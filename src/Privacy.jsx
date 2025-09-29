@@ -13,7 +13,7 @@ export default function Privacy() {
       </p>
 
       <p className="mb-4">
-        You may unsubscribe from updates at any time using the link in our emails, or by contacting us at{" "}
+        You may unsubscribe at any time using the link in our emails, or by contacting us at{' '}
         <a href="mailto:hello@moralclarityai.com" className="underline text-slate-900">
           hello@moralclarityai.com
         </a>.
