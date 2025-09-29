@@ -1,9 +1,13 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import Header from './components/Header.jsx'
+import Footer from './components/Footer.jsx'
 
 export default function App() {
   return (
     <main className="text-slate-900">
+      <Header />
+
       {/* HERO */}
       <section className="min-h-screen flex items-center">
         <div className="max-w-3xl mx-auto w-full text-center px-6">
@@ -42,7 +46,7 @@ export default function App() {
         </div>
       </section>
 
-      {/* UPDATES placeholder */}
+      {/* UPDATES */}
       <section id="updates" className="py-16">
         <div className="max-w-3xl mx-auto px-6 text-center">
           <h2 className="text-3xl font-bold">Stay updated</h2>
@@ -68,14 +72,7 @@ export default function App() {
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="border-t border-slate-200 py-6 text-center text-sm text-slate-500">
-        <p>
-          © {new Date().getFullYear()} Moral Clarity AI ·{' '}
-          <Link to="/privacy" className="hover:underline">Privacy</Link> ·{' '}
-          <Link to="/terms" className="hover:underline">Terms</Link>
-        </p>
-      </footer>
+      <Footer />
     </main>
   )
 }
