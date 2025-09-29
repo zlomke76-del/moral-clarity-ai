@@ -7,6 +7,14 @@ const CATEGORIES = ["Leaders & Policy", "Educators", "Enterprises"];
 export default function App() {
   const [cat, setCat] = useState("Leaders & Policy");
 
+  // --- Smooth scroll helper (accounts for ~80px fixed header) ---
+  const goTo = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const y = el.getBoundingClientRect().top + window.scrollY - 80;
+    window.scrollTo({ top: y, behavior: "smooth" });
+  };
+
   // --- WHY IT MATTERS (expandable) ---
   const whyItems = useMemo(
     () => [
@@ -229,12 +237,16 @@ export default function App() {
             Pick a category to see tailored use cases and answers.
           </p>
 
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             {CATEGORIES.map((c) => (
               <button
                 key={c}
-                onClick={() => setCat(c)}
+                onClick={() => {
+                  setCat(c);
+                  goTo("use-cases"); // <-- jump to content
+                }}
                 aria-pressed={cat === c}
+                aria-controls="use-cases"
                 className={
                   "px-4 py-2 rounded-full border text-sm transition " +
                   (cat === c
