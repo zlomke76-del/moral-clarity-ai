@@ -74,6 +74,39 @@ export default function App() {
         </div>
       </section>
 
+      {/* SOLUTION */}
+      <section id="solution" className="border-t border-slate-200 py-16 bg-gray-50">
+        <div className="max-w-5xl mx-auto px-6 text-center">
+          <h2 className="text-3xl font-bold">The solution</h2>
+          <p className="mt-4 text-slate-600 max-w-2xl mx-auto">
+            Moral Clarity AI applies three guardrails that keep every answer steady, balanced, and trustworthy.
+          </p>
+
+          <div className="mt-10 grid gap-6 sm:grid-cols-3">
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition">
+              <h3 className="text-xl font-semibold">Neutral</h3>
+              <p className="mt-2 text-slate-600 text-sm">
+                Facts first, no partisan defaults, no hidden spin. Answers are clear, not slanted.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition">
+              <h3 className="text-xl font-semibold">Anchored</h3>
+              <p className="mt-2 text-slate-600 text-sm">
+                Every response is tethered to enduring moral standards—unchanging, consistent, reliable.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition">
+              <h3 className="text-xl font-semibold">Red-teamed</h3>
+              <p className="mt-2 text-slate-600 text-sm">
+                Answers are stress-tested against biases and blind spots to make sure clarity holds under pressure.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* UPDATES — newsletter signup with inline success message */}
       <section id="updates" className="border-t border-slate-200 py-16">
         <div className="max-w-2xl mx-auto px-6 text-center">
@@ -95,7 +128,6 @@ export default function App() {
               onSubmit={handleSubscribe}
               className="mt-6 flex flex-col sm:flex-row gap-3 justify-center"
             >
-              {/* simple honeypot to deter bots */}
               <input type="text" name="_gotcha" className="hidden" tabIndex="-1" autoComplete="off" />
               <input
                 type="email"
