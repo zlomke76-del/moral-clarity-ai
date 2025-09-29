@@ -1,6 +1,39 @@
-import React from 'react'
+import React, { useState } from 'react'
 
 export default function App() {
+  // form state for inline thank-you message
+  const [status, setStatus] = useState('idle') // 'idle' | 'loading' | 'success' | 'error'
+  const [errMsg, setErrMsg] = useState('')
+
+  async function handleSubscribe(e) {
+    e.preventDefault()
+    setStatus('loading')
+    setErrMsg('')
+
+    const form = e.target
+    const data = new FormData(form)
+
+    try {
+      const res = await fetch('https://formspree.io/f/mblzgvdb', {
+        method: 'POST',
+        body: data,
+        headers: { Accept: 'application/json' },
+      })
+
+      if (res.ok) {
+        setStatus('success')
+        form.reset()
+      } else {
+        const d = await res.json().catch(() => ({}))
+        setErrMsg(d?.errors?.[0]?.message || 'Something went wrong.')
+        setStatus('error')
+      }
+    } catch (err) {
+      setErrMsg('Network error. Please try again.')
+      setStatus('error')
+    }
+  }
+
   return (
     <main className="text-slate-900">
       {/* HERO — fills the whole viewport */}
@@ -30,7 +63,7 @@ export default function App() {
         </div>
       </section>
 
-      {/* PROBLEM — starts below the viewport */}
+      {/* PROBLEM */}
       <section id="problem" className="border-t border-slate-200 py-16">
         <div className="max-w-3xl mx-auto px-6">
           <h2 className="text-3xl font-bold">The problem</h2>
@@ -41,32 +74,52 @@ export default function App() {
         </div>
       </section>
 
-      {/* UPDATES — newsletter signup */}
+      {/* UPDATES — newsletter signup with inline success message */}
       <section id="updates" className="border-t border-slate-200 py-16">
         <div className="max-w-2xl mx-auto px-6 text-center">
           <h2 className="text-3xl font-bold">Get updates</h2>
           <p className="mt-4 text-slate-600">
             Subscribe to be the first to know when we release major updates, features, or insights.
           </p>
-          <form
-            action="https://formspree.io/f/mblzgvdb"
-            method="POST"
-            className="mt-6 flex flex-col sm:flex-row gap-3 justify-center"
-          >
-            <input
-              type="email"
-              name="email"
-              required
-              placeholder="Enter your email"
-              className="px-4 py-3 border border-slate-300 rounded-lg w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-slate-500"
-            />
-            <button
-              type="submit"
-              className="px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-700"
+
+          {status === 'success' ? (
+            <div
+              className="mt-6 rounded-xl border border-green-200 bg-green-50 px-5 py-4 text-green-800"
+              role="status"
+              aria-live="polite"
             >
-              Subscribe
-            </button>
-          </form>
+              ✅ Thanks! You’re on the list. Check your inbox for a confirmation.
+            </div>
+          ) : (
+            <form
+              onSubmit={handleSubscribe}
+              className="mt-6 flex flex-col sm:flex-row gap-3 justify-center"
+            >
+              {/* simple honeypot to deter bots */}
+              <input type="text" name="_gotcha" className="hidden" tabIndex="-1" autoComplete="off" />
+              <input
+                type="email"
+                name="email"
+                required
+                placeholder="Enter your email"
+                className="px-4 py-3 border border-slate-300 rounded-lg w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-slate-500"
+                aria-label="Email address"
+              />
+              <button
+                type="submit"
+                disabled={status === 'loading'}
+                className="px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-700 disabled:opacity-60"
+              >
+                {status === 'loading' ? 'Subscribing…' : 'Subscribe'}
+              </button>
+            </form>
+          )}
+
+          {status === 'error' && (
+            <p className="mt-3 text-sm text-red-600" role="alert" aria-live="assertive">
+              {errMsg}
+            </p>
+          )}
         </div>
       </section>
     </main>
