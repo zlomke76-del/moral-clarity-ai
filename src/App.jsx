@@ -4,7 +4,8 @@ export default function App() {
   return (
     <main className="min-h-screen bg-white text-slate-900">
       {/* Hero */}
-      <section className="max-w-3xl mx-auto text-center p-10">
+<section className="min-h-screen flex items-center">
+  <div className="max-w-3xl mx-auto text-center p-10 w-full">
         <h1 className="text-5xl font-extrabold tracking-tight">Moral Clarity AI</h1>
         <p className="text-xl text-slate-600 mt-3">A compass that never drifts.</p>
         <p className="mt-6 text-slate-700 leading-relaxed">
