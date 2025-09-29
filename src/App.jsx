@@ -1,14 +1,16 @@
 import React from "react";
+import Header from "./components/Header.jsx";
+import Footer from "./components/Footer.jsx"; // optional; remove if you don’t want it
 
 export default function App() {
   return (
     <main className="text-slate-900">
+      <Header />
+
       {/* HERO */}
       <section className="min-h-screen flex items-center">
         <div className="max-w-3xl mx-auto w-full text-center px-6">
-          <h1 className="text-5xl font-extrabold tracking-tight">
-            Moral Clarity AI
-          </h1>
+          <h1 className="text-5xl font-extrabold tracking-tight">Moral Clarity AI</h1>
           <p className="mt-3 text-xl text-slate-600">A compass that never drifts.</p>
           <p className="mt-6 text-slate-700 leading-relaxed">
             In a world of spin and shifting narratives, Moral Clarity AI delivers
@@ -16,16 +18,10 @@ export default function App() {
           </p>
 
           <div className="mt-8 flex gap-4 justify-center">
-            <a
-              href="#problem"
-              className="px-5 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-700"
-            >
+            <a href="/#problem" className="px-5 py-3 bg-slate-900 text-white rounded-xl hover:bg-slate-700">
               Learn more
             </a>
-            <a
-              href="#updates"
-              className="px-5 py-3 border border-slate-900 rounded-xl hover:bg-slate-100"
-            >
+            <a href="/#updates" className="px-5 py-3 border border-slate-900 rounded-xl hover:bg-slate-100">
               Get updates
             </a>
           </div>
@@ -43,42 +39,39 @@ export default function App() {
         <div className="max-w-3xl mx-auto px-6">
           <h2 className="text-3xl font-bold">The problem</h2>
           <p className="mt-4 text-slate-700 leading-relaxed">
-            We don’t lack information—we lack anchoring. Most systems don’t just
-            present facts; they frame them. Trust erodes, drift increases, and
-            decisions get nudged by hidden assumptions.
+            We don’t lack information—we lack anchoring. Most systems don’t just present facts; they frame them.
+            Trust erodes, drift increases, and decisions get nudged by hidden assumptions.
           </p>
         </div>
       </section>
 
-      {/* UPDATES placeholder */}
-      <section id="updates" className="py-8 text-center">
-        <h2 className="text-xl font-bold">Stay Updated</h2>
-        <form
-          action="https://formspree.io/f/mblzgvdb"
-          method="POST"
-          className="mt-4 flex flex-col items-center gap-2"
-        >
-          <input
-            type="email"
-            name="email"
-            placeholder="Your email"
-            required
-            className="px-4 py-2 border border-slate-300 rounded-lg w-64"
-          />
-          <button
-            type="submit"
-            className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-700"
+      {/* UPDATES */}
+      <section id="updates" className="py-16">
+        <div className="max-w-3xl mx-auto px-6 text-center">
+          <h2 className="text-3xl font-bold">Stay updated</h2>
+          <form
+            action="https://formspree.io/f/mblzgvdb"
+            method="POST"
+            className="mt-6 flex flex-col sm:flex-row gap-3 justify-center"
           >
-            Subscribe
-          </button>
-        </form>
+            <input
+              type="email"
+              name="email"
+              placeholder="Enter your email"
+              required
+              className="px-4 py-3 border border-slate-300 rounded-lg w-full sm:w-80"
+            />
+            <button
+              type="submit"
+              className="px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-700"
+            >
+              Subscribe
+            </button>
+          </form>
+        </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="border-t border-slate-200 py-6 text-center text-sm text-slate-500">
-        <a href="/privacy" className="hover:underline mx-2">Privacy Policy</a> |
-        <a href="/terms" className="hover:underline mx-2">Terms of Service</a>
-      </footer>
+      <Footer />
     </main>
   );
 }
