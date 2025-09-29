@@ -2,10 +2,11 @@ import React from 'react'
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-white text-slate-900 flex items-center justify-center">
-      <div className="max-w-2xl text-center p-10">
-        <h1 className="text-4xl font-bold tracking-tight">Moral Clarity AI</h1>
-        <h2 className="text-lg text-slate-600 mt-2">A compass that never drifts.</h2>
+    <main className="min-h-screen bg-white text-slate-900">
+      {/* Hero */}
+      <section className="max-w-3xl mx-auto text-center p-10">
+        <h1 className="text-5xl font-extrabold tracking-tight">Moral Clarity AI</h1>
+        <p className="text-xl text-slate-600 mt-3">A compass that never drifts.</p>
         <p className="mt-6 text-slate-700 leading-relaxed">
           In a world of spin and shifting narratives, Moral Clarity AI delivers answers anchored to eternal
           standards—clear, neutral, and unshakable.
@@ -18,7 +19,26 @@ export default function App() {
             Get updates
           </a>
         </div>
-      </div>
-    </div>
+        <ul className="mt-6 text-sm text-slate-500 flex gap-4 justify-center">
+          <li>Neutral</li>
+          <li>Anchored</li>
+          <li>Red-teamed</li>
+        </ul>
+      </section>
+
+      {/* Problem */}
+      <section id="problem" className="border-t border-slate-200 py-16">
+        <div className="max-w-3xl mx-auto px-6">
+          <h2 className="text-2xl font-bold">The problem</h2>
+          <p className="mt-4 text-slate-700 leading-relaxed">
+            We don’t lack information—we lack anchoring. Most systems don’t just present facts; they
+            frame them. Trust erodes, drift increases, and decisions get nudged by hidden assumptions.
+          </p>
+        </div>
+      </section>
+
+      {/* Placeholder anchor so the “Get updates” link has a target later */}
+      <section id="updates" className="py-8"></section>
+    </main>
   )
 }
