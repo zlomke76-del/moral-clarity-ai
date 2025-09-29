@@ -41,8 +41,34 @@ export default function App() {
         </div>
       </section>
 
-      {/* UPDATES anchor placeholder */}
-      <section id="updates" className="py-8" />
+      {/* UPDATES — newsletter signup */}
+      <section id="updates" className="border-t border-slate-200 py-16">
+        <div className="max-w-2xl mx-auto px-6 text-center">
+          <h2 className="text-3xl font-bold">Get updates</h2>
+          <p className="mt-4 text-slate-600">
+            Subscribe to be the first to know when we release major updates, features, or insights.
+          </p>
+          <form
+            action="https://formspree.io/f/mblzgvdb"
+            method="POST"
+            className="mt-6 flex flex-col sm:flex-row gap-3 justify-center"
+          >
+            <input
+              type="email"
+              name="email"
+              required
+              placeholder="Enter your email"
+              className="px-4 py-3 border border-slate-300 rounded-lg w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-slate-500"
+            />
+            <button
+              type="submit"
+              className="px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-700"
+            >
+              Subscribe
+            </button>
+          </form>
+        </div>
+      </section>
     </main>
   )
 }
