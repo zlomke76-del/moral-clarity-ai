@@ -154,6 +154,31 @@ export default function App() {
           )}
         </div>
       </section>
+
+      {/* FOOTER */}
+      <footer className="border-t border-slate-200">
+        <div className="max-w-6xl mx-auto px-6 py-10 grid gap-6 sm:grid-cols-3 items-center">
+          <div className="text-sm text-slate-600">
+            <div className="font-semibold text-slate-900">Moral Clarity AI</div>
+            <div className="text-slate-500">A compass that never drifts.</div>
+          </div>
+
+          <nav className="flex justify-center gap-5 text-sm">
+            <a href="#problem" className="text-slate-600 hover:text-slate-900">Problem</a>
+            <a href="#solution" className="text-slate-600 hover:text-slate-900">Solution</a>
+            <a href="#updates" className="text-slate-600 hover:text-slate-900">Updates</a>
+          </nav>
+
+          <div className="text-right text-sm text-slate-500">
+            <a href="/privacy" className="hover:text-slate-800 mr-4">Privacy</a>
+            <a href="/terms" className="hover:text-slate-800 mr-4">Terms</a>
+            <a href="mailto:hello@moralclarityai.com" className="hover:text-slate-800">Contact</a>
+          </div>
+        </div>
+        <div className="text-center text-xs text-slate-400 pb-6">
+          © {new Date().getFullYear()} Moral Clarity AI. All rights reserved.
+        </div>
+      </footer>
     </main>
   )
 }
