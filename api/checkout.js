@@ -1,8 +1,7 @@
+// api/checkout.js
 import Stripe from "stripe";
-pk_live_51SCrCv0tWJXzci1Aykw5idEQRgt3IPU2aN7EWVG1SCB4dibVQgCvFOeiiFxDEhhsqR4CWjrV8IDwbsu3rfx2vObA00YLfcCjjQ
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2022-11-15",
-});
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2022-11-15" });
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -10,7 +9,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { priceId, coupon } = req.body || {};
+    // Some hosts send req.body as string — handle both
+    const raw = req.body ?? {};
+    const { priceId, coupon } = typeof raw === "string" ? JSON.parse(raw) : raw;
 
     if (!priceId) {
       return res.status(400).json({ error: "Missing priceId" });
@@ -25,27 +26,22 @@ export default async function handler(req, res) {
       cancel_url: `${req.headers.origin}/cancel`,
     };
 
-    // Handle coupon (if provided)
+    // Optional: pre-apply a promotion code if provided (e.g., FAITH50)
     if (coupon && coupon.trim()) {
       const promos = await stripe.promotionCodes.list({
         code: coupon.trim(),
         active: true,
         limit: 1,
       });
-
       if (promos.data[0]) {
         params.discounts = [{ promotion_code: promos.data[0].id }];
       }
     }
 
-    // Create checkout session
     const session = await stripe.checkout.sessions.create(params);
-
     return res.status(200).json({ url: session.url });
   } catch (err) {
     console.error("❌ Stripe checkout error:", err);
-    return res
-      .status(500)
-      .json({ error: err.message || "Internal server error" });
+    return res.status(500).json({ error: err.message || "Internal server error" });
   }
 }
