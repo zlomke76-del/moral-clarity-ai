@@ -1,14 +1,8 @@
-// api/checkout.js
 import Stripe from "stripe";
 
-const secret = process.env.STRIPE_SECRET_KEY;
-
-// Guard: if Vercel didn't inject the secret, fail fast with a readable message
-if (!secret) {
-  console.error("Missing STRIPE_SECRET_KEY env var");
-}
-
-const stripe = new Stripe(secret, { apiVersion: "2022-11-15" });
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2022-11-15",
+});
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -17,8 +11,10 @@ export default async function handler(req, res) {
 
   try {
     const { priceId, coupon } = req.body || {};
-    if (!priceId) return res.status(400).json({ error: "Missing priceId" });
-    if (!secret) return res.status(500).json({ error: "Server misconfiguration" });
+
+    if (!priceId) {
+      return res.status(400).json({ error: "Missing priceId" });
+    }
 
     const params = {
       mode: "subscription",
@@ -29,20 +25,27 @@ export default async function handler(req, res) {
       cancel_url: `${req.headers.origin}/cancel`,
     };
 
+    // Handle coupon (if provided)
     if (coupon && coupon.trim()) {
       const promos = await stripe.promotionCodes.list({
         code: coupon.trim(),
         active: true,
         limit: 1,
       });
-      if (promos.data[0]) params.discounts = [{ promotion_code: promos.data[0].id }];
+
+      if (promos.data[0]) {
+        params.discounts = [{ promotion_code: promos.data[0].id }];
+      }
     }
 
+    // Create checkout session
     const session = await stripe.checkout.sessions.create(params);
+
     return res.status(200).json({ url: session.url });
   } catch (err) {
     console.error("❌ Stripe checkout error:", err);
-    return res.status(500).json({ error: err.message || "Internal error" });
+    return res
+      .status(500)
+      .json({ error: err.message || "Internal server error" });
   }
 }
-fix: update checkout.js to use STRIPE_SECRET_KEY
