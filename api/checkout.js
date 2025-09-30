@@ -1,7 +1,12 @@
 // api/checkout.js
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2022-11-15" });
+// Your secret key must start with sk_live_ (or sk_test_ in test mode)
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Use a fixed site URL so we don't depend on headers
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://www.moralclarityai.com";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -9,58 +14,34 @@ export default async function handler(req, res) {
   }
 
   try {
-    // ---- Robust body parsing ----
-    let body = {};
-    if (req.body && typeof req.body === "object") {
-      // Already parsed JSON (ideal case)
-      body = req.body;
-    } else if (typeof req.body === "string") {
-      // Only parse if it looks like JSON; avoid "[object Object]"
-      const s = req.body.trim();
-      if (s.startsWith("{") || s.startsWith("[")) {
-        try {
-          body = JSON.parse(s);
-        } catch {
-          body = {};
-        }
-      } else {
+    // Parse body safely whether it's an object or a string
+    let body = req.body;
+    if (typeof body === "string") {
+      try {
+        body = JSON.parse(body);
+      } catch {
         body = {};
       }
-    } else {
-      body = {};
     }
+    if (!body || typeof body !== "object") body = {};
 
-    const { priceId, coupon } = body;
-
+    const { priceId } = body;
     if (!priceId) {
       return res.status(400).json({ error: "Missing priceId" });
     }
 
-    const params = {
+    // Minimal params (no coupons, no extra fields)
+    const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
-      allow_promotion_codes: true,
-      success_url: `${req.headers.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.origin}/cancel`,
-    };
+      success_url: `${SITE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${SITE_URL}/cancel`,
+    });
 
-    // Optional promotion code by text (e.g., "FAITH50")
-    if (typeof coupon === "string" && coupon.trim()) {
-      const promos = await stripe.promotionCodes.list({
-        code: coupon.trim(),
-        active: true,
-        limit: 1,
-      });
-      if (promos.data[0]) {
-        params.discounts = [{ promotion_code: promos.data[0].id }];
-      }
-    }
-
-    const session = await stripe.checkout.sessions.create(params);
     return res.status(200).json({ url: session.url });
   } catch (err) {
-    console.error("❌ Stripe checkout error:", err);
-    return res.status(500).json({ error: err.message || "Internal server error" });
+    // This is the error we want to see if Stripe is unhappy
+    console.error("❌ Stripe error:", err?.message, err);
+    return res.status(500).json({ error: err?.message || "Internal server error" });
   }
 }
