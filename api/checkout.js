@@ -1,23 +1,20 @@
-// api/checkout.js  (Vercel Serverless Function for a SPA)
+// api/checkout.js — Minimal Stripe Checkout session (subscription)
 import Stripe from "stripe";
-
-// ---- CORS (allow your site + local dev) ----
-const allowOrigin = (req) => {
-  const origin = req.headers.origin || "";
-  const allowed = [
-    "http://localhost:5173",        // Vite dev
-    "http://localhost:3000",        // alt dev
-    "https://moral-clarity-ai.vercel.app", // your prod
-  ];
-  return allowed.includes(origin) ? origin : allowed[2];
-};
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2024-06-20",
 });
 
+// Allow your site + localhost (optional)
+const ORIGINS = [
+  "https://moral-clarity-ai.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:3000",
+];
+const allowOrigin = (req) => (ORIGINS.includes(req.headers.origin) ? req.headers.origin : ORIGINS[0]);
+
 export default async function handler(req, res) {
-  // Preflight
+  // CORS preflight
   if (req.method === "OPTIONS") {
     res.setHeader("Access-Control-Allow-Origin", allowOrigin(req));
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -31,40 +28,26 @@ export default async function handler(req, res) {
   }
 
   try {
-    // ---- Robust JSON body parsing (handles object or raw string) ----
-    let priceId;
-    if (req.body && typeof req.body === "object") {
-      priceId = req.body.priceId;
-    } else if (typeof req.body === "string") {
-      try { priceId = JSON.parse(req.body).priceId; } catch (_) {}
-    } else if (req.readable) {
-      // fallback: read raw data
-      const raw = await new Promise((resolve) => {
-        let data = "";
-        req.setEncoding("utf8");
-        req.on("data", (c) => (data += c));
-        req.on("end", () => resolve(data));
-      });
-      try { priceId = JSON.parse(raw).priceId; } catch (_) {}
-    }
-
+    // ---- Strict JSON body (no fancy parsing) ----
+    const { priceId } = typeof req.body === "object" ? req.body : JSON.parse(req.body || "{}");
     if (!priceId) {
       res.setHeader("Access-Control-Allow-Origin", allowOrigin(req));
-      return res.status(400).json({ error: "Request body is not valid JSON or missing priceId" });
+      return res.status(400).json({ error: "Missing priceId" });
     }
 
+    // ---- MINIMAL PARAMS ONLY (avoid any nested objects that could stringify badly) ----
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://moral-clarity-ai.vercel.app";
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:5173"}/success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:5173"}/cancel`,
-      automatic_tax: { enabled: true },
+      success_url: `${baseUrl}/success`,
+      cancel_url: `${baseUrl}/cancel`,
     });
 
     res.setHeader("Access-Control-Allow-Origin", allowOrigin(req));
     return res.status(200).json({ url: session.url });
-  } catch (err) {
+  } catch (e) {
     res.setHeader("Access-Control-Allow-Origin", allowOrigin(req));
-    return res.status(400).json({ error: err?.message || "Checkout error" });
+    return res.status(400).json({ error: e?.message || "Checkout error" });
   }
 }
