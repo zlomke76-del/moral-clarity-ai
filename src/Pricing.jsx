@@ -6,39 +6,38 @@ const PLANS = [
     name: "Standard",
     priceText: "$25 / month",
     blurb: "Personal use. Anchored answers and updates.",
-    priceId: "price_1SCsmG0tWJXzci1AX3GLoTj8", // ✅ real Stripe Price ID
+    priceId: "price_1SCsmG0tWJXzci1AX3GLoTj8",
     features: ["Neutral, anchored answers", "Email updates", "Basic support"],
-    cta: "Subscribe",
+    cta: "Subscribe"
   },
   {
     key: "family",
     name: "Family",
     priceText: "$50 / month",
-    blurb:
-      "For households or small teams — governance & audit-ready insights.",
-    priceId: "price_1SCsmv0tWJXzci1A6hvi2Ccp", // ✅ real Stripe Price ID
+    blurb: "For households or small teams — governance & audit-ready insights.",
+    priceId: "price_1SCsmv0tWJXzci1A6hvi2Ccp",
     features: [
       "Everything in Standard",
       "Governance guardrails",
-      "Audit-friendly summaries",
+      "Audit-friendly summaries"
     ],
     cta: "Subscribe",
-    highlight: true,
+    highlight: true
   },
   {
     key: "ministry",
     name: "Ministry Plan",
     priceText: "$249 / month",
     blurb: "Tailored for ministries and congregations.",
-    priceId: "price_1SCso80tWJXzci1AoZiKFy3b", // ✅ real Stripe Price ID
+    priceId: "price_1SCso80tWJXzci1AoZiKFy3b",
     features: [
       "Anchored analysis for pastors and boards",
       "Balanced materials for teaching",
       "Support for church governance",
-      "Founding partners: coupon eligible",
+      "Founding partners: coupon eligible"
     ],
-    cta: "Subscribe as a ministry",
-  },
+    cta: "Subscribe as a ministry"
+  }
 ];
 
 export default function Pricing() {
@@ -52,15 +51,19 @@ export default function Pricing() {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId, coupon: maybeCoupon || null }),
+        body: JSON.stringify({ priceId, coupon: maybeCoupon || null })
       });
 
-      const data = await res.json().catch(() => ({})); // prevent JSON parse crash
+      let data = {};
+      try {
+        data = await res.json();
+      } catch {
+        // If server crashed and returned HTML, data stays {}
+      }
 
       if (!res.ok) {
         throw new Error(data.error || "Server error. Please try again.");
       }
-
       if (!data?.url) {
         throw new Error("Checkout did not return a URL.");
       }
