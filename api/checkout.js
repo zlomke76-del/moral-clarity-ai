@@ -9,9 +9,28 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Some hosts send req.body as string — handle both
-    const raw = req.body ?? {};
-    const { priceId, coupon } = typeof raw === "string" ? JSON.parse(raw) : raw;
+    // ---- Robust body parsing ----
+    let body = {};
+    if (req.body && typeof req.body === "object") {
+      // Already parsed JSON (ideal case)
+      body = req.body;
+    } else if (typeof req.body === "string") {
+      // Only parse if it looks like JSON; avoid "[object Object]"
+      const s = req.body.trim();
+      if (s.startsWith("{") || s.startsWith("[")) {
+        try {
+          body = JSON.parse(s);
+        } catch {
+          body = {};
+        }
+      } else {
+        body = {};
+      }
+    } else {
+      body = {};
+    }
+
+    const { priceId, coupon } = body;
 
     if (!priceId) {
       return res.status(400).json({ error: "Missing priceId" });
@@ -26,8 +45,8 @@ export default async function handler(req, res) {
       cancel_url: `${req.headers.origin}/cancel`,
     };
 
-    // Optional: pre-apply a promotion code if provided (e.g., FAITH50)
-    if (coupon && coupon.trim()) {
+    // Optional promotion code by text (e.g., "FAITH50")
+    if (typeof coupon === "string" && coupon.trim()) {
       const promos = await stripe.promotionCodes.list({
         code: coupon.trim(),
         active: true,
