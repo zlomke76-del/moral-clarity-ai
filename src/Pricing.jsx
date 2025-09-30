@@ -1,16 +1,15 @@
 import React from "react";
 import { loadStripe } from "@stripe/stripe-js";
 
-// IMPORTANT: set your publishable key in .env as VITE_STRIPE_PK
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PK);
 
-// Replace these with your real Price IDs from the Stripe Dashboard
+// TODO: replace price IDs with real ones from Stripe dashboard
 const PLANS = [
   {
     name: "Standard",
     priceText: "$20 / month",
     blurb: "Personal use. Anchored answers and updates.",
-    priceId: "price_standard_monthly", // e.g., price_1Pxxx...
+    priceId: "price_standard_monthly", // e.g. price_1Pxxxxxxx
     features: [
       "Neutral, anchored answers",
       "Email updates",
@@ -48,10 +47,7 @@ const PLANS = [
 export default function Pricing() {
   const handleCheckout = async (priceId) => {
     const stripe = await stripePromise;
-    if (!stripe) {
-      alert("Stripe failed to load. Please refresh and try again.");
-      return;
-    }
+    if (!stripe) return alert("Stripe failed to load. Please refresh.");
     await stripe.redirectToCheckout({
       lineItems: [{ price: priceId, quantity: 1 }],
       mode: "subscription",
@@ -91,11 +87,14 @@ export default function Pricing() {
                 ))}
               </ul>
             </div>
+
             <button
               onClick={() => handleCheckout(p.priceId)}
               className={
                 "mt-6 w-full px-4 py-2 rounded-lg text-white " +
-                (p.highlight ? "bg-slate-900 hover:bg-slate-700" : "bg-slate-800 hover:bg-slate-700")
+                (p.highlight
+                  ? "bg-slate-900 hover:bg-slate-700"
+                  : "bg-slate-800 hover:bg-slate-700")
               }
             >
               {p.cta}
@@ -107,8 +106,8 @@ export default function Pricing() {
       <section className="mt-10 text-center text-sm text-slate-500">
         <p>
           Payments handled by Stripe. By subscribing you agree to our{" "}
-          <a href="/terms" className="underline">Terms</a> and{" "}
-          <a href="/privacy" className="underline">Privacy Policy</a>.
+          <a className="underline" href="/terms">Terms</a> and{" "}
+          <a className="underline" href="/privacy">Privacy Policy</a>.
         </p>
       </section>
     </main>
