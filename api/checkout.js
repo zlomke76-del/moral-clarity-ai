@@ -13,14 +13,11 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: { message: "Method Not Allowed" } });
   }
 
-  // Accept either a parsed object or a raw string body
+  // Accept parsed objects or raw JSON strings
   let body = req.body;
   if (typeof body === "string") {
-    try {
-      body = JSON.parse(body);
-    } catch (_) {
-      return res.status(400).json({ error: { message: "Body must be valid JSON" } });
-    }
+    try { body = JSON.parse(body); }
+    catch { return res.status(400).json({ error: { message: "Body must be valid JSON" } }); }
   }
 
   const { priceId, success_url, cancel_url, customer_email } = body || {};
