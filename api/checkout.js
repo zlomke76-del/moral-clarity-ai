@@ -1,14 +1,15 @@
-// /api/checkout.js
+// /api/checkout.js — v5
+
 import Stripe from "stripe";
 
-// tiny helper to send JSON consistently
+// small helper to always send JSON
 function sendJson(res, status, obj) {
   res.status(status);
   res.setHeader("Content-Type", "application/json");
   res.end(JSON.stringify(obj));
 }
 
-// read raw request body if a framework didn't parse it
+// read raw body if not already parsed
 async function readRaw(req) {
   if (req.body && typeof req.body === "object") return req.body;
   const chunks = [];
@@ -16,18 +17,17 @@ async function readRaw(req) {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-// support JSON and x-www-form-urlencoded
-function parseBody(raw, contentType) {
+function parseBody(raw, contentType = "") {
   if (!raw) return {};
   if (typeof raw === "object") return raw;
 
-  const ct = (contentType || "").toLowerCase();
+  const ct = contentType.toLowerCase();
 
-  // try JSON
+  // try JSON first
   try {
     return JSON.parse(raw);
   } catch (_) {
-    // try form-encoded
+    // then try x-www-form-urlencoded
     if (ct.includes("application/x-www-form-urlencoded") || raw.includes("=")) {
       const params = new URLSearchParams(raw);
       const obj = {};
@@ -39,6 +39,12 @@ function parseBody(raw, contentType) {
 }
 
 export default async function handler(req, res) {
+  // ✅ GET ping so we can verify the new function is live
+  if (req.method === "GET") {
+    res.status(200).setHeader("Content-Type", "application/json");
+    return res.end(JSON.stringify({ ok: true, route: "/api/checkout", version: "v5" }));
+  }
+
   if (req.method !== "POST") {
     return sendJson(res, 405, { error: "Method not allowed" });
   }
@@ -46,7 +52,7 @@ export default async function handler(req, res) {
   const secret = process.env.STRIPE_SECRET_KEY;
   if (!secret) return sendJson(res, 500, { error: "Missing STRIPE_SECRET_KEY on server" });
 
-  // best-effort origin
+  // determine origin for success/cancel
   const origin =
     req.headers.origin ||
     (req.headers.referer ? new URL(req.headers.referer).origin : null) ||
@@ -54,10 +60,11 @@ export default async function handler(req, res) {
 
   if (!origin) return sendJson(res, 500, { error: "Unable to determine site origin" });
 
+  // parse body safely (supports JSON & form)
   let body = {};
   try {
     const raw = await readRaw(req);
-    body = parseBody(raw, req.headers["content-type"]);
+    body = parseBody(raw, req.headers["content-type"] || "");
   } catch {
     return sendJson(res, 400, { error: "Unable to read request body" });
   }
