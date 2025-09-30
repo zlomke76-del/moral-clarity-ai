@@ -1,15 +1,16 @@
-import React from "react";
-import { loadStripe } from "@stripe/stripe-js";
+import React, { useState } from "react";
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PK);
-
-// ⚡ Replace these placeholders with the real Stripe Price IDs from your dashboard
+/**
+ * Plans shown on the page.
+ * ⛳ Replace each priceId with the real Stripe Price ID from your dashboard.
+ */
 const PLANS = [
   {
+    key: "standard",
     name: "Standard",
     priceText: "$25 / month",
     blurb: "Personal use. Anchored answers and updates.",
-    priceId: "price_standard_id_here", 
+    priceId: "price_standard_id_here",
     features: [
       "Neutral, anchored answers",
       "Email updates",
@@ -18,43 +19,62 @@ const PLANS = [
     cta: "Subscribe",
   },
   {
+    key: "family",
     name: "Family",
     priceText: "$50 / month",
-    blurb: "For households or teams — governance and audit-ready insights.",
-    priceId: "price_family_id_here", 
+    blurb: "For households or small teams — governance & audit-ready insights.",
+    priceId: "price_family_id_here",
     features: [
       "Everything in Standard",
       "Governance guardrails",
       "Audit-friendly summaries",
     ],
     cta: "Subscribe",
-    highlight: true,
+    highlight: true, // draws the eye
   },
   {
+    key: "ministry",
     name: "Ministry Plan",
     priceText: "$249 / month",
     blurb: "Tailored for ministries and congregations.",
-    priceId: "price_ministry_id_here", 
+    priceId: "price_ministry_id_here",
     features: [
       "Anchored analysis for pastors and boards",
       "Balanced materials for teaching",
       "Support for church governance",
-      "Founding partners: 50% off with coupon",
+      "Founding partners: coupon eligible",
     ],
     cta: "Subscribe as a ministry",
   },
 ];
 
 export default function Pricing() {
-  const handleCheckout = async (priceId) => {
-    const stripe = await stripePromise;
-    if (!stripe) return alert("Stripe failed to load. Please refresh.");
-    await stripe.redirectToCheckout({
-      lineItems: [{ price: priceId, quantity: 1 }],
-      mode: "subscription",
-      successUrl: "https://www.moralclarityai.com/success",
-      cancelUrl: "https://www.moralclarityai.com/cancel",
-    });
+  const [loadingKey, setLoadingKey] = useState("");      // which plan is loading
+  const [coupon, setCoupon] = useState("");              // optional coupon for Ministry
+
+  const startCheckout = async (priceId, maybeCoupon) => {
+    try {
+      setLoadingKey(priceId);
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          priceId,
+          coupon: maybeCoupon || null,   // if provided we’ll pre-apply it
+        }),
+      });
+
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || "Checkout failed.");
+      }
+
+      const { url } = await res.json();
+      window.location.href = url; // Stripe-hosted Checkout
+    } catch (err) {
+      alert(err.message || "Something went wrong starting checkout.");
+      setLoadingKey("");
+    }
   };
 
   return (
@@ -68,8 +88,8 @@ export default function Pricing() {
 
       <section className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {PLANS.map((p) => (
-          <div
-            key={p.name}
+          <article
+            key={p.key}
             className={
               "rounded-xl border bg-white p-6 shadow-sm flex flex-col " +
               (p.highlight ? "border-slate-900" : "border-slate-200")
@@ -79,6 +99,7 @@ export default function Pricing() {
               <h3 className="text-xl font-semibold">{p.name}</h3>
               <p className="mt-1 text-slate-600">{p.blurb}</p>
               <div className="mt-4 text-3xl font-extrabold">{p.priceText}</div>
+
               <ul className="mt-4 space-y-2 text-sm text-slate-700">
                 {p.features.map((f) => (
                   <li key={f} className="flex items-start gap-2">
@@ -87,20 +108,41 @@ export default function Pricing() {
                   </li>
                 ))}
               </ul>
+
+              {/* Optional coupon field only shown for Ministry Plan */}
+              {p.key === "ministry" && (
+                <div className="mt-6">
+                  <label className="block text-sm font-medium text-slate-700">
+                    Have a coupon? (optional)
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="text"
+                    placeholder="e.g. FAITH50"
+                    value={coupon}
+                    onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+                    className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-500"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">
+                    You can also enter promotion codes directly on the checkout page.
+                  </p>
+                </div>
+              )}
             </div>
 
             <button
-              onClick={() => handleCheckout(p.priceId)}
+              onClick={() => startCheckout(p.priceId, p.key === "ministry" ? coupon.trim() : null)}
+              disabled={loadingKey === p.priceId}
               className={
-                "mt-6 w-full px-4 py-2 rounded-lg text-white " +
+                "mt-6 w-full px-4 py-2 rounded-lg text-white transition " +
                 (p.highlight
-                  ? "bg-slate-900 hover:bg-slate-700"
-                  : "bg-slate-800 hover:bg-slate-700")
+                  ? "bg-slate-900 hover:bg-slate-700 disabled:opacity-60"
+                  : "bg-slate-800 hover:bg-slate-700 disabled:opacity-60")
               }
             >
-              {p.cta}
+              {loadingKey === p.priceId ? "Redirecting…" : p.cta}
             </button>
-          </div>
+          </article>
         ))}
       </section>
 
