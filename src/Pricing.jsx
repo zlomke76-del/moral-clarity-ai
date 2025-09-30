@@ -50,35 +50,33 @@ export default function Pricing() {
         body: JSON.stringify({ priceId, coupon: maybeCoupon || null }),
       });
 
-      // Prefer JSON; fall back to text so we never show [object Object]
-      const data =
-        (await res.json().catch(async () => null)) ??
-        (() => {
-          // fallback to text if not JSON
-          return res
-            .text()
-            .then((t) => {
-              try {
-                return JSON.parse(t);
-              } catch {
-                return { error: t };
-              }
-            })
-            .catch(() => ({ error: "Unknown error" }));
-        })();
-
-      const payload = data instanceof Promise ? await data : data;
+      // Always read as text so we can show a clean message on error
+      const text = await res.text();
 
       if (!res.ok) {
-        const msg = payload?.error || payload?.message || "Checkout failed";
-        throw new Error(msg);
+        // show exactly what the server returned
+        alert(`Checkout failed (${res.status}): ${text}`);
+        setLoadingKey("");
+        return;
       }
 
-      if (!payload?.url) {
-        throw new Error("No checkout URL returned");
+      // parse JSON only on success
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        alert(`Server returned non-JSON on success: ${text}`);
+        setLoadingKey("");
+        return;
       }
 
-      window.location.href = payload.url;
+      if (!data?.url) {
+        alert(`No checkout URL returned: ${text}`);
+        setLoadingKey("");
+        return;
+      }
+
+      window.location.href = data.url;
     } catch (e) {
       console.error("Checkout error:", e);
       alert(e?.message || "Server error. Please try again.");
