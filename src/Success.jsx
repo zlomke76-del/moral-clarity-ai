@@ -1,12 +1,19 @@
-import React from "react";
-export default function Success() {
-  return (
-    <main className="max-w-3xl mx-auto px-6 py-16 text-center">
-      <h1 className="text-3xl font-bold">You’re in 🎉</h1>
-      <p className="mt-4 text-slate-700">Thanks for subscribing. A receipt is headed to your email.</p>
-      <a href="/" className="inline-block mt-8 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-700">
-        Go to homepage
-      </a>
-    </main>
-  );
-}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Success — Moral Clarity AI</title>https://github.com/zlomke76-del/moral-clarity-ai/blob/main/src/Success.jsx
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; margin:0; padding:40px; background:#0b1524; color:#e7eef9; }
+    .wrap { max-width: 720px; margin: 0 auto; }
+    a { color:#a8c6ff; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Thank you!</h1>
+    <p>Your subscription is set. You can close this tab or <a href="/">go back to the homepage</a>.</p>
+  </div>
+</body>
+</html>
