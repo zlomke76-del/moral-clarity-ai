@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-
+pk_live_51SCrCv0tWJXzci1Aykw5idEQRgt3IPU2aN7EWVG1SCB4dibVQgCvFOeiiFxDEhhsqR4CWjrV8IDwbsu3rfx2vObA00YLfcCjjQ
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2022-11-15",
 });
