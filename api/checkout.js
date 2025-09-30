@@ -1,108 +1,49 @@
-// /api/checkout.js — v5
-
+// /api/checkout.js
 import Stripe from "stripe";
 
-// small helper to always send JSON
-function sendJson(res, status, obj) {
-  res.status(status);
-  res.setHeader("Content-Type", "application/json");
-  res.end(JSON.stringify(obj));
-}
-
-// read raw body if not already parsed
-async function readRaw(req) {
-  if (req.body && typeof req.body === "object") return req.body;
-  const chunks = [];
-  for await (const c of req) chunks.push(c);
-  return Buffer.concat(chunks).toString("utf8");
-}
-
-function parseBody(raw, contentType = "") {
-  if (!raw) return {};
-  if (typeof raw === "object") return raw;
-
-  const ct = contentType.toLowerCase();
-
-  // try JSON first
-  try {
-    return JSON.parse(raw);
-  } catch (_) {
-    // then try x-www-form-urlencoded
-    if (ct.includes("application/x-www-form-urlencoded") || raw.includes("=")) {
-      const params = new URLSearchParams(raw);
-      const obj = {};
-      for (const [k, v] of params) obj[k] = v;
-      return obj;
-    }
-  }
-  return {};
-}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2024-06-20", // or your current
+});
 
 export default async function handler(req, res) {
-  // ✅ GET ping so we can verify the new function is live
-  if (req.method === "GET") {
-    res.status(200).setHeader("Content-Type", "application/json");
-    return res.end(JSON.stringify({ ok: true, route: "/api/checkout", version: "v5" }));
-  }
+  res.setHeader("Content-Type", "application/json");
 
   if (req.method !== "POST") {
-    return sendJson(res, 405, { error: "Method not allowed" });
+    res.setHeader("Allow", "POST");
+    return res.status(405).json({ error: { message: "Method Not Allowed" } });
   }
 
-  const secret = process.env.STRIPE_SECRET_KEY;
-  if (!secret) return sendJson(res, 500, { error: "Missing STRIPE_SECRET_KEY on server" });
-
-  // determine origin for success/cancel
-  const origin =
-    req.headers.origin ||
-    (req.headers.referer ? new URL(req.headers.referer).origin : null) ||
-    (req.headers.host ? `https://${req.headers.host}` : null);
-
-  if (!origin) return sendJson(res, 500, { error: "Unable to determine site origin" });
-
-  // parse body safely (supports JSON & form)
-  let body = {};
   try {
-    const raw = await readRaw(req);
-    body = parseBody(raw, req.headers["content-type"] || "");
-  } catch {
-    return sendJson(res, 400, { error: "Unable to read request body" });
-  }
+    // Ensure we actually got JSON
+    const { priceId, success_url, cancel_url, customer_email } =
+      (req.body && typeof req.body === "object" ? req.body : {}) || {};
 
-  const priceId = typeof body.priceId === "string" ? body.priceId.trim() : "";
-  const coupon = typeof body.coupon === "string" ? body.coupon.trim() : "";
-
-  if (!priceId) return sendJson(res, 400, { error: "Missing or invalid priceId" });
-
-  const stripe = new Stripe(secret, { apiVersion: "2022-11-15" });
-
-  try {
-    const params = {
-      mode: "subscription",
-      payment_method_types: ["card"],
-      line_items: [{ price: priceId, quantity: 1 }],
-      allow_promotion_codes: true,
-      success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/cancel`,
-    };
-
-    if (coupon) {
-      try {
-        const promos = await stripe.promotionCodes.list({
-          code: coupon,
-          active: true,
-          limit: 1,
-        });
-        if (promos.data[0]) params.discounts = [{ promotion_code: promos.data[0].id }];
-      } catch (e) {
-        console.warn("coupon lookup failed:", e?.message || e);
-      }
+    if (!priceId) {
+      return res.status(400).json({ error: { message: "Missing priceId" } });
     }
 
-    const session = await stripe.checkout.sessions.create(params);
-    return sendJson(res, 200, { url: session.url });
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url:
+        success_url ||
+        `${req.headers.origin || "https://www.moralclarityai.com"}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:
+        cancel_url ||
+        `${req.headers.origin || "https://www.moralclarityai.com"}/pricing`,
+      ...(customer_email ? { customer_email } : {}),
+    });
+
+    return res.status(200).json({ url: session.url });
   } catch (err) {
-    console.error("Stripe checkout error:", err);
-    return sendJson(res, 500, { error: err?.message || "Internal server error" });
+    const message =
+      err && typeof err.message === "string"
+        ? err.message
+        : String(err || "Unknown error");
+    return res.status(400).json({ error: { message } });
   }
 }
+
+// Vercel uses Node, so body parsing is automatic for JSON requests.
+// If you ever switch runtimes and lose that, use:
+// const body = JSON.parse(await new Promise(r=>{ let d=""; req.on("data",c=>d+=c); req.on("end",()=>r(d)); }));
