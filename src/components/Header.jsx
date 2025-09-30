@@ -11,11 +11,37 @@ export default function Header() {
         <div className="h-14 flex items-center justify-between">
           <Link to="/" className="font-bold text-slate-900">Moral Clarity AI</Link>
           <nav className="flex items-center gap-1">
-            {/* Use absolute anchors so they work from any route */}
+            {/* Anchors scroll to sections on the homepage */}
             <a href="/#problem" className={base}>Problem</a>
             <a href="/#updates" className={base}>Updates</a>
-            <NavLink to="/privacy" className={({isActive}) => isActive ? `${base} ${active}` : base}>Privacy</NavLink>
-            <NavLink to="/terms" className={({isActive}) => isActive ? `${base} ${active}` : base}>Terms</NavLink>
+
+            {/* New Pricing link */}
+            <NavLink
+              to="/pricing"
+              className={({ isActive }) =>
+                isActive ? `${base} ${active}` : base
+              }
+            >
+              Pricing
+            </NavLink>
+
+            <NavLink
+              to="/privacy"
+              className={({ isActive }) =>
+                isActive ? `${base} ${active}` : base
+              }
+            >
+              Privacy
+            </NavLink>
+
+            <NavLink
+              to="/terms"
+              className={({ isActive }) =>
+                isActive ? `${base} ${active}` : base
+              }
+            >
+              Terms
+            </NavLink>
           </nav>
         </div>
       </div>
