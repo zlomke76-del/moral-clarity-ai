@@ -1,157 +1,108 @@
-// src/Pricing.jsx — v5
-import React, { useState } from "react";
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Moral Clarity AI — Pricing</title>
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; margin: 0; padding: 32px; background:#0b1524; color:#e7eef9; }
+    .wrap { max-width: 1000px; margin: 0 auto; }
+    h1 { margin: 0 0 16px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+    .card { background:#0e1b33; border:1px solid #203356; border-radius:16px; padding:24px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+    .price { font-size: 32px; font-weight: 800; margin: 8px 0 16px; }
+    ul { margin:0 0 16px 18px; line-height:1.5; }
+    button { width:100%; padding:14px 16px; border-radius:12px; border:none; font-weight:700; cursor:pointer; background:#e7eef9; color:#0b1524; }
+    button[disabled] { opacity: .6; cursor: not-allowed; }
+    .note { opacity:.8; margin-top: 10px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Pick a plan</h1>
+    <p class="note">You can upgrade or cancel anytime.</p>
 
-const PLANS = [
-  {
-    key: "standard",
-    name: "Standard",
-    priceText: "$25 / month",
-    blurb: "Personal use. Anchored answers and updates.",
-    priceId: "price_1SCsmG0tWJXzci1AX3GLoTj8",
-    features: ["Neutral, anchored answers", "Email updates", "Basic support"],
-    cta: "Subscribe",
-  },
-  {
-    key: "family",
-    name: "Family",
-    priceText: "$50 / month",
-    blurb: "For households or small teams — governance & audit-ready insights.",
-    priceId: "price_1SCsmv0tWJXzci1A6hvi2Ccp",
-    features: ["Everything in Standard", "Governance guardrails", "Audit-friendly summaries"],
-    cta: "Subscribe",
-    highlight: true,
-  },
-  {
-    key: "ministry",
-    name: "Ministry Plan",
-    priceText: "$249 / month",
-    blurb: "Tailored for ministries and congregations.",
-    priceId: "price_1SCso80tWJXzci1AoZiKFy3b",
-    features: [
-      "Anchored analysis for pastors and boards",
-      "Balanced materials for teaching",
-      "Support for church governance",
-      "Founding partners: coupon eligible",
-    ],
-    cta: "Subscribe as a ministry",
-  },
-];
+    <div class="grid">
+      <div class="card">
+        <h2>Standard</h2>
+        <div class="price">$25 / month</div>
+        <ul>
+          <li>Neutral, anchored answers</li>
+          <li>Email updates</li>
+          <li>Basic support</li>
+        </ul>
+        <button id="btn-standard">Subscribe</button>
+      </div>
 
-export default function Pricing() {
-  const [loadingKey, setLoadingKey] = useState("");
-  const [coupon, setCoupon] = useState("");
+      <div class="card">
+        <h2>Family</h2>
+        <div class="price">$50 / month</div>
+        <ul>
+          <li>Everything in Standard</li>
+          <li>Governance guardrails</li>
+          <li>Audit-friendly summaries</li>
+        </ul>
+        <button id="btn-family">Subscribe</button>
+      </div>
 
-  async function startCheckout(priceId, maybeCoupon) {
-    try {
-      setLoadingKey(priceId);
+      <div class="card">
+        <h2>Ministry Plan</h2>
+        <div class="price">$249 / month</div>
+        <ul>
+          <li>Anchored analysis for pastors/boards</li>
+          <li>Teaching materials</li>
+          <li>Church hub + family access</li>
+        </ul>
+        <button id="btn-ministry">Subscribe</button>
+      </div>
+    </div>
 
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId, coupon: maybeCoupon || null }),
-      });
+    <p class="note">Having trouble? Email support@moralclarityai.com.</p>
+  </div>
 
-      // read text first to avoid “[object Object]”
-      const text = await res.text();
+  <script>
+    // 🔁 REPLACE these with your actual Stripe price IDs (test or live).
+    const PRICE_STANDARD = "price_STANDARD_REPLACE_ME";
+    const PRICE_FAMILY   = "price_FAMILY_REPLACE_ME";
+    const PRICE_MINISTRY = "price_MINISTRY_REPLACE_ME";
 
-      if (!res.ok) {
-        alert(`Checkout failed (${res.status}): ${text}`);
-        setLoadingKey("");
-        return;
-      }
-
-      let data;
+    async function startCheckout(priceId, button) {
       try {
-        data = JSON.parse(text);
-      } catch {
-        alert(`Server returned non-JSON: ${text}`);
-        setLoadingKey("");
-        return;
-      }
+        button.disabled = true;
+        button.textContent = "Redirecting…";
 
-      if (!data?.url) {
-        alert(`No checkout URL returned: ${text}`);
-        setLoadingKey("");
-        return;
-      }
+        const resp = await fetch("/api/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ priceId })
+        });
 
-      window.location.href = data.url;
-    } catch (e) {
-      console.error("Checkout error:", e);
-      alert(e?.message || "Server error. Please try again.");
-      setLoadingKey("");
+        // Expect clean JSON back from the server
+        const data = await resp.json();
+
+        if (!resp.ok) {
+          throw new Error(data?.error?.message || "Checkout failed");
+        }
+        if (!data?.url) {
+          throw new Error("No checkout URL returned.");
+        }
+        window.location.href = data.url;
+      } catch (err) {
+        alert(err?.message || "Something went wrong starting checkout.");
+        button.disabled = false;
+        button.textContent = "Subscribe";
+      }
     }
-  }
 
-  return (
-    <main className="max-w-6xl mx-auto px-6 py-16">
-      <section className="text-center">
-        <h1 className="text-4xl font-extrabold tracking-tight">Pricing</h1>
-        <p className="mt-3 text-slate-600">Pick a plan. Upgrade or cancel anytime in the billing portal.</p>
-      </section>
-
-      <section className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {PLANS.map((p) => (
-          <article
-            key={p.key}
-            className={
-              "rounded-xl border bg-white p-6 shadow-sm flex flex-col " +
-              (p.highlight ? "border-slate-900" : "border-slate-200")
-            }
-          >
-            <div className="flex-1">
-              <h3 className="text-xl font-semibold">{p.name}</h3>
-              <p className="mt-1 text-slate-600">{p.blurb}</p>
-              <div className="mt-4 text-3xl font-extrabold">{p.priceText}</div>
-
-              <ul className="mt-4 space-y-2 text-sm text-slate-700">
-                {p.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2">
-                    <span className="text-slate-400">•</span>
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {p.key === "ministry" && (
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-slate-700">Have a coupon? (optional)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. FAITH50"
-                    value={coupon}
-                    onChange={(e) => setCoupon(e.target.value.toUpperCase())}
-                    className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-500"
-                  />
-                  <p className="mt-1 text-xs text-slate-500">
-                    You can also enter promotion codes directly on the checkout page.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={() => startCheckout(p.priceId, p.key === "ministry" ? coupon.trim() : null)}
-              disabled={loadingKey === p.priceId}
-              className={
-                "mt-6 w-full px-4 py-2 rounded-lg text-white transition " +
-                (p.highlight ? "bg-slate-900 hover:bg-slate-700" : "bg-slate-800 hover:bg-slate-700") +
-                " disabled:opacity-60"
-              }
-            >
-              {loadingKey === p.priceId ? "Redirecting…" : `${p.cta} • v5`}
-            </button>
-          </article>
-        ))}
-      </section>
-
-      <section className="mt-10 text-center text-sm text-slate-500">
-        <p>
-          Payments handled by Stripe. By subscribing you agree to our{" "}
-          <a className="underline" href="/terms">Terms</a> and{" "}
-          <a className="underline" href="/privacy">Privacy Policy</a>.
-        </p>
-      </section>
-    </main>
-  );
-}
+    document.getElementById("btn-standard").addEventListener("click", (e) => {
+      e.preventDefault(); startCheckout(PRICE_STANDARD, e.currentTarget);
+    });
+    document.getElementById("btn-family").addEventListener("click", (e) => {
+      e.preventDefault(); startCheckout(PRICE_FAMILY, e.currentTarget);
+    });
+    document.getElementById("btn-ministry").addEventListener("click", (e) => {
+      e.preventDefault(); startCheckout(PRICE_MINISTRY, e.currentTarget);
+    });
+  </script>
+</body>
+</html>
