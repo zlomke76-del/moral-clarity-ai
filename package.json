@@ -12,7 +12,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0",
-    "stripe": "^16.6.0"
+    "stripe": "^16.4.0"
   },
   "devDependencies": {
     "vite": "^5.4.0",
