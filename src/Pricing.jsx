@@ -48,14 +48,24 @@ export default function Pricing() {
   const startCheckout = async (priceId, maybeCoupon) => {
     try {
       setLoadingKey(priceId);
+
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ priceId, coupon: maybeCoupon || null }),
       });
-      if (!res.ok) throw new Error(await res.text());
-      const { url } = await res.json();
-      window.location.href = url;
+
+      const data = await res.json().catch(() => ({})); // prevent JSON parse crash
+
+      if (!res.ok) {
+        throw new Error(data.error || "Server error. Please try again.");
+      }
+
+      if (!data?.url) {
+        throw new Error("Checkout did not return a URL.");
+      }
+
+      window.location.href = data.url;
     } catch (e) {
       alert(e?.message || "Server error. Please try again.");
       setLoadingKey("");
@@ -116,7 +126,10 @@ export default function Pricing() {
 
             <button
               onClick={() =>
-                startCheckout(p.priceId, p.key === "ministry" ? coupon.trim() : null)
+                startCheckout(
+                  p.priceId,
+                  p.key === "ministry" ? coupon.trim() : null
+                )
               }
               disabled={loadingKey === p.priceId}
               className={
