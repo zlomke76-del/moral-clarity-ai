@@ -1,12 +1,17 @@
+// app/api/checkout/route.js
 import { NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
+import Stripe from "stripe";
 
 export const runtime = "nodejs";       // avoid Edge runtime stalls
 export const dynamic = "force-dynamic";
 
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
+  apiVersion: "2024-06-20",
+});
+
 export async function POST(req) {
   try {
-    const { priceId } = await req.json();      // <-- must be JSON
+    const { priceId } = await req.json();          // must be JSON
     if (!priceId) {
       return NextResponse.json({ error: "Missing priceId" }, { status: 400 });
     }
@@ -21,7 +26,6 @@ export async function POST(req) {
 
     return NextResponse.json({ url: session.url }, { status: 200 });
   } catch (err) {
-    const msg = err?.message || "Checkout error";
-    return NextResponse.json({ error: msg }, { status: 400 });
+    return NextResponse.json({ error: err?.message || "Checkout error" }, { status: 400 });
   }
 }
