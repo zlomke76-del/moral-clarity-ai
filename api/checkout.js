@@ -1,9 +1,6 @@
 // /api/checkout.js
 import Stripe from "stripe";
 
-/**
- * Always reply JSON (never HTML), so the frontend can display real messages.
- */
 function sendJson(res, status, obj) {
   res.status(status);
   res.setHeader("Content-Type", "application/json");
@@ -20,7 +17,7 @@ export default async function handler(req, res) {
     return sendJson(res, 500, { error: "Missing STRIPE_SECRET_KEY on server" });
   }
 
-  // ---- Parse body robustly (Vercel may give string or already-parsed object) ----
+  // Parse body robustly (string, object, or raw stream)
   let body = {};
   try {
     if (typeof req.body === "string") {
@@ -28,13 +25,12 @@ export default async function handler(req, res) {
     } else if (req.body && typeof req.body === "object") {
       body = req.body;
     } else {
-      // Read raw stream just in case (older runtimes)
       const chunks = [];
       for await (const c of req) chunks.push(c);
       const raw = Buffer.concat(chunks).toString("utf8");
       body = raw ? JSON.parse(raw) : {};
     }
-  } catch (e) {
+  } catch {
     return sendJson(res, 400, { error: "Request body is not valid JSON" });
   }
 
@@ -44,7 +40,6 @@ export default async function handler(req, res) {
     return sendJson(res, 400, { error: "Missing or invalid priceId" });
   }
 
-  // Build a safe base URL. Prefer Origin, then Referer, then Host.
   const origin =
     req.headers.origin ||
     (req.headers.referer ? new URL(req.headers.referer).origin : null) ||
@@ -63,18 +58,22 @@ export default async function handler(req, res) {
       line_items: [{ price: priceId, quantity: 1 }],
       allow_promotion_codes: true,
       success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/cancel`
+      cancel_url: `${origin}/cancel`,
     };
 
-    // Optional coupon
     if (coupon && typeof coupon === "string" && coupon.trim()) {
-      const promos = await stripe.promotionCodes.list({
-        code: coupon.trim(),
-        active: true,
-        limit: 1
-      });
-      if (promos.data[0]) {
-        params.discounts = [{ promotion_code: promos.data[0].id }];
+      try {
+        const promos = await stripe.promotionCodes.list({
+          code: coupon.trim(),
+          active: true,
+          limit: 1,
+        });
+        if (promos.data[0]) {
+          params.discounts = [{ promotion_code: promos.data[0].id }];
+        }
+      } catch (e) {
+        // If coupon lookup fails, still allow checkout to proceed without it
+        console.warn("⚠️ coupon lookup failed:", e?.message || e);
       }
     }
 
@@ -82,7 +81,6 @@ export default async function handler(req, res) {
     return sendJson(res, 200, { url: session.url });
   } catch (err) {
     console.error("❌ Stripe checkout error:", err);
-    // Normalize Stripe errors to a simple message for the UI
     const message =
       (err && err.message) ||
       (err && err.error && err.error.message) ||
