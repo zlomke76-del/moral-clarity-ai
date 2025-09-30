@@ -1,9 +1,5 @@
 import React, { useState } from "react";
 
-/**
- * Plans shown on the page.
- * ⛳ Replace each priceId with the real Stripe Price ID from your dashboard.
- */
 const PLANS = [
   {
     key: "standard",
@@ -11,12 +7,8 @@ const PLANS = [
     priceText: "$25 / month",
     blurb: "Personal use. Anchored answers and updates.",
     priceId: "price_standard_id_here",
-    features: [
-      "Neutral, anchored answers",
-      "Email updates",
-      "Basic support",
-    ],
-    cta: "Subscribe",
+    features: ["Neutral, anchored answers", "Email updates", "Basic support"],
+    cta: "Subscribe"
   },
   {
     key: "family",
@@ -24,13 +16,9 @@ const PLANS = [
     priceText: "$50 / month",
     blurb: "For households or small teams — governance & audit-ready insights.",
     priceId: "price_family_id_here",
-    features: [
-      "Everything in Standard",
-      "Governance guardrails",
-      "Audit-friendly summaries",
-    ],
+    features: ["Everything in Standard", "Governance guardrails", "Audit-friendly summaries"],
     cta: "Subscribe",
-    highlight: true, // draws the eye
+    highlight: true
   },
   {
     key: "ministry",
@@ -42,15 +30,15 @@ const PLANS = [
       "Anchored analysis for pastors and boards",
       "Balanced materials for teaching",
       "Support for church governance",
-      "Founding partners: coupon eligible",
+      "Founding partners: coupon eligible"
     ],
-    cta: "Subscribe as a ministry",
-  },
+    cta: "Subscribe as a ministry"
+  }
 ];
 
 export default function Pricing() {
-  const [loadingKey, setLoadingKey] = useState("");      // which plan is loading
-  const [coupon, setCoupon] = useState("");              // optional coupon for Ministry
+  const [loadingKey, setLoadingKey] = useState("");
+  const [coupon, setCoupon] = useState("");
 
   const startCheckout = async (priceId, maybeCoupon) => {
     try {
@@ -58,21 +46,13 @@ export default function Pricing() {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          priceId,
-          coupon: maybeCoupon || null,   // if provided we’ll pre-apply it
-        }),
+        body: JSON.stringify({ priceId, coupon: maybeCoupon || null })
       });
-
-      if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || "Checkout failed.");
-      }
-
+      if (!res.ok) throw new Error(await res.text());
       const { url } = await res.json();
-      window.location.href = url; // Stripe-hosted Checkout
-    } catch (err) {
-      alert(err.message || "Something went wrong starting checkout.");
+      window.location.href = url;
+    } catch (e) {
+      alert(e?.message || "Server error. Please try again.");
       setLoadingKey("");
     }
   };
@@ -81,9 +61,7 @@ export default function Pricing() {
     <main className="max-w-6xl mx-auto px-6 py-16">
       <section className="text-center">
         <h1 className="text-4xl font-extrabold tracking-tight">Pricing</h1>
-        <p className="mt-3 text-slate-600">
-          Pick a plan. Upgrade or cancel anytime in the billing portal.
-        </p>
+        <p className="mt-3 text-slate-600">Pick a plan. Upgrade or cancel anytime in the billing portal.</p>
       </section>
 
       <section className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -109,15 +87,11 @@ export default function Pricing() {
                 ))}
               </ul>
 
-              {/* Optional coupon field only shown for Ministry Plan */}
               {p.key === "ministry" && (
                 <div className="mt-6">
-                  <label className="block text-sm font-medium text-slate-700">
-                    Have a coupon? (optional)
-                  </label>
+                  <label className="block text-sm font-medium text-slate-700">Have a coupon? (optional)</label>
                   <input
                     type="text"
-                    inputMode="text"
                     placeholder="e.g. FAITH50"
                     value={coupon}
                     onChange={(e) => setCoupon(e.target.value.toUpperCase())}
@@ -135,9 +109,8 @@ export default function Pricing() {
               disabled={loadingKey === p.priceId}
               className={
                 "mt-6 w-full px-4 py-2 rounded-lg text-white transition " +
-                (p.highlight
-                  ? "bg-slate-900 hover:bg-slate-700 disabled:opacity-60"
-                  : "bg-slate-800 hover:bg-slate-700 disabled:opacity-60")
+                (p.highlight ? "bg-slate-900 hover:bg-slate-700" : "bg-slate-800 hover:bg-slate-700") +
+                " disabled:opacity-60"
               }
             >
               {loadingKey === p.priceId ? "Redirecting…" : p.cta}
