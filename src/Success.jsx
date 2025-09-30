@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Success — Moral Clarity AI</title>https://github.com/zlomke76-del/moral-clarity-ai/blob/main/src/Success.jsx
+  <title>Success — Moral Clarity AI</title>
   <style>
     body { font-family: system-ui, Arial, sans-serif; margin:0; padding:40px; background:#0b1524; color:#e7eef9; }
     .wrap { max-width: 720px; margin: 0 auto; }
