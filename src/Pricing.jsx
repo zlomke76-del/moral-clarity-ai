@@ -3,13 +3,13 @@ import { loadStripe } from "@stripe/stripe-js";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PK);
 
-// TODO: replace price IDs with real ones from Stripe dashboard
+// ⚡ Replace these placeholders with the real Stripe Price IDs from your dashboard
 const PLANS = [
   {
     name: "Standard",
-    priceText: "$20 / month",
+    priceText: "$25 / month",
     blurb: "Personal use. Anchored answers and updates.",
-    priceId: "price_standard_monthly", // e.g. price_1Pxxxxxxx
+    priceId: "price_standard_id_here", 
     features: [
       "Neutral, anchored answers",
       "Email updates",
@@ -18,10 +18,10 @@ const PLANS = [
     cta: "Subscribe",
   },
   {
-    name: "Team",
-    priceText: "$49 / month",
-    blurb: "Teams & orgs. Governance & audit trail.",
-    priceId: "price_team_monthly",
+    name: "Family",
+    priceText: "$50 / month",
+    blurb: "For households or teams — governance and audit-ready insights.",
+    priceId: "price_family_id_here", 
     features: [
       "Everything in Standard",
       "Governance guardrails",
@@ -31,16 +31,17 @@ const PLANS = [
     highlight: true,
   },
   {
-    name: "Annual",
-    priceText: "$200 / year",
-    blurb: "Best value. Two months free.",
-    priceId: "price_standard_yearly",
+    name: "Ministry Plan",
+    priceText: "$249 / month",
+    blurb: "Tailored for ministries and congregations.",
+    priceId: "price_ministry_id_here", 
     features: [
-      "Everything in Standard",
-      "Priority updates",
-      "Best annual pricing",
+      "Anchored analysis for pastors and boards",
+      "Balanced materials for teaching",
+      "Support for church governance",
+      "Founding partners: 50% off with coupon",
     ],
-    cta: "Subscribe annually",
+    cta: "Subscribe as a ministry",
   },
 ];
 
