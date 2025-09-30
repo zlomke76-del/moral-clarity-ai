@@ -1,3 +1,4 @@
+// src/Pricing.jsx — v5
 import React, { useState } from "react";
 
 const PLANS = [
@@ -50,22 +51,20 @@ export default function Pricing() {
         body: JSON.stringify({ priceId, coupon: maybeCoupon || null }),
       });
 
-      // Always read as text so we can show a clean message on error
+      // read text first to avoid “[object Object]”
       const text = await res.text();
 
       if (!res.ok) {
-        // show exactly what the server returned
         alert(`Checkout failed (${res.status}): ${text}`);
         setLoadingKey("");
         return;
       }
 
-      // parse JSON only on success
       let data;
       try {
         data = JSON.parse(text);
       } catch {
-        alert(`Server returned non-JSON on success: ${text}`);
+        alert(`Server returned non-JSON: ${text}`);
         setLoadingKey("");
         return;
       }
@@ -140,7 +139,7 @@ export default function Pricing() {
                 " disabled:opacity-60"
               }
             >
-              {loadingKey === p.priceId ? "Redirecting…" : p.cta}
+              {loadingKey === p.priceId ? "Redirecting…" : `${p.cta} • v5`}
             </button>
           </article>
         ))}
