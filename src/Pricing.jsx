@@ -8,7 +8,7 @@ const PLANS = [
     blurb: "Personal use. Anchored answers and updates.",
     priceId: "price_1SCsmG0tWJXzci1AX3GLoTj8",
     features: ["Neutral, anchored answers", "Email updates", "Basic support"],
-    cta: "Subscribe"
+    cta: "Subscribe",
   },
   {
     key: "family",
@@ -16,13 +16,9 @@ const PLANS = [
     priceText: "$50 / month",
     blurb: "For households or small teams — governance & audit-ready insights.",
     priceId: "price_1SCsmv0tWJXzci1A6hvi2Ccp",
-    features: [
-      "Everything in Standard",
-      "Governance guardrails",
-      "Audit-friendly summaries"
-    ],
+    features: ["Everything in Standard", "Governance guardrails", "Audit-friendly summaries"],
     cta: "Subscribe",
-    highlight: true
+    highlight: true,
   },
   {
     key: "ministry",
@@ -34,54 +30,67 @@ const PLANS = [
       "Anchored analysis for pastors and boards",
       "Balanced materials for teaching",
       "Support for church governance",
-      "Founding partners: coupon eligible"
+      "Founding partners: coupon eligible",
     ],
-    cta: "Subscribe as a ministry"
-  }
+    cta: "Subscribe as a ministry",
+  },
 ];
 
 export default function Pricing() {
   const [loadingKey, setLoadingKey] = useState("");
   const [coupon, setCoupon] = useState("");
 
-  const startCheckout = async (priceId, maybeCoupon) => {
+  async function startCheckout(priceId, maybeCoupon) {
     try {
       setLoadingKey(priceId);
 
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId, coupon: maybeCoupon || null })
+        body: JSON.stringify({ priceId, coupon: maybeCoupon || null }),
       });
 
-      let data = {};
-      try {
-        data = await res.json();
-      } catch {
-        // If server crashed and returned HTML, data stays {}
-      }
+      // Prefer JSON; fall back to text so we never show [object Object]
+      const data =
+        (await res.json().catch(async () => null)) ??
+        (() => {
+          // fallback to text if not JSON
+          return res
+            .text()
+            .then((t) => {
+              try {
+                return JSON.parse(t);
+              } catch {
+                return { error: t };
+              }
+            })
+            .catch(() => ({ error: "Unknown error" }));
+        })();
+
+      const payload = data instanceof Promise ? await data : data;
 
       if (!res.ok) {
-        throw new Error(data.error || "Server error. Please try again.");
-      }
-      if (!data?.url) {
-        throw new Error("Checkout did not return a URL.");
+        const msg = payload?.error || payload?.message || "Checkout failed";
+        throw new Error(msg);
       }
 
-      window.location.href = data.url;
+      if (!payload?.url) {
+        throw new Error("No checkout URL returned");
+      }
+
+      window.location.href = payload.url;
     } catch (e) {
+      console.error("Checkout error:", e);
       alert(e?.message || "Server error. Please try again.");
       setLoadingKey("");
     }
-  };
+  }
 
   return (
     <main className="max-w-6xl mx-auto px-6 py-16">
       <section className="text-center">
         <h1 className="text-4xl font-extrabold tracking-tight">Pricing</h1>
-        <p className="mt-3 text-slate-600">
-          Pick a plan. Upgrade or cancel anytime in the billing portal.
-        </p>
+        <p className="mt-3 text-slate-600">Pick a plan. Upgrade or cancel anytime in the billing portal.</p>
       </section>
 
       <section className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -109,9 +118,7 @@ export default function Pricing() {
 
               {p.key === "ministry" && (
                 <div className="mt-6">
-                  <label className="block text-sm font-medium text-slate-700">
-                    Have a coupon? (optional)
-                  </label>
+                  <label className="block text-sm font-medium text-slate-700">Have a coupon? (optional)</label>
                   <input
                     type="text"
                     placeholder="e.g. FAITH50"
@@ -120,26 +127,18 @@ export default function Pricing() {
                     className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-500"
                   />
                   <p className="mt-1 text-xs text-slate-500">
-                    You can also enter promotion codes directly on the checkout
-                    page.
+                    You can also enter promotion codes directly on the checkout page.
                   </p>
                 </div>
               )}
             </div>
 
             <button
-              onClick={() =>
-                startCheckout(
-                  p.priceId,
-                  p.key === "ministry" ? coupon.trim() : null
-                )
-              }
+              onClick={() => startCheckout(p.priceId, p.key === "ministry" ? coupon.trim() : null)}
               disabled={loadingKey === p.priceId}
               className={
                 "mt-6 w-full px-4 py-2 rounded-lg text-white transition " +
-                (p.highlight
-                  ? "bg-slate-900 hover:bg-slate-700"
-                  : "bg-slate-800 hover:bg-slate-700") +
+                (p.highlight ? "bg-slate-900 hover:bg-slate-700" : "bg-slate-800 hover:bg-slate-700") +
                 " disabled:opacity-60"
               }
             >
@@ -152,14 +151,8 @@ export default function Pricing() {
       <section className="mt-10 text-center text-sm text-slate-500">
         <p>
           Payments handled by Stripe. By subscribing you agree to our{" "}
-          <a className="underline" href="/terms">
-            Terms
-          </a>{" "}
-          and{" "}
-          <a className="underline" href="/privacy">
-            Privacy Policy
-          </a>
-          .
+          <a className="underline" href="/terms">Terms</a> and{" "}
+          <a className="underline" href="/privacy">Privacy Policy</a>.
         </p>
       </section>
     </main>
