@@ -6,34 +6,39 @@ const PLANS = [
     name: "Standard",
     priceText: "$25 / month",
     blurb: "Personal use. Anchored answers and updates.",
-    priceId: "price_standard_id_here",
+    priceId: "price_1SCsmG0tWJXzci1AX3GLoTj8", // ✅ real Stripe Price ID
     features: ["Neutral, anchored answers", "Email updates", "Basic support"],
-    cta: "Subscribe"
+    cta: "Subscribe",
   },
   {
     key: "family",
     name: "Family",
     priceText: "$50 / month",
-    blurb: "For households or small teams — governance & audit-ready insights.",
-    priceId: "price_family_id_here",
-    features: ["Everything in Standard", "Governance guardrails", "Audit-friendly summaries"],
+    blurb:
+      "For households or small teams — governance & audit-ready insights.",
+    priceId: "price_1SCsmv0tWJXzci1A6hvi2Ccp", // ✅ real Stripe Price ID
+    features: [
+      "Everything in Standard",
+      "Governance guardrails",
+      "Audit-friendly summaries",
+    ],
     cta: "Subscribe",
-    highlight: true
+    highlight: true,
   },
   {
     key: "ministry",
     name: "Ministry Plan",
     priceText: "$249 / month",
     blurb: "Tailored for ministries and congregations.",
-    priceId: "price_ministry_id_here",
+    priceId: "price_1SCso80tWJXzci1AoZiKFy3b", // ✅ real Stripe Price ID
     features: [
       "Anchored analysis for pastors and boards",
       "Balanced materials for teaching",
       "Support for church governance",
-      "Founding partners: coupon eligible"
+      "Founding partners: coupon eligible",
     ],
-    cta: "Subscribe as a ministry"
-  }
+    cta: "Subscribe as a ministry",
+  },
 ];
 
 export default function Pricing() {
@@ -46,7 +51,7 @@ export default function Pricing() {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId, coupon: maybeCoupon || null })
+        body: JSON.stringify({ priceId, coupon: maybeCoupon || null }),
       });
       if (!res.ok) throw new Error(await res.text());
       const { url } = await res.json();
@@ -61,7 +66,9 @@ export default function Pricing() {
     <main className="max-w-6xl mx-auto px-6 py-16">
       <section className="text-center">
         <h1 className="text-4xl font-extrabold tracking-tight">Pricing</h1>
-        <p className="mt-3 text-slate-600">Pick a plan. Upgrade or cancel anytime in the billing portal.</p>
+        <p className="mt-3 text-slate-600">
+          Pick a plan. Upgrade or cancel anytime in the billing portal.
+        </p>
       </section>
 
       <section className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -89,7 +96,9 @@ export default function Pricing() {
 
               {p.key === "ministry" && (
                 <div className="mt-6">
-                  <label className="block text-sm font-medium text-slate-700">Have a coupon? (optional)</label>
+                  <label className="block text-sm font-medium text-slate-700">
+                    Have a coupon? (optional)
+                  </label>
                   <input
                     type="text"
                     placeholder="e.g. FAITH50"
@@ -98,18 +107,23 @@ export default function Pricing() {
                     className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-500"
                   />
                   <p className="mt-1 text-xs text-slate-500">
-                    You can also enter promotion codes directly on the checkout page.
+                    You can also enter promotion codes directly on the checkout
+                    page.
                   </p>
                 </div>
               )}
             </div>
 
             <button
-              onClick={() => startCheckout(p.priceId, p.key === "ministry" ? coupon.trim() : null)}
+              onClick={() =>
+                startCheckout(p.priceId, p.key === "ministry" ? coupon.trim() : null)
+              }
               disabled={loadingKey === p.priceId}
               className={
                 "mt-6 w-full px-4 py-2 rounded-lg text-white transition " +
-                (p.highlight ? "bg-slate-900 hover:bg-slate-700" : "bg-slate-800 hover:bg-slate-700") +
+                (p.highlight
+                  ? "bg-slate-900 hover:bg-slate-700"
+                  : "bg-slate-800 hover:bg-slate-700") +
                 " disabled:opacity-60"
               }
             >
@@ -122,8 +136,14 @@ export default function Pricing() {
       <section className="mt-10 text-center text-sm text-slate-500">
         <p>
           Payments handled by Stripe. By subscribing you agree to our{" "}
-          <a className="underline" href="/terms">Terms</a> and{" "}
-          <a className="underline" href="/privacy">Privacy Policy</a>.
+          <a className="underline" href="/terms">
+            Terms
+          </a>{" "}
+          and{" "}
+          <a className="underline" href="/privacy">
+            Privacy Policy
+          </a>
+          .
         </p>
       </section>
     </main>
