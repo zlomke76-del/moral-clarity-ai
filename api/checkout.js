@@ -7,47 +7,62 @@ function sendJson(res, status, obj) {
   res.end(JSON.stringify(obj));
 }
 
+async function readRawBody(req) {
+  if (req.body && typeof req.body === "object") return req.body; // already parsed
+  const chunks = [];
+  for await (const c of req) chunks.push(c);
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+function parseBody(raw, contentType) {
+  if (raw && typeof raw === "object") return raw;
+  if (typeof raw === "string" && raw.trim()) {
+    const ct = (contentType || "").toLowerCase();
+
+    // Try JSON first
+    try {
+      return JSON.parse(raw);
+    } catch (_) {
+      // Then urlencoded (PowerShell or some clients)
+      if (ct.includes("application/x-www-form-urlencoded") || raw.includes("=")) {
+        const params = new URLSearchParams(raw);
+        const obj = {};
+        for (const [k, v] of params.entries()) obj[k] = v;
+        return obj;
+      }
+    }
+  }
+  return {};
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return sendJson(res, 405, { error: "Method not allowed" });
   }
 
   const secret = process.env.STRIPE_SECRET_KEY;
-  if (!secret) {
-    return sendJson(res, 500, { error: "Missing STRIPE_SECRET_KEY on server" });
-  }
-
-  // Parse body robustly (string, object, or raw stream)
-  let body = {};
-  try {
-    if (typeof req.body === "string") {
-      body = JSON.parse(req.body || "{}");
-    } else if (req.body && typeof req.body === "object") {
-      body = req.body;
-    } else {
-      const chunks = [];
-      for await (const c of req) chunks.push(c);
-      const raw = Buffer.concat(chunks).toString("utf8");
-      body = raw ? JSON.parse(raw) : {};
-    }
-  } catch {
-    return sendJson(res, 400, { error: "Request body is not valid JSON" });
-  }
-
-  const { priceId, coupon } = body;
-
-  if (!priceId || typeof priceId !== "string") {
-    return sendJson(res, 400, { error: "Missing or invalid priceId" });
-  }
+  if (!secret) return sendJson(res, 500, { error: "Missing STRIPE_SECRET_KEY on server" });
 
   const origin =
     req.headers.origin ||
     (req.headers.referer ? new URL(req.headers.referer).origin : null) ||
     (req.headers.host ? `https://${req.headers.host}` : null);
 
-  if (!origin) {
-    return sendJson(res, 500, { error: "Unable to determine site origin" });
+  if (!origin) return sendJson(res, 500, { error: "Unable to determine site origin" });
+
+  // Parse body (JSON or form)
+  let body = {};
+  try {
+    const raw = await readRawBody(req);
+    body = parseBody(raw, req.headers["content-type"]);
+  } catch {
+    return sendJson(res, 400, { error: "Unable to read request body" });
   }
+
+  const priceId = typeof body.priceId === "string" ? body.priceId.trim() : "";
+  const coupon = typeof body.coupon === "string" ? body.coupon.trim() : "";
+
+  if (!priceId) return sendJson(res, 400, { error: "Missing or invalid priceId" });
 
   const stripe = new Stripe(secret, { apiVersion: "2022-11-15" });
 
@@ -61,18 +76,15 @@ export default async function handler(req, res) {
       cancel_url: `${origin}/cancel`,
     };
 
-    if (coupon && typeof coupon === "string" && coupon.trim()) {
+    if (coupon) {
       try {
         const promos = await stripe.promotionCodes.list({
-          code: coupon.trim(),
+          code: coupon,
           active: true,
           limit: 1,
         });
-        if (promos.data[0]) {
-          params.discounts = [{ promotion_code: promos.data[0].id }];
-        }
+        if (promos.data[0]) params.discounts = [{ promotion_code: promos.data[0].id }];
       } catch (e) {
-        // If coupon lookup fails, still allow checkout to proceed without it
         console.warn("⚠️ coupon lookup failed:", e?.message || e);
       }
     }
@@ -81,10 +93,6 @@ export default async function handler(req, res) {
     return sendJson(res, 200, { url: session.url });
   } catch (err) {
     console.error("❌ Stripe checkout error:", err);
-    const message =
-      (err && err.message) ||
-      (err && err.error && err.error.message) ||
-      "Internal server error";
-    return sendJson(res, 500, { error: message });
+    return sendJson(res, 500, { error: err?.message || "Internal server error" });
   }
 }
