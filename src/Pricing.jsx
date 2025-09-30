@@ -20,7 +20,7 @@
 <body>
   <div class="wrap">
     <h1>Pick a plan</h1>
-    <p class="note">You can upgrade or cancel anytime.</p>
+    <p class="note">Upgrade or cancel anytime.</p>
 
     <div class="grid">
       <div class="card">
@@ -61,10 +61,10 @@
   </div>
 
   <script>
-    // 🔁 REPLACE these with your actual Stripe price IDs (test or live).
-    const PRICE_STANDARD = "price_STANDARD_REPLACE_ME";
-    const PRICE_FAMILY   = "price_FAMILY_REPLACE_ME";
-    const PRICE_MINISTRY = "price_MINISTRY_REPLACE_ME";
+    // YOUR actual Stripe Price IDs (LIVE mode values you provided)
+    const PRICE_STANDARD = "price_1SCsmG0tWJXzci1AX3GLoTj8"; // $25
+    const PRICE_FAMILY   = "price_1SCsmv0tWJXzci1A6hvi2Ccp"; // $50
+    const PRICE_MINISTRY = "price_1SCso80tWJXzci1AoZiKFy3b"; // $249
 
     async function startCheckout(priceId, button) {
       try {
@@ -77,15 +77,11 @@
           body: JSON.stringify({ priceId })
         });
 
-        // Expect clean JSON back from the server
         const data = await resp.json();
 
-        if (!resp.ok) {
-          throw new Error(data?.error?.message || "Checkout failed");
-        }
-        if (!data?.url) {
-          throw new Error("No checkout URL returned.");
-        }
+        if (!resp.ok) throw new Error(data?.error?.message || "Checkout failed");
+        if (!data?.url) throw new Error("No checkout URL returned.");
+
         window.location.href = data.url;
       } catch (err) {
         alert(err?.message || "Something went wrong starting checkout.");
