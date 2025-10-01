@@ -84,13 +84,12 @@ export async function POST(req: NextRequest) {
     const completion = await client.chat.completions.create({
       model: MODEL,
       messages: chatMessages,
-      max_completion_tokens: 800, // supported param
+      max_completion_tokens: 800, // ✅ correct param
     });
 
-    // Fallback parsing for different models
+    // ✅ Correct property for chat.completions
     const text =
-      (completion as any).output_text ||
-      completion.choices?.[0]?.message?.content?.trim() ||
+      completion.choices[0]?.message?.content?.trim() ||
       "[No content returned by model]";
 
     return NextResponse.json(
