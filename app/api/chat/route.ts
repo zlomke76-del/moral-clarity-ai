@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
     const rolled = trimConversation(messages);
     const system = buildSystemPrompt(filters);
 
-    // 🔧 Flatten the conversation + system into one prompt string
+    // Flatten the conversation + system into one prompt string
     const transcript = rolled
       .map((m: any) => {
         const speaker = m.role === "assistant" ? "Assistant" : "User";
@@ -94,10 +94,10 @@ export async function POST(req: NextRequest) {
       `${transcript}\n\n` +
       `Assistant:`; // cue the model to reply
 
-    // ✅ Responses API expects a string or content parts, not message objects.
+    // ✅ Use plain string input to satisfy current SDK typings
     const response = await client.responses.create({
       model: MODEL,
-      input: [{ type: "text", text: fullPrompt }],
+      input: fullPrompt,
       max_output_tokens: 800,
     });
 
