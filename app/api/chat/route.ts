@@ -32,7 +32,12 @@ const GUIDELINE_GUIDANCE =
 
 // -------------------------------------------------------------
 function buildSystemPrompt(filters: string[], newsContext?: string) {
-  const parts = [GUIDELINE_NEUTRAL];
+  const parts = [
+    `You are Moral Clarity AI. Provide analysis, not endorsements of harm.
+- Anchor in truth, history, and law.
+- If a topic is sensitive, do not promote harmful action; educate, warn, and advise responsibly.`,
+    GUIDELINE_NEUTRAL,
+  ];
   if (filters?.includes("ministry")) parts.push(GUIDELINE_MINISTRY);
   if (filters?.includes("guidance")) parts.push(GUIDELINE_GUIDANCE);
 
@@ -168,26 +173,27 @@ export async function POST(req: NextRequest) {
 
     const system = buildSystemPrompt(filters, newsContext);
 
-    // Build Responses API "messages" with content blocks
-    const messagesForAPI = [
-      { role: "system" as const, content: [{ type: "text" as const, text: system }] },
-      ...rolled.map((m) => ({
-        role: (m.role === "assistant" ? "assistant" : "user") as "assistant" | "user",
-        content: [{ type: "text" as const, text: String(m.content ?? "") }],
-      })),
+    // Build Chat Completions API messages
+    const apiMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+      { role: "system", content: system },
+      ...rolled.map((m) =>
+        m.role === "assistant"
+          ? ({ role: "assistant", content: String(m.content ?? "") } as const)
+          : ({ role: "user", content: String(m.content ?? "") } as const)
+      ),
     ];
 
-    const response = await client.responses.create({
+    const completion = await client.chat.completions.create({
       model: MODEL,
-      messages: messagesForAPI,
-      max_output_tokens: 900,
+      messages: apiMessages,
       temperature: 0.4,
+      // reasonable token cap for concise answers
+      max_tokens: 900,
     });
 
     const text =
-      (response as any).output_text ||
-      (response as any).content?.[0]?.text ||
-      JSON.stringify(response);
+      completion.choices?.[0]?.message?.content?.trim() ||
+      "[No content returned by model]";
 
     return NextResponse.json(
       { text, model: MODEL, sources },
