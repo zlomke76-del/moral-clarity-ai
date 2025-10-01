@@ -80,24 +80,27 @@ export async function POST(req: NextRequest) {
     const rolled = trimConversation(messages);
     const system = buildSystemPrompt(filters);
 
-    // 🔧 Map to Responses API message format:
-    // { role: "user" | "assistant" | "system", content: [{ type: "text", text: "..." }] }
-    const toPart = (text: string) => [{ type: "text", text }];
-    const input = [
-      { role: "system", content: toPart(system) },
-      ...rolled.map((m: any) => ({
-        role: m.role === "assistant" ? "assistant" : "user",
-        content: toPart(String(m.content || "")),
-      })),
-    ];
+    // 🔧 Flatten the conversation + system into one prompt string
+    const transcript = rolled
+      .map((m: any) => {
+        const speaker = m.role === "assistant" ? "Assistant" : "User";
+        return `${speaker}: ${String(m.content || "")}`;
+      })
+      .join("\n");
 
+    const fullPrompt =
+      `System instructions:\n${system}\n\n` +
+      `Conversation so far (newest last, remember only last ${MAX_TURNS} turns):\n` +
+      `${transcript}\n\n` +
+      `Assistant:`; // cue the model to reply
+
+    // ✅ Responses API expects a string or content parts, not message objects.
     const response = await client.responses.create({
       model: MODEL,
-      input,                 // ✅ correct shape for Responses API
-      max_output_tokens: 800 // ✅ correct param name
+      input: [{ type: "text", text: fullPrompt }],
+      max_output_tokens: 800,
     });
 
-    // ✅ Responses API: safest way to get text
     const text =
       (response as any).output_text ||
       (response as any).content?.[0]?.text ||
