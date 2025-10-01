@@ -1,182 +1,141 @@
 // app/api/chat/route.ts
+import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { z } from "zod";
 
-/** ──────────────────────────────────────────────────────────────────────────
- *  ENV & CLIENT
- *  ────────────────────────────────────────────────────────────────────────── */
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!, // will throw in dev if missing
+  apiKey: process.env.OPENAI_API_KEY!,
 });
 
-// Primary model (fast & cheap); allow override via env
-const PRIMARY_MODEL =
-  (process.env.OPENAI_MODEL && process.env.OPENAI_MODEL.trim()) || "gpt-5-nano";
+const MODEL = process.env.OPENAI_MODEL || "gpt-5-nano";
 
-// Fallback if provider returns "does not exist" or similar
-const FALLBACK_MODEL = "gpt-5-mini";
+// CORS
+const ALLOWED_ORIGIN =
+  process.env.ALLOWED_ORIGIN || "https://www.moralclarityai.com";
 
-// Allow a single origin or a comma-separated list via env
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGIN ??
-  "https://www.moralclarityai.com")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
+// ----- Guideline “warehouse” (env-first with safe defaults) -----
+const GUIDELINE_NEUTRAL =
+  process.env.GUIDELINE_NEUTRAL ||
+  `Neutral mode:
+- Be clear, structured, and impartial.
+- Frame issues using recognized frameworks (e.g., utilitarianism, deontology, law, Just War).
+- Identify uncertainties and avoid speculation.
+- Cite sources when the user gives links; otherwise state that you do not have live browsing.`;
 
-/** Build CORS headers for a particular request origin. */
-function corsFor(origin: string | null) {
-  // If request origin matches one of our allowed origins, reflect it.
-  // Otherwise, don’t set ACAO (browser will block).
-  const allowed =
-    origin && ALLOWED_ORIGINS.some((o) => o.toLowerCase() === origin.toLowerCase());
-  const base: Record<string, string> = {
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Vary": "Origin",
-  };
-  if (allowed) base["Access-Control-Allow-Origin"] = origin!;
-  return base;
+const GUIDELINE_MINISTRY =
+  process.env.GUIDELINE_MINISTRY ||
+  `Ministry add-on:
+- Offer pastoral, Biblical counsel with humility and care.
+- Anchor moral reasoning in Scripture, Christian tradition, and stewardship before God.
+- Emphasize human responsibility for life-and-death judgments.
+- Be gentle, truthful, and non-political; cite verses appropriately.`;
+
+const GUIDELINE_GUIDANCE =
+  process.env.GUIDELINE_GUIDANCE ||
+  `Guidance add-on (red-team & clarity):
+- Pressure-test arguments for bias, incentives, and failure modes.
+- Offer risk registers, decision trees, and “next-step” checklists.
+- Surface what would change your conclusion (“decision pivots”).
+- Split facts vs. interpretations; avoid certainty inflation.`;
+
+// ----- Build the system prompt from selected filters -----
+function buildSystemPrompt(filters: string[]) {
+  const parts = [GUIDELINE_NEUTRAL];
+
+  if (filters?.includes("ministry")) parts.push(GUIDELINE_MINISTRY);
+  if (filters?.includes("guidance")) parts.push(GUIDELINE_GUIDANCE);
+
+  // subtle reminder to keep responses concise and structured
+  parts.push(
+    `Format:
+- Start with a 1–2 sentence answer.
+- Then provide short, skimmable bullets under clear headings.
+- If user provided a link, summarize *that content* first.`
+  );
+
+  return parts.join("\n\n");
 }
 
-/** ──────────────────────────────────────────────────────────────────────────
- *  REQUEST SCHEMA
- *  ────────────────────────────────────────────────────────────────────────── */
-const Body = z.object({
-  messages: z
-    .array(
-      z.object({
-        role: z.enum(["user", "assistant", "system"]),
-        content: z.string(),
-      })
-    )
-    .min(1, "messages must include at least one item"),
-  mode: z.enum(["guidance", "redteam", "news"]).default("guidance"),
-});
+// Trim to newest N user↔AI exchanges (N=5 => 10 messages)
+const MAX_TURNS = 5;
+const MAX_MESSAGES = MAX_TURNS * 2;
 
-/** ──────────────────────────────────────────────────────────────────────────
- *  SYSTEM POLICY (no Ask Abe, neutral tone, etc.)
- *  ────────────────────────────────────────────────────────────────────────── */
-const SYSTEM_PROMPT = `
-You are MoralClarityAI — neutral, precise, and transparent.
-• Provide clear, sourced guidance when relevant.
-• Avoid ideological drift and avoid introducing “Ask Abe” or any branding that was removed.
-• Where claims may be contested, present multiple perspectives and note uncertainty.
-• Be concise; cite or quote only when needed. No hallucinations.
-`;
-
-/** ──────────────────────────────────────────────────────────────────────────
- *  UTIL: call OpenAI with fallback when model id is invalid/unavailable
- *  ────────────────────────────────────────────────────────────────────────── */
-async function callOpenAI(input: any) {
-  try {
-    return await client.responses.create({
-      model: PRIMARY_MODEL,
-      input,
-    });
-  } catch (err: any) {
-    const msg = (err?.message || "").toLowerCase();
-    const isBadModel =
-      err?.status === 400 &&
-      (msg.includes("does not exist") ||
-        msg.includes("unknown model") ||
-        msg.includes("invalid") ||
-        msg.includes("unsupported"));
-
-    if (isBadModel) {
-      // Retry once with fallback
-      return await client.responses.create({
-        model: FALLBACK_MODEL,
-        input,
-      });
-    }
-    throw err;
-  }
+function trimConversation(messages: Array<{ role: string; content: string }>) {
+  if (!Array.isArray(messages)) return [];
+  if (messages.length <= MAX_MESSAGES) return messages;
+  return messages.slice(-MAX_MESSAGES);
 }
 
-/** Extract plain text from Responses API result. */
-function extractText(resp: any): string {
-  if (resp?.output_text) return String(resp.output_text);
-  // Some SDK versions return a structured "output"
-  if (Array.isArray(resp?.output)) {
-    try {
-      return resp.output
-        .map((p: any) =>
-          Array.isArray(p?.content)
-            ? p.content.map((c: any) => c?.text?.value ?? "").join("")
-            : ""
-        )
-        .join("\n")
-        .trim();
-    } catch {}
-  }
-  return "";
-}
-
-/** ──────────────────────────────────────────────────────────────────────────
- *  OPTIONS (CORS preflight)
- *  ────────────────────────────────────────────────────────────────────────── */
-export function OPTIONS(req: Request) {
-  const origin = req.headers.get("Origin");
-  return new Response(null, {
-    headers: corsFor(origin),
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Max-Age": "86400",
+    },
   });
 }
 
-/** ──────────────────────────────────────────────────────────────────────────
- *  POST /api/chat
- *  ────────────────────────────────────────────────────────────────────────── */
-export async function POST(req: Request) {
-  const origin = req.headers.get("Origin");
-
+export async function POST(req: NextRequest) {
   try {
-    const json = await req.json();
-    const { messages, mode } = Body.parse(json);
+    const origin = req.headers.get("origin") || "";
+    if (ALLOWED_ORIGIN && origin !== ALLOWED_ORIGIN) {
+      return NextResponse.json(
+        { error: "Origin not allowed" },
+        {
+          status: 403,
+          headers: {
+            "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+          },
+        }
+      );
+    }
 
-    const modeLine =
-      mode === "redteam"
-        ? "Mode: Red-team — surface risks, incentives, and failure modes neutrally."
-        : mode === "news"
-        ? "Mode: News clarity — summarize neutrally with dates and sources when appropriate."
-        : "Mode: Guidance — offer principled, neutral answers.";
+    const body = await req.json();
+    const { messages = [], filters = [] } = body || {};
+    const rolled = trimConversation(messages);
 
-    const response = await callOpenAI([
-      { role: "system", content: `${SYSTEM_PROMPT}\n${modeLine}` },
-      ...messages,
-    ]);
+    const system = buildSystemPrompt(filters);
 
-    const text = extractText(response) || "Sorry, I couldn’t find an answer.";
-
-    return new Response(JSON.stringify({ text, model: response?.model }), {
-      headers: {
-        "Content-Type": "application/json",
-        ...corsFor(origin),
-      },
-      status: 200,
+    const response = await client.responses.create({
+      model: MODEL,
+      // Responses API accepts "input" or "messages"; we’ll use "input" with role blocks
+      input: [
+        { role: "system", content: system },
+        ...rolled.map((m: any) => ({
+          role: m.role === "assistant" ? "assistant" : "user",
+          content: String(m.content || ""),
+        })),
+      ],
+      // keep it crisp
+      max_output_tokens: 800,
+      temperature: 0.4,
     });
-  } catch (err: any) {
-    const status =
-      typeof err?.status === "number"
-        ? err.status
-        : err?.name === "ZodError"
-        ? 400
-        : 500;
 
-    const message =
-      err?.name === "ZodError"
-        ? "Invalid request body. Expected { messages: [{role, content}], mode? }"
-        : err?.message || "Internal error";
+    const text =
+      (response as any).output_text ||
+      (response as any).content?.[0]?.text ||
+      JSON.stringify(response);
 
-    return new Response(
-      JSON.stringify({
-        error: String(message),
-        status,
-      }),
+    return NextResponse.json(
+      { text, model: MODEL, turns_kept: MAX_TURNS },
       {
         headers: {
+          "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
           "Content-Type": "application/json",
-          ...corsFor(origin),
         },
-        status,
+      }
+    );
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err?.message || "Unknown error" },
+      {
+        status: 500,
+        headers: {
+          "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+          "Content-Type": "application/json",
+        },
       }
     );
   }
