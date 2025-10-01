@@ -4,12 +4,8 @@ import OpenAI from "openai";
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 const MODEL = process.env.OPENAI_MODEL || "gpt-5-nano";
-
-// You can comma-separate multiple origins in env (e.g. "https://www.moralclarityai.com,https://moralclarityai.com")
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGIN || "https://www.moralclarityai.com,https://moralclarityai.com")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
+const ALLOWED_ORIGIN =
+  process.env.ALLOWED_ORIGIN || "https://www.moralclarityai.com";
 
 // -------- Guidelines from env (with safe defaults) ----------
 const GUIDELINE_NEUTRAL =
@@ -36,13 +32,7 @@ const GUIDELINE_GUIDANCE =
 
 // -------------------------------------------------------------
 function buildSystemPrompt(filters: string[], newsContext?: string) {
-  const parts = [
-    `You are Moral Clarity AI. Provide analysis, not endorsements of harm. 
-- Anchor in truth, history, and law. 
-- If a topic is sensitive, *do not* promote harmful actions; instead educate, warn, and advise responsibly.
-- If you must refuse to *perform* something dangerous, still provide a neutral moral/ethical analysis of the question itself.`,
-    GUIDELINE_NEUTRAL,
-  ];
+  const parts = [GUIDELINE_NEUTRAL];
   if (filters?.includes("ministry")) parts.push(GUIDELINE_MINISTRY);
   if (filters?.includes("guidance")) parts.push(GUIDELINE_GUIDANCE);
 
@@ -62,7 +52,7 @@ Instructions:
       `Format:
 - Start with a 1–2 sentence answer.
 - Then give short bullets under clear headings.
-- If user provided a link, summarize that content first.`
+- If the user provided a link, summarize that content first.`
     );
   }
 
@@ -95,7 +85,7 @@ async function fetchSearch(
   req: NextRequest,
   q: string,
   count = 5,
-  freshness = "Week"
+  freshness: "Day" | "Week" | "Month" = "Week"
 ) {
   const base = new URL(req.url);
   base.pathname = "/api/search";
@@ -105,38 +95,44 @@ async function fetchSearch(
   return resp.json();
 }
 
-function corsHeaders(origin: string) {
-  return {
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Max-Age": "86400",
-    Vary: "Origin",
-  };
-}
-
-export async function OPTIONS(req: NextRequest) {
-  const origin = req.headers.get("origin") || "";
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
-    headers: corsHeaders(allowedOrigin),
+    headers: {
+      "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Max-Age": "86400",
+    },
   });
 }
 
 export async function POST(req: NextRequest) {
   try {
+    // Basic CORS
     const origin = req.headers.get("origin") || "";
-    const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : "";
-    if (ALLOWED_ORIGINS.length && !allowedOrigin) {
+    if (ALLOWED_ORIGIN && origin !== ALLOWED_ORIGIN) {
       return NextResponse.json(
         { error: "Origin not allowed" },
-        { status: 403, headers: corsHeaders(ALLOWED_ORIGINS[0]) }
+        {
+          status: 403,
+          headers: { "Access-Control-Allow-Origin": ALLOWED_ORIGIN },
+        }
       );
     }
 
     const body = await req.json();
-    const { messages = [], filters = [], allowSearch = true } = body || {};
+    const {
+      messages = [],
+      filters = [],
+      allowSearch = true,
+    }: {
+      messages: Array<{ role: "user" | "assistant"; content: string }>;
+      filters: string[];
+      allowSearch?: boolean;
+    } = body || {};
+
+    // Rolling memory
     const rolled = trimConversation(messages);
     const lastUser = [...rolled].reverse().find((m) => m.role === "user");
     const lastText = String(lastUser?.content || "");
@@ -144,13 +140,13 @@ export async function POST(req: NextRequest) {
     let sources: Array<{ index: number; title: string; url: string }> = [];
     let newsContext = "";
 
-    // Only auto-search when:
+    // Auto-search only when:
     // 1) caller allows it
-    // 2) looks like a "current event" query
-    // 3) user didn't paste a link (we prefer the user's link)
+    // 2) it "looks recent"
+    // 3) user didn't paste a link (we prefer user's link when provided)
     if (allowSearch && lastText && looksRecent(lastText) && !containsUrl(lastText)) {
       try {
-        const search = await fetchSearch(req, lastText, 4, "Week"); // 4 good snippets
+        const search = await fetchSearch(req, lastText, 4, "Week"); // 4 useful snippets
         const results = Array.isArray(search?.results) ? search.results : [];
         if (results.length) {
           newsContext = results
@@ -166,52 +162,51 @@ export async function POST(req: NextRequest) {
           }));
         }
       } catch {
-        // Swallow search errors silently; we still answer neutrally.
+        // Swallow search errors to avoid blocking a reply
       }
     }
 
     const system = buildSystemPrompt(filters, newsContext);
 
+    // Build Responses API "input" with content blocks
+    const input = [
+      { role: "system" as const, content: [{ type: "text" as const, text: system }] },
+      ...rolled.map((m) => ({
+        role: (m.role === "assistant" ? "assistant" : "user") as "assistant" | "user",
+        content: [{ type: "text" as const, text: String(m.content ?? "") }],
+      })),
+    ];
+
     const response = await client.responses.create({
       model: MODEL,
-      input: [
-        { role: "system", content: system },
-        ...rolled.map((m: any) => ({
-          role: m.role === "assistant" ? "assistant" : "user",
-          content: String(m.content || ""),
-        })),
-      ],
+      input,
       max_output_tokens: 900,
       temperature: 0.4,
     });
 
-    // Try multiple extraction paths for Responses API
-    let text =
-      (response as any).output_text ??
-      (response as any).content?.[0]?.text ??
-      (Array.isArray((response as any).content)
-        ? (response as any).content.map((c: any) => c?.text).filter(Boolean).join("\n\n")
-        : "");
-
-    if (!text || !text.trim()) {
-      text = "[No content returned by model]";
-    }
+    const text =
+      (response as any).output_text ||
+      (response as any).content?.[0]?.text ||
+      JSON.stringify(response);
 
     return NextResponse.json(
       { text, model: MODEL, sources },
-      { headers: { ...corsHeaders(allowedOrigin || ALLOWED_ORIGINS[0]), "Content-Type": "application/json" } }
+      {
+        headers: {
+          "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+          "Content-Type": "application/json",
+        },
+      }
     );
   } catch (err: any) {
-    // Surface meaningful error back to the client
-    const msg =
-      err?.response?.data?.error?.message ||
-      err?.message ||
-      "Unknown error";
     return NextResponse.json(
-      { error: msg },
+      { error: err?.message || "Unknown error" },
       {
         status: 500,
-        headers: { ...corsHeaders(ALLOWED_ORIGINS[0]), "Content-Type": "application/json" },
+        headers: {
+          "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+          "Content-Type": "application/json",
+        },
       }
     );
   }
