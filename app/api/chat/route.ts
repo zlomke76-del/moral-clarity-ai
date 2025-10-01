@@ -168,8 +168,8 @@ export async function POST(req: NextRequest) {
 
     const system = buildSystemPrompt(filters, newsContext);
 
-    // Build Responses API "input" with content blocks
-    const input = [
+    // Build Responses API "messages" with content blocks
+    const messagesForAPI = [
       { role: "system" as const, content: [{ type: "text" as const, text: system }] },
       ...rolled.map((m) => ({
         role: (m.role === "assistant" ? "assistant" : "user") as "assistant" | "user",
@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
 
     const response = await client.responses.create({
       model: MODEL,
-      input,
+      messages: messagesForAPI,
       max_output_tokens: 900,
       temperature: 0.4,
     });
