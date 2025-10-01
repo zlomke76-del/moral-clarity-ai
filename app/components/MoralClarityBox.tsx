@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import sendChat from "../lib/sendChat";
+import sendChat from "@/lib/sendChat";
 
 export default function MoralClarityBox() {
   const [input, setInput] = useState("");
@@ -12,7 +12,6 @@ export default function MoralClarityBox() {
     if (!input.trim()) return;
     setBusy(true);
 
-    // user message
     const next = [...log, { role: "user" as const, content: input }];
     setLog(next);
     setInput("");
@@ -44,6 +43,7 @@ export default function MoralClarityBox() {
           style={{ flex: 1, padding: "0.5rem" }}
           placeholder="Type your message..."
           disabled={busy}
+          onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
         />
         <button onClick={handleSend} disabled={busy || !input.trim()}>
           {busy ? "..." : "Send"}
