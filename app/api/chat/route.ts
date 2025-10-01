@@ -145,13 +145,9 @@ export async function POST(req: NextRequest) {
     let sources: Array<{ index: number; title: string; url: string }> = [];
     let newsContext = "";
 
-    // Auto-search only when:
-    // 1) caller allows it
-    // 2) it "looks recent"
-    // 3) user didn't paste a link (we prefer user's link when provided)
     if (allowSearch && lastText && looksRecent(lastText) && !containsUrl(lastText)) {
       try {
-        const search = await fetchSearch(req, lastText, 4, "Week"); // 4 useful snippets
+        const search = await fetchSearch(req, lastText, 4, "Week");
         const results = Array.isArray(search?.results) ? search.results : [];
         if (results.length) {
           newsContext = results
@@ -167,7 +163,7 @@ export async function POST(req: NextRequest) {
           }));
         }
       } catch {
-        // Swallow search errors to avoid blocking a reply
+        // swallow silently
       }
     }
 
@@ -187,8 +183,7 @@ export async function POST(req: NextRequest) {
       model: MODEL,
       messages: apiMessages,
       temperature: 0.4,
-      // reasonable token cap for concise answers
-      max_tokens: 900,
+      max_completion_tokens: 900, // ✅ FIXED PARAM
     });
 
     const text =
