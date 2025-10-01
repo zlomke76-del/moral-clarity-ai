@@ -71,26 +71,20 @@ export async function POST(req: NextRequest) {
     const rolled = trimConversation(messages);
     const system = buildSystemPrompt(filters);
 
-    const chatMessages: OpenAI.ChatCompletionMessageParam[] = [
-      { role: "system", content: system },
-      ...rolled.map(
-        (m: any): OpenAI.ChatCompletionMessageParam => ({
-          role: (m.role === "assistant" ? "assistant" : "user") as "assistant" | "user",
-          content: String(m.content ?? ""),
-        })
-      ),
-    ];
-
-    const completion = await client.chat.completions.create({
+    const response = await client.responses.create({
       model: MODEL,
-      messages: chatMessages,
-      max_completion_tokens: 800, // ✅ correct param
+      input: [
+        { role: "system", content: system },
+        ...rolled.map((m: any) => ({
+          role: m.role === "assistant" ? "assistant" : "user",
+          content: String(m.content || ""),
+        })),
+      ],
+      max_output_tokens: 800, // ✅ correct param for responses API
     });
 
-    // ✅ Correct property for chat.completions
-    const text =
-      completion.choices[0]?.message?.content?.trim() ||
-      "[No content returned by model]";
+    // ✅ Responses API always provides .output_text
+    const text = (response as any).output_text || "[No reply from model]";
 
     return NextResponse.json(
       { text, model: MODEL },
