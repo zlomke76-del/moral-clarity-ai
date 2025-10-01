@@ -71,12 +71,10 @@ export async function POST(req: NextRequest) {
     const rolled = trimConversation(messages);
     const system = buildSystemPrompt(filters);
 
-    // Build messages with explicit, narrow roles so the type checker is happy.
     const chatMessages: OpenAI.ChatCompletionMessageParam[] = [
       { role: "system", content: system },
       ...rolled.map(
         (m: any): OpenAI.ChatCompletionMessageParam => ({
-          // Narrow to just the two roles we actually send
           role: (m.role === "assistant" ? "assistant" : "user") as "assistant" | "user",
           content: String(m.content ?? ""),
         })
@@ -86,12 +84,12 @@ export async function POST(req: NextRequest) {
     const completion = await client.chat.completions.create({
       model: MODEL,
       messages: chatMessages,
-      // Models like gpt-5-nano accept max_completion_tokens (not max_tokens).
-      max_completion_tokens: 800,
-      // temperature omitted: some “nano” models only accept the default (1).
+      max_completion_tokens: 800, // supported param
     });
 
+    // Fallback parsing for different models
     const text =
+      (completion as any).output_text ||
       completion.choices?.[0]?.message?.content?.trim() ||
       "[No content returned by model]";
 
