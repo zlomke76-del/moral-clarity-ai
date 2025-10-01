@@ -1,4 +1,3 @@
-// app/api/chat/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
@@ -8,17 +7,23 @@ const ALLOWED_ORIGIN =
   process.env.ALLOWED_ORIGIN || "https://www.moralclarityai.com";
 
 /* ---------------- Guidelines ---------------- */
-const GUIDELINE_NEUTRAL = `Neutral mode:
+const GUIDELINE_NEUTRAL =
+  process.env.GUIDELINE_NEUTRAL ||
+  `Neutral mode:
 - Be clear, structured, and impartial.
 - Frame using recognized moral, legal, and policy frameworks.
 - Identify uncertainties; avoid speculation.`;
 
-const GUIDELINE_MINISTRY = `Ministry add-on:
+const GUIDELINE_MINISTRY =
+  process.env.GUIDELINE_MINISTRY ||
+  `Ministry add-on:
 - Offer pastoral counsel grounded in Scripture and Christian tradition.
 - Emphasize humility, human dignity, and responsibility before God.
 - Be gentle, truthful, and non-partisan; cite verses appropriately.`;
 
-const GUIDELINE_GUIDANCE = `Guidance add-on:
+const GUIDELINE_GUIDANCE =
+  process.env.GUIDELINE_GUIDANCE ||
+  `Guidance add-on:
 - Red-team arguments for bias and failure modes.
 - Provide risk registers, decision trees, and “next steps”.
 - Separate facts vs. interpretations; avoid certainty inflation.`;
@@ -26,8 +31,8 @@ const GUIDELINE_GUIDANCE = `Guidance add-on:
 /* Build system prompt */
 function buildSystemPrompt(filters: string[]) {
   const parts = [GUIDELINE_NEUTRAL];
-  if (filters.includes("ministry")) parts.push(GUIDELINE_MINISTRY);
-  if (filters.includes("guidance")) parts.push(GUIDELINE_GUIDANCE);
+  if (filters?.includes("ministry")) parts.push(GUIDELINE_MINISTRY);
+  if (filters?.includes("guidance")) parts.push(GUIDELINE_GUIDANCE);
   parts.push(
     `Format:
 - Start with a 1–2 sentence answer.
@@ -44,6 +49,7 @@ function trimConversation(messages: Array<{ role: string; content: string }>) {
   return messages.length <= limit ? messages : messages.slice(-limit);
 }
 
+/* CORS preflight */
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
@@ -62,7 +68,10 @@ export async function POST(req: NextRequest) {
     if (origin !== ALLOWED_ORIGIN) {
       return NextResponse.json(
         { error: "Origin not allowed" },
-        { status: 403, headers: { "Access-Control-Allow-Origin": ALLOWED_ORIGIN } }
+        {
+          status: 403,
+          headers: { "Access-Control-Allow-Origin": ALLOWED_ORIGIN },
+        }
       );
     }
 
@@ -71,20 +80,28 @@ export async function POST(req: NextRequest) {
     const rolled = trimConversation(messages);
     const system = buildSystemPrompt(filters);
 
+    // 🔧 Map to Responses API message format:
+    // { role: "user" | "assistant" | "system", content: [{ type: "text", text: "..." }] }
+    const toPart = (text: string) => [{ type: "text", text }];
+    const input = [
+      { role: "system", content: toPart(system) },
+      ...rolled.map((m: any) => ({
+        role: m.role === "assistant" ? "assistant" : "user",
+        content: toPart(String(m.content || "")),
+      })),
+    ];
+
     const response = await client.responses.create({
       model: MODEL,
-      input: [
-        { role: "system", content: system },
-        ...rolled.map((m: any) => ({
-          role: m.role === "assistant" ? "assistant" : "user",
-          content: String(m.content || ""),
-        })),
-      ],
-      max_output_tokens: 800, // ✅ correct param for responses API
+      input,                 // ✅ correct shape for Responses API
+      max_output_tokens: 800 // ✅ correct param name
     });
 
-    // ✅ Responses API always provides .output_text
-    const text = (response as any).output_text || "[No reply from model]";
+    // ✅ Responses API: safest way to get text
+    const text =
+      (response as any).output_text ||
+      (response as any).content?.[0]?.text ||
+      "[No reply from model]";
 
     return NextResponse.json(
       { text, model: MODEL },
