@@ -179,12 +179,24 @@ export async function POST(req: NextRequest) {
       ),
     ];
 
-    const completion = await client.chat.completions.create({
+    // Build payload WITHOUT temperature (models like gpt-5-nano only support default=1)
+    const payload: OpenAI.Chat.Completions.ChatCompletionCreateParams = {
       model: MODEL,
       messages: apiMessages,
-      temperature: 0.4,
-      max_completion_tokens: 900, // ✅ FIXED PARAM
-    });
+      max_completion_tokens: 900,
+    };
+
+    // Optional: allow forcing a temperature via env for models that support it.
+    // e.g., set FORCE_TEMPERATURE=0.4 for gpt-4o, gpt-4.1, etc.
+    if (process.env.FORCE_TEMPERATURE && process.env.FORCE_TEMPERATURE !== "default") {
+      const t = Number(process.env.FORCE_TEMPERATURE);
+      if (!Number.isNaN(t)) {
+        // NOTE: if the model doesn't support custom temp, the API will ignore or error.
+        payload.temperature = t;
+      }
+    }
+
+    const completion = await client.chat.completions.create(payload);
 
     const text =
       completion.choices?.[0]?.message?.content?.trim() ||
