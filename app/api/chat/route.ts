@@ -2,11 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+
+// You can still use gpt-5-nano here:
 const MODEL = process.env.OPENAI_MODEL || "gpt-5-nano";
+
+// CORS
 const ALLOWED_ORIGIN =
   process.env.ALLOWED_ORIGIN || "https://www.moralclarityai.com";
 
-/* ---------------- Guidelines ---------------- */
+// -------- Guidelines --------
 const GUIDELINE_NEUTRAL =
   process.env.GUIDELINE_NEUTRAL ||
   `Neutral mode:
@@ -28,7 +32,7 @@ const GUIDELINE_GUIDANCE =
 - Provide risk registers, decision trees, and “next steps”.
 - Separate facts vs. interpretations; avoid certainty inflation.`;
 
-/* Build system prompt */
+// ------- System prompt -------
 function buildSystemPrompt(filters: string[]) {
   const parts = [GUIDELINE_NEUTRAL];
   if (filters?.includes("ministry")) parts.push(GUIDELINE_MINISTRY);
@@ -36,12 +40,13 @@ function buildSystemPrompt(filters: string[]) {
   parts.push(
     `Format:
 - Start with a 1–2 sentence answer.
-- Then give short bullets under clear headings.`
+- Then give short bullets under clear headings.
+- Mark uncertainties plainly.`
   );
   return parts.join("\n\n");
 }
 
-/* Rolling memory: newest 5 turns (10 messages) */
+// ------- Rolling memory (newest 5 turns) -------
 const MAX_TURNS = 5;
 function trimConversation(messages: Array<{ role: string; content: string }>) {
   if (!Array.isArray(messages)) return [];
@@ -49,7 +54,51 @@ function trimConversation(messages: Array<{ role: string; content: string }>) {
   return messages.length <= limit ? messages : messages.slice(-limit);
 }
 
-/* CORS preflight */
+// ------- Robust extractor for Responses API -------
+function extractText(resp: any): string {
+  // 1) Most SDKs expose this:
+  if (resp?.output_text && typeof resp.output_text === "string") {
+    return resp.output_text.trim();
+  }
+
+  // 2) Some versions put it under .content[].text
+  const contentArr = resp?.content;
+  if (Array.isArray(contentArr)) {
+    for (const c of contentArr) {
+      if (typeof c?.text === "string" && c.text.trim()) {
+        return c.text.trim();
+      }
+      // nested shapes: c?.content?.[0]?.text
+      if (Array.isArray(c?.content)) {
+        for (const inner of c.content) {
+          if (typeof inner?.text === "string" && inner.text.trim()) {
+            return inner.text.trim();
+          }
+        }
+      }
+    }
+  }
+
+  // 3) Some versions expose .output[].content[].text
+  const out = resp?.output;
+  if (Array.isArray(out)) {
+    const pieces: string[] = [];
+    for (const item of out) {
+      if (Array.isArray(item?.content)) {
+        for (const inner of item.content) {
+          if (typeof inner?.text === "string" && inner.text.trim()) {
+            pieces.push(inner.text.trim());
+          }
+        }
+      }
+    }
+    if (pieces.length) return pieces.join("\n\n");
+  }
+
+  return "";
+}
+
+/* ---------- CORS preflight ---------- */
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
@@ -62,12 +111,13 @@ export async function OPTIONS() {
   });
 }
 
+/* --------------- POST --------------- */
 export async function POST(req: NextRequest) {
   try {
     const origin = req.headers.get("origin") || "";
     if (origin !== ALLOWED_ORIGIN) {
       return NextResponse.json(
-        { error: "Origin not allowed" },
+        { error: `Origin not allowed: ${origin}` },
         {
           status: 403,
           headers: { "Access-Control-Allow-Origin": ALLOWED_ORIGIN },
@@ -77,37 +127,41 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const { messages = [], filters = [] } = body || {};
+
     const rolled = trimConversation(messages);
     const system = buildSystemPrompt(filters);
 
-    // Flatten the conversation + system into one prompt string
+    // Flatten conversation into one prompt string
     const transcript = rolled
       .map((m: any) => {
-        const speaker = m.role === "assistant" ? "Assistant" : "User";
-        return `${speaker}: ${String(m.content || "")}`;
+        const who = m.role === "assistant" ? "Assistant" : "User";
+        return `${who}: ${String(m.content || "")}`;
       })
       .join("\n");
 
     const fullPrompt =
       `System instructions:\n${system}\n\n` +
-      `Conversation so far (newest last, remember only last ${MAX_TURNS} turns):\n` +
-      `${transcript}\n\n` +
-      `Assistant:`; // cue the model to reply
+      `Conversation (last ${MAX_TURNS} turns, newest last):\n${transcript}\n\n` +
+      `Assistant:`; // cue the reply
 
-    // ✅ Use plain string input to satisfy current SDK typings
+    // ✅ Use simple string input (most tolerant across SDK versions/models)
     const response = await client.responses.create({
       model: MODEL,
       input: fullPrompt,
       max_output_tokens: 800,
     });
 
-    const text =
-      (response as any).output_text ||
-      (response as any).content?.[0]?.text ||
-      "[No reply from model]";
+    let text = extractText(response);
+
+    if (!text) {
+      // Give a visible diagnostic instead of a blank bubble.
+      text =
+        "[No content returned by model] " +
+        "(Diagnostic: empty response payload; check model name/APIs or try again.)";
+    }
 
     return NextResponse.json(
-      { text, model: MODEL },
+      { text, model: MODEL, sources: [] }, // sources disabled while search is OFF
       {
         headers: {
           "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
@@ -116,8 +170,9 @@ export async function POST(req: NextRequest) {
       }
     );
   } catch (err: any) {
+    // Return the error message so you see it in the UI
     return NextResponse.json(
-      { error: err?.message || "Unknown error" },
+      { error: err?.message || String(err) },
       {
         status: 500,
         headers: {
