@@ -4,8 +4,12 @@ import OpenAI from "openai";
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 const MODEL = process.env.OPENAI_MODEL || "gpt-5-nano";
-const ALLOWED_ORIGIN =
-  process.env.ALLOWED_ORIGIN || "https://www.moralclarityai.com";
+
+// You can comma-separate multiple origins in env (e.g. "https://www.moralclarityai.com,https://moralclarityai.com")
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGIN || "https://www.moralclarityai.com,https://moralclarityai.com")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 // -------- Guidelines from env (with safe defaults) ----------
 const GUIDELINE_NEUTRAL =
@@ -32,7 +36,13 @@ const GUIDELINE_GUIDANCE =
 
 // -------------------------------------------------------------
 function buildSystemPrompt(filters: string[], newsContext?: string) {
-  const parts = [GUIDELINE_NEUTRAL];
+  const parts = [
+    `You are Moral Clarity AI. Provide analysis, not endorsements of harm. 
+- Anchor in truth, history, and law. 
+- If a topic is sensitive, *do not* promote harmful actions; instead educate, warn, and advise responsibly.
+- If you must refuse to *perform* something dangerous, still provide a neutral moral/ethical analysis of the question itself.`,
+    GUIDELINE_NEUTRAL,
+  ];
   if (filters?.includes("ministry")) parts.push(GUIDELINE_MINISTRY);
   if (filters?.includes("guidance")) parts.push(GUIDELINE_GUIDANCE);
 
@@ -95,28 +105,33 @@ async function fetchSearch(
   return resp.json();
 }
 
-export async function OPTIONS() {
+function corsHeaders(origin: string) {
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
+    Vary: "Origin",
+  };
+}
+
+export async function OPTIONS(req: NextRequest) {
+  const origin = req.headers.get("origin") || "";
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
   return new NextResponse(null, {
     status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "Access-Control-Max-Age": "86400",
-    },
+    headers: corsHeaders(allowedOrigin),
   });
 }
 
 export async function POST(req: NextRequest) {
   try {
     const origin = req.headers.get("origin") || "";
-    if (ALLOWED_ORIGIN && origin !== ALLOWED_ORIGIN) {
+    const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : "";
+    if (ALLOWED_ORIGINS.length && !allowedOrigin) {
       return NextResponse.json(
         { error: "Origin not allowed" },
-        {
-          status: 403,
-          headers: { "Access-Control-Allow-Origin": ALLOWED_ORIGIN },
-        }
+        { status: 403, headers: corsHeaders(ALLOWED_ORIGINS[0]) }
       );
     }
 
@@ -170,29 +185,33 @@ export async function POST(req: NextRequest) {
       temperature: 0.4,
     });
 
-    const text =
-      (response as any).output_text ||
-      (response as any).content?.[0]?.text ||
-      JSON.stringify(response);
+    // Try multiple extraction paths for Responses API
+    let text =
+      (response as any).output_text ??
+      (response as any).content?.[0]?.text ??
+      (Array.isArray((response as any).content)
+        ? (response as any).content.map((c: any) => c?.text).filter(Boolean).join("\n\n")
+        : "");
+
+    if (!text || !text.trim()) {
+      text = "[No content returned by model]";
+    }
 
     return NextResponse.json(
       { text, model: MODEL, sources },
-      {
-        headers: {
-          "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-          "Content-Type": "application/json",
-        },
-      }
+      { headers: { ...corsHeaders(allowedOrigin || ALLOWED_ORIGINS[0]), "Content-Type": "application/json" } }
     );
   } catch (err: any) {
+    // Surface meaningful error back to the client
+    const msg =
+      err?.response?.data?.error?.message ||
+      err?.message ||
+      "Unknown error";
     return NextResponse.json(
-      { error: err?.message || "Unknown error" },
+      { error: msg },
       {
         status: 500,
-        headers: {
-          "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-          "Content-Type": "application/json",
-        },
+        headers: { ...corsHeaders(ALLOWED_ORIGINS[0]), "Content-Type": "application/json" },
       }
     );
   }
