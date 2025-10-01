@@ -1,63 +1,52 @@
 "use client";
-import { useState } from "react";
-import type { Mode } from "@/lib/chatClient";
-import { sendChat } from "@/lib/chatClient";
 
-export default function MoralClarityBox(){
-  const [mode, setMode] = useState<Mode>("guidance");
-  const [log, setLog] = useState<{role:"user"|"assistant"; content:string}[]>([]);
+import { useState } from "react";
+import sendChat from "../lib/sendChat";
+
+export default function MoralClarityBox() {
   const [input, setInput] = useState("");
+  const [log, setLog] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
   const [busy, setBusy] = useState(false);
 
-  async function onSend(){
-    if(!input.trim()) return;
+  async function handleSend() {
+    if (!input.trim()) return;
     setBusy(true);
-    const next = [...log, {role:"user", content: input}];
+
+    // user message
+    const next = [...log, { role: "user" as const, content: input }];
     setLog(next);
     setInput("");
-    try{
-      const text = await sendChat(
-        [{role:"system", content:""}, ...next],
-        mode
-      );
-      setLog([...next, {role:"assistant", content:text}]);
-    }catch(e:any){
-      setLog([...next, {role:"assistant", content:`Error: ${e.message}`}]);
-    }finally{
+
+    try {
+      const text = await sendChat(next);
+      setLog([...next, { role: "assistant" as const, content: text }]);
+    } catch (e: any) {
+      setLog([...next, { role: "assistant" as const, content: `Error: ${e.message}` }]);
+    } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="space-y-3 max-w-2xl w-full">
-      <div className="flex gap-2">
-        <label className="text-sm font-medium">Mode</label>
-        <select value={mode} onChange={e=>setMode(e.target.value as Mode)} className="border rounded p-2">
-          <option value="guidance">Guidance</option>
-          <option value="redteam">Red-Team</option>
-          <option value="news">News Clarity</option>
-        </select>
-      </div>
-
-      <div className="border p-3 h-72 overflow-auto text-sm bg-white rounded">
-        {log.length===0 && <div className="opacity-60">Start the conversation…</div>}
-        {log.map((m,i)=>(
-          <div key={i} className="mb-2">
-            <b>{m.role}:</b> {m.content}
+    <div style={{ border: "1px solid #ccc", padding: "1rem", borderRadius: "8px" }}>
+      <div style={{ minHeight: "200px", marginBottom: "1rem", overflowY: "auto" }}>
+        {log.map((msg, i) => (
+          <div key={i}>
+            <strong>{msg.role === "user" ? "You" : "AI"}:</strong> {msg.content}
           </div>
         ))}
       </div>
-
-      <div className="flex gap-2">
+      <div style={{ display: "flex", gap: "0.5rem" }}>
         <input
+          type="text"
           value={input}
-          onChange={e=>setInput(e.target.value)}
-          className="flex-1 border rounded p-2"
-          placeholder="Ask anything…"
-          onKeyDown={(e)=>{ if(e.key==="Enter") onSend(); }}
+          onChange={(e) => setInput(e.target.value)}
+          style={{ flex: 1, padding: "0.5rem" }}
+          placeholder="Type your message..."
+          disabled={busy}
         />
-        <button onClick={onSend} disabled={busy} className="px-4 py-2 bg-black text-white rounded">
-          {busy ? "Sending…" : "Send"}
+        <button onClick={handleSend} disabled={busy || !input.trim()}>
+          {busy ? "..." : "Send"}
         </button>
       </div>
     </div>
