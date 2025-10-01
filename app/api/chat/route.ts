@@ -7,7 +7,7 @@ const MODEL = process.env.OPENAI_MODEL || "gpt-5-nano";
 const ALLOWED_ORIGIN =
   process.env.ALLOWED_ORIGIN || "https://www.moralclarityai.com";
 
-// ---------------- Guidelines ----------------
+/* ---------------- Guidelines ---------------- */
 const GUIDELINE_NEUTRAL = `Neutral mode:
 - Be clear, structured, and impartial.
 - Frame using recognized moral, legal, and policy frameworks.
@@ -23,27 +23,25 @@ const GUIDELINE_GUIDANCE = `Guidance add-on:
 - Provide risk registers, decision trees, and “next steps”.
 - Separate facts vs. interpretations; avoid certainty inflation.`;
 
-// Build system prompt
+/* Build system prompt */
 function buildSystemPrompt(filters: string[]) {
   const parts = [GUIDELINE_NEUTRAL];
   if (filters.includes("ministry")) parts.push(GUIDELINE_MINISTRY);
   if (filters.includes("guidance")) parts.push(GUIDELINE_GUIDANCE);
-
   parts.push(
     `Format:
 - Start with a 1–2 sentence answer.
 - Then give short bullets under clear headings.`
   );
-
   return parts.join("\n\n");
 }
 
-// Rolling memory: newest 5 turns
+/* Rolling memory: newest 5 turns (10 messages) */
 const MAX_TURNS = 5;
 function trimConversation(messages: Array<{ role: string; content: string }>) {
   if (!Array.isArray(messages)) return [];
-  if (messages.length <= MAX_TURNS * 2) return messages;
-  return messages.slice(-MAX_TURNS * 2);
+  const limit = MAX_TURNS * 2;
+  return messages.length <= limit ? messages : messages.slice(-limit);
 }
 
 export async function OPTIONS() {
@@ -53,6 +51,7 @@ export async function OPTIONS() {
       "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
       "Access-Control-Allow-Methods": "POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Max-Age": "86400",
     },
   });
 }
@@ -70,19 +69,26 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { messages = [], filters = [] } = body || {};
     const rolled = trimConversation(messages);
-
     const system = buildSystemPrompt(filters);
+
+    // Build messages with explicit, narrow roles so the type checker is happy.
+    const chatMessages: OpenAI.ChatCompletionMessageParam[] = [
+      { role: "system", content: system },
+      ...rolled.map(
+        (m: any): OpenAI.ChatCompletionMessageParam => ({
+          // Narrow to just the two roles we actually send
+          role: (m.role === "assistant" ? "assistant" : "user") as "assistant" | "user",
+          content: String(m.content ?? ""),
+        })
+      ),
+    ];
 
     const completion = await client.chat.completions.create({
       model: MODEL,
-      messages: [
-        { role: "system", content: system },
-        ...rolled.map((m: any) => ({
-          role: m.role === "assistant" ? "assistant" : "user",
-          content: String(m.content || ""),
-        })),
-      ],
+      messages: chatMessages,
+      // Models like gpt-5-nano accept max_completion_tokens (not max_tokens).
       max_completion_tokens: 800,
+      // temperature omitted: some “nano” models only accept the default (1).
     });
 
     const text =
