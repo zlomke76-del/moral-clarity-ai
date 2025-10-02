@@ -8,7 +8,7 @@ const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 const MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 const ALLOWED_ORIGIN =
   process.env.ALLOWED_ORIGIN || "https://www.moralclarityai.com";
-const DEBUG_PROMPTS = true; // <— set to true while testing; flip to false later
+const DEBUG_PROMPTS = true; // set true while testing, false later
 
 /* ========= MODES / GUIDELINES ========= */
 
@@ -27,7 +27,7 @@ const GUIDELINE_ABRAHAMIC = `ABRAHAMIC COUNSEL ADD-ON
   • Qur'an (with Sunnah as general moral guidance).
 - Honor the continuity of revelation (Abraham, Moses, Jesus, Muhammad — peace be upon them).
 - Emphasize human dignity, stewardship, mercy, justice, truthfulness, responsibility before God.
-- When relevant, include 1–3 brief references (e.g., "Exodus 20", "Matthew 5", "Qur'an 4:135").
+- When relevant, include brief references (e.g., "Exodus 20", "Matthew 5", "Qur'an 4:135").
 - Avoid sectarian polemics; do not proselytize; inclusive language ("people of faith," "believers").
 - Pastoral sensitivity; acknowledge suffering; encourage prayer/reflection/community.
 - Do not issue detailed legal rulings in any single tradition unless explicitly asked; instead, recommend qualified local clergy/scholars when appropriate.`;
@@ -38,14 +38,25 @@ const GUIDELINE_GUIDANCE = `GUIDANCE ADD-ON
 - Offer a compact risk register (top 3–5), a simple options matrix/decision path, and clear next steps.
 - End with a short actionable checklist.`;
 
-// Predictable output shape — with strict Section 4 behavior
+// Predictable output shape — strict Section 4 behavior text
 const RESPONSE_FORMAT = `RESPONSE FORMAT
 1) Brief Answer (2–4 sentences, plain language).
 2) Rationale (bullet points; note uncertainty if any).
 3) Options / Next Steps (actionable bullets).
 4) Relevant Scripture:
-   - If Abrahamic add-on is active AND user has not asked for secular framing: PROVIDE 1–3 concise references across Torah/Tanakh, Gospels, Qur'an.
-   - If NOT active or the user asked for secular framing: OMIT this section entirely. Do NOT write "Not applicable."`;
+   - If Abrahamic add-on is ACTIVE and user has NOT asked for secular framing: PROVIDE 1–3 concise references across Torah/Tanakh, Gospels, Qur'an.
+   - If NOT active or the user asked for secular framing: OMIT this section entirely. Do NOT write "Not applicable" or placeholders.`;
+
+// **NEW**: hard mandate when Abrahamic is on
+const ABRAHAMIC_MUST = `MANDATE (only when Abrahamic add-on is active and user has not asked for secular framing)
+- You MUST include Section 4 with at least ONE concise reference (e.g., "Leviticus 19:18", "Matthew 5:37", "Qur'an 4:135").
+- Keep references brief; no long quotations; no more than three references.
+- Do NOT output any text like "Not applicable" in place of Section 4.`;
+
+// **NEW**: quick output self-check
+const OUTPUT_CHECK = `OUTPUT SELF-CHECK
+- If Abrahamic add-on is active and user has not asked for secular framing, verify that your final message contains Section 4 with 1–3 concise references.
+- If it does not, regenerate succinctly to include it, keeping Sections 1–3 intact.`;
 
 // House rules
 const HOUSE_RULES = `HOUSE RULES
@@ -63,33 +74,36 @@ function normalizeFilters(filters: unknown): string[] {
     .filter(Boolean);
 }
 
-// Build system prompt from filters
-function buildSystemPrompt(filters: string[], userWantsSecular: boolean) {
-  const parts = [GUIDELINE_NEUTRAL, HOUSE_RULES, RESPONSE_FORMAT];
-
-  // Back-compat: "ministry" maps to Abrahamic
-  const wantsAbrahamic =
-    filters.includes("abrahamic") || filters.includes("ministry");
-
-  if (wantsAbrahamic && !userWantsSecular) parts.push(GUIDELINE_ABRAHAMIC);
-  if (filters.includes("guidance")) parts.push(GUIDELINE_GUIDANCE);
-
-  return { prompt: parts.join("\n\n"), wantsAbrahamic };
-}
-
-// Keep convo short
 function trimConversation(messages: Array<{ role: string; content: string }>) {
   const MAX_TURNS = 5; // last 5 exchanges
   const limit = MAX_TURNS * 2;
   return messages.length <= limit ? messages : messages.slice(-limit);
 }
 
-// Detect explicit secular request (tightened to avoid false positives)
+// Tighter “secular” detector to avoid false positives
 function wantsSecular(messages: Array<{ role: string; content: string }>) {
   const text = messages.slice(-6).map((m) => m.content).join(" ").toLowerCase();
   return /\bsecular framing\b|\bsecular only\b|\bno scripture\b|\bno religious\b|\bkeep it secular\b/.test(
     text
   );
+}
+
+// Build system prompt from filters + secular preference
+function buildSystemPrompt(filters: string[], userWantsSecular: boolean) {
+  const parts = [GUIDELINE_NEUTRAL, HOUSE_RULES, RESPONSE_FORMAT, OUTPUT_CHECK];
+
+  // Back-compat: "ministry" maps to Abrahamic
+  const wantsAbrahamic =
+    filters.includes("abrahamic") || filters.includes("ministry");
+
+  if (wantsAbrahamic && !userWantsSecular) {
+    parts.push(GUIDELINE_ABRAHAMIC, ABRAHAMIC_MUST);
+  }
+  if (filters.includes("guidance")) {
+    parts.push(GUIDELINE_GUIDANCE);
+  }
+
+  return { prompt: parts.join("\n\n"), wantsAbrahamic };
 }
 
 /* ========= CORS (OPTIONS) ========= */
