@@ -8,7 +8,7 @@ const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 const MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 const ALLOWED_ORIGIN =
   process.env.ALLOWED_ORIGIN || "https://www.moralclarityai.com";
-const DEBUG_PROMPTS = process.env.DEBUG_PROMPTS === "true";
+const DEBUG_PROMPTS = true; // <— set to true while testing; flip to false later
 
 /* ========= MODES / GUIDELINES ========= */
 
@@ -84,11 +84,11 @@ function trimConversation(messages: Array<{ role: string; content: string }>) {
   return messages.length <= limit ? messages : messages.slice(-limit);
 }
 
-// Detect if user explicitly asked for secular framing in recent turns
+// Detect explicit secular request (tightened to avoid false positives)
 function wantsSecular(messages: Array<{ role: string; content: string }>) {
-  const recent = messages.slice(-6).map((m) => m.content.toLowerCase()).join(" ");
-  return /secular framing|secular only|no scripture|no religious|keep it secular/.test(
-    recent
+  const text = messages.slice(-6).map((m) => m.content).join(" ").toLowerCase();
+  return /\bsecular framing\b|\bsecular only\b|\bno scripture\b|\bno religious\b|\bkeep it secular\b/.test(
+    text
   );
 }
 
@@ -117,9 +117,8 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const rawFilters = body?.filters ?? [];
-    const filters = normalizeFilters(rawFilters); // <-- normalize here
     const messages = Array.isArray(body?.messages) ? body.messages : [];
+    const filters = normalizeFilters(body?.filters ?? []);
 
     const rolled = trimConversation(messages);
     const userAskedForSecular = wantsSecular(rolled);
@@ -148,7 +147,6 @@ export async function POST(req: NextRequest) {
 
     const text = (response as any).output_text?.trim() || "[No reply from model]";
 
-    // Optional debug echo to help you verify parsed filters while testing
     const debug = DEBUG_PROMPTS
       ? { parsedFilters: filters, wantsAbrahamic, userAskedForSecular, model: MODEL }
       : undefined;
