@@ -1,4 +1,3 @@
-// app/api/subscribe/route.ts
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
@@ -13,10 +12,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders });
-}
-
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -24,30 +19,73 @@ const supabase = createClient(
 
 export async function POST(req: Request) {
   try {
-    // Be defensive: if body isn't JSON, show useful message
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
+    const contentType = req.headers.get("content-type") || "";
+    let email: string | null = null;
+
+    if (contentType.includes("application/json")) {
+      // JSON body
+      const body = await req.json();
+      const parsed = schema.safeParse(body);
+      if (!parsed.success) {
+        return NextResponse.json(
+          { ok: false, message: "Valid email required" },
+          { status: 400, headers: corsHeaders }
+        );
+      }
+      email = parsed.data.email;
+    } else if (contentType.includes("application/x-www-form-urlencoded")) {
+      // Classic form post (Webflow default)
+      const text = await req.text();
+      const params = new URLSearchParams(text);
+
+      // Try common field names
+      email =
+        params.get("email") ||
+        params.get("Email") ||
+        params.get("Newsletter Email") ||
+        params.get("newsletter-email") ||
+        null;
+
+      // Validate
+      const parsed = schema.safeParse({ email });
+      if (!parsed.success) {
+        return NextResponse.json(
+          { ok: false, message: "Valid email required" },
+          { status: 400, headers: corsHeaders }
+        );
+      }
+      email = parsed.data.email;
+    } else if (contentType.includes("multipart/form-data")) {
+      // In case Webflow or another client sends multipart
+      const form = await req.formData();
+      const raw = (form.get("email") ||
+        form.get("Email") ||
+        form.get("Newsletter Email") ||
+        form.get("newsletter-email")) as string | null;
+
+      const parsed = schema.safeParse({ email: raw ?? null });
+      if (!parsed.success) {
+        return NextResponse.json(
+          { ok: false, message: "Valid email required" },
+          { status: 400, headers: corsHeaders }
+        );
+      }
+      email = parsed.data.email;
+    } else {
+      // Unknown content-type; you can choose to reject or try to parse anyway
       return NextResponse.json(
-        { ok: false, message: "Expected JSON body" },
-        { status: 400, headers: corsHeaders }
+        { ok: false, message: "Unsupported Content-Type" },
+        { status: 415, headers: corsHeaders }
       );
     }
 
-    const parsed = schema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json(
-        { ok: false, message: "Valid email required" },
-        { status: 400, headers: corsHeaders }
-      );
-    }
-
-    const { error } = await supabase.from("subscribers").insert({
-      email: parsed.data.email,
-    });
-
+    // Insert into Supabase
+    const { error } = await supabase.from("subscribers").insert({ email });
     if (error) {
+      // If duplicate, treat as success
+      if (error.message && /duplicate key/i.test(error.message)) {
+        return NextResponse.json({ ok: true }, { headers: corsHeaders });
+      }
       return NextResponse.json(
         { ok: false, message: error.message },
         { status: 500, headers: corsHeaders }
@@ -55,42 +93,10 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ ok: true }, { headers: corsHeaders });
-  } catch {
+  } catch (err) {
     return NextResponse.json(
       { ok: false, message: "Server error" },
       { status: 500, headers: corsHeaders }
     );
   }
-}
-
-// Human-friendly HTML when visiting in a browser
-export async function GET(_req: Request) {
-  const html = `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Thanks!</title>
-  <meta http-equiv="refresh" content="3; url=https://www.moralclarityai.com/" />
-  <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-           display: grid; place-items: center; height: 100vh; margin: 0;
-           background: #0b1220; color: #fff; }
-    .card { background: #121b2e; padding: 24px 28px; border-radius: 12px; max-width: 560px;
-            box-shadow: 0 8px 30px rgba(0,0,0,.3); text-align: center; }
-    h1 { margin: 0 0 8px; font-size: 20px; }
-    p  { margin: 0; color: #b9c4d1; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <h1>Thanks — we’ll be in touch soon.</h1>
-    <p>You’re being redirected back to Moral Clarity AI…</p>
-  </div>
-</body>
-</html>`;
-  return new Response(html, {
-    status: 200,
-    headers: { "Content-Type": "text/html; charset=utf-8" },
-  });
 }
