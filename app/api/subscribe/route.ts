@@ -1,35 +1,69 @@
+// app/api/subscribe/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Init Supabase client (env vars from Vercel)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Make sure we use the Node.js runtime
+export const runtime = "nodejs";
 
-// -----------------------------
-// POST  (called by your Webflow form)
-// -----------------------------
+// ------------------------------------
+// POST (called by your Webflow form)
+// ------------------------------------
 export async function POST(req: Request) {
   try {
-    const { email } = await req.json();
-
-    if (!email || !email.includes("@")) {
-      return NextResponse.json({ ok: false, message: "Valid email required" }, { status: 400 });
+    // Require JSON body
+    const ct = req.headers.get("content-type") || "";
+    if (!ct.includes("application/json")) {
+      return NextResponse.json(
+        { ok: false, message: "Expected JSON body" },
+        { status: 400 }
+      );
     }
 
-    const { error } = await supabase
-      .from("subscribers")
-      .insert([{ email }]);
+    const body = await req.json().catch(() => null);
+    const email = typeof body?.email === "string" ? body.email.trim() : "";
+
+    if (!email || !email.includes("@")) {
+      return NextResponse.json(
+        { ok: false, message: "Valid email required" },
+        { status: 400 }
+      );
+    }
+
+    // Read env vars *inside* the handler
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!url || !serviceKey) {
+      console.error("Missing Supabase env vars", { url: !!url, serviceKey: !!serviceKey });
+      return NextResponse.json(
+        { ok: false, message: "Server is not configured (Supabase env vars missing)" },
+        { status: 500 }
+      );
+    }
+
+    // Create the client only now
+    const supabase = createClient(url, serviceKey);
+
+    const { error } = await supabase.from("subscribers").insert([{ email }]);
 
     if (error) {
-      console.error("Supabase insert error:", error.message);
-      return NextResponse.json({ ok: false, message: "Database insert failed" }, { status: 500 });
+      // idempotent: duplicate unique email => treat as success
+      const msg = String(error.message || "").toLowerCase();
+      const isDuplicate =
+        msg.includes("duplicate") || msg.includes("unique") || msg.includes("already exists");
+
+      if (!isDuplicate) {
+        console.error("Supabase insert error:", error);
+        return NextResponse.json(
+          { ok: false, message: "Database insert failed" },
+          { status: 500 }
+        );
+      }
     }
 
     return NextResponse.json({
       ok: true,
-      message: "Thanks! We'll be in touch with you soon."
+      message: "Thanks! We'll be in touch with you soon.",
     });
   } catch (err) {
     console.error("POST /subscribe error:", err);
@@ -37,11 +71,12 @@ export async function POST(req: Request) {
   }
 }
 
-// -----------------------------
-// GET  (direct browser visit)
-// -----------------------------
+// ------------------------------------
+// GET (direct browser visit -> nice page)
+// ------------------------------------
 export async function GET() {
-  const html = `<!doctype html>
+  try {
+    const html = `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -80,10 +115,15 @@ export async function GET() {
 </body>
 </html>`;
 
-  return new Response(html, {
-    headers: {
-      "content-type": "text/html; charset=utf-8",
-      "cache-control": "no-store",
-    },
-  });
+    return new Response(html, {
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+      },
+    });
+  } catch (err) {
+    console.error("GET /subscribe error:", err);
+    // As a last resort, return a small JSON so we never 500
+    return NextResponse.json({ ok: true });
+  }
 }
