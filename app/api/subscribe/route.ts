@@ -1,16 +1,10 @@
-// app/api/subscribe/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Make sure we use the Node.js runtime
 export const runtime = "nodejs";
 
-// ------------------------------------
-// POST (called by your Webflow form)
-// ------------------------------------
 export async function POST(req: Request) {
   try {
-    // Require JSON body
     const ct = req.headers.get("content-type") || "";
     if (!ct.includes("application/json")) {
       return NextResponse.json(
@@ -29,7 +23,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Read env vars *inside* the handler
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -41,17 +34,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // Create the client only now
     const supabase = createClient(url, serviceKey);
-
     const { error } = await supabase.from("subscribers").insert([{ email }]);
 
     if (error) {
-      // idempotent: duplicate unique email => treat as success
       const msg = String(error.message || "").toLowerCase();
-      const isDuplicate =
-        msg.includes("duplicate") || msg.includes("unique") || msg.includes("already exists");
-
+      const isDuplicate = msg.includes("duplicate") || msg.includes("unique") || msg.includes("already exists");
       if (!isDuplicate) {
         console.error("Supabase insert error:", error);
         return NextResponse.json(
@@ -71,9 +59,6 @@ export async function POST(req: Request) {
   }
 }
 
-// ------------------------------------
-// GET (direct browser visit -> nice page)
-// ------------------------------------
 export async function GET() {
   try {
     const html = `<!doctype html>
@@ -114,16 +99,11 @@ export async function GET() {
   </main>
 </body>
 </html>`;
-
     return new Response(html, {
-      headers: {
-        "content-type": "text/html; charset=utf-8",
-        "cache-control": "no-store",
-      },
+      headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
     });
   } catch (err) {
     console.error("GET /subscribe error:", err);
-    // As a last resort, return a small JSON so we never 500
     return NextResponse.json({ ok: true });
   }
 }
