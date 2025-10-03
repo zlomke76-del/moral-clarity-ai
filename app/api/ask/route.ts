@@ -1,13 +1,13 @@
-// /app/api/ask/route.ts
+// app/api/ask/route.ts
 import { NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { answerOrchestrator } from "@/lib/answerOrchestrator";
 
-// --- config helpers ---
+// --- Config ---
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!; // SERVER ONLY
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!; // server only
 
-// Boundaries (unchanging guardrails)
+// Guardrails
 const BOUNDARIES = [
   "Provide truthful, neutral, concise answers.",
   "Do not invent facts; if uncertain, say so.",
@@ -16,7 +16,7 @@ const BOUNDARIES = [
   "Medical/legal: provide general info only; suggest consulting a professional.",
 ].join("\n");
 
-// Build the faith-lens prompt text
+// Faith lens builder
 function buildFaithLensPrompt(
   lens: "neutral" | "ministry",
   scriptureVersion = "ESV"
@@ -35,7 +35,7 @@ function buildFaithLensPrompt(
   ].join("\n");
 }
 
-// Create a server-side Supabase client (service role)
+// Supabase server client
 function sbServer() {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
@@ -52,18 +52,17 @@ export async function POST(req: NextRequest) {
 
     const sb = sbServer();
 
-    // --- Resolve the authed user (via Supabase Auth cookie/JWT if you use it) ---
-    // If you're not using Supabase Auth yet, set DEV_USER_ID in env temporarily.
+    // TEMP: fallback for no auth yet
     const { data: auth } = await sb.auth.getUser().catch(() => ({ data: { user: null } as any }));
     const userId =
       auth?.user?.id ??
-      process.env.DEV_USER_ID; // TEMP fallback for local testing without auth
+      process.env.DEV_USER_ID; // Set DEV_USER_ID in .env for local testing
 
     if (!userId) {
       return Response.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // --- Load user settings (faith lens, etc.) ---
+    // --- Load user settings ---
     const { data: settings } = await sb
       .from("user_settings")
       .select("faith_lens, scripture_version, apply_faith_globally")
@@ -89,10 +88,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // --- Resolve persona from DB (fallback safe) ---
+    // --- Resolve persona ---
     const { data: persona } = await sb
       .from("personas")
-      .select("slug, name, system_prompt, style, plan_min, capabilities, disclaimer")
+      .select("slug, name, system_prompt, style")
       .eq("slug", personaSlug)
       .maybeSingle();
 
@@ -109,7 +108,7 @@ export async function POST(req: NextRequest) {
     // --- Compose faith-lens prompt ---
     const faithLensPrompt = buildFaithLensPrompt(activeLens, scriptureVersion);
 
-    // --- Call the orchestrator (OpenAI) ---
+    // --- Call orchestrator ---
     const { answer } = await answerOrchestrator({
       personaName,
       personaSystemPrompt,
@@ -119,7 +118,7 @@ export async function POST(req: NextRequest) {
       userMessage: message,
     });
 
-    // --- Persist messages if we have a thread ---
+    // --- Save messages if thread exists ---
     if (threadId) {
       await sb.from("messages").insert([
         { thread_id: threadId, role: "user", content: message },
