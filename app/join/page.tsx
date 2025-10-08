@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function JoinPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = createClientComponentClient();
-
   const [message, setMessage] = useState('Joining…');
 
   useEffect(() => {
@@ -23,27 +26,28 @@ export default function JoinPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const accessToken = session?.access_token;
       if (!accessToken) {
-        // send to your existing login route then bounce back
         router.replace(`/login?next=/join?token=${encodeURIComponent(token)}`);
         return;
       }
 
-      // call your Supabase Edge Function
-      const res = await fetch(
-        `https://<YOUR-PROJECT-REF>.functions.supabase.co/join?token=${encodeURIComponent(token)}`,
-        { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } }
-      );
+      // Build the Edge Function URL from your env var (no hardcoding project ref)
+      const base = process.env.NEXT_PUBLIC_SUPABASE_URL!; // e.g. https://abc123xyz.supabase.co
+      const fnUrl = `${base.replace('.supabase.co', '')}.functions.supabase.co/join?token=${encodeURIComponent(token)}`;
+
+      const res = await fetch(fnUrl, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
       const data = await res.json();
 
       if (res.ok) {
         setMessage(data.message || 'Joined successfully.');
-        // optional: send them somewhere useful
-        // router.replace('/dashboard');
+        // router.replace('/dashboard'); // optional redirect
       } else {
         setMessage(data.error || 'Join failed.');
       }
     })();
-  }, [router, searchParams, supabase]);
+  }, [router, searchParams]);
 
   return (
     <main className="mx-auto max-w-xl px-6 py-16 text-center">
