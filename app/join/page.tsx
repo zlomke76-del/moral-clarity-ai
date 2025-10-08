@@ -1,15 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
+
+// Tell Next.js NOT to prerender this page (CSR only)
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export default function JoinPage() {
+function JoinInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [message, setMessage] = useState('Joining…');
@@ -22,7 +26,6 @@ export default function JoinPage() {
         return;
       }
 
-      // ensure user is signed in
       const { data: { session } } = await supabase.auth.getSession();
       const accessToken = session?.access_token;
       if (!accessToken) {
@@ -30,7 +33,6 @@ export default function JoinPage() {
         return;
       }
 
-      // Build the Edge Function URL from your env var (no hardcoding project ref)
       const base = process.env.NEXT_PUBLIC_SUPABASE_URL!; // e.g. https://abc123xyz.supabase.co
       const fnUrl = `${base.replace('.supabase.co', '')}.functions.supabase.co/join?token=${encodeURIComponent(token)}`;
 
@@ -42,7 +44,7 @@ export default function JoinPage() {
 
       if (res.ok) {
         setMessage(data.message || 'Joined successfully.');
-        // router.replace('/dashboard'); // optional redirect
+        // router.replace('/dashboard'); // optional
       } else {
         setMessage(data.error || 'Join failed.');
       }
@@ -54,5 +56,18 @@ export default function JoinPage() {
       <h1 className="text-2xl font-semibold mb-4">Invite</h1>
       <p>{message}</p>
     </main>
+  );
+}
+
+export default function JoinPage() {
+  return (
+    <Suspense fallback={
+      <main className="mx-auto max-w-xl px-6 py-16 text-center">
+        <h1 className="text-2xl font-semibold mb-4">Invite</h1>
+        <p>Preparing…</p>
+      </main>
+    }>
+      <JoinInner />
+    </Suspense>
   );
 }
