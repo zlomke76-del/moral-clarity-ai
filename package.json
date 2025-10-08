@@ -7,16 +7,17 @@
     "start": "next start"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
     "next": "14.2.5",
+    "openai": "^4.57.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "openai": "^4.57.0",
-    "zod": "^3.23.8",
-    "@supabase/supabase-js": "^2.45.4"
+    "stripe": "^19.1.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "typescript": "^5.4.5",
+    "@types/node": "^20.12.12",
     "@types/react": "^18.2.66",
-    "@types/node": "^20.12.12"
+    "typescript": "^5.4.5"
   }
 }
