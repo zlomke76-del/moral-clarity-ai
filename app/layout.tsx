@@ -1,4 +1,3 @@
-// app/layout.tsx
 export const metadata = {
   title: "Moral Clarity AI",
   description: "Bridge + app",
@@ -14,7 +13,8 @@ export default function RootLayout({
       <body
         style={{
           margin: 0,
-          fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
+          fontFamily:
+            "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
           background: "#0b0b0c",
           color: "#f7f7f7",
         }}
