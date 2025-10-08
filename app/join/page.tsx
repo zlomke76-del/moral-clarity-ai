@@ -4,9 +4,9 @@ import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 
-// Tell Next.js NOT to prerender this page (CSR only)
+// Prevent prerendering — render client-side only
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// (Remove the revalidate export that was causing the error)
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,12 +42,9 @@ function JoinInner() {
       });
       const data = await res.json();
 
-      if (res.ok) {
-        setMessage(data.message || 'Joined successfully.');
-        // router.replace('/dashboard'); // optional
-      } else {
-        setMessage(data.error || 'Join failed.');
-      }
+      setMessage(res.ok ? (data.message || 'Joined successfully.') : (data.error || 'Join failed.'));
+      // Optionally redirect after success:
+      // if (res.ok) router.replace('/dashboard');
     })();
   }, [router, searchParams]);
 
