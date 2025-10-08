@@ -54,8 +54,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Price for plan '${plan}' is not configured` }, { status: 400 });
     }
 
-    // Initialize Stripe per request
-    const stripe = new Stripe(secret, { apiVersion: "2024-06-20" });
+    // Initialize Stripe – let SDK use its installed API version
+    const stripe = new Stripe(secret);
 
     const origin = getOrigin(req);
     const seatsMax = SEATS_MAX_BY_PLAN[plan];
@@ -65,19 +65,15 @@ export async function POST(req: NextRequest) {
       payment_method_types: ["card"],
       line_items: [
         {
-          // Always 1 line item — Family/Ministry are fixed price regardless of usage
           price: priceId,
-          quantity: 1,
+          quantity: 1, // Family & Ministry are fixed price regardless of usage
         },
       ],
       success_url: `${origin}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/billing/cancelled`,
-      // Helpful for tax and coupons
       automatic_tax: { enabled: true },
       allow_promotion_codes: true,
       billing_address_collection: "auto",
-
-      // Store plan + caps where webhooks and your app can read them
       subscription_data: {
         metadata: {
           plan,
@@ -85,11 +81,8 @@ export async function POST(req: NextRequest) {
           userId,
           orgName,
         },
-        // No free trial
         trial_period_days: 0,
       },
-
-      // Also mirror some at the session level if you like (optional)
       metadata: {
         plan,
         seats_max: String(seatsMax),
