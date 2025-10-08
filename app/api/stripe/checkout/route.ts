@@ -2,24 +2,30 @@
 import Stripe from "stripe";
 import { NextRequest, NextResponse } from "next/server";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-08-20",
-});
+// Initialize Stripe client
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(req: NextRequest) {
   try {
+    // Extract payload from front-end request
     const { userId = null, seats = 1, orgName = null } = await req.json();
 
+    // Get the price ID from environment variables
     const priceId = process.env.STRIPE_PRICE_ID_PRO;
     if (!priceId) {
-      return NextResponse.json({ error: "Missing STRIPE_PRICE_ID_PRO" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Missing STRIPE_PRICE_ID_PRO environment variable" },
+        { status: 500 }
+      );
     }
 
+    // Determine the correct site origin
     const origin =
       process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
       process.env.VERCEL_URL?.replace(/\/$/, "") ||
       "http://localhost:3000";
 
+    // Create a checkout session
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       payment_method_types: ["card"],
@@ -40,11 +46,12 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Return the Stripe Checkout URL to the client
     return NextResponse.json({ url: session.url });
   } catch (error: any) {
-    console.error("Checkout error:", error);
+    console.error("❌ Stripe checkout error:", error);
     return NextResponse.json(
-      { error: error.message || "Unknown error" },
+      { error: error.message || "Unknown error during checkout" },
       { status: 500 }
     );
   }
