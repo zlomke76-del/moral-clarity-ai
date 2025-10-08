@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+// NOTE: relative import (no @ alias required)
+import { supabase } from "../../lib/supabaseClient";
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -19,9 +20,9 @@ export default function ChatUI() {
       setEmail((data.user?.email as string | undefined) ?? null);
     });
     (async () => {
-      const user = (await supabase.auth.getUser()).data.user?.id ?? null;
-      if (!user) return;
-      const { data } = await supabase.rpc("can_add_memory", { uid: user });
+      const uid = (await supabase.auth.getUser()).data.user?.id ?? null;
+      if (!uid) return;
+      const { data } = await supabase.rpc("can_add_memory", { uid });
       if (typeof data === "boolean") setCanWrite(data);
     })();
   }, []);
@@ -88,16 +89,24 @@ export default function ChatUI() {
         <h1 className="text-xl font-semibold">Moral Clarity AI — Bridge</h1>
         <div className="flex gap-3">
           {!userId ? (
-            <button className="rounded bg-black text-white px-3 py-2" onClick={signInWithMagicLink}>
+            <button
+              className="rounded bg-black text-white px-3 py-2"
+              onClick={signInWithMagicLink}
+            >
               Sign in
             </button>
           ) : (
             <>
               <span className="text-sm text-gray-400">{email}</span>
-              <button className="rounded border px-3 py-2" onClick={signOut}>Sign out</button>
+              <button className="rounded border px-3 py-2" onClick={signOut}>
+                Sign out
+              </button>
             </>
           )}
-          <button className="rounded bg-indigo-600 text-white px-3 py-2" onClick={startCheckout}>
+          <button
+            className="rounded bg-indigo-600 text-white px-3 py-2"
+            onClick={startCheckout}
+          >
             Upgrade to Pro
           </button>
         </div>
@@ -108,10 +117,15 @@ export default function ChatUI() {
           <div className="text-gray-500">Ask anything to get started…</div>
         ) : (
           messages.map((m, i) => (
-            <div key={i} className={`my-2 ${m.role === "user" ? "text-right" : "text-left"}`}>
+            <div
+              key={i}
+              className={`my-2 ${m.role === "user" ? "text-right" : "text-left"}`}
+            >
               <span
                 className={`inline-block px-3 py-2 rounded ${
-                  m.role === "user" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-900"
+                  m.role === "user"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-100 text-gray-900"
                 }`}
               >
                 {m.content}
@@ -132,7 +146,11 @@ export default function ChatUI() {
           }
           className="flex-1 border rounded px-3 py-2 text-black"
         />
-        <button onClick={onSend} disabled={loading || !canWrite} className="rounded bg-black text-white px-4 py-2">
+        <button
+          onClick={onSend}
+          disabled={loading || !canWrite}
+          className="rounded bg-black text-white px-4 py-2"
+        >
           {loading ? "…" : "Send"}
         </button>
       </div>
