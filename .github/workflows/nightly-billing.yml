@@ -1,0 +1,33 @@
+name: Nightly Billing (attach + snapshot)
+
+on:
+  schedule:
+    - cron: "0 5 * * *"   # 05:00 UTC daily
+  workflow_dispatch:      # allows manual run from Actions tab
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Attach payments → users
+        env:
+          URL: ${{ secrets.SUPABASE_ATTACH_URL }}
+          SECRET: ${{ secrets.INTERNAL_CRON_SECRET }}
+        run: |
+          echo "Calling: $URL"
+          curl -sS -X POST \
+            -H "x-cron-secret: ${SECRET}" \
+            "${URL}" | tee /dev/stderr
+
+      - name: Small pause
+        run: sleep 10
+
+      - name: Refresh user_billing_snapshot
+        env:
+          URL: ${{ secrets.SUPABASE_SNAPSHOT_URL }}
+          SECRET: ${{ secrets.INTERNAL_CRON_SECRET }}
+        run: |
+          echo "Calling: $URL"
+          curl -sS -X POST \
+            -H "x-cron-secret: ${SECRET}" \
+            "${URL}" | tee /dev/stderr
