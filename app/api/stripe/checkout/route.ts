@@ -7,29 +7,33 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-06-20",
 });
 
-// This route is called by your frontend when user clicks "Upgrade" or "Buy Team Plan"
 export async function POST(req: NextRequest) {
   try {
+    // Expected body from the client
     const { userId, priceId, seats = 1, orgName, orgId } = await req.json();
 
     if (!userId || !priceId) {
-      return NextResponse.json({ error: "Missing userId or priceId" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing userId or priceId" },
+        { status: 400 }
+      );
     }
 
-    // If this is a new org checkout, generate one now
+    // If a new org is being created for this purchase, generate an id now
     const finalOrgId = orgId ?? randomUUID();
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       line_items: [
         {
-          price: priceId,             // the Stripe price id (pro/ministry/team)
-          quantity: Math.max(1, Number(seats || 1)), // seat count
+          price: priceId,
+          quantity: Math.max(1, Number(seats || 1)),
         },
       ],
       success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/billing/cancel`,
       allow_promotion_codes: true,
+      // 👇 this metadata is what your webhook already expects/uses
       metadata: {
         user_id: userId,
         org_id: finalOrgId,
