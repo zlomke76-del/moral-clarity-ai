@@ -1,22 +1,33 @@
-// app/api/spaces/route.ts
+import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const cookieStore = cookies();
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies }
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options?: CookieOptions) {
+          // Next's cookies().set accepts an options object
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name: string, options?: CookieOptions) {
+          // Remove = set with maxAge 0
+          cookieStore.set({ name, value: '', ...options, maxAge: 0 });
+        },
+      },
+    }
   );
 
   const body = await req.json();
-  const { data, error } = await supabase.rpc('api_create_space', {
-    p_name: body.name,
-    p_description: body.description ?? '',
-    p_topic: body.topic ?? 'general',
-    p_is_public: !!body.isPublic,
-  });
 
-  if (error) return new Response(error.message, { status: 400 });
-  return Response.json({ id: data });
+  // …use `supabase` with RLS, e.g. supabase.from('spaces').insert(...)
+  // return NextResponse.json(...)
+  return NextResponse.json({ ok: true });
 }
