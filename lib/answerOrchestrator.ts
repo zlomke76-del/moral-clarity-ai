@@ -1,4 +1,3 @@
-// lib/answerOrchestrator.ts
 import type OpenAI from "openai";
 import { getOpenAI } from "./openai";
 
@@ -28,12 +27,7 @@ export async function answerOrchestrator(input: OrchestratorInput) {
   const openai = await getOpenAI();
 
   const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-    {
-      role: "system",
-      content: `[PERSONA: ${personaName}]
-${personaSystemPrompt}
-Style: ${personaStyle}`,
-    },
+    { role: "system", content: `[PERSONA: ${personaName}]\n${personaSystemPrompt}\nStyle: ${personaStyle}` },
     { role: "system", content: boundaries },
     { role: "system", content: faithLensPrompt },
     { role: "user", content: userMessage },
