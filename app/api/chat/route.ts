@@ -1,13 +1,17 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
+import type OpenAI from 'openai';
+import { getOpenAI } from '@/lib/openai';
 
 /* ========= CONFIG ========= */
-const MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
+const MODEL = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
 const REQUEST_TIMEOUT_MS = 20_000;
-const ORIGIN_LIST = (process.env.ALLOWED_ORIGIN || "https://www.moralclarityai.com")
-  .split(",").map(s => s.trim()).filter(Boolean);
+const ORIGIN_LIST = (process.env.ALLOWED_ORIGIN || 'https://www.moralclarityai.com')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
 
 /* ========= GUIDELINES ========= */
 const GUIDELINE_NEUTRAL = `NEUTRAL MODE
@@ -59,7 +63,7 @@ const HOUSE_RULES = `HOUSE RULES
 /* ========= HELPERS ========= */
 function normalizeFilters(filters: unknown): string[] {
   if (!Array.isArray(filters)) return [];
-  return filters.map(f => String(f ?? "").toLowerCase().trim()).filter(Boolean);
+  return filters.map(f => String(f ?? '').toLowerCase().trim()).filter(Boolean);
 }
 function trimConversation(messages: Array<{ role: string; content: string }>) {
   const MAX_TURNS = 5;
@@ -67,50 +71,41 @@ function trimConversation(messages: Array<{ role: string; content: string }>) {
   return messages.length <= limit ? messages : messages.slice(-limit);
 }
 function wantsSecular(messages: Array<{ role: string; content: string }>) {
-  const text = messages.slice(-6).map(m => m.content).join(" ").toLowerCase();
+  const text = messages.slice(-6).map(m => m.content).join(' ').toLowerCase();
   return /\bsecular framing\b|\bsecular only\b|\bno scripture\b|\bno religious\b|\bkeep it secular\b/.test(text);
 }
 function buildSystemPrompt(filters: string[], userWantsSecular: boolean) {
   const parts = [GUIDELINE_NEUTRAL, HOUSE_RULES, RESPONSE_FORMAT, OUTPUT_CHECK];
-  const wantsAbrahamic = filters.includes("abrahamic") || filters.includes("ministry");
+  const wantsAbrahamic = filters.includes('abrahamic') || filters.includes('ministry');
   if (wantsAbrahamic && !userWantsSecular) parts.push(GUIDELINE_ABRAHAMIC, ABRAHAMIC_MUST);
-  if (filters.includes("guidance")) parts.push(GUIDELINE_GUIDANCE);
-  return { prompt: parts.join("\n\n"), wantsAbrahamic };
+  if (filters.includes('guidance')) parts.push(GUIDELINE_GUIDANCE);
+  return { prompt: parts.join('\n\n'), wantsAbrahamic };
 }
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
-    const id = setTimeout(() => reject(new Error("Request timed out")), ms);
+    const id = setTimeout(() => reject(new Error('Request timed out')), ms);
     p.then(v => { clearTimeout(id); resolve(v); })
      .catch(e => { clearTimeout(id); reject(e); });
   });
 }
+
+/** CORS helpers */
 function pickAllowed(origin: string | null) {
   if (!origin) return null;
   return ORIGIN_LIST.includes(origin) ? origin : null;
 }
 function corsHeaders(origin: string) {
   return {
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Max-Age": "86400",
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Max-Age': '86400',
   };
-}
-
-/* ========= LAZY OPENAI CLIENT ========= */
-import type OpenAI from "openai";
-let _client: OpenAI | null = null;
-async function getClient(): Promise<OpenAI> {
-  if (!_client) {
-    const { default: OpenAI } = await import("openai");
-    _client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-  }
-  return _client;
 }
 
 /* ========= CORS (OPTIONS) ========= */
 export async function OPTIONS(req: NextRequest) {
-  const origin = pickAllowed(req.headers.get("origin"));
+  const origin = pickAllowed(req.headers.get('origin'));
   if (!origin) return new NextResponse(null, { status: 403 });
   return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
 }
@@ -118,10 +113,10 @@ export async function OPTIONS(req: NextRequest) {
 /* ========= POST ========= */
 export async function POST(req: NextRequest) {
   try {
-    const origin = pickAllowed(req.headers.get("origin"));
+    const origin = pickAllowed(req.headers.get('origin'));
     if (!origin) {
       return NextResponse.json(
-        { error: `Origin not allowed`, allowed: ORIGIN_LIST },
+        { error: 'Origin not allowed', allowed: ORIGIN_LIST },
         { status: 403 }
       );
     }
@@ -129,20 +124,21 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const messages = Array.isArray(body?.messages) ? body.messages : [];
     const filters = normalizeFilters(body?.filters ?? []);
+
     const rolled = trimConversation(messages);
     const userAskedForSecular = wantsSecular(rolled);
     const { prompt: system } = buildSystemPrompt(filters, userAskedForSecular);
 
     const transcript = rolled
-      .map((m: any) => `${m.role === "assistant" ? "Assistant" : "User"}: ${m.content}`)
-      .join("\n");
+      .map(m => `${m.role === 'assistant' ? 'Assistant' : 'User'}: ${m.content}`)
+      .join('\n');
 
     const fullPrompt =
       `System instructions:\n${system}\n\n` +
       `Conversation (last ${Math.floor(rolled.length / 2)} turns, newest last):\n` +
       `${transcript}\n\nAssistant:`;
 
-    const openai = await getClient();
+    const openai = await getOpenAI();
     const resp = await withTimeout(
       openai.responses.create({
         model: MODEL,
@@ -152,21 +148,16 @@ export async function POST(req: NextRequest) {
       REQUEST_TIMEOUT_MS
     );
 
-    const text = (resp as any).output_text?.trim() || "[No reply from model]";
-
-    return NextResponse.json(
-      { text, model: MODEL, sources: [] },
-      { headers: corsHeaders(origin) }
-    );
+    const text = (resp as any).output_text?.trim() || '[No reply from model]';
+    return NextResponse.json({ text, model: MODEL, sources: [] }, { headers: corsHeaders(origin) });
   } catch (err: any) {
-    const msg = err?.message === "Request timed out"
-      ? "⚠️ Connection timed out. Please try again."
+    const msg = err?.message === 'Request timed out'
+      ? '⚠️ Connection timed out. Please try again.'
       : (err?.message || String(err));
-    const origin = pickAllowed(req.headers.get("origin")) || ORIGIN_LIST[0];
-
+    const origin = pickAllowed(req.headers.get('origin')) || ORIGIN_LIST[0];
     return NextResponse.json(
       { error: msg },
-      { status: err?.message === "Request timed out" ? 504 : 500, headers: corsHeaders(origin) }
+      { status: err?.message === 'Request timed out' ? 504 : 500, headers: corsHeaders(origin) }
     );
   }
 }
