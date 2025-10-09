@@ -5,6 +5,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import crypto from 'crypto';
 
+// ⚠️ DO NOT import anything from "@/lib/*" here.
+// Keep this file self-contained so it can't pull OpenAI in via a barrel.
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 const ALLOWED_PRICES = new Set(
