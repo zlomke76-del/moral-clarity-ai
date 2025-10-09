@@ -44,6 +44,5 @@ Style: ${personaStyle}`,
     messages,
   });
 
-  const answer = completion.choices?.[0]?.message?.content ?? '';
-  return { answer };
+  return { answer: completion.choices?.[0]?.message?.content ?? '' };
 }
