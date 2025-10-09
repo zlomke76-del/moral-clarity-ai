@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import crypto from 'crypto';
 
-// ⚠️ Keep this file self-contained. Do NOT import from "@/lib/*".
+// ⚠️ Keep this file self-contained. Do NOT import from "@/lib/*" anywhere.
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 // Only allow your known LIVE/TEST prices
@@ -23,9 +23,7 @@ const ALLOWED_PRICES = new Set(
 const SITE = process.env.SITE_URL ?? 'https://moral-clarity-ai-2-0.webflow.io';
 
 export async function GET(req: NextRequest) {
-  const searchParams = new URL(req.url).searchParams;
-  const price = searchParams.get('price') ?? '';
-
+  const price = new URL(req.url).searchParams.get('price') ?? '';
   if (!ALLOWED_PRICES.has(price)) {
     return NextResponse.json({ error: 'Unknown price' }, { status: 400 });
   }
