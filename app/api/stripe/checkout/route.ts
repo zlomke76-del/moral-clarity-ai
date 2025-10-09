@@ -1,14 +1,12 @@
 export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic'; // don’t attempt to prerender
+export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import crypto from 'crypto';
 
-// No apiVersion literal -> avoid type mismatch churn
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-// Keep this local and simple; no shared libs that might init OpenAI
 const ALLOWED_PRICES = new Set(
   [
     process.env.PRICE_LIVE_STANDARD,
@@ -44,4 +42,3 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.redirect(session.url!, { status: 303 });
 }
-
