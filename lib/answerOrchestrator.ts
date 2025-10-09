@@ -1,24 +1,16 @@
 // /lib/answerOrchestrator.ts
-import OpenAI from "openai";
-
-// 👇 lazy singleton — prevents build-time initialization
-let _client: OpenAI | null = null;
-function getOpenAI(): OpenAI {
-  if (!_client) {
-    _client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-  }
-  return _client;
-}
+import type OpenAI from "openai";
+import { getOpenAI } from "./openai";
 
 export type OrchestratorInput = {
   personaName: string;
   personaSystemPrompt: string;
   personaStyle: string;
   boundaries: string;
-  faithLensPrompt: string;   // built string: neutral OFF or Ministry ON
+  faithLensPrompt: string;
   userMessage: string;
-  model?: string;            // default below
-  temperature?: number;      // default below
+  model?: string;
+  temperature?: number;
 };
 
 export async function answerOrchestrator(input: OrchestratorInput) {
@@ -33,8 +25,7 @@ export async function answerOrchestrator(input: OrchestratorInput) {
     temperature = 0.3,
   } = input;
 
-  // 👇 get client at runtime only
-  const openai = getOpenAI();
+  const openai = await getOpenAI();
 
   const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
     {
