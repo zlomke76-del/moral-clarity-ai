@@ -2,18 +2,22 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import crypto from 'crypto'; // small addition here
+import crypto from 'crypto';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' });
+// ❌ remove the apiVersion option
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-// Allow only your three known LIVE prices
+// allow-list your price IDs (use TEST + LIVE as needed)
 const ALLOWED_PRICES = new Set([
   process.env.PRICE_LIVE_STANDARD!,
   process.env.PRICE_LIVE_FAMILY!,
   process.env.PRICE_LIVE_MINISTRY!,
-]);
+  process.env.PRICE_TEST_STANDARD!,   // optional for v2 testing
+  process.env.PRICE_TEST_FAMILY!,     // optional
+  process.env.PRICE_TEST_MINISTRY!,   // optional
+].filter(Boolean));
 
-const SITE = process.env.SITE_URL ?? 'https://www.moralclarityai.com';
+const SITE = process.env.SITE_URL ?? 'https://moral-clarity-ai-2-0.webflow.io';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -23,10 +27,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unknown price' }, { status: 400 });
   }
 
-  // Generate a random reference for auditing
   const clientRef = crypto.randomUUID();
 
-  // Create the checkout session
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
     line_items: [{ price, quantity: 1 }],
@@ -34,7 +36,7 @@ export async function GET(req: NextRequest) {
     cancel_url: `${SITE}/#pricing`,
     client_reference_id: clientRef,
     allow_promotion_codes: true,
-    metadata: { source: 'webflow_pricing' },
+    metadata: { source: 'webflow_v2' },
   });
 
   return NextResponse.redirect(session.url!, { status: 303 });
