@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
-    // TODO: mark user active in DB using session.customer or client_reference_id
+    console.log('✅ Checkout completed:', session.id);
   }
 
   return NextResponse.json({ received: true }, { status: 200 });
