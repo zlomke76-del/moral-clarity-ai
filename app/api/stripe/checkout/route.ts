@@ -1,4 +1,3 @@
-// app/api/stripe/checkout/route.ts
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -6,8 +5,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import crypto from 'crypto';
 
+// ⚠️ DO NOT import anything from "@/lib/*" here.
+// Keep this file self-contained so it can’t pull OpenAI via a barrel.
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
+// Only allow your known LIVE/TEST prices
 const ALLOWED_PRICES = new Set(
   [
     process.env.PRICE_LIVE_STANDARD,
@@ -22,7 +25,7 @@ const ALLOWED_PRICES = new Set(
 const SITE = process.env.SITE_URL ?? 'https://moral-clarity-ai-2-0.webflow.io';
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
+  const searchParams = new URL(req.url).searchParams;
   const price = searchParams.get('price') ?? '';
 
   if (!ALLOWED_PRICES.has(price)) {
@@ -35,7 +38,7 @@ export async function GET(req: NextRequest) {
     mode: 'subscription',
     line_items: [{ price, quantity: 1 }],
     success_url: `${SITE}/thanks?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${SITE}/#pricing`,
+    cancel_url: `${SITE}/pricing`,
     client_reference_id: clientRef,
     allow_promotion_codes: true,
     metadata: { source: 'webflow_v2' },
