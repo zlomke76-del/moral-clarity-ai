@@ -1,49 +1,30 @@
 export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { headers } from 'next/headers';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
-});
+// ❌ remove apiVersion; let Stripe use your account's default
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
-// Example: upsert to Supabase or log events (customize as needed)
-async function handleEvent(event: Stripe.Event) {
-  switch (event.type) {
-    case 'checkout.session.completed':
-      console.log('✅ Checkout complete:', event.data.object.id);
-      // TODO: upsert subscription in Supabase
-      break;
-    case 'customer.subscription.updated':
-      console.log('🔁 Subscription updated:', event.data.object.id);
-      break;
-    case 'customer.subscription.deleted':
-      console.log('❌ Subscription canceled:', event.data.object.id);
-      break;
-    default:
-      console.log(`Unhandled event type ${event.type}`);
-  }
-}
-
 export async function POST(req: NextRequest) {
-  const signature = req.headers.get('stripe-signature');
-  const body = await req.text();
+  const buf = await req.text();
+  const sig = headers().get('stripe-signature') || '';
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, signature!, endpointSecret);
+    event = stripe.webhooks.constructEvent(buf, sig, endpointSecret);
   } catch (err: any) {
-    console.error('❗ Invalid signature:', err.message);
-    return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
+    return NextResponse.json({ error: `Webhook error: ${err.message}` }, { status: 400 });
   }
 
-  try {
-    await handleEvent(event);
-    return NextResponse.json({ received: true });
-  } catch (err: any) {
-    console.error('❗ Webhook handler error:', err);
-    return new NextResponse('Webhook handler error', { status: 500 });
+  // Handle events you care about
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object as Stripe.Checkout.Session;
+    // TODO: mark user active in your DB using session.client_reference_id || session.customer
   }
+
+  return NextResponse.json({ received: true }, { status: 200 });
 }
