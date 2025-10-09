@@ -1,4 +1,3 @@
-// app/api/chat/route.ts
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -8,9 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 const MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 const REQUEST_TIMEOUT_MS = 20_000;
 const ORIGIN_LIST = (process.env.ALLOWED_ORIGIN || "https://www.moralclarityai.com")
-  .split(",")
-  .map(s => s.trim())
-  .filter(Boolean);
+  .split(",").map(s => s.trim()).filter(Boolean);
 
 /* ========= GUIDELINES ========= */
 const GUIDELINE_NEUTRAL = `NEUTRAL MODE
@@ -173,4 +170,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
