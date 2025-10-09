@@ -1,5 +1,6 @@
 // /lib/answerOrchestrator.ts
-import OpenAI from "openai";
+import type OpenAI from "openai";
+import { getOpenAI } from "./openai";
 
 export type OrchestratorInput = {
   personaName: string;
@@ -24,7 +25,7 @@ export async function answerOrchestrator(input: OrchestratorInput) {
     temperature = 0.3,
   } = input;
 
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+  const openai = getOpenAI();
 
   const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
     {
