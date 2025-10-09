@@ -1,13 +1,11 @@
 // app/api/chat/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
 /* ========= ENV ========= */
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 const MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
-const ALLOWED_ORIGIN =
-  process.env.ALLOWED_ORIGIN || "https://www.moralclarityai.com";
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "https://www.moralclarityai.com";
 const REQUEST_TIMEOUT_MS = 20_000; // 20s
 const DEBUG_PROMPTS = false; // production: off
 
@@ -70,9 +68,7 @@ const HOUSE_RULES = `HOUSE RULES
 
 function normalizeFilters(filters: unknown): string[] {
   if (!Array.isArray(filters)) return [];
-  return filters
-    .map((f) => String(f ?? "").toLowerCase().trim())
-    .filter(Boolean);
+  return filters.map((f) => String(f ?? "").toLowerCase().trim()).filter(Boolean);
 }
 
 function trimConversation(messages: Array<{ role: string; content: string }>) {
@@ -84,24 +80,15 @@ function trimConversation(messages: Array<{ role: string; content: string }>) {
 // Tighter “secular” detector to avoid false positives
 function wantsSecular(messages: Array<{ role: string; content: string }>) {
   const text = messages.slice(-6).map((m) => m.content).join(" ").toLowerCase();
-  return /\bsecular framing\b|\bsecular only\b|\bno scripture\b|\bno religious\b|\bkeep it secular\b/.test(
-    text
-  );
+  return /\bsecular framing\b|\bsecular only\b|\bno scripture\b|\bno religious\b|\bkeep it secular\b/.test(text);
 }
 
 function buildSystemPrompt(filters: string[], userWantsSecular: boolean) {
   const parts = [GUIDELINE_NEUTRAL, HOUSE_RULES, RESPONSE_FORMAT, OUTPUT_CHECK];
 
-  // Back-compat: "ministry" maps to Abrahamic
-  const wantsAbrahamic =
-    filters.includes("abrahamic") || filters.includes("ministry");
-
-  if (wantsAbrahamic && !userWantsSecular) {
-    parts.push(GUIDELINE_ABRAHAMIC, ABRAHAMIC_MUST);
-  }
-  if (filters.includes("guidance")) {
-    parts.push(GUIDELINE_GUIDANCE);
-  }
+  const wantsAbrahamic = filters.includes("abrahamic") || filters.includes("ministry");
+  if (wantsAbrahamic && !userWantsSecular) parts.push(GUIDELINE_ABRAHAMIC, ABRAHAMIC_MUST);
+  if (filters.includes("guidance")) parts.push(GUIDELINE_GUIDANCE);
 
   return { prompt: parts.join("\n\n"), wantsAbrahamic };
 }
@@ -115,30 +102,39 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-/* ========= CORS (OPTIONS) ========= */
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "Access-Control-Max-Age": "86400",
-    },
-  });
+/* ========= CORS (multi-origin) ========= */
+const ORIGIN_LIST = ALLOWED_ORIGIN.split(",").map(s => s.trim()).filter(Boolean);
+
+function pickAllowedOrigin(req: NextRequest) {
+  const origin = req.headers.get("origin") || "";
+  return ORIGIN_LIST.includes(origin) ? origin : "";
+}
+function corsHeaders(origin: string) {
+  return {
+    "Access-Control-Allow-Origin": origin || ORIGIN_LIST[0] || "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
+  };
+}
+
+/* ========= OPTIONS ========= */
+export async function OPTIONS(req: NextRequest) {
+  const origin = pickAllowedOrigin(req);
+  return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
 }
 
 /* ========= POST ========= */
 export async function POST(req: NextRequest) {
-  try {
-    const origin = req.headers.get("origin") || "";
-    if (origin !== ALLOWED_ORIGIN) {
-      return NextResponse.json(
-        { error: `Origin not allowed: ${origin}` },
-        { status: 403, headers: { "Access-Control-Allow-Origin": ALLOWED_ORIGIN } }
-      );
-    }
+  const origin = pickAllowedOrigin(req);
+  if (!origin) {
+    return NextResponse.json(
+      { error: `Origin not allowed` },
+      { status: 403, headers: corsHeaders(origin) }
+    );
+  }
 
+  try {
     const body = await req.json();
     const messages = Array.isArray(body?.messages) ? body.messages : [];
     const filters = normalizeFilters(body?.filters ?? []);
@@ -172,12 +168,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(
       { text, model: MODEL, sources: [] },
-      {
-        headers: {
-          "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-          "Content-Type": "application/json",
-        },
-      }
+      { headers: { ...corsHeaders(origin), "Content-Type": "application/json" } }
     );
   } catch (err: any) {
     const msg =
@@ -187,13 +178,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(
       { error: msg },
-      {
-        status: err?.message === "Request timed out" ? 504 : 500,
-        headers: {
-          "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
-          "Content-Type": "application/json",
-        },
-      }
+      { status: err?.message === "Request timed out" ? 504 : 500,
+        headers: { ...corsHeaders(origin), "Content-Type": "application/json" } }
     );
   }
 }
