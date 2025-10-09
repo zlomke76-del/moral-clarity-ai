@@ -1,30 +1,39 @@
+// app/api/stripe/webhook/route.ts
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { headers } from 'next/headers';
 
-// ⚠️ No "@/lib/*" imports here either.
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 export async function POST(req: NextRequest) {
-  const buf = await req.text();
-  const sig = headers().get('stripe-signature') ?? '';
+  const sig = req.headers.get('stripe-signature');
+  if (!sig) return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
+
+  const raw = await req.text();
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(buf, sig, endpointSecret);
+    event = stripe.webhooks.constructEvent(raw, sig, endpointSecret);
   } catch (err: any) {
-    return NextResponse.json({ error: `Webhook error: ${err.message}` }, { status: 400 });
+    return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
   }
 
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as Stripe.Checkout.Session;
-    console.log('✅ checkout.session.completed', session.id);
-    // TODO: mark user active in DB if/when you wire a DB
+  // Handle events you care about
+  switch (event.type) {
+    case 'checkout.session.completed':
+      // TODO: mark user as active, etc.
+      break;
+    case 'customer.subscription.updated':
+    case 'customer.subscription.deleted':
+      // TODO: sync subscription state
+      break;
   }
 
   return NextResponse.json({ received: true });
+}
+export async function GET() {
+  return NextResponse.json({ ok: true });
 }
