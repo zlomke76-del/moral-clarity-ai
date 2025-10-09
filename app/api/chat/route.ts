@@ -5,20 +5,23 @@ import OpenAI from "openai";
 /* ========= ENV ========= */
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 const MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "https://www.moralclarityai.com";
-const REQUEST_TIMEOUT_MS = 20_000; // 20s
-const DEBUG_PROMPTS = false; // production: off
 
-/* ========= MODES / GUIDELINES ========= */
+/** Comma/space separated list of allowed origins */
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGIN || "https://www.moralclarityai.com")
+  .split(",")
+  .map(s => s.trim())
+  .filter(Boolean);
 
-// Neutral baseline
+const REQUEST_TIMEOUT_MS = 20_000;
+
+/* ========= MODES / GUIDELINES (unchanged) ========= */
+
 const GUIDELINE_NEUTRAL = `NEUTRAL MODE
 - Be clear, structured, and impartial.
 - Use recognized moral, legal, policy, and practical frameworks when relevant.
 - Identify uncertainty; avoid speculation and moral relativism.
 - Plain, respectful tone; short paragraphs; no fluff.`;
 
-// Abrahamic / God-rooted (replaces "Ministry")
 const GUIDELINE_ABRAHAMIC = `ABRAHAMIC COUNSEL ADD-ON
 - Root counsel in God across the Abrahamic tradition, drawing respectfully from:
   • Torah/Tanakh (Hebrew Scriptures),
@@ -31,13 +34,11 @@ const GUIDELINE_ABRAHAMIC = `ABRAHAMIC COUNSEL ADD-ON
 - Pastoral sensitivity; acknowledge suffering; encourage prayer/reflection/community.
 - Do not issue detailed legal rulings in any single tradition unless explicitly asked; instead, recommend qualified local clergy/scholars when appropriate.`;
 
-// Decision support
 const GUIDELINE_GUIDANCE = `GUIDANCE ADD-ON
 - Red-team briefly for bias/failure modes where appropriate.
 - Offer a compact risk register (top 3–5), a simple options matrix/decision path, and clear next steps.
 - End with a short actionable checklist.`;
 
-// Predictable output shape — strict Section 4 behavior
 const RESPONSE_FORMAT = `RESPONSE FORMAT
 1) Brief Answer (2–4 sentences, plain language).
 2) Rationale (bullet points; note uncertainty if any).
@@ -46,18 +47,15 @@ const RESPONSE_FORMAT = `RESPONSE FORMAT
    - If Abrahamic add-on is ACTIVE and user has NOT asked for secular framing: PROVIDE 1–3 concise references across Torah/Tanakh, Gospels, Qur'an.
    - If NOT active or the user asked for secular framing: OMIT this section entirely. Do NOT write "Not applicable" or placeholders.`;
 
-// Hard mandate when Abrahamic is on
 const ABRAHAMIC_MUST = `MANDATE (only when Abrahamic add-on is active and user has not asked for secular framing)
 - You MUST include Section 4 with at least ONE concise reference (e.g., "Leviticus 19:18", "Matthew 5:37", "Qur'an 4:135").
 - Keep references brief; no long quotations; no more than three references.
 - Do NOT output any text like "Not applicable" in place of Section 4.`;
 
-// Quick output self-check
 const OUTPUT_CHECK = `OUTPUT SELF-CHECK
 - If Abrahamic add-on is active and user has not asked for secular framing, verify that your final message contains Section 4 with 1–3 concise references.
 - If it does not, regenerate succinctly to include it, keeping Sections 1–3 intact.`;
 
-// House rules
 const HOUSE_RULES = `HOUSE RULES
 - Always uphold human dignity; avoid contempt or stereotyping of any group.
 - Be kind but candid; moral clarity over moral relativism.
@@ -66,18 +64,34 @@ const HOUSE_RULES = `HOUSE RULES
 
 /* ========= HELPERS ========= */
 
+function isAllowedOrigin(origin: string | null): origin is string {
+  if (!origin) return false;
+  // Exact match against any allowed origin
+  return ALLOWED_ORIGINS.includes(origin);
+}
+
+function corsHeadersFor(origin: string) {
+  return {
+    "Access-Control-Allow-Origin": origin,        // echo the caller when allowed
+    "Vary": "Origin",                             // caching correctness
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
+    "Content-Type": "application/json",
+  };
+}
+
 function normalizeFilters(filters: unknown): string[] {
   if (!Array.isArray(filters)) return [];
   return filters.map((f) => String(f ?? "").toLowerCase().trim()).filter(Boolean);
 }
 
 function trimConversation(messages: Array<{ role: string; content: string }>) {
-  const MAX_TURNS = 5; // last 5 exchanges
+  const MAX_TURNS = 5;
   const limit = MAX_TURNS * 2;
   return messages.length <= limit ? messages : messages.slice(-limit);
 }
 
-// Tighter “secular” detector to avoid false positives
 function wantsSecular(messages: Array<{ role: string; content: string }>) {
   const text = messages.slice(-6).map((m) => m.content).join(" ").toLowerCase();
   return /\bsecular framing\b|\bsecular only\b|\bno scripture\b|\bno religious\b|\bkeep it secular\b/.test(text);
@@ -85,15 +99,12 @@ function wantsSecular(messages: Array<{ role: string; content: string }>) {
 
 function buildSystemPrompt(filters: string[], userWantsSecular: boolean) {
   const parts = [GUIDELINE_NEUTRAL, HOUSE_RULES, RESPONSE_FORMAT, OUTPUT_CHECK];
-
   const wantsAbrahamic = filters.includes("abrahamic") || filters.includes("ministry");
   if (wantsAbrahamic && !userWantsSecular) parts.push(GUIDELINE_ABRAHAMIC, ABRAHAMIC_MUST);
   if (filters.includes("guidance")) parts.push(GUIDELINE_GUIDANCE);
-
   return { prompt: parts.join("\n\n"), wantsAbrahamic };
 }
 
-// Promise timeout helper
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const id = setTimeout(() => reject(new Error("Request timed out")), ms);
@@ -102,36 +113,21 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-/* ========= CORS (multi-origin) ========= */
-const ORIGIN_LIST = ALLOWED_ORIGIN.split(",").map(s => s.trim()).filter(Boolean);
-
-function pickAllowedOrigin(req: NextRequest) {
-  const origin = req.headers.get("origin") || "";
-  return ORIGIN_LIST.includes(origin) ? origin : "";
-}
-function corsHeaders(origin: string) {
-  return {
-    "Access-Control-Allow-Origin": origin || ORIGIN_LIST[0] || "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Max-Age": "86400",
-  };
-}
-
-/* ========= OPTIONS ========= */
+/* ========= CORS (OPTIONS) ========= */
 export async function OPTIONS(req: NextRequest) {
-  const origin = pickAllowedOrigin(req);
-  return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
+  const origin = req.headers.get("origin");
+  if (!isAllowedOrigin(origin)) {
+    return new NextResponse(null, { status: 403 });
+  }
+  return new NextResponse(null, { status: 204, headers: corsHeadersFor(origin) });
 }
 
 /* ========= POST ========= */
 export async function POST(req: NextRequest) {
-  const origin = pickAllowedOrigin(req);
-  if (!origin) {
-    return NextResponse.json(
-      { error: `Origin not allowed` },
-      { status: 403, headers: corsHeaders(origin) }
-    );
+  const origin = req.headers.get("origin");
+  if (!isAllowedOrigin(origin)) {
+    // Return 403 and DO NOT set ACAO for disallowed origins
+    return NextResponse.json({ error: `Origin not allowed: ${origin ?? "unknown"}` }, { status: 403 });
   }
 
   try {
@@ -141,10 +137,8 @@ export async function POST(req: NextRequest) {
 
     const rolled = trimConversation(messages);
     const userAskedForSecular = wantsSecular(rolled);
-
     const { prompt: system } = buildSystemPrompt(filters, userAskedForSecular);
 
-    // Flatten conversation
     const transcript = rolled
       .map((m: any) => `${m.role === "assistant" ? "Assistant" : "User"}: ${m.content}`)
       .join("\n");
@@ -154,32 +148,21 @@ export async function POST(req: NextRequest) {
       `Conversation (last ${Math.floor(rolled.length / 2)} turns, newest last):\n` +
       `${transcript}\n\nAssistant:`;
 
-    // Call model (string input) with timeout
     const resp = await withTimeout(
-      client.responses.create({
-        model: MODEL,
-        input: fullPrompt,
-        max_output_tokens: 800,
-      }),
+      client.responses.create({ model: MODEL, input: fullPrompt, max_output_tokens: 800 }),
       REQUEST_TIMEOUT_MS
     );
 
     const text = (resp as any).output_text?.trim() || "[No reply from model]";
 
-    return NextResponse.json(
-      { text, model: MODEL, sources: [] },
-      { headers: { ...corsHeaders(origin), "Content-Type": "application/json" } }
-    );
+    return NextResponse.json({ text, model: MODEL, sources: [] }, { headers: corsHeadersFor(origin) });
   } catch (err: any) {
     const msg =
       err?.message === "Request timed out"
         ? "⚠️ Connection timed out. Please try again."
         : (err?.message || String(err));
 
-    return NextResponse.json(
-      { error: msg },
-      { status: err?.message === "Request timed out" ? 504 : 500,
-        headers: { ...corsHeaders(origin), "Content-Type": "application/json" } }
-    );
+    const status = err?.message === "Request timed out" ? 504 : 500;
+    return NextResponse.json({ error: msg }, { status, headers: corsHeadersFor(origin!) });
   }
 }
