@@ -1,22 +1,18 @@
 // app/api/chat/route.ts
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
 
-/* ========= ENV ========= */
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+/* ========= CONFIG ========= */
 const MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
-
-/** Allow multi-origin, comma-separated, trimmed */
-const ORIGIN_LIST = (process.env.ALLOWED_ORIGIN ||
-  "https://www.moralclarityai.com")
+const REQUEST_TIMEOUT_MS = 20_000;
+const ORIGIN_LIST = (process.env.ALLOWED_ORIGIN || "https://www.moralclarityai.com")
   .split(",")
   .map(s => s.trim())
   .filter(Boolean);
 
-const REQUEST_TIMEOUT_MS = 20_000;
-const DEBUG_PROMPTS = false;
-
-/* ========= GUIDELINES (unchanged) ========= */
+/* ========= GUIDELINES ========= */
 const GUIDELINE_NEUTRAL = `NEUTRAL MODE
 - Be clear, structured, and impartial.
 - Use recognized moral, legal, policy, and practical frameworks when relevant.
@@ -91,8 +87,6 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
      .catch(e => { clearTimeout(id); reject(e); });
   });
 }
-
-/** CORS helpers */
 function pickAllowed(origin: string | null) {
   if (!origin) return null;
   return ORIGIN_LIST.includes(origin) ? origin : null;
@@ -106,12 +100,21 @@ function corsHeaders(origin: string) {
   };
 }
 
+/* ========= LAZY OPENAI CLIENT ========= */
+import type OpenAI from "openai";
+let _client: OpenAI | null = null;
+async function getClient(): Promise<OpenAI> {
+  if (!_client) {
+    const { default: OpenAI } = await import("openai");
+    _client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+  }
+  return _client;
+}
+
 /* ========= CORS (OPTIONS) ========= */
 export async function OPTIONS(req: NextRequest) {
   const origin = pickAllowed(req.headers.get("origin"));
-  if (!origin) {
-    return new NextResponse(null, { status: 403 });
-  }
+  if (!origin) return new NextResponse(null, { status: 403 });
   return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
 }
 
@@ -129,7 +132,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const messages = Array.isArray(body?.messages) ? body.messages : [];
     const filters = normalizeFilters(body?.filters ?? []);
-
     const rolled = trimConversation(messages);
     const userAskedForSecular = wantsSecular(rolled);
     const { prompt: system } = buildSystemPrompt(filters, userAskedForSecular);
@@ -143,8 +145,9 @@ export async function POST(req: NextRequest) {
       `Conversation (last ${Math.floor(rolled.length / 2)} turns, newest last):\n` +
       `${transcript}\n\nAssistant:`;
 
+    const openai = await getClient();
     const resp = await withTimeout(
-      client.responses.create({
+      openai.responses.create({
         model: MODEL,
         input: fullPrompt,
         max_output_tokens: 800,
