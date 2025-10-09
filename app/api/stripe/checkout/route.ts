@@ -2,10 +2,11 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import crypto from 'crypto'; // small addition here
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' });
 
-// allow-list LIVE price IDs so a bad query can’t buy random stuff
+// Allow only your three known LIVE prices
 const ALLOWED_PRICES = new Set([
   process.env.PRICE_LIVE_STANDARD!,
   process.env.PRICE_LIVE_FAMILY!,
@@ -22,9 +23,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unknown price' }, { status: 400 });
   }
 
-  // optional: attach a client reference for later reconciliation
+  // Generate a random reference for auditing
   const clientRef = crypto.randomUUID();
 
+  // Create the checkout session
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
     line_items: [{ price, quantity: 1 }],
