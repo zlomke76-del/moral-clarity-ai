@@ -1,9 +1,9 @@
-// app/(dashboard)/spaces/page.tsx
-import { cookies } from 'next/headers'
-import { createServerClient } from '@supabase/ssr'
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
-export default async function SpacesPage() {
-  const cookieStore = cookies()
+export async function POST(req: NextRequest) {
+  const cookieStore = cookies();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,47 +11,23 @@ export default async function SpacesPage() {
     {
       cookies: {
         get(name: string) {
-          return cookieStore.get(name)?.value
+          return cookieStore.get(name)?.value;
         },
-        set(name: string, value: string, options: any) {
-          // Next's cookies() is mutable in Server Components
-          cookieStore.set(name, value, options)
+        set(name: string, value: string, options?: CookieOptions) {
+          // Next's cookies().set accepts an options object
+          cookieStore.set({ name, value, ...options });
         },
-        remove(name: string, options: any) {
-          cookieStore.set(name, '', { ...options, maxAge: 0 })
+        remove(name: string, options?: CookieOptions) {
+          // Remove = set with maxAge 0
+          cookieStore.set({ name, value: '', ...options, maxAge: 0 });
         },
       },
     }
-  )
+  );
 
-  // If the user isn’t signed in this just returns an empty list (RLS)
-  const { data: spaces, error } = await supabase
-    .from('spaces')
-    .select('id,name,created_at')
-    .order('created_at', { ascending: false })
+  const body = await req.json();
 
-  if (error) {
-    // helpful render-time message while developing
-    return (
-      <div className="text-sm text-red-600">
-        Failed to load spaces: {error.message}
-      </div>
-    )
-  }
-
-  return (
-    <div className="grid gap-4">
-      {(spaces ?? []).map((s) => (
-        <div key={s.id} className="rounded border p-3">
-          <div className="font-medium">{s.name}</div>
-          <div className="text-xs opacity-60">{s.id}</div>
-        </div>
-      ))}
-      {!spaces?.length && (
-        <div className="text-sm opacity-60">
-          No spaces yet. Create your first one from “New Project”.
-        </div>
-      )}
-    </div>
-  )
+  // …use `supabase` with RLS, e.g. supabase.from('spaces').insert(...)
+  // return NextResponse.json(...)
+  return NextResponse.json({ ok: true });
 }
