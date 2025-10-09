@@ -1,4 +1,5 @@
 import type OpenAI from 'openai';
+
 let _client: OpenAI | null = null;
 
 export async function getOpenAI(): Promise<OpenAI> {
