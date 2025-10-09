@@ -5,9 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import crypto from 'crypto';
 
-// ⚠️ DO NOT import anything from "@/lib/*" here.
-// Keep this file self-contained so it can’t pull OpenAI via a barrel.
-
+// ⚠️ Keep this file self-contained. Do NOT import from "@/lib/*".
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 // Only allow your known LIVE/TEST prices
