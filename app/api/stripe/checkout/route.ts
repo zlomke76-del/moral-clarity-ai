@@ -1,27 +1,30 @@
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic'; // don’t attempt to prerender
 
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import crypto from 'crypto';
 
-// ❌ remove the apiVersion option
+// No apiVersion literal -> avoid type mismatch churn
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-// allow-list your price IDs (use TEST + LIVE as needed)
-const ALLOWED_PRICES = new Set([
-  process.env.PRICE_LIVE_STANDARD!,
-  process.env.PRICE_LIVE_FAMILY!,
-  process.env.PRICE_LIVE_MINISTRY!,
-  process.env.PRICE_TEST_STANDARD!,   // optional for v2 testing
-  process.env.PRICE_TEST_FAMILY!,     // optional
-  process.env.PRICE_TEST_MINISTRY!,   // optional
-].filter(Boolean));
+// Keep this local and simple; no shared libs that might init OpenAI
+const ALLOWED_PRICES = new Set(
+  [
+    process.env.PRICE_LIVE_STANDARD,
+    process.env.PRICE_LIVE_FAMILY,
+    process.env.PRICE_LIVE_MINISTRY,
+    process.env.PRICE_TEST_STANDARD,
+    process.env.PRICE_TEST_FAMILY,
+    process.env.PRICE_TEST_MINISTRY,
+  ].filter(Boolean) as string[]
+);
 
 const SITE = process.env.SITE_URL ?? 'https://moral-clarity-ai-2-0.webflow.io';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const price = searchParams.get('price') || '';
+  const price = searchParams.get('price') ?? '';
 
   if (!ALLOWED_PRICES.has(price)) {
     return NextResponse.json({ error: 'Unknown price' }, { status: 400 });
@@ -41,3 +44,4 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.redirect(session.url!, { status: 303 });
 }
+
