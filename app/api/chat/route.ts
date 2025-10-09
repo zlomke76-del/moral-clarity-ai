@@ -6,16 +6,17 @@ import OpenAI from "openai";
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 const MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 
-/** Comma/space separated list of allowed origins */
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGIN || "https://www.moralclarityai.com")
+/** Allow multi-origin, comma-separated, trimmed */
+const ORIGIN_LIST = (process.env.ALLOWED_ORIGIN ||
+  "https://www.moralclarityai.com")
   .split(",")
   .map(s => s.trim())
   .filter(Boolean);
 
 const REQUEST_TIMEOUT_MS = 20_000;
+const DEBUG_PROMPTS = false;
 
-/* ========= MODES / GUIDELINES (unchanged) ========= */
-
+/* ========= GUIDELINES (unchanged) ========= */
 const GUIDELINE_NEUTRAL = `NEUTRAL MODE
 - Be clear, structured, and impartial.
 - Use recognized moral, legal, policy, and practical frameworks when relevant.
@@ -63,40 +64,19 @@ const HOUSE_RULES = `HOUSE RULES
 - If the user requests "secular framing," comply and omit religious references.`;
 
 /* ========= HELPERS ========= */
-
-function isAllowedOrigin(origin: string | null): origin is string {
-  if (!origin) return false;
-  // Exact match against any allowed origin
-  return ALLOWED_ORIGINS.includes(origin);
-}
-
-function corsHeadersFor(origin: string) {
-  return {
-    "Access-Control-Allow-Origin": origin,        // echo the caller when allowed
-    "Vary": "Origin",                             // caching correctness
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Max-Age": "86400",
-    "Content-Type": "application/json",
-  };
-}
-
 function normalizeFilters(filters: unknown): string[] {
   if (!Array.isArray(filters)) return [];
-  return filters.map((f) => String(f ?? "").toLowerCase().trim()).filter(Boolean);
+  return filters.map(f => String(f ?? "").toLowerCase().trim()).filter(Boolean);
 }
-
 function trimConversation(messages: Array<{ role: string; content: string }>) {
   const MAX_TURNS = 5;
   const limit = MAX_TURNS * 2;
   return messages.length <= limit ? messages : messages.slice(-limit);
 }
-
 function wantsSecular(messages: Array<{ role: string; content: string }>) {
-  const text = messages.slice(-6).map((m) => m.content).join(" ").toLowerCase();
+  const text = messages.slice(-6).map(m => m.content).join(" ").toLowerCase();
   return /\bsecular framing\b|\bsecular only\b|\bno scripture\b|\bno religious\b|\bkeep it secular\b/.test(text);
 }
-
 function buildSystemPrompt(filters: string[], userWantsSecular: boolean) {
   const parts = [GUIDELINE_NEUTRAL, HOUSE_RULES, RESPONSE_FORMAT, OUTPUT_CHECK];
   const wantsAbrahamic = filters.includes("abrahamic") || filters.includes("ministry");
@@ -104,33 +84,48 @@ function buildSystemPrompt(filters: string[], userWantsSecular: boolean) {
   if (filters.includes("guidance")) parts.push(GUIDELINE_GUIDANCE);
   return { prompt: parts.join("\n\n"), wantsAbrahamic };
 }
-
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const id = setTimeout(() => reject(new Error("Request timed out")), ms);
-    p.then((v) => { clearTimeout(id); resolve(v); })
-     .catch((e) => { clearTimeout(id); reject(e); });
+    p.then(v => { clearTimeout(id); resolve(v); })
+     .catch(e => { clearTimeout(id); reject(e); });
   });
+}
+
+/** CORS helpers */
+function pickAllowed(origin: string | null) {
+  if (!origin) return null;
+  return ORIGIN_LIST.includes(origin) ? origin : null;
+}
+function corsHeaders(origin: string) {
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
+  };
 }
 
 /* ========= CORS (OPTIONS) ========= */
 export async function OPTIONS(req: NextRequest) {
-  const origin = req.headers.get("origin");
-  if (!isAllowedOrigin(origin)) {
+  const origin = pickAllowed(req.headers.get("origin"));
+  if (!origin) {
     return new NextResponse(null, { status: 403 });
   }
-  return new NextResponse(null, { status: 204, headers: corsHeadersFor(origin) });
+  return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
 }
 
 /* ========= POST ========= */
 export async function POST(req: NextRequest) {
-  const origin = req.headers.get("origin");
-  if (!isAllowedOrigin(origin)) {
-    // Return 403 and DO NOT set ACAO for disallowed origins
-    return NextResponse.json({ error: `Origin not allowed: ${origin ?? "unknown"}` }, { status: 403 });
-  }
-
   try {
+    const origin = pickAllowed(req.headers.get("origin"));
+    if (!origin) {
+      return NextResponse.json(
+        { error: `Origin not allowed`, allowed: ORIGIN_LIST },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const messages = Array.isArray(body?.messages) ? body.messages : [];
     const filters = normalizeFilters(body?.filters ?? []);
@@ -149,20 +144,29 @@ export async function POST(req: NextRequest) {
       `${transcript}\n\nAssistant:`;
 
     const resp = await withTimeout(
-      client.responses.create({ model: MODEL, input: fullPrompt, max_output_tokens: 800 }),
+      client.responses.create({
+        model: MODEL,
+        input: fullPrompt,
+        max_output_tokens: 800,
+      }),
       REQUEST_TIMEOUT_MS
     );
 
     const text = (resp as any).output_text?.trim() || "[No reply from model]";
 
-    return NextResponse.json({ text, model: MODEL, sources: [] }, { headers: corsHeadersFor(origin) });
+    return NextResponse.json(
+      { text, model: MODEL, sources: [] },
+      { headers: corsHeaders(origin) }
+    );
   } catch (err: any) {
-    const msg =
-      err?.message === "Request timed out"
-        ? "⚠️ Connection timed out. Please try again."
-        : (err?.message || String(err));
+    const msg = err?.message === "Request timed out"
+      ? "⚠️ Connection timed out. Please try again."
+      : (err?.message || String(err));
+    const origin = pickAllowed(req.headers.get("origin")) || ORIGIN_LIST[0];
 
-    const status = err?.message === "Request timed out" ? 504 : 500;
-    return NextResponse.json({ error: msg }, { status, headers: corsHeadersFor(origin!) });
+    return NextResponse.json(
+      { error: msg },
+      { status: err?.message === "Request timed out" ? 504 : 500, headers: corsHeaders(origin) }
+    );
   }
 }
