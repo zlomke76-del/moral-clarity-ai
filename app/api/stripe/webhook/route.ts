@@ -7,9 +7,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/**
- * If your column names differ, tweak MAP only.
- */
+/** Tweak names here if your columns differ */
 const MAP = {
   userStripeCustomers: {
     table: "user_stripe_customers",
@@ -52,7 +50,7 @@ async function linkCustomer(userId: string | null, stripeCustomerId: string) {
     .upsert(payload, { onConflict: MAP.userStripeCustomers.customerId });
 }
 
-// Relax type only for current_period_end missing in your Stripe typings
+// Relax type only where local Stripe typings are missing fields
 async function upsertSubscription(sub: Stripe.Subscription, userId?: string | null) {
   const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
 
@@ -80,12 +78,16 @@ async function upsertSubscription(sub: Stripe.Subscription, userId?: string | nu
 }
 
 async function logPayment(inv: Stripe.Invoice) {
-  const customerId = typeof inv.customer === "string" ? inv.customer : inv.customer?.id ?? null;
+  const customerId =
+    typeof inv.customer === "string" ? inv.customer : inv.customer?.id ?? null;
+
+  // typings workaround: invoice.subscription isn't in your Stripe types
+  const subField = (inv as unknown as { subscription?: string | { id?: string } | null }).subscription;
   const subscriptionId =
-    typeof inv.subscription === "string"
-      ? inv.subscription
-      : inv.subscription && "id" in (inv.subscription as any)
-      ? (inv.subscription as any).id
+    typeof subField === "string"
+      ? subField
+      : subField && typeof subField === "object" && "id" in subField
+      ? (subField as any).id
       : null;
 
   const payload: Record<string, any> = {
@@ -98,7 +100,7 @@ async function logPayment(inv: Stripe.Invoice) {
     [MAP.payments.createdAt]: new Date().toISOString(),
   };
 
-  // If you enforce uniqueness on invoice_id, switch to upsert.
+  // If you enforce uniqueness on invoice_id, change to upsert.
   await supabaseAdmin.from(MAP.payments.table).insert(payload).catch(() => null);
 }
 
@@ -141,29 +143,4 @@ export async function POST(req: NextRequest) {
         const inv = event.data.object as Stripe.Invoice;
         await logPayment(inv);
 
-        if (inv.subscription) {
-          const subId = typeof inv.subscription === "string" ? inv.subscription : inv.subscription.id;
-          const sub = await stripe.subscriptions.retrieve(subId);
-          await upsertSubscription(sub);
-        }
-        break;
-      }
-
-      default:
-        // ignore others for now
-        break;
-    }
-
-    return NextResponse.json({ received: true });
-  } catch (err: any) {
-    console.error("[stripe:webhook] error", err?.message ?? err);
-    return NextResponse.json(
-      { error: `Webhook Error: ${err?.message ?? "unknown"}` },
-      { status: 400 }
-    );
-  }
-}
-
-export async function GET() {
-  return NextResponse.json({ ok: true });
-}
+        // Keep subscriptions table in sync with the
