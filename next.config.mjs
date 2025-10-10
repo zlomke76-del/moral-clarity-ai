@@ -4,7 +4,7 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: "/:path*",                   // allow ALL routes to be framed for now
+        source: "/:path*",
         headers: [
           {
             key: "Content-Security-Policy",
@@ -15,5 +15,4 @@ const nextConfig = {
     ];
   },
 };
-
 export default nextConfig;
