@@ -1,4 +1,6 @@
 // app/subscribe/page.tsx
+"use client"; // <-- must be first
+
 // A simple, embed-friendly pricing page that calls your Checkout + Portal routes
 
 export const dynamic = "force-dynamic";
@@ -99,8 +101,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** ---------- Client actions (kept inline; no extra files needed) ---------- */
-"use client";
+/** ---------- Client actions ---------- */
 
 async function startCheckout(priceId: string) {
   try {
