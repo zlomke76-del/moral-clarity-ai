@@ -1,58 +1,39 @@
 // app/api/stripe/checkout/route.ts
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
 
-import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
-import crypto from 'crypto';
+// Run this on Node (not edge) and don't try to pre-render it
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-/**
- * Keep this file self-contained. Do NOT import from "@/lib/*".
- */
+export async function POST(req: NextRequest) {
+  try {
+    const { priceId, successUrl, cancelUrl, customerEmail } = await req.json();
 
-// ---- Server-side env ----
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      apiVersion: "2024-06-20",
+    });
 
-// Allowed live/test price ids (fill with your actual ids)
-const ALLOWED_PRICES = new Set(
-  [
-    process.env.PRICE_LIVE_STANDARD,
-    process.env.PRICE_LIVE_FAMILY,
-    process.env.PRICE_LIVE_MINISTRY,
-    process.env.PRICE_TEST_STANDARD,
-    process.env.PRICE_TEST_FAMILY,
-    process.env.PRICE_TEST_MINISTRY,
-  ].filter(Boolean) as string[],
-);
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      customer_email: customerEmail,
+      allow_promotion_codes: true,
+      billing_address_collection: "auto",
+    });
 
-// Where to send users after checkout/cancel
-const SITE =
-  process.env.SITE_URL ??
-  'https://moral-clarity-ai-2-0.webflow.io';
-
-// ---- GET /api/stripe/checkout?price=price_xxx ----
-export async function GET(req: NextRequest) {
-  const search = new URL(req.url).searchParams;
-  const price = search.get('price') ?? '';
-
-  if (!ALLOWED_PRICES.has(price)) {
+    return NextResponse.json({ id: session.id, url: session.url });
+  } catch (err: any) {
+    console.error("Checkout error:", err);
     return NextResponse.json(
-      { error: 'Unknown price' },
-      { status: 400 },
+      { error: err?.message ?? "Checkout failed" },
+      { status: 500 }
     );
   }
+}
 
-  const clientRef = crypto.randomUUID();
-
-  const session = await stripe.checkout.sessions.create({
-    mode: 'subscription',
-    line_items: [{ price, quantity: 1 }],
-    success_url: `${SITE}/thanks?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${SITE}/pricing`,
-    client_reference_id: clientRef,
-    allow_promotion_codes: true,
-    metadata: { source: 'webflow_v2' },
-  });
-
-  return NextResponse.redirect(session.url!, { status: 303 });
+export async function GET() {
+  return NextResponse.json({ ok: true });
 }
