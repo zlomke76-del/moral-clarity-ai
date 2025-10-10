@@ -1,6 +1,6 @@
 // app/subscribe/page.tsx
 import Stripe from "stripe";
-import { StartCheckoutButton, ManageBillingButton } from "../../components/CheckoutButtons";
+import { StartCheckoutButton, ManageBillingButton } from "../components/CheckoutButtons";
 
 export const dynamic = "force-dynamic";
 
