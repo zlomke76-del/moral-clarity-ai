@@ -1,4 +1,6 @@
-// app/success/page.tsx
+"use client";
+import { motion } from "framer-motion";
+
 export default function SuccessPage() {
   return (
     <main
@@ -12,7 +14,10 @@ export default function SuccessPage() {
           "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
       }}
     >
-      <div
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
         style={{
           background: "rgba(255,255,255,0.04)",
           border: "1px solid rgba(255,255,255,0.1)",
@@ -24,15 +29,15 @@ export default function SuccessPage() {
         }}
       >
         <img
-          src="/mca-logo.svg"
-          alt="Moral Clarity AI"
+          src="/anchor-logo.svg"
+          alt="Moral Clarity Anchor Logo"
           style={{ width: 64, marginBottom: 16, opacity: 0.9 }}
         />
 
         <h1 style={{ fontSize: 28, marginBottom: 8 }}>Subscription Activated</h1>
         <p style={{ opacity: 0.85, fontSize: 16, lineHeight: 1.6 }}>
           Thank you for joining <strong>Moral Clarity AI</strong>.  
-          Your subscription is now active, and your account has been upgraded.
+          Your account has been successfully upgraded.
         </p>
 
         <div
@@ -79,7 +84,7 @@ export default function SuccessPage() {
           “Anchored insight. Guided by principle.”  
           — The Moral Clarity AI Team
         </p>
-      </div>
+      </motion.div>
     </main>
   );
 }
