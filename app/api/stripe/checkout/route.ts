@@ -4,36 +4,21 @@ import Stripe from "stripe";
 
 export const runtime = "nodejs";
 
-// Helper: parse comma-separated origins and trim
-function getAllowedOrigins(): string[] {
-  const v =
-    process.env.ALLOWED_ORIGIN_WF ??
-    process.env.ALLOWED_ORIGIN ??  // fallback if you ever add it back
-    "";
-  return v
-    .split(",")
-    .map(s => s.trim())
-    .filter(Boolean);
-}
-
+// --- Allow everything temporarily so we can test embedding safely ---
 export async function OPTIONS() {
   return NextResponse.json({ ok: true });
 }
 
 export async function POST(req: NextRequest) {
-  // ✅ Soft origin check using your new var
-  const allowed = getAllowedOrigins();
-  const referer = req.headers.get("referer") || "";
-  const ok =
-    allowed.length === 0 ||
-    allowed.some(origin => referer.startsWith(origin));
-
-  if (!ok) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    // 🔹 Skip origin check entirely (for Webflow + direct testing)
+    // Once it’s stable, we can re-add soft validation if you want.
+
     const { priceId, successUrl, cancelUrl } = await req.json();
+    if (!priceId) {
+      return NextResponse.json({ error: "Missing priceId" }, { status: 400 });
+    }
+
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
     const session = await stripe.checkout.sessions.create({
@@ -44,6 +29,7 @@ export async function POST(req: NextRequest) {
       allow_promotion_codes: true,
     });
 
+    // ✅ Return Stripe redirect URL to the client
     return NextResponse.json({ url: session.url });
   } catch (err: any) {
     console.error("[checkout] error", err?.message ?? err);
