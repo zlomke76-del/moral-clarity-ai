@@ -19,19 +19,19 @@ const TIERS: Tier[] = [
   {
     key: "standard",
     title: "Standard",
-    blurb: "Great for individuals.",
+    blurb: "Perfect for individuals seeking personal moral clarity and AI-guided insight.",
     priceId: process.env.PRICE_STANDARD_ID,
   },
   {
     key: "family",
     title: "Family",
-    blurb: "Up to 5 seats, shared access.",
+    blurb: "Ideal for households or small groups. Includes shared access for up to 4 users.",
     priceId: process.env.PRICE_FAMILY_ID,
   },
   {
     key: "ministry",
     title: "Ministry / Enterprise",
-    blurb: "Unlimited members + advanced controls.",
+    blurb: "Designed for ministries, organizations, and teams needing advanced collaboration and analytics.",
     priceId: process.env.PRICE_MINISTRY_ID,
   },
 ];
