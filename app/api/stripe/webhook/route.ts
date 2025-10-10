@@ -7,7 +7,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Tweak names here if your columns differ */
+/** Adjust names here if your columns differ */
 const MAP = {
   userStripeCustomers: {
     table: "user_stripe_customers",
@@ -81,7 +81,7 @@ async function logPayment(inv: Stripe.Invoice) {
   const customerId =
     typeof inv.customer === "string" ? inv.customer : inv.customer?.id ?? null;
 
-  // typings workaround: invoice.subscription isn't in your Stripe types
+  // typings workaround: invoice.subscription may be missing in your Stripe types
   const subField = (inv as unknown as { subscription?: string | { id?: string } | null }).subscription;
   const subscriptionId =
     typeof subField === "string"
@@ -143,4 +143,38 @@ export async function POST(req: NextRequest) {
         const inv = event.data.object as Stripe.Invoice;
         await logPayment(inv);
 
-        // Keep subscriptions table in sync with the
+        // Keep subscriptions table in sync with the invoice's subscription
+        const subField = (inv as unknown as { subscription?: string | { id?: string } | null }).subscription;
+        const subId =
+          typeof subField === "string"
+            ? subField
+            : subField && typeof subField === "object" && "id" in subField
+            ? (subField as any).id
+            : null;
+
+        if (subId) {
+          const sub = await stripe.subscriptions.retrieve(subId);
+          await upsertSubscription(sub);
+        }
+        break;
+      }
+
+      default: {
+        // ignore others for now
+        break;
+      }
+    }
+
+    return NextResponse.json({ received: true });
+  } catch (err: any) {
+    console.error("[stripe:webhook] error", err?.message ?? err);
+    return NextResponse.json(
+      { error: `Webhook Error: ${err?.message ?? "unknown"}` },
+      { status: 400 }
+    );
+  }
+}
+
+export async function GET() {
+  return NextResponse.json({ ok: true });
+}
