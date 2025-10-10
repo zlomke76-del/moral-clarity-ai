@@ -1,45 +1,53 @@
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+// app/api/stripe/webhook/route.ts
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
+import { NextRequest, NextResponse } from 'next/server';
+import Stripe from 'stripe';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// IMPORTANT: This file MUST stay self-contained.
-//   • Do NOT import anything from "@/lib/*" or re-exported barrels.
-//   • No OpenAI imports here.
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Keep this file self-contained. Do NOT import from "@/lib/*".
+ * Make sure STRIPE_WEBHOOK_SECRET is set in Vercel.
+ */
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2024-06-20" });
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 export async function POST(req: NextRequest) {
-  const raw = await req.text();
-  const sig = req.headers.get("stripe-signature");
-
+  const sig = req.headers.get('stripe-signature');
   if (!sig) {
-    return NextResponse.json({ error: "Missing signature" }, { status: 400 });
+    return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
   }
+
+  // IMPORTANT: use the raw body
+  const payload = await req.text();
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(raw, sig, endpointSecret);
+    event = stripe.webhooks.constructEvent(payload, sig, endpointSecret);
   } catch (err: any) {
-    return NextResponse.json({ error: `Webhook signature verification failed: ${err.message}` }, { status: 400 });
+    return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
   }
 
   // Handle events you care about
   switch (event.type) {
-    case "checkout.session.completed":
-      // TODO: fulfill subscription, mark user active, etc.
+    case 'checkout.session.completed': {
+      const session = event.data.object as Stripe.Checkout.Session;
+      // TODO: fulfill, provision, or record subscription in your DB
+      // e.g., session.client_reference_id, session.customer, session.subscription, etc.
       break;
-    case "customer.subscription.deleted":
-      // TODO: mark user inactive
-      break;
+    }
+    // add other event types as needed
     default:
       // no-op
       break;
   }
 
-  return NextResponse.json({ received: true });
+  // Stripe needs a 2xx to consider delivery successful
+  return new NextResponse(null, { status: 200 });
+}
+
+// Stripe sends GET pings occasionally; respond OK
+export async function GET() {
+  return new NextResponse('OK', { status: 200 });
 }
