@@ -8,14 +8,14 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * 👉 Adjust these mappings ONLY if your column names differ.
- * The defaults below match common schemas:
- * - user_stripe_customers(user_id, stripe_customer_id)
- * - subscriptions(user_id, stripe_customer_id, stripe_subscription_id, status, price_id, current_period_end, updated_at)
- * - payments(stripe_invoice_id, stripe_customer_id, stripe_subscription_id, amount_due, amount_paid, status, created_at)
+ * If your column names differ, just tweak MAP below.
  */
 const MAP = {
-  userStripeCustomers: { table: "user_stripe_customers", userId: "user_id", customerId: "stripe_customer_id" },
+  userStripeCustomers: {
+    table: "user_stripe_customers",
+    userId: "user_id",
+    customerId: "stripe_customer_id",
+  },
   subscriptions: {
     table: "subscriptions",
     userId: "user_id",
@@ -47,14 +47,22 @@ async function linkCustomer(userId: string | null, stripeCustomerId: string) {
     [MAP.userStripeCustomers.userId]: userId,
     [MAP.userStripeCustomers.customerId]: stripeCustomerId,
   };
-  await supabaseAdmin.from(MAP.userStripeCustomers.table).upsert(payload, {
-    onConflict: MAP.userStripeCustomers.customerId,
-  });
+  await supabaseAdmin
+    .from(MAP.userStripeCustomers.table)
+    .upsert(payload, { onConflict: MAP.userStripeCustomers.customerId });
 }
 
+// --- FIXED VERSION: relax typing only for current_period_end
 async function upsertSubscription(sub: Stripe.Subscription, userId?: string | null) {
   const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
-  const priceId = sub.items.data[0]?.price?.id ?? null;
+
+  const priceId =
+    (sub.items?.data?.[0]?.price as any)?.id ??
+    (sub.items?.data?.[0] as any)?.price_id ??
+    null;
+
+  const periodEnd =
+    (sub as unknown as { current_period_end?: number | null }).current_period_end ?? null;
 
   const payload: Record<string, any> = {
     [MAP.subscriptions.userId]: userId ?? null,
@@ -62,13 +70,13 @@ async function upsertSubscription(sub: Stripe.Subscription, userId?: string | nu
     [MAP.subscriptions.subscriptionId]: sub.id,
     [MAP.subscriptions.status]: sub.status,
     [MAP.subscriptions.priceId]: priceId,
-    [MAP.subscriptions.currentPeriodEnd]: toIso(sub.current_period_end),
+    [MAP.subscriptions.currentPeriodEnd]: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
     [MAP.subscriptions.updatedAt]: new Date().toISOString(),
   };
 
-  await supabaseAdmin.from(MAP.subscriptions.table).upsert(payload, {
-    onConflict: MAP.subscriptions.subscriptionId,
-  });
+  await supabaseAdmin
+    .from(MAP.subscriptions.table)
+    .upsert(payload, { onConflict: MAP.subscriptions.subscriptionId });
 }
 
 async function logPayment(inv: Stripe.Invoice) {
@@ -76,7 +84,7 @@ async function logPayment(inv: Stripe.Invoice) {
   const subscriptionId =
     typeof inv.subscription === "string"
       ? inv.subscription
-      : inv.subscription && "id" in inv.subscription
+      : inv.subscription && "id" in (inv.subscription as any)
       ? (inv.subscription as any).id
       : null;
 
@@ -90,35 +98,26 @@ async function logPayment(inv: Stripe.Invoice) {
     [MAP.payments.createdAt]: new Date().toISOString(),
   };
 
-  // If your payments table has stricter unique constraints, switch to upsert with onConflict
+  // If you have a unique constraint on invoice_id, swap to upsert
   await supabaseAdmin.from(MAP.payments.table).insert(payload).catch(() => null);
 }
 
 export async function POST(req: NextRequest) {
   const sig = headers().get("stripe-signature");
-  if (!sig) {
-    return NextResponse.json({ error: "Missing Stripe signature header" }, { status: 400 });
-  }
+  if (!sig) return NextResponse.json({ error: "Missing Stripe signature header" }, { status: 400 });
 
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!webhookSecret) {
-    return NextResponse.json({ error: "Missing STRIPE_WEBHOOK_SECRET" }, { status: 500 });
-  }
+  if (!webhookSecret) return NextResponse.json({ error: "Missing STRIPE_WEBHOOK_SECRET" }, { status: 500 });
 
   const rawBody = await req.text();
 
   try {
-    // Construct Stripe client inside handler
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
     const event = Stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
-    // Minimal structured log
-    console.info("[stripe:webhook] event", { type: event.type, id: event.id });
 
     switch (event.type) {
       case "checkout.session.completed": {
         const s = event.data.object as Stripe.Checkout.Session;
-        // We expect you to have set metadata.user_id when creating the Checkout session
         const userId = (s.metadata?.user_id as string | undefined) ?? null;
         const customerId = typeof s.customer === "string" ? s.customer : s.customer?.id;
         if (customerId) await linkCustomer(userId, customerId);
@@ -137,8 +136,6 @@ export async function POST(req: NextRequest) {
       case "invoice.payment_failed": {
         const inv = event.data.object as Stripe.Invoice;
         await logPayment(inv);
-
-        // Keep subscriptions table in sync with the invoice's subscription
         if (inv.subscription) {
           const subId = typeof inv.subscription === "string" ? inv.subscription : inv.subscription.id;
           const sub = await stripe.subscriptions.retrieve(subId);
@@ -155,10 +152,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true });
   } catch (err: any) {
     console.error("[stripe:webhook] error", err?.message ?? err);
-    return NextResponse.json({ error: `Webhook Error: ${err?.message ?? "unknown"}` }, { status: 400 });
-  }
-}
-
-export async function GET() {
-  return NextResponse.json({ ok: true });
-}
+    return NextResp
