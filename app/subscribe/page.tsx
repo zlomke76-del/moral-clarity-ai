@@ -2,6 +2,9 @@
 import Stripe from "stripe";
 import { StartCheckoutButton, ManageBillingButton } from "../components/CheckoutButtons";
 
+// ✅ [1] ADD THIS — import the auto-resize client helper
+import IframeAutoResize from "../components/IframeAutoResize"; // 👈 New
+
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
@@ -43,17 +46,25 @@ function currency(amount: number, currency: string) {
 
 export default async function SubscribePage() {
   const missingSecret = !process.env.STRIPE_SECRET_KEY;
-  const missingAnyPrice = TIERS.some(t => !t.priceId);
+  const missingAnyPrice = TIERS.some((t) => !t.priceId);
 
   if (missingSecret || missingAnyPrice) {
     // Render a friendly message instead of crashing
     return (
-      <main style={{minHeight:"100vh",background:"#0b0b0b",color:"#fff",display:"grid",placeItems:"center"}}>
-        <div style={{maxWidth:700,padding:24,textAlign:"center"}}>
-          <h1 style={{margin:0}}>Setup needed</h1>
-          <p style={{opacity:.8,marginTop:12}}>
-            Missing Stripe configuration. Please set <code>STRIPE_SECRET_KEY</code> and all
-            price IDs (<code>PRICE_STANDARD_ID</code>, <code>PRICE_FAMILY_ID</code>, <code>PRICE_MINISTRY_ID</code>) in Vercel
+      <main
+        style={{
+          minHeight: "100vh",
+          background: "#0b0b0b",
+          color: "#fff",
+          display: "grid",
+          placeItems: "center",
+        }}
+      >
+        <div style={{ maxWidth: 700, padding: 24, textAlign: "center" }}>
+          <h1 style={{ margin: 0 }}>Setup needed</h1>
+          <p style={{ opacity: 0.8, marginTop: 12 }}>
+            Missing Stripe configuration. Please set <code>STRIPE_SECRET_KEY</code> and all price IDs (
+            <code>PRICE_STANDARD_ID</code>, <code>PRICE_FAMILY_ID</code>, <code>PRICE_MINISTRY_ID</code>) in Vercel
             environment variables and redeploy.
           </p>
         </div>
@@ -63,7 +74,7 @@ export default async function SubscribePage() {
 
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-  // Fetch Stripe prices defensively
+  // ✅ [2] Fetch Stripe prices safely
   const results = await Promise.allSettled(
     TIERS.map(async (t) => {
       const p = await stripe.prices.retrieve(t.priceId!);
@@ -80,7 +91,7 @@ export default async function SubscribePage() {
   );
 
   const prices = results
-    .map((r, i) => (r.status === "fulfilled" ? r.value : null))
+    .map((r) => (r.status === "fulfilled" ? r.value : null))
     .filter(Boolean) as Array<{
       key: Tier["key"];
       title: string;
@@ -94,10 +105,18 @@ export default async function SubscribePage() {
   if (prices.length === 0) {
     console.error("[/subscribe] All Stripe price lookups failed:", results);
     return (
-      <main style={{minHeight:"100vh",background:"#0b0b0b",color:"#fff",display:"grid",placeItems:"center"}}>
-        <div style={{maxWidth:700,padding:24,textAlign:"center"}}>
-          <h1 style={{margin:0}}>Stripe unavailable</h1>
-          <p style={{opacity:.8,marginTop:12}}>
+      <main
+        style={{
+          minHeight: "100vh",
+          background: "#0b0b0b",
+          color: "#fff",
+          display: "grid",
+          placeItems: "center",
+        }}
+      >
+        <div style={{ maxWidth: 700, padding: 24, textAlign: "center" }}>
+          <h1 style={{ margin: 0 }}>Stripe unavailable</h1>
+          <p style={{ opacity: 0.8, marginTop: 12 }}>
             We couldn’t load pricing details from Stripe. Please verify your Price IDs are correct and active.
           </p>
         </div>
@@ -105,6 +124,7 @@ export default async function SubscribePage() {
     );
   }
 
+  // ✅ [3] Here’s the live render
   return (
     <main
       style={{
@@ -115,6 +135,9 @@ export default async function SubscribePage() {
           "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji",
       }}
     >
+      {/* ✅ [A] Auto-resize component for Webflow iframe */}
+      <IframeAutoResize /> {/* 👈 This sends your page height to Webflow for auto-sizing */}
+
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 20px" }}>
         <h1 style={{ fontSize: 36, margin: 0 }}>Choose your plan</h1>
         <p style={{ marginTop: 8, color: "#bfbfbf" }}>
@@ -149,12 +172,35 @@ export default async function SubscribePage() {
                 </span>
               </div>
 
-              <ul style={{ margin: "16px 0 20px", paddingLeft: 18, color: "#ddd", lineHeight: 1.6 }}>
-                {tier.key === "standard" && (<><li>Core features</li><li>Single user</li></>)}
-                {tier.key === "family" && (<><li>Everything in Standard</li><li>Up to 5 seats</li></>)}
-                {tier.key === "ministry" && (<><li>Unlimited members</li><li>Advanced tools & support</li></>)}
+              <ul
+                style={{
+                  margin: "16px 0 20px",
+                  paddingLeft: 18,
+                  color: "#ddd",
+                  lineHeight: 1.6,
+                }}
+              >
+                {tier.key === "standard" && (
+                  <>
+                    <li>Core features</li>
+                    <li>Single user</li>
+                  </>
+                )}
+                {tier.key === "family" && (
+                  <>
+                    <li>Everything in Standard</li>
+                    <li>Up to 5 seats</li>
+                  </>
+                )}
+                {tier.key === "ministry" && (
+                  <>
+                    <li>Unlimited members</li>
+                    <li>Advanced tools & support</li>
+                  </>
+                )}
               </ul>
 
+              {/* ✅ [B] Checkout buttons (already handle redirect back to Webflow) */}
               <StartCheckoutButton priceId={tier.priceId!} label={`Start ${tier.title}`} />
             </div>
           ))}
