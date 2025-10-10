@@ -3,12 +3,13 @@ import Stripe from "stripe";
 import { StartCheckoutButton, ManageBillingButton } from "../components/CheckoutButtons";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 type Tier = {
   key: "standard" | "family" | "ministry";
   title: string;
   blurb: string;
-  priceId: string;
+  priceId?: string; // make optional so we can skip gracefully
 };
 
 const TIERS: Tier[] = [
@@ -16,19 +17,19 @@ const TIERS: Tier[] = [
     key: "standard",
     title: "Standard",
     blurb: "Great for individuals.",
-    priceId: process.env.PRICE_STANDARD_ID!, // e.g. price_123
+    priceId: process.env.PRICE_STANDARD_ID,
   },
   {
     key: "family",
     title: "Family",
     blurb: "Up to 5 seats, shared access.",
-    priceId: process.env.PRICE_FAMILY_ID!, // e.g. price_456
+    priceId: process.env.PRICE_FAMILY_ID,
   },
   {
     key: "ministry",
     title: "Ministry / Enterprise",
     blurb: "Unlimited members + advanced controls.",
-    priceId: process.env.PRICE_MINISTRY_ID!, // e.g. price_789
+    priceId: process.env.PRICE_MINISTRY_ID,
   },
 ];
 
@@ -41,12 +42,31 @@ function currency(amount: number, currency: string) {
 }
 
 export default async function SubscribePage() {
+  const missingSecret = !process.env.STRIPE_SECRET_KEY;
+  const missingAnyPrice = TIERS.some(t => !t.priceId);
+
+  if (missingSecret || missingAnyPrice) {
+    // Render a friendly message instead of crashing
+    return (
+      <main style={{minHeight:"100vh",background:"#0b0b0b",color:"#fff",display:"grid",placeItems:"center"}}>
+        <div style={{maxWidth:700,padding:24,textAlign:"center"}}>
+          <h1 style={{margin:0}}>Setup needed</h1>
+          <p style={{opacity:.8,marginTop:12}}>
+            Missing Stripe configuration. Please set <code>STRIPE_SECRET_KEY</code> and all
+            price IDs (<code>PRICE_STANDARD_ID</code>, <code>PRICE_FAMILY_ID</code>, <code>PRICE_MINISTRY_ID</code>) in Vercel
+            environment variables and redeploy.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-  // Pull live price details from Stripe for display (amount, interval, currency)
-  const prices = await Promise.all(
+  // Fetch Stripe prices defensively
+  const results = await Promise.allSettled(
     TIERS.map(async (t) => {
-      const p = await stripe.prices.retrieve(t.priceId);
+      const p = await stripe.prices.retrieve(t.priceId!);
       const unit = (p.unit_amount ?? 0) / 100;
       const interval = p.recurring?.interval ?? "month";
       const curr = p.currency?.toUpperCase() ?? "USD";
@@ -58,6 +78,32 @@ export default async function SubscribePage() {
       };
     })
   );
+
+  const prices = results
+    .map((r, i) => (r.status === "fulfilled" ? r.value : null))
+    .filter(Boolean) as Array<{
+      key: Tier["key"];
+      title: string;
+      blurb: string;
+      priceId: string;
+      displayPrice: string;
+      interval: string;
+      _curr: string;
+    }>;
+
+  if (prices.length === 0) {
+    console.error("[/subscribe] All Stripe price lookups failed:", results);
+    return (
+      <main style={{minHeight:"100vh",background:"#0b0b0b",color:"#fff",display:"grid",placeItems:"center"}}>
+        <div style={{maxWidth:700,padding:24,textAlign:"center"}}>
+          <h1 style={{margin:0}}>Stripe unavailable</h1>
+          <p style={{opacity:.8,marginTop:12}}>
+            We couldn’t load pricing details from Stripe. Please verify your Price IDs are correct and active.
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main
@@ -72,7 +118,7 @@ export default async function SubscribePage() {
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 20px" }}>
         <h1 style={{ fontSize: 36, margin: 0 }}>Choose your plan</h1>
         <p style={{ marginTop: 8, color: "#bfbfbf" }}>
-          Pricing and intervals shown below are fetched live from Stripe.
+          Pricing and intervals are fetched live from Stripe.
         </p>
 
         <section
@@ -104,27 +150,12 @@ export default async function SubscribePage() {
               </div>
 
               <ul style={{ margin: "16px 0 20px", paddingLeft: 18, color: "#ddd", lineHeight: 1.6 }}>
-                {tier.key === "standard" && (
-                  <>
-                    <li>Core features</li>
-                    <li>Single user</li>
-                  </>
-                )}
-                {tier.key === "family" && (
-                  <>
-                    <li>Everything in Standard</li>
-                    <li>Up to 5 seats</li>
-                  </>
-                )}
-                {tier.key === "ministry" && (
-                  <>
-                    <li>Unlimited members</li>
-                    <li>Advanced tools & support</li>
-                  </>
-                )}
+                {tier.key === "standard" && (<><li>Core features</li><li>Single user</li></>)}
+                {tier.key === "family" && (<><li>Everything in Standard</li><li>Up to 5 seats</li></>)}
+                {tier.key === "ministry" && (<><li>Unlimited members</li><li>Advanced tools & support</li></>)}
               </ul>
 
-              <StartCheckoutButton priceId={tier.priceId} label={`Start ${tier.title}`} />
+              <StartCheckoutButton priceId={tier.priceId!} label={`Start ${tier.title}`} />
             </div>
           ))}
         </section>
