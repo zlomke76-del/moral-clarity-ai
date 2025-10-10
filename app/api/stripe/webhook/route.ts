@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * If your column names differ, just tweak MAP below.
+ * If your column names differ, tweak MAP only.
  */
 const MAP = {
   userStripeCustomers: {
@@ -52,7 +52,7 @@ async function linkCustomer(userId: string | null, stripeCustomerId: string) {
     .upsert(payload, { onConflict: MAP.userStripeCustomers.customerId });
 }
 
-// --- FIXED VERSION: relax typing only for current_period_end
+// Relax type only for current_period_end missing in your Stripe typings
 async function upsertSubscription(sub: Stripe.Subscription, userId?: string | null) {
   const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
 
@@ -98,16 +98,20 @@ async function logPayment(inv: Stripe.Invoice) {
     [MAP.payments.createdAt]: new Date().toISOString(),
   };
 
-  // If you have a unique constraint on invoice_id, swap to upsert
+  // If you enforce uniqueness on invoice_id, switch to upsert.
   await supabaseAdmin.from(MAP.payments.table).insert(payload).catch(() => null);
 }
 
 export async function POST(req: NextRequest) {
   const sig = headers().get("stripe-signature");
-  if (!sig) return NextResponse.json({ error: "Missing Stripe signature header" }, { status: 400 });
+  if (!sig) {
+    return NextResponse.json({ error: "Missing Stripe signature header" }, { status: 400 });
+  }
 
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!webhookSecret) return NextResponse.json({ error: "Missing STRIPE_WEBHOOK_SECRET" }, { status: 500 });
+  if (!webhookSecret) {
+    return NextResponse.json({ error: "Missing STRIPE_WEBHOOK_SECRET" }, { status: 500 });
+  }
 
   const rawBody = await req.text();
 
@@ -136,6 +140,7 @@ export async function POST(req: NextRequest) {
       case "invoice.payment_failed": {
         const inv = event.data.object as Stripe.Invoice;
         await logPayment(inv);
+
         if (inv.subscription) {
           const subId = typeof inv.subscription === "string" ? inv.subscription : inv.subscription.id;
           const sub = await stripe.subscriptions.retrieve(subId);
@@ -145,11 +150,20 @@ export async function POST(req: NextRequest) {
       }
 
       default:
-        // no-op
+        // ignore others for now
         break;
     }
 
     return NextResponse.json({ received: true });
   } catch (err: any) {
     console.error("[stripe:webhook] error", err?.message ?? err);
-    return NextResp
+    return NextResponse.json(
+      { error: `Webhook Error: ${err?.message ?? "unknown"}` },
+      { status: 400 }
+    );
+  }
+}
+
+export async function GET() {
+  return NextResponse.json({ ok: true });
+}
