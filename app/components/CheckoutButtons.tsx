@@ -1,4 +1,3 @@
-// app/components/CheckoutButtons.tsx
 "use client";
 
 type StartProps = { priceId: string; label?: string };
@@ -6,13 +5,13 @@ type StartProps = { priceId: string; label?: string };
 export function StartCheckoutButton({ priceId, label = "Start" }: StartProps) {
   const onClick = async () => {
     try {
-      // Build absolute return URLs. Prefer your Webflow site if provided.
-      const base =
-        (process.env.NEXT_PUBLIC_RETURN_URL || "").replace(/\/+$/, "") ||
-        window.location.origin;
+      // Use Webflow site as the return base if provided
+      const returnBase =
+        process.env.NEXT_PUBLIC_RETURN_BASE_URL || window.location.origin;
 
-      const successUrl = `${base}?checkout=success`;
-      const cancelUrl  = `${base}?checkout=canceled`;
+      // send people back to Webflow with a friendly banner
+      const successUrl = `${returnBase}/?checkout=success`;
+      const cancelUrl = `${returnBase}/?checkout=canceled`;
 
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
@@ -21,37 +20,12 @@ export function StartCheckoutButton({ priceId, label = "Start" }: StartProps) {
       });
 
       const json = await res.json();
+      if (!res.ok || !json?.url) throw new Error(json?.error || "Checkout failed");
 
-      if (!res.ok || !json?.url) {
-        // Show server error if available; otherwise a generic message.
-        alert(json?.error || "Could not start checkout.");
-        return;
-      }
-
-      const url: string = json.url;
-
-      // ✅ Prefer top-level navigation (breaks out of iframe; avoids popup blockers)
-      try {
-        window.top!.location.href = url;
-        return;
-      } catch (_) {}
-
-      // Fallback: same-frame navigation
-      try {
-        window.location.href = url;
-        return;
-      } catch (_) {}
-
-      // Last-resort fallback: programmatic anchor click
-      const a = document.createElement("a");
-      a.href = url;
-      a.target = "_top";
-      a.rel = "noopener";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      window.open(json.url, "_blank"); // or window.location.href = json.url
     } catch (e: any) {
-      alert(e?.message ?? "Checkout failed.");
+      alert(e?.message ?? "Could not start checkout.");
+      console.error("[checkout]", e);
     }
   };
 
@@ -61,11 +35,11 @@ export function StartCheckoutButton({ priceId, label = "Start" }: StartProps) {
       style={{
         width: "100%",
         padding: "12px 16px",
-        borderRadius: 10,
-        border: "1px solid rgba(255,255,255,.15)",
-        background: "#11a6ff",
+        borderRadius: 12,
+        background: "#1f6fff",
         color: "#fff",
         fontWeight: 700,
+        border: "none",
         cursor: "pointer",
       }}
     >
@@ -75,19 +49,28 @@ export function StartCheckoutButton({ priceId, label = "Start" }: StartProps) {
 }
 
 export function ManageBillingButton() {
-  const onClick = () => {
-    // Replace with your billing portal link when you wire it
-    alert("Billing portal coming soon.");
+  const onClick = async () => {
+    try {
+      const res = await fetch("/api/stripe/checkout?mode=billing", {
+        method: "POST",
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.url) throw new Error(json?.error || "Missing portal URL");
+      window.open(json.url, "_blank");
+    } catch (e: any) {
+      alert(e?.message ?? "Could not open billing portal.");
+    }
   };
+
   return (
     <button
       onClick={onClick}
       style={{
-        padding: "8px 12px",
-        borderRadius: 8,
-        border: "1px solid rgba(255,255,255,.15)",
-        background: "transparent",
+        padding: "10px 14px",
+        borderRadius: 10,
+        background: "rgba(255,255,255,.08)",
         color: "#fff",
+        border: "1px solid rgba(255,255,255,.12)",
         cursor: "pointer",
       }}
     >
