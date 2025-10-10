@@ -4,15 +4,27 @@ import Stripe from "stripe";
 
 export const runtime = "nodejs";
 
-// --- Allow everything temporarily so we can test embedding safely ---
+// Comma-separated list of allowed referer prefixes (scheme + host)
+const ALLOWED = (process.env.ALLOWED_CHECKOUT_REFERRERS ||
+  "http://localhost,https://moral-clarity-ai.vercel.app,https://moral-clarity-ai-2-0.webflow.io")
+  .split(",")
+  .map((s) => s.trim());
+
+function isAllowed(req: NextRequest) {
+  const referer = req.headers.get("referer") || "";
+  return ALLOWED.some((prefix) => referer.startsWith(prefix));
+}
+
 export async function OPTIONS() {
   return NextResponse.json({ ok: true });
 }
 
 export async function POST(req: NextRequest) {
   try {
-    // 🔹 Skip origin check entirely (for Webflow + direct testing)
-    // Once it’s stable, we can re-add soft validation if you want.
+    if (!isAllowed(req)) {
+      // You can temporarily comment this out during testing:
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const { priceId, successUrl, cancelUrl } = await req.json();
     if (!priceId) {
@@ -29,7 +41,6 @@ export async function POST(req: NextRequest) {
       allow_promotion_codes: true,
     });
 
-    // ✅ Return Stripe redirect URL to the client
     return NextResponse.json({ url: session.url });
   } catch (err: any) {
     console.error("[checkout] error", err?.message ?? err);
