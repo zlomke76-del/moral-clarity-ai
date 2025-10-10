@@ -100,8 +100,15 @@ async function logPayment(inv: Stripe.Invoice) {
     [MAP.payments.createdAt]: new Date().toISOString(),
   };
 
-  // If you enforce uniqueness on invoice_id, change to upsert.
-  await supabaseAdmin.from(MAP.payments.table).insert(payload).catch(() => null);
+  // Insert and ignore duplicate-invoice unique violations if you have a constraint
+  const { error } = await supabaseAdmin.from(MAP.payments.table).insert(payload);
+  if (error) {
+    // Postgres duplicate key is 23505; swallow that, surface others
+    if ((error as any).code !== "23505") {
+      console.error("[stripe:webhook] payments insert error", error);
+      throw error;
+    }
+  }
 }
 
 export async function POST(req: NextRequest) {
