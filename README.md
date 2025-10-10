@@ -11,3 +11,4 @@ OPENAI_API_KEY=sk-...your key ...
 3) `npm run dev` → http://localhost:3000
 
 Deploy to Vercel and set `OPENAI_API_KEY` in the project Environment Variables.
+ 
