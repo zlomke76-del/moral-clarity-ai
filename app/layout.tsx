@@ -1,14 +1,19 @@
-import Head from "next/head";
+// app/layout.tsx
+import type { Metadata } from "next";
 
-export default function MyApp({ Component, pageProps }) {
+export const metadata: Metadata = {
+  title: "Moral Clarity AI",
+  description: "Decisions with conscience, clarity, and calm.",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <>
-      <Head>
-        <title>Moral Clarity AI</title>
-        <meta name="description" content="Anchored answers for modern life." />
-        <link rel="icon" href="/anchor-compass.svg" type="image/svg+xml" />
-      </Head>
-      <Component {...pageProps} />
-    </>
+    <html lang="en">
+      <body>{children}</body>
+    </html>
   );
 }
