@@ -20,7 +20,10 @@ export default function AdminOverview() {
   async function load() {
     if (!key) return;
     setLoading(true); setErr(null);
-    const res = await fetch("/api/admin/metrics", { headers: { "x-admin-key": key }, cache: "no-store" });
+    const res = await fetch("/api/admin/metrics", {
+      headers: { "x-admin-key": key },
+      cache: "no-store",
+    });
     if (!res.ok) { setErr(await res.text()); setLoading(false); return; }
     setData(await res.json());
     setLoading(false);
@@ -35,9 +38,15 @@ export default function AdminOverview() {
       <main className="mx-auto max-w-md px-6 py-12">
         <h1 className="text-2xl font-semibold mb-3">Admin Overview</h1>
         <p className="text-gray-400 mb-4">Enter your admin key to view metrics.</p>
-        <input type="password" className="w-full border rounded px-3 py-2" placeholder="ADMIN_DASH_KEY"
-               onChange={(e)=>setKey(e.target.value)} />
-        <p className="text-xs text-gray-500 mt-3">You can rotate this key anytime in Vercel → Environment Variables.</p>
+        <input
+          type="password"
+          className="w-full border rounded px-3 py-2"
+          placeholder="ADMIN_DASH_KEY"
+          onChange={(e)=>setKey(e.target.value)}
+        />
+        <p className="text-xs text-gray-500 mt-3">
+          You can rotate this key anytime in Vercel → Environment Variables.
+        </p>
       </main>
     );
   }
@@ -46,7 +55,9 @@ export default function AdminOverview() {
     <main className="mx-auto max-w-6xl px-6 py-10">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Admin Overview</h1>
-        <button onClick={load} className="border rounded px-3 py-2">{loading ? "Refreshing…" : "Refresh"}</button>
+        <button onClick={load} className="border rounded px-3 py-2">
+          {loading ? "Refreshing…" : "Refresh"}
+        </button>
       </div>
 
       {err && <div className="border rounded p-3 text-red-400 mb-4">{err}</div>}
@@ -79,14 +90,18 @@ export default function AdminOverview() {
                 <li key={t.id} className="py-3">
                   <div className="flex justify-between">
                     <div>
-                      <div className="font-medium">{t.email} • {t.category} • <span className="text-gray-400">{t.status}</span></div>
+                      <div className="font-medium">
+                        {t.email} • {t.category} • <span className="text-gray-400">{t.status}</span>
+                      </div>
                       <div className="text-gray-300 text-sm line-clamp-1">{t.description}</div>
                     </div>
                     <div className="text-gray-400 text-sm">{fmt(t.created_at)}</div>
                   </div>
                 </li>
               ))}
-              {data.support.latest.length === 0 && <li className="py-3 text-gray-400">No tickets yet.</li>}
+              {data.support.latest.length === 0 && (
+                <li className="py-3 text-gray-400">No tickets yet.</li>
+              )}
             </ul>
           </section>
 
@@ -97,7 +112,9 @@ export default function AdminOverview() {
               <li>SUPPORT_INBOX: {data.env.SUPPORT_INBOX ? "✅" : "❌"}</li>
               <li>APP_BASE_URL: {data.env.APP_BASE_URL ? "✅" : "❌"}</li>
             </ul>
-            <div className="text-xs text-gray-500 mt-2">Updated: {fmt(data.updatedAt)}</div>
+            <div className="text-xs text-gray-500 mt-2">
+              Updated: {fmt(data.updatedAt)}
+            </div>
           </section>
         </>
       )}
