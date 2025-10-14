@@ -1,30 +1,39 @@
-// app/layout.tsx
+import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
 
+export const metadata: Metadata = {
+  metadataBase: new URL("https://www.moralclarity.ai"),
+  title: { default: "Moral Clarity AI", template: "%s • Moral Clarity AI" },
+  description: "Anchored answers. Neutral • Guidance • Ministry.",
+  openGraph: { type: "website", siteName: "Moral Clarity AI", url: "https://www.moralclarity.ai" },
+  twitter: { card: "summary_large_image", site: "@", creator: "@" }
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen flex flex-col bg-surface text-text">
-        <nav className="flex justify-between items-center px-6 py-3 border-b border-border bg-panel">
-          <Link href="/" className="font-semibold text-lg tracking-tight">Moral Clarity AI</Link>
-          <div className="flex gap-5 text-sm">
-            <Link href="/ethos" className="hover:underline">Ethos</Link>
-            <Link href="/help" className="hover:underline">Help</Link>
-            <Link href="/support" className="hover:underline">Support</Link>
-          </div>
-        </nav>
-
-        <main className="flex-1">{children}</main>
-
-        <footer className="border-t border-border bg-panel px-6 py-6 text-sm text-muted flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex gap-4">
-            <Link href="/privacy" className="hover:underline">Privacy Policy</Link>
-            <Link href="/terms" className="hover:underline">Terms of Use</Link>
-            <Link href="/aup" className="hover:underline">Acceptable Use</Link>
-          </div>
-          <div className="text-xs text-gray-500">
-            © {new Date().getFullYear()} Moral Clarity AI · All rights reserved
+    <html lang="en" className="h-full">
+      <body className="min-h-screen bg-zinc-950 text-zinc-100">
+        <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur">
+          <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+            <Link href="/" className="font-semibold">Moral Clarity AI</Link>
+            <div className="flex gap-6 text-sm">
+              <Link href="/app">Try</Link>
+              <Link href="/subscribe">Pricing</Link>
+              <Link href="/docs">Docs</Link>
+              <Link href="/contact">Contact</Link>
+            </div>
+          </nav>
+        </header>
+        <main className="mx-auto max-w-6xl px-4 py-10">{children}</main>
+        <footer className="mx-auto max-w-6xl px-4 py-12 text-sm text-zinc-400">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <span>© {new Date().getFullYear()} Moral Clarity AI</span>
+            <div className="flex gap-6">
+              <Link href="/privacy">Privacy</Link>
+              <Link href="/terms">Terms</Link>
+              <Link href="/status">Status</Link>
+            </div>
           </div>
         </footer>
       </body>
