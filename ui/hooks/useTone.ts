@@ -8,3 +8,4 @@ export function useTone(mode: "Neutral"|"Guidance"|"Ministry") {
     sentenceMax: t.avgSentence[1],
   };
 }
+
