@@ -9,7 +9,11 @@ import { routeMode } from '@/core/mode-router';
 /* ========= CONFIG ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
 const REQUEST_TIMEOUT_MS = 20_000;
-const ORIGIN_LIST = (process.env.ALLOWED_ORIGIN || 'https://www.moralclarityai.com')
+
+// ✅ FIXED: include the real domains you’re using (add more if needed)
+const ORIGIN_LIST = (process.env.ALLOWED_ORIGIN ||
+  'https://moralclarity.ai,https://www.moralclarity.ai,https://studio.moralclarity.ai'
+)
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
@@ -96,21 +100,27 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 
 /** CORS helpers */
 function pickAllowed(origin: string | null) {
-  if (!origin) return null;
+  if (!origin) return null; // treat “no origin” (server-to-server, curl, same-origin) as allowed separately
   return ORIGIN_LIST.includes(origin) ? origin : null;
 }
-function corsHeaders(origin: string) {
-  return {
-    'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Max-Age': '86400',
-  };
+function corsHeaders(origin?: string | null) {
+  return origin
+    ? {
+        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Max-Age': '86400',
+      }
+    : {}; // same-origin/no-origin → no CORS header needed
 }
 
 /* ========= CORS (OPTIONS) ========= */
 export async function OPTIONS(req: NextRequest) {
   const origin = pickAllowed(req.headers.get('origin'));
+  // If no Origin header, allow (curl/same-origin preflight rarely happens)
+  if (!origin && !req.headers.get('origin')) {
+    return new NextResponse(null, { status: 204 });
+  }
   if (!origin) return new NextResponse(null, { status: 403 });
   return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
 }
@@ -118,8 +128,14 @@ export async function OPTIONS(req: NextRequest) {
 /* ========= POST ========= */
 export async function POST(req: NextRequest) {
   try {
-    const origin = pickAllowed(req.headers.get('origin'));
-    if (!origin) {
+    const reqOrigin = req.headers.get('origin');
+    const origin = pickAllowed(reqOrigin);
+
+    // Allow:
+    //  - listed cross-origins (origin != null and whitelisted)
+    //  - same-origin or server-to-server (no Origin header)
+    const isSameOrNoOrigin = !reqOrigin;
+    if (!origin && !isSameOrNoOrigin) {
       return NextResponse.json(
         { error: 'Origin not allowed', allowed: ORIGIN_LIST },
         { status: 403 }
@@ -129,6 +145,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const messages = Array.isArray(body?.messages) ? body.messages : [];
     const filters = normalizeFilters(body?.filters ?? []);
+    const wantStream = !!body?.stream;
 
     const rolled = trimConversation(messages);
     const userAskedForSecular = wantsSecular(rolled);
@@ -138,7 +155,7 @@ export async function POST(req: NextRequest) {
     const lastModeHeader = (req.headers.get('x-last-mode') as any) ?? null;
     const route = routeMode(lastUser, { lastMode: lastModeHeader });
 
-    // If client didn't specify filters, map mode -> default filters (backwards compatible)
+    // Back-compat defaults if filters not explicitly passed
     const effectiveFilters =
       filters.length ? filters :
       route.mode === 'Guidance' ? ['guidance'] :
@@ -156,47 +173,88 @@ export async function POST(req: NextRequest) {
       `${transcript}\n\nAssistant:`;
 
     const openai = await getOpenAI();
-    const resp = await withTimeout(
-      openai.responses.create({
-        model: MODEL,
-        input: fullPrompt,
-        max_output_tokens: 800,
-      }),
-      REQUEST_TIMEOUT_MS
-    );
 
-    const text = (resp as any).output_text?.trim() || '[No reply from model]';
+    // === Non-stream JSON response (default) ===
+    if (!wantStream) {
+      const resp = await withTimeout(
+        openai.responses.create({
+          model: MODEL,
+          input: fullPrompt,
+          max_output_tokens: 800,
+        }),
+        REQUEST_TIMEOUT_MS
+      );
 
-    // Telemetry event (conforms to telemetry/schemas/mode_event.schema.json)
-    const event = {
-      event: 'mode_transition',
-      from: lastModeHeader,
-      to: route.mode,
-      confidence: route.confidence,
-      context_id: req.headers.get('x-context-id'),
-      signals: route.signals,
-      version: 'canon-1.0.0',
-      ts: new Date().toISOString()
-    };
+      const text = (resp as any).output_text?.trim() || '[No reply from model]';
 
-    return NextResponse.json(
-      {
-        text,
-        model: MODEL,
-        sources: [],
-        mode: route.mode,
+      const event = {
+        event: 'mode_transition',
+        from: lastModeHeader,
+        to: route.mode,
         confidence: route.confidence,
+        context_id: req.headers.get('x-context-id'),
         signals: route.signals,
-        filters: effectiveFilters,
-        event
+        version: 'canon-1.0.0',
+        ts: new Date().toISOString()
+      };
+
+      return NextResponse.json(
+        {
+          text,
+          model: MODEL,
+          sources: [],
+          mode: route.mode,
+          confidence: route.confidence,
+          signals: route.signals,
+          filters: effectiveFilters,
+          event
+        },
+        { headers: { ...corsHeaders(origin), 'x-mode': route.mode, 'x-mode-confidence': String(route.confidence) } }
+      );
+    }
+
+    // === Streaming SSE path (if body.stream === true) ===
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${(await getOpenAI() as any).apiKey ?? process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
       },
-      { headers: { ...corsHeaders(origin), 'x-mode': route.mode, 'x-mode-confidence': String(route.confidence) } }
-    );
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        stream: true,
+        temperature: 0.2,
+        messages: [
+          { role: 'system', content: system },
+          ...rolled.map(m => ({
+            role: m.role === 'assistant' ? 'assistant' : 'user',
+            content: m.content,
+          })),
+        ],
+      }),
+    });
+
+    if (!r.ok || !r.body) {
+      const t = await r.text().catch(() => '');
+      return new NextResponse(`Model error: ${r.status} ${t}`, { status: 500 });
+    }
+
+    return new NextResponse(r.body as any, {
+      headers: {
+        ...corsHeaders(origin),
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'X-Accel-Buffering': 'no',
+        'x-mode': route.mode,
+        'x-mode-confidence': String(route.confidence),
+      },
+    });
+
   } catch (err: any) {
     const msg = err?.message === 'Request timed out'
       ? '⚠️ Connection timed out. Please try again.'
       : (err?.message || String(err));
-    const origin = pickAllowed(req.headers.get('origin')) || ORIGIN_LIST[0];
+    const origin = pickAllowed(req.headers.get('origin'));
     return NextResponse.json(
       { error: msg },
       { status: err?.message === 'Request timed out' ? 504 : 500, headers: corsHeaders(origin) }
