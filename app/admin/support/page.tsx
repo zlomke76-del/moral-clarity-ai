@@ -53,7 +53,6 @@ export default async function AdminSupportPage({
 }: {
   searchParams: { q?: string; status?: string; category?: string };
 }) {
-  // ✅ Define these BEFORE render
   const q = searchParams.q ?? "";
   const status = searchParams.status ?? "all";
   const category = searchParams.category ?? "all";
@@ -70,7 +69,7 @@ export default async function AdminSupportPage({
         </div>
       </header>
 
-      {/* Live metrics */}
+      {/* Live metrics (realtime) */}
       <LiveDashboard />
 
       <div className="overflow-x-auto rounded-2xl border border-neutral-800">
