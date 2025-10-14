@@ -1,123 +1,174 @@
-// app/admin/page.tsx
-"use client";
-import { useEffect, useState } from "react";
+// app/admin/support/page.tsx (SERVER COMPONENT)
+import { createClient } from "@supabase/supabase-js";
+import LiveDashboard from "@/components/admin/support/LiveDashboard";
+import {
+  Filters,
+  ActionButton,
+  Assign,
+  Reply,
+  Close,
+} from "@/components/admin/support/ClientBits";
 
-type Ticket = {
-  id: string; name: string|null; email: string;
-  category: string; status: string; created_at: string; description: string;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+type Row = {
+  id: string;
+  created_at: string;
+  name: string | null;
+  email: string | null;
+  category: "Billing" | "Technical" | "Account" | "Other";
+  title: string;
+  description: string;
+  status: "open" | "closed";
+  priority: "low" | "medium" | "high";
+  assignee?: string | null;
 };
 
-export default function AdminOverview() {
-  const [key, setKey] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string|null>(null);
-  const [data, setData] = useState<{
-    updatedAt: string;
-    support: { open: number; in_progress: number; resolved: number; last7: number; latest: Ticket[] };
-    env: { RESEND_API_KEY: boolean; SUPPORT_INBOX: boolean; APP_BASE_URL: boolean };
-  } | null>(null);
+export const dynamic = "force-dynamic";
 
-  async function load() {
-    if (!key) return;
-    setLoading(true); setErr(null);
-    const res = await fetch("/api/admin/metrics", {
-      headers: { "x-admin-key": key },
-      cache: "no-store",
-    });
-    if (!res.ok) { setErr(await res.text()); setLoading(false); return; }
-    setData(await res.json());
-    setLoading(false);
-  }
+async function fetchRows(search = "", status = "all", category = "all") {
+  const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+  let q = supabase
+    .from("v_support_requests")
+    .select("*")
+    .order("created_at", { ascending: false });
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [key]);
-
-  function fmt(d: string) { try { return new Date(d).toLocaleString(); } catch { return d; } }
-
-  if (!key) {
-    return (
-      <main className="mx-auto max-w-md px-6 py-12">
-        <h1 className="text-2xl font-semibold mb-3">Admin Overview</h1>
-        <p className="text-gray-400 mb-4">Enter your admin key to view metrics.</p>
-        <input
-          type="password"
-          className="w-full border rounded px-3 py-2"
-          placeholder="ADMIN_DASH_KEY"
-          onChange={(e)=>setKey(e.target.value)}
-        />
-        <p className="text-xs text-gray-500 mt-3">
-          You can rotate this key anytime in Vercel → Environment Variables.
-        </p>
-      </main>
+  if (status !== "all") q = q.eq("status", status);
+  if (category !== "all") q = q.eq("category", category);
+  if (search) {
+    q = q.or(
+      `title.ilike.%${search}%,description.ilike.%${search}%,email.ilike.%${search}%,name.ilike.%${search}%`
     );
   }
 
+  const { data, error } = await q.limit(200);
+  if (error) throw error;
+  return data as Row[];
+}
+
+export default async function AdminSupportPage({
+  searchParams,
+}: {
+  searchParams: { q?: string; status?: string; category?: string };
+}) {
+  const q = searchParams.q ?? "";
+  const status = searchParams.status ?? "all";
+  const category = searchParams.category ?? "all";
+  const rows = await fetchRows(q, status, category);
+
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Admin Overview</h1>
-        <button onClick={load} className="border rounded px-3 py-2">
-          {loading ? "Refreshing…" : "Refresh"}
-        </button>
-      </div>
+    <main className="p-6 space-y-6">
+      <header className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-semibold">Support Requests</h1>
+        <Filters defaultQ={q} defaultStatus={status} defaultCategory={category} />
+      </header>
 
-      {err && <div className="border rounded p-3 text-red-400 mb-4">{err}</div>}
+      {/* Live metrics */}
+      <LiveDashboard />
 
-      {data && (
-        <>
-          <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div className="border rounded p-4">
-              <div className="text-sm text-gray-400">Open Tickets</div>
-              <div className="text-3xl font-semibold">{data.support.open}</div>
-            </div>
-            <div className="border rounded p-4">
-              <div className="text-sm text-gray-400">In Progress</div>
-              <div className="text-3xl font-semibold">{data.support.in_progress}</div>
-            </div>
-            <div className="border rounded p-4">
-              <div className="text-sm text-gray-400">Resolved</div>
-              <div className="text-3xl font-semibold">{data.support.resolved}</div>
-            </div>
-            <div className="border rounded p-4">
-              <div className="text-sm text-gray-400">New (7 days)</div>
-              <div className="text-3xl font-semibold">{data.support.last7}</div>
-            </div>
-          </section>
-
-          <section className="border rounded p-4 mb-8">
-            <div className="font-medium mb-3">Latest Tickets</div>
-            <ul className="divide-y">
-              {data.support.latest.map(t => (
-                <li key={t.id} className="py-3">
-                  <div className="flex justify-between">
-                    <div>
-                      <div className="font-medium">
-                        {t.email} • {t.category} • <span className="text-gray-400">{t.status}</span>
-                      </div>
-                      <div className="text-gray-300 text-sm line-clamp-1">{t.description}</div>
-                    </div>
-                    <div className="text-gray-400 text-sm">{fmt(t.created_at)}</div>
+      <div className="overflow-x-auto rounded-2xl border border-neutral-800">
+        <table className="w-full text-sm">
+          <thead className="bg-neutral-900 text-neutral-300">
+            <tr>
+              <th className="p-3 text-left">Created</th>
+              <th className="p-3 text-left">Requester</th>
+              <th className="p-3 text-left">Category</th>
+              <th className="p-3 text-left">Title</th>
+              <th className="p-3 text-left">Status</th>
+              <th className="p-3 text-left">Priority</th>
+              <th className="p-3 text-left">Assignee</th>
+              <th className="p-3 text-left">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="[&>tr:nth-child(even)]:bg-neutral-950">
+            {rows.map((r) => (
+              <tr key={r.id} className="align-top">
+                <td className="p-3 tabular-nums">
+                  {new Date(r.created_at).toLocaleString()}
+                </td>
+                <td className="p-3">
+                  <div className="font-medium">{r.name || "—"}</div>
+                  <div className="text-neutral-400">{r.email}</div>
+                </td>
+                <td className="p-3">
+                  <span className="rounded-full px-2 py-0.5 text-xs bg-neutral-800">
+                    {r.category}
+                  </span>
+                </td>
+                <td className="p-3">
+                  <div className="font-medium">{r.title}</div>
+                  <div className="text-neutral-400 line-clamp-2">
+                    {r.description}
                   </div>
-                </li>
-              ))}
-              {data.support.latest.length === 0 && (
-                <li className="py-3 text-gray-400">No tickets yet.</li>
-              )}
-            </ul>
-          </section>
+                </td>
+                <td className="p-3">
+                  <StatusBadge value={r.status} />
+                </td>
+                <td className="p-3">
+                  <PriorityBadge value={r.priority} />
+                </td>
+                <td className="p-3">{r.assignee || "—"}</td>
+                <td className="p-3">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      <ActionButton
+                        id={r.id}
+                        field="status"
+                        value={r.status === "open" ? "closed" : "open"}
+                      />
+                      <ActionButton
+                        id={r.id}
+                        field="priority"
+                        value={nextPriority(r.priority)}
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Assign id={r.id} current={r.assignee || ""} />
+                      <Reply id={r.id} email={r.email} title={r.title} />
+                      <Close id={r.id} />
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            ))}
 
-          <section className="border rounded p-4">
-            <div className="font-medium mb-2">Environment sanity</div>
-            <ul className="text-sm text-gray-300">
-              <li>RESEND_API_KEY: {data.env.RESEND_API_KEY ? "✅" : "❌"}</li>
-              <li>SUPPORT_INBOX: {data.env.SUPPORT_INBOX ? "✅" : "❌"}</li>
-              <li>APP_BASE_URL: {data.env.APP_BASE_URL ? "✅" : "❌"}</li>
-            </ul>
-            <div className="text-xs text-gray-500 mt-2">
-              Updated: {fmt(data.updatedAt)}
-            </div>
-          </section>
-        </>
-      )}
+            {rows.length === 0 && (
+              <tr>
+                <td className="p-6 text-neutral-400" colSpan={8}>
+                  No tickets match your filters.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </main>
+  );
+}
+
+function nextPriority(p: Row["priority"]): Row["priority"] {
+  return p === "low" ? "medium" : p === "medium" ? "high" : "low";
+}
+
+function StatusBadge({ value }: { value: "open" | "closed" }) {
+  const cls =
+    value === "open"
+      ? "bg-emerald-900/40 text-emerald-300"
+      : "bg-neutral-800 text-neutral-300";
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-xs ${cls}`}>{value}</span>
+  );
+}
+
+function PriorityBadge({ value }: { value: "low" | "medium" | "high" }) {
+  const cls =
+    value === "high"
+      ? "bg-red-900/40 text-red-300"
+      : value === "medium"
+      ? "bg-amber-900/40 text-amber-300"
+      : "bg-neutral-800 text-neutral-300";
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-xs ${cls}`}>{value}</span>
   );
 }
