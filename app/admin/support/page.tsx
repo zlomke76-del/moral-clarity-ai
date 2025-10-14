@@ -2,6 +2,16 @@
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 import { Filters, ActionButton, Assign, Reply, Close } from "@/components/admin/support/ClientBits";
+import BulkActions from "@/components/admin/support/BulkActions";
+
+// ...
+<header className="flex items-center justify-between gap-4">
+  <h1 className="text-2xl font-semibold">Support Requests</h1>
+  <div className="flex items-center gap-3">
+    <Filters defaultQ={q} defaultStatus={status} defaultCategory={category} />
+    <BulkActions />
+  </div>
+</header>
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
