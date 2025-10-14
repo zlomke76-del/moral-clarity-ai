@@ -1,0 +1,20 @@
+name: Canon Lint
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  canon-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Canon Lint
+        run: |
+          node tools/canon-lint/check.js "${{ github.event.pull_request.body }}"
