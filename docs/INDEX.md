@@ -65,5 +65,9 @@ All new or modified documents must:
 4. Receive sign-off by **Timothy Zlomke** and one Model Steward before merge.
 
 ---
+### 7a) Integrity Badges
+<!-- CHECKSUMS:BEGIN -->
+<!-- This section is auto-generated. Do not edit by hand. -->
+<!-- CHECKSUMS:END -->
 
 *Index v1.0 • Issued October 2025 • Moral Clarity AI Core Documentation Division*
