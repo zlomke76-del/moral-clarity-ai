@@ -12,13 +12,29 @@ type Ticket = {
   created_at: string;
 };
 
+type ThreadMsg = {
+  id: string;
+  author: string;        // "admin" or user email
+  authorName: string | null;
+  from: "admin" | "user";
+  body: string;
+  created_at: string;
+};
+
 export default function SupportAdmin() {
   const [key, setKey] = useState<string>("");
   const [status, setStatus] = useState<string>("open");
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<Ticket[]>([]);
   const [sel, setSel] = useState<Ticket | null>(null);
+  const [thread, setThread] = useState<ThreadMsg[]>([]);
   const [reply, setReply] = useState("");
+
+  const title = useMemo(() => {
+    if (status === "open") return "Open";
+    if (status === "in_progress") return "In Progress";
+    return "Resolved";
+  }, [status]);
 
   async function fetchRows(s = status) {
     if (!key) return;
@@ -32,7 +48,23 @@ export default function SupportAdmin() {
     setLoading(false);
   }
 
+  async function fetchThread(requestId: string) {
+    if (!key) return;
+    const res = await fetch(`/api/support/thread?requestId=${encodeURIComponent(requestId)}`, {
+      headers: { "x-admin-key": key },
+      cache: "no-store",
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    setThread(data.thread || []);
+  }
+
   useEffect(() => { fetchRows(); /* eslint-disable-next-line */ }, [key, status]);
+  useEffect(() => {
+    if (sel?.id) fetchThread(sel.id);
+    else setThread([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sel?.id, key]);
 
   async function setTicketStatus(id: string, next: Ticket["status"]) {
     await fetch("/api/support/update", {
@@ -52,14 +84,15 @@ export default function SupportAdmin() {
       body: JSON.stringify({ requestId: sel.id, message: reply }),
     });
     setReply("");
-    alert("Reply sent.");
+    await fetchThread(sel.id);   // refresh thread after sending
+    await fetchRows();           // keep list fresh
   }
 
-  const title = useMemo(() => {
-    if (status === "open") return "Open";
-    if (status === "in_progress") return "In Progress";
-    return "Resolved";
-  }, [status]);
+  function fmt(d: string) {
+    try {
+      return new Date(d).toLocaleString();
+    } catch { return d; }
+  }
 
   if (!key) {
     return (
@@ -73,7 +106,7 @@ export default function SupportAdmin() {
           onChange={(e) => setKey(e.target.value)}
         />
         <p className="text-gray-600 text-sm">
-          Tip: store this in your password manager. You can rotate it anytime in Vercel env vars.
+          Tip: store this in your password manager. Rotate anytime in Vercel env vars.
         </p>
       </main>
     );
@@ -92,10 +125,7 @@ export default function SupportAdmin() {
           <option value="in_progress">In Progress</option>
           <option value="resolved">Resolved</option>
         </select>
-        <button
-          onClick={() => fetchRows()}
-          className="border rounded px-3 py-2"
-        >
+        <button onClick={() => fetchRows()} className="border rounded px-3 py-2">
           Refresh
         </button>
       </div>
@@ -115,14 +145,14 @@ export default function SupportAdmin() {
                     <div className="font-medium">{t.email} • {t.category}</div>
                     <div className="text-gray-600 text-sm line-clamp-1">{t.description}</div>
                   </div>
-                  <div className="text-gray-500 text-sm">{new Date(t.created_at).toLocaleString()}</div>
+                  <div className="text-gray-500 text-sm">{fmt(t.created_at)}</div>
                 </div>
               </li>
             ))}
           </ul>
         </div>
 
-        {/* Detail */}
+        {/* Detail + Thread */}
         <div className="border rounded p-3">
           {sel ? (
             <>
@@ -138,21 +168,37 @@ export default function SupportAdmin() {
                 </div>
               </div>
 
-              <div className="mt-4 space-y-2">
+              <div className="mt-3 space-y-1 text-sm text-gray-700">
                 <div><span className="font-medium">From:</span> {sel.name || "(no name)"} &lt;{sel.email}&gt;</div>
                 <div><span className="font-medium">Category:</span> {sel.category}</div>
                 <div><span className="font-medium">Status:</span> {sel.status}</div>
-                <div className="mt-2"><span className="font-medium">Message:</span>
-                  <p className="whitespace-pre-wrap mt-1">{sel.description}</p>
+              </div>
+
+              {/* Thread viewer */}
+              <div className="mt-5 border rounded bg-white">
+                <div className="px-3 py-2 border-b font-medium">Conversation</div>
+                <div className="max-h-80 overflow-auto p-3 space-y-4">
+                  {thread.length === 0 && (
+                    <div className="text-gray-500 text-sm">No messages yet.</div>
+                  )}
+                  {thread.map((m) => (
+                    <div key={m.id} className={`p-3 rounded border ${m.from === "admin" ? "bg-gray-50" : "bg-white"}`}>
+                      <div className="text-xs text-gray-500 mb-1">
+                        {m.from === "admin" ? "Support" : (m.authorName || m.author)} • {fmt(m.created_at)}
+                      </div>
+                      <div className="whitespace-pre-wrap">{m.body}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              <div className="mt-6">
+              {/* Reply composer */}
+              <div className="mt-4">
                 <label className="block text-sm font-medium mb-1">Reply</label>
                 <textarea
                   value={reply}
                   onChange={(e) => setReply(e.target.value)}
-                  rows={6}
+                  rows={5}
                   className="w-full border rounded px-3 py-2"
                   placeholder="Write a thoughtful response…"
                 />
