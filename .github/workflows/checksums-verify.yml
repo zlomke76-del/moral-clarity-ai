@@ -1,0 +1,13 @@
+name: Checksums Verify
+on: [pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: node tools/checksums/update-checksums.mjs
+      - name: Fail if diff
+        run: |
+          git diff --exit-code governance/checksums.yml || (echo "Checksum ledger out of date. Run: npm run checksums:update" && exit 1)
