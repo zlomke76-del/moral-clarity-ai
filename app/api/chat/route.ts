@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import type OpenAI from 'openai';
 import { getOpenAI } from '@/lib/openai';
+import { routeMode } from '@/core/mode-router';
 
 /* ========= CONFIG ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
@@ -65,15 +66,18 @@ function normalizeFilters(filters: unknown): string[] {
   if (!Array.isArray(filters)) return [];
   return filters.map(f => String(f ?? '').toLowerCase().trim()).filter(Boolean);
 }
+
 function trimConversation(messages: Array<{ role: string; content: string }>) {
   const MAX_TURNS = 5;
   const limit = MAX_TURNS * 2;
   return messages.length <= limit ? messages : messages.slice(-limit);
 }
+
 function wantsSecular(messages: Array<{ role: string; content: string }>) {
   const text = messages.slice(-6).map(m => m.content).join(' ').toLowerCase();
   return /\bsecular framing\b|\bsecular only\b|\bno scripture\b|\bno religious\b|\bkeep it secular\b/.test(text);
 }
+
 function buildSystemPrompt(filters: string[], userWantsSecular: boolean) {
   const parts = [GUIDELINE_NEUTRAL, HOUSE_RULES, RESPONSE_FORMAT, OUTPUT_CHECK];
   const wantsAbrahamic = filters.includes('abrahamic') || filters.includes('ministry');
@@ -81,6 +85,7 @@ function buildSystemPrompt(filters: string[], userWantsSecular: boolean) {
   if (filters.includes('guidance')) parts.push(GUIDELINE_GUIDANCE);
   return { prompt: parts.join('\n\n'), wantsAbrahamic };
 }
+
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const id = setTimeout(() => reject(new Error('Request timed out')), ms);
@@ -127,7 +132,19 @@ export async function POST(req: NextRequest) {
 
     const rolled = trimConversation(messages);
     const userAskedForSecular = wantsSecular(rolled);
-    const { prompt: system } = buildSystemPrompt(filters, userAskedForSecular);
+
+    // === Mode Router integration ===
+    const lastUser = [...rolled].reverse().find(m => m.role?.toLowerCase() === 'user')?.content || '';
+    const lastModeHeader = (req.headers.get('x-last-mode') as any) ?? null;
+    const route = routeMode(lastUser, { lastMode: lastModeHeader });
+
+    // If client didn't specify filters, map mode -> default filters (backwards compatible)
+    const effectiveFilters =
+      filters.length ? filters :
+      route.mode === 'Guidance' ? ['guidance'] :
+      route.mode === 'Ministry' ? ['abrahamic', 'ministry'] : [];
+
+    const { prompt: system } = buildSystemPrompt(effectiveFilters, userAskedForSecular);
 
     const transcript = rolled
       .map(m => `${m.role === 'assistant' ? 'Assistant' : 'User'}: ${m.content}`)
@@ -149,7 +166,32 @@ export async function POST(req: NextRequest) {
     );
 
     const text = (resp as any).output_text?.trim() || '[No reply from model]';
-    return NextResponse.json({ text, model: MODEL, sources: [] }, { headers: corsHeaders(origin) });
+
+    // Telemetry event (conforms to telemetry/schemas/mode_event.schema.json)
+    const event = {
+      event: 'mode_transition',
+      from: lastModeHeader,
+      to: route.mode,
+      confidence: route.confidence,
+      context_id: req.headers.get('x-context-id'),
+      signals: route.signals,
+      version: 'canon-1.0.0',
+      ts: new Date().toISOString()
+    };
+
+    return NextResponse.json(
+      {
+        text,
+        model: MODEL,
+        sources: [],
+        mode: route.mode,
+        confidence: route.confidence,
+        signals: route.signals,
+        filters: effectiveFilters,
+        event
+      },
+      { headers: { ...corsHeaders(origin), 'x-mode': route.mode, 'x-mode-confidence': String(route.confidence) } }
+    );
   } catch (err: any) {
     const msg = err?.message === 'Request timed out'
       ? '⚠️ Connection timed out. Please try again.'
