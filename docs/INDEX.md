@@ -30,4 +30,40 @@ Every file listed here represents an **authoritative text** governing the design
 |---------|----------|------|
 | **Model Access Policy v1** | Defines model-tier routing and access control across user groups. | [`/docs/policies/model_access_policy_v1.md`](policies/model_access_policy_v1.md) |
 | **Pricing & Seat Policy v1** | Outlines subscription tiers and seat allocations for individuals, families, ministries, and enterprises. | [`/docs/policies/pricing_seat_policy_v1.md`](policies/pricing_seat_policy_v1.md) |
-| **Governanc**
+| **Governance & Version Control Guidelines** | Ratification process for Canon updates, version tags, and sign-off records. | [`/governance/version_control.md`](../governance/version_control.md) |
+
+---
+
+## 4) Release & Change History
+| Record | File |
+|---------|------|
+| **Changelog** – All notable updates, semantic-versioned. | [`/CHANGELOG.md`](../CHANGELOG.md) |
+
+---
+
+## 5) Upcoming Additions
+| Planned Document | Intent |
+|------------------|--------|
+| **Ministry Charter v1** | Formal framework for faith-aligned engagement and moral support. |
+| **Design Stewardship Handbook v1** | Practical guide for contributors extending Canon principles. |
+| **Memory Ethics Standard v1** | Defines consent, ceremony, and erasure rules for contextual memory. |
+
+---
+
+### 6) Version Trace
+| Canon Version | Date Issued | Linked Changelog Section |
+|----------------|-------------|--------------------------|
+| 1.0.0 (User Experience Canon) | 2025-10-14 | [`CHANGELOG.md#100--2025-10-14`](../CHANGELOG.md#100--2025-10-14) |
+
+---
+
+### 7) Amendment Protocol
+All new or modified documents must:
+1. Reference the current Canon version.  
+2. Include YAML front-matter with `author`, `version`, `issued`, and `related_version`.  
+3. Be logged in `CHANGELOG.md`.  
+4. Receive sign-off by **Timothy Zlomke** and one Model Steward before merge.
+
+---
+
+*Index v1.0 • Issued October 2025 • Moral Clarity AI Core Documentation Division*
