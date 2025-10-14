@@ -41,17 +41,45 @@ function validate(body: any) {
   if (!categories.includes(body.category)) throw new Error("Invalid category.");
 }
 
-async function sendResendEmail({
-  to,
-  subject,
-  text,
-  from,
-}: {
-  to: string;
-  subject: string;
-  text: string;
-  from: string;
-}) {
+async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  e.preventDefault();
+  setLoading(true); setError(null);
+
+  const form = e.currentTarget;
+  const fd = new FormData(form);
+  const data: Record<string, string> = {};
+  fd.forEach((v, k) => { data[k] = typeof v === "string" ? v : v.name || ""; });
+
+  try {
+    const res = await fetch("/api/support", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    setOk(true);
+    form.reset();
+  } catch (err: any) {
+    setError(err.message || "Something went wrong.");
+  } finally {
+    setLoading(false);
+  }
+}
+    const res = await fetch("/api/support", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    setOk(true);
+    form.reset();
+  } catch (err: any) {
+    setError(err.message || "Something went wrong.");
+  } finally {
+    setLoading(false);
+  }
+}
+) {
   const apiKey = process.env.RESEND_API_KEY!;
   const r = await fetch("https://api.resend.com/emails", {
     method: "POST",
