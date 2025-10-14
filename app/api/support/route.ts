@@ -22,7 +22,6 @@ async function insertSupport(payload: any) {
       description,
       attachment_url: attachment_url || null,
     }),
-    // Important on Vercel edge/node runtimes
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`DB error: ${await res.text()}`);
@@ -41,45 +40,17 @@ function validate(body: any) {
   if (!categories.includes(body.category)) throw new Error("Invalid category.");
 }
 
-async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-  e.preventDefault();
-  setLoading(true); setError(null);
-
-  const form = e.currentTarget;
-  const fd = new FormData(form);
-  const data: Record<string, string> = {};
-  fd.forEach((v, k) => { data[k] = typeof v === "string" ? v : v.name || ""; });
-
-  try {
-    const res = await fetch("/api/support", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error(await res.text());
-    setOk(true);
-    form.reset();
-  } catch (err: any) {
-    setError(err.message || "Something went wrong.");
-  } finally {
-    setLoading(false);
-  }
-}
-    const res = await fetch("/api/support", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error(await res.text());
-    setOk(true);
-    form.reset();
-  } catch (err: any) {
-    setError(err.message || "Something went wrong.");
-  } finally {
-    setLoading(false);
-  }
-}
-) {
+async function sendResendEmail({
+  to,
+  subject,
+  text,
+  from,
+}: {
+  to: string;
+  subject: string;
+  text: string;
+  from: string;
+}) {
   const apiKey = process.env.RESEND_API_KEY!;
   const r = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -89,7 +60,6 @@ async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     },
     body: JSON.stringify({ from, to, subject, text }),
   });
-  // Don't throw on non-200; just log — we still want ticket creation to succeed
   if (!r.ok) console.error("Resend email failed:", await r.text());
 }
 
@@ -104,7 +74,7 @@ export async function POST(req: Request) {
     const supportTo = process.env.SUPPORT_INBOX || "support@moralclarity.ai";
     const appUrl = process.env.APP_BASE_URL || "https://moralclarity.ai";
 
-    // Use your verified sender; until DNS verifies, you can use onboarding@resend.dev
+    // If your Resend domain isn't verified yet, temporarily use onboarding@resend.dev
     const FROM = "Moral Clarity Support <support@moralclarity.ai>";
     // const FROM = "Moral Clarity Support <onboarding@resend.dev>";
 
