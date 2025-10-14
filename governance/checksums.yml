@@ -1,0 +1,43 @@
+# Moral Clarity AI • Ratified Document Checksums
+# Do not edit 'checksum' fields by hand; use the update script.
+
+documents:
+  - file: docs/user_experience_canon_v1.md
+    version: 1.0.0
+    checksum: TODO
+    approved_by:
+      - Timothy Zlomke
+      - Model Steward: Moral Clarity Model
+    issued: 2025-10-14
+
+  - file: docs/ux_canon_implementation_checklist_v1.md
+    version: 1.0.0
+    checksum: TODO
+    approved_by:
+      - Timothy Zlomke
+      - Model Steward: Moral Clarity Model
+    issued: 2025-10-14
+
+  - file: core/mode_router_spec_v1.md
+    version: 1.0.0
+    checksum: TODO
+    approved_by:
+      - Timothy Zlomke
+      - Model Steward: Moral Clarity Model
+    issued: 2025-10-14
+
+  - file: governance/version_control.md
+    version: 1.0.0
+    checksum: TODO
+    approved_by:
+      - Timothy Zlomke
+      - Model Steward: Moral Clarity Model
+    issued: 2025-10-14
+
+  - file: docs/INDEX.md
+    version: 1.0.0
+    checksum: TODO
+    approved_by:
+      - Timothy Zlomke
+      - Model Steward: Moral Clarity Model
+    issued: 2025-10-14
