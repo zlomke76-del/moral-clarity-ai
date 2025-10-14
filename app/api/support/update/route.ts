@@ -1,33 +1,20 @@
-// app/api/support/update/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-function assertAdmin(req: Request) {
-  const hdr = req.headers.get("x-admin-key") || "";
-  if (hdr !== process.env.ADMIN_DASH_KEY) throw new Error("Unauthorized");
-}
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY! // server only
+);
 
-export async function POST(req: Request) {
-  try {
-    assertAdmin(req);
-    const { id, status } = await req.json(); // open | in_progress | resolved
-    if (!id || !status) throw new Error("Missing id or status");
-
-    const supa = process.env.SUPABASE_URL!;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-    const r = await fetch(`${supa}/rest/v1/support_requests?id=eq.${id}`, {
-      method: "PATCH",
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ status }),
-    });
-    if (!r.ok) throw new Error(await r.text());
-
-    return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    return new NextResponse(e.message || "Bad Request", { status: e.message === "Unauthorized" ? 401 : 400 });
+export async function PATCH(req: NextRequest) {
+  const { id, field, value } = await req.json();
+  if (!id || !["status","priority"].includes(field)) {
+    return new NextResponse("Invalid payload", { status: 400 });
   }
+  const { error } = await supabase
+    .from("support_requests")
+    .update({ [field]: value })
+    .eq("id", id);
+  if (error) return new NextResponse(error.message, { status: 400 });
+  return NextResponse.json({ ok: true });
 }
