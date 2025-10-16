@@ -10,8 +10,8 @@ import { routeMode } from '@/core/mode-router';
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
 const REQUEST_TIMEOUT_MS = 20_000;
 
-// ✅ FIXED: include the real domains you’re using (add more if needed)
-const ORIGIN_LIST = (process.env.ALLOWED_ORIGIN ||
+const ORIGIN_LIST = (
+  process.env.ALLOWED_ORIGIN ||
   'https://moralclarity.ai,https://www.moralclarity.ai,https://studio.moralclarity.ai'
 )
   .split(',')
@@ -50,14 +50,12 @@ const RESPONSE_FORMAT = `RESPONSE FORMAT
    - If Abrahamic add-on is ACTIVE and user has NOT asked for secular framing: PROVIDE 1–3 concise references across Torah/Tanakh, Gospels, Qur'an.
    - If NOT active or the user asked for secular framing: OMIT this section entirely. Do NOT write "Not applicable" or placeholders.`;
 
-const ABRAHAMIC_MUST = `MANDATE (only when Abrahamic add-on is active and user has not asked for secular framing)
+const ABRAHAMIC_MUST = `MANDATE
 - You MUST include Section 4 with at least ONE concise reference (e.g., "Leviticus 19:18", "Matthew 5:37", "Qur'an 4:135").
-- Keep references brief; no long quotations; no more than three references.
-- Do NOT output any text like "Not applicable" in place of Section 4.`;
+- Keep references brief; no long quotations; no more than three references.`;
 
 const OUTPUT_CHECK = `OUTPUT SELF-CHECK
-- If Abrahamic add-on is active and user has not asked for secular framing, verify that your final message contains Section 4 with 1–3 concise references.
-- If it does not, regenerate succinctly to include it, keeping Sections 1–3 intact.`;
+- If Abrahamic add-on is active and user has not asked for secular framing, verify that your final message contains Section 4 with 1–3 concise references.`;
 
 const HOUSE_RULES = `HOUSE RULES
 - Always uphold human dignity; avoid contempt or stereotyping of any group.
@@ -98,42 +96,28 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-/** CORS helpers */
+/* ========= CORS ========= */
 function pickAllowed(origin: string | null) {
-  if (!origin) return null; // treat “no origin” (server-to-server, curl, same-origin) as allowed separately
+  if (!origin) return null;
   return ORIGIN_LIST.includes(origin) ? origin : null;
 }
-/* ========= CORS ========= */
+
 function corsHeaders(origin?: string | null): Headers {
   const h = new Headers();
-  h.set("Vary", "Origin");
-  if (origin) h.set("Access-Control-Allow-Origin", origin);
-  else h.set("Access-Control-Allow-Origin", "*"); // fallback so type stays valid
-  h.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  h.set('Vary', 'Origin');
+  h.set('Access-Control-Allow-Origin', origin || '*');
+  h.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   h.set(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, X-Requested-With, X-Context-Id, X-Last-Mode"
+    'Access-Control-Allow-Headers',
+    'Content-Type, Authorization, X-Requested-With, X-Context-Id, X-Last-Mode'
   );
-  h.set("Access-Control-Max-Age", "86400");
+  h.set('Access-Control-Max-Age', '86400');
   return h;
 }
 
 /* ========= OPTIONS (preflight) ========= */
 export async function OPTIONS(req: NextRequest) {
-  const allowed = isAllowedOrigin(req.headers.get("origin"));
-  const headers = corsHeaders(allowed); // always returns Headers
-  return new NextResponse(null, { status: 204, headers });
-}
-
-
-/* ========= CORS (OPTIONS) ========= */
-export async function OPTIONS(req: NextRequest) {
   const origin = pickAllowed(req.headers.get('origin'));
-  // If no Origin header, allow (curl/same-origin preflight rarely happens)
-  if (!origin && !req.headers.get('origin')) {
-    return new NextResponse(null, { status: 204 });
-  }
-  if (!origin) return new NextResponse(null, { status: 403 });
   return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
 }
 
@@ -142,11 +126,8 @@ export async function POST(req: NextRequest) {
   try {
     const reqOrigin = req.headers.get('origin');
     const origin = pickAllowed(reqOrigin);
-
-    // Allow:
-    //  - listed cross-origins (origin != null and whitelisted)
-    //  - same-origin or server-to-server (no Origin header)
     const isSameOrNoOrigin = !reqOrigin;
+
     if (!origin && !isSameOrNoOrigin) {
       return NextResponse.json(
         { error: 'Origin not allowed', allowed: ORIGIN_LIST },
@@ -162,36 +143,24 @@ export async function POST(req: NextRequest) {
     const rolled = trimConversation(messages);
     const userAskedForSecular = wantsSecular(rolled);
 
-    // === Mode Router integration ===
     const lastUser = [...rolled].reverse().find(m => m.role?.toLowerCase() === 'user')?.content || '';
-    const lastModeHeader = (req.headers.get('x-last-mode') as any) ?? null;
-    const route = routeMode(lastUser, { lastMode: lastModeHeader });
+    const lastModeHeader = req.headers.get('x-last-mode');
+    const route = routeMode(lastUser, { lastMode: lastModeHeader as any });
 
-    // Back-compat defaults if filters not explicitly passed
     const effectiveFilters =
       filters.length ? filters :
       route.mode === 'Guidance' ? ['guidance'] :
       route.mode === 'Ministry' ? ['abrahamic', 'ministry'] : [];
 
     const { prompt: system } = buildSystemPrompt(effectiveFilters, userAskedForSecular);
-
-    const transcript = rolled
-      .map(m => `${m.role === 'assistant' ? 'Assistant' : 'User'}: ${m.content}`)
-      .join('\n');
-
-    const fullPrompt =
-      `System instructions:\n${system}\n\n` +
-      `Conversation (last ${Math.floor(rolled.length / 2)} turns, newest last):\n` +
-      `${transcript}\n\nAssistant:`;
-
     const openai = await getOpenAI();
 
-    // === Non-stream JSON response (default) ===
+    /* ----- Non-stream JSON response ----- */
     if (!wantStream) {
       const resp = await withTimeout(
         openai.responses.create({
           model: MODEL,
-          input: fullPrompt,
+          input: system + '\n\n' + rolled.map(m => `${m.role}: ${m.content}`).join('\n'),
           max_output_tokens: 800,
         }),
         REQUEST_TIMEOUT_MS
@@ -199,41 +168,28 @@ export async function POST(req: NextRequest) {
 
       const text = (resp as any).output_text?.trim() || '[No reply from model]';
 
-      const event = {
-        event: 'mode_transition',
-        from: lastModeHeader,
-        to: route.mode,
-        confidence: route.confidence,
-        context_id: req.headers.get('x-context-id'),
-        signals: route.signals,
-        version: 'canon-1.0.0',
-        ts: new Date().toISOString()
-      };
-
       return NextResponse.json(
         {
           text,
           model: MODEL,
-          sources: [],
           mode: route.mode,
           confidence: route.confidence,
-          signals: route.signals,
           filters: effectiveFilters,
-          event
         },
-        { headers: { ...corsHeaders(origin), 'x-mode': route.mode, 'x-mode-confidence': String(route.confidence) } }
+        { headers: corsHeaders(origin) }
       );
     }
 
-    // === Streaming SSE path (if body.stream === true) ===
+    /* ----- Streamed SSE response ----- */
+    const apiKey = process.env.OPENAI_API_KEY || '';
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${(await getOpenAI() as any).apiKey ?? process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: MODEL,
         stream: true,
         temperature: 0.2,
         messages: [
@@ -253,20 +209,18 @@ export async function POST(req: NextRequest) {
 
     return new NextResponse(r.body as any, {
       headers: {
-        ...corsHeaders(origin),
+        ...Object.fromEntries(corsHeaders(origin).entries()),
         'Content-Type': 'text/event-stream; charset=utf-8',
         'Cache-Control': 'no-cache, no-transform',
         'X-Accel-Buffering': 'no',
-        'x-mode': route.mode,
-        'x-mode-confidence': String(route.confidence),
       },
     });
-
   } catch (err: any) {
-    const msg = err?.message === 'Request timed out'
-      ? '⚠️ Connection timed out. Please try again.'
-      : (err?.message || String(err));
     const origin = pickAllowed(req.headers.get('origin'));
+    const msg =
+      err?.message === 'Request timed out'
+        ? '⚠️ Connection timed out. Please try again.'
+        : err?.message || String(err);
     return NextResponse.json(
       { error: msg },
       { status: err?.message === 'Request timed out' ? 504 : 500, headers: corsHeaders(origin) }
