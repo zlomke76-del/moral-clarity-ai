@@ -1,30 +1,49 @@
-// next.config.mjs
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
 
-  // Allow Webflow to embed + call your app
-  async headers() {
-    // If you prefer, put your Webflow domain in an env var and read it here.
-    const webflow = "https://moral-clarity-ai-2-0.webflow.io";
-
+  // ✅ Canonical redirect (force www → root)
+  async redirects() {
     return [
       {
-        // apply to everything
-        source: "/:path*",
-        headers: [
-          // CORS for XHR/fetch from the embedded page
-          { key: "Access-Control-Allow-Origin", value: webflow },
-          { key: "Access-Control-Allow-Methods", value: "GET,POST,OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Content-Type, Authorization" },
-          { key: "Access-Control-Allow-Credentials", value: "true" },
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.moralclarity.ai' }],
+        destination: 'https://moralclarity.ai/:path*',
+        permanent: true,
+      },
+    ];
+  },
 
-          // Allow framing by your Webflow site
-          {
-            key: "Content-Security-Policy",
-            value: "frame-ancestors 'self' https://*.webflow.io https://moral-clarity-ai-2-0.webflow.io;",
-          },
+  // ✅ Global headers for CORS + embedding
+  async headers() {
+    const allowedOrigins = [
+      'https://moralclarity.ai',
+      'https://studio.moralclarity.ai',
+      'https://moral-clarity-ai-2-0.webflow.io',
+    ];
+
+    const csp = [
+      "default-src 'self'",
+      "frame-ancestors 'self' https://*.webflow.io https://moral-clarity-ai-2-0.webflow.io https://studio.moralclarity.ai",
+    ].join('; ');
+
+    // Apply headers to all routes
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          // Dynamic CORS allowlist (Vercel doesn’t support inline functions, so use wildcard headers here)
+          { key: 'Access-Control-Allow-Origin', value: '*' }, // You can replace * with your specific list once stable
+          { key: 'Access-Control-Allow-Methods', value: 'GET,POST,OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
+          { key: 'Access-Control-Allow-Credentials', value: 'true' },
+
+          // Security headers
+          { key: 'X-Frame-Options', value: 'ALLOW-FROM https://moral-clarity-ai-2-0.webflow.io' },
+          { key: 'Content-Security-Policy', value: csp },
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          { key: 'Referrer-Policy', value: 'no-referrer-when-downgrade' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
         ],
       },
     ];
