@@ -209,7 +209,7 @@ export async function POST(req: NextRequest) {
 
 // Convert Headers → Record<string,string> safely for TS
 const cors = Object.fromEntries(
-  Array.from(corsHeaders(origin)).map(([k, v]) => [k, v])
+  Array.from(corsHeaders(origin) as unknown as Iterable<[string, string]>)
 );
 
 return new NextResponse(r.body as any, {
