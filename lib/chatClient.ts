@@ -1,5 +1,17 @@
 // lib/chatClient.ts
 
+function normalizeApiBase(raw?: string) {
+  // prefer www to avoid apex -> www redirects (breaks CORS preflight)
+  const fallback = "https://www.moralclarity.ai/api";
+  if (!raw) return fallback;
+  // if someone configured apex by mistake, rewrite it
+  return raw.replace("https://moralclarity.ai", "https://www.moralclarity.ai");
+}
+
+// If env var is set, we normalize it; else we hard-lock to www
+const API_BASE = normalizeApiBase(process.env.NEXT_PUBLIC_API_BASE_URL);
+
+
 export type ChatMessage = {
   role: "user" | "assistant" | "system";
   content: string;
