@@ -207,14 +207,15 @@ export async function POST(req: NextRequest) {
       return new NextResponse(`Model error: ${r.status} ${t}`, { status: 500 });
     }
 
-    return new NextResponse(r.body as any, {
-      headers: {
-        ...Object.fromEntries(corsHeaders(origin).entries()),
-        'Content-Type': 'text/event-stream; charset=utf-8',
-        'Cache-Control': 'no-cache, no-transform',
-        'X-Accel-Buffering': 'no',
-      },
-    });
+return new NextResponse(r.body as any, {
+  headers: {
+    ...Object.fromEntries(corsHeaders(origin).entries()),
+    'Content-Type': 'text/event-stream; charset=utf-8',
+    'Cache-Control': 'no-cache, no-transform',
+    'X-Accel-Buffering': 'no',
+  },
+});
+
   } catch (err: any) {
     const origin = pickAllowed(req.headers.get('origin'));
     const msg =
