@@ -1,16 +1,15 @@
 // lib/chatClient.ts
 
 function normalizeApiBase(raw?: string) {
-  // prefer www to avoid apex -> www redirects (breaks CORS preflight)
+  // Prefer www (avoids apex→www redirects that can break CORS preflight)
   const fallback = "https://www.moralclarity.ai/api";
   if (!raw) return fallback;
-  // if someone configured apex by mistake, rewrite it
+  // If someone configured apex by mistake, rewrite it
   return raw.replace("https://moralclarity.ai", "https://www.moralclarity.ai");
 }
 
-// If env var is set, we normalize it; else we hard-lock to www
-const API_BASE = normalizeApiBase(process.env.NEXT_PUBLIC_API_BASE_URL);
-
+// ✅ Single source of truth
+export const API_BASE = normalizeApiBase(process.env.NEXT_PUBLIC_API_BASE_URL);
 
 export type ChatMessage = {
   role: "user" | "assistant" | "system";
@@ -18,10 +17,6 @@ export type ChatMessage = {
 };
 
 export type ChatFilters = string[];
-
-// Use env in Studio project if set, else canonical domain
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://www.moralclarity.ai/api";
 
 /**
  * Call the chat API (non-stream JSON).
@@ -52,7 +47,6 @@ export async function chat(
     method: "POST",
     headers,
     body: JSON.stringify(payload),
-    // no credentials needed for cross-origin API
   });
 
   if (!res.ok) {
@@ -60,7 +54,6 @@ export async function chat(
     throw new Error(`Chat API ${res.status}: ${text || res.statusText}`);
   }
 
-  // shape from your route: { text, model, mode, confidence, ... }
   return (await res.json()) as {
     text: string;
     model: string;
