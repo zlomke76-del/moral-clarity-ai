@@ -207,14 +207,20 @@ export async function POST(req: NextRequest) {
       return new NextResponse(`Model error: ${r.status} ${t}`, { status: 500 });
     }
 
+// Convert Headers → Record<string,string> safely for TS
+const cors = Object.fromEntries(
+  Array.from(corsHeaders(origin)).map(([k, v]) => [k, v])
+);
+
 return new NextResponse(r.body as any, {
   headers: {
-    ...Object.fromEntries(corsHeaders(origin).entries()),
+    ...cors,
     'Content-Type': 'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-cache, no-transform',
     'X-Accel-Buffering': 'no',
   },
 });
+
 
   } catch (err: any) {
     const origin = pickAllowed(req.headers.get('origin'));
