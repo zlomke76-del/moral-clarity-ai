@@ -5,11 +5,12 @@ export async function sendChat(
   messages: { role: ChatRole; content: string }[],
   mode: Mode = "guidance"
 ) {
-  const res = await fetch("/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages, mode }),
-  });
+  const res = await fetch("https://www.moralclarity.ai/api/chat", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(payload),
+});
+
   if (!res.ok) {
     let e = "Request failed";
     try {
