@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  // Send people on the www subdomain to the apex (your current behavior)
+  // Keep www -> apex redirect
   async redirects() {
     return [
       {
@@ -14,17 +14,25 @@ const nextConfig = {
     ];
   },
 
-  // Site-wide headers (you already had these)
+  // Headers: loosen CSP so Next.js can run, keep frame-ancestors allowlist
   async headers() {
     const csp = [
       "default-src 'self'",
-      "frame-ancestors 'self' https://*.webflow.io https://moral-clarity-ai-2-0.webflow.io https://studio.moralclarity.ai",
+      // Allow Next.js inline/eval scripts and workers
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob:",
+      // allow API/streaming calls to your backend origins
+      "connect-src 'self' https://www.moralclarity.ai https://moralclarity.ai",
+      // where this page may be embedded
+      "frame-ancestors 'self' https://*.webflow.io https://moral-clarity-ai-2-0.webflow.io https://studio.moralclarity.ai"
     ].join('; ');
 
     return [
       {
         source: '/:path*',
         headers: [
+          // (Optional) broad CORS while we finish wiring; safe to remove later
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Access-Control-Allow-Methods', value: 'GET,POST,OPTIONS' },
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
@@ -39,7 +47,7 @@ const nextConfig = {
     ];
   },
 
-  // 👉 This is the key: make /api on your site quietly proxy to your main backend.
+  // Same-origin /api on studio → proxy to main backend (no CORS)
   async rewrites() {
     return [
       { source: '/api/:path*', destination: 'https://www.moralclarity.ai/api/:path*' },
