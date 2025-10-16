@@ -96,24 +96,40 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-/* ========= CORS ========= */
-function pickAllowed(origin: string | null) {
-  if (!origin) return null;
-  return ORIGIN_LIST.includes(origin) ? origin : null;
-}
+/** ========= CORS ========= **/
+const ALLOWED_ORIGINS = [
+  'https://moralclarity.ai',
+  'https://www.moralclarity.ai',
+  'https://studio.moralclarity.ai',
+];
 
 function corsHeaders(origin?: string | null): Headers {
-  const h = new Headers();
-  h.set('Vary', 'Origin');
-  h.set('Access-Control-Allow-Origin', origin || '*');
-  h.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  h.set(
+  const headers = new Headers();
+
+  // Always vary by Origin so caches don't mix responses
+  headers.set('Vary', 'Origin');
+  headers.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  headers.set(
     'Access-Control-Allow-Headers',
     'Content-Type, Authorization, X-Requested-With, X-Context-Id, X-Last-Mode'
   );
-  h.set('Access-Control-Max-Age', '86400');
-  return h;
+  headers.set('Access-Control-Max-Age', '86400');
+
+  // Strict echo of valid origin
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    headers.set('Access-Control-Allow-Origin', origin);
+  } else {
+    headers.set('Access-Control-Allow-Origin', 'https://www.moralclarity.ai');
+  }
+
+  return headers;
 }
+
+export async function OPTIONS(req: NextRequest) {
+  const origin = req.headers.get('origin');
+  return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
+}
+
 
 /* ========= OPTIONS (preflight) ========= */
 export async function OPTIONS(req: NextRequest) {
