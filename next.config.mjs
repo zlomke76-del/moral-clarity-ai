@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  // ✅ Canonical redirect (force www → apex)
+  // Send people on the www subdomain to the apex (your current behavior)
   async redirects() {
     return [
       {
@@ -14,11 +14,10 @@ const nextConfig = {
     ];
   },
 
-  // ✅ Global headers (CSP controls embedding; CORS headers optional)
+  // Site-wide headers (you already had these)
   async headers() {
     const csp = [
       "default-src 'self'",
-      // Use CSP for embedding control instead of X-Frame-Options
       "frame-ancestors 'self' https://*.webflow.io https://moral-clarity-ai-2-0.webflow.io https://studio.moralclarity.ai",
     ].join('; ');
 
@@ -26,16 +25,11 @@ const nextConfig = {
       {
         source: '/:path*',
         headers: [
-          // You can remove these CORS headers now that we’re using a same-origin /api proxy.
-          // If you still want generic CORS, keep them (but prefer a specific allowlist later).
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Access-Control-Allow-Methods', value: 'GET,POST,OPTIONS' },
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
 
-          // Security headers
-          // NOTE: X-Frame-Options is deprecated/ignored when CSP frame-ancestors is present.
-          // { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'Content-Security-Policy', value: csp },
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
           { key: 'Referrer-Policy', value: 'no-referrer-when-downgrade' },
@@ -45,7 +39,7 @@ const nextConfig = {
     ];
   },
 
-  // ✅ Same-origin /api → proxy to your backend to avoid CORS entirely
+  // 👉 This is the key: make /api on your site quietly proxy to your main backend.
   async rewrites() {
     return [
       { source: '/api/:path*', destination: 'https://www.moralclarity.ai/api/:path*' },
