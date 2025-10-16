@@ -10,10 +10,12 @@ import { routeMode } from '@/core/mode-router';
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
 const REQUEST_TIMEOUT_MS = 20_000;
 
-const ORIGIN_LIST = (
-  process.env.ALLOWED_ORIGIN ||
-  'https://moralclarity.ai,https://www.moralclarity.ai,https://studio.moralclarity.ai'
-)
+const ORIGIN_LIST = [
+  "https://moralclarity.ai",
+  "https://www.moralclarity.ai",
+  "https://studio.moralclarity.ai"
+];
+
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
