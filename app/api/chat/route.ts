@@ -103,16 +103,28 @@ function pickAllowed(origin: string | null) {
   if (!origin) return null; // treat “no origin” (server-to-server, curl, same-origin) as allowed separately
   return ORIGIN_LIST.includes(origin) ? origin : null;
 }
-function corsHeaders(origin?: string | null) {
-  return origin
-    ? {
-        'Access-Control-Allow-Origin': origin,
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Max-Age': '86400',
-      }
-    : {}; // same-origin/no-origin → no CORS header needed
+/* ========= CORS ========= */
+function corsHeaders(origin?: string | null): Headers {
+  const h = new Headers();
+  h.set("Vary", "Origin");
+  if (origin) h.set("Access-Control-Allow-Origin", origin);
+  else h.set("Access-Control-Allow-Origin", "*"); // fallback so type stays valid
+  h.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  h.set(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-Requested-With, X-Context-Id, X-Last-Mode"
+  );
+  h.set("Access-Control-Max-Age", "86400");
+  return h;
 }
+
+/* ========= OPTIONS (preflight) ========= */
+export async function OPTIONS(req: NextRequest) {
+  const allowed = isAllowedOrigin(req.headers.get("origin"));
+  const headers = corsHeaders(allowed); // always returns Headers
+  return new NextResponse(null, { status: 204, headers });
+}
+
 
 /* ========= CORS (OPTIONS) ========= */
 export async function OPTIONS(req: NextRequest) {
