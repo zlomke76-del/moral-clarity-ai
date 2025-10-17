@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useMemo } from "react";
 import { createClient } from "@supabase/supabase-js";
 
@@ -10,13 +11,13 @@ const supabase = createClient(
 export default function BuyPage() {
   const [loading, setLoading] = useState<string | null>(null);
 
-  // map friendly keys to live PRICE IDs (optional; you can also pick via UI buttons)
+  // Map UI buttons → LIVE Price IDs (match checkout route)
   const PRICES = useMemo(
     () => ({
-      standard: "price_std_live_123",
-      family: "price_family_live_123",
-      ministry: "price_ministry_live_123",
-      memory1gb: "price_memory1gb_live_123",
+      standard: "price_XXXXXXXX_std",
+      family: "price_XXXXXXXX_fam",
+      ministry: "price_XXXXXXXX_min",
+      memory1gb: "price_XXXXXXXX_mem1",
     }),
     []
   );
