@@ -1,22 +1,20 @@
-// app/api/stripe/webhook/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
-export const runtime = "nodejs";            // ensure Node runtime
-export const dynamic = "force-dynamic";     // don't statically analyze this route
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-// --- Memory add-on linkage ---
-const MEMORY_PRICE_ID = "price_XXXXXXXX_mem1"; // <-- replace with your real $5 1GB price ID
+// Memory add-on (LIVE price)
+const MEMORY_PRICE_ID = "price_1SIQry0tWJXzci1A38ftypv9";
 const MEMORY_GB_PER_UNIT = 1;
 
-// Create Supabase admin client lazily at runtime
+// Lazy Supabase admin client (prevents build-time env access)
 function getSupabase() {
   const url = process.env.SUPABASE_URL!;
   const key = process.env.SUPABASE_SERVICE_ROLE!;
-  // Optional: keep it stateless
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
@@ -35,7 +33,7 @@ async function setAddonMemoryFromSubscription(userId: string, sub: Stripe.Subscr
 
 export async function POST(req: NextRequest) {
   const sig = req.headers.get("stripe-signature") as string;
-  const body = await req.text(); // raw string for signature verify
+  const body = await req.text();
 
   let event: Stripe.Event;
   try {
@@ -52,7 +50,6 @@ export async function POST(req: NextRequest) {
         if (s.mode !== "subscription") break;
 
         const supabase = getSupabase();
-
         const userId = s.metadata?.userId!;
         const tier = s.metadata?.tier || "plus";
         const seats = Number(s.metadata?.seats || "1");
@@ -127,6 +124,7 @@ export async function POST(req: NextRequest) {
         if (users && users.length === 1) {
           const userId = users[0].id as string;
 
+          // Zero memory add-on
           await supabase.rpc("set_memory_addon_quota", {
             p_user_id: userId,
             p_units: 0,
@@ -145,7 +143,6 @@ export async function POST(req: NextRequest) {
       }
 
       default:
-        // ignore other events
         break;
     }
 
