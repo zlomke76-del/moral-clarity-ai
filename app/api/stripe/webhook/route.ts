@@ -1,28 +1,31 @@
+// app/api/stripe/webhook/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
-export const runtime = "nodejs"; // raw body + Node required
+export const runtime = "nodejs";            // ensure Node runtime
+export const dynamic = "force-dynamic";     // don't statically analyze this route
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE! // server-only
-);
 
 // --- Memory add-on linkage ---
-const MEMORY_PRICE_ID = "price_XXXXXXXX_mem1"; // ⬅️ your $5 1GB memory add-on price ID
+const MEMORY_PRICE_ID = "price_XXXXXXXX_mem1"; // <-- replace with your real $5 1GB price ID
 const MEMORY_GB_PER_UNIT = 1;
 
-async function setAddonMemoryFromSubscription(
-  userId: string,
-  sub: Stripe.Subscription
-) {
+// Create Supabase admin client lazily at runtime
+function getSupabase() {
+  const url = process.env.SUPABASE_URL!;
+  const key = process.env.SUPABASE_SERVICE_ROLE!;
+  // Optional: keep it stateless
+  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+}
+
+async function setAddonMemoryFromSubscription(userId: string, sub: Stripe.Subscription) {
+  const supabase = getSupabase();
   const items = sub.items?.data ?? [];
   const memoryItem = items.find((it) => it.price?.id === MEMORY_PRICE_ID);
   const units = Math.max(memoryItem?.quantity ?? 0, 0);
 
-  // Idempotent: sets memory_quota_gb to units * GB_PER_UNIT
   await supabase.rpc("set_memory_addon_quota", {
     p_user_id: userId,
     p_units: units,
@@ -32,17 +35,13 @@ async function setAddonMemoryFromSubscription(
 
 export async function POST(req: NextRequest) {
   const sig = req.headers.get("stripe-signature") as string;
-  const body = await req.text(); // raw string
+  const body = await req.text(); // raw string for signature verify
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    );
+    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!);
   } catch (err: any) {
-    console.error("Webhook signature verify failed.", err.message);
+    console.error("Webhook signature verify failed:", err.message);
     return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
   }
 
@@ -52,6 +51,8 @@ export async function POST(req: NextRequest) {
         const s = event.data.object as Stripe.Checkout.Session;
         if (s.mode !== "subscription") break;
 
+        const supabase = getSupabase();
+
         const userId = s.metadata?.userId!;
         const tier = s.metadata?.tier || "plus";
         const seats = Number(s.metadata?.seats || "1");
@@ -59,7 +60,6 @@ export async function POST(req: NextRequest) {
         const subscriptionId = s.subscription as string;
         const customerId = s.customer as string;
 
-        // Update user → activate & store Stripe IDs
         await supabase
           .from("users")
           .update({
@@ -71,7 +71,6 @@ export async function POST(req: NextRequest) {
           })
           .eq("id", userId);
 
-        // Optional immediate UX boost for memory add-on
         if (memoryGB > 0) {
           await supabase.rpc("increment_memory_quota", {
             p_user_id: userId,
@@ -82,16 +81,15 @@ export async function POST(req: NextRequest) {
       }
 
       case "customer.subscription.updated": {
+        const supabase = getSupabase();
         const sub = event.data.object as Stripe.Subscription;
-        const isActive = sub.status === "active" || sub.status === "trialing";
-        const periodEndUnix = (sub as any)?.current_period_end as number | undefined;
-        const periodEndISO = periodEndUnix
-          ? new Date(periodEndUnix * 1000).toISOString()
-          : null;
-
         const customerId = sub.customer as string;
 
-        // Find the user by stripe_customer_id to get internal id
+        const isActive = sub.status === "active" || sub.status === "trialing";
+        const periodEndUnix = (sub as any)?.current_period_end as number | undefined;
+        const periodEndISO = periodEndUnix ? new Date(periodEndUnix * 1000).toISOString() : null;
+
+        // find internal user id
         const { data: users } = await supabase
           .from("users")
           .select("id")
@@ -101,7 +99,7 @@ export async function POST(req: NextRequest) {
         if (users && users.length === 1) {
           const userId = users[0].id as string;
 
-          // Idempotent reconciliation of the memory add-on from subscription items
+          // Reconcile memory add-on idempotently from subscription items
           await setAddonMemoryFromSubscription(userId, sub);
 
           const update: Record<string, any> = {
@@ -110,15 +108,13 @@ export async function POST(req: NextRequest) {
           };
           if (periodEndISO) update.current_period_end = periodEndISO;
 
-          await supabase
-            .from("users")
-            .update(update)
-            .eq("id", userId);
+          await supabase.from("users").update(update).eq("id", userId);
         }
         break;
       }
 
       case "customer.subscription.deleted": {
+        const supabase = getSupabase();
         const sub = event.data.object as Stripe.Subscription;
         const customerId = sub.customer as string;
 
@@ -131,7 +127,6 @@ export async function POST(req: NextRequest) {
         if (users && users.length === 1) {
           const userId = users[0].id as string;
 
-          // Zero out memory add-on when subscription ends
           await supabase.rpc("set_memory_addon_quota", {
             p_user_id: userId,
             p_units: 0,
@@ -150,7 +145,7 @@ export async function POST(req: NextRequest) {
       }
 
       default:
-        // no-op for other events
+        // ignore other events
         break;
     }
 
