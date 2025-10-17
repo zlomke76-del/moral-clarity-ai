@@ -1,11 +1,11 @@
+// app/api/stripe/webhook/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-06-20",
-});
+export const runtime = "nodejs"; // required for raw body & Node crypto
 
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE! // server-only
@@ -13,12 +13,12 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   const sig = req.headers.get("stripe-signature") as string;
-  const buf = Buffer.from(await req.arrayBuffer());
+  const body = await req.text(); // raw string, not Buffer/arrayBuffer
 
   let event: Stripe.Event;
   try {
     event = stripe.webhooks.constructEvent(
-      buf,
+      body,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
@@ -31,19 +31,15 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        // Only handle subscriptions
         if (session.mode !== "subscription") break;
 
         const userId = session.metadata?.userId!;
         const tier = session.metadata?.tier || "plus";
         const seats = Number(session.metadata?.seats || "1");
         const memoryGB = Number(session.metadata?.memoryGB || "0");
-
-        // Get subscription + customer IDs
         const subscriptionId = session.subscription as string;
         const customerId = session.customer as string;
 
-        // Update your users (or profiles) table
         await supabase
           .from("users")
           .update({
@@ -52,67 +48,55 @@ export async function POST(req: NextRequest) {
             stripe_subscription_id: subscriptionId,
             plan_tier: tier,
             seats,
-            // If you store memory quota separately, add it here:
-            memory_gb: supabase.rpc ? undefined : undefined,
           })
           .eq("id", userId);
 
-        // If memory is an add-on product: increment quota
         if (memoryGB > 0) {
           await supabase.rpc("increment_memory_quota", {
             p_user_id: userId,
             p_delta_gb: memoryGB,
           });
         }
-
         break;
       }
 
       case "customer.subscription.updated": {
-  const sub = event.data.object as Stripe.Subscription;
+        const sub = event.data.object as Stripe.Subscription;
+        const isActive = sub.status === "active" || sub.status === "trialing";
 
-  // Map status → active flag
-  const isActive = sub.status === "active" || sub.status === "trialing";
+        // `current_period_end` not guaranteed on TS type – read defensively
+        const periodEndUnix = (sub as any)?.current_period_end as number | undefined;
+        const periodEndISO = periodEndUnix
+          ? new Date(periodEndUnix * 1000).toISOString()
+          : null;
 
-  // `current_period_end` may not be present on the TS type in your SDK —
-  // read it defensively:
-  const periodEndUnix = (sub as any)?.current_period_end as number | undefined;
-  const periodEndISO = periodEndUnix
-    ? new Date(periodEndUnix * 1000).toISOString()
-    : null;
+        const update: Record<string, any> = {
+          subscription_active: isActive,
+          stripe_subscription_status: sub.status,
+        };
+        if (periodEndISO) update.current_period_end = periodEndISO;
 
-  const update: Record<string, any> = {
-    subscription_active: isActive,
-    stripe_subscription_status: sub.status,
-  };
-  if (periodEndISO) update.current_period_end = periodEndISO;
-
-  await supabase
-    .from("users")
-    .update(update)
-    .eq("stripe_customer_id", sub.customer as string);
-
-  break;
-}
-
+        await supabase
+          .from("users")
+          .update(update)
+          .eq("stripe_customer_id", sub.customer as string);
+        break;
+      }
 
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
-        const customerId = sub.customer as string;
-
         await supabase
           .from("users")
           .update({
             subscription_active: false,
             stripe_subscription_status: "canceled",
           })
-          .eq("stripe_customer_id", customerId);
-
+          .eq("stripe_customer_id", sub.customer as string);
         break;
       }
 
-      // optional: handle invoice.paid / payment_failed for UI badges
       default:
+        // no-op for other events
         break;
     }
 
@@ -123,5 +107,5 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Disable Next.js body parsing for this route
-export const config = { api: { bodyParser: false } } as any;
+// ❌ Do NOT export `config` in App Router. Remove the old:
+// export const config = { api: { bodyParser: false } } as any;
