@@ -11,16 +11,13 @@ const supabase = createClient(
 export default function BuyPage() {
   const [loading, setLoading] = useState<string | null>(null);
 
-  // Map UI buttons → LIVE Price IDs (match checkout route)
-  const PRICES = useMemo(
-    () => ({
-      standard: "price_XXXXXXXX_std",
-      family: "price_XXXXXXXX_fam",
-      ministry: "price_XXXXXXXX_min",
-      memory1gb: "price_XXXXXXXX_mem1",
-    }),
-    []
-  );
+  // Match server PRICE_MAP keys
+  const PRICES = useMemo(() => ({
+    standard:  "price_1SCsmG0tWJXzci1AX3GLoTj8",
+    family:    "price_1SCsmv0tWJXzci1A6hvi2Ccp",
+    ministry:  "price_1SCso80tWJXzci1AoZiKFy3b",
+    memory1gb: "price_1SIQry0tWJXzci1A38ftypv9",
+  }), []);
 
   async function startCheckout(which: keyof typeof PRICES) {
     setLoading(which);
