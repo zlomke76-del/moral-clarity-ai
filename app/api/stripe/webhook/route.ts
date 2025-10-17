@@ -69,24 +69,32 @@ export async function POST(req: NextRequest) {
       }
 
       case "customer.subscription.updated": {
-        const sub = event.data.object as Stripe.Subscription;
-        const customerId = sub.customer as string;
+  const sub = event.data.object as Stripe.Subscription;
 
-        // Map status → active flag
-        const isActive = sub.status === "active" || sub.status === "trialing";
+  // Map status → active flag
+  const isActive = sub.status === "active" || sub.status === "trialing";
 
-        // If you store stripe_customer_id on users, update by that
-        await supabase
-          .from("users")
-          .update({
-            subscription_active: isActive,
-            stripe_subscription_status: sub.status,
-            current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
-          })
-          .eq("stripe_customer_id", customerId);
+  // `current_period_end` may not be present on the TS type in your SDK —
+  // read it defensively:
+  const periodEndUnix = (sub as any)?.current_period_end as number | undefined;
+  const periodEndISO = periodEndUnix
+    ? new Date(periodEndUnix * 1000).toISOString()
+    : null;
 
-        break;
-      }
+  const update: Record<string, any> = {
+    subscription_active: isActive,
+    stripe_subscription_status: sub.status,
+  };
+  if (periodEndISO) update.current_period_end = periodEndISO;
+
+  await supabase
+    .from("users")
+    .update(update)
+    .eq("stripe_customer_id", sub.customer as string);
+
+  break;
+}
+
 
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
