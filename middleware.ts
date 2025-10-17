@@ -1,22 +1,25 @@
-// middleware.ts at repo root
+// middleware.ts
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 export function middleware(req: NextRequest) {
-  const host = req.headers.get("host");
+  const host = req.headers.get("host") || "";
 
-  // Redirect .com or www to the canonical .ai host
-  if (host === "www.moralclarityai.com" || host === "moralclarityai.com") {
-    const url = req.nextUrl.clone();     // preserves pathname + search
+  // only redirect apex + www .com → .ai
+  if (
+    (host === "moralclarityai.com" || host === "www.moralclarityai.com") &&
+    !host.startsWith("app.")
+  ) {
+    const url = req.nextUrl.clone();
     url.protocol = "https";
-    url.hostname = "moralclarity.ai";    // only change the host!
+    url.hostname = "moralclarity.ai"; // canonical
     return NextResponse.redirect(url, 308);
   }
 
+  // do not redirect the app subdomain
   return NextResponse.next();
 }
 
-// Optional: limit middleware to app routes and keep static assets fast
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)"],
 };
