@@ -11,7 +11,7 @@ import { routeMode } from '@/core/mode-router';
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
 const REQUEST_TIMEOUT_MS = 20_000;
 
-// Allowed callers (exact echo, no "*")
+// Only these exact origins are allowed
 const ALLOWED_ORIGINS = [
   'https://moralclarity.ai',
   'https://www.moralclarity.ai',
@@ -70,7 +70,7 @@ function normalizeFilters(filters: unknown): string[] {
 }
 
 function trimConversation(messages: Array<{ role: string; content: string }>) {
-  const MAX_TURNS = 5; // last 5 user+assistant pairs
+  const MAX_TURNS = 5; // 5 user+assistant pairs
   const limit = MAX_TURNS * 2;
   return messages.length <= limit ? messages : messages.slice(-limit);
 }
@@ -97,8 +97,8 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 }
 
 /* ========= CORS ========= */
-function pickEchoOrigin(origin: string | null): string | null {
-  if (!origin) return null; // same-origin (no preflight)
+function pickAllowedOrigin(origin: string | null): string | null {
+  if (!origin) return null;       // same-origin
   return ALLOWED_ORIGINS.includes(origin) ? origin : null;
 }
 
@@ -106,31 +106,30 @@ function corsHeaders(origin: string | null): Headers {
   const h = new Headers();
   h.set('Vary', 'Origin');
   h.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  h.set(
-    'Access-Control-Allow-Headers',
-    'Content-Type, Authorization, X-Requested-With, X-Context-Id, X-Last-Mode'
-  );
+  h.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Context-Id, X-Last-Mode');
   h.set('Access-Control-Max-Age', '86400');
   if (origin) h.set('Access-Control-Allow-Origin', origin);
   return h;
 }
 
-// Headers -> plain object, avoids TS type error for .entries()
 function headersToRecord(h: Headers): Record<string, string> {
   const out: Record<string, string> = {};
-  h.forEach((value, key) => { out[key] = value; });
+  h.forEach((v, k) => { out[k] = v; });
   return out;
 }
 
 /* ========= HEALTHCHECK ========= */
 export async function GET(req: NextRequest) {
-  const origin = pickEchoOrigin(req.headers.get('origin'));
+  const origin = pickAllowedOrigin(req.headers.get('origin'));
   return NextResponse.json({ ok: true, model: MODEL }, { headers: corsHeaders(origin) });
 }
 
 /* ========= OPTIONS (preflight) ========= */
 export async function OPTIONS(req: NextRequest) {
-  const origin = pickEchoOrigin(req.headers.get('origin'));
+  const reqOrigin = req.headers.get('origin');
+  const origin = pickAllowedOrigin(reqOrigin);
+  console.log('[CORS preflight] Origin:', reqOrigin, '→ allowed:', Boolean(origin));
+  // If not allowed, still return 204 with Vary/Allow headers but without ACAO.
   return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
 }
 
@@ -138,13 +137,13 @@ export async function OPTIONS(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const reqOrigin = req.headers.get('origin');
-    const echoOrigin = pickEchoOrigin(reqOrigin);
-    const isSameOrNoOrigin = !reqOrigin;
+    const echoOrigin = pickAllowedOrigin(reqOrigin);
+    const sameOrNoOrigin = !reqOrigin;
 
-    if (!echoOrigin && !isSameOrNoOrigin) {
+    if (!echoOrigin && !sameOrNoOrigin) {
       return NextResponse.json(
         { error: 'Origin not allowed', allowed: ALLOWED_ORIGINS },
-        { status: 403 }
+        { status: 403, headers: corsHeaders(null) }
       );
     }
 
@@ -163,13 +162,12 @@ export async function POST(req: NextRequest) {
     const effectiveFilters =
       filters.length ? filters :
       route.mode === 'Guidance' ? ['guidance'] :
-      route.mode === 'Ministry' ? ['abrahamic', 'ministry'] :
-      [];
+      route.mode === 'Ministry' ? ['abrahamic', 'ministry'] : [];
 
     const { prompt: system } = buildSystemPrompt(effectiveFilters, userAskedForSecular);
     const openai: OpenAI = await getOpenAI();
 
-    /* ----- Non-stream JSON response ----- */
+    // Non-stream
     if (!wantStream) {
       const resp = await withTimeout(
         openai.responses.create({
@@ -183,25 +181,16 @@ export async function POST(req: NextRequest) {
       const text = (resp as any).output_text?.trim() || '[No reply from model]';
 
       return NextResponse.json(
-        {
-          text,
-          model: MODEL,
-          mode: route.mode,
-          confidence: route.confidence,
-          filters: effectiveFilters,
-        },
+        { text, model: MODEL, mode: route.mode, confidence: route.confidence, filters: effectiveFilters },
         { headers: corsHeaders(echoOrigin) }
       );
     }
 
-    /* ----- Streamed SSE response ----- */
+    // Stream (SSE via Chat Completions)
     const apiKey = process.env.OPENAI_API_KEY || '';
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: MODEL,
         stream: true,
@@ -218,32 +207,26 @@ export async function POST(req: NextRequest) {
 
     if (!r.ok || !r.body) {
       const t = await r.text().catch(() => '');
-      return new NextResponse(`Model error: ${r.status} ${t}`, {
-        status: 500,
-        headers: corsHeaders(echoOrigin),
-      });
+      return new NextResponse(`Model error: ${r.status} ${t}`, { status: 500, headers: corsHeaders(echoOrigin) });
     }
-
-    const corsObj = headersToRecord(corsHeaders(echoOrigin));
 
     return new NextResponse(r.body as any, {
       headers: {
-        ...corsObj,
+        ...headersToRecord(corsHeaders(echoOrigin)),
         'Content-Type': 'text/event-stream; charset=utf-8',
         'Cache-Control': 'no-cache, no-transform',
         'X-Accel-Buffering': 'no',
       },
     });
   } catch (err: any) {
-    const echoOrigin = pickEchoOrigin(req.headers.get('origin'));
-    const msg =
-      err?.message === 'Request timed out'
-        ? '⚠️ Connection timed out. Please try again.'
-        : err?.message || String(err);
+    const echoOrigin = pickAllowedOrigin(req.headers.get('origin'));
+    const msg = err?.message === 'Request timed out'
+      ? '⚠️ Connection timed out. Please try again.'
+      : err?.message || String(err);
 
-    return NextResponse.json(
-      { error: msg },
-      { status: err?.message === 'Request timed out' ? 504 : 500, headers: corsHeaders(echoOrigin) }
-    );
+    return NextResponse.json({ error: msg }, {
+      status: err?.message === 'Request timed out' ? 504 : 500,
+      headers: corsHeaders(echoOrigin),
+    });
   }
 }
