@@ -1,3 +1,4 @@
+// app/api/chat/route.ts
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -10,13 +11,11 @@ import { routeMode } from '@/core/mode-router';
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
 const REQUEST_TIMEOUT_MS = 20_000;
 
-const ORIGIN_LIST = (process.env.ALLOWED_ORIGIN ||
-  "https://moralclarity.ai,https://www.moralclarity.ai,https://studio.moralclarity.ai"
-)
-  .split(",")
-  .map(s => s.trim())
-  .filter(Boolean);
-
+const ALLOWED_ORIGINS = [
+  'https://moralclarity.ai',
+  'https://www.moralclarity.ai',
+  'https://studio.moralclarity.ai',
+];
 
 /* ========= GUIDELINES ========= */
 const GUIDELINE_NEUTRAL = `NEUTRAL MODE
@@ -71,7 +70,7 @@ function normalizeFilters(filters: unknown): string[] {
 
 function trimConversation(messages: Array<{ role: string; content: string }>) {
   const MAX_TURNS = 5;
-  const limit = MAX_TURNS * 2;
+  const limit = MAX_TURNS * 2; // user+assistant
   return messages.length <= limit ? messages : messages.slice(-limit);
 }
 
@@ -96,44 +95,34 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-/** ========= CORS ========= **/
-const ALLOWED_ORIGINS = [
-  'https://moralclarity.ai',
-  'https://www.moralclarity.ai',
-  'https://studio.moralclarity.ai',
-];
+/* ========= CORS ========= */
+function pickEchoOrigin(origin: string | null): string | null {
+  if (!origin) return null; // same-origin, preflight not required
+  return ALLOWED_ORIGINS.includes(origin) ? origin : null;
+}
 
-function corsHeaders(origin?: string | null): Headers {
-  const headers = new Headers();
-
-  // Always vary by Origin so caches don't mix responses
-  headers.set('Vary', 'Origin');
-  headers.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  headers.set(
+function corsHeaders(origin: string | null): Headers {
+  const h = new Headers();
+  h.set('Vary', 'Origin');
+  h.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  h.set(
     'Access-Control-Allow-Headers',
     'Content-Type, Authorization, X-Requested-With, X-Context-Id, X-Last-Mode'
   );
-  headers.set('Access-Control-Max-Age', '86400');
-
-  // Strict echo of valid origin
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
-    headers.set('Access-Control-Allow-Origin', origin);
-  } else {
-    headers.set('Access-Control-Allow-Origin', 'https://www.moralclarity.ai');
-  }
-
-  return headers;
+  h.set('Access-Control-Max-Age', '86400');
+  if (origin) h.set('Access-Control-Allow-Origin', origin);
+  return h;
 }
 
-export async function OPTIONS(req: NextRequest) {
-  const origin = req.headers.get('origin');
-  return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
+/* ========= HEALTHCHECK (optional) ========= */
+export async function GET(req: NextRequest) {
+  const origin = pickEchoOrigin(req.headers.get('origin'));
+  return NextResponse.json({ ok: true, model: MODEL }, { headers: corsHeaders(origin) });
 }
-
 
 /* ========= OPTIONS (preflight) ========= */
 export async function OPTIONS(req: NextRequest) {
-  const origin = pickAllowed(req.headers.get('origin'));
+  const origin = pickEchoOrigin(req.headers.get('origin'));
   return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
 }
 
@@ -141,17 +130,17 @@ export async function OPTIONS(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const reqOrigin = req.headers.get('origin');
-    const origin = pickAllowed(reqOrigin);
+    const echoOrigin = pickEchoOrigin(reqOrigin);
     const isSameOrNoOrigin = !reqOrigin;
 
-    if (!origin && !isSameOrNoOrigin) {
+    if (!echoOrigin && !isSameOrNoOrigin) {
       return NextResponse.json(
-        { error: 'Origin not allowed', allowed: ORIGIN_LIST },
+        { error: 'Origin not allowed', allowed: ALLOWED_ORIGINS },
         { status: 403 }
       );
     }
 
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const messages = Array.isArray(body?.messages) ? body.messages : [];
     const filters = normalizeFilters(body?.filters ?? []);
     const wantStream = !!body?.stream;
@@ -159,19 +148,20 @@ export async function POST(req: NextRequest) {
     const rolled = trimConversation(messages);
     const userAskedForSecular = wantsSecular(rolled);
 
-    const lastUser = [...rolled].reverse().find(m => m.role?.toLowerCase() === 'user')?.content || '';
+    const lastUser =
+      [...rolled].reverse().find(m => m.role?.toLowerCase() === 'user')?.content || '';
     const lastModeHeader = req.headers.get('x-last-mode');
     const route = routeMode(lastUser, { lastMode: lastModeHeader as any });
 
     const effectiveFilters =
       filters.length ? filters :
       route.mode === 'Guidance' ? ['guidance'] :
-      route.mode === 'Ministry' ? ['abrahamic', 'ministry'] : [];
+      route.mode === 'Ministry' ? ['abrahamic', 'ministry'] :
+      [];
 
     const { prompt: system } = buildSystemPrompt(effectiveFilters, userAskedForSecular);
-    const openai = await getOpenAI();
+    const openai: OpenAI = await getOpenAI();
 
-    /* ----- Non-stream JSON response ----- */
     if (!wantStream) {
       const resp = await withTimeout(
         openai.responses.create({
@@ -192,11 +182,11 @@ export async function POST(req: NextRequest) {
           confidence: route.confidence,
           filters: effectiveFilters,
         },
-        { headers: corsHeaders(origin) }
+        { headers: corsHeaders(echoOrigin) }
       );
     }
 
-    /* ----- Streamed SSE response ----- */
+    // Streamed SSE
     const apiKey = process.env.OPENAI_API_KEY || '';
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -220,33 +210,34 @@ export async function POST(req: NextRequest) {
 
     if (!r.ok || !r.body) {
       const t = await r.text().catch(() => '');
-      return new NextResponse(`Model error: ${r.status} ${t}`, { status: 500 });
+      return new NextResponse(`Model error: ${r.status} ${t}`, {
+        status: 500,
+        headers: corsHeaders(echoOrigin),
+      });
     }
 
-// Convert Headers → Record<string,string> safely for TS
-const cors = Object.fromEntries(
-  Array.from(corsHeaders(origin) as unknown as Iterable<[string, string]>)
-);
+    const cors = Object.fromEntries(
+      Array.from(corsHeaders(echoOrigin) as unknown as Iterable<[string, string]>)
+    );
 
-return new NextResponse(r.body as any, {
-  headers: {
-    ...cors,
-    'Content-Type': 'text/event-stream; charset=utf-8',
-    'Cache-Control': 'no-cache, no-transform',
-    'X-Accel-Buffering': 'no',
-  },
-});
-
-
+    return new NextResponse(r.body as any, {
+      headers: {
+        ...cors,
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'X-Accel-Buffering': 'no',
+      },
+    });
   } catch (err: any) {
-    const origin = pickAllowed(req.headers.get('origin'));
+    const echoOrigin = pickEchoOrigin(req.headers.get('origin'));
     const msg =
       err?.message === 'Request timed out'
         ? '⚠️ Connection timed out. Please try again.'
         : err?.message || String(err);
+
     return NextResponse.json(
       { error: msg },
-      { status: err?.message === 'Request timed out' ? 504 : 500, headers: corsHeaders(origin) }
+      { status: err?.message === 'Request timed out' ? 504 : 500, headers: corsHeaders(echoOrigin) }
     );
   }
 }
