@@ -5,13 +5,12 @@ import crypto from "crypto";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 const SITE = process.env.NEXT_PUBLIC_SITE_URL!;
 
-// Map your real live Price IDs → app tiers
+/** Map LIVE Price IDs → internal tiers */
 const PRICE_MAP: Record<string, { tier: string; seats: number; memoryGB?: number }> = {
-  // ⬇️ REPLACE with your actual LIVE Price IDs
-  "price_XXXXXXXX_std":  { tier: "plus",       seats: 1 },
-  "price_XXXXXXXX_fam":  { tier: "pro_family", seats: 4 },
-  "price_XXXXXXXX_min":  { tier: "ministry",   seats: 10 },
-  "price_XXXXXXXX_mem1": { tier: "addon_memory", seats: 0, memoryGB: 1 }, // $5 Memory Pack (1 GB)
+  "price_1SCsmG0tWJXzci1AX3GLoTj8": { tier: "plus",        seats: 1 },  // Standard $25
+  "price_1SCsmv0tWJXzci1A6hvi2Ccp": { tier: "pro_family",  seats: 4 },  // Family $50
+  "price_1SCso80tWJXzci1AoZiKFy3b": { tier: "ministry",    seats: 10 }, // Ministry $249
+  "price_1SIQry0tWJXzci1A38ftypv9": { tier: "addon_memory", seats: 0, memoryGB: 1 }, // Memory +1GB $5
 };
 
 export async function POST(req: NextRequest) {
@@ -21,13 +20,11 @@ export async function POST(req: NextRequest) {
     if (!userId || !priceId) {
       return NextResponse.json({ error: "Missing userId or priceId" }, { status: 400 });
     }
-
     const plan = PRICE_MAP[priceId];
     if (!plan) {
       return NextResponse.json({ error: "Unknown priceId" }, { status: 400 });
     }
 
-    // Idempotency key per attempt (prevents accidental double sessions)
     const idempotencyKey = crypto
       .createHash("sha256")
       .update(`${userId}:${priceId}:${Date.now()}`)
@@ -37,7 +34,7 @@ export async function POST(req: NextRequest) {
       {
         mode: "subscription",
         allow_promotion_codes: true,
-        line_items: [{ price: priceId, quantity: 1 }], // adjust if you offer multi-GB in one go
+        line_items: [{ price: priceId, quantity: 1 }],
         success_url: `${SITE}/thank-you?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${SITE}/pricing`,
         metadata: {
