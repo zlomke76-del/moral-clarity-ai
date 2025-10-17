@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import crypto from "crypto";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// (no apiVersion passed)
+
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-06-20",
