@@ -1,9 +1,5 @@
 {
   "redirects": [
-    {
-      "source": "/pricing",
-      "destination": "/subscribe",
-      "permanent": true
-    }
+    { "source": "/pricing", "destination": "/subscribe", "permanent": true }
   ]
 }
