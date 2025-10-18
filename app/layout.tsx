@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
             {/* Desktop navigation */}
             <div className="hidden sm:flex items-center gap-6 text-sm">
-              <Link href="/pricing" className="hover:opacity-80">
+              <Link href="/subscribe" className="hover:opacity-80">
                 Pricing
               </Link>
               <Link href="/docs" className="hover:opacity-80">
