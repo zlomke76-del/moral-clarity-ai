@@ -6,15 +6,22 @@ import { createSupabaseAdmin } from "@/lib/supabaseAdmin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Util: convert Stripe epoch seconds → ISO string */
+/** Convert Stripe epoch seconds → ISO string */
 const toISO = (secs?: number | null) =>
   secs ? new Date(secs * 1000).toISOString() : null;
 
+/** A helper type that includes the period fields (some Stripe type dists omit them) */
+type SubWithPeriods = Stripe.Subscription & {
+  current_period_start?: number | null;
+  current_period_end?: number | null;
+  cancel_at_period_end?: boolean | null;
+};
+
 /** Persist/refresh a subscription row in Supabase */
 async function upsertSubscription(params: {
-  id: string;                         // Stripe subscription id
-  customer_id: string;                // Stripe customer id
-  status: string;                     // active | trialing | past_due | canceled | ...
+  id: string; // Stripe subscription id
+  customer_id: string;
+  status: string;
   price_id?: string | null;
   quantity?: number | null;
   current_period_start?: number | null;
@@ -35,13 +42,13 @@ async function upsertSubscription(params: {
     updated: new Date().toISOString(),
   };
 
-  // `onConflict: id` requires a UNIQUE/PK on id (which you likely have).
   const { error } = await sb.from("subscriptions").upsert(row, { onConflict: "id" });
   if (error) throw new Error(`Supabase upsert failed: ${error.message}`);
 }
 
-/** Pull key details from a Stripe.Subscription */
-function extractFromSubscription(sub: Stripe.Subscription) {
+/** Pull key details safely from a Stripe.Subscription */
+function extractFromSubscription(subRaw: Stripe.Subscription) {
+  const sub = subRaw as SubWithPeriods;
   const item = sub.items?.data?.[0];
   return {
     id: sub.id,
@@ -49,8 +56,8 @@ function extractFromSubscription(sub: Stripe.Subscription) {
     status: sub.status,
     price_id: item?.price?.id ?? null,
     quantity: item?.quantity ?? null,
-    current_period_start: sub.current_period_start,
-    current_period_end: sub.current_period_end,
+    current_period_start: sub.current_period_start ?? null,
+    current_period_end: sub.current_period_end ?? null,
     cancel_at_period_end: sub.cancel_at_period_end ?? false,
   };
 }
@@ -62,7 +69,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing signature" }, { status: 400 });
   }
 
-  // IMPORTANT: raw body for Stripe signature verification
   const raw = await req.text();
 
   let event: Stripe.Event;
@@ -81,24 +87,17 @@ export async function POST(req: Request) {
 
   try {
     switch (event.type) {
-      /** User finished Checkout successfully */
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
 
-        // Only care if it's a subscription checkout
         if (session.mode !== "subscription") break;
-
-        // Get the real subscription (has period dates, price, etc.)
         if (!session.subscription) break;
-        const sub = await stripe.subscriptions.retrieve(
-          String(session.subscription)
-        );
 
+        const sub = await stripe.subscriptions.retrieve(String(session.subscription));
         await upsertSubscription(extractFromSubscription(sub));
         break;
       }
 
-      /** Subscription lifecycle events */
       case "customer.subscription.created":
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
@@ -107,15 +106,13 @@ export async function POST(req: Request) {
         break;
       }
 
-      /** Optional: track invoice outcomes */
       case "invoice.paid":
       case "invoice.payment_failed": {
-        // You could persist invoice state if you want.
+        // Optional: mirror invoice state if you want
         break;
       }
 
       default:
-        // No-op for other events.
         break;
     }
 
