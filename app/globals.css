@@ -18,3 +18,11 @@ button{border:1px solid var(--mc-border);border-radius:.5rem;background:#121a28;
 button:hover{background:var(--mc-accent);color:#000}
 .prose{max-width:65ch} .prose h1{font-size:2rem;margin:1.5rem 0 .75rem} .prose h2{font-size:1.5rem;margin:1.25rem 0 .5rem}
 .prose p{line-height:1.7;margin:1rem 0} .prose ul{margin:.75rem 0;padding-left:1.25rem} .prose li{margin:.25rem 0}
+.brand,
+.brand::before,
+.brand::after {
+  background: none !important;
+  content: none !important;
+  mask-image: none !important;
+  -webkit-mask-image: none !important;
+}
