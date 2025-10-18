@@ -1,9 +1,8 @@
 {
   "redirects": [
     {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "www.moralclarity.ai" }],
-      "destination": "https://moralclarity.ai/:path*",
+      "source": "/pricing",
+      "destination": "/subscribe",
       "permanent": true
     }
   ]
