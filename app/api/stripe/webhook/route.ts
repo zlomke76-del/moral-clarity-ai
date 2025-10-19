@@ -1,3 +1,4 @@
+// app/api/stripe/webhook/route.ts
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createSupabaseAdmin } from "@/lib/supabaseAdmin";
@@ -5,9 +6,8 @@ import { createSupabaseAdmin } from "@/lib/supabaseAdmin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Helpers */
-const toISO = (secs?: number | null) =>
-  secs ? new Date(secs * 1000).toISOString() : null;
+/** Utils */
+const toISO = (secs?: number | null) => (secs ? new Date(secs * 1000).toISOString() : null);
 
 type SubWithPeriods = Stripe.Subscription & {
   current_period_start?: number | null;
@@ -15,41 +15,75 @@ type SubWithPeriods = Stripe.Subscription & {
   cancel_at_period_end?: boolean | null;
 };
 
-type UpsertSub = {
-  id: string;                    // Stripe subscription id
-  user_id?: string | null;       // profiles.id (nullable if not known)
-  customer_id: string;           // Stripe customer id
+/** -----------------------------
+ *  Email (Resend, via fetch API)
+ *  -----------------------------
+ *  Avoids SDK friction — uses fetch directly.
+ *  ENV:
+ *    - RESEND_API_KEY
+ *    - RESEND_FROM           (e.g. 'Moral Clarity AI Support <support@moralclarity.ai>')
+ */
+async function sendResendEmail(params: { to: string[]; subject: string; html: string }) {
+  const apiKey = process.env.RESEND_API_KEY!;
+  const from = process.env.RESEND_FROM!;
+  if (!apiKey || !from) throw new Error("Missing RESEND_API_KEY or RESEND_FROM");
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: params.to,
+      subject: params.subject,
+      html: params.html,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text().catch(() => "");
+    throw new Error(`Resend error: ${res.status} ${res.statusText} ${err}`);
+  }
+}
+
+/** --------------------------------------------
+ *  Supabase helpers (admin client is server-side)
+ *  --------------------------------------------
+ *  Tables assumed:
+ *    - public.profiles: { id uuid PK, email text?, display_name?, stripe_customer_id text? ... }
+ *    - public.subscriptions:
+ *        user_id uuid NOT NULL
+ *        stripe_customer_id text NOT NULL
+ *        stripe_subscription_id text UNIQUE NOT NULL
+ *        status text
+ *        price_id text null
+ *        quantity int null
+ *        current_period_start timestamptz null
+ *        current_period_end   timestamptz null
+ *        cancel_at_period_end boolean default false
+ *        updated timestamptz
+ */
+
+/** Upsert/refresh subscription row (no 'id' col, conflict on stripe_subscription_id) */
+async function upsertSubscription(params: {
+  user_id: string;
+  stripe_customer_id: string;
+  stripe_subscription_id: string;
   status: string;
   price_id?: string | null;
   quantity?: number | null;
   current_period_start?: number | null;
   current_period_end?: number | null;
   cancel_at_period_end?: boolean | null;
-};
-
-function extractFromSubscription(subRaw: Stripe.Subscription) {
-  const sub = subRaw as SubWithPeriods;
-  const item = sub.items?.data?.[0];
-  return {
-    id: sub.id,
-    customer_id: String(sub.customer),
-    status: sub.status,
-    price_id: item?.price?.id ?? null,
-    quantity: item?.quantity ?? null,
-    current_period_start: sub.current_period_start ?? null,
-    current_period_end: sub.current_period_end ?? null,
-    cancel_at_period_end: sub.cancel_at_period_end ?? false,
-  };
-}
-
-/** Persist/refresh a subscription row in Supabase (subscriptions.id = Stripe sub id) */
-async function upsertSubscription(params: UpsertSub) {
+}) {
   const sb = createSupabaseAdmin();
 
   const row = {
-    id: params.id,
-    user_id: params.user_id ?? null, // assumes subscriptions.user_id is nullable
-    customer_id: params.customer_id,
+    user_id: params.user_id,
+    stripe_customer_id: params.stripe_customer_id,
+    stripe_subscription_id: params.stripe_subscription_id,
     status: params.status,
     price_id: params.price_id ?? null,
     quantity: params.quantity ?? null,
@@ -59,195 +93,117 @@ async function upsertSubscription(params: UpsertSub) {
     updated: new Date().toISOString(),
   };
 
-  const { error } = await sb.from("subscriptions").upsert(row, { onConflict: "id" });
+  const { error } = await sb.from("subscriptions").upsert(row, {
+    onConflict: "stripe_subscription_id",
+  });
   if (error) throw new Error(`Supabase upsert failed: ${error.message}`);
 }
 
-/** Ensure a profile exists and is linked to the Stripe customer; return user_id (uuid) or null */
-async function findOrCreateProfileByStripeCustomer(opts: {
-  customerId: string;
-  email?: string | null;
+/** Try to find a profile by stripe_customer_id, otherwise create a minimal shell profile. */
+async function getOrCreateUserIdByCustomerId(args: {
+  stripe_customer_id: string;
+  fallbackEmail?: string | null;
+  fallbackName?: string | null;
 }) {
+  const { stripe_customer_id, fallbackEmail, fallbackName } = args;
   const sb = createSupabaseAdmin();
 
-  // 1) Try by stripe_customer_id
-  const byCust = await sb
+  // 1) Try existing profile
+  const { data: prof, error: pErr } = await sb
     .from("profiles")
     .select("id")
-    .eq("stripe_customer_id", opts.customerId)
-    .limit(1)
+    .eq("stripe_customer_id", stripe_customer_id)
     .maybeSingle();
 
-  if (!byCust.error && byCust.data?.id) {
-    return byCust.data.id as string;
-  }
+  if (pErr) throw pErr;
+  if (prof?.id) return { user_id: prof.id, created: false };
 
-  // 2) If we have an email, try by email; if found, link customer id
-  const email = opts.email?.toLowerCase().trim();
-  if (email) {
-    const byEmail = await sb
-      .from("profiles")
-      .select("id, stripe_customer_id")
-      .eq("email", email)
-      .limit(1)
-      .maybeSingle();
+  // 2) Create a shell profile (attach stripe_customer_id; store email/display_name if we have them)
+  const insert = {
+    email: fallbackEmail ?? null,
+    display_name: fallbackName ?? null,
+    stripe_customer_id,
+  };
 
-    if (!byEmail.error && byEmail.data?.id) {
-      if (!byEmail.data.stripe_customer_id) {
-        await sb
-          .from("profiles")
-          .update({ stripe_customer_id: opts.customerId, updated_at: new Date().toISOString() })
-          .eq("id", byEmail.data.id);
-      }
-      return byEmail.data.id as string;
-    }
+  const { data: created, error: iErr } = await sb
+    .from("profiles")
+    .insert(insert)
+    .select("id")
+    .single();
 
-    // 3) No profile exists → create auth user + profile
-    const created = await sb.auth.admin.createUser({
-      email,
-      email_confirm: true, // they’ll still receive a magic link below
-    });
-    if (created.error) throw created.error;
-    const userId = created.data.user?.id;
-    if (!userId) return null;
-
-    const ins = await sb.from("profiles").upsert(
-      {
-        id: userId,
-        email,
-        stripe_customer_id: opts.customerId,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "id" }
-    );
-    if (ins.error) throw ins.error;
-
-    return userId;
-  }
-
-  // No email available — return null (we'll upsert sub without user_id for now)
-  return null;
+  if (iErr) throw iErr;
+  return { user_id: created.id, created: true };
 }
 
-/** Generate a Supabase magic link to /app for the given email */
-async function generateMagicLink(email: string) {
+/** Optional: generate a Supabase magic link and send it via Resend */
+async function sendMagicLinkInvite(email: string) {
   const sb = createSupabaseAdmin();
-  const redirectTo = `${process.env.APP_BASE_URL ?? "https://moralclarity.ai"}/app`;
 
+  // Generate a one-time magic link
   const { data, error } = await sb.auth.admin.generateLink({
     type: "magiclink",
     email,
-    options: { redirectTo },
-  } as any);
+    // (Optional) If you use a separate redirect, add 'options: { redirectTo: "https://moralclarity.ai/app" }'
+  });
   if (error) throw error;
 
-  const link = (data as any)?.properties?.action_link ?? (data as any)?.action_link;
-  if (!link) throw new Error("Supabase did not return a magic link");
-  return link;
-}
+  const link = data?.properties?.action_link || data?.properties?.email_otp_link;
+  if (!link) throw new Error("Could not generate magic link URL");
 
-/** Send email via Resend REST (no SDK dependency) */
-async function sendEmail(to: string, subject: string, html: string) {
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.RESEND_API_KEY!}`,
-    },
-    body: JSON.stringify({
-      from: process.env.RESEND_FROM!,
-      to: [to],
-      subject,
-      html,
-    }),
+  // Send invite email
+  await sendResendEmail({
+    to: [email],
+    subject: "Welcome to Moral Clarity AI — Your Sign-In Link",
+    html: `
+      <p>Welcome! Click the button below to sign in:</p>
+      <p><a href="${link}" style="display:inline-block;padding:10px 16px;border-radius:8px;background:#5c7cfa;color:#fff;text-decoration:none;">Sign in</a></p>
+      <p>If the button doesn’t work, copy & paste this URL:<br/><code>${link}</code></p>
+    `,
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Resend failed: ${res.status} ${text}`);
-  }
 }
 
-/** Idempotent invite: only send at most once/hour per profile */
-async function inviteIfNeeded(opts: {
-  email?: string | null;
-  customerId: string;
-  planLabel?: string;
-}) {
-  if (!opts.email) return;
-
-  const sb = createSupabaseAdmin();
-
-  // Ensure profile exists/linked
-  const userId = await findOrCreateProfileByStripeCustomer({
-    customerId: opts.customerId,
-    email: opts.email,
-  });
-
-  if (!userId) return;
-
-  // Check throttle window (1h)
-  const prof = await sb
-    .from("profiles")
-    .select("invited_at,last_login_link_sent_at")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (prof.error) throw prof.error;
-
-  const last = prof.data?.last_login_link_sent_at
-    ? new Date(prof.data.last_login_link_sent_at).getTime()
-    : 0;
-  if (Date.now() - last < 60 * 60 * 1000) return; // skip re-sending
-
-  const magic = await generateMagicLink(opts.email);
-
-  await sendEmail(
-    opts.email,
-    "Your Moral Clarity AI account is ready",
-    `
-      <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial">
-        <p>Welcome to <strong>Moral Clarity AI</strong>${
-          opts.planLabel ? ` — ${opts.planLabel}` : ""
-        }.</p>
-        <p>Click the button below to sign in instantly:</p>
-        <p><a href="${magic}" style="display:inline-block;padding:10px 16px;border-radius:8px;background:#5c7cfa;color:#fff;text-decoration:none;">Sign in</a></p>
-        <p>If the button doesn’t work, copy & paste this link:<br>${magic}</p>
-      </div>
-    `
-  );
-
-  await sb
-    .from("profiles")
-    .update({
-      invited_at: prof.data?.invited_at ?? new Date().toISOString(),
-      last_login_link_sent_at: new Date().toISOString(),
-    })
-    .eq("id", userId);
+/** Extract Stripe subscription details in our shape */
+function extractFromSubscription(subRaw: Stripe.Subscription) {
+  const sub = subRaw as SubWithPeriods;
+  const item = sub.items?.data?.[0];
+  return {
+    stripe_subscription_id: sub.id,
+    stripe_customer_id: String(sub.customer),
+    status: sub.status,
+    price_id: item?.price?.id ?? null,
+    quantity: item?.quantity ?? null,
+    current_period_start: sub.current_period_start ?? null,
+    current_period_end: sub.current_period_end ?? null,
+    cancel_at_period_end: sub.cancel_at_period_end ?? false,
+  };
 }
 
+/** Optionally mirror some invoice state (not required) */
+async function handleInvoiceEvent(_inv: Stripe.Invoice) {
+  // If you want to persist invoice info, do it here.
+  // Leaving empty as optional.
+}
+
+/** ----------------------
+ *  Webhook entrypoint
+ *  ----------------------
+ */
 export async function POST(req: Request) {
-  const stripeSecret = process.env.STRIPE_SECRET_KEY;
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-  if (!stripeSecret || !webhookSecret) {
-    return NextResponse.json(
-      { error: "Missing STRIPE_SECRET_KEY or STRIPE_WEBHOOK_SECRET" },
-      { status: 500 }
-    );
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!); // uses your Stripe account’s pinned API version
+  const signature = req.headers.get("stripe-signature");
+  if (!signature) {
+    return NextResponse.json({ error: "Missing signature" }, { status: 400 });
   }
 
-  const stripe = new Stripe(stripeSecret);
-  const signature = req.headers.get("stripe-signature");
-  if (!signature) return NextResponse.json({ error: "Missing signature" }, { status: 400 });
-
-  const rawBody = await req.text();
+  // Get the raw body for signature verification
+  const raw = await req.text();
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+    event = stripe.webhooks.constructEvent(raw, signature, process.env.STRIPE_WEBHOOK_SECRET!);
   } catch (e: any) {
     return NextResponse.json(
-      { error: `Signature verification failed: ${e?.message ?? "invalid signature"}` },
+      { error: `Signature verification failed: ${e.message}` },
       { status: 400 }
     );
   }
@@ -256,38 +212,38 @@ export async function POST(req: Request) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        if (session.mode !== "subscription" || !session.subscription) break;
 
-        const sub = await stripe.subscriptions.retrieve(String(session.subscription));
-        const minimal = extractFromSubscription(sub);
+        if (session.mode === "subscription" && session.subscription) {
+          // 1) Persist subscription
+          const sub = await stripe.subscriptions.retrieve(String(session.subscription));
+          const base = extractFromSubscription(sub);
 
-        // Email for invite (prefer customer record if present)
-        let email =
-          session.customer_details?.email ?? session.customer_email ?? undefined;
-        if (!email && minimal.customer_id) {
-          const cust = (await stripe.customers.retrieve(
-            minimal.customer_id
-          )) as Stripe.Customer;
-          email = cust.email ?? undefined;
+          // 2) Resolve (or create) user_id
+          // Get richer fallback info from Stripe Customer to help with profile + invite
+          const customer = await stripe.customers.retrieve(String(session.customer));
+          const fallbackEmail =
+            typeof customer?.email === "string" ? customer.email : (session.customer_details?.email ?? null);
+          const fallbackName =
+            typeof customer?.name === "string" ? customer.name : (session.customer_details?.name ?? null);
+
+          const { user_id, created } = await getOrCreateUserIdByCustomerId({
+            stripe_customer_id: base.stripe_customer_id,
+            fallbackEmail,
+            fallbackName,
+          });
+
+          await upsertSubscription({ ...base, user_id });
+
+          // 3) Optional: first-time invite (only if we just created a shell profile & have an email)
+          if (created && fallbackEmail) {
+            try {
+              await sendMagicLinkInvite(fallbackEmail);
+            } catch (inviteErr) {
+              // Don't fail the webhook for email issues — just log
+              console.error("[invite-email] error:", inviteErr);
+            }
+          }
         }
-
-        // Resolve user and upsert sub
-        const userId = await findOrCreateProfileByStripeCustomer({
-          customerId: minimal.customer_id,
-          email,
-        });
-        await upsertSubscription({ ...minimal, user_id: userId ?? null });
-
-        // Send login link (idempotent)
-        await inviteIfNeeded({
-          email,
-          customerId: minimal.customer_id,
-          planLabel:
-            sub.items?.data?.[0]?.price?.nickname ??
-            sub.items?.data?.[0]?.plan?.nickname ??
-            undefined,
-        });
-
         break;
       }
 
@@ -295,48 +251,38 @@ export async function POST(req: Request) {
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
-        const minimal = extractFromSubscription(sub);
+        const base = extractFromSubscription(sub);
 
-        // Best-effort user resolution (email may not be on this event)
-        let email: string | undefined = undefined;
-        try {
-          const cust = (await stripe.customers.retrieve(
-            minimal.customer_id
-          )) as Stripe.Customer;
-          email = cust.email ?? undefined;
-        } catch {}
+        // We may not have email/name inside this event — fetch customer to enrich if needed
+        const customer = await stripe.customers.retrieve(String(sub.customer));
+        const fallbackEmail = typeof customer?.email === "string" ? customer.email : null;
+        const fallbackName = typeof customer?.name === "string" ? customer.name : null;
 
-        const userId = await findOrCreateProfileByStripeCustomer({
-          customerId: minimal.customer_id,
-          email,
-        });
-        await upsertSubscription({ ...minimal, user_id: userId ?? null });
-
-        // Optional: also invite here as a fallback
-        await inviteIfNeeded({
-          email,
-          customerId: minimal.customer_id,
-          planLabel:
-            sub.items?.data?.[0]?.price?.nickname ??
-            sub.items?.data?.[0]?.plan?.nickname ??
-            undefined,
+        const { user_id } = await getOrCreateUserIdByCustomerId({
+          stripe_customer_id: base.stripe_customer_id,
+          fallbackEmail,
+          fallbackName,
         });
 
+        await upsertSubscription({ ...base, user_id });
         break;
       }
 
-      // Mirror invoice states if you want
       case "invoice.paid":
-      case "invoice.payment_failed":
+      case "invoice.payment_failed": {
+        const inv = event.data.object as Stripe.Invoice;
+        await handleInvoiceEvent(inv); // optional
         break;
+      }
 
       default:
+        // ignore other events
         break;
     }
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {
-    console.error("[stripe-webhook] error:", err);
+    console.error("[stripe-webhook] handler error:", err);
     return NextResponse.json({ error: err?.message ?? "Unhandled error" }, { status: 500 });
   }
 }
