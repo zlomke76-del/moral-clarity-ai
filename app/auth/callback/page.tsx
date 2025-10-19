@@ -1,68 +1,107 @@
 // app/auth/callback/page.tsx
-"use client";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
-import { Suspense, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
+/**
+ * If you're using the Supabase Auth helpers for Next.js (SSR),
+ * import your pre-wired client creator. If you don't have one yet,
+ * see the inline "fallback" client creator below.
+ */
+import { createClient } from "@/lib/supabase/server"; // <-- preferred
+// If you DON'T have "@/lib/supabase/server", uncomment this fallback:
+/*
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
-/** Keep this page dynamic so Vercel doesn't try to prerender it */
-export const dynamic = "force-dynamic";
-export const revalidate = false; // <- important: boolean, not an object/shape
-
-function CallbackInner() {
-  const router = useRouter();
-  const params = useSearchParams();
-  const sb = createSupabaseBrowser();
-
-  useEffect(() => {
-    (async () => {
-      try {
-        // A) PKCE/code callback
-        const code = params.get("code");
-        if (code) {
-          const { error } = await sb.auth.exchangeCodeForSession(code);
-          if (error) throw error;
-        }
-
-        // B) Hash-based (access_token/refresh_token in URL hash)
-        const hash = typeof window !== "undefined" ? window.location.hash : "";
-        if (hash?.includes("access_token")) {
-          const q = new URLSearchParams(hash.replace(/^#/, ""));
-          const access_token = q.get("access_token");
-          const refresh_token = q.get("refresh_token");
-          if (access_token && refresh_token) {
-            await sb.auth.setSession({ access_token, refresh_token });
-            // Clean hash so refreshes don't repeat this
-            window.history.replaceState({}, "", window.location.pathname);
-          }
-        }
-      } catch (err) {
-        console.error("Auth callback failed:", err);
-      } finally {
-        // Send the user to the homepage; the homepage decides what to show
-        router.replace("/");
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return (
-    <main className="min-h-[60vh] flex items-center justify-center">
-      <div className="opacity-70">Signing you in…</div>
-    </main>
+function createClient() {
+  const cookieStore = cookies();
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name: string, options: CookieOptions) {
+          cookieStore.set({ name, value: "", ...options });
+        },
+      },
+    }
   );
 }
+*/
 
-export default function AuthCallbackPage() {
-  return (
-    <Suspense
-      fallback={
-        <main className="min-h-[60vh] flex items-center justify-center">
-          <div className="opacity-70">Preparing sign-in…</div>
-        </main>
-      }
-    >
-      <CallbackInner />
-    </Suspense>
-  );
+export const runtime = "nodejs";            // Auth prefers Node runtime
+export const dynamic = "force-dynamic";     // Never prerender this route
+export const revalidate = 0;                // Must be a number or false (not an object)
+export const fetchCache = "force-no-store"; // Avoid caching anything here
+
+type SearchParams = {
+  code?: string;
+  next?: string;
+  error?: string;
+  error_description?: string;
+};
+
+export default async function AuthCallbackPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const { code, next, error, error_description } = searchParams;
+
+  // If provider returned an error, punt to a friendly error page
+  if (error) {
+    const qs = new URLSearchParams({
+      error,
+      ...(error_description ? { error_description } : {}),
+    }).toString();
+    redirect(`/auth/error?${qs}`);
+  }
+
+  // Exchange the authorization code for a session and set cookies
+  if (code) {
+    const supabase = createClient();
+    // This will set the sb-* cookies via the SSR helpers’ cookie adapters
+    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(
+      code
+    );
+
+    if (exchangeError) {
+      const qs = new URLSearchParams({
+        error: "exchange_failed",
+        error_description: exchangeError.message,
+      }).toString();
+      redirect(`/auth/error?${qs}`);
+    }
+  }
+
+  // Where to redirect the user after login
+  // (provider can pass ?next=...; sanitize/fallback to "/")
+  const target =
+    (next && safeNextPath(next)) ||
+    (typeof next === "string" && decodeURIComponent(next)) ||
+    "/";
+
+  redirect(target);
+}
+
+/**
+ * Very small guard against open-redirects. Only allow same-origin paths.
+ * Returns a safe path (starting with "/") or null.
+ */
+function safeNextPath(value: string | undefined): string | null {
+  if (!value) return null;
+  try {
+    // Disallow absolute URLs; allow only app-internal paths
+    if (value.startsWith("/")) return value;
+    // If someone passed a full URL, require it to be same-origin path
+    const url = new URL(value, "http://localhost"); // base won’t be used for absolute paths starting with "/"
+    return url.pathname.startsWith("/") ? url.pathname + url.search + url.hash : null;
+  } catch {
+    return null;
+  }
 }
