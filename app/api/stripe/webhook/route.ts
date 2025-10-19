@@ -23,24 +23,37 @@ type SubWithPeriods = Stripe.Subscription & {
  *    - RESEND_API_KEY
  *    - RESEND_FROM           (e.g. 'Moral Clarity AI Support <support@moralclarity.ai>')
  */
-async function sendResendEmail(params: { to: string[]; subject: string; html: string }) {
-  const apiKey = process.env.RESEND_API_KEY!;
-  const from = process.env.RESEND_FROM!;
-  if (!apiKey || !from) throw new Error("Missing RESEND_API_KEY or RESEND_FROM");
+async function sendMagicLinkInvite(email: string) {
+  const sb = createSupabaseAdmin();
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from,
-      to: params.to,
-      subject: params.subject,
-      html: params.html,
-    }),
+  const { data, error } = await sb.auth.admin.generateLink({
+    type: "magiclink",
+    email,
+    // options: { redirectTo: "https://moralclarity.ai/app" }, // optional
   });
+  if (error) throw error;
+
+  // Supabase returns various link fields depending on flow; the types don't declare all of them.
+  const props = (data?.properties ?? {}) as Record<string, unknown>;
+  const link =
+    (props.action_link as string | undefined) ??
+    (props.email_otp_link as string | undefined) ??
+    (props.magic_link as string | undefined) ??
+    (props.invite_link as string | undefined);
+
+  if (!link) throw new Error("Could not generate magic link URL");
+
+  await sendResendEmail({
+    to: [email],
+    subject: "Welcome to Moral Clarity AI — Your Sign-In Link",
+    html: `
+      <p>Welcome! Click the button below to sign in:</p>
+      <p><a href="${link}" style="display:inline-block;padding:10px 16px;border-radius:8px;background:#5c7cfa;color:#fff;text-decoration:none;">Sign in</a></p>
+      <p>If the button doesn’t work, copy & paste this URL:<br/><code>${link}</code></p>
+    `,
+  });
+}
+
 
   if (!res.ok) {
     const err = await res.text().catch(() => "");
