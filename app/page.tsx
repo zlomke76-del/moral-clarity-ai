@@ -1,92 +1,79 @@
 // app/page.tsx
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
+import FeatureGrid from "@/app/components/FeatureGrid";
 
-// If you put FeatureGrid at app/(marketing)/_components/FeatureGrid.tsx, use this:
-import FeatureGrid from "./(marketing)/_components/FeatureGrid";
-// If your path is different, adjust the import accordingly:
-// import FeatureGrid from "./_components/FeatureGrid";
-
-type View = "checking" | "loggedOut" | "loggedIn";
+type View = "loading" | "loggedOut" | "loggedIn";
 
 export default function HomePage() {
-  const router = useRouter();
-  const [view, setView] = useState<View>("checking");
+  const sb = useMemo(() => createSupabaseBrowser(), []);
+  const [view, setView] = useState<View>("loading");
 
   useEffect(() => {
-    const run = async () => {
-      const sb = createSupabaseBrowser();
+    let cancelled = false;
+
+    (async () => {
+      // 1) If a magic link dropped us here with a hash, set the session.
+      const hash = typeof window !== "undefined" ? window.location.hash : "";
+      if (hash?.includes("access_token")) {
+        const params = new URLSearchParams(hash.replace(/^#/, ""));
+        const access_token = params.get("access_token");
+        const refresh_token = params.get("refresh_token");
+
+        if (access_token && refresh_token) {
+          try {
+            await sb.auth.setSession({ access_token, refresh_token });
+          } catch (e) {
+            console.warn("setSession failed:", e);
+          } finally {
+            // Clean the URL (avoid re-running on refresh)
+            window.history.replaceState({}, "", window.location.pathname);
+          }
+        }
+      }
+
+      // 2) Decide which view to render
       const { data } = await sb.auth.getSession();
-      setView(data.session ? "loggedIn" : "loggedOut");
+      if (!cancelled) {
+        setView(data.session ? "loggedIn" : "loggedOut");
+      }
+    })();
 
-      // OPTIONAL: if you’d rather move logged-in users off the marketing page entirely:
-      // if (data.session) router.replace("/studio"); // <- enable if you want hard redirect
+    return () => {
+      cancelled = true;
     };
-    run();
-  }, [router]);
+  }, [sb]);
 
-  if (view === "checking") {
-    // Quick, minimal skeleton while we detect session
+  if (view === "loading") {
     return (
-      <main className="min-h-[60vh] grid place-items-center">
-        <p className="text-sm text-zinc-400">Loading…</p>
+      <main className="min-h-[60vh] flex items-center justify-center">
+        <div className="opacity-70">Loading…</div>
       </main>
     );
   }
 
   if (view === "loggedIn") {
-    // ✅ LOGGED-IN VIEW: No ads/marketing/subscribe block. Show your six-block grid.
+    // ✅ Authenticated view replaces the marketing hero
     return (
-      <main className="min-h-screen bg-zinc-950 text-zinc-100">
-        {/* Optional: a subtle greeting/header could go here */}
-        <Suspense fallback={<div className="p-8 text-zinc-400">Loading…</div>}>
-          <FeatureGrid />
-        </Suspense>
+      <main className="min-h-screen">
+        <FeatureGrid />
       </main>
     );
   }
 
-  // 🧲 LOGGED-OUT VIEW: Your existing marketing/ads/subscribe sections go here.
-  // Replace the placeholders with your current components/markup.
+  // ❌ Not logged in → keep your current marketing content here
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      {/* === HERO / AD / MARKETING CONTENT === */}
-      <section className="px-4 pt-16 pb-10 mx-auto max-w-6xl">
-        {/* Example hero placeholder — replace with your current marketing content */}
-        <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">
-          Moral Clarity AI
-        </h1>
-        <p className="mt-4 max-w-2xl text-zinc-400">
-          Anchored answers. Neutral • Guidance • Ministry.
-        </p>
-
-        {/* Your current “Subscribe” CTA (keep for logged-out only) */}
-        <div className="mt-8 flex gap-3">
-          <a
-            href="/subscribe"
-            className="rounded-lg px-5 py-2.5 text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition"
-          >
-            Subscribe
-          </a>
-          <a
-            href="/app"
-            className="rounded-lg px-5 py-2.5 text-sm font-semibold border border-zinc-700 hover:bg-zinc-900 transition"
-          >
-            Open the app
-          </a>
-        </div>
+    <main>
+      {/* Your existing marketing hero/sections remain intact */}
+      <section className="py-24 text-center">
+        <h1 className="text-4xl font-bold mb-4">Anchor your decisions in clarity.</h1>
+        <p className="opacity-80">AI guidance grounded in truth, neutrality, and moral clarity.</p>
       </section>
 
-      {/* === YOUR EXISTING AD/SECTIONS ===
-          Paste your current ad blocks / testimonials / features here.
-          They will NOT render when logged in.
-      */}
-      {/* <AdStrip /> */}
-      {/* <FeatureBullets /> */}
-      {/* <FAQ /> */}
+      {/* Optionally still show teaser tiles for logged-out users */}
+      {/* <FeatureGrid /> */}
     </main>
   );
 }
