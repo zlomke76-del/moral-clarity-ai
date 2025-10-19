@@ -5,13 +5,11 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 
-/** This page must never be prerendered */
+// Ensure Node runtime and no prerendering
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const fetchCache = "force-no-store";
+export const runtime = "nodejs";
 
 export default function AuthCallbackPage() {
-  // Wrap the part that reads useSearchParams in Suspense
   return (
     <Suspense fallback={<FallbackUI />}>
       <AuthCallbackInner />
@@ -21,18 +19,10 @@ export default function AuthCallbackPage() {
 
 function FallbackUI() {
   return (
-    <main
-      style={{
-        minHeight: "70vh",
-        display: "grid",
-        placeItems: "center",
-        padding: "2rem",
-        textAlign: "center",
-      }}
-    >
+    <main style={{ minHeight: "70vh", display: "grid", placeItems: "center", padding: 24 }}>
       <div>
         <h1>Finalizing your sign-in…</h1>
-        <p style={{ color: "#999" }}>Please wait.</p>
+        <p style={{ color: "#888" }}>Please wait.</p>
       </div>
     </main>
   );
@@ -50,15 +40,13 @@ function AuthCallbackInner() {
       try {
         const sb = createSupabaseBrowser();
 
-        // Case A: magic link / email change / invite / recovery via query params
+        // Case A: magic link / recovery / invite / email_change
         const tokenHash = search.get("token_hash");
         const type = (search.get("type") || "").toLowerCase();
         const email = search.get("email") || undefined;
 
         if (tokenHash && type) {
-          const validType = ["magiclink", "recovery", "invite", "email_change"].includes(
-            type
-          )
+          const validType = ["magiclink", "recovery", "invite", "email_change"].includes(type)
             ? (type as "magiclink" | "recovery" | "invite" | "email_change")
             : undefined;
 
@@ -73,11 +61,11 @@ function AuthCallbackInner() {
 
           setState("ok");
           setMsg("Signed in. Redirecting…");
-          router.replace("/studio"); // change if your post-login route differs
+          router.replace("/studio");
           return;
         }
 
-        // Case B: OAuth or legacy #access_token – SDK has already processed it.
+        // Case B: OAuth or legacy #access_token hash in URL (SDK already processed it)
         const { data, error } = await sb.auth.getSession();
         if (error) throw error;
 
@@ -101,20 +89,12 @@ function AuthCallbackInner() {
   }, []);
 
   return (
-    <main
-      style={{
-        minHeight: "70vh",
-        display: "grid",
-        placeItems: "center",
-        padding: "2rem",
-        textAlign: "center",
-      }}
-    >
-      <div>
+    <main style={{ minHeight: "70vh", display: "grid", placeItems: "center", padding: 24 }}>
+      <div style={{ textAlign: "center" }}>
         <h1 style={{ marginBottom: 8 }}>
           {state === "working" ? "Signing you in…" : state === "ok" ? "Success" : "Something went wrong"}
         </h1>
-        <p style={{ color: state === "err" ? "#d33" : "#999" }}>{msg}</p>
+        <p style={{ color: state === "err" ? "#d33" : "#888" }}>{msg}</p>
         {state === "err" && (
           <p style={{ marginTop: 16 }}>
             <a href="/login">Go back to sign in</a>
