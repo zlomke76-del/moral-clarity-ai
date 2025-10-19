@@ -117,14 +117,16 @@ async function mirrorSubscriptionById(
 }
 
 export async function POST(req: Request) {
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2025-08-27.basil",
-  });
+  // BEFORE (caused TS error)
+  // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  //   apiVersion: "2025-08-27.basil",
+  // });
 
-  const signature = req.headers.get("stripe-signature");
-  if (!signature) {
-    return NextResponse.json({ error: "Missing Stripe signature." }, { status: 400 });
-  }
+  // AFTER (let Stripe use the account's pinned API version)
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+  …
+}
+
 
   const rawBody = await req.text();
 
