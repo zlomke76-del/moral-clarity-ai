@@ -1,76 +1,98 @@
 // app/auth/callback/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 
+/** This page must never be prerendered */
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
 export default function AuthCallbackPage() {
+  // Wrap the part that reads useSearchParams in Suspense
+  return (
+    <Suspense fallback={<FallbackUI />}>
+      <AuthCallbackInner />
+    </Suspense>
+  );
+}
+
+function FallbackUI() {
+  return (
+    <main
+      style={{
+        minHeight: "70vh",
+        display: "grid",
+        placeItems: "center",
+        padding: "2rem",
+        textAlign: "center",
+      }}
+    >
+      <div>
+        <h1>Finalizing your sign-in…</h1>
+        <p style={{ color: "#999" }}>Please wait.</p>
+      </div>
+    </main>
+  );
+}
+
+function AuthCallbackInner() {
   const router = useRouter();
   const search = useSearchParams();
+
   const [state, setState] = useState<"working" | "ok" | "err">("working");
-  const [msg, setMsg] = useState<string>("Finalizing your sign-in…");
+  const [msg, setMsg] = useState("Finalizing your sign-in…");
 
   useEffect(() => {
     const run = async () => {
       try {
         const sb = createSupabaseBrowser();
 
-        // Case A: Email OTP / magic-link via query params
+        // Case A: magic link / email change / invite / recovery via query params
         const tokenHash = search.get("token_hash");
         const type = (search.get("type") || "").toLowerCase();
         const email = search.get("email") || undefined;
 
         if (tokenHash && type) {
-          // Types that Supabase accepts for verifyOtp:
-          // 'magiclink' | 'recovery' | 'invite' | 'email_change'
           const validType = ["magiclink", "recovery", "invite", "email_change"].includes(
             type
           )
-            ? (type as
-                | "magiclink"
-                | "recovery"
-                | "invite"
-                | "email_change")
+            ? (type as "magiclink" | "recovery" | "invite" | "email_change")
             : undefined;
 
-          if (!validType) {
-            throw new Error(`Unsupported link type: ${type}`);
-          }
+          if (!validType) throw new Error(`Unsupported link type: ${type}`);
 
           const { error } = await sb.auth.verifyOtp({
             type: validType,
             token_hash: tokenHash,
-            email, // Supabase will use it when needed (if present)
+            email,
           });
           if (error) throw error;
 
           setState("ok");
           setMsg("Signed in. Redirecting…");
-          router.replace("/studio"); // <- change if your app's home is different
+          router.replace("/studio"); // change if your post-login route differs
           return;
         }
 
-        // Case B: OAuth or legacy hash (#access_token) – SDK handles it automatically
-        // We just check whether a session exists now.
+        // Case B: OAuth or legacy #access_token – SDK has already processed it.
         const { data, error } = await sb.auth.getSession();
         if (error) throw error;
 
         if (data.session) {
           setState("ok");
           setMsg("Signed in. Redirecting…");
-          router.replace("/studio"); // <- change if needed
+          router.replace("/studio");
           return;
         }
 
-        // If we’re here, we didn’t detect/verify anything.
         setState("err");
-        setMsg(
-          "Email link is invalid or has expired. Please request a new sign-in link."
-        );
+        setMsg("Email link is invalid or has expired. Please request a new link.");
       } catch (e: any) {
         setState("err");
-        setMsg(e?.message || "Could not complete sign-in.");
+        setMsg(e?.message ?? "Could not complete sign-in.");
       }
     };
 
