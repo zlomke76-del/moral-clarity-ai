@@ -1,101 +1,104 @@
+// app/auth/callback/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabaseBrowser"; // your browser client factory
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 
-function parseHash(search: string) {
-  // Supabase magic-link puts tokens in the URL hash (#access_token=...).
-  // We convert it into a URLSearchParams to read values.
-  const hash = search.startsWith("#") ? search.slice(1) : search;
-  return new URLSearchParams(hash);
-}
-
-export default function AuthCallback() {
+export default function AuthCallbackPage() {
   const router = useRouter();
-  const [status, setStatus] = useState<"working"|"done"|"error">("working");
-  const [message, setMessage] = useState<string>("Finishing sign-in…");
+  const search = useSearchParams();
+  const [state, setState] = useState<"working" | "ok" | "err">("working");
+  const [msg, setMsg] = useState<string>("Finalizing your sign-in…");
 
   useEffect(() => {
     const run = async () => {
       try {
-        const supabase = createClient();
+        const sb = createSupabaseBrowser();
 
-        // 1) Try code exchange (PKCE / OAuth). If there's a `code` param,
-        // Supabase will exchange and set the session.
-        const { error: codeErr } = await supabase.auth.exchangeCodeForSession();
-        if (!codeErr) {
-          setStatus("done");
-          router.replace("/studio"); // wherever you want to land
-          return;
-        }
+        // Case A: Email OTP / magic-link via query params
+        const tokenHash = search.get("token_hash");
+        const type = (search.get("type") || "").toLowerCase();
+        const email = search.get("email") || undefined;
 
-        // 2) Fallback: magic-link tokens come in the hash (#access_token=...).
-        const params = parseHash(window.location.hash);
-        const access_token = params.get("access_token");
-        const refresh_token = params.get("refresh_token");
-        const error = params.get("error");
-        const error_description = params.get("error_description");
+        if (tokenHash && type) {
+          // Types that Supabase accepts for verifyOtp:
+          // 'magiclink' | 'recovery' | 'invite' | 'email_change'
+          const validType = ["magiclink", "recovery", "invite", "email_change"].includes(
+            type
+          )
+            ? (type as
+                | "magiclink"
+                | "recovery"
+                | "invite"
+                | "email_change")
+            : undefined;
 
-        if (error) {
-          setStatus("error");
-          setMessage(
-            error === "access_denied"
-              ? (error_description ?? "This sign-in link is invalid or expired.")
-              : `Sign-in error: ${error_description ?? error}`
-          );
-          return;
-        }
+          if (!validType) {
+            throw new Error(`Unsupported link type: ${type}`);
+          }
 
-        if (access_token && refresh_token) {
-          const { error: setErr } = await supabase.auth.setSession({
-            access_token,
-            refresh_token,
+          const { error } = await sb.auth.verifyOtp({
+            type: validType,
+            token_hash: tokenHash,
+            email, // Supabase will use it when needed (if present)
           });
-          if (setErr) throw setErr;
+          if (error) throw error;
 
-          setStatus("done");
-          router.replace("/studio"); // destination after login
+          setState("ok");
+          setMsg("Signed in. Redirecting…");
+          router.replace("/studio"); // <- change if your app's home is different
           return;
         }
 
-        // Nothing to exchange and no tokens present
-        setStatus("error");
-        setMessage("No sign-in token found. Please request a new link.");
+        // Case B: OAuth or legacy hash (#access_token) – SDK handles it automatically
+        // We just check whether a session exists now.
+        const { data, error } = await sb.auth.getSession();
+        if (error) throw error;
+
+        if (data.session) {
+          setState("ok");
+          setMsg("Signed in. Redirecting…");
+          router.replace("/studio"); // <- change if needed
+          return;
+        }
+
+        // If we’re here, we didn’t detect/verify anything.
+        setState("err");
+        setMsg(
+          "Email link is invalid or has expired. Please request a new sign-in link."
+        );
       } catch (e: any) {
-        setStatus("error");
-        setMessage(e?.message ?? "Could not complete sign-in.");
+        setState("err");
+        setMsg(e?.message || "Could not complete sign-in.");
       }
     };
 
     run();
-  }, [router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  if (status === "working") {
-    return (
-      <div className="mx-auto max-w-md p-8">
-        <h1 className="text-xl font-semibold">Signing you in…</h1>
-        <p className="mt-2 text-sm text-gray-500">
-          Please wait a moment.
-        </p>
+  return (
+    <main
+      style={{
+        minHeight: "70vh",
+        display: "grid",
+        placeItems: "center",
+        padding: "2rem",
+        textAlign: "center",
+      }}
+    >
+      <div>
+        <h1 style={{ marginBottom: 8 }}>
+          {state === "working" ? "Signing you in…" : state === "ok" ? "Success" : "Something went wrong"}
+        </h1>
+        <p style={{ color: state === "err" ? "#d33" : "#999" }}>{msg}</p>
+        {state === "err" && (
+          <p style={{ marginTop: 16 }}>
+            <a href="/login">Go back to sign in</a>
+          </p>
+        )}
       </div>
-    );
-  }
-
-  if (status === "error") {
-    return (
-      <div className="mx-auto max-w-md p-8">
-        <h1 className="text-xl font-semibold">We couldn’t sign you in</h1>
-        <p className="mt-3 text-sm text-red-600">{message}</p>
-        <a
-          className="mt-6 inline-block rounded bg-black px-4 py-2 text-white"
-          href="/login"
-        >
-          Get a new sign-in link
-        </a>
-      </div>
-    );
-  }
-
-  return null;
+    </main>
+  );
 }
