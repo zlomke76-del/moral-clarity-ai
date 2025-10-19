@@ -71,15 +71,17 @@ async function sendResendEmail(opts: {
 async function sendMagicLinkInvite(email: string) {
   const sb = createSupabaseAdmin();
 
+  // 👇 the important part — add this `options.redirectTo`
   const { data, error } = await sb.auth.admin.generateLink({
     type: "magiclink",
     email,
-    // options: { redirectTo: "https://moralclarity.ai/app" },
+    options: {
+      redirectTo: `${process.env.APP_BASE_URL}/auth/callback`, // ✅ NEW
+    },
   });
+
   if (error) throw error;
 
-  // Supabase's returned properties contain a link but the type
-  // doesn't list every possible field—read defensively.
   const props = (data?.properties ?? {}) as Record<string, unknown>;
   const link =
     (props.action_link as string | undefined) ??
@@ -94,11 +96,16 @@ async function sendMagicLinkInvite(email: string) {
     subject: "Welcome to Moral Clarity AI — Your Sign-In Link",
     html: `
       <p>Welcome! Click the button below to sign in:</p>
-      <p><a href="${link}" style="display:inline-block;padding:10px 16px;border-radius:8px;background:#5c7cfa;color:#fff;text-decoration:none;">Sign in</a></p>
+      <p>
+        <a href="${link}" style="display:inline-block;padding:10px 16px;border-radius:8px;background:#5c7cfa;color:#fff;text-decoration:none;">
+          Sign in
+        </a>
+      </p>
       <p>If the button doesn’t work, copy & paste this URL:<br/><code>${link}</code></p>
     `,
   });
 }
+
 
 /* ---------- subscription persistence ---------- */
 
