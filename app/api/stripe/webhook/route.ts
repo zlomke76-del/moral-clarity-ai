@@ -3,131 +3,84 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createSupabaseAdmin } from "@/lib/supabaseAdmin";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export const runtime = "nodejs";          // ensure Node runtime for raw body/crypto
+export const dynamic = "force-dynamic";   // don't cache webhook responses
 
+/** Convert Stripe epoch seconds → ISO string (nullable safe) */
 const toISO = (secs?: number | null) =>
-  typeof secs === "number" ? new Date(secs * 1000).toISOString() : null;
+  secs ? new Date(secs * 1000).toISOString() : null;
 
-function unpackSubscription(sub: Stripe.Subscription) {
-  const firstItem = sub.items?.data?.[0];
-  const price = firstItem?.price ?? null;
+/** Some Stripe dists omit the period fields; add them here for safety */
+type SubWithPeriods = Stripe.Subscription & {
+  current_period_start?: number | null;
+  current_period_end?: number | null;
+  cancel_at_period_end?: boolean | null;
+};
 
+/** Upsert our canonical subscription row in Supabase */
+async function upsertSubscription(params: {
+  id: string; // Stripe subscription id
+  customer_id: string;
+  status: string;
+  price_id?: string | null;
+  quantity?: number | null;
+  current_period_start?: number | null;
+  current_period_end?: number | null;
+  cancel_at_period_end?: boolean | null;
+}) {
+  const sb = createSupabaseAdmin();
+
+  const row = {
+    id: params.id,
+    customer_id: params.customer_id,
+    status: params.status,
+    price_id: params.price_id ?? null,
+    quantity: params.quantity ?? null,
+    current_period_start: toISO(params.current_period_start),
+    current_period_end: toISO(params.current_period_end),
+    cancel_at_period_end: params.cancel_at_period_end ?? false,
+    updated: new Date().toISOString(), // your table has `updated`
+  };
+
+  const { error } = await sb.from("subscriptions").upsert(row, { onConflict: "id" });
+  if (error) throw new Error(`Supabase upsert failed: ${error.message}`);
+}
+
+/** Safely extract fields we care about from a Stripe.Subscription */
+function extractFromSubscription(subRaw: Stripe.Subscription) {
+  const sub = subRaw as SubWithPeriods;
+  const item = sub.items?.data?.[0];
   return {
-    subId: sub.id,
-    customerId: typeof sub.customer === "string" ? sub.customer : sub.customer?.id ?? null,
-    status: sub.status ?? "incomplete",
-    priceId: price?.id ?? null,
-    quantity: firstItem?.quantity ?? null,
-    currentPeriodStart: (sub as any).current_period_start ?? null,
-    currentPeriodEnd: (sub as any).current_period_end ?? null,
-    cancelAtPeriodEnd: (sub as any).cancel_at_period_end ?? false,
-    createdAt: (sub as any).created ?? null,
+    id: sub.id,
+    customer_id: String(sub.customer),
+    status: sub.status,
+    price_id: item?.price?.id ?? null,
+    quantity: item?.quantity ?? null,
+    current_period_start: sub.current_period_start ?? null,
+    current_period_end: sub.current_period_end ?? null,
+    cancel_at_period_end: sub.cancel_at_period_end ?? false,
   };
 }
 
-async function upsertStripeSubscriptionsMirror(
-  sb: ReturnType<typeof createSupabaseAdmin>,
-  sub: Stripe.Subscription
-) {
-  const u = unpackSubscription(sub);
-
-  const row = {
-    id: u.subId,
-    user_id: null,
-    customer_id: u.customerId,
-    status: u.status,
-    price_id: u.priceId,
-    quantity: u.quantity,
-    current_period_start: toISO(u.currentPeriodStart),
-    current_period_end: toISO(u.currentPeriodEnd),
-    cancel_at_period_end: !!u.cancelAtPeriodEnd,
-    created: toISO(u.createdAt) ?? new Date().toISOString(),
-    updated: new Date().toISOString(),
-  };
-
-  const { error } = await sb.from("stripe_subscriptions").upsert(row, { onConflict: "id" });
-  if (error) throw new Error(`stripe_subscriptions upsert failed: ${error.message}`);
-}
-
-async function upsertWideSubscriptionsRow(
-  sb: ReturnType<typeof createSupabaseAdmin>,
-  sub: Stripe.Subscription
-) {
-  const u = unpackSubscription(sub);
-
-  const row = {
-    stripe_subscription_id: u.subId,
-    stripe_customer_id: u.customerId,
-    status: u.status,
-    customer_id: u.customerId,
-    price_id: u.priceId,
-    quantity: u.quantity,
-    current_period_start: toISO(u.currentPeriodStart),
-    current_period_end: toISO(u.currentPeriodEnd),
-    cancel_at_period_end: !!u.cancelAtPeriodEnd,
-    updated: new Date().toISOString(),
-    created: toISO(u.createdAt) ?? new Date().toISOString(),
-  };
-
-  const { error } = await sb
-    .from("subscriptions")
-    .upsert(row, { onConflict: "stripe_subscription_id" });
-  if (error) throw new Error(`subscriptions upsert failed: ${error.message}`);
-}
-
+/** Optional: react to invoice events (no-op now but keeps 200s flowing) */
 async function handleInvoiceEvent(
-  sb: ReturnType<typeof createSupabaseAdmin>,
-  inv: Stripe.Invoice
+  _sb: ReturnType<typeof createSupabaseAdmin>,
+  _inv: Stripe.Invoice
 ) {
-  // Some Stripe TS dists don’t expose these fields → read via `any`
-  const invAny = inv as any;
-
-  const subId: string | undefined =
-    typeof invAny.subscription === "string"
-      ? invAny.subscription
-      : invAny.subscription?.id;
-
-  if (!subId) return;
-
-  const lastPaymentId: string | null =
-    typeof invAny.payment_intent === "string"
-      ? invAny.payment_intent
-      : invAny.payment_intent?.id ?? null;
-
-  const { error } = await sb
-    .from("subscriptions")
-    .update({
-      last_payment_id: lastPaymentId,
-      updated: new Date().toISOString(),
-    })
-    .eq("stripe_subscription_id", subId);
-
-  if (error) console.warn("[stripe-webhook] invoice mirror update warning:", error.message);
-}
-
-async function mirrorSubscriptionById(
-  stripe: Stripe,
-  sb: ReturnType<typeof createSupabaseAdmin>,
-  subId: string
-) {
-  const sub = await stripe.subscriptions.retrieve(subId);
-  await upsertStripeSubscriptionsMirror(sb, sub);
-  await upsertWideSubscriptionsRow(sb, sub);
+  // If you want to mirror invoice state or last_payment_id into your DB,
+  // do it here. Keeping as a no-op so webhook returns 200 fast.
 }
 
 export async function POST(req: Request) {
-  // BEFORE (caused TS error)
-  // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  //   apiVersion: "2025-08-27.basil",
-  // });
-
-  // AFTER (let Stripe use the account's pinned API version)
+  // Let Stripe SDK use the account’s pinned API version (avoids TS union issues)
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-  …
-}
 
+  const signature = req.headers.get("stripe-signature");
+  if (!signature) {
+    return NextResponse.json({ error: "Missing signature" }, { status: 400 });
+  }
 
+  // IMPORTANT: read the raw text body for signature verification
   const rawBody = await req.text();
 
   let event: Stripe.Event;
@@ -137,26 +90,30 @@ export async function POST(req: Request) {
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
-  } catch (err: any) {
+  } catch (e: any) {
     return NextResponse.json(
-      { error: `Signature verification failed: ${err?.message ?? "unknown"}` },
+      { error: `Signature verification failed: ${e.message}` },
       { status: 400 }
     );
   }
 
-  const sb = createSupabaseAdmin();
-
   try {
+    const sb = createSupabaseAdmin();
+
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        if (session.mode === "subscription" && session.subscription) {
-          const subId =
-            typeof session.subscription === "string"
-              ? session.subscription
-              : session.subscription.id;
-          await mirrorSubscriptionById(stripe, sb, subId);
-        }
+
+        // Only handle subscription checkouts
+        if (session.mode !== "subscription" || !session.subscription) break;
+
+        // session.subscription can be `string | Subscription`
+        const sub =
+          typeof session.subscription === "string"
+            ? await stripe.subscriptions.retrieve(session.subscription)
+            : (session.subscription as Stripe.Subscription);
+
+        await upsertSubscription(extractFromSubscription(sub));
         break;
       }
 
@@ -164,32 +121,30 @@ export async function POST(req: Request) {
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
-        await upsertStripeSubscriptionsMirror(sb, sub);
-        await upsertWideSubscriptionsRow(sb, sub);
+        await upsertSubscription(extractFromSubscription(sub));
         break;
       }
 
       case "invoice.paid":
       case "invoice.payment_failed": {
-        const invoice = event.data.object as Stripe.Invoice;
-        await handleInvoiceEvent(sb, invoice);
+        const inv = event.data.object as Stripe.Invoice;
+        await handleInvoiceEvent(sb, inv);
         break;
       }
 
+      // Unhandled types still return 200 so Stripe doesn't retry forever
       default:
         break;
     }
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {
+    // Make sure we return 200s for non-critical paths if desired, but since this
+    // is our core sync we surface the error to Stripe as 500 to trigger retries.
     console.error("[stripe-webhook] handler error:", err);
     return NextResponse.json(
       { error: err?.message ?? "Unhandled webhook error" },
       { status: 500 }
     );
   }
-}
-
-export async function GET() {
-  return NextResponse.json({ error: "Method not allowed" }, { status: 405 });
 }
