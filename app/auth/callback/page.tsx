@@ -5,10 +5,9 @@ import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 
-// Prevent static export / prerender issues
+/** Keep this page dynamic so Vercel doesn't try to prerender it */
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const runtime = "nodejs";
+export const revalidate = false; // <- important: boolean, not an object/shape
 
 function CallbackInner() {
   const router = useRouter();
@@ -18,14 +17,14 @@ function CallbackInner() {
   useEffect(() => {
     (async () => {
       try {
-        // A) PKCE/code links
+        // A) PKCE/code callback
         const code = params.get("code");
         if (code) {
           const { error } = await sb.auth.exchangeCodeForSession(code);
           if (error) throw error;
         }
 
-        // B) Hash-based links (access_token / refresh_token in the hash)
+        // B) Hash-based (access_token/refresh_token in URL hash)
         const hash = typeof window !== "undefined" ? window.location.hash : "";
         if (hash?.includes("access_token")) {
           const q = new URLSearchParams(hash.replace(/^#/, ""));
@@ -33,14 +32,15 @@ function CallbackInner() {
           const refresh_token = q.get("refresh_token");
           if (access_token && refresh_token) {
             await sb.auth.setSession({ access_token, refresh_token });
-            // Clean the hash so refreshes don't re-run this
+            // Clean hash so refreshes don't repeat this
             window.history.replaceState({}, "", window.location.pathname);
           }
         }
       } catch (err) {
         console.error("Auth callback failed:", err);
       } finally {
-        router.replace("/"); // home decides what to show (FeatureGrid vs marketing)
+        // Send the user to the homepage; the homepage decides what to show
+        router.replace("/");
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
