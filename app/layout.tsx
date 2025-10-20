@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import "./globals.css";
+import DemoBadge from "@/components/DemoBadge";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.moralclarity.ai"),
@@ -18,7 +19,6 @@ export const metadata: Metadata = {
     site: "@",
     creator: "@",
   },
-  // ✅ favicons/icons
   icons: {
     icon: "/MoralClarityAI_QuietDepth_Logos/icon-180.png",
     apple: "/MoralClarityAI_QuietDepth_Logos/icon-180.png",
@@ -33,22 +33,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* ===== HEADER ===== */}
         <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur">
           <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-            {/* Brand (logo + wordmark) */}
-            <Link href="/" className="flex items-center gap-2">
-              <Image
-                src="/MoralClarityAI_QuietDepth_Logos/icon-180.png"
-                alt="Moral Clarity AI"
-                width={28}
-                height={28}
-                priority
-                className="rounded-md"
-              />
-              <span className="brand font-semibold tracking-tight">Moral Clarity AI</span>
-            </Link>
+            {/* Brand + Demo badge */}
+            <div className="flex items-center">
+              <Link href="/" className="flex items-center gap-2">
+                <Image
+                  src="/MoralClarityAI_QuietDepth_Logos/icon-180.png"
+                  alt="Moral Clarity AI"
+                  width={28}
+                  height={28}
+                  priority
+                  className="rounded-md"
+                />
+                <span className="brand font-semibold tracking-tight">
+                  Moral Clarity AI
+                </span>
+              </Link>
+              <DemoBadge />
+            </div>
 
-            {/* Desktop navigation */}
+            {/* Desktop nav */}
             <div className="hidden sm:flex items-center gap-6 text-sm">
-              {/* Change to /pricing if that's your route */}
+              {/* Change to /subscribe if that’s your route */}
               <Link href="/pricing" className="hover:opacity-80">
                 Pricing
               </Link>
@@ -60,17 +65,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </Link>
               <Link
                 href="/app"
-                className="rounded-lg px-4 py-2 text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition"
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
               >
                 Open the app
               </Link>
             </div>
 
-            {/* Mobile navigation (CTA only) */}
+            {/* Mobile nav (CTA only) */}
             <div className="sm:hidden">
               <Link
                 href="/app"
-                className="rounded-md px-3 py-2 text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition"
+                className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
               >
                 Open
               </Link>
@@ -82,7 +87,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main className="mx-auto max-w-6xl px-4 py-10">{children}</main>
 
         {/* ===== FOOTER ===== */}
-        <footer className="mx-auto max-w-6xl px-4 py-12 text-sm text-zinc-400 border-t border-zinc-800">
+        <footer className="mx-auto max-w-6xl border-t border-zinc-800 px-4 py-12 text-sm text-zinc-400">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <span>© {new Date().getFullYear()} Moral Clarity AI</span>
             <div className="flex gap-6">
