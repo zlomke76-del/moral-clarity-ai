@@ -1,5 +1,7 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,6 +18,12 @@ export const metadata: Metadata = {
     site: "@",
     creator: "@",
   },
+  // ✅ favicons/icons
+  icons: {
+    icon: "/MoralClarityAI_QuietDepth_Logos/icon-180.png",
+    apple: "/MoralClarityAI_QuietDepth_Logos/icon-180.png",
+    shortcut: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -25,14 +33,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* ===== HEADER ===== */}
         <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur">
           <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-            {/* Brand (text only — removed broken image) */}
-            <Link href="/" className="brand font-semibold tracking-tight">
-              Moral Clarity AI
+            {/* Brand (logo + wordmark) */}
+            <Link href="/" className="flex items-center gap-2">
+              <Image
+                src="/MoralClarityAI_QuietDepth_Logos/icon-180.png"
+                alt="Moral Clarity AI"
+                width={28}
+                height={28}
+                priority
+                className="rounded-md"
+              />
+              <span className="brand font-semibold tracking-tight">Moral Clarity AI</span>
             </Link>
 
             {/* Desktop navigation */}
             <div className="hidden sm:flex items-center gap-6 text-sm">
-              <Link href="/subscribe" className="hover:opacity-80">
+              {/* Change to /pricing if that's your route */}
+              <Link href="/pricing" className="hover:opacity-80">
                 Pricing
               </Link>
               <Link href="/docs" className="hover:opacity-80">
@@ -49,7 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </Link>
             </div>
 
-            {/* Mobile navigation (only shows CTA) */}
+            {/* Mobile navigation (CTA only) */}
             <div className="sm:hidden">
               <Link
                 href="/app"
