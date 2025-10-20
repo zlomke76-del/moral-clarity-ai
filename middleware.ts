@@ -1,33 +1,51 @@
 // middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
-const PROTECTED_PREFIXES = ["/app", "/studio"]; // adjust to your private areas
+// Protect these URL prefixes (adjust as needed)
+const PROTECTED_PREFIXES = ["/app", "/studio"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  if (!PROTECTED_PREFIXES.some(p => pathname.startsWith(p))) return NextResponse.next();
 
+  // Skip protection for public routes
+  const requiresAuth = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
+  if (!requiresAuth) return NextResponse.next();
+
+  // Prepare a mutable response so we can set cookies during refresh/sign-out, etc.
   const res = NextResponse.next();
+
+  // Create Supabase client for middleware, adapting cookies onto the response.
+  // We cast to `any` to tolerate CookieMethodsServer{,Deprecated} type drift between versions.
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: (n) => req.cookies.get(n)?.value,
-        set: (n, v, o) => res.cookies.set({ name: n, value: v, ...o }),
-        remove: (n, o) => res.cookies.set({ name: n, value: "", ...o }),
-      },
+        get(name: string) {
+          return req.cookies.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          res.cookies.set({ name, value, ...options });
+        },
+        remove(name: string, options: CookieOptions) {
+          res.cookies.set({ name, value: "", ...options });
+        },
+      } as any,
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   if (!user) {
-    const login = new URL("/auth/sign-in", req.url);
-    login.searchParams.set("next", pathname);
-    return NextResponse.redirect(login);
+    const loginUrl = new URL("/auth/sign-in", req.url);
+    loginUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(loginUrl);
   }
+
   return res;
 }
 
