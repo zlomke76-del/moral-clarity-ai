@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export async function POST() {
   const reqCookies = cookies();
 
-  // Prepare redirect response first so we can write cookie changes onto it
+  // Build a redirect response first so we can write cookie mutations onto it
   const redirectBase = process.env.NEXT_PUBLIC_SITE_URL ?? "https://moralclarity.ai";
   const res = NextResponse.redirect(new URL("/", redirectBase));
 
@@ -16,8 +16,8 @@ export async function POST() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      // ✅ MUST be a function returning cookie methods
-      cookies: () => ({
+      // Use a minimal adapter that works across @supabase/ssr versions.
+      cookies: {
         get(name: string) {
           return reqCookies.get(name)?.value;
         },
@@ -27,7 +27,7 @@ export async function POST() {
         remove(name: string, options: CookieOptions) {
           res.cookies.set({ name, value: "", ...options });
         },
-      }),
+      } as any, // ← tolerate CookieMethodsServer / Deprecated differences
     }
   );
 
