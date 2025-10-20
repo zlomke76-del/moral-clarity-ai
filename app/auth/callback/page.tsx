@@ -1,4 +1,3 @@
-// app/auth/callback/page.tsx
 'use client';
 
 import { useEffect } from 'react';
@@ -15,22 +14,20 @@ export default function AuthCallback() {
 
   useEffect(() => {
     async function run() {
-      // Grab tokens from the URL hash
-      const hash = new URLSearchParams(window.location.hash.substring(1));
+      // Handle implicit OAuth flow (#access_token in hash)
+      const hash = new URLSearchParams(window.location.hash.slice(1));
       const access_token = hash.get('access_token');
       const refresh_token = hash.get('refresh_token');
 
       if (access_token && refresh_token) {
-        // Persist session (sets cookies via supabase-js)
         await supabase.auth.setSession({ access_token, refresh_token });
-        // Optional: clean up the hash for a pretty URL
-        const clean = window.location.pathname;
-        window.history.replaceState({}, '', clean);
+        // Clean URL & go to app
+        window.history.replaceState({}, '', '/auth/callback');
         router.replace('/app');
         return;
       }
 
-      // Newer PKCE flow? Handle `?code=`:
+      // Handle PKCE/code flow (?code=)
       const code = new URLSearchParams(window.location.search).get('code');
       if (code) {
         await supabase.auth.exchangeCodeForSession(code);
@@ -38,7 +35,6 @@ export default function AuthCallback() {
         return;
       }
 
-      // Fallback
       router.replace('/auth/sign-in');
     }
     run();
