@@ -32,19 +32,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen bg-zinc-950 text-zinc-100">
         {/* ===== HEADER ===== */}
         <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur">
-          <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-            {/* Brand + Demo badge */}
-            <div className="flex items-center">
+          {/* set a fixed height so links and CTA align perfectly */}
+          <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
+            {/* Brand + optional Demo badge */}
+            <div className="flex items-center gap-2">
               <Link href="/" className="flex items-center gap-2">
                 <Image
                   src="/MoralClarityAI_QuietDepth_Logos/icon-180.png"
                   alt="Moral Clarity AI"
-                  width={28}
-                  height={28}
+                  width={24}
+                  height={24}
                   priority
-                  className="rounded-md"
+                  className="rounded"
                 />
-                <span className="brand font-semibold tracking-tight">
+                <span className="brand font-semibold leading-none tracking-tight">
                   Moral Clarity AI
                 </span>
               </Link>
@@ -53,14 +54,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
             {/* Desktop nav */}
             <div className="hidden sm:flex items-center gap-6 text-sm">
-              {/* Change to /subscribe if that’s your route */}
-              <Link href="/pricing" className="hover:opacity-80">
+              {/* change /pricing to your real route if needed (e.g., /subscribe) */}
+              <Link href="/pricing" className="hover:opacity-80 leading-none">
                 Pricing
               </Link>
-              <Link href="/docs" className="hover:opacity-80">
+              <Link href="/docs" className="hover:opacity-80 leading-none">
                 Docs
               </Link>
-              <Link href="/contact" className="hover:opacity-80">
+              <Link href="/contact" className="hover:opacity-80 leading-none">
                 Contact
               </Link>
               <Link
@@ -71,7 +72,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </Link>
             </div>
 
-            {/* Mobile nav (CTA only) */}
+            {/* Mobile CTA only */}
             <div className="sm:hidden">
               <Link
                 href="/app"
@@ -91,15 +92,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="flex flex-wrap items-center justify-between gap-4">
             <span>© {new Date().getFullYear()} Moral Clarity AI</span>
             <div className="flex gap-6">
-              <Link href="/privacy" className="hover:text-zinc-300">
-                Privacy
-              </Link>
-              <Link href="/terms" className="hover:text-zinc-300">
-                Terms
-              </Link>
-              <Link href="/status" className="hover:text-zinc-300">
-                Status
-              </Link>
+              <Link href="/privacy" className="hover:text-zinc-300">Privacy</Link>
+              <Link href="/terms" className="hover:text-zinc-300">Terms</Link>
+              <Link href="/status" className="hover:text-zinc-300">Status</Link>
             </div>
           </div>
         </footer>
