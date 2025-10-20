@@ -75,7 +75,7 @@ async function sendMagicLinkInvite(email: string) {
     type: "magiclink",
     email,
     options: {
-      // make sure this env is https://studio.moralclarity.ai
+      // ensure this is https://studio.moralclarity.ai
       redirectTo: `${process.env.APP_BASE_URL}/auth/callback`,
     },
   });
@@ -182,7 +182,7 @@ async function upsertSubscriptionRecord(args: {
         current_period_start: toISO(extracted.current_period_start),
         current_period_end: toISO(extracted.current_period_end),
         cancel_at_period_end: extracted.cancel_at_period_end ?? false,
-        updated: new Date().toISOString(), // NOTE: ensure your column is named "updated" (not "updated_at")
+        updated: new Date().toISOString(), // adjust column name if your schema uses updated_at
       })
       .eq("stripe_subscription_id", extracted.stripe_subscription_id);
 
@@ -216,10 +216,8 @@ async function upsertSubscriptionRecord(args: {
 /* ---------- webhook handler ---------- */
 
 export async function POST(req: Request) {
-  // Pin API version to avoid accidental breaking changes
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2024-06-20",
-  });
+  // Let the endpoint's version (configured in Stripe Dashboard) control behavior.
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
   const signature = req.headers.get("stripe-signature");
   if (!signature) {
