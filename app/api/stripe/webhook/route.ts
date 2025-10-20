@@ -43,7 +43,7 @@ async function sendResendEmail(opts: {
   const RESEND_API_KEY = process.env.RESEND_API_KEY!;
   const RESEND_FROM =
     opts.from ??
-    process.env.RESEND_FROM ?? // e.g. 'Moral Clarity AI Support <support@moralclarity.ai>'
+    process.env.RESEND_FROM ??
     "Moral Clarity AI <noreply@moralclarity.ai>";
 
   const r = await fetch("https://api.resend.com/emails", {
@@ -71,12 +71,12 @@ async function sendResendEmail(opts: {
 async function sendMagicLinkInvite(email: string) {
   const sb = createSupabaseAdmin();
 
-  // 👇 the important part — add this `options.redirectTo`
   const { data, error } = await sb.auth.admin.generateLink({
     type: "magiclink",
     email,
     options: {
-      redirectTo: `${process.env.APP_BASE_URL}/auth/callback`, // ✅ NEW
+      // make sure this env is https://studio.moralclarity.ai
+      redirectTo: `${process.env.APP_BASE_URL}/auth/callback`,
     },
   });
 
@@ -92,12 +92,12 @@ async function sendMagicLinkInvite(email: string) {
   if (!link) throw new Error("Could not generate magic link URL");
 
   await sendResendEmail({
-    to: [email],
+    to: [email.toLowerCase()],
     subject: "Welcome to Moral Clarity AI — Your Sign-In Link",
     html: `
       <p>Welcome! Click the button below to sign in:</p>
       <p>
-        <a href="${link}" style="display:inline-block;padding:10px 16px;border-radius:8px;background:#5c7cfa;color:#fff;text-decoration:none;">
+        <a href="${link}" style="display:inline-block;padding:10px 16px;border-radius:8px;background:#2563eb;color:#fff;text-decoration:none;">
           Sign in
         </a>
       </p>
@@ -105,7 +105,6 @@ async function sendMagicLinkInvite(email: string) {
     `,
   });
 }
-
 
 /* ---------- subscription persistence ---------- */
 
@@ -116,7 +115,7 @@ async function resolveUserIdForCustomer(params: {
   const { stripe_customer_id, stripe } = params;
   const sb = createSupabaseAdmin();
 
-  // 1) Do we already have a profile linked to this Stripe customer?
+  // 1) Already linked by stripe_customer_id?
   {
     const { data, error } = await sb
       .from("profiles")
@@ -128,7 +127,7 @@ async function resolveUserIdForCustomer(params: {
     if (data?.id) return data.id as string;
   }
 
-  // 2) Try by email (fetch from Stripe, then update the profile row)
+  // 2) Try by email (from Stripe), then link profile -> customer
   const cust = (await stripe.customers.retrieve(
     stripe_customer_id
   )) as Stripe.Customer;
@@ -153,7 +152,7 @@ async function resolveUserIdForCustomer(params: {
     }
   }
 
-  // 3) No profile yet (e.g., they haven't signed up in the app). Return null.
+  // 3) No profile yet — probably purchased before app signup
   return null;
 }
 
@@ -166,15 +165,14 @@ async function upsertSubscriptionRecord(args: {
 
   const extracted = extractFromSubscription(sub);
 
-  // Find the owning user (needed because user_id is NOT NULL)
+  // associate to a user if we can
   const userId = await resolveUserIdForCustomer({
     stripe_customer_id: extracted.stripe_customer_id,
     stripe,
   });
 
   if (!userId) {
-    // We can't insert a new row without user_id; try to update an existing row,
-    // otherwise just skip (we'll catch up once the user signs in and we can link).
+    // update existing row if present; otherwise skip until user signs in
     const { error: updErr } = await sb
       .from("subscriptions")
       .update({
@@ -184,12 +182,12 @@ async function upsertSubscriptionRecord(args: {
         current_period_start: toISO(extracted.current_period_start),
         current_period_end: toISO(extracted.current_period_end),
         cancel_at_period_end: extracted.cancel_at_period_end ?? false,
-        updated: new Date().toISOString(),
+        updated: new Date().toISOString(), // NOTE: ensure your column is named "updated" (not "updated_at")
       })
       .eq("stripe_subscription_id", extracted.stripe_subscription_id);
 
+    // PGRST116 = no rows found to update — safe to ignore here
     if (updErr && updErr.code !== "PGRST116") {
-      // PGRST116 = no rows found to update — safe to ignore here
       throw new Error(`Supabase update failed: ${updErr.message}`);
     }
     return;
@@ -208,7 +206,6 @@ async function upsertSubscriptionRecord(args: {
     updated: new Date().toISOString(),
   };
 
-  // Your schema uses stripe_subscription_id as the unique key.
   const { error } = await sb
     .from("subscriptions")
     .upsert(row, { onConflict: "stripe_subscription_id" });
@@ -219,18 +216,23 @@ async function upsertSubscriptionRecord(args: {
 /* ---------- webhook handler ---------- */
 
 export async function POST(req: Request) {
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!); // use account-pinned API version
+  // Pin API version to avoid accidental breaking changes
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: "2024-06-20",
+  });
+
   const signature = req.headers.get("stripe-signature");
   if (!signature) {
     return NextResponse.json({ error: "Missing signature" }, { status: 400 });
   }
 
-  const rawBody = await req.text();
+  // RAW body for signature verification (App Router)
+  const raw = Buffer.from(await req.arrayBuffer());
 
   let event: Stripe.Event;
   try {
     event = stripe.webhooks.constructEvent(
-      rawBody,
+      raw,
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     );
@@ -247,7 +249,7 @@ export async function POST(req: Request) {
         const session = event.data.object as Stripe.Checkout.Session;
         if (session.mode !== "subscription") break;
 
-        // 1) Persist sub
+        // 1) persist subscription
         if (session.subscription) {
           const sub = await stripe.subscriptions.retrieve(
             String(session.subscription)
@@ -255,7 +257,7 @@ export async function POST(req: Request) {
           await upsertSubscriptionRecord({ stripe, sub });
         }
 
-        // 2) Invite the customer if we have an email
+        // 2) email magic link if we have the customer email
         if (session.customer_details?.email) {
           await sendMagicLinkInvite(session.customer_details.email);
         }
@@ -272,7 +274,7 @@ export async function POST(req: Request) {
 
       case "invoice.paid":
       case "invoice.payment_failed":
-        // Optional: mirror invoice state if you keep an invoices table.
+        // Optional: mirror invoice state in your own table if you keep one.
         break;
 
       default:
