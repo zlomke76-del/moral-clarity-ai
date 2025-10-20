@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 
-export async function GET() {
-  const res = NextResponse.redirect("/");
+// make sure this never gets statically optimized
+export const dynamic = "force-dynamic";
+
+export async function GET(req: Request) {
+  const redirectTo = new URL("/", req.url);
+  const res = NextResponse.redirect(redirectTo);
   res.cookies.set("mcai_demo", "1", {
     path: "/",
     httpOnly: false,
