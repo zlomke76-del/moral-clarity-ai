@@ -7,168 +7,212 @@ import type OpenAI from 'openai';
 import { getOpenAI } from '@/lib/openai';
 import { routeMode } from '@/core/mode-router';
 
-/* ========= CONFIG ========= */
+/* ========= MODEL / TIMEOUT ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
 const REQUEST_TIMEOUT_MS = 20_000;
 
-// Only these exact origins are allowed
+/* ========= ORIGINS ========= */
 const ALLOWED_ORIGINS = [
   'https://moralclarity.ai',
   'https://www.moralclarity.ai',
   'https://studio.moralclarity.ai',
 ];
 
-/* ========= GUIDELINES (brief-by-default) ========= */
-const GUIDELINE_NEUTRAL = `NEUTRAL MODE
+/* ========= SOLACE (IDENTITY) ========= */
+const SOLACE_NAME = 'Solace';
+
+/* ========= GUIDELINES ========= */
+const HOUSE_RULES = `HOUSE RULES
+- You are ${SOLACE_NAME}, a steady, compassionate presence. Warmth without sentimentality; conviction without ego.
+- Always uphold human dignity; avoid contempt or stereotyping of any group.
+- Be kind but candid; moral clarity over moral relativism.
+- If stakes are medical, legal, or financial, recommend consulting a qualified professional.
+- If the user requests "secular framing," comply and omit religious references.`;
+
+const GUIDELINE_NEUTRAL = `NEUTRAL MODE BASELINE
 - Be clear, structured, and impartial.
 - Use recognized moral, legal, policy, and practical frameworks when relevant.
-- Identify uncertainty; avoid speculation and moral relativism.
+- Identify uncertainty; avoid speculation.
 - Plain, respectful tone; short paragraphs; no fluff.`;
 
-const GUIDELINE_ABRAHAMIC = `ABRAHAMIC COUNSEL ADD-ON
+const GUIDELINE_ABRAHAMIC = `ABRAHAMIC COUNSEL LAYER
 - Root counsel in God across the Abrahamic tradition, drawing respectfully from:
   • Torah/Tanakh (Hebrew Scriptures),
   • New Testament (Gospels and apostolic writings),
   • Qur'an (with Sunnah as general moral guidance).
 - Honor the continuity of revelation (Abraham, Moses, Jesus, Muhammad — peace be upon them).
 - Emphasize human dignity, stewardship, mercy, justice, truthfulness, responsibility before God.
-- When relevant, include brief references (e.g., "Exodus 20", "Matthew 5", "Qur'an 4:135").
 - Avoid sectarian polemics; do not proselytize; inclusive language ("people of faith," "believers").
-- Pastoral sensitivity; acknowledge suffering; encourage prayer/reflection/community.
-- Do not issue detailed legal rulings in any single tradition unless explicitly asked; instead, recommend qualified local clergy/scholars when appropriate.`;
+- Pastoral sensitivity; acknowledge suffering; encourage reflection/prayer/community.
+- Do not issue detailed legal rulings in any single tradition unless explicitly asked; recommend qualified local clergy/scholars when appropriate.`;
 
 const GUIDELINE_GUIDANCE = `GUIDANCE ADD-ON
-- Red-team briefly for bias/failure modes where appropriate.
-- Offer a compact risk register (top 3–5), a simple options matrix/decision path, and clear next steps.
-- End with a short actionable checklist.`;
+- Briefly red-team the plan if stakes are high.
+- Offer a compact risk register (top 3–5) and a simple options matrix/decision path when asked.
+- End with a short actionable checklist when the user explicitly requests steps.`;
 
-const HOUSE_RULES = `HOUSE RULES
-- Always uphold human dignity; avoid contempt or stereotyping of any group.
-- Be kind but candid; moral clarity over moral relativism.
-- If stakes are medical, legal, or financial, recommend consulting a qualified professional.
-- If the user requests "secular framing," comply and omit religious references.`;
+const RESPONSE_FORMAT = `RESPONSE FORMAT (DEFAULT)
+- Default to a single "Brief Answer" (2–5 sentences, plain language).
+- Include "Rationale" and/or "Next Steps" ONLY IF the user explicitly asks for them (e.g., "why", "explain", "give steps", "how do I proceed").
+- Keep paragraphs short; avoid verbosity.`;
 
-/* ========= STYLE CONTROLS ========= */
-const STYLE_BRIEF = `STYLE (DEFAULT)
-- Answer briefly (one short paragraph or 2–4 sentences).
-- Do NOT include "Rationale", "Options/Next Steps", or "Scripture" sections unless explicitly requested by the user or activated by filters/mode.
-- Be plain, respectful, and concrete.`;
+/* ========= SCRIPTURE POLICY (DYNAMIC) =========
+   Gentle seeding when:
+   - Abrahamic layer is active AND
+   - The first substantive turn is moral/emotional (hope, fear, loss, guilt, forgiveness, justice, etc.)
+   Otherwise: weave 1–2 short refs later only when relevant.
+*/
+function scripturePolicyText(opts: {
+  wantsAbrahamic: boolean;
+  forceFirstTurnSeeding: boolean;
+  userAskedForSecular: boolean;
+}) {
+  const base =
+    `SCRIPTURE POLICY\n` +
+    `- Use very short references only (e.g., "Exodus 20", "Matthew 5", "Qur'an 4:135"); no long quotes by default.\n` +
+    `- Weave 1–2 references inline only when relevant; avoid overwhelming the user.\n`;
 
-const STYLE_EXPANDED = `STYLE (EXPANDED ON REQUEST)
-- The user asked for more detail (e.g., "why", "explain", "rationale", "what next", "options").
-- You may include short bullet lists for Rationale and Next Steps.
-- Keep it compact; avoid boilerplate.`;
+  if (!opts.wantsAbrahamic || opts.userAskedForSecular) {
+    return base + `- Abrahamic references DISABLED due to secular framing or inactive Abrahamic layer. Do not include scripture.`;
+  }
 
-const STYLE_SCRIPTURE = `STYLE (SCRIPTURE ADD-ON)
-- In Ministry mode, always carry a gentle faith-centered tone (purpose, stewardship, compassion, truth) even if the user doesn’t mention religion.
-- On the FIRST substantive reply of a new conversation in Ministry mode, include 1–3 brief references (e.g., "Leviticus 19:18", "Matthew 5", "Qur'an 4:135").
-- After the first reply, include references ONLY when the user mentions faith/God/prayer/Scripture OR when a moral/ethical discernment is being requested and there hasn't been a reference recently.
-- No long quotes. Avoid sectarian polemics. Pastoral, concise.`;
+  if (opts.forceFirstTurnSeeding) {
+    return (
+      base +
+      `- FIRST REAL TURN IS MORAL/EMOTIONAL: Provide ONE gentle reference (max 1–2) to anchor hope/justice/mercy.\n` +
+      `- Subsequent turns: include references only when clearly helpful or requested.`
+    );
+  }
+
+  return base + `- Include references only when clearly helpful or explicitly requested.`;
+}
 
 /* ========= HELPERS ========= */
 function normalizeFilters(filters: unknown): string[] {
   if (!Array.isArray(filters)) return [];
-  return filters.map(f => String(f ?? '').toLowerCase().trim()).filter(Boolean);
+  return filters.map((f) => String(f ?? '').toLowerCase().trim()).filter(Boolean);
 }
 
 function trimConversation(messages: Array<{ role: string; content: string }>) {
-  const MAX_TURNS = 5; // 5 user+assistant pairs
+  const MAX_TURNS = 5; // last 5 user+assistant pairs
   const limit = MAX_TURNS * 2;
   return messages.length <= limit ? messages : messages.slice(-limit);
 }
 
 function wantsSecular(messages: Array<{ role: string; content: string }>) {
-  const text = messages.slice(-6).map(m => m.content).join(' ').toLowerCase();
-  return /\bsecular framing\b|\bsecular only\b|\bno scripture\b|\bno religious\b|\bkeep it secular\b/.test(text);
+  const text = messages.slice(-6).map((m) => m.content).join(' ').toLowerCase();
+  return /\bsecular framing\b|\bsecular only\b|\bno scripture\b|\bno religious\b|\bkeep it secular\b|\bstrictly secular\b/.test(
+    text
+  );
 }
 
-function wantsExpanded(messages: Array<{ role: string; content: string }>) {
-  const text = messages.slice(-4).map(m => m.content).join(' ').toLowerCase();
-  return /\bwhy\b|\bexplain\b|\brationale\b|\bnext steps\b|\bwhat next\b|\boptions\b|\bhow should i\b/.test(text);
+/** Detects if this is effectively the user's first substantive message in the thread. */
+function isFirstRealTurn(messages: Array<{ role: string; content: string }>) {
+  const userCount = messages.filter((m) => m.role?.toLowerCase() === 'user').length;
+  const assistantCount = messages.filter((m) => m.role?.toLowerCase() === 'assistant').length;
+  // First real back-and-forth if there's at most one user message and no assistant content yet,
+  // or if total turns < 3.
+  return userCount <= 1 || messages.length < 3 || assistantCount === 0;
 }
 
-function wantsScriptureExplicit(messages: Array<{ role: string; content: string }>) {
-  const text = messages.slice(-6).map(m => m.content).join(' ').toLowerCase();
-  return /\bscripture\b|\bverse\b|\bfaith framing\b|\babrahamic\b|\bbible\b|\bqur'?an\b|\btorah\b|\bpray(er)?\b/.test(text);
+/** Gentle emotional/moral cue detector for seeding references. */
+function hasEmotionalOrMoralCue(text: string) {
+  const t = text.toLowerCase();
+  const emo = [
+    'hope',
+    'lost',
+    'afraid',
+    'fear',
+    'anxious',
+    'anxiety',
+    'grief',
+    'sad',
+    'sorrow',
+    'depressed',
+    'stress',
+    'overwhelmed',
+    'lonely',
+    'alone',
+    'comfort',
+    'forgive',
+    'forgiveness',
+    'guilt',
+    'shame',
+    'purpose',
+    'meaning',
+  ];
+  const moral = [
+    'right',
+    'wrong',
+    'unfair',
+    'injustice',
+    'justice',
+    'truth',
+    'honest',
+    'dishonest',
+    'integrity',
+    'mercy',
+    'compassion',
+    'courage',
+  ];
+  const hit = (arr: string[]) => arr.some((w) => t.includes(w));
+  return hit(emo) || hit(moral);
 }
 
-function isGreeting(text: string) {
-  return /\b(hi|hello|hey|good (morning|afternoon|evening)|good day)\b/i.test((text || '').trim());
-}
-
-function isSubstantive(text: string) {
-  const t = (text || '').trim();
-  return t.split(/\s+/).length >= 4 && !isGreeting(t);
-}
-
-/**
- * FIRST substantive user turn = seed references in Ministry mode.
- * We find the first substantive user message across the thread.
- * If the last user message is that first substantive one, it's "first turn".
- */
-function isFirstSubstantiveTurn(messages: Array<{ role: string; content: string }>) {
-  const userMsgs = messages.filter(m => (m.role || '').toLowerCase() === 'user');
-  if (userMsgs.length === 0) return false;
-  const idxFirstSub = userMsgs.findIndex(m => isSubstantive(m.content));
-  if (idxFirstSub === -1) return false;
-  const lastUser = userMsgs[userMsgs.length - 1];
-  return isSubstantive(lastUser.content) && idxFirstSub === userMsgs.length - 1;
-}
-
-/** crude scripture presence check within recent turns */
-function hasRecentScripture(messages: Array<{ role: string; content: string }>, lookback = 6) {
-  const text = messages.slice(-lookback).map(m => m.content).join(' ');
-  return /\b(leviticus|genesis|exodus|psalm|proverbs|isaiah|jeremiah|ezekiel|matthew|mark|luke|john|acts|romans|corinthians|galatians|ephesians|philippians|colossians|timothy|peter|james|qur'?an|surah|[\w]+\s?\d+:\d+)\b/i.test(text);
-}
-
-function wantsMoralDiscernment(messages: Array<{ role: string; content: string }>) {
-  const text = messages.slice(-4).map(m => m.content).join(' ').toLowerCase();
-  return /\b(should i|is it right|ethical|moral|sin|haram|halal|permissible|discern|conscience|integrity|justice|mercy|stewardship)\b/.test(text);
-}
-
+/** Build the full Solace system prompt. */
 function buildSystemPrompt(
   filters: string[],
   userWantsSecular: boolean,
-  userWantsExpanded: boolean,
-  userWantsScripture: boolean,
-  firstTurnScripture: boolean,
-  recentScripture: boolean,
-  discernmentCue: boolean
+  messages: Array<{ role: string; content: string }>
 ) {
-  const parts = [GUIDELINE_NEUTRAL, HOUSE_RULES, STYLE_BRIEF];
+  const wantsAbrahamic = filters.includes('abrahamic') || filters.includes('ministry');
+  const wantsGuidance = filters.includes('guidance');
 
-  const wantsAbrahamic = (filters.includes('abrahamic') || filters.includes('ministry')) && !userWantsSecular;
+  const firstUserText =
+    [...messages].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content ?? '';
+  const firstTurn = isFirstRealTurn(messages);
+  const moralOrEmo = hasEmotionalOrMoralCue(firstUserText);
 
-  // Scripture activation policy:
-  // 1) If user explicitly asked for scripture -> true
-  // 2) Else if Ministry mode:
-  //    - FIRST substantive reply → true
-  //    - Later only if discernment cue and no recent scripture in last few turns
-  const activateScripture =
-    !userWantsSecular && (
-      userWantsScripture ||
-      (wantsAbrahamic && (firstTurnScripture || (discernmentCue && !recentScripture)))
-    );
+  const forceFirstTurnSeeding = wantsAbrahamic && !userWantsSecular && firstTurn && moralOrEmo;
 
-  if (wantsAbrahamic) parts.push(GUIDELINE_ABRAHAMIC);
-  if (filters.includes('guidance')) parts.push(GUIDELINE_GUIDANCE);
-  if (userWantsExpanded) parts.push(STYLE_EXPANDED);
-  if (activateScripture) parts.push(STYLE_SCRIPTURE);
+  const parts: string[] = [];
+  parts.push(
+    `IDENTITY\nYou are ${SOLACE_NAME} — a steady, principled presence. You listen first, then offer concise counsel with moral clarity.`,
+    HOUSE_RULES,
+    GUIDELINE_NEUTRAL,
+    RESPONSE_FORMAT,
+    scripturePolicyText({
+      wantsAbrahamic,
+      forceFirstTurnSeeding,
+      userAskedForSecular: userWantsSecular,
+    })
+  );
+  if (wantsAbrahamic && !userWantsSecular) parts.push(GUIDELINE_ABRAHAMIC);
+  if (wantsGuidance) parts.push(GUIDELINE_GUIDANCE);
 
-  return { prompt: parts.join('\n\n'), wantsAbrahamic, wantsScripture: activateScripture };
+  return {
+    prompt: parts.join('\n\n'),
+    wantsAbrahamic,
+    forceFirstTurnSeeding,
+  };
 }
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const id = setTimeout(() => reject(new Error('Request timed out')), ms);
-    p.then(v => { clearTimeout(id); resolve(v); })
-     .catch(e => { clearTimeout(id); reject(e); });
+    p.then((v) => {
+      clearTimeout(id);
+      resolve(v);
+    }).catch((e) => {
+      clearTimeout(id);
+      reject(e);
+    });
   });
 }
 
 /* ========= CORS ========= */
 function pickAllowedOrigin(origin: string | null): string | null {
-  if (!origin) return null;       // same-origin
+  if (!origin) return null; // same-origin
   return ALLOWED_ORIGINS.includes(origin) ? origin : null;
 }
 
@@ -184,22 +228,22 @@ function corsHeaders(origin: string | null): Headers {
 
 function headersToRecord(h: Headers): Record<string, string> {
   const out: Record<string, string> = {};
-  h.forEach((v, k) => { out[k] = v; });
+  h.forEach((v, k) => {
+    out[k] = v;
+  });
   return out;
 }
 
 /* ========= HEALTHCHECK ========= */
 export async function GET(req: NextRequest) {
   const origin = pickAllowedOrigin(req.headers.get('origin'));
-  return NextResponse.json({ ok: true, model: MODEL }, { headers: corsHeaders(origin) });
+  return NextResponse.json({ ok: true, model: MODEL, identity: SOLACE_NAME }, { headers: corsHeaders(origin) });
 }
 
 /* ========= OPTIONS (preflight) ========= */
 export async function OPTIONS(req: NextRequest) {
   const reqOrigin = req.headers.get('origin');
   const origin = pickAllowedOrigin(reqOrigin);
-  console.log('[CORS preflight] Origin:', reqOrigin, '→ allowed:', Boolean(origin));
-  // If not allowed, still return 204 with Vary/Allow headers but without ACAO.
   return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
 }
 
@@ -224,40 +268,34 @@ export async function POST(req: NextRequest) {
 
     const rolled = trimConversation(messages);
     const userAskedForSecular = wantsSecular(rolled);
-    const userAskedForExpanded = wantsExpanded(rolled);
-    const userAskedForScripture = wantsScriptureExplicit(rolled);
 
-    const lastUser = [...rolled].reverse().find(m => (m.role || '').toLowerCase() === 'user')?.content || '';
+    const lastUser = [...rolled].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content || '';
     const lastModeHeader = req.headers.get('x-last-mode');
     const route = routeMode(lastUser, { lastMode: lastModeHeader as any });
 
     const effectiveFilters =
-      filters.length ? filters :
-      route.mode === 'Guidance' ? ['guidance'] :
-      route.mode === 'Ministry' ? ['abrahamic', 'ministry'] : [];
+      filters.length
+        ? filters
+        : route.mode === 'Guidance'
+        ? ['guidance']
+        : route.mode === 'Ministry'
+        ? ['abrahamic', 'ministry']
+        : [];
 
-    const firstTurnScripture = isFirstSubstantiveTurn(rolled);
-    const recentScripture = hasRecentScripture(rolled);
-    const discernmentCue = wantsMoralDiscernment(rolled);
-
-    const { prompt: system } = buildSystemPrompt(
-      effectiveFilters,
-      userAskedForSecular,
-      userAskedForExpanded,
-      userAskedForScripture,
-      firstTurnScripture,
-      recentScripture,
-      discernmentCue
-    );
-
+    const { prompt: system } = buildSystemPrompt(effectiveFilters, userAskedForSecular, rolled);
     const openai: OpenAI = await getOpenAI();
 
-    // ===== Non-stream (Responses API) =====
+    // Non-stream path using Responses API (fast)
     if (!wantStream) {
       const resp = await withTimeout(
         openai.responses.create({
           model: MODEL,
-          input: system + '\n\n' + rolled.map(m => `${m.role}: ${m.content}`).join('\n'),
+          input:
+            system +
+            '\n\n' +
+            rolled
+              .map((m) => `${m.role}: ${m.content}`)
+              .join('\n'),
           max_output_tokens: 800,
         }),
         REQUEST_TIMEOUT_MS
@@ -266,12 +304,12 @@ export async function POST(req: NextRequest) {
       const text = (resp as any).output_text?.trim() || '[No reply from model]';
 
       return NextResponse.json(
-        { text, model: MODEL, mode: route.mode, confidence: route.confidence, filters: effectiveFilters },
+        { text, model: MODEL, identity: SOLACE_NAME, mode: route.mode, confidence: route.confidence, filters: effectiveFilters },
         { headers: corsHeaders(echoOrigin) }
       );
     }
 
-    // ===== Stream (SSE via Chat Completions) =====
+    // Stream via Chat Completions API (SSE)
     const apiKey = process.env.OPENAI_API_KEY || '';
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -282,7 +320,7 @@ export async function POST(req: NextRequest) {
         temperature: 0.2,
         messages: [
           { role: 'system', content: system },
-          ...rolled.map(m => ({
+          ...rolled.map((m) => ({
             role: m.role === 'assistant' ? 'assistant' : 'user',
             content: m.content,
           })),
@@ -305,13 +343,17 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     const echoOrigin = pickAllowedOrigin(req.headers.get('origin'));
-    const msg = err?.message === 'Request timed out'
-      ? '⚠️ Connection timed out. Please try again.'
-      : err?.message || String(err);
+    const msg =
+      err?.message === 'Request timed out'
+        ? '⚠️ Connection timed out. Please try again.'
+        : err?.message || String(err);
 
-    return NextResponse.json({ error: msg }, {
-      status: err?.message === 'Request timed out' ? 504 : 500,
-      headers: corsHeaders(echoOrigin),
-    });
+    return NextResponse.json(
+      { error: msg, identity: SOLACE_NAME },
+      {
+        status: err?.message === 'Request timed out' ? 504 : 500,
+        headers: corsHeaders(echoOrigin),
+      }
+    );
   }
 }
