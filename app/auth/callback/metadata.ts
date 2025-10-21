@@ -1,4 +1,3 @@
-// app/auth/callback/metadata.ts
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
