@@ -18,7 +18,7 @@ const ALLOWED_ORIGINS = [
   'https://studio.moralclarity.ai',
 ];
 
-/* ========= GUIDELINES ========= */
+/* ========= GUIDELINES (brief-by-default) ========= */
 const GUIDELINE_NEUTRAL = `NEUTRAL MODE
 - Be clear, structured, and impartial.
 - Use recognized moral, legal, policy, and practical frameworks when relevant.
@@ -42,26 +42,27 @@ const GUIDELINE_GUIDANCE = `GUIDANCE ADD-ON
 - Offer a compact risk register (top 3–5), a simple options matrix/decision path, and clear next steps.
 - End with a short actionable checklist.`;
 
-const RESPONSE_FORMAT = `RESPONSE FORMAT
-1) Brief Answer (2–4 sentences, plain language).
-2) Rationale (bullet points; note uncertainty if any).
-3) Options / Next Steps (actionable bullets).
-4) Relevant Scripture:
-   - If Abrahamic add-on is ACTIVE and user has NOT asked for secular framing: PROVIDE 1–3 concise references across Torah/Tanakh, Gospels, Qur'an.
-   - If NOT active or the user asked for secular framing: OMIT this section entirely. Do NOT write "Not applicable" or placeholders.`;
-
-const ABRAHAMIC_MUST = `MANDATE
-- You MUST include Section 4 with at least ONE concise reference (e.g., "Leviticus 19:18", "Matthew 5:37", "Qur'an 4:135").
-- Keep references brief; no long quotations; no more than three references.`;
-
-const OUTPUT_CHECK = `OUTPUT SELF-CHECK
-- If Abrahamic add-on is active and user has not asked for secular framing, verify that your final message contains Section 4 with 1–3 concise references.`;
-
 const HOUSE_RULES = `HOUSE RULES
 - Always uphold human dignity; avoid contempt or stereotyping of any group.
 - Be kind but candid; moral clarity over moral relativism.
 - If stakes are medical, legal, or financial, recommend consulting a qualified professional.
 - If the user requests "secular framing," comply and omit religious references.`;
+
+/* ========= STYLE CONTROLS ========= */
+const STYLE_BRIEF = `STYLE (DEFAULT)
+- Answer briefly (one short paragraph or 2–4 sentences).
+- Do NOT include "Rationale", "Options/Next Steps", or "Scripture" sections unless explicitly requested by the user or activated by filters/mode.
+- Be plain, respectful, and concrete.`;
+
+const STYLE_EXPANDED = `STYLE (EXPANDED ON REQUEST)
+- The user asked for more detail (e.g., "why", "explain", "rationale", "what next", "options").
+- You may include short bullet lists for Rationale and Next Steps.
+- Keep it compact; avoid boilerplate.`;
+
+const STYLE_SCRIPTURE = `STYLE (SCRIPTURE ADD-ON)
+- The user asked for faith framing OR Abrahamic mode is active and the user did not request secular framing.
+- Provide 1–3 brief references (e.g., "Leviticus 19:18", "Matthew 5", "Qur'an 4:135") ONLY if relevant to the user’s ask.
+- No long quotes. Avoid sectarian polemics. Pastoral, concise.`;
 
 /* ========= HELPERS ========= */
 function normalizeFilters(filters: unknown): string[] {
@@ -80,12 +81,33 @@ function wantsSecular(messages: Array<{ role: string; content: string }>) {
   return /\bsecular framing\b|\bsecular only\b|\bno scripture\b|\bno religious\b|\bkeep it secular\b/.test(text);
 }
 
-function buildSystemPrompt(filters: string[], userWantsSecular: boolean) {
-  const parts = [GUIDELINE_NEUTRAL, HOUSE_RULES, RESPONSE_FORMAT, OUTPUT_CHECK];
-  const wantsAbrahamic = filters.includes('abrahamic') || filters.includes('ministry');
-  if (wantsAbrahamic && !userWantsSecular) parts.push(GUIDELINE_ABRAHAMIC, ABRAHAMIC_MUST);
+function wantsExpanded(messages: Array<{ role: string; content: string }>) {
+  const text = messages.slice(-4).map(m => m.content).join(' ').toLowerCase();
+  return /\bwhy\b|\bexplain\b|\brationale\b|\bnext steps\b|\bwhat next\b|\boptions\b|\bhow should i\b/.test(text);
+}
+
+function wantsScriptureExplicit(messages: Array<{ role: string; content: string }>) {
+  const text = messages.slice(-6).map(m => m.content).join(' ').toLowerCase();
+  return /\bscripture\b|\bverse\b|\bfaith framing\b|\babrahamic\b|\bbible\b|\bqur'?an\b|\btorah\b/.test(text);
+}
+
+function buildSystemPrompt(
+  filters: string[],
+  userWantsSecular: boolean,
+  userWantsExpanded: boolean,
+  userWantsScripture: boolean
+) {
+  const parts = [GUIDELINE_NEUTRAL, HOUSE_RULES, STYLE_BRIEF];
+
+  const wantsAbrahamic = (filters.includes('abrahamic') || filters.includes('ministry')) && !userWantsSecular;
+  const activateScripture = (wantsAbrahamic || userWantsScripture) && !userWantsSecular;
+
+  if (wantsAbrahamic) parts.push(GUIDELINE_ABRAHAMIC);
   if (filters.includes('guidance')) parts.push(GUIDELINE_GUIDANCE);
-  return { prompt: parts.join('\n\n'), wantsAbrahamic };
+  if (userWantsExpanded) parts.push(STYLE_EXPANDED);
+  if (activateScripture) parts.push(STYLE_SCRIPTURE);
+
+  return { prompt: parts.join('\n\n'), wantsAbrahamic, wantsScripture: activateScripture };
 }
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
@@ -154,6 +176,8 @@ export async function POST(req: NextRequest) {
 
     const rolled = trimConversation(messages);
     const userAskedForSecular = wantsSecular(rolled);
+    const userAskedForExpanded = wantsExpanded(rolled);
+    const userAskedForScripture = wantsScriptureExplicit(rolled);
 
     const lastUser = [...rolled].reverse().find(m => m.role?.toLowerCase() === 'user')?.content || '';
     const lastModeHeader = req.headers.get('x-last-mode');
@@ -164,10 +188,16 @@ export async function POST(req: NextRequest) {
       route.mode === 'Guidance' ? ['guidance'] :
       route.mode === 'Ministry' ? ['abrahamic', 'ministry'] : [];
 
-    const { prompt: system } = buildSystemPrompt(effectiveFilters, userAskedForSecular);
+    const { prompt: system } = buildSystemPrompt(
+      effectiveFilters,
+      userAskedForSecular,
+      userAskedForExpanded,
+      userAskedForScripture
+    );
+
     const openai: OpenAI = await getOpenAI();
 
-    // Non-stream
+    // ===== Non-stream (Responses API) =====
     if (!wantStream) {
       const resp = await withTimeout(
         openai.responses.create({
@@ -186,7 +216,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Stream (SSE via Chat Completions)
+    // ===== Stream (SSE via Chat Completions) =====
     const apiKey = process.env.OPENAI_API_KEY || '';
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
