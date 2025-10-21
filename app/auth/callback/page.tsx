@@ -1,20 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter, useSearchParams } from "next/navigation";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0; // never pre-render
+export const metadata = { robots: { index: false, follow: false } };
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-/**
- * Handles both flows:
- * - Hash tokens (#access_token, #refresh_token) from magic links
- * - PKCE/code flow (?code=...)
- */
-export default function AuthCallback() {
+export default function Page() {
+  return (
+    <Suspense fallback={<Splash msg="Completing sign-in…" />}>
+      <CallbackInner />
+    </Suspense>
+  );
+}
+
+function CallbackInner() {
   const router = useRouter();
   const search = useSearchParams();
   const [msg, setMsg] = useState("Completing sign-in…");
@@ -22,14 +29,14 @@ export default function AuthCallback() {
   useEffect(() => {
     (async () => {
       try {
-        // If we have a code param, use PKCE exchange:
+        // PKCE/code flow
         const code = search.get("code");
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) throw error;
         } else {
-          // Otherwise parse hash tokens (magic link style)
-          const hash = window.location.hash; // e.g. #access_token=...&refresh_token=...
+          // Magic link hash tokens (#access_token=...&refresh_token=...)
+          const hash = window.location.hash;
           const params = new URLSearchParams(hash.replace(/^#/, ""));
           const access_token = params.get("access_token");
           const refresh_token = params.get("refresh_token");
@@ -43,7 +50,6 @@ export default function AuthCallback() {
           if (error) throw error;
         }
 
-        // Optional: honor ?next=/app
         const next = search.get("next") || "/app";
         setMsg("Signed in. Redirecting…");
         router.replace(next);
@@ -54,6 +60,10 @@ export default function AuthCallback() {
     })();
   }, [router, search]);
 
+  return <Splash msg={msg} />;
+}
+
+function Splash({ msg }: { msg: string }) {
   return (
     <div className="min-h-[60vh] grid place-items-center">
       <div className="rounded-2xl border border-zinc-800 p-6">
