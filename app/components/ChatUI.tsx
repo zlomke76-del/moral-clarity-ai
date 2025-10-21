@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-// NOTE: relative import (no @ alias required)
-import { supabase } from "../../lib/supabaseClient";
+// FIX: use default import (no braces)
+import supabase from "../../lib/supabaseClient";
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -10,26 +10,52 @@ export default function ChatUI() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // whether user can add more memory (free cap gating)
   const [canWrite, setCanWrite] = useState<boolean>(true);
+  const [capLoading, setCapLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUserId(data.user?.id ?? null);
-      setEmail((data.user?.email as string | undefined) ?? null);
-    });
+    let cancelled = false;
+
     (async () => {
-      const uid = (await supabase.auth.getUser()).data.user?.id ?? null;
-      if (!uid) return;
-      const { data } = await supabase.rpc("can_add_memory", { uid });
-      if (typeof data === "boolean") setCanWrite(data);
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (cancelled) return;
+
+        const u = data.user ?? null;
+        setUserId(u?.id ?? null);
+        setEmail((u?.email as string | undefined) ?? null);
+      } finally {
+        if (!cancelled) setAuthLoading(false);
+      }
+
+      try {
+        const uid = (await supabase.auth.getUser()).data.user?.id ?? null;
+        if (!uid) {
+          setCanWrite(true); // allow typing when logged out
+          return;
+        }
+        const { data } = await supabase.rpc("can_add_memory", { uid });
+        if (typeof data === "boolean") setCanWrite(data);
+      } finally {
+        if (!cancelled) setCapLoading(false);
+      }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function onSend() {
     if (!input.trim()) return;
     const text = input.trim();
+
     setInput("");
     setMessages((m) => [...m, { role: "user", content: text }]);
     setLoading(true);
@@ -40,13 +66,14 @@ export default function ChatUI() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ prompt: text }),
       });
-      const json = await res.json();
+
+      const json = await res.json().catch(() => ({}));
       const output = json?.reply ?? "(no reply)";
       setMessages((m) => [...m, { role: "assistant", content: output }]);
     } catch (e: any) {
       setMessages((m) => [
         ...m,
-        { role: "assistant", content: `Error: ${e?.message ?? e}` },
+        { role: "assistant", content: `Error: ${e?.message ?? String(e)}` },
       ]);
     } finally {
       setLoading(false);
@@ -63,7 +90,7 @@ export default function ChatUI() {
       const data = await res.json();
       if (data?.url) window.location.href = data.url;
       else alert("Checkout failed to start.");
-    } catch (e) {
+    } catch {
       alert("Checkout error");
     }
   }
@@ -83,6 +110,9 @@ export default function ChatUI() {
     setEmail(null);
   }
 
+  const inputDisabled =
+    loading || (!canWrite && !capLoading) || authLoading || capLoading;
+
   return (
     <div className="mx-auto max-w-4xl w-full p-6">
       <div className="flex items-center justify-between mb-4">
@@ -92,8 +122,9 @@ export default function ChatUI() {
             <button
               className="rounded bg-black text-white px-3 py-2"
               onClick={signInWithMagicLink}
+              disabled={authLoading}
             >
-              Sign in
+              {authLoading ? "…" : "Sign in"}
             </button>
           ) : (
             <>
@@ -114,7 +145,13 @@ export default function ChatUI() {
 
       <div className="border rounded p-4 h-[50vh] overflow-auto bg-white text-black">
         {messages.length === 0 ? (
-          <div className="text-gray-500">Ask anything to get started…</div>
+          <div className="text-gray-500">
+            {capLoading
+              ? "Checking your plan…"
+              : !canWrite
+              ? "Free limit reached. Upgrade to continue."
+              : "Ask anything to get started…"}
+          </div>
         ) : (
           messages.map((m, i) => (
             <div
@@ -139,16 +176,20 @@ export default function ChatUI() {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && onSend()}
-          disabled={loading || !canWrite}
+          onKeyDown={(e) => e.key === "Enter" && !inputDisabled && onSend()}
+          disabled={inputDisabled}
           placeholder={
-            canWrite ? "Type your message…" : "Free limit reached. Upgrade to continue."
+            capLoading
+              ? "Loading…"
+              : canWrite
+              ? "Type your message…"
+              : "Free limit reached. Upgrade to continue."
           }
           className="flex-1 border rounded px-3 py-2 text-black"
         />
         <button
           onClick={onSend}
-          disabled={loading || !canWrite}
+          disabled={inputDisabled}
           className="rounded bg-black text-white px-4 py-2"
         >
           {loading ? "…" : "Send"}
