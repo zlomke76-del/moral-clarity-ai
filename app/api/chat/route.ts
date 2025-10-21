@@ -60,8 +60,9 @@ const STYLE_EXPANDED = `STYLE (EXPANDED ON REQUEST)
 - Keep it compact; avoid boilerplate.`;
 
 const STYLE_SCRIPTURE = `STYLE (SCRIPTURE ADD-ON)
-- The user asked for faith framing OR Abrahamic mode is active and the user did not request secular framing.
-- Provide 1–3 brief references (e.g., "Leviticus 19:18", "Matthew 5", "Qur'an 4:135") ONLY if relevant to the user’s ask.
+- In Ministry mode, always carry a gentle faith-centered tone (purpose, stewardship, compassion, truth) even if the user doesn’t mention religion.
+- On the FIRST substantive reply of a new conversation in Ministry mode, include 1–3 brief references (e.g., "Leviticus 19:18", "Matthew 5", "Qur'an 4:135").
+- After the first reply, include references ONLY when the user mentions faith/God/prayer/Scripture OR when a moral/ethical discernment is being requested and there hasn't been a reference recently.
 - No long quotes. Avoid sectarian polemics. Pastoral, concise.`;
 
 /* ========= HELPERS ========= */
@@ -88,19 +89,66 @@ function wantsExpanded(messages: Array<{ role: string; content: string }>) {
 
 function wantsScriptureExplicit(messages: Array<{ role: string; content: string }>) {
   const text = messages.slice(-6).map(m => m.content).join(' ').toLowerCase();
-  return /\bscripture\b|\bverse\b|\bfaith framing\b|\babrahamic\b|\bbible\b|\bqur'?an\b|\btorah\b/.test(text);
+  return /\bscripture\b|\bverse\b|\bfaith framing\b|\babrahamic\b|\bbible\b|\bqur'?an\b|\btorah\b|\bpray(er)?\b/.test(text);
+}
+
+function isGreeting(text: string) {
+  return /\b(hi|hello|hey|good (morning|afternoon|evening)|good day)\b/i.test((text || '').trim());
+}
+
+function isSubstantive(text: string) {
+  const t = (text || '').trim();
+  return t.split(/\s+/).length >= 4 && !isGreeting(t);
+}
+
+/**
+ * FIRST substantive user turn = seed references in Ministry mode.
+ * We find the first substantive user message across the thread.
+ * If the last user message is that first substantive one, it's "first turn".
+ */
+function isFirstSubstantiveTurn(messages: Array<{ role: string; content: string }>) {
+  const userMsgs = messages.filter(m => (m.role || '').toLowerCase() === 'user');
+  if (userMsgs.length === 0) return false;
+  const idxFirstSub = userMsgs.findIndex(m => isSubstantive(m.content));
+  if (idxFirstSub === -1) return false;
+  const lastUser = userMsgs[userMsgs.length - 1];
+  return isSubstantive(lastUser.content) && idxFirstSub === userMsgs.length - 1;
+}
+
+/** crude scripture presence check within recent turns */
+function hasRecentScripture(messages: Array<{ role: string; content: string }>, lookback = 6) {
+  const text = messages.slice(-lookback).map(m => m.content).join(' ');
+  return /\b(leviticus|genesis|exodus|psalm|proverbs|isaiah|jeremiah|ezekiel|matthew|mark|luke|john|acts|romans|corinthians|galatians|ephesians|philippians|colossians|timothy|peter|james|qur'?an|surah|[\w]+\s?\d+:\d+)\b/i.test(text);
+}
+
+function wantsMoralDiscernment(messages: Array<{ role: string; content: string }>) {
+  const text = messages.slice(-4).map(m => m.content).join(' ').toLowerCase();
+  return /\b(should i|is it right|ethical|moral|sin|haram|halal|permissible|discern|conscience|integrity|justice|mercy|stewardship)\b/.test(text);
 }
 
 function buildSystemPrompt(
   filters: string[],
   userWantsSecular: boolean,
   userWantsExpanded: boolean,
-  userWantsScripture: boolean
+  userWantsScripture: boolean,
+  firstTurnScripture: boolean,
+  recentScripture: boolean,
+  discernmentCue: boolean
 ) {
   const parts = [GUIDELINE_NEUTRAL, HOUSE_RULES, STYLE_BRIEF];
 
   const wantsAbrahamic = (filters.includes('abrahamic') || filters.includes('ministry')) && !userWantsSecular;
-  const activateScripture = (wantsAbrahamic || userWantsScripture) && !userWantsSecular;
+
+  // Scripture activation policy:
+  // 1) If user explicitly asked for scripture -> true
+  // 2) Else if Ministry mode:
+  //    - FIRST substantive reply → true
+  //    - Later only if discernment cue and no recent scripture in last few turns
+  const activateScripture =
+    !userWantsSecular && (
+      userWantsScripture ||
+      (wantsAbrahamic && (firstTurnScripture || (discernmentCue && !recentScripture)))
+    );
 
   if (wantsAbrahamic) parts.push(GUIDELINE_ABRAHAMIC);
   if (filters.includes('guidance')) parts.push(GUIDELINE_GUIDANCE);
@@ -179,7 +227,7 @@ export async function POST(req: NextRequest) {
     const userAskedForExpanded = wantsExpanded(rolled);
     const userAskedForScripture = wantsScriptureExplicit(rolled);
 
-    const lastUser = [...rolled].reverse().find(m => m.role?.toLowerCase() === 'user')?.content || '';
+    const lastUser = [...rolled].reverse().find(m => (m.role || '').toLowerCase() === 'user')?.content || '';
     const lastModeHeader = req.headers.get('x-last-mode');
     const route = routeMode(lastUser, { lastMode: lastModeHeader as any });
 
@@ -188,11 +236,18 @@ export async function POST(req: NextRequest) {
       route.mode === 'Guidance' ? ['guidance'] :
       route.mode === 'Ministry' ? ['abrahamic', 'ministry'] : [];
 
+    const firstTurnScripture = isFirstSubstantiveTurn(rolled);
+    const recentScripture = hasRecentScripture(rolled);
+    const discernmentCue = wantsMoralDiscernment(rolled);
+
     const { prompt: system } = buildSystemPrompt(
       effectiveFilters,
       userAskedForSecular,
       userAskedForExpanded,
-      userAskedForScripture
+      userAskedForScripture,
+      firstTurnScripture,
+      recentScripture,
+      discernmentCue
     );
 
     const openai: OpenAI = await getOpenAI();
