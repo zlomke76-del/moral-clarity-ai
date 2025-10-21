@@ -1,49 +1,87 @@
 // client/components/Quota.tsx
 'use client';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+
+import { useEffect, useState } from 'react';
+import supabase from '../../lib/supabaseClient';
+
+type CapRow = { value: number | null; updated_at: string | null };
 
 export default function Quota() {
-  const supabase = createClientComponentClient();
-
-  const [capMb, setCapMb] = useState<number | null>(null);
-  const [usedMb, setUsedMb] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState<string | null>(null);
+  const [memoryMb, setMemoryMb] = useState<number | null>(null);
+  const [canWrite, setCanWrite] = useState<boolean | null>(null);
+  const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      try {
+        // 1) who’s logged in?
+        const { data: userResp, error: userErr } = await supabase.auth.getUser();
+        if (userErr) throw userErr;
+        const user = userResp.user ?? null;
 
-      // 1) Cap (falls back to 1024 if no row)
-      const { data: capRow } = await supabase
-        .from('user_caps')
-        .select('value')
-        .eq('user_id', user.id)
-        .eq('cap', 'memory_quota_mb')
-        .maybeSingle();
-      const cap = capRow?.value ?? 1024;
-      setCapMb(cap);
+        setEmail((user?.email as string | undefined) ?? null);
 
-      // 2) Usage (replace with your real view/table/rpc)
-      // Example assumes a view `memory_usage_mb(user_id, used_mb)`
-      const { data: usage } = await supabase
-        .from('memory_usage_mb')
-        .select('used_mb')
-        .eq('user_id', user.id)
-        .maybeSingle();
+        // 2) read current memory cap from user_caps (fallback to 1024MB if none)
+        if (user?.id) {
+          const { data, error } = await supabase
+            .from('user_caps')
+            .select('value, updated_at')
+            .eq('user_id', user.id)
+            .eq('cap', 'memory_quota_mb')
+            .limit(1)
+            .maybeSingle<CapRow>();
 
-      setUsedMb(usage?.used_mb ?? 0);
+          if (error) throw error;
+
+          const mb = (data?.value ?? 1024) as number;
+          setMemoryMb(mb);
+
+          // 3) can this user still add memory? (your RPC)
+          const { data: canData, error: canErr } = await supabase.rpc('can_add_memory', { uid: user.id });
+          if (canErr) throw canErr;
+          setCanWrite(typeof canData === 'boolean' ? canData : null);
+        } else {
+          // logged out view
+          setMemoryMb(1024);
+          setCanWrite(true);
+        }
+      } catch (e: any) {
+        if (!cancelled) setErr(e?.message ?? 'Unknown error');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  if (capMb == null || usedMb == null) return null;
-  const pct = Math.min(100, Math.round((usedMb / capMb) * 100));
+  if (loading) {
+    return <div className="text-sm text-gray-500">Loading quota…</div>;
+  }
+
+  if (err) {
+    return <div className="text-sm text-red-600">Quota error: {err}</div>;
+  }
 
   return (
-    <div className="text-sm">
-      <div className="mb-1">Memory: {usedMb} / {capMb} MB</div>
-      <div className="h-2 w-64 bg-zinc-800 rounded">
-        <div className="h-2 bg-blue-600 rounded" style={{ width: `${pct}%` }} />
-      </div>
+    <div className="text-sm text-gray-800 flex items-center gap-3">
+      {email ? <span className="text-gray-500">{email}</span> : <span className="text-gray-500">Guest</span>}
+      <span className="px-2 py-1 rounded bg-gray-100 border">Memory cap: <b>{memoryMb} MB</b></span>
+      {canWrite !== null && (
+        <span
+          className={`px-2 py-1 rounded border ${
+            canWrite ? 'bg-green-50 text-green-700 border-green-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+          }`}
+        >
+          {canWrite ? 'Within limit' : 'Free limit reached'}
+        </span>
+      )}
     </div>
   );
 }
