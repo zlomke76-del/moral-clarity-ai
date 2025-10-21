@@ -1,15 +1,29 @@
-// app/app/page.tsx
-import { getSupabaseServer } from "@/lib/supabaseServer";
-import { redirect } from "next/navigation";
+"use client";
+import { useEffect, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
 
-export const dynamic = "force-dynamic";
+export default function AppPage() {
+  const [session, setSession] = useState(null);
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
-export default async function AppHome() {
-  const supabase = getSupabaseServer();
-  const { data: { session } } = await supabase.auth.getSession();
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+  }, []);
+
   if (!session) {
-    redirect("/auth/sign-in?next=%2Fapp");
+    window.location.href = "/auth/sign-in";
+    return null;
   }
 
-  // ... then run your Six Blocks queries and render
+  return (
+    <div className="p-8 text-white">
+      <h1 className="text-2xl font-bold mb-4">Welcome to Moral Clarity AI</h1>
+      <p>Your workspace will appear here once Six Blocks syncs.</p>
+    </div>
+  );
 }
