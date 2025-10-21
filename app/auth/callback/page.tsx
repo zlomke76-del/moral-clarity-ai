@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0; // never pre-render
-export const metadata = { robots: { index: false, follow: false } };
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -29,27 +28,23 @@ function CallbackInner() {
   useEffect(() => {
     (async () => {
       try {
-        // PKCE/code flow
         const code = search.get("code");
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) throw error;
         } else {
-          // Magic link hash tokens (#access_token=...&refresh_token=...)
           const hash = window.location.hash;
           const params = new URLSearchParams(hash.replace(/^#/, ""));
           const access_token = params.get("access_token");
           const refresh_token = params.get("refresh_token");
-          if (!access_token || !refresh_token) {
+          if (!access_token || !refresh_token)
             throw new Error("Missing tokens in callback URL.");
-          }
           const { error } = await supabase.auth.setSession({
             access_token,
             refresh_token,
           });
           if (error) throw error;
         }
-
         const next = search.get("next") || "/app";
         setMsg("Signed in. Redirecting…");
         router.replace(next);
