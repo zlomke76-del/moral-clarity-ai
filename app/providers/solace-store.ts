@@ -3,15 +3,11 @@
 import { create } from "zustand";
 
 type SolaceState = {
-  /* visibility & position */
   visible: boolean;
   x: number;
   y: number;
-
-  /* active filters (e.g., "abrahamic", "ministry", "guidance") */
   filters: Set<string>;
 
-  /* actions */
   show: () => void;
   hide: () => void;
   toggle: () => void;
@@ -19,17 +15,13 @@ type SolaceState = {
 
   setPos: (x: number, y: number) => void;
 
-  /** replace the current filter set (accepts Set or string[]) */
   setFilters: (next: Set<string> | string[]) => void;
-
-  /** add/remove a single filter */
   addFilter: (f: string) => void;
   removeFilter: (f: string) => void;
   clearFilters: () => void;
 };
 
-export const useSolaceStore = create<SolaceState>((set, get) => ({
-  /* defaults: dock visible, bottom-rightish */
+export const useSolaceStore = create<SolaceState>((set) => ({
   visible: true,
   x: typeof window !== "undefined" ? Math.max(8, window.innerWidth - 560) : 860,
   y: typeof window !== "undefined" ? Math.max(8, window.innerHeight - 420) : 520,
