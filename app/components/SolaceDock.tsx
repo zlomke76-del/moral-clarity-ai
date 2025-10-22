@@ -1,41 +1,38 @@
 "use client";
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSolaceStore } from "@/app/providers/solace-store";
 
 declare global {
-  interface Window {
-    __solaceDockMounted?: boolean;
-  }
+  interface Window { __solaceDockMounted?: boolean }
 }
 
-type Role = "user" | "assistant";
-type Message = { role: Role; content: string };
+type Message = { role: "user" | "assistant"; content: string };
 
 export default function SolaceDock() {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // ---- singleton guard (mount once)
+  // ---- singleton guard
   const [canRender, setCanRender] = useState(false);
   useEffect(() => {
-    if (typeof window === "undefined") return;
     if (window.__solaceDockMounted) return; // another instance exists
     window.__solaceDockMounted = true;
     setCanRender(true);
-    return () => {
-      window.__solaceDockMounted = false;
-    };
+    return () => { window.__solaceDockMounted = false; };
   }, []);
 
-  const { visible, x, y, setPos, filters } = useSolaceStore();
+  // store
+  const {
+    visible, x, y, setPos, filters, toggle, setFilters, clearFilters
+  } = useSolaceStore();
+
   const [dragging, setDragging] = useState(false);
-  const [offset, setOffset] = useState<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
+  const [offset, setOffset] = useState<{dx:number, dy:number}>({ dx: 0, dy: 0 });
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
-  const [modeHint, setModeHint] = useState<"Create" | "Next Steps" | "Red Team" | "Ministry" | "Neutral">("Neutral");
+  const [modeHint, setModeHint] = useState<"Create"|"Next Steps"|"Red Team"|"Ministry"|"Neutral">("Neutral");
 
   // Ministry is an overlay (filters), not a mode switch
   const activeFilters = useMemo(() => Array.from(filters), [filters]);
@@ -52,9 +49,7 @@ export default function SolaceDock() {
     if (!dragging) return;
     setPos(Math.max(8, e.clientX - offset.dx), Math.max(8, e.clientY - offset.dy));
   }
-  function onMouseUp() {
-    setDragging(false);
-  }
+  function onMouseUp() { setDragging(false); }
 
   useEffect(() => {
     if (!dragging) return;
@@ -64,15 +59,13 @@ export default function SolaceDock() {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
     };
-  }, [dragging, offset]);
+  }, [dragging, offset, setPos]);
 
   async function send() {
     const text = input.trim();
     if (!text || streaming) return;
-
     setInput("");
-    const newMsg: Message = { role: "user", content: text }; // <-- narrow to literal union
-    const next: Message[] = [...messages, newMsg];
+    const next: Message[] = [...messages, { role: "user", content: text }];
     setMessages(next);
     setStreaming(true);
 
@@ -86,27 +79,20 @@ export default function SolaceDock() {
         body: JSON.stringify({
           messages: next,
           filters: activeFilters, // multi-select, includes "abrahamic","ministry" if toggled
-          stream: false, // plain JSON (we can enable streaming later)
+          stream: false,          // keep non-stream for now
         }),
       });
-
-      if (!res.ok) {
-        const t = await res.text().catch(() => "");
-        throw new Error(`HTTP ${res.status}: ${t}`);
-      }
-
       const data = await res.json();
-      const reply: Message = { role: "assistant", content: String(data.text ?? "[No reply]") };
-      setMessages((m) => [...m, reply]);
+      const reply = String(data.text ?? "[No reply]");
+      setMessages((m) => [...m, { role: "assistant", content: reply }]);
     } catch (e: any) {
-      const errMsg: Message = { role: "assistant", content: `⚠️ ${e?.message ?? "Error"}` };
-      setMessages((m) => [...m, errMsg]);
+      setMessages((m) => [...m, { role: "assistant", content: `⚠️ ${e?.message ?? "Error"}` }]);
     } finally {
       setStreaming(false);
     }
   }
 
-  // autoresize text area (avoid off-screen horizontal scrolling)
+  // autoresize text area (no off-screen scroll)
   const taRef = useRef<HTMLTextAreaElement | null>(null);
   useEffect(() => {
     const ta = taRef.current;
@@ -125,7 +111,7 @@ export default function SolaceDock() {
         left: x,
         top: y,
         width: 520,
-        zIndex: 70000, // above app
+        zIndex: 70_000, // above app
       }}
       className="rounded-2xl border border-zinc-800 bg-zinc-950/95 shadow-2xl backdrop-blur"
     >
@@ -137,23 +123,21 @@ export default function SolaceDock() {
         <div className="text-sm text-zinc-300">Solace</div>
         <div className="flex items-center gap-2">
           {/* mode chips (Create/Next/Red) are hints; “Ministry” is an overlay */}
-          <ModeChip label="Create" active={modeHint === "Create"} onClick={() => setModeHint("Create")} />
-          <ModeChip label="Next" active={modeHint === "Next Steps"} onClick={() => setModeHint("Next Steps")} />
-          <ModeChip label="Red" active={modeHint === "Red Team"} onClick={() => setModeHint("Red Team")} />
+          <ModeChip label="Create"   active={modeHint==="Create"}    onClick={() => setModeHint("Create")} />
+          <ModeChip label="Next"     active={modeHint==="Next Steps"} onClick={() => setModeHint("Next Steps")} />
+          <ModeChip label="Red"      active={modeHint==="Red Team"}   onClick={() => setModeHint("Red Team")} />
           <TogglePill
             label="Ministry"
             value={filters.has("abrahamic") || filters.has("ministry")}
             onToggle={() => {
+              // ensure both filters are applied together, not either-or
               const has = filters.has("abrahamic") || filters.has("ministry");
               if (has) {
-                useSolaceStore.getState().setFilters(
-                  Array.from(filters).filter((f) => f !== "abrahamic" && f !== "ministry")
-                );
+                setFilters(Array.from(filters).filter(f => f !== "abrahamic" && f !== "ministry"));
               } else {
-                const nextSet = new Set(filters);
-                nextSet.add("abrahamic");
-                nextSet.add("ministry");
-                useSolaceStore.getState().setFilters(nextSet);
+                const next = new Set(filters);
+                next.add("abrahamic"); next.add("ministry");
+                setFilters(next);
               }
             }}
           />
@@ -189,13 +173,22 @@ export default function SolaceDock() {
           <div className="text-xs text-zinc-500">
             {activeFilters.length ? `Filters: ${activeFilters.join(", ")}` : "Neutral"}
           </div>
-          <button
-            onClick={send}
-            disabled={streaming}
-            className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
-          >
-            {streaming ? "Thinking…" : "Ask"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={clearFilters}
+              className="rounded-md px-2 py-1 text-xs bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+              title="Clear filters"
+            >
+              Clear
+            </button>
+            <button
+              onClick={send}
+              disabled={streaming}
+              className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+            >
+              {streaming ? "Thinking…" : "Ask"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -204,12 +197,12 @@ export default function SolaceDock() {
   return createPortal(panel, document.body);
 }
 
-function ModeChip(props: { label: string; active: boolean; onClick: () => void }) {
+function ModeChip(props: {label:string; active:boolean; onClick:()=>void}) {
   return (
     <button
       onClick={props.onClick}
       className={`rounded-md px-2 py-1 text-xs ${
-        props.active ? "bg-zinc-200 text-zinc-900" : "bg-zinc-800 text-zinc-300"
+        props.active ? "bg-zinc-200 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
       }`}
       title={`${props.label} mode hint`}
     >
@@ -218,12 +211,12 @@ function ModeChip(props: { label: string; active: boolean; onClick: () => void }
   );
 }
 
-function TogglePill(props: { label: string; value: boolean; onToggle: () => void }) {
+function TogglePill(props: {label:string; value:boolean; onToggle:()=>void}) {
   return (
     <button
       onClick={props.onToggle}
       className={`rounded-full px-2 py-1 text-xs ${
-        props.value ? "bg-amber-400 text-black" : "bg-zinc-800 text-zinc-300"
+        props.value ? "bg-amber-400 text-black" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
       }`}
       title={`${props.label} overlay`}
     >
