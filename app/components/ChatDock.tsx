@@ -1,291 +1,371 @@
+// app/components/ChatDock.tsx
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { MessageSquare, Mic, Paperclip, X, Minus, Plus } from "lucide-react";
-import { cn } from "@/lib/ui"; // if you don't have this, see fallback at bottom
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-type Mode = "create" | "next" | "red" | "ministry";
+/**
+ * SINGLETON GUARD
+ * Prevents duplicate mounts across hot reloads or accidental re-use.
+ */
+declare global {
+  interface Window {
+    __SOLACE_DOCK_MOUNTED__?: boolean;
+  }
+}
 
-type Msg = {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  mode: Mode;
-  ts: number;
-};
+type Msg = { role: "user" | "assistant"; content: string };
+type Mode = "Create" | "Next Steps" | "Red Team";
 
-const modeMeta: Record<
-  Mode,
-  { label: string; hint: string; accent: string; border: string }
-> = {
-  create: {
-    label: "Create",
-    hint: "Brainstorm, draft, ideate.",
-    accent: "text-fuchsia-300",
-    border: "border-fuchsia-500/30",
-  },
-  next: {
-    label: "Next Steps",
-    hint: "Clarify actions and owners.",
-    accent: "text-blue-300",
-    border: "border-blue-500/30",
-  },
-  red: {
-    label: "Red Team",
-    hint: "Stress-test & find risks.",
-    accent: "text-amber-300",
-    border: "border-amber-500/30",
-  },
-  ministry: {
-    label: "Ministry",
-    hint: "Reverent, scripture-aligned tone.",
-    accent: "text-emerald-300",
-    border: "border-emerald-500/30",
-  },
-};
+/** Small inline SVGs (no external icon deps) */
+const IconMin = (props: any) => (
+  <svg viewBox="0 0 24 24" width="18" height="18" {...props}><path fill="currentColor" d="M5 12h14v2H5z"/></svg>
+);
+const IconClose = (props: any) => (
+  <svg viewBox="0 0 24 24" width="18" height="18" {...props}><path fill="currentColor" d="M18.3 5.71 12 12l6.3 6.29-1.41 1.42L10.59 13.4l-6.3 6.3-1.41-1.42L9.17 12 2.88 5.71 4.3 4.29l6.29 6.3 6.29-6.3z"/></svg>
+);
+const IconSend = (props: any) => (
+  <svg viewBox="0 0 24 24" width="18" height="18" {...props}><path fill="currentColor" d="M2 21 23 12 2 3v7l15 2-15 2z"/></svg>
+);
+const IconMic = (props: any) => (
+  <svg viewBox="0 0 24 24" width="18" height="18" {...props}><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21H9v2h6v-2h-2v-3.08A7 7 0 0 0 19 11z"/></svg>
+);
+const IconClip = (props: any) => (
+  <svg viewBox="0 0 24 24" width="18" height="18" {...props}><path fill="currentColor" d="M16.5 6.5 8 15a3 3 0 0 0 4.24 4.24l8.49-8.49a5 5 0 1 0-7.07-7.07L4.7 9.64a7 7 0 1 0 9.9 9.9l6.01-6.01-1.41-1.41-6.01 6.01a5 5 0 1 1-7.07-7.07l9.9-9.9a3 3 0 1 1 4.24 4.24l-8.49 8.49"/></svg>
+);
+
+/** Utility */
+const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
 export default function ChatDock() {
-  // position & UI state
-  const [minimized, setMinimized] = useState(false);
-  const [mode, setMode] = useState<Mode>("create");
-  const [dragging, setDragging] = useState(false);
-  const [pos, setPos] = useState<{ x: number; y: number }>({ x: 20, y: 20 });
+  // -------- Singleton mount guard --------
+  const [enabled, setEnabled] = useState(false);
+  const mountedOnceRef = useRef(false);
+  useEffect(() => {
+    if (mountedOnceRef.current) return;
+    mountedOnceRef.current = true;
+    if (typeof window !== "undefined") {
+      if (window.__SOLACE_DOCK_MOUNTED__) return;
+      window.__SOLACE_DOCK_MOUNTED__ = true;
+    }
+    setEnabled(true);
+  }, []);
+  if (!enabled) return null;
+
+  // -------- Position / drag state --------
+  const initPos = useMemo(() => {
+    if (typeof window === "undefined") return { x: 24, y: 24 };
+    const raw = localStorage.getItem("solace_dock_pos");
+    try {
+      return raw ? JSON.parse(raw) : { x: 24, y: 24 };
+    } catch {
+      return { x: 24, y: 24 };
+    }
+  }, []);
+  const [pos, setPos] = useState(initPos);
   const startRef = useRef<{ x: number; y: number; mx: number; my: number } | null>(null);
 
-  // chat state (local for now; we’ll swap to real API later)
-  const [value, setValue] = useState("");
-  const [messages, setMessages] = useState<Msg[]>([
-    {
-      id: "sys-1",
-      role: "assistant",
-      content:
-        "Hi — I’m here, floating with you. Ask anything or paste context and I’ll help. (Create / Next Steps / Red Team / Ministry)",
-      mode: "create",
-      ts: Date.now(),
-    },
-  ]);
-  const [busy, setBusy] = useState(false);
-
-  // drag handlers
-  const onMouseDown = (e: React.MouseEvent) => {
-    setDragging(true);
+  const onDragStart = useCallback((e: React.MouseEvent) => {
     startRef.current = { x: pos.x, y: pos.y, mx: e.clientX, my: e.clientY };
-  };
-  const onMouseMove = (e: MouseEvent) => {
-    if (!dragging || !startRef.current) return;
-    const dx = e.clientX - startRef.current.mx;
-    const dy = e.clientY - startRef.current.my;
-    setPos({ x: Math.max(8, startRef.current.x + dx), y: Math.max(8, startRef.current.y + dy) });
-  };
-  const onMouseUp = () => {
-    setDragging(false);
+    window.addEventListener("mousemove", onDrag);
+    window.addEventListener("mouseup", onDragEnd);
+  }, [pos]);
+
+  const onDrag = useCallback((e: MouseEvent) => {
+    const s = startRef.current;
+    if (!s) return;
+    const nx = s.x + (e.clientX - s.mx);
+    const ny = s.y + (e.clientY - s.my);
+    const maxX = (window.innerWidth ?? 0) - 360; // dock width
+    const maxY = (window.innerHeight ?? 0) - 60; // header height-ish
+    const clamped = { x: clamp(nx, 8, Math.max(8, maxX)), y: clamp(ny, 8, Math.max(8, maxY)) };
+    setPos(clamped);
+  }, []);
+
+  const onDragEnd = useCallback(() => {
+    window.removeEventListener("mousemove", onDrag);
+    window.removeEventListener("mouseup", onDragEnd);
+    try {
+      localStorage.setItem("solace_dock_pos", JSON.stringify(pos));
+    } catch {}
     startRef.current = null;
-  };
-  useEffect(() => {
-    if (!dragging) return;
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
+  }, [pos, onDrag]);
+
+  // -------- UI state --------
+  const [open, setOpen] = useState(true);
+  const [activeMode, setActiveMode] = useState<Mode>("Create");
+  const [ministry, setMinistry] = useState(false); // overlay; can be combined with any mode
+  const [msgs, setMsgs] = useState<Msg[]>([
+    { role: "assistant", content: "Hi—I'm Solace. What’s on your mind?" },
+  ]);
+  const [input, setInput] = useState("");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // -------- send message --------
+  const computeFilters = useCallback(() => {
+    const f: string[] = [];
+    if (activeMode === "Next Steps") f.push("guidance");
+    if (ministry) f.push("abrahamic", "ministry");
+    return f;
+  }, [activeMode, ministry]);
+
+  const handleSend = useCallback(async () => {
+    const text = input.trim();
+    if (!text || pending) return;
+    setError(null);
+    setMsgs((m) => [...m, { role: "user", content: text }, { role: "assistant", content: "" }]);
+    setInput("");
+    setPending(true);
+
+    const filters = computeFilters();
+    const body = {
+      messages: [...msgs, { role: "user", content: text }].map(({ role, content }) => ({
+        role,
+        content,
+      })),
+      filters,
+      stream: true,
     };
-  }, [dragging]);
 
-  // submit
-  const send = async () => {
-    const text = value.trim();
-    if (!text || busy) return;
-    const id = crypto.randomUUID();
-    const userMsg: Msg = { id, role: "user", content: text, mode, ts: Date.now() };
-    setMessages((m) => [...m, userMsg]);
-    setValue("");
-    setBusy(true);
+    try {
+      const r = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Last-Mode": activeMode },
+        body: JSON.stringify(body),
+      });
 
-    // TEMP: local “assistant” placeholder so UX feels alive
-    await new Promise((r) => setTimeout(r, 450));
-    const assistant: Msg = {
-      id: crypto.randomUUID(),
-      role: "assistant",
-      mode,
-      ts: Date.now(),
-      content:
-        mode === "create"
-          ? "Let’s expand this. Give me the core constraint and the outcome you want; I’ll propose 3 strong paths."
-          : mode === "next"
-          ? "Here’s a quick action scaffold: 1) owner 2) deadline 3) blockers 4) metrics. Want me to fill a draft?"
-          : mode === "red"
-          ? "Counter-argument: What if the core premise is false? Identify the riskiest assumption and an experiment to test it."
-          : "Let’s approach this with reverence. Would you like relevant scripture, or a gentle framing to act wisely?",
-    };
-    setMessages((m) => [...m, assistant]);
-    setBusy(false);
-  };
+      // If backend returns JSON (non-stream), consume once
+      const ct = r.headers.get("content-type") || "";
+      if (!r.ok) {
+        const t = await r.text().catch(() => "");
+        throw new Error(t || `HTTP ${r.status}`);
+      }
 
-  // keyboard
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      send();
+      if (ct.includes("application/json")) {
+        const j = await r.json();
+        const text = String(j?.text ?? "");
+        setMsgs((m) => {
+          const copy = [...m];
+          const i = copy.length - 1;
+          if (i >= 0 && copy[i].role === "assistant") {
+            copy[i] = { role: "assistant", content: text || "[No reply]" };
+          }
+          return copy;
+        });
+        setPending(false);
+        return;
+      }
+
+      // otherwise stream SSE/plain text
+      if (!r.body) throw new Error("No response body");
+      const reader = r.body.getReader();
+      const decoder = new TextDecoder();
+      let acc = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        acc += decoder.decode(value, { stream: true });
+        setMsgs((m) => {
+          const copy = [...m];
+          const i = copy.length - 1;
+          if (i >= 0 && copy[i].role === "assistant") {
+            copy[i] = { role: "assistant", content: acc };
+          }
+          return copy;
+        });
+      }
+      setPending(false);
+    } catch (e: any) {
+      setPending(false);
+      setError(e?.message || "Something went wrong");
+      setMsgs((m) => {
+        const copy = [...m];
+        const i = copy.length - 1;
+        if (i >= 0 && copy[i].role === "assistant") {
+          copy[i] = { role: "assistant", content: "⚠️ Connection issue. Please try again." };
+        }
+        return copy;
+      });
     }
-  };
+  }, [input, pending, msgs, activeMode, computeFilters]);
 
-  // MOBILE: snap to bottom on small screens
-  const containerStyle: React.CSSProperties = {
-    position: "fixed",
-    zIndex: 60,
-    right: pos.x,
-    bottom: pos.y,
-    maxWidth: "min(680px, 96vw)",
-    width: "min(680px, 96vw)",
-  };
+  const onKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    },
+    [handleSend]
+  );
 
+  // -------- Mic & file stubs (safe placeholders) --------
+  const handleMic = useCallback(() => {
+    // Keep UI responsive without trying to access hardware here
+    setError("Mic capture will be added next—use your keyboard for now.");
+    setTimeout(() => setError(null), 3000);
+  }, []);
+  const handleAttach = useCallback(() => {
+    setError("File attachments coming soon (images, PDFs).");
+    setTimeout(() => setError(null), 3000);
+  }, []);
+
+  // -------- Render --------
   return (
-    <div style={containerStyle} className="pointer-events-auto">
-      {/* Minimized button */}
-      {minimized ? (
+    <div
+      className="fixed z-[1000]"
+      style={{ right: pos.x, bottom: pos.y }}
+      aria-live="polite"
+    >
+      {/* FAB when minimized */}
+      {!open ? (
         <button
-          onClick={() => setMinimized(false)}
-          className="flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/80 px-3 py-2 text-sm text-zinc-200 shadow-lg backdrop-blur transition hover:bg-zinc-900"
-          aria-label="Open chat"
+          onClick={() => setOpen(true)}
+          className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold shadow-lg shadow-blue-900/40 hover:bg-blue-500 focus:outline-none"
+          title="Open Solace"
         >
-          <MessageSquare className="h-4 w-4" />
-          <span>Solace</span>
-          <Plus className="ml-1 h-4 w-4" />
+          Open Solace
         </button>
       ) : (
-        <div
-          className={cn(
-            "rounded-2xl border bg-zinc-950/85 backdrop-blur shadow-2xl",
-            "border-zinc-800"
-          )}
-        >
-          {/* Header / drag handle */}
+        <div className="w-[360px] overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950/95 backdrop-blur shadow-2xl">
+          {/* Header (draggable) */}
           <div
-            onMouseDown={onMouseDown}
-            className={cn(
-              "cursor-grab active:cursor-grabbing select-none",
-              "flex items-center justify-between px-3 py-2 border-b border-zinc-800"
-            )}
-            aria-label="Drag to move"
-            title="Drag to move"
+            className="flex cursor-grab items-center justify-between gap-2 border-b border-zinc-800 bg-zinc-900/50 px-3 py-2"
+            onMouseDown={onDragStart}
           >
-            <div className="flex items-baseline gap-3">
-              <span className="font-medium text-zinc-200">Solace</span>
-              <span className={cn("text-xs text-zinc-400 hidden sm:inline")}>
-                {modeMeta[mode].hint}
-              </span>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-emerald-400" />
+              <span className="text-sm font-semibold tracking-tight">Solace</span>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setMinimized(true)}
-                className="rounded-md p-1 hover:bg-zinc-800"
-                aria-label="Minimize"
+                className="rounded-md p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpen(false);
+                }}
+                title="Minimize"
               >
-                <Minus className="h-4 w-4 text-zinc-400" />
+                <IconMin />
               </button>
               <button
-                onClick={() => setMinimized(true)}
-                className="rounded-md p-1 hover:bg-zinc-800"
-                aria-label="Close"
-                title="Close (minimize)"
+                className="rounded-md p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpen(false);
+                }}
+                title="Close"
               >
-                <X className="h-4 w-4 text-zinc-400" />
+                <IconClose />
               </button>
             </div>
           </div>
 
-          {/* Mode tabs */}
-          <div className="flex gap-1 px-2 pt-2">
-            {(["create", "next", "red", "ministry"] as Mode[]).map((m) => (
+          {/* Mode row */}
+          <div className="flex items-center gap-2 border-b border-zinc-800 px-3 py-2">
+            {(["Create", "Next Steps", "Red Team"] as Mode[]).map((m) => (
               <button
                 key={m}
-                onClick={() => setMode(m)}
-                className={cn(
-                  "rounded-lg px-3 py-1 text-xs transition",
-                  m === mode
+                onClick={() => setActiveMode(m)}
+                className={[
+                  "rounded-md px-2.5 py-1 text-xs font-medium transition",
+                  activeMode === m
                     ? "bg-zinc-800 text-zinc-100"
-                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900"
-                )}
+                    : "bg-zinc-900 text-zinc-400 hover:text-zinc-200",
+                ].join(" ")}
               >
-                {modeMeta[m].label}
+                {m}
               </button>
             ))}
+            <div className="ml-auto flex items-center gap-2">
+              <label className="text-xs text-zinc-400">Ministry</label>
+              <button
+                onClick={() => setMinistry((v) => !v)}
+                className={[
+                  "h-5 w-10 rounded-full transition",
+                  ministry ? "bg-emerald-500/80" : "bg-zinc-700",
+                ].join(" ")}
+                title="Abrahamic counsel overlay"
+              >
+                <span
+                  className={[
+                    "block h-5 w-5 rounded-full bg-white shadow transition",
+                    ministry ? "translate-x-5" : "translate-x-0",
+                  ].join(" ")}
+                />
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
-          <div className="max-h-[36vh] overflow-y-auto px-3 pt-2 pb-3 space-y-2">
-            {messages.map((msg) => (
-              <div key={msg.id} className="flex">
-                <div
-                  className={cn(
-                    "max-w-[92%] rounded-xl px-3 py-2 text-sm leading-relaxed",
-                    msg.role === "user"
-                      ? "ml-auto bg-zinc-800 text-zinc-100"
-                      : "mr-auto bg-zinc-900 text-zinc-200 border border-zinc-800",
-                    // subtle mode border cue on assistant
-                    msg.role === "assistant" && modeMeta[msg.mode].border
-                  )}
-                >
-                  {msg.content}
-                </div>
+          <div className="max-h-[320px] space-y-3 overflow-y-auto p-3">
+            {msgs.map((m, i) => (
+              <div
+                key={i}
+                className={
+                  m.role === "user"
+                    ? "ml-8 rounded-lg bg-blue-600/10 px-3 py-2 text-sm text-blue-200 ring-1 ring-inset ring-blue-900/50"
+                    : "mr-8 rounded-lg bg-zinc-800/60 px-3 py-2 text-sm text-zinc-200 ring-1 ring-inset ring-black/20"
+                }
+              >
+                {m.content}
               </div>
             ))}
-            {busy && (
-              <div className="text-xs text-zinc-400 animate-pulse">Thinking…</div>
+            {error && (
+              <div className="rounded-md bg-red-900/30 px-3 py-2 text-xs text-red-200 ring-1 ring-inset ring-red-900/50">
+                {error}
+              </div>
             )}
           </div>
 
-          {/* Input row (single line, no wrap, horizontal scroll) */}
+          {/* Composer */}
           <div className="border-t border-zinc-800 p-2">
-            <div className="flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-950 px-2 py-1">
+            <div className="flex items-center gap-2">
               <button
-                className="rounded-md p-2 hover:bg-zinc-900"
+                onClick={handleAttach}
+                className="rounded-md p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
                 title="Attach (coming soon)"
-                aria-label="Attach"
               >
-                <Paperclip className="h-4 w-4 text-zinc-400" />
+                <IconClip />
+              </button>
+              <button
+                onClick={handleMic}
+                className="rounded-md p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                title="Speak (coming soon)"
+              >
+                <IconMic />
               </button>
 
-              {/* Single-line input that does NOT wrap text; horizontal scroll */}
-              <input
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                onKeyDown={onKeyDown}
-                placeholder="Speak or type…"
-                className={cn(
-                  "flex-1 bg-transparent outline-none text-zinc-100 text-sm",
-                  "whitespace-nowrap overflow-x-auto scrollbar-thin scrollbar-thumb-zinc-700",
-                  "placeholder:text-zinc-500"
-                )}
-                style={{ caretColor: "white" }}
-              />
+              <div className="relative flex-1">
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={onKeyDown}
+                  placeholder={
+                    ministry
+                      ? "Ask anything… (Create/Steps/Red-team + Ministry overlay)"
+                      : "Ask anything… (Create / Next Steps / Red Team)"
+                  }
+                  className="w-full resize-none overflow-x-auto rounded-md bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none ring-1 ring-inset ring-zinc-800 focus:ring-zinc-600"
+                  rows={1}
+                  // Non-wrapping input so long thoughts scroll horizontally (your request)
+                  style={{ whiteSpace: "nowrap" }}
+                />
+              </div>
 
               <button
-                className="rounded-md p-2 hover:bg-zinc-900"
-                title="Voice (detect built-in mic; graceful fallback)"
-                aria-label="Voice input"
-                onClick={() => alert("Voice input coming soon — will use built-in mic if present.")}
+                onClick={handleSend}
+                disabled={pending || !input.trim()}
+                className="rounded-md bg-blue-600 p-2 text-white shadow hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+                title="Send"
               >
-                <Mic className="h-4 w-4 text-zinc-400" />
-              </button>
-
-              <button
-                onClick={send}
-                disabled={!value.trim() || busy}
-                className={cn(
-                  "rounded-lg px-3 py-1.5 text-sm font-medium transition",
-                  value.trim() && !busy
-                    ? "bg-blue-600 text-white hover:bg-blue-500"
-                    : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
-                )}
-              >
-                Send
+                <IconSend />
               </button>
             </div>
 
-            {/* Mode hint */}
-            <div className={cn("mt-2 text-xs", modeMeta[mode].accent)}>
-              {modeMeta[mode].label} mode
+            <div className="mt-1 px-1 text-[10px] text-zinc-500">
+              {pending ? "Thinking…" : ministry ? "Ministry overlay is ON" : "Neutral counsel"}
             </div>
           </div>
         </div>
@@ -293,8 +373,3 @@ export default function ChatDock() {
     </div>
   );
 }
-
-/** Fallback tiny classnames helper (remove if you already have "@/lib/ui" with `cn`) */
-// export function cn(...parts: Array<string | false | null | undefined>) {
-//   return parts.filter(Boolean).join(" ");
-// }
