@@ -1,3 +1,4 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
@@ -5,7 +6,8 @@ import "./globals.css";
 import DemoBadge from "@/components/DemoBadge";
 import dynamic from "next/dynamic";
 
-const ChatDock = dynamic(() => import("@/app/components/ChatDock"), { ssr: false });
+// 🔒 Mount Solace once, client-only
+const SolaceDock = dynamic(() => import("@/app/components/SolaceDock"), { ssr: false });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.moralclarity.ai"),
@@ -84,8 +86,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* ===== MAIN CONTENT ===== */}
         <main className="mx-auto max-w-6xl px-4 py-10">{children}</main>
 
-        {/* Floating chat dock */}
-        <ChatDock />
+        {/* 🔵 Solace Dock — mounted once at root, after main */}
+        <SolaceDock />
 
         {/* ===== FOOTER ===== */}
         <footer className="mx-auto max-w-6xl border-t border-zinc-800 px-4 py-12 text-sm text-zinc-400">
