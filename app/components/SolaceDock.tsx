@@ -4,23 +4,22 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSolaceStore } from "@/app/providers/solace-store";
 
-
 declare global {
   interface Window {
     __solaceDockMounted?: boolean;
   }
 }
 
-type Message = { role: "user" | "assistant"; content: string };
-type ModeHint = "Create" | "Next Steps" | "Red Team" | "Ministry" | "Neutral";
+type Role = "user" | "assistant";
+type Message = { role: Role; content: string };
 
 export default function SolaceDock() {
-  const mountedRef = useRef(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // ---- singleton guard
+  // ---- singleton guard (mount once)
   const [canRender, setCanRender] = useState(false);
   useEffect(() => {
+    if (typeof window === "undefined") return;
     if (window.__solaceDockMounted) return; // another instance exists
     window.__solaceDockMounted = true;
     setCanRender(true);
@@ -29,16 +28,16 @@ export default function SolaceDock() {
     };
   }, []);
 
-  const { visible, x, y, setPos, filters, setFilters, toggle } = useSolaceStore();
+  const { visible, x, y, setPos, filters } = useSolaceStore();
   const [dragging, setDragging] = useState(false);
   const [offset, setOffset] = useState<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
-  const [modeHint, setModeHint] = useState<ModeHint>("Neutral");
+  const [modeHint, setModeHint] = useState<"Create" | "Next Steps" | "Red Team" | "Ministry" | "Neutral">("Neutral");
 
-  // ensure Ministry acts as an overlay, not a mode switch
+  // Ministry is an overlay (filters), not a mode switch
   const activeFilters = useMemo(() => Array.from(filters), [filters]);
 
   // drag handlers
@@ -65,13 +64,15 @@ export default function SolaceDock() {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
     };
-  }, [dragging, offset, setPos]);
+  }, [dragging, offset]);
 
   async function send() {
     const text = input.trim();
     if (!text || streaming) return;
+
     setInput("");
-    const next = [...messages, { role: "user", content: text }];
+    const newMsg: Message = { role: "user", content: text }; // <-- narrow to literal union
+    const next: Message[] = [...messages, newMsg];
     setMessages(next);
     setStreaming(true);
 
@@ -85,23 +86,27 @@ export default function SolaceDock() {
         body: JSON.stringify({
           messages: next,
           filters: activeFilters, // multi-select, includes "abrahamic","ministry" if toggled
-          stream: false, // can wire streaming later
+          stream: false, // plain JSON (we can enable streaming later)
         }),
       });
+
+      if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status}: ${t}`);
+      }
+
       const data = await res.json();
-      const reply = String(data.text ?? "[No reply]");
-      setMessages((m) => [...m, { role: "assistant", content: reply }]);
+      const reply: Message = { role: "assistant", content: String(data.text ?? "[No reply]") };
+      setMessages((m) => [...m, reply]);
     } catch (e: any) {
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", content: `⚠️ ${e?.message ?? "Error"}` },
-      ]);
+      const errMsg: Message = { role: "assistant", content: `⚠️ ${e?.message ?? "Error"}` };
+      setMessages((m) => [...m, errMsg]);
     } finally {
       setStreaming(false);
     }
   }
 
-  // autoresize text area (no off-screen scroll)
+  // autoresize text area (avoid off-screen horizontal scrolling)
   const taRef = useRef<HTMLTextAreaElement | null>(null);
   useEffect(() => {
     const ta = taRef.current;
@@ -120,7 +125,7 @@ export default function SolaceDock() {
         left: x,
         top: y,
         width: 520,
-        zIndex: 70_000, // above app
+        zIndex: 70000, // above app
       }}
       className="rounded-2xl border border-zinc-800 bg-zinc-950/95 shadow-2xl backdrop-blur"
     >
@@ -132,36 +137,23 @@ export default function SolaceDock() {
         <div className="text-sm text-zinc-300">Solace</div>
         <div className="flex items-center gap-2">
           {/* mode chips (Create/Next/Red) are hints; “Ministry” is an overlay */}
-          <ModeChip
-            label="Create"
-            active={modeHint === "Create"}
-            onClick={() => setModeHint("Create")}
-          />
-          <ModeChip
-            label="Next"
-            active={modeHint === "Next Steps"}
-            onClick={() => setModeHint("Next Steps")}
-          />
-          <ModeChip
-            label="Red"
-            active={modeHint === "Red Team"}
-            onClick={() => setModeHint("Red Team")}
-          />
+          <ModeChip label="Create" active={modeHint === "Create"} onClick={() => setModeHint("Create")} />
+          <ModeChip label="Next" active={modeHint === "Next Steps"} onClick={() => setModeHint("Next Steps")} />
+          <ModeChip label="Red" active={modeHint === "Red Team"} onClick={() => setModeHint("Red Team")} />
           <TogglePill
             label="Ministry"
             value={filters.has("abrahamic") || filters.has("ministry")}
             onToggle={() => {
               const has = filters.has("abrahamic") || filters.has("ministry");
               if (has) {
-                const next = activeFilters.filter(
-                  (f) => f !== "abrahamic" && f !== "ministry"
+                useSolaceStore.getState().setFilters(
+                  Array.from(filters).filter((f) => f !== "abrahamic" && f !== "ministry")
                 );
-                setFilters(next);
               } else {
-                const next = new Set(filters);
-                next.add("abrahamic");
-                next.add("ministry");
-                setFilters(next);
+                const nextSet = new Set(filters);
+                nextSet.add("abrahamic");
+                nextSet.add("ministry");
+                useSolaceStore.getState().setFilters(nextSet);
               }
             }}
           />
@@ -171,13 +163,8 @@ export default function SolaceDock() {
       {/* transcript */}
       <div className="max-h-[320px] overflow-auto px-3 py-2 space-y-2">
         {messages.map((m, i) => (
-          <div
-            key={i}
-            className={m.role === "user" ? "text-zinc-200" : "text-zinc-400"}
-          >
-            <span className="text-xs uppercase tracking-wide text-zinc-500 mr-2">
-              {m.role}
-            </span>
+          <div key={i} className={m.role === "user" ? "text-zinc-200" : "text-zinc-400"}>
+            <span className="text-xs uppercase tracking-wide text-zinc-500 mr-2">{m.role}</span>
             {m.content}
           </div>
         ))}
