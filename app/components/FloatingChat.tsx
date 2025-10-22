@@ -70,19 +70,53 @@ export default function FloatingChat({
 
     try {
       const r = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode,
-          userId,
-          userName,
-          messages: [...msgs, outgoing].map(({ role, content }) => ({ role, content })),
-        }),
-      });
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    mode,
+    stream: true, // request stream first
+    userId,
+    userName,
+    messages: [...msgs, outgoing].map(({ role, content }) => ({ role, content })),
+  }),
+});
 
-      if (!r.ok || !r.body) {
-        throw new Error(`HTTP ${r.status}`);
-      }
+if (!r.ok) throw new Error(`HTTP ${r.status}`);
+
+// 🧠 Detect whether it's JSON or text stream
+const contentType = r.headers.get("content-type") || "";
+if (contentType.includes("application/json")) {
+  const data = await r.json();
+  const reply = data.text || data.error || "[Empty reply]";
+  setMsgs((m) => {
+    const copy = [...m];
+    copy[copy.length - 1] = { role: "assistant", content: reply };
+    return copy;
+  });
+  setSending(false);
+  return;
+}
+
+// otherwise stream SSE/plain text
+if (!r.body) throw new Error("No response body");
+const reader = r.body.getReader();
+const decoder = new TextDecoder();
+let acc = "";
+
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  acc += decoder.decode(value, { stream: true });
+  setMsgs((m) => {
+    const copy = [...m];
+    const i = copy.length - 1;
+    if (i >= 0 && copy[i].role === "assistant") {
+      copy[i] = { role: "assistant", content: acc };
+    }
+    return copy;
+  });
+}
+
 
       const reader = r.body.getReader();
       const decoder = new TextDecoder();
