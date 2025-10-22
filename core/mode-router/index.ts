@@ -53,8 +53,10 @@ const LEX_FACT = new Set([
 
 // --- Tiny utils ---
 const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+
+/** Return all tokens from `set` that are contained in `s` (avoid spreading Set for downlevel targets). */
 const containsAny = (s: string, set: Set<string>) =>
-  [...set].filter(t => s.includes(t));
+  Array.from(set).filter((t) => s.includes(t));
 
 function detectIntent(t: string): "fact" | "decision" | "purpose" {
   const lc = t.toLowerCase();
@@ -136,9 +138,9 @@ export function routeMode(text: string, context: RouteContext = {}): RouteResult
   if (["spiritual"].includes(sentiment))                scores.Ministry += 1.0 * w.Ministry.sentiment;
 
   // depth (0..2)
-  scores.Neutral  += (2 - depth)/2 * w.Neutral.depth;        // shallow favors Neutral
+  scores.Neutral  += (2 - depth)/2 * w.Neutral.depth;             // shallow favors Neutral
   scores.Guidance += (1 - Math.abs(depth - 1)) * w.Guidance.depth; // mid favors Guidance
-  scores.Ministry += (depth/2) * w.Ministry.depth;            // deep favors Ministry
+  scores.Ministry += (depth/2) * w.Ministry.depth;                 // deep favors Ministry
 
   // lexical boosts
   if (markers.some(m => LEX_FAITH.has(m)))    scores.Ministry += 0.8;
