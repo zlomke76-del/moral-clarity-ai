@@ -1,31 +1,51 @@
 "use client";
+
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import type { Session } from "@supabase/supabase-js";
+import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
+import FeatureGrid from "@/app/components/FeatureGrid";
 
-export default function AppPage() {
-  import type { Session } from "@supabase/supabase-js";
-const [session, setSession] = useState<Session | null>(null);
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+export default function AppDashboard() {
+  const supabase = createSupabaseBrowser();
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-  }, []);
+    let active = true;
 
+    (async () => {
+      // Get current session (handles magic-link cases once set)
+      const { data } = await supabase.auth.getSession();
+      if (!active) return;
+      setSession(data.session ?? null);
+      setLoading(false);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
+
+  if (loading) {
+    return (
+      <main className="min-h-[60vh] flex items-center justify-center">
+        <div className="opacity-70">Loading…</div>
+      </main>
+    );
+  }
+
+  // Not signed in → send to auth (preserve deep link back to /app)
   if (!session) {
-    window.location.href = "/auth/sign-in";
+    if (typeof window !== "undefined") {
+      window.location.replace("/auth?next=%2Fapp");
+    }
     return null;
   }
 
+  // Signed in → render the Six Blocks (FeatureGrid)
   return (
-    <div className="p-8 text-white">
-      <h1 className="text-2xl font-bold mb-4">Welcome to Moral Clarity AI</h1>
-      <p>Your workspace will appear here once Six Blocks syncs.</p>
-    </div>
+    <main className="min-h-screen">
+      <FeatureGrid />
+    </main>
   );
 }
