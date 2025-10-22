@@ -1,48 +1,35 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
-import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
+// app/app/page.tsx
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { createClient } from "@supabase/supabase-js";
 import FeatureGrid from "@/app/components/FeatureGrid";
 
-export default function AppDashboard() {
-  const supabase = createSupabaseBrowser();
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+export const dynamic = "force-dynamic";
 
-  useEffect(() => {
-    let active = true;
-
-    (async () => {
-      // Get current session (handles magic-link cases once set)
-      const { data } = await supabase.auth.getSession();
-      if (!active) return;
-      setSession(data.session ?? null);
-      setLoading(false);
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [supabase]);
-
-  if (loading) {
-    return (
-      <main className="min-h-[60vh] flex items-center justify-center">
-        <div className="opacity-70">Loading…</div>
-      </main>
-    );
-  }
-
-  // Not signed in → send to auth (preserve deep link back to /app)
-  if (!session) {
-    if (typeof window !== "undefined") {
-      window.location.replace("/auth?next=%2Fapp");
+export default async function AppDashboard() {
+  // server-side session check using the cookie
+  const cookieStore = cookies();
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name) {
+          return cookieStore.get(name)?.value;
+        },
+      },
+      auth: { persistSession: false },
     }
-    return null;
+  );
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    redirect(`/auth?next=${encodeURIComponent("/app")}`);
   }
 
-  // Signed in → render the Six Blocks (FeatureGrid)
   return (
     <main className="min-h-screen">
       <FeatureGrid />
