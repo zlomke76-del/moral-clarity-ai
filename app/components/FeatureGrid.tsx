@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { cn } from "@/lib/ui"; // tiny helper below
+// removed: import { cn } from "@/lib/ui";
 import {
   ClipboardList,
   ShieldAlert,
@@ -125,7 +125,7 @@ export default function FeatureGrid() {
   );
 }
 
-/** tiny classnames helper (if you don’t already have one) */
+/** tiny classnames helper */
 function cn(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }
