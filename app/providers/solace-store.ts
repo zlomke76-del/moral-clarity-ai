@@ -1,108 +1,56 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { create } from "zustand";
 
-/** Shape of the dock’s shared state */
-type SolaceSnapshot = {
+type SolaceState = {
+  // visibility + position
   visible: boolean;
   x: number;
   y: number;
-  /** active filters behave like tags; e.g. "abrahamic","ministry","guidance" */
+
+  // filters behave like multi-select tags (e.g., "abrahamic","ministry","guidance")
   filters: Set<string>;
+
+  // actions
+  show(): void;
+  hide(): void;
+  toggle(): void;
+  setPos(nx: number, ny: number): void;
+  setFilters(next: string[] | Set<string>): void;
+  addFilter(tag: string): void;
+  removeFilter(tag: string): void;
+  clearFilters(): void;
 };
 
-/** Internal mutable state (module singleton) */
-let state: SolaceSnapshot = {
+export const useSolaceStore = create<SolaceState>((set) => ({
   visible: true,
   x: 24,
-  y: 24,
-  filters: new Set<string>(),
-};
+  y: 24 + 56, // a bit under the header
+  filters: new Set(),
 
-const listeners = new Set<() => void>();
-function emit() {
-  for (const l of listeners) l();
-}
+  show: () => set({ visible: true }),
+  hide: () => set({ visible: false }),
+  toggle: () => set((s) => ({ visible: !s.visible })),
+  setPos: (nx, ny) => set({ x: Math.max(8, nx), y: Math.max(8, ny) }),
 
-/** subscribe/get for useSyncExternalStore */
-function subscribe(cb: () => void) {
-  listeners.add(cb);
-  return () => listeners.delete(cb);
-}
-function getSnapshot(): SolaceSnapshot {
-  return state;
-}
+  setFilters: (next) =>
+    set({
+      filters: new Set(Array.isArray(next) ? next : Array.from(next)),
+    }),
 
-/* ---------- Mutators (immutable snapshots for React) ---------- */
-function setState(patch: Partial<Omit<SolaceSnapshot, "filters">> & { filters?: Set<string> | string[] }) {
-  const next: SolaceSnapshot = {
-    ...state,
-    ...patch,
-    filters:
-      patch.filters === undefined
-        ? state.filters
-        : patch.filters instanceof Set
-        ? new Set(patch.filters)
-        : new Set(patch.filters),
-  };
-  // Avoid emitting if nothing changed (cheap compare)
-  if (
-    next.visible === state.visible &&
-    next.x === state.x &&
-    next.y === state.y &&
-    sameSet(next.filters, state.filters)
-  ) {
-    return;
-  }
-  state = next;
-  emit();
-}
+  addFilter: (tag) =>
+    set((s) => {
+      const n = new Set(s.filters);
+      n.add(tag);
+      return { filters: n };
+    }),
 
-function sameSet(a: Set<string>, b: Set<string>) {
-  if (a.size !== b.size) return false;
-  for (const v of a) if (!b.has(v)) return false;
-  return true;
-}
+  removeFilter: (tag) =>
+    set((s) => {
+      const n = new Set(s.filters);
+      n.delete(tag);
+      return { filters: n };
+    }),
 
-/* ---------- Public API (hook) ---------- */
-export function useSolaceStore() {
-  const snap = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
-
-  return {
-    /* snapshot fields */
-    visible: snap.visible,
-    x: snap.x,
-    y: snap.y,
-    filters: snap.filters,
-
-    /* actions */
-    show() {
-      setState({ visible: true });
-    },
-    hide() {
-      setState({ visible: false });
-    },
-    toggle() {
-      setState({ visible: !state.visible });
-    },
-    setPos(nx: number, ny: number) {
-      setState({ x: Math.max(8, Math.round(nx)), y: Math.max(8, Math.round(ny)) });
-    },
-    setFilters(next: Set<string> | string[]) {
-      setState({ filters: next });
-    },
-    addFilter(tag: string) {
-      const next = new Set(state.filters);
-      next.add(tag);
-      setState({ filters: next });
-    },
-    removeFilter(tag: string) {
-      const next = new Set(state.filters);
-      next.delete(tag);
-      setState({ filters: next });
-    },
-    clearFilters() {
-      setState({ filters: new Set() });
-    },
-  };
-}
+  clearFilters: () => set({ filters: new Set() }),
+}));
