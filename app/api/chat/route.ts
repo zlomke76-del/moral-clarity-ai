@@ -22,7 +22,6 @@ const HARDCODED_ALLOWED_ORIGINS = [
   'https://studio.moralclarity.ai',
   'https://moralclarityai.com',
   'https://www.moralclarityai.com',
-  // add any permanent demo host here if you like:
   // 'https://demo.moralclarity.ai',
 ];
 
@@ -153,10 +152,10 @@ function buildSystemPrompt(
   const wantsAbrahamic = filters.includes('abrahamic') || filters.includes('ministry');
   const wantsGuidance = filters.includes('guidance');
 
-  const firstUserText =
+  const lastUserText =
     [...messages].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content ?? '';
   const firstTurn = isFirstRealTurn(messages);
-  const moralOrEmo = hasEmotionalOrMoralCue(firstUserText);
+  const moralOrEmo = hasEmotionalOrMoralCue(lastUserText);
 
   const forceFirstTurnSeeding = wantsAbrahamic && !userWantsSecular && firstTurn && moralOrEmo;
 
@@ -198,17 +197,17 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 /* ========= CORS ========= */
 function isAllowedOrigin(origin: string | null): string | null {
   if (!origin) return null; // same-origin request
-  // exact match first
+  // exact match fast-path
   if (ALLOWED_ORIGINS.includes(origin)) return origin;
 
-  // suffix rules: any entry starting with "." means "endsWith"
   try {
     const u = new URL(origin);
-    const host = `${u.protocol}//${u.host}`;
+    const host = u.host; // <-- host only (no protocol) for suffix checks
     const allowed = ALLOWED_ORIGINS.some(entry => {
       if (!entry.startsWith('.')) return false;
-      // entry ".vercel.app" => allow any host that ends with ".vercel.app"
-      return host.endsWith(entry);
+      // ".vercel.app" should match any host that ends with "vercel.app"
+      const suffix = entry.slice(1);
+      return host.endsWith(suffix);
     });
     return allowed ? origin : null;
   } catch {
