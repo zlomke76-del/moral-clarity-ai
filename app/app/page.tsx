@@ -1,14 +1,12 @@
-"use client";
-
+// app/app/page.tsx
 import FeatureGrid from "@/app/components/FeatureGrid";
-import FloatingChat from "@/app/components/FloatingChat";
 
 export default function AppHome() {
-  // If you have auth context, pass userId/userName. Optional.
   return (
-    <main className="min-h-screen">
+    <div className="min-h-[60vh]">
       <FeatureGrid />
-      <FloatingChat userId={null} userName={null} />
-    </main>
+      {/* Chat is mounted once globally via <ChatDock /> in app/layout.tsx */}
+    </div>
   );
 }
+
