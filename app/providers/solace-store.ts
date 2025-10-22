@@ -1,17 +1,11 @@
 "use client";
-
 import { create } from "zustand";
 
 type SolaceState = {
-  // visibility + position
   visible: boolean;
   x: number;
   y: number;
-
-  // filters behave like multi-select tags (e.g., "abrahamic","ministry","guidance")
   filters: Set<string>;
-
-  // actions
   show(): void;
   hide(): void;
   toggle(): void;
@@ -24,14 +18,15 @@ type SolaceState = {
 
 export const useSolaceStore = create<SolaceState>((set) => ({
   visible: true,
-  x: 24,
-  y: 24 + 56, // a bit under the header
+  x: 16,
+  y: 16,
   filters: new Set(),
 
   show: () => set({ visible: true }),
   hide: () => set({ visible: false }),
   toggle: () => set((s) => ({ visible: !s.visible })),
-  setPos: (nx, ny) => set({ x: Math.max(8, nx), y: Math.max(8, ny) }),
+
+  setPos: (nx, ny) => set({ x: nx, y: ny }),
 
   setFilters: (next) =>
     set({
