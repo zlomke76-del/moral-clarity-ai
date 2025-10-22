@@ -1,9 +1,11 @@
-import React, { type ReactNode } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import "./globals.css";
 import DemoBadge from "@/components/DemoBadge";
+import dynamic from "next/dynamic";
+
+const ChatDock = dynamic(() => import("@/app/components/ChatDock"), { ssr: false });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.moralclarity.ai"),
@@ -14,7 +16,11 @@ export const metadata: Metadata = {
     siteName: "Moral Clarity AI",
     url: "https://www.moralclarity.ai",
   },
-  twitter: { card: "summary_large_image", site: "@", creator: "@" },
+  twitter: {
+    card: "summary_large_image",
+    site: "@",
+    creator: "@",
+  },
   icons: {
     icon: "/MoralClarityAI_QuietDepth_Logos/icon-180.png",
     apple: "/MoralClarityAI_QuietDepth_Logos/icon-180.png",
@@ -22,14 +28,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="h-full" suppressHydrationWarning>
+    <html lang="en" className="h-full">
       <body className="min-h-screen bg-zinc-950 text-zinc-100">
         {/* ===== HEADER ===== */}
         <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur">
           <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-            {/* Brand + optional Demo badge */}
             <div className="flex items-center gap-2">
               <Link href="/" className="flex items-center gap-2">
                 <Image
@@ -47,7 +52,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <DemoBadge />
             </div>
 
-            {/* Desktop nav */}
             <div className="hidden sm:flex items-center gap-6 text-sm">
               <Link href="/pricing" className="hover:opacity-80 leading-none">
                 Pricing
@@ -66,7 +70,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               </Link>
             </div>
 
-            {/* Mobile CTA only */}
             <div className="sm:hidden">
               <Link
                 href="/app"
@@ -80,6 +83,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
         {/* ===== MAIN CONTENT ===== */}
         <main className="mx-auto max-w-6xl px-4 py-10">{children}</main>
+
+        {/* Floating chat dock */}
+        <ChatDock />
 
         {/* ===== FOOTER ===== */}
         <footer className="mx-auto max-w-6xl border-t border-zinc-800 px-4 py-12 text-sm text-zinc-400">
@@ -98,15 +104,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
         </footer>
-
-        {/* Build tag for quick verification */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `window.__BUILD = ${JSON.stringify(
-              process.env.NEXT_PUBLIC_BUILD_ID || "no-build"
-            )};`,
-          }}
-        />
       </body>
     </html>
   );
