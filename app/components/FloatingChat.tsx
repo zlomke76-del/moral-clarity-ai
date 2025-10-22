@@ -1,264 +1,267 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-type Mode = "create" | "next" | "red" | "ministry";
+type Role = 'user' | 'assistant' | 'system';
+type Msg = { role: Role; content: string };
 
-type Msg = { role: "user" | "assistant" | "system"; content: string };
+type Mode = 'Create' | 'Next Steps' | 'Red Team' | 'Ministry' | 'Neutral';
 
-const MODES: Record<Mode, { label: string; hint: string }> = {
-  create: { label: "Create", hint: "Brainstorm, draft, ideate." },
-  next: { label: "Next Steps", hint: "Move to action with concrete steps." },
-  red: { label: "Red Team", hint: "Stress-test, find blind spots." },
-  ministry: { label: "Ministry", hint: "Reverent, scripture-aligned guidance." },
-};
+function clsx(...parts: Array<string | false | null | undefined>) {
+  return parts.filter(Boolean).join(' ');
+}
 
-export default function FloatingChat({
-  userId,
-  userName,
-}: {
-  userId?: string | null;
-  userName?: string | null;
-}) {
+export default function FloatingChat() {
   const [open, setOpen] = useState(true);
-  const [mode, setMode] = useState<Mode>("create");
+  const [mode, setMode] = useState<Mode>('Create');
+  const [filters, setFilters] = useState<string[]>([]);
   const [msgs, setMsgs] = useState<Msg[]>([]);
-  const [draft, setDraft] = useState("");
-  const [sending, setSending] = useState(false);
+  const [input, setInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  // position (remember last)
-  const [pos, setPos] = useState<{ x: number; y: number }>(() => {
-    try {
-      const raw = localStorage.getItem("mca.chat.pos");
-      return raw ? JSON.parse(raw) : { x: 24, y: 24 };
-    } catch {
-      return { x: 24, y: 24 };
-    }
-  });
+  // Mode → default filters (you can tune these)
   useEffect(() => {
-    try {
-      localStorage.setItem("mca.chat.pos", JSON.stringify(pos));
-    } catch {}
-  }, [pos]);
+    if (mode === 'Ministry') setFilters(['abrahamic', 'ministry']);
+    else if (mode === 'Next Steps') setFilters(['guidance']);
+    else setFilters([]);
+  }, [mode]);
 
-  // drag
-  const dragging = useRef(false);
-  const dragStart = useRef<{ ox: number; oy: number } | null>(null);
-  const onMouseDown = (e: React.MouseEvent) => {
-    dragging.current = true;
-    dragStart.current = { ox: e.clientX - pos.x, oy: e.clientY - pos.y };
-  };
-  const onMouseMove = (e: React.MouseEvent) => {
-    if (!dragging.current || !dragStart.current) return;
-    setPos({ x: e.clientX - dragStart.current.ox, y: e.clientY - dragStart.current.oy });
-  };
-  const onMouseUp = () => {
-    dragging.current = false;
-    dragStart.current = null;
-  };
+  // always scroll to bottom on new content
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  }, [msgs, open]);
 
-  // prevent “loop”: never auto-send; only on explicit action
-  const send = async (text?: string) => {
-    const content = (text ?? draft).trim();
-    if (!content || sending) return;
+  const appendAssistantShell = useCallback(() => {
+    setMsgs((m) => [...m, { role: 'assistant', content: '' }]);
+  }, []);
 
-    setSending(true);
-    setDraft("");
+  const updateAssistantText = useCallback((txt: string) => {
+    setMsgs((m) => {
+      const copy = [...m];
+      const i = copy.length - 1;
+      if (i >= 0 && copy[i].role === 'assistant') copy[i] = { role: 'assistant', content: txt };
+      return copy;
+    });
+  }, []);
 
-    const outgoing: Msg = { role: "user", content };
-    setMsgs((m) => [...m, outgoing, { role: "assistant", content: "" }]);
+  const send = useCallback(
+    async (stream = true) => {
+      const text = input.trim();
+      if (!text || busy) return;
 
-    try {
-      const r = await fetch("/api/chat", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    mode,
-    stream: true, // request stream first
-    userId,
-    userName,
-    messages: [...msgs, outgoing].map(({ role, content }) => ({ role, content })),
-  }),
-});
+      setBusy(true);
+      setError(null);
+      setInput('');
+      setMsgs((m) => [...m, { role: 'user', content: text }]);
 
-if (!r.ok) throw new Error(`HTTP ${r.status}`);
-
-// 🧠 Detect whether it's JSON or text stream
-const contentType = r.headers.get("content-type") || "";
-if (contentType.includes("application/json")) {
-  const data = await r.json();
-  const reply = data.text || data.error || "[Empty reply]";
-  setMsgs((m) => {
-    const copy = [...m];
-    copy[copy.length - 1] = { role: "assistant", content: reply };
-    return copy;
-  });
-  setSending(false);
-  return;
-}
-
-// otherwise stream SSE/plain text
-if (!r.body) throw new Error("No response body");
-const reader = r.body.getReader();
-const decoder = new TextDecoder();
-let acc = "";
-
-while (true) {
-  const { done, value } = await reader.read();
-  if (done) break;
-  acc += decoder.decode(value, { stream: true });
-  setMsgs((m) => {
-    const copy = [...m];
-    const i = copy.length - 1;
-    if (i >= 0 && copy[i].role === "assistant") {
-      copy[i] = { role: "assistant", content: acc };
-    }
-    return copy;
-  });
-}
-
-
-      const reader = r.body.getReader();
-      const decoder = new TextDecoder();
-      let acc = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        acc += decoder.decode(value, { stream: true });
-        setMsgs((m) => {
-          // stream into last assistant message
-          const copy = [...m];
-          const i = copy.length - 1;
-          if (i >= 0 && copy[i].role === "assistant") {
-            copy[i] = { role: "assistant", content: acc };
+      try {
+        if (!stream) {
+          // ---- Non-stream path (/api/chat non-stream) ----
+          const r = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Last-Mode': mode,
+            },
+            body: JSON.stringify({
+              messages: [...msgs, { role: 'user', content: text }],
+              filters,
+              stream: false,
+            }),
+          });
+          if (!r.ok) {
+            const t = await r.text().catch(() => '');
+            throw new Error(`HTTP ${r.status}: ${t}`);
           }
-          return copy;
+          const j = await r.json();
+          setMsgs((m) => [...m, { role: 'assistant', content: String(j.text ?? '') }]);
+          return;
+        }
+
+        // ---- Stream path (/api/chat stream; supports Solace or OpenAI SSE) ----
+        const r = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Last-Mode': mode,
+          },
+          body: JSON.stringify({
+            messages: [...msgs, { role: 'user', content: text }],
+            filters,
+            stream: true,
+          }),
         });
+
+        if (!r.ok) {
+          const t = await r.text().catch(() => '');
+          throw new Error(`HTTP ${r.status}: ${t}`);
+        }
+
+        // Some backends return text/plain (incremental), others SSE.
+        // We handle both by reading the raw stream and appending text.
+        if (!r.body) throw new Error('No response body');
+
+        const reader = r.body.getReader();
+        const decoder = new TextDecoder();
+        let acc = '';
+
+        // Create the assistant shell so we can progressively update it
+        appendAssistantShell();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+
+          // If it's SSE, collect only the `data:` lines
+          if (chunk.includes('data:')) {
+            // Minimal SSE parsing
+            const lines = chunk
+              .split('\n')
+              .map((s) => s.trim())
+              .filter(Boolean);
+
+            for (const ln of lines) {
+              if (ln.startsWith('data:')) {
+                const payload = ln.slice(5).trim();
+                if (payload === '[DONE]') continue;
+
+                // Some servers send raw text; others JSON with {text:"..."}
+                try {
+                  const j = JSON.parse(payload);
+                  const t = String(j.text ?? j.delta ?? j.choices?.[0]?.delta?.content ?? '');
+                  if (t) {
+                    acc += t;
+                    updateAssistantText(acc);
+                  }
+                } catch {
+                  acc += payload;
+                  updateAssistantText(acc);
+                }
+              }
+            }
+          } else {
+            // Plain-text progressive stream (Solace plain mode)
+            acc += chunk;
+            updateAssistantText(acc);
+          }
+        }
+
+        // finalize
+        if (!acc) updateAssistantText('[No response]');
+      } catch (e: any) {
+        const msg = e?.message || 'Request failed';
+        setError(msg);
+        // if streaming failed before assistant shell existed, add a one-shot error line
+        setMsgs((m) => {
+          const hasTailAssistant = m[m.length - 1]?.role === 'assistant';
+          if (hasTailAssistant) return [...m.slice(0, -1), { role: 'assistant', content: `⚠️ ${msg}` }];
+          return [...m, { role: 'assistant', content: `⚠️ ${msg}` }];
+        });
+      } finally {
+        setBusy(false);
       }
-    } catch (e) {
-      setMsgs((m) => [
-        ...m.slice(0, -1),
-        { role: "assistant", content: "⚠️ Failed to reach the assistant. Please try again." },
-      ]);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      send();
-    }
-  };
-
-  const modeBtn = (m: Mode) => (
-    <button
-      key={m}
-      className={[
-        "px-2.5 py-1 rounded-md text-xs border",
-        mode === m ? "bg-zinc-800 border-zinc-600" : "bg-zinc-900 border-zinc-800 hover:border-zinc-700",
-      ].join(" ")}
-      onClick={() => setMode(m)}
-    >
-      {MODES[m].label}
-    </button>
+    },
+    [appendAssistantShell, updateAssistantText, input, msgs, filters, mode, busy]
   );
 
-  // minimal styles inline to avoid CSS thrash
   return (
     <div
-      style={{
-        position: "fixed",
-        right: `${pos.x}px`,
-        bottom: `${pos.y}px`,
-        zIndex: 60,
-        maxWidth: 640,
-        width: "min(92vw, 640px)",
-      }}
-      onMouseMove={onMouseMove}
-      onMouseUp={onMouseUp}
+      className={clsx(
+        'fixed right-4 bottom-4 z-[1000] w-[min(720px,calc(100vw-2rem))] text-sm',
+        open ? '' : ''
+      )}
     >
-      {/* header */}
-      <div
-        className="flex items-center gap-2 rounded-t-2xl border border-b-0 border-zinc-800 bg-zinc-950/90 px-3 py-2 cursor-move select-none"
-        onMouseDown={onMouseDown}
-      >
-        <div className="text-xs text-zinc-400">
-          {MODES[mode].hint}
-          {mode === "ministry" && <span className="ml-2 text-amber-300">• Ministry mode</span>}
+      {/* Header / Toggle */}
+      <div className="flex items-center justify-between rounded-t-xl border border-zinc-800 bg-zinc-900/95 px-3 py-2 backdrop-blur">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500/80" />
+          <span className="font-medium">Solace</span>
+          <span className="text-zinc-400">Brainstorm, draft, ideate.</span>
         </div>
-        <div className="ml-auto flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <button
-            className="rounded-md px-2 py-1 text-xs border border-zinc-800 hover:border-zinc-700"
             onClick={() => setOpen((v) => !v)}
+            className="rounded-md px-2 py-1 text-zinc-300 hover:bg-zinc-800"
+            aria-label={open ? 'Minimize' : 'Open'}
           >
-            {open ? "–" : "Open"}
+            {open ? '–' : 'Open'}
           </button>
-          <div className="hidden sm:flex gap-1">{(Object.keys(MODES) as Mode[]).map(modeBtn)}</div>
         </div>
       </div>
 
-      {!open ? null : (
-        <div className="rounded-b-2xl border border-zinc-800 bg-zinc-950/90">
-          {/* transcript */}
-          <div className="max-h-[46vh] overflow-auto px-3 py-2 space-y-2">
+      {/* Body */}
+      {open && (
+        <div className="rounded-b-xl border border-zinc-800 border-t-0 bg-zinc-950/95 backdrop-blur">
+          {/* Mode row */}
+          <div className="flex flex-wrap items-center gap-2 border-b border-zinc-800 px-3 py-2">
+            {(['Create', 'Next Steps', 'Red Team', 'Ministry'] as Mode[]).map((m) => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                className={clsx(
+                  'rounded-md px-2 py-1 text-xs',
+                  mode === m ? 'bg-zinc-200 text-zinc-900' : 'bg-zinc-800 text-zinc-200 hover:bg-zinc-700'
+                )}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+
+          {/* Messages */}
+          <div ref={scrollRef} className="max-h-[40vh] overflow-y-auto px-3 py-3 space-y-2">
             {msgs.length === 0 && (
-              <div className="text-xs text-zinc-500">
+              <p className="text-zinc-400">
                 Ask anything, or paste context. I’ll stream a concise, mode-aware answer and invite next steps.
-              </div>
+              </p>
             )}
             {msgs.map((m, i) => (
               <div
                 key={i}
-                className={
-                  m.role === "user"
-                    ? "bg-zinc-800/60 border border-zinc-700/60 rounded-xl px-3 py-2 text-sm"
-                    : "bg-zinc-900/60 border border-zinc-800 rounded-xl px-3 py-2 text-sm"
-                }
+                className={clsx(
+                  'rounded-lg px-3 py-2',
+                  m.role === 'user' ? 'bg-zinc-800/80 text-zinc-100' : 'bg-zinc-900/80 text-zinc-200'
+                )}
               >
                 {m.content}
               </div>
             ))}
+            {error && <div className="text-amber-400">⚠️ {error}</div>}
           </div>
 
-          {/* input row */}
-          <div className="flex items-end gap-2 border-t border-zinc-800 px-2 py-2">
-            <button
-              title="Attach"
-              className="shrink-0 rounded-lg border border-zinc-800 px-2 py-2 hover:border-zinc-700"
-              onClick={() => alert("TODO: open file picker & upload; stored to Supabase storage")}
-            >
-              📎
-            </button>
-            <button
-              title="Mic"
-              className="shrink-0 rounded-lg border border-zinc-800 px-2 py-2 hover:border-zinc-700"
-              onClick={() => alert("TODO: start/stop Web Speech API or Whisper streaming")}
-            >
-              🎙️
-            </button>
-            <textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={onKeyDown}
-              placeholder="Speak or type…"
-              className="min-h-[44px] max-h-40 grow resize-none overflow-x-auto overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm outline-none focus:border-zinc-700"
-              style={{ whiteSpace: "pre" }} // no soft-wrap; horizontal scroll instead
-            />
-            <button
-              disabled={sending || !draft.trim()}
-              onClick={() => send()}
-              className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50"
-            >
-              {sending ? "Sending…" : "Send"}
-            </button>
-          </div>
-
-          {/* compact mode selector for mobile */}
-          <div className="sm:hidden border-t border-zinc-800 px-2 py-2 flex gap-2 overflow-auto">
-            {(Object.keys(MODES) as Mode[]).map(modeBtn)}
+          {/* Composer */}
+          <div className="border-t border-zinc-800 p-3">
+            <div className="flex items-center gap-2">
+              <textarea
+                className="min-h-[40px] max-h-[160px] flex-1 resize-none rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 outline-none focus:border-zinc-600"
+                placeholder="Speak or type..."
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    send(true);
+                  }
+                }}
+              />
+              <button
+                disabled={busy || !input.trim()}
+                onClick={() => send(true)}
+                className={clsx(
+                  'rounded-md px-3 py-2',
+                  busy || !input.trim()
+                    ? 'bg-zinc-800 text-zinc-400'
+                    : 'bg-zinc-200 text-zinc-900 hover:bg-white'
+                )}
+              >
+                {busy ? '…' : 'Send'}
+              </button>
+            </div>
+            {/* Optional: a non-stream fallback button for debugging */}
+            {/* <button onClick={() => send(false)} className="mt-2 text-xs text-zinc-400 hover:text-zinc-200">Use non-stream</button> */}
           </div>
         </div>
       )}
