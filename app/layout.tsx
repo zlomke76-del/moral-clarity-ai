@@ -5,10 +5,8 @@ import Image from "next/image";
 import "./globals.css";
 import DemoBadge from "@/components/DemoBadge";
 import dynamic from "next/dynamic";
-const SolaceDock = dynamic(() => import("@/app/components/SolaceDock"), { ssr: false });
 
-
-// 🔒 Mount Solace once, client-only
+// Mount Solace once, client-only
 const SolaceDock = dynamic(() => import("@/app/components/SolaceDock"), { ssr: false });
 
 export const metadata: Metadata = {
@@ -88,7 +86,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* ===== MAIN CONTENT ===== */}
         <main className="mx-auto max-w-6xl px-4 py-10">{children}</main>
 
-        {/* 🔵 Solace Dock — mounted once at root, after main */}
+        {/* Floating Solace (singleton) */}
         <SolaceDock />
 
         {/* ===== FOOTER ===== */}
