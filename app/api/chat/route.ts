@@ -8,7 +8,7 @@ import { getOpenAI } from '@/lib/openai';
 import { routeMode } from '@/core/mode-router';
 
 /* ========= MODEL / TIMEOUT ========= */
-const MODEL = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
+const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const REQUEST_TIMEOUT_MS = 20_000;
 
 /* ========= ORIGINS ========= */
@@ -16,10 +16,15 @@ const ALLOWED_ORIGINS = [
   'https://moralclarity.ai',
   'https://www.moralclarity.ai',
   'https://studio.moralclarity.ai',
+  // Official domain (added)
+  'https://moralclarityai.com',
+  'https://www.moralclarityai.com',
 ];
 
-/* ========= SOLACE (IDENTITY) ========= */
+/* ========= SOLACE (IDENTITY / BACKEND) ========= */
 const SOLACE_NAME = 'Solace';
+const SOLACE_URL = process.env.SOLACE_API_URL || '';
+const SOLACE_KEY = process.env.SOLACE_API_KEY || '';
 
 /* ========= GUIDELINES ========= */
 const HOUSE_RULES = `HOUSE RULES
@@ -56,12 +61,7 @@ const RESPONSE_FORMAT = `RESPONSE FORMAT (DEFAULT)
 - Include "Rationale" and/or "Next Steps" ONLY IF the user explicitly asks for them (e.g., "why", "explain", "give steps", "how do I proceed").
 - Keep paragraphs short; avoid verbosity.`;
 
-/* ========= SCRIPTURE POLICY (DYNAMIC) =========
-   Gentle seeding when:
-   - Abrahamic layer is active AND
-   - The first substantive turn is moral/emotional (hope, fear, loss, guilt, forgiveness, justice, etc.)
-   Otherwise: weave 1–2 short refs later only when relevant.
-*/
+/* ========= SCRIPTURE POLICY (DYNAMIC) ========= */
 function scripturePolicyText(opts: {
   wantsAbrahamic: boolean;
   forceFirstTurnSeeding: boolean;
@@ -110,8 +110,6 @@ function wantsSecular(messages: Array<{ role: string; content: string }>) {
 function isFirstRealTurn(messages: Array<{ role: string; content: string }>) {
   const userCount = messages.filter((m) => m.role?.toLowerCase() === 'user').length;
   const assistantCount = messages.filter((m) => m.role?.toLowerCase() === 'assistant').length;
-  // First real back-and-forth if there's at most one user message and no assistant content yet,
-  // or if total turns < 3.
   return userCount <= 1 || messages.length < 3 || assistantCount === 0;
 }
 
@@ -119,41 +117,13 @@ function isFirstRealTurn(messages: Array<{ role: string; content: string }>) {
 function hasEmotionalOrMoralCue(text: string) {
   const t = text.toLowerCase();
   const emo = [
-    'hope',
-    'lost',
-    'afraid',
-    'fear',
-    'anxious',
-    'anxiety',
-    'grief',
-    'sad',
-    'sorrow',
-    'depressed',
-    'stress',
-    'overwhelmed',
-    'lonely',
-    'alone',
-    'comfort',
-    'forgive',
-    'forgiveness',
-    'guilt',
-    'shame',
-    'purpose',
-    'meaning',
+    'hope', 'lost', 'afraid', 'fear', 'anxious', 'anxiety', 'grief', 'sad', 'sorrow',
+    'depressed', 'stress', 'overwhelmed', 'lonely', 'alone', 'comfort', 'forgive',
+    'forgiveness', 'guilt', 'shame', 'purpose', 'meaning',
   ];
   const moral = [
-    'right',
-    'wrong',
-    'unfair',
-    'injustice',
-    'justice',
-    'truth',
-    'honest',
-    'dishonest',
-    'integrity',
-    'mercy',
-    'compassion',
-    'courage',
+    'right', 'wrong', 'unfair', 'injustice', 'justice', 'truth', 'honest', 'dishonest',
+    'integrity', 'mercy', 'compassion', 'courage',
   ];
   const hit = (arr: string[]) => arr.some((w) => t.includes(w));
   return hit(emo) || hit(moral);
@@ -237,7 +207,11 @@ function headersToRecord(h: Headers): Record<string, string> {
 /* ========= HEALTHCHECK ========= */
 export async function GET(req: NextRequest) {
   const origin = pickAllowedOrigin(req.headers.get('origin'));
-  return NextResponse.json({ ok: true, model: MODEL, identity: SOLACE_NAME }, { headers: corsHeaders(origin) });
+  const backend = SOLACE_URL && SOLACE_KEY ? 'solace' : 'openai';
+  return NextResponse.json(
+    { ok: true, model: MODEL, identity: SOLACE_NAME, backend },
+    { headers: corsHeaders(origin) }
+  );
 }
 
 /* ========= OPTIONS (preflight) ========= */
@@ -245,6 +219,45 @@ export async function OPTIONS(req: NextRequest) {
   const reqOrigin = req.headers.get('origin');
   const origin = pickAllowedOrigin(reqOrigin);
   return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
+}
+
+/* ========= SOLACE HELPERS ========= */
+async function solaceNonStream(payload: any) {
+  const r = await fetch(SOLACE_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${SOLACE_KEY}`,
+    },
+    body: JSON.stringify({ ...payload, stream: false }),
+  });
+  if (!r.ok) {
+    const t = await r.text().catch(() => '');
+    throw new Error(`Solace ${r.status}: ${t}`);
+  }
+  // Expecting { text: "..." } or plain text
+  const ct = r.headers.get('content-type') || '';
+  if (ct.includes('application/json')) {
+    const j = await r.json().catch(() => ({}));
+    return String(j.text ?? j.output ?? j.data ?? '');
+  }
+  return await r.text();
+}
+
+async function solaceStream(payload: any) {
+  const r = await fetch(SOLACE_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${SOLACE_KEY}`,
+    },
+    body: JSON.stringify({ ...payload, stream: true }),
+  });
+  if (!r.ok || !r.body) {
+    const t = await r.text().catch(() => '');
+    throw new Error(`Solace ${r.status}: ${t}`);
+  }
+  return r.body as ReadableStream<Uint8Array>;
 }
 
 /* ========= POST ========= */
@@ -265,6 +278,8 @@ export async function POST(req: NextRequest) {
     const messages = Array.isArray(body?.messages) ? body.messages : [];
     const filters = normalizeFilters(body?.filters ?? []);
     const wantStream = !!body?.stream;
+    const userId = body?.userId ?? null;
+    const userName = body?.userName ?? null;
 
     const rolled = trimConversation(messages);
     const userAskedForSecular = wantsSecular(rolled);
@@ -283,10 +298,34 @@ export async function POST(req: NextRequest) {
         : [];
 
     const { prompt: system } = buildSystemPrompt(effectiveFilters, userAskedForSecular, rolled);
-    const openai: OpenAI = await getOpenAI();
 
-    // Non-stream path using Responses API (fast)
+    // ----- Prefer SOLACE if configured -----
+    const useSolace = Boolean(SOLACE_URL && SOLACE_KEY);
+
     if (!wantStream) {
+      if (useSolace) {
+        try {
+          const text = await withTimeout(
+            solaceNonStream({
+              mode: route.mode,
+              userId,
+              userName,
+              system,
+              messages: rolled,
+              temperature: 0.2,
+            }),
+            REQUEST_TIMEOUT_MS
+          );
+          return NextResponse.json(
+            { text, model: 'solace', identity: SOLACE_NAME, mode: route.mode, confidence: route.confidence, filters: effectiveFilters },
+            { headers: corsHeaders(echoOrigin) }
+          );
+        } catch (e) {
+          // fall through to OpenAI
+        }
+      }
+
+      const openai: OpenAI = await getOpenAI();
       const resp = await withTimeout(
         openai.responses.create({
           model: MODEL,
@@ -297,6 +336,7 @@ export async function POST(req: NextRequest) {
               .map((m) => `${m.role}: ${m.content}`)
               .join('\n'),
           max_output_tokens: 800,
+          temperature: 0.2,
         }),
         REQUEST_TIMEOUT_MS
       );
@@ -309,7 +349,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Stream via Chat Completions API (SSE)
+    // ----- Stream path -----
+    if (useSolace) {
+      try {
+        const stream = await solaceStream({
+          mode: route.mode,
+          userId,
+          userName,
+          system,
+          messages: rolled,
+          temperature: 0.2,
+        });
+
+        return new NextResponse(stream as any, {
+          headers: {
+            ...headersToRecord(corsHeaders(echoOrigin)),
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Cache-Control': 'no-cache, no-transform',
+            'X-Accel-Buffering': 'no',
+          },
+        });
+      } catch {
+        // fall through to OpenAI streaming
+      }
+    }
+
+    // OpenAI SSE streaming fallback
     const apiKey = process.env.OPENAI_API_KEY || '';
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
