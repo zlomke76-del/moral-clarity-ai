@@ -5,6 +5,8 @@ import Image from "next/image";
 import "./globals.css";
 import DemoBadge from "@/components/DemoBadge";
 import dynamic from "next/dynamic";
+const SolaceDock = dynamic(() => import("@/app/components/SolaceDock"), { ssr: false });
+
 
 // 🔒 Mount Solace once, client-only
 const SolaceDock = dynamic(() => import("@/app/components/SolaceDock"), { ssr: false });
