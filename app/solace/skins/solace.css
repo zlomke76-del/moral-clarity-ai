@@ -1,0 +1,46 @@
+/* app/solace/skins/solace.css */
+:root {
+  --sol-bg: rgba(12,12,13,0.9);
+  --sol-border: #2a2a2e;
+  --sol-fg: #e6e6e6;
+  --sol-fg-muted: #a1a1aa;
+  --sol-accent: #60a5fa;
+  --sol-user: #18181b;
+  --sol-assistant: #0f0f12;
+  --sol-radius: 16px;
+}
+
+[data-skin="glass"] {
+  --sol-bg: rgba(20,20,24,0.72);
+  --sol-border: #2b2b35;
+  --sol-accent: #7dd3fc;
+}
+
+[data-skin="dawn"] {
+  --sol-bg: rgba(255,255,255,0.9);
+  --sol-border: #e5e7eb;
+  --sol-fg: #0f172a;
+  --sol-fg-muted: #475569;
+  --sol-accent: #ea580c;
+  --sol-user: #f1f5f9;
+  --sol-assistant: #ffffff;
+}
+
+/* primitive parts */
+[data-solace-chat] {
+  position: fixed; right: 1rem; bottom: 1rem; width: min(720px, calc(100vw - 2rem));
+  color: var(--sol-fg); backdrop-filter: blur(8px);
+  background: var(--sol-bg); border: 1px solid var(--sol-border); border-radius: var(--sol-radius);
+  box-shadow: 0 20px 80px rgba(0,0,0,0.45);
+  display: grid; grid-template-rows: auto minmax(0,40vh) auto;
+}
+.solace__header { display:flex; gap:.5rem; align-items:center; padding:.5rem .75rem; border-bottom:1px solid var(--sol-border); }
+.solace__header .dot { width:8px; height:8px; border-radius:9999px; background: #34d399; }
+.solace__header .spacer { flex:1; }
+.solace__header .ghost { color: var(--sol-fg-muted); }
+.solace__scroll { overflow:auto; padding: .75rem; }
+[data-slot="transcript"] [data-msg="user"]      { background: var(--sol-user);      padding:.5rem .75rem; border-radius:12px; margin:.25rem 0; }
+[data-slot="transcript"] [data-msg="assistant"] { background: var(--sol-assistant); padding:.5rem .75rem; border-radius:12px; margin:.25rem 0; color: var(--sol-fg-muted);}
+.solace__composer { display:flex; gap:.5rem; padding:.75rem; border-top:1px solid var(--sol-border); }
+.solace__composer textarea { flex:1; resize:none; background: transparent; border:1px solid var(--sol-border); color:var(--sol-fg); border-radius:12px; padding:.5rem .75rem; outline:none; }
+.solace__composer button { border-radius:10px; padding:.5rem .9rem; background: var(--sol-accent); color:black; font-weight:600; }
