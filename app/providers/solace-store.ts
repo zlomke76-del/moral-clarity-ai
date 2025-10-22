@@ -1,31 +1,74 @@
 "use client";
-import { create } from "zustand";
+
+/**
+ * Tiny dependency-free UI store for the Solace dock.
+ * Works across components via useSyncExternalStore.
+ */
+
+import { useMemo, useSyncExternalStore } from "react";
 
 type SolaceState = {
   visible: boolean;
   x: number;
   y: number;
-  filters: Set<string>; // multi-select (e.g., "abrahamic","ministry","guidance")
-  setVisible(v: boolean): void;
-  setPos(x: number, y: number): void;
-  toggle(filter: string): void;
-  setFilters(next: string[] | Set<string>): void;
-  clearFilters(): void;
+  filters: Set<string>;
 };
 
-export const useSolaceStore = create<SolaceState>((set, get) => ({
+type SolaceActions = {
+  toggle: () => void;
+  setPos: (x: number, y: number) => void;
+  setFilters: (next: Set<string> | string[]) => void;
+  clearFilters: () => void;
+};
+
+/* ---------- internal store ---------- */
+
+let state: SolaceState = {
   visible: true,
-  x: 24,
-  y: typeof window !== "undefined" ? window.innerHeight - 280 : 400,
+  x: 16,
+  y: typeof window !== "undefined" ? Math.max(16, window.innerHeight - 420) : 16,
   filters: new Set<string>(),
-  setVisible: (v) => set({ visible: v }),
-  setPos: (x, y) => set({ x, y }),
-  toggle: (f) => {
-    const next = new Set(get().filters);
-    next.has(f) ? next.delete(f) : next.add(f);
-    set({ filters: next });
-  },
-  setFilters: (next) =>
-    set({ filters: new Set(Array.isArray(next) ? next : Array.from(next)) }),
-  clearFilters: () => set({ filters: new Set() }),
-}));
+};
+
+const listeners = new Set<() => void>();
+
+function emit() {
+  for (const l of listeners) l();
+}
+
+function setState(partial: Partial<SolaceState>) {
+  state = { ...state, ...partial };
+  emit();
+}
+
+/* ---------- subscription API ---------- */
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+function getSnapshot() {
+  return state;
+}
+
+/* ---------- hook ---------- */
+
+export function useSolaceStore(): SolaceState & SolaceActions {
+  const snap = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+
+  const actions = useMemo<SolaceActions>(
+    () => ({
+      toggle: () => setState({ visible: !state.visible }),
+      setPos: (x: number, y: number) => setState({ x, y }),
+      setFilters: (next: Set<string> | string[]) => {
+        const s = Array.isArray(next) ? new Set(next) : next;
+        setState({ filters: new Set(s) });
+      },
+      clearFilters: () => setState({ filters: new Set() }),
+    }),
+    []
+  );
+
+  return { ...snap, ...actions };
+}
