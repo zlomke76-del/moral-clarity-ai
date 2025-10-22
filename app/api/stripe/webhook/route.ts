@@ -71,13 +71,13 @@ async function sendResendEmail(opts: {
 async function sendMagicLinkInvite(email: string) {
   const sb = createSupabaseAdmin();
 
+  // Always redirect to callback, then /app
+  const redirectUrl = `${process.env.APP_BASE_URL}/auth/callback?next=%2Fapp`;
+
   const { data, error } = await sb.auth.admin.generateLink({
     type: "magiclink",
     email,
-    options: {
-      // ensure this is https://studio.moralclarity.ai
-      redirectTo: `${process.env.APP_BASE_URL}/auth/callback`,
-    },
+    options: { redirectTo: redirectUrl },
   });
 
   if (error) throw error;
@@ -162,7 +162,6 @@ async function upsertSubscriptionRecord(args: {
 }) {
   const { stripe, sub } = args;
   const sb = createSupabaseAdmin();
-
   const extracted = extractFromSubscription(sub);
 
   // associate to a user if we can
@@ -172,7 +171,6 @@ async function upsertSubscriptionRecord(args: {
   });
 
   if (!userId) {
-    // update existing row if present; otherwise skip until user signs in
     const { error: updErr } = await sb
       .from("subscriptions")
       .update({
@@ -182,11 +180,10 @@ async function upsertSubscriptionRecord(args: {
         current_period_start: toISO(extracted.current_period_start),
         current_period_end: toISO(extracted.current_period_end),
         cancel_at_period_end: extracted.cancel_at_period_end ?? false,
-        updated: new Date().toISOString(), // adjust column name if your schema uses updated_at
+        updated: new Date().toISOString(),
       })
       .eq("stripe_subscription_id", extracted.stripe_subscription_id);
 
-    // PGRST116 = no rows found to update — safe to ignore here
     if (updErr && updErr.code !== "PGRST116") {
       throw new Error(`Supabase update failed: ${updErr.message}`);
     }
@@ -216,15 +213,11 @@ async function upsertSubscriptionRecord(args: {
 /* ---------- webhook handler ---------- */
 
 export async function POST(req: Request) {
-  // Let the endpoint's version (configured in Stripe Dashboard) control behavior.
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
   const signature = req.headers.get("stripe-signature");
-  if (!signature) {
+  if (!signature)
     return NextResponse.json({ error: "Missing signature" }, { status: 400 });
-  }
 
-  // RAW body for signature verification (App Router)
   const raw = Buffer.from(await req.arrayBuffer());
 
   let event: Stripe.Event;
@@ -247,7 +240,6 @@ export async function POST(req: Request) {
         const session = event.data.object as Stripe.Checkout.Session;
         if (session.mode !== "subscription") break;
 
-        // 1) persist subscription
         if (session.subscription) {
           const sub = await stripe.subscriptions.retrieve(
             String(session.subscription)
@@ -255,7 +247,6 @@ export async function POST(req: Request) {
           await upsertSubscriptionRecord({ stripe, sub });
         }
 
-        // 2) email magic link if we have the customer email
         if (session.customer_details?.email) {
           await sendMagicLinkInvite(session.customer_details.email);
         }
@@ -272,11 +263,9 @@ export async function POST(req: Request) {
 
       case "invoice.paid":
       case "invoice.payment_failed":
-        // Optional: mirror invoice state in your own table if you keep one.
         break;
 
       default:
-        // ignore other events
         break;
     }
 
