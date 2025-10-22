@@ -276,7 +276,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json().catch(() => ({}));
     const messages = Array.isArray(body?.messages) ? body.messages : [];
-    const filters = normalizeFilters(body?.filters ?? []);
+    const rawFilters = normalizeFilters(body?.filters ?? []);
     const wantStream = !!body?.stream;
     const userId = body?.userId ?? null;
     const userName = body?.userName ?? null;
@@ -288,14 +288,25 @@ export async function POST(req: NextRequest) {
     const lastModeHeader = req.headers.get('x-last-mode');
     const route = routeMode(lastUser, { lastMode: lastModeHeader as any });
 
-    const effectiveFilters =
-      filters.length
-        ? filters
-        : route.mode === 'Guidance'
-        ? ['guidance']
-        : route.mode === 'Ministry'
-        ? ['abrahamic', 'ministry']
-        : [];
+    // ---------- ADDITIVE FILTER LOGIC (Ministry as overlay) ----------
+    // Start with any filters the client sent
+    const incoming = new Set(rawFilters);
+
+    // Router suggestion (soft-add; never removes)
+    if (route.mode === 'Guidance') incoming.add('guidance');
+    if (route.mode === 'Ministry') {
+      incoming.add('ministry');
+      incoming.add('abrahamic');
+    }
+
+    // Explicit overlay boolean from client (optional)
+    if (body?.ministry === true) {
+      incoming.add('ministry');
+      incoming.add('abrahamic');
+    }
+
+    const effectiveFilters = Array.from(incoming);
+    // ---------------------------------------------------------------
 
     const { prompt: system } = buildSystemPrompt(effectiveFilters, userAskedForSecular, rolled);
 
@@ -320,7 +331,7 @@ export async function POST(req: NextRequest) {
             { text, model: 'solace', identity: SOLACE_NAME, mode: route.mode, confidence: route.confidence, filters: effectiveFilters },
             { headers: corsHeaders(echoOrigin) }
           );
-        } catch (e) {
+        } catch {
           // fall through to OpenAI
         }
       }
