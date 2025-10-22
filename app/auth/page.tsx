@@ -1,84 +1,54 @@
+// app/auth/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
+import { useState } from "react";
+import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-export default function AuthPage() {
+export default function AuthPage({
+  searchParams,
+}: {
+  searchParams?: { next?: string };
+}) {
+  const supabase = createSupabaseBrowser();
   const [email, setEmail] = useState("");
-  const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
-  const pathname = usePathname();
+  const [sent, setSent] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
-  // Normalize route — works for /auth, /auth/signin, /auth/sign-in
-  useEffect(() => {
-    const normalized = pathname.toLowerCase();
-    if (normalized === "/auth/signin" || normalized === "/auth/sign-in") {
-      // stay here — same page handles them
-    }
-  }, [pathname]);
+  const next = encodeURIComponent(searchParams?.next || "/app");
+  const emailRedirectTo = `${process.env.NEXT_PUBLIC_APP_BASE_URL}/auth/callback?next=${next}`;
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setState("sending");
-
-    try {
-      const redirectTo = `${window.location.origin}/auth/callback`;
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: redirectTo },
-      });
-
-      if (error) throw error;
-      setState("sent");
-    } catch {
-      setState("error");
-    }
+  async function send() {
+    setErr(null);
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo },
+    });
+    if (error) setErr(error.message);
+    else setSent(true);
   }
 
   return (
-    <div className="min-h-[60vh] flex items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-6 shadow-xl">
-        <h1 className="text-xl font-semibold mb-2 text-center">
-          Sign in to <span className="text-blue-400">Moral Clarity AI</span>
-        </h1>
-        <p className="text-sm text-zinc-400 mb-6 text-center">
-          We’ll email you a secure magic link to continue.
+    <main className="mx-auto max-w-md p-6">
+      <h1 className="mb-4 text-2xl font-semibold">Sign in</h1>
+      <input
+        className="mb-3 w-full rounded border border-zinc-700 bg-zinc-900 p-2"
+        placeholder="you@example.com"
+        onChange={(e) => setEmail(e.target.value)}
+        value={email}
+        type="email"
+      />
+      <button
+        className="rounded bg-blue-600 px-4 py-2 text-white"
+        onClick={send}
+      >
+        Send magic link
+      </button>
+      {sent && (
+        <p className="mt-3 text-sm text-zinc-400">
+          Check your email for the sign-in link.
         </p>
-
-        <form onSubmit={onSubmit} className="space-y-4">
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100 placeholder-zinc-500 focus:border-blue-500 focus:outline-none"
-          />
-          <button
-            type="submit"
-            className="w-full rounded-lg bg-blue-600 py-2 text-white font-medium hover:bg-blue-500 transition"
-            disabled={state === "sending"}
-          >
-            {state === "sending" ? "Sending..." : "Send magic link"}
-          </button>
-        </form>
-
-        {state === "sent" && (
-          <p className="mt-4 text-sm text-green-400 text-center">
-            ✅ Check your email for a sign-in link.
-          </p>
-        )}
-        {state === "error" && (
-          <p className="mt-4 text-sm text-red-400 text-center">
-            ⚠️ Something went wrong. Please try again.
-          </p>
-        )}
-      </div>
-    </div>
+      )}
+      {err && <p className="mt-3 text-sm text-red-400">{err}</p>}
+    </main>
   );
 }
