@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useSolaceStore } from "@/providers/solace-store";
+import { useSolaceStore } from "@/app/providers/solace-store";
 
 declare global {
   interface Window {
