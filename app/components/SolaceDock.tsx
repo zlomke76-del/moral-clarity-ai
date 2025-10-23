@@ -172,10 +172,10 @@ export default function SolaceDock() {
         pointerEvents: "auto",
       }}
       className={cx(
-        "rounded-3xl border bg-zinc-950/90 shadow-2xl backdrop-blur",
-        "border-zinc-800",
-        ministryOn && "ring-1 ring-amber-300/30 shadow-[0_0_40px_-10px_rgba(251,191,36,0.25)]"
-      )}
+  "solace-dock rounded-3xl border shadow-2xl backdrop-blur",
+  ministryOn && "ring-1 ring-amber-300/30 shadow-[0_0_40px_-10px_rgba(251,191,36,0.25)]"
+)}
+
     >
       {/* Header: drag handle + mode chips + ministry overlay */}
       <header
