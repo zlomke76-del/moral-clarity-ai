@@ -1,28 +1,9 @@
 // app/api/admin/metrics/route.ts
 import { NextResponse } from "next/server";
 
-/** Simple header check; throws on failure */
 function assertAdmin(req: Request) {
   const hdr = req.headers.get("x-admin-key") || "";
   if (hdr !== process.env.ADMIN_DASH_KEY) throw new Error("Unauthorized");
-}
-
-/** Count rows by status via Supabase REST with Prefer: count=exact */
-async function countByStatus(
-  supaUrl: string,
-  headers: Record<string, string>,
-  status: string
-) {
-  const url = new URL(`${supaUrl}/rest/v1/support_requests`);
-  url.searchParams.set("select", "id");
-  url.searchParams.set("status", `eq.${status}`);
-  const r = await fetch(url.toString(), {
-    headers: { ...headers, Prefer: "count=exact" },
-    cache: "no-store",
-  });
-  if (!r.ok) throw new Error(await r.text());
-  // Content-Range: */<total>
-  return Number(r.headers.get("content-range")?.split("/")[1] || "0");
 }
 
 export async function GET(req: Request) {
@@ -33,19 +14,32 @@ export async function GET(req: Request) {
     const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
     const headers = { apikey: KEY, Authorization: `Bearer ${KEY}` };
 
+    // ---- helpers ----------------------------------------------------------
+    async function countByStatus(status: string) {
+      const url = new URL(`${SUPA}/rest/v1/support_requests`);
+      url.searchParams.set("select", "id");
+      url.searchParams.set("status", `eq.${status}`);
+      const r = await fetch(url, {
+        headers: { ...headers, Prefer: "count=exact" },
+        cache: "no-store",
+      });
+      if (!r.ok) throw new Error(await r.text());
+      return Number(r.headers.get("content-range")?.split("/")[1] || "0");
+    }
+
     // ---- counts -----------------------------------------------------------
     const [open, inprog, resolved] = await Promise.all([
-      countByStatus(SUPA, headers, "open"),
-      countByStatus(SUPA, headers, "in_progress"),
-      countByStatus(SUPA, headers, "resolved"),
+      countByStatus("open"),
+      countByStatus("in_progress"),
+      countByStatus("resolved"),
     ]);
 
     // last 7 days created
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const recentUrl = new URL(`${SUPA}/rest/v1/support_requests`);
     recentUrl.searchParams.set("select", "id");
-    recentUrl.searchParams.set("created_at", `gte.${since}`);
-    const recentRes = await fetch(recentUrl.toString(), {
+    recentUrl.searchParams.append("created_at", `gte.${since}`);
+    const recentRes = await fetch(recentUrl, {
       headers: { ...headers, Prefer: "count=exact" },
       cache: "no-store",
     });
@@ -60,10 +54,7 @@ export async function GET(req: Request) {
     );
     listUrl.searchParams.set("order", "created_at.desc");
     listUrl.searchParams.set("limit", "10");
-    const latestRes = await fetch(listUrl.toString(), {
-      headers,
-      cache: "no-store",
-    });
+    const latestRes = await fetch(listUrl, { headers, cache: "no-store" });
     if (!latestRes.ok) throw new Error(await latestRes.text());
     const latest = await latestRes.json();
 
@@ -77,7 +68,7 @@ export async function GET(req: Request) {
       },
     });
   } catch (e: any) {
-    const code = e?.message === "Unauthorized" ? 401 : 400;
-    return new NextResponse(e?.message || "Bad Request", { status: code });
+    const code = e.message === "Unauthorized" ? 401 : 400;
+    return new NextResponse(e.message || "Bad Request", { status: code });
   }
 }

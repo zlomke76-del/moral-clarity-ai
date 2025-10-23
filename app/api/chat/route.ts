@@ -11,29 +11,15 @@ import { routeMode } from '@/core/mode-router';
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const REQUEST_TIMEOUT_MS = 20_000;
 
-/* ========= ORIGINS =========
-   - Exact hosts go in the list below
-   - You can also allow suffix patterns by adding entries that start with a dot (e.g. ".vercel.app")
-   - Or set ALLOWED_ORIGINS_CSV="https://a.com,https://b.com,.vercel.app"
-*/
-const HARDCODED_ALLOWED_ORIGINS = [
+/* ========= ORIGINS ========= */
+const ALLOWED_ORIGINS = [
   'https://moralclarity.ai',
   'https://www.moralclarity.ai',
   'https://studio.moralclarity.ai',
+  // Official domain (added)
   'https://moralclarityai.com',
   'https://www.moralclarityai.com',
-  // 'https://demo.moralclarity.ai',
 ];
-
-// Optionally supplement at deploy-time via env var:
-const ALLOWED_FROM_ENV =
-  (process.env.ALLOWED_ORIGINS_CSV || '')
-    .split(',')
-    .map(s => s.trim())
-    .filter(Boolean);
-
-/** Mix hardcoded + env list, dedupe, and support suffix rules (entries that start with ".") */
-const ALLOWED_ORIGINS = Array.from(new Set([...HARDCODED_ALLOWED_ORIGINS, ...ALLOWED_FROM_ENV]));
 
 /* ========= SOLACE (IDENTITY / BACKEND) ========= */
 const SOLACE_NAME = 'Solace';
@@ -152,10 +138,10 @@ function buildSystemPrompt(
   const wantsAbrahamic = filters.includes('abrahamic') || filters.includes('ministry');
   const wantsGuidance = filters.includes('guidance');
 
-  const lastUserText =
+  const firstUserText =
     [...messages].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content ?? '';
   const firstTurn = isFirstRealTurn(messages);
-  const moralOrEmo = hasEmotionalOrMoralCue(lastUserText);
+  const moralOrEmo = hasEmotionalOrMoralCue(firstUserText);
 
   const forceFirstTurnSeeding = wantsAbrahamic && !userWantsSecular && firstTurn && moralOrEmo;
 
@@ -195,24 +181,9 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 }
 
 /* ========= CORS ========= */
-function isAllowedOrigin(origin: string | null): string | null {
-  if (!origin) return null; // same-origin request
-  // exact match fast-path
-  if (ALLOWED_ORIGINS.includes(origin)) return origin;
-
-  try {
-    const u = new URL(origin);
-    const host = u.host; // <-- host only (no protocol) for suffix checks
-    const allowed = ALLOWED_ORIGINS.some(entry => {
-      if (!entry.startsWith('.')) return false;
-      // ".vercel.app" should match any host that ends with "vercel.app"
-      const suffix = entry.slice(1);
-      return host.endsWith(suffix);
-    });
-    return allowed ? origin : null;
-  } catch {
-    return null;
-  }
+function pickAllowedOrigin(origin: string | null): string | null {
+  if (!origin) return null; // same-origin
+  return ALLOWED_ORIGINS.includes(origin) ? origin : null;
 }
 
 function corsHeaders(origin: string | null): Headers {
@@ -235,7 +206,7 @@ function headersToRecord(h: Headers): Record<string, string> {
 
 /* ========= HEALTHCHECK ========= */
 export async function GET(req: NextRequest) {
-  const origin = isAllowedOrigin(req.headers.get('origin'));
+  const origin = pickAllowedOrigin(req.headers.get('origin'));
   const backend = SOLACE_URL && SOLACE_KEY ? 'solace' : 'openai';
   return NextResponse.json(
     { ok: true, model: MODEL, identity: SOLACE_NAME, backend },
@@ -246,7 +217,7 @@ export async function GET(req: NextRequest) {
 /* ========= OPTIONS (preflight) ========= */
 export async function OPTIONS(req: NextRequest) {
   const reqOrigin = req.headers.get('origin');
-  const origin = isAllowedOrigin(reqOrigin);
+  const origin = pickAllowedOrigin(reqOrigin);
   return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
 }
 
@@ -293,7 +264,7 @@ async function solaceStream(payload: any) {
 export async function POST(req: NextRequest) {
   try {
     const reqOrigin = req.headers.get('origin');
-    const echoOrigin = isAllowedOrigin(reqOrigin);
+    const echoOrigin = pickAllowedOrigin(reqOrigin);
     const sameOrNoOrigin = !reqOrigin;
 
     if (!echoOrigin && !sameOrNoOrigin) {
@@ -318,16 +289,22 @@ export async function POST(req: NextRequest) {
     const route = routeMode(lastUser, { lastMode: lastModeHeader as any });
 
     // ---------- ADDITIVE FILTER LOGIC (Ministry as overlay) ----------
+    // Start with any filters the client sent
     const incoming = new Set(rawFilters);
+
+    // Router suggestion (soft-add; never removes)
     if (route.mode === 'Guidance') incoming.add('guidance');
     if (route.mode === 'Ministry') {
       incoming.add('ministry');
       incoming.add('abrahamic');
     }
+
+    // Explicit overlay boolean from client (optional)
     if (body?.ministry === true) {
       incoming.add('ministry');
       incoming.add('abrahamic');
     }
+
     const effectiveFilters = Array.from(incoming);
     // ---------------------------------------------------------------
 
@@ -398,7 +375,6 @@ export async function POST(req: NextRequest) {
         return new NextResponse(stream as any, {
           headers: {
             ...headersToRecord(corsHeaders(echoOrigin)),
-            // Solace may send progressive plain text; this is fine for your client reader.
             'Content-Type': 'text/plain; charset=utf-8',
             'Cache-Control': 'no-cache, no-transform',
             'X-Accel-Buffering': 'no',
@@ -442,7 +418,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err: any) {
-    const echoOrigin = isAllowedOrigin(req.headers.get('origin'));
+    const echoOrigin = pickAllowedOrigin(req.headers.get('origin'));
     const msg =
       err?.message === 'Request timed out'
         ? '⚠️ Connection timed out. Please try again.'

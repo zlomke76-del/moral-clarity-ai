@@ -1,4 +1,3 @@
-// app/components/SolaceDock.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -14,7 +13,7 @@ declare global {
 type Message = { role: "user" | "assistant"; content: string };
 type ModeHint = "Create" | "Next Steps" | "Red Team" | "Neutral";
 
-/** tiny class combiner */
+/** Utility */
 const cx = (...xs: Array<string | false | null | undefined>) =>
   xs.filter(Boolean).join(" ");
 
@@ -50,7 +49,7 @@ export default function SolaceDock() {
   // Mobile-friendly width/placement
   const width = "min(720px, calc(100vw - 2rem))";
 
-  // Seed a welcoming first turn
+  // “One Thing” thought-starter: seed a helpful first prompt once.
   useEffect(() => {
     if (messages.length === 0) {
       setMessages([
@@ -85,7 +84,7 @@ export default function SolaceDock() {
     };
   }, [dragging, offset, setPos]);
 
-  // autoresize textarea
+  // autoresize textarea (prevents off-screen wrap)
   const taRef = useRef<HTMLTextAreaElement | null>(null);
   useEffect(() => {
     const ta = taRef.current;
@@ -166,20 +165,16 @@ export default function SolaceDock() {
         bottom: 16, // friendlier on mobile; still draggable
         transform: `translate3d(${Math.max(0, x - 16)}px, ${Math.max(
           0,
-          y - (typeof window !== "undefined"
-            ? window.innerHeight - 16
-            : 0)
+          y - (window?.innerHeight ? window.innerHeight - 16 : 0)
         )}px, 0)`,
         width,
         zIndex: 70_000,
         pointerEvents: "auto",
       }}
       className={cx(
-        "solace-dock", // ← theme token root
         "rounded-3xl border bg-zinc-950/90 shadow-2xl backdrop-blur",
         "border-zinc-800",
-        ministryOn &&
-          "ring-1 ring-amber-300/30 shadow-[0_0_40px_-10px_rgba(251,191,36,0.25)]"
+        ministryOn && "ring-1 ring-amber-300/30 shadow-[0_0_40px_-10px_rgba(251,191,36,0.25)]"
       )}
     >
       {/* Header: drag handle + mode chips + ministry overlay */}
@@ -218,7 +213,10 @@ export default function SolaceDock() {
       </header>
 
       {/* Transcript */}
-      <div className="max-h-[44vh] overflow-auto px-4 py-3 space-y-2" aria-live="polite">
+      <div
+        className="max-h-[44vh] overflow-auto px-4 py-3 space-y-2"
+        aria-live="polite"
+      >
         {messages.map((m, i) => (
           <div
             key={i}
@@ -254,20 +252,20 @@ export default function SolaceDock() {
             onClick={send}
             disabled={streaming || !input.trim()}
             className={cx(
-              "primary", // ← tokenized accent hook
               "rounded-xl px-4 py-2 text-sm font-medium",
               streaming || !input.trim()
                 ? "bg-zinc-800 text-zinc-400"
                 : "bg-zinc-200 text-zinc-900 hover:bg-white"
             )}
-            type="button"
           >
             {streaming ? "…" : "Ask"}
           </button>
         </div>
 
         <div className="mt-2 flex items-center justify-between text-xs text-zinc-500">
-          <span>{ministryOn ? "Create • Ministry overlay" : modeHint || "Neutral"}</span>
+          <span>
+            {ministryOn ? "Create • Ministry overlay" : modeHint || "Neutral"}
+          </span>
           {!!filters.size && (
             <span className="truncate max-w-[60%]">
               Filters: {Array.from(filters).join(", ")}
@@ -296,7 +294,6 @@ function Chip({
     <button
       onClick={onClick}
       className={cx(
-        "chip", // ← tokenized chip hook
         "rounded-md px-2 py-1 text-xs",
         active
           ? "bg-zinc-200 text-zinc-900"
@@ -335,4 +332,3 @@ function TogglePill({
     </button>
   );
 }
-
