@@ -13,11 +13,11 @@ declare global {
 type Message = { role: "user" | "assistant"; content: string };
 type ModeHint = "Create" | "Next Steps" | "Red Team" | "Neutral";
 
-/** tiny classnames helper */
 const cx = (...xs: Array<string | false | null | undefined>) =>
   xs.filter(Boolean).join(" ");
 
-const POS_KEY = "solace:pos:v1";
+/** bump the key to invalidate any saved {x:0,y:0} */
+const POS_KEY = "solace:pos:v2";
 
 export default function SolaceDock() {
   // ----- singleton mount guard -----
@@ -42,16 +42,14 @@ export default function SolaceDock() {
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
 
-  // Ministry overlay: acts as *additional* guidance, not a mode switch.
   const ministryOn = useMemo(
     () => filters.has("abrahamic") && filters.has("ministry"),
     [filters]
   );
 
-  // Mobile-friendly width/placement
   const width = "min(720px, calc(100vw - 2rem))";
 
-  // “One Thing” thought-starter: seed a helpful first prompt once.
+  // seed first prompt
   useEffect(() => {
     if (messages.length === 0) {
       setMessages([
@@ -85,45 +83,54 @@ export default function SolaceDock() {
     };
   }, []);
 
-  // --- center on first open (or restore saved pos) ---
+  // --- center on first open (or restore saved pos if valid) ---
+  const triedInitRef = useRef(false);
   useEffect(() => {
     if (typeof window === "undefined" || !canRender || !visible) return;
+    if (triedInitRef.current) return;
+    triedInitRef.current = true;
 
-    // 1) Try to restore a saved position
+    // 1) try to restore a *valid* saved position
     try {
       const raw = localStorage.getItem(POS_KEY);
       if (raw) {
-        const { x: sx, y: sy } = JSON.parse(raw) || {};
-        if (typeof sx === "number" && typeof sy === "number") {
+        const parsed = JSON.parse(raw) as { x?: number; y?: number } | null;
+        const sx = typeof parsed?.x === "number" ? parsed!.x : undefined;
+        const sy = typeof parsed?.y === "number" ? parsed!.y : undefined;
+        if (
+          sx !== undefined &&
+          sy !== undefined &&
+          !(sx === 0 && sy === 0) // ignore old bad value
+        ) {
           setPos(sx, sy);
           return;
         }
       }
     } catch {
-      /* ignore */
+      /* ignore parse errors */
     }
 
-    // 2) If none saved and store is (0,0), center after layout stabilizes
-    if (x === 0 && y === 0) {
-      const el = containerRef.current;
-      if (!el) return;
-
-      setTimeout(() => {
-        const rect = el.getBoundingClientRect();
-        const w = rect.width || Math.min(720, window.innerWidth - 32);
-        const h = rect.height || 220;
-        const startX = Math.max(16, Math.round((window.innerWidth - w) / 2));
-        const startY = Math.max(16, Math.round((window.innerHeight - h) / 2));
-        setPos(startX, startY);
-      }, 100); // small delay ensures we have real dimensions
-    }
-  }, [x, y, setPos, canRender, visible]);
+    // 2) otherwise center after the element has real dimensions
+    const el = containerRef.current;
+    if (!el) return;
+    setTimeout(() => {
+      const rect = el.getBoundingClientRect();
+      const w = rect.width || Math.min(720, window.innerWidth - 32);
+      const h = rect.height || 220;
+      const startX = Math.max(16, Math.round((window.innerWidth - w) / 2));
+      const startY = Math.max(16, Math.round((window.innerHeight - h) / 2));
+      setPos(startX, startY);
+    }, 120);
+  }, [canRender, visible, setPos]);
 
   // --- persist position whenever it changes ---
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      localStorage.setItem(POS_KEY, JSON.stringify({ x, y }));
+      // don’t save 0,0 (we never want to restore that)
+      if (!(x === 0 && y === 0)) {
+        localStorage.setItem(POS_KEY, JSON.stringify({ x, y }));
+      }
     } catch {
       /* ignore */
     }
@@ -151,7 +158,7 @@ export default function SolaceDock() {
     };
   }, [dragging, offset, setPos]);
 
-  // autoresize textarea (prevents off-screen wrap)
+  // autoresize textarea
   const taRef = useRef<HTMLTextAreaElement | null>(null);
   useEffect(() => {
     const ta = taRef.current;
@@ -164,13 +171,11 @@ export default function SolaceDock() {
     const text = input.trim();
     if (!text || streaming) return;
 
-    // push user message
     setInput("");
     const next: Message[] = [...messages, { role: "user", content: text }];
     setMessages(next);
     setStreaming(true);
 
-    // derive multi-select filters to send
     const activeFilters: string[] = Array.from(filters);
 
     try {
@@ -178,11 +183,11 @@ export default function SolaceDock() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Last-Mode": modeHint, // Create/Next/Red/Neutral hint for router
+          "X-Last-Mode": modeHint,
         },
         body: JSON.stringify({
           messages: next,
-          filters: activeFilters, // may include "abrahamic","ministry"
+          filters: activeFilters,
           stream: false,
         }),
       });
@@ -221,7 +226,7 @@ export default function SolaceDock() {
 
   if (!canRender || !visible) return null;
 
-  // clamp to viewport (so you can’t drag it off-screen)
+  // clamp to viewport
   const maxX = Math.max(
     0,
     (typeof window !== "undefined" ? window.innerWidth : 0) - panelW - 16
