@@ -12,11 +12,16 @@ declare global {
 
 type Message = { role: "user" | "assistant"; content: string };
 type ModeHint = "Create" | "Next Steps" | "Red Team" | "Neutral";
-const POS_KEY = "solace:pos:v1";
 
-/* Small util for classNames */
+/** classNames helper */
 const cx = (...xs: Array<string | false | null | undefined>) =>
   xs.filter(Boolean).join(" ");
+
+/** Bump the key to bypass any previously-saved bad positions */
+const POS_KEY = "solace:pos:v2";
+
+/** minimum “sane” distance from edges to consider a saved pos valid */
+const MIN_PAD = 12;
 
 export default function SolaceDock() {
   // ----- singleton mount guard -----
@@ -41,16 +46,16 @@ export default function SolaceDock() {
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
 
-  // Ministry overlay (additional guidance, not a mode switch)
+  // Ministry overlay (additional guidance)
   const ministryOn = useMemo(
     () => filters.has("abrahamic") && filters.has("ministry"),
     [filters]
   );
 
-  // Wider & resizable by default
+  // Wider by default, user can resize
   const width = "clamp(520px, 56vw, 980px)";
 
-  // --- track dock size to clamp movement within viewport ---
+  // Track size for clamping movement
   const [panelH, setPanelH] = useState(0);
   const [panelW, setPanelW] = useState(0);
   const [posReady, setPosReady] = useState(false);
@@ -73,47 +78,58 @@ export default function SolaceDock() {
     };
   }, []);
 
-  // --- center on first open OR restore saved position; hide until ready ---
+  // Center or restore saved position. Don’t show until position is set.
   useEffect(() => {
     if (typeof window === "undefined" || !canRender || !visible) return;
 
-    // attempt restore
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // try RESTORE (but ignore bogus coords like 0,0 or off-screen)
     try {
       const raw = localStorage.getItem(POS_KEY);
       if (raw) {
-        const { x: sx, y: sy } = JSON.parse(raw) || {};
-        if (typeof sx === "number" && typeof sy === "number") {
-          setPos(sx, sy);
-          setPosReady(true);
-          return;
+        const saved = JSON.parse(raw) as { x: number; y: number } | null;
+        if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+          const sx = Math.max(MIN_PAD, Math.min(vw - MIN_PAD, saved.x));
+          const sy = Math.max(MIN_PAD, Math.min(vh - MIN_PAD, saved.y));
+          const looksValid =
+            sx >= MIN_PAD && sy >= MIN_PAD && (sx !== 0 || sy !== 0);
+          if (looksValid) {
+            setPos(sx, sy);
+            setPosReady(true);
+            return;
+          }
         }
       }
     } catch {
       /* ignore */
     }
 
-    // otherwise center on first open
+    // otherwise CENTER
     requestAnimationFrame(() => {
-      const w = panelW || Math.min(980, Math.max(520, Math.round(window.innerWidth * 0.56)));
+      const w = panelW || Math.min(980, Math.max(520, Math.round(vw * 0.56)));
       const h = panelH || 260;
-      const startX = Math.max(16, Math.round((window.innerWidth - w) / 2));
-      const startY = Math.max(16, Math.round((window.innerHeight - h) / 2));
+      const startX = Math.max(MIN_PAD, Math.round((vw - w) / 2));
+      const startY = Math.max(MIN_PAD, Math.round((vh - h) / 2));
       setPos(startX, startY);
       setPosReady(true);
     });
   }, [canRender, visible, panelW, panelH, setPos]);
 
-  // --- persist position whenever it changes ---
+  // Persist position (only once we’ve confirmed it’s ready & sane)
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!posReady) return;
+    if (x < MIN_PAD || y < MIN_PAD) return; // ignore bogus 0,0 writes
     try {
       localStorage.setItem(POS_KEY, JSON.stringify({ x, y }));
     } catch {
       /* ignore */
     }
-  }, [x, y]);
+  }, [x, y, posReady]);
 
-  // --- drag handlers ---
+  // Dragging
   function onHeaderMouseDown(e: React.MouseEvent) {
     const rect = containerRef.current?.getBoundingClientRect();
     setOffset({
@@ -122,7 +138,6 @@ export default function SolaceDock() {
     });
     setDragging(true);
   }
-
   useEffect(() => {
     if (!dragging) return;
     const onMove = (e: MouseEvent) => setPos(e.clientX - offset.dx, e.clientY - offset.dy);
@@ -179,7 +194,7 @@ export default function SolaceDock() {
     }
   }
 
-  // toggle ministry overlay (adds/removes BOTH tags together)
+  // toggle ministry overlay
   function toggleMinistry() {
     if (ministryOn) {
       const next = Array.from(filters).filter((f) => f !== "abrahamic" && f !== "ministry");
@@ -194,14 +209,15 @@ export default function SolaceDock() {
 
   if (!canRender || !visible) return null;
 
-  // clamp to viewport (so you can’t drag it off-screen)
-  const maxX = Math.max(0, (typeof window !== "undefined" ? window.innerWidth : 0) - panelW - 16);
-  const maxY = Math.max(0, (typeof window !== "undefined" ? window.innerHeight : 0) - panelH - 16);
-  const tx = Math.min(Math.max(0, x - 16), maxX);
-  const ty = Math.min(Math.max(0, y - 16), maxY);
+  // clamp within viewport
+  const vw = typeof window !== "undefined" ? window.innerWidth : 0;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 0;
+  const maxX = Math.max(0, vw - panelW - MIN_PAD);
+  const maxY = Math.max(0, vh - panelH - MIN_PAD);
+  const tx = Math.min(Math.max(0, x - MIN_PAD), maxX);
+  const ty = Math.min(Math.max(0, y - MIN_PAD), maxY);
 
-  // hide until we’ve set/restored a position to avoid top-left flash
-  const invisible = !posReady;
+  const invisible = !posReady; // prevent top-left flash
 
   const panel = (
     <section
@@ -210,15 +226,14 @@ export default function SolaceDock() {
       aria-label="Solace"
       style={{
         position: "fixed",
-        left: 16,
-        top: 16,
+        left: MIN_PAD,
+        top: MIN_PAD,
         width,
         zIndex: 70000,
         pointerEvents: invisible ? "none" : "auto",
         transform: `translate3d(${tx}px, ${ty}px, 0)`,
         opacity: invisible ? 0 : 1,
         transition: "opacity 120ms ease",
-        // let users make it bigger
         resize: "both",
         overflow: "auto",
       }}
@@ -231,9 +246,20 @@ export default function SolaceDock() {
       <header
         onMouseDown={onHeaderMouseDown}
         className="cursor-move select-none px-4 py-2.5 flex items-center justify-between border-b border-zinc-800"
+        onClick={(e) => {
+          // ALT + click title area => reset pos (handy if someone drags it off)
+          if (e.altKey) {
+            const w = panelW || Math.min(980, Math.max(520, Math.round(vw * 0.56)));
+            const h = panelH || 260;
+            const startX = Math.max(MIN_PAD, Math.round((vw - w) / 2));
+            const startY = Math.max(MIN_PAD, Math.round((vh - h) / 2));
+            setPos(startX, startY);
+            try { localStorage.removeItem(POS_KEY); } catch {}
+          }
+        }}
       >
         <div className="flex items-center gap-3">
-          {/* golden orb */}
+          {/* golden orb accent (matches marketing vibe) */}
           <span
             aria-hidden
             className="inline-block h-4 w-4 rounded-full"
@@ -242,6 +268,7 @@ export default function SolaceDock() {
                 "radial-gradient(60% 60% at 50% 40%, rgba(251,191,36,0.95) 0%, rgba(251,191,36,0.55) 35%, rgba(251,191,36,0.2) 70%, rgba(251,191,36,0.1) 100%)",
               boxShadow: "0 0 24px rgba(251,191,36,0.45)",
             }}
+            title="Alt+Click to center/reset"
           />
           <span className="text-sm font-medium">Solace</span>
           <span className="text-xs text-zinc-400">Create with moral clarity</span>
