@@ -166,6 +166,53 @@ button:disabled{ opacity:.5; cursor:not-allowed; }
   box-shadow: var(--sd-shadow) !important;
   backdrop-filter: blur(8px) !important;
 }
+/* --- Solace dock refinements --- */
+.solace-dock {
+  position: relative;
+  background: color-mix(in oklab, var(--sd-bg) 92%, transparent) !important;
+  border: 1px solid color-mix(in oklab, var(--sd-border) 85%, transparent) !important;
+  box-shadow: 0 14px 40px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.03) !important;
+}
+
+/* ambient glow under the dock (very subtle) */
+.solace-dock::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  z-index: -1;
+  filter: blur(18px);
+  opacity: .22;
+  background:
+    radial-gradient(120px 60px at 20% 90%, color-mix(in oklab, var(--sd-accent) 30%, transparent), transparent 70%),
+    radial-gradient(200px 80px at 80% 95%, rgba(40,120,255,.35), transparent 70%);
+  pointer-events: none;
+}
+
+/* clearer header separation */
+.solace-dock header {
+  border-bottom: 1px solid color-mix(in oklab, var(--sd-border) 85%, transparent);
+}
+
+/* textarea slight inset + focus ring */
+.solace-dock textarea {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.02);
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.solace-dock textarea:focus {
+  border-color: color-mix(in oklab, var(--sd-accent) 60%, var(--sd-border));
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--sd-accent) 22%, transparent);
+}
+
+/* primary button hover/press */
+.solace-dock button.primary {
+  transition: background .15s ease, transform .05s ease, opacity .15s ease;
+}
+.solace-dock button.primary:hover {
+  background: color-mix(in oklab, var(--sd-accent) 90%, white);
+}
+.solace-dock button.primary:active {
+  transform: translateY(1px);
+}
 
 /* Text & chips */
 .solace-dock .muted{ color: var(--sd-muted) !important; }
