@@ -31,6 +31,16 @@ export default function SolaceDock() {
 
   const { visible, x, y, setPos, filters, setFilters } = useSolaceStore();
   const containerRef = useRef<HTMLDivElement | null>(null);
+// center dock on first render
+useEffect(() => {
+  if (typeof window === "undefined") return;
+  // only center once (if not already set)
+  if (x === 0 && y === 0) {
+    const startX = window.innerWidth / 2 - 360;   // ~half of 720px width
+    const startY = window.innerHeight / 2 - 200;  // visually balanced center
+    setPos(startX, startY);
+  }
+}, [x, y, setPos]);
 
   // ---- UI / state ----
   const [dragging, setDragging] = useState(false);
