@@ -13,7 +13,7 @@ declare global {
 type Message = { role: "user" | "assistant"; content: string };
 type ModeHint = "Create" | "Next Steps" | "Red Team" | "Neutral";
 
-/** Utility */
+/** tiny classnames helper */
 const cx = (...xs: Array<string | false | null | undefined>) =>
   xs.filter(Boolean).join(" ");
 
@@ -64,7 +64,7 @@ export default function SolaceDock() {
     }
   }, [messages.length]);
 
-  // --- track dock size to clamp movement within viewport ---
+  // --- track dock size so we can clamp within the viewport ---
   const [panelH, setPanelH] = useState(0);
   const [panelW, setPanelW] = useState(0);
   useEffect(() => {
@@ -85,11 +85,11 @@ export default function SolaceDock() {
     };
   }, []);
 
-  // --- center on first open or load saved position ---
+  // --- center on first open (or restore saved pos) ---
   useEffect(() => {
     if (typeof window === "undefined" || !canRender || !visible) return;
 
-    // try restore saved position first
+    // 1) Try to restore a saved position
     try {
       const raw = localStorage.getItem(POS_KEY);
       if (raw) {
@@ -103,18 +103,21 @@ export default function SolaceDock() {
       /* ignore */
     }
 
-    // if no saved pos and store still at (0,0), center it
+    // 2) If none saved and store is (0,0), center after layout stabilizes
     if (x === 0 && y === 0) {
-      // wait a frame so the element renders and we can measure width/height
-      requestAnimationFrame(() => {
-        const w = panelW || Math.min(720, window.innerWidth - 32);
-        const h = panelH || 220;
+      const el = containerRef.current;
+      if (!el) return;
+
+      setTimeout(() => {
+        const rect = el.getBoundingClientRect();
+        const w = rect.width || Math.min(720, window.innerWidth - 32);
+        const h = rect.height || 220;
         const startX = Math.max(16, Math.round((window.innerWidth - w) / 2));
         const startY = Math.max(16, Math.round((window.innerHeight - h) / 2));
         setPos(startX, startY);
-      });
+      }, 100); // small delay ensures we have real dimensions
     }
-  }, [x, y, setPos, canRender, visible, panelW, panelH]);
+  }, [x, y, setPos, canRender, visible]);
 
   // --- persist position whenever it changes ---
   useEffect(() => {
@@ -179,7 +182,7 @@ export default function SolaceDock() {
         },
         body: JSON.stringify({
           messages: next,
-          filters: activeFilters, // may include "abrahamic","ministry" together
+          filters: activeFilters, // may include "abrahamic","ministry"
           stream: false,
         }),
       });
@@ -219,8 +222,14 @@ export default function SolaceDock() {
   if (!canRender || !visible) return null;
 
   // clamp to viewport (so you can’t drag it off-screen)
-  const maxX = Math.max(0, (typeof window !== "undefined" ? window.innerWidth : 0) - panelW - 16);
-  const maxY = Math.max(0, (typeof window !== "undefined" ? window.innerHeight : 0) - panelH - 16);
+  const maxX = Math.max(
+    0,
+    (typeof window !== "undefined" ? window.innerWidth : 0) - panelW - 16
+  );
+  const maxY = Math.max(
+    0,
+    (typeof window !== "undefined" ? window.innerHeight : 0) - panelH - 16
+  );
   const tx = Math.min(Math.max(0, x - 16), maxX);
   const ty = Math.min(Math.max(0, y - 16), maxY);
 
@@ -237,6 +246,8 @@ export default function SolaceDock() {
         zIndex: 70000,
         pointerEvents: "auto",
         transform: `translate3d(${tx}px, ${ty}px, 0)`,
+        transition: "transform 160ms ease-out, opacity 160ms ease-out",
+        opacity: 1,
       }}
       className={cx(
         "solace-dock rounded-3xl border shadow-2xl backdrop-blur",
