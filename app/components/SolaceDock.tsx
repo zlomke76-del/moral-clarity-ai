@@ -252,11 +252,10 @@ export default function SolaceDock() {
             onClick={send}
             disabled={streaming || !input.trim()}
             className={cx(
-              "rounded-xl px-4 py-2 text-sm font-medium",
-              streaming || !input.trim()
-                ? "bg-zinc-800 text-zinc-400"
-                : "bg-zinc-200 text-zinc-900 hover:bg-white"
-            )}
+  "primary rounded-xl px-4 py-2 text-sm font-medium",
+  (streaming || !input.trim()) && "opacity-50 cursor-not-allowed"
+)}
+
           >
             {streaming ? "…" : "Ask"}
           </button>
