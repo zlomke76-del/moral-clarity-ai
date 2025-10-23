@@ -12,12 +12,11 @@ declare global {
 
 type Message = { role: "user" | "assistant"; content: string };
 type ModeHint = "Create" | "Next Steps" | "Red Team" | "Neutral";
+const POS_KEY = "solace:pos:v1";
 
+/* Small util for classNames */
 const cx = (...xs: Array<string | false | null | undefined>) =>
   xs.filter(Boolean).join(" ");
-
-/** bump the key to invalidate any saved {x:0,y:0} */
-const POS_KEY = "solace:pos:v2";
 
 export default function SolaceDock() {
   // ----- singleton mount guard -----
@@ -42,29 +41,20 @@ export default function SolaceDock() {
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
 
+  // Ministry overlay (additional guidance, not a mode switch)
   const ministryOn = useMemo(
     () => filters.has("abrahamic") && filters.has("ministry"),
     [filters]
   );
 
-  const width = "min(720px, calc(100vw - 2rem))";
+  // Wider & resizable by default
+  const width = "clamp(520px, 56vw, 980px)";
 
-  // seed first prompt
-  useEffect(() => {
-    if (messages.length === 0) {
-      setMessages([
-        {
-          role: "assistant",
-          content:
-            "Welcome. What is **the one thing** you could do today that would make tomorrow more meaningful?",
-        },
-      ]);
-    }
-  }, [messages.length]);
-
-  // --- track dock size so we can clamp within the viewport ---
+  // --- track dock size to clamp movement within viewport ---
   const [panelH, setPanelH] = useState(0);
   const [panelW, setPanelW] = useState(0);
+  const [posReady, setPosReady] = useState(false);
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -83,54 +73,41 @@ export default function SolaceDock() {
     };
   }, []);
 
-  // --- center on first open (or restore saved pos if valid) ---
-  const triedInitRef = useRef(false);
+  // --- center on first open OR restore saved position; hide until ready ---
   useEffect(() => {
     if (typeof window === "undefined" || !canRender || !visible) return;
-    if (triedInitRef.current) return;
-    triedInitRef.current = true;
 
-    // 1) try to restore a *valid* saved position
+    // attempt restore
     try {
       const raw = localStorage.getItem(POS_KEY);
       if (raw) {
-        const parsed = JSON.parse(raw) as { x?: number; y?: number } | null;
-        const sx = typeof parsed?.x === "number" ? parsed!.x : undefined;
-        const sy = typeof parsed?.y === "number" ? parsed!.y : undefined;
-        if (
-          sx !== undefined &&
-          sy !== undefined &&
-          !(sx === 0 && sy === 0) // ignore old bad value
-        ) {
+        const { x: sx, y: sy } = JSON.parse(raw) || {};
+        if (typeof sx === "number" && typeof sy === "number") {
           setPos(sx, sy);
+          setPosReady(true);
           return;
         }
       }
     } catch {
-      /* ignore parse errors */
+      /* ignore */
     }
 
-    // 2) otherwise center after the element has real dimensions
-    const el = containerRef.current;
-    if (!el) return;
-    setTimeout(() => {
-      const rect = el.getBoundingClientRect();
-      const w = rect.width || Math.min(720, window.innerWidth - 32);
-      const h = rect.height || 220;
+    // otherwise center on first open
+    requestAnimationFrame(() => {
+      const w = panelW || Math.min(980, Math.max(520, Math.round(window.innerWidth * 0.56)));
+      const h = panelH || 260;
       const startX = Math.max(16, Math.round((window.innerWidth - w) / 2));
       const startY = Math.max(16, Math.round((window.innerHeight - h) / 2));
       setPos(startX, startY);
-    }, 120);
-  }, [canRender, visible, setPos]);
+      setPosReady(true);
+    });
+  }, [canRender, visible, panelW, panelH, setPos]);
 
   // --- persist position whenever it changes ---
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      // don’t save 0,0 (we never want to restore that)
-      if (!(x === 0 && y === 0)) {
-        localStorage.setItem(POS_KEY, JSON.stringify({ x, y }));
-      }
+      localStorage.setItem(POS_KEY, JSON.stringify({ x, y }));
     } catch {
       /* ignore */
     }
@@ -164,7 +141,7 @@ export default function SolaceDock() {
     const ta = taRef.current;
     if (!ta) return;
     ta.style.height = "0px";
-    ta.style.height = Math.min(160, ta.scrollHeight) + "px";
+    ta.style.height = Math.min(200, ta.scrollHeight) + "px";
   }, [input]);
 
   async function send() {
@@ -185,11 +162,7 @@ export default function SolaceDock() {
           "Content-Type": "application/json",
           "X-Last-Mode": modeHint,
         },
-        body: JSON.stringify({
-          messages: next,
-          filters: activeFilters,
-          stream: false,
-        }),
+        body: JSON.stringify({ messages: next, filters: activeFilters, stream: false }),
       });
 
       if (!res.ok) {
@@ -200,10 +173,7 @@ export default function SolaceDock() {
       const reply = String(data.text ?? "[No reply]");
       setMessages((m) => [...m, { role: "assistant", content: reply }]);
     } catch (e: any) {
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", content: `⚠️ ${e?.message ?? "Error"}` },
-      ]);
+      setMessages((m) => [...m, { role: "assistant", content: `⚠️ ${e?.message ?? "Error"}` }]);
     } finally {
       setStreaming(false);
     }
@@ -212,9 +182,7 @@ export default function SolaceDock() {
   // toggle ministry overlay (adds/removes BOTH tags together)
   function toggleMinistry() {
     if (ministryOn) {
-      const next = Array.from(filters).filter(
-        (f) => f !== "abrahamic" && f !== "ministry"
-      );
+      const next = Array.from(filters).filter((f) => f !== "abrahamic" && f !== "ministry");
       setFilters(next);
     } else {
       const next = new Set(filters);
@@ -226,17 +194,14 @@ export default function SolaceDock() {
 
   if (!canRender || !visible) return null;
 
-  // clamp to viewport
-  const maxX = Math.max(
-    0,
-    (typeof window !== "undefined" ? window.innerWidth : 0) - panelW - 16
-  );
-  const maxY = Math.max(
-    0,
-    (typeof window !== "undefined" ? window.innerHeight : 0) - panelH - 16
-  );
+  // clamp to viewport (so you can’t drag it off-screen)
+  const maxX = Math.max(0, (typeof window !== "undefined" ? window.innerWidth : 0) - panelW - 16);
+  const maxY = Math.max(0, (typeof window !== "undefined" ? window.innerHeight : 0) - panelH - 16);
   const tx = Math.min(Math.max(0, x - 16), maxX);
   const ty = Math.min(Math.max(0, y - 16), maxY);
+
+  // hide until we’ve set/restored a position to avoid top-left flash
+  const invisible = !posReady;
 
   const panel = (
     <section
@@ -249,15 +214,17 @@ export default function SolaceDock() {
         top: 16,
         width,
         zIndex: 70000,
-        pointerEvents: "auto",
+        pointerEvents: invisible ? "none" : "auto",
         transform: `translate3d(${tx}px, ${ty}px, 0)`,
-        transition: "transform 160ms ease-out, opacity 160ms ease-out",
-        opacity: 1,
+        opacity: invisible ? 0 : 1,
+        transition: "opacity 120ms ease",
+        // let users make it bigger
+        resize: "both",
+        overflow: "auto",
       }}
       className={cx(
         "solace-dock rounded-3xl border shadow-2xl backdrop-blur",
-        ministryOn &&
-          "ring-1 ring-amber-300/30 shadow-[0_0_40px_-10px_rgba(251,191,36,0.25)]"
+        ministryOn && "ring-1 ring-amber-300/30 shadow-[0_0_40px_-10px_rgba(251,191,36,0.25)]"
       )}
     >
       {/* Header: drag handle + mode chips + ministry overlay */}
@@ -265,8 +232,17 @@ export default function SolaceDock() {
         onMouseDown={onHeaderMouseDown}
         className="cursor-move select-none px-4 py-2.5 flex items-center justify-between border-b border-zinc-800"
       >
-        <div className="flex items-center gap-2">
-          <span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400/90" />
+        <div className="flex items-center gap-3">
+          {/* golden orb */}
+          <span
+            aria-hidden
+            className="inline-block h-4 w-4 rounded-full"
+            style={{
+              background:
+                "radial-gradient(60% 60% at 50% 40%, rgba(251,191,36,0.95) 0%, rgba(251,191,36,0.55) 35%, rgba(251,191,36,0.2) 70%, rgba(251,191,36,0.1) 100%)",
+              boxShadow: "0 0 24px rgba(251,191,36,0.45)",
+            }}
+          />
           <span className="text-sm font-medium">Solace</span>
           <span className="text-xs text-zinc-400">Create with moral clarity</span>
         </div>
@@ -281,19 +257,36 @@ export default function SolaceDock() {
 
       {/* Transcript */}
       <div className="max-h-[44vh] overflow-auto px-4 py-3 space-y-2" aria-live="polite">
-        {messages.map((m, i) => (
-          <div
-            key={i}
-            className={cx(
-              "rounded-xl px-3 py-2",
-              m.role === "user"
-                ? "bg-zinc-800/70 text-zinc-100"
-                : "bg-zinc-900/70 text-zinc-300"
-            )}
-          >
-            {m.content}
+        {messages.length === 0 ? (
+          <div className="rounded-xl px-3 py-3 text-zinc-400 text-sm">
+            <div className="flex items-center gap-2">
+              <span
+                aria-hidden
+                className="inline-block h-3 w-3 rounded-full"
+                style={{
+                  background:
+                    "radial-gradient(60% 60% at 50% 40%, rgba(251,191,36,0.95) 0%, rgba(251,191,36,0.55) 35%, rgba(251,191,36,0.2) 70%, rgba(251,191,36,0.1) 100%)",
+                  boxShadow: "0 0 18px rgba(251,191,36,0.35)",
+                }}
+              />
+              <span>Ready when you are.</span>
+            </div>
           </div>
-        ))}
+        ) : (
+          messages.map((m, i) => (
+            <div
+              key={i}
+              className={cx(
+                "rounded-xl px-3 py-2",
+                m.role === "user"
+                  ? "bg-zinc-800/70 text-zinc-100"
+                  : "bg-zinc-900/70 text-zinc-300"
+              )}
+            >
+              {m.content}
+            </div>
+          ))
+        )}
       </div>
 
       {/* Composer */}
@@ -310,7 +303,8 @@ export default function SolaceDock() {
                 send();
               }
             }}
-            className="min-h-[44px] max-h-[160px] w-full resize-none rounded-xl p-3 outline-none"
+            rows={2}
+            className="min-h-[52px] max-h-[220px] w-full resize-none rounded-xl p-3 outline-none"
           />
           <button
             onClick={send}
@@ -353,9 +347,7 @@ function Chip({
       onClick={onClick}
       className={cx(
         "rounded-md px-2 py-1 text-xs",
-        active
-          ? "bg-zinc-200 text-zinc-900"
-          : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
+        active ? "bg-zinc-200 text-zinc-900" : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
       )}
       title={`${label} mode hint`}
       type="button"
