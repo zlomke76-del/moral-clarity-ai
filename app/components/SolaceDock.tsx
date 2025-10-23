@@ -13,14 +13,30 @@ declare global {
 type Message = { role: "user" | "assistant"; content: string };
 type ModeHint = "Create" | "Next Steps" | "Red Team" | "Neutral";
 
+const POS_KEY = "solace:pos:v3";
+const PAD = 12;
+
+const ui = {
+  // colors pull from your globals.css tokens where possible
+  panelBg:
+    "radial-gradient(140% 160% at 50% -60%, rgba(26,35,53,0.85) 0%, rgba(14,21,34,0.88) 60%)",
+  border: "1px solid var(--mc-border)",
+  edge: "1px solid rgba(255,255,255,.06)",
+  text: "var(--mc-text)",
+  sub: "var(--mc-muted)",
+  surface: "rgba(14,21,34,.85)",
+  surface2: "rgba(12,19,30,.85)",
+  line: "var(--mc-border)",
+  glowOn:
+    "0 0 0 1px rgba(251,191,36,.25) inset, 0 0 90px rgba(251,191,36,.14), 0 22px 70px rgba(0,0,0,.55)",
+  shadow: "0 14px 44px rgba(0,0,0,.45)",
+};
+
 const cx = (...xs: Array<string | false | null | undefined>) =>
   xs.filter(Boolean).join(" ");
 
-const POS_KEY = "solace:pos:v2";
-const MIN_PAD = 12;
-
 export default function SolaceDock() {
-  // ----- singleton mount guard -----
+  // single mount
   const [canRender, setCanRender] = useState(false);
   useEffect(() => {
     if (window.__solaceDockMounted) return;
@@ -32,30 +48,34 @@ export default function SolaceDock() {
   }, []);
 
   const { visible, x, y, setPos, filters, setFilters } = useSolaceStore();
-  const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // ---- UI / state ----
+  // state
   const [dragging, setDragging] = useState(false);
   const [offset, setOffset] = useState({ dx: 0, dy: 0 });
+  const [posReady, setPosReady] = useState(false);
+  const [panelH, setPanelH] = useState(0);
+  const [panelW, setPanelW] = useState(0);
+
   const [modeHint, setModeHint] = useState<ModeHint>("Neutral");
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
 
-  // Ministry overlay
   const ministryOn = useMemo(
     () => filters.has("abrahamic") && filters.has("ministry"),
     [filters]
   );
 
-  // Wider + taller defaults; user can resize
-  const width = "clamp(560px, 56vw, 980px)";
+  // seed welcome once
+  useEffect(() => {
+    if (messages.length === 0) {
+      setMessages([{ role: "assistant", content: "Ready when you are." }]);
+    }
+  }, [messages.length]);
 
-  // track size for clamping
-  const [panelH, setPanelH] = useState(0);
-  const [panelW, setPanelW] = useState(0);
-  const [posReady, setPosReady] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
+  // measure for clamp
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -74,9 +94,9 @@ export default function SolaceDock() {
     };
   }, []);
 
-  // center or restore saved pos (ignore bogus values)
+  // restore or center
   useEffect(() => {
-    if (typeof window === "undefined" || !canRender || !visible) return;
+    if (!canRender || !visible) return;
 
     const vw = window.innerWidth;
     const vh = window.innerHeight;
@@ -86,37 +106,34 @@ export default function SolaceDock() {
       if (raw) {
         const saved = JSON.parse(raw) as { x: number; y: number } | null;
         if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
-          const sx = Math.max(MIN_PAD, Math.min(vw - MIN_PAD, saved.x));
-          const sy = Math.max(MIN_PAD, Math.min(vh - MIN_PAD, saved.y));
-          if (sx >= MIN_PAD && sy >= MIN_PAD && (sx !== 0 || sy !== 0)) {
-            setPos(sx, sy);
-            setPosReady(true);
-            return;
-          }
+          const sx = Math.max(PAD, Math.min(vw - PAD, saved.x));
+          const sy = Math.max(PAD, Math.min(vh - PAD, saved.y));
+          setPos(sx, sy);
+          setPosReady(true);
+          return;
         }
       }
     } catch {}
 
     requestAnimationFrame(() => {
       const w = panelW || Math.min(980, Math.max(560, Math.round(vw * 0.56)));
-      const h = panelH || Math.min(820, Math.max(420, Math.round(vh * 0.62)));
-      const startX = Math.max(MIN_PAD, Math.round((vw - w) / 2));
-      const startY = Math.max(MIN_PAD, Math.round((vh - h) / 2));
+      const h = panelH || Math.min(820, Math.max(460, Math.round(vh * 0.62)));
+      const startX = Math.max(PAD, Math.round((vw - w) / 2));
+      const startY = Math.max(PAD, Math.round((vh - h) / 2));
       setPos(startX, startY);
       setPosReady(true);
     });
   }, [canRender, visible, panelW, panelH, setPos]);
 
-  // persist pos once sane
+  // persist
   useEffect(() => {
-    if (typeof window === "undefined" || !posReady) return;
-    if (x < MIN_PAD || y < MIN_PAD) return;
+    if (!posReady) return;
     try {
       localStorage.setItem(POS_KEY, JSON.stringify({ x, y }));
     } catch {}
   }, [x, y, posReady]);
 
-  // dragging
+  // drag
   function onHeaderMouseDown(e: React.MouseEvent) {
     const rect = containerRef.current?.getBoundingClientRect();
     setOffset({
@@ -146,6 +163,7 @@ export default function SolaceDock() {
     ta.style.height = Math.min(220, ta.scrollHeight) + "px";
   }, [input]);
 
+  // send
   async function send() {
     const text = input.trim();
     if (!text || streaming) return;
@@ -181,7 +199,7 @@ export default function SolaceDock() {
     }
   }
 
-  // toggle ministry overlay
+  // ministry toggle
   function toggleMinistry() {
     if (ministryOn) {
       const next = Array.from(filters).filter((f) => f !== "abrahamic" && f !== "ministry");
@@ -196,120 +214,212 @@ export default function SolaceDock() {
 
   if (!canRender || !visible) return null;
 
-  // clamp within viewport
-  const vw = typeof window !== "undefined" ? window.innerWidth : 0;
-  const vh = typeof window !== "undefined" ? window.innerHeight : 0;
-  const maxX = Math.max(0, vw - panelW - MIN_PAD);
-  const maxY = Math.max(0, vh - panelH - MIN_PAD);
-  const tx = Math.min(Math.max(0, x - MIN_PAD), maxX);
-  const ty = Math.min(Math.max(0, y - MIN_PAD), maxY);
-
+  // clamp
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const maxX = Math.max(0, vw - panelW - PAD);
+  const maxY = Math.max(0, vh - panelH - PAD);
+  const tx = Math.min(Math.max(0, x - PAD), maxX);
+  const ty = Math.min(Math.max(0, y - PAD), maxY);
   const invisible = !posReady;
 
-  const panelGlow = ministryOn
-    ? {
-        boxShadow:
-          "0 0 0 1px rgba(251,191,36,.25) inset, 0 0 90px rgba(251,191,36,.14), 0 22px 70px rgba(0,0,0,.55)",
-        background:
-          "radial-gradient(40% 60% at 20% -30%, rgba(251,191,36,.12), transparent 60%), radial-gradient(45% 60% at 80% -30%, rgba(251,191,36,.10), transparent 60%)",
-      }
-    : {};
+  const panelStyle: React.CSSProperties = {
+    position: "fixed",
+    left: PAD,
+    top: PAD,
+    width: "clamp(560px, 56vw, 980px)",
+    height: "clamp(460px, 62vh, 820px)",
+    maxHeight: "90vh",
+    background: ui.panelBg,
+    borderRadius: 20,
+    border: ui.border,
+    boxShadow: ministryOn ? ui.glowOn : ui.shadow,
+    backdropFilter: "blur(8px)",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    pointerEvents: invisible ? "none" : "auto",
+    transform: `translate3d(${tx}px, ${ty}px, 0)`,
+    opacity: invisible ? 0 : 1,
+    transition: "opacity 120ms ease",
+    resize: "both",
+  };
+
+  const headerStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "10px 14px",
+    borderBottom: ui.edge,
+    cursor: "move",
+    userSelect: "none",
+    background: "linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.00))",
+    color: ui.text,
+  };
+
+  const transcriptStyle: React.CSSProperties = {
+    flex: "1 1 auto",
+    overflow: "auto",
+    padding: "14px 16px 10px 16px",
+    color: ui.text,
+    background: "linear-gradient(180deg, rgba(12,19,30,.9), rgba(10,17,28,.92))",
+  };
+
+  const composerWrapStyle: React.CSSProperties = {
+    borderTop: ui.edge,
+    background: ui.surface2,
+    padding: 10,
+  };
+
+  const fieldStyle: React.CSSProperties = {
+    flex: "1 1 auto",
+    minHeight: 60,
+    maxHeight: 240,
+    overflow: "auto",
+    border: `1px solid ${getComputedStyle(document.documentElement).getPropertyValue(
+      "--mc-border"
+    ) || "rgba(34,48,71,.9)"}`,
+    background: "#0e1726",
+    color: ui.text,
+    borderRadius: 12,
+    padding: "10px 12px",
+    font: "14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
+    resize: "none",
+    outline: "none",
+  };
+
+  const askBtnStyle: React.CSSProperties = {
+    minWidth: 80,
+    height: 40,
+    borderRadius: 12,
+    border: "0",
+    background: "#6e8aff",
+    color: "#fff",
+    font: "600 13px/1 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
+    cursor: streaming || !input.trim() ? "not-allowed" : "pointer",
+    opacity: streaming || !input.trim() ? 0.55 : 1,
+  };
+
+  const orbStyle: React.CSSProperties = {
+    width: 22,
+    height: 22,
+    borderRadius: "50%",
+    background:
+      "radial-gradient(62% 62% at 50% 42%, rgba(251,191,36,1) 0%, rgba(251,191,36,.65) 38%, rgba(251,191,36,.22) 72%, rgba(251,191,36,.12) 100%)",
+    boxShadow: "0 0 38px rgba(251,191,36,.55)",
+    flex: "0 0 22px",
+  };
+
+  const chip = (label: string, active: boolean, onClick: () => void) => (
+    <button
+      onClick={onClick}
+      style={{
+        borderRadius: 8,
+        padding: "7px 10px",
+        font: "600 12px/1 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
+        color: active ? "#0b0f16" : "var(--mc-text)",
+        background: active ? "var(--mc-text)" : "#0e1726",
+        border: `1px solid var(--mc-border)`,
+        cursor: "pointer",
+      }}
+      title={`${label} mode`}
+      type="button"
+    >
+      {label}
+    </button>
+  );
+
+  const ministryTab = (
+    <button
+      onClick={toggleMinistry}
+      title="Ministry mode"
+      type="button"
+      style={{
+        borderRadius: 8,
+        padding: "7px 10px",
+        font: "700 12px/1 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
+        color: ministryOn ? "#000" : "var(--mc-text)",
+        background: ministryOn ? "#f6c453" : "#0e1726",
+        border: `1px solid ${ministryOn ? "#f4cf72" : "var(--mc-border)"}`,
+        boxShadow: ministryOn ? "0 0 22px rgba(251,191,36,.65)" : "none",
+        cursor: "pointer",
+      }}
+    >
+      Ministry
+    </button>
+  );
 
   const panel = (
     <section
       ref={containerRef}
       role="dialog"
       aria-label="Solace"
-      style={{
-        position: "fixed",
-        left: MIN_PAD,
-        top: MIN_PAD,
-        width,
-        // **taller by default & resizable**
-        height: "clamp(420px, 62vh, 820px)",
-        maxHeight: "90vh",
-        zIndex: 70000,
-        pointerEvents: invisible ? "none" : "auto",
-        transform: `translate3d(${tx}px, ${ty}px, 0)`,
-        opacity: invisible ? 0 : 1,
-        transition: "opacity 120ms ease",
-        resize: "both",
-        overflow: "hidden",
-        ...panelGlow,
+      style={panelStyle}
+      onClick={(e) => {
+        // Alt+Click header area to center
+        // (keeping the convenience from earlier builds)
       }}
-      className={cx(
-        "solace-dock rounded-3xl border shadow-2xl backdrop-blur flex flex-col",
-        ministryOn && "ring-1 ring-amber-300/30"
-      )}
     >
-      {/* Header */}
+      {/* HEADER */}
       <header
+        style={headerStyle}
         onMouseDown={onHeaderMouseDown}
-        className="cursor-move select-none px-4 py-2.5 flex items-center gap-3 border-b border-zinc-800"
         onClick={(e) => {
+          if (!containerRef.current) return;
           if (e.altKey) {
-            const startX = Math.max(MIN_PAD, Math.round((vw - (panelW || 760)) / 2));
-            const startY = Math.max(MIN_PAD, Math.round((vh - (panelH || 560)) / 2));
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            const w = panelW || 760;
+            const h = panelH || 560;
+            const startX = Math.max(PAD, Math.round((vw - w) / 2));
+            const startY = Math.max(PAD, Math.round((vh - h) / 2));
             setPos(startX, startY);
-            try { localStorage.removeItem(POS_KEY); } catch {}
+            try {
+              localStorage.removeItem(POS_KEY);
+            } catch {}
           }
         }}
       >
-        {/* title + golden orb */}
-        <div className="flex items-center gap-3">
-          <span
-            aria-hidden
-            className="inline-block h-5 w-5 rounded-full"
-            style={{
-              background:
-                "radial-gradient(62% 62% at 50% 42%, rgba(251,191,36,1) 0%, rgba(251,191,36,.65) 38%, rgba(251,191,36,.22) 72%, rgba(251,191,36,.12) 100%)",
-              boxShadow: "0 0 38px rgba(251,191,36,.55)",
-            }}
-            title="Alt+Click to center/reset"
-          />
-          <span className="text-sm font-semibold leading-none">Solace</span>
-          <span className="text-xs text-zinc-400 leading-none">Create with moral clarity</span>
+        {/* left: orb + title */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span aria-hidden style={orbStyle} title="Alt+Click header to center/reset" />
+          <span style={{ font: "600 13px system-ui", color: ui.text }}>Solace</span>
+          <span style={{ font: "12px system-ui", color: ui.sub }}>Create with moral clarity</span>
         </div>
 
-        {/* lenses in the middle */}
-        <div className="flex items-center gap-2 ml-4">
-          <Chip label="Create" active={modeHint === "Create"} onClick={() => setModeHint("Create")} />
-          <Chip label="Next"   active={modeHint === "Next Steps"} onClick={() => setModeHint("Next Steps")} />
-          <Chip label="Red"    active={modeHint === "Red Team"}   onClick={() => setModeHint("Red Team")} />
+        {/* middle: lenses */}
+        <div style={{ display: "flex", gap: 8, marginLeft: 12 }}>
+          {chip("Create", modeHint === "Create", () => setModeHint("Create"))}
+          {chip("Next", modeHint === "Next Steps", () => setModeHint("Next Steps"))}
+          {chip("Red", modeHint === "Red Team", () => setModeHint("Red Team"))}
         </div>
 
-        {/* push Ministry all the way right */}
-        <div className="ml-auto">
-          <MinistryTab active={ministryOn} onToggle={toggleMinistry} />
-        </div>
+        {/* right: ministry */}
+        <div style={{ marginLeft: "auto" }}>{ministryTab}</div>
       </header>
 
-      {/* Transcript (roomy) */}
-      <div className="flex-1 overflow-auto px-4 py-3 space-y-2" aria-live="polite">
-        {messages.length === 0 ? (
-          <div className="rounded-xl px-3 py-3 text-zinc-400 text-sm">
-            Ready when you are.
+      {/* TRANSCRIPT */}
+      <div style={transcriptStyle} aria-live="polite">
+        {messages.map((m, i) => (
+          <div
+            key={i}
+            style={{
+              borderRadius: 12,
+              padding: "10px 12px",
+              margin: "6px 0",
+              background: m.role === "user" ? "rgba(39,52,74,.6)" : "rgba(28,38,54,.6)",
+              color: m.role === "user" ? "var(--mc-text)" : "rgba(233,240,250,.94)",
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            {m.content}
           </div>
-        ) : (
-          messages.map((m, i) => (
-            <div
-              key={i}
-              className={cx(
-                "rounded-xl px-3 py-2",
-                m.role === "user"
-                  ? "bg-zinc-800/70 text-zinc-100"
-                  : "bg-zinc-900/70 text-zinc-300"
-              )}
-            >
-              {m.content}
-            </div>
-          ))
-        )}
+        ))}
       </div>
 
-      {/* Composer */}
-      <div className="border-t border-zinc-800 p-3">
-        <div className="flex items-end gap-2">
+      {/* COMPOSER (ALWAYS AT BOTTOM) */}
+      <div style={composerWrapStyle}>
+        <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
           <textarea
             ref={taRef}
             value={input}
@@ -321,25 +431,27 @@ export default function SolaceDock() {
                 send();
               }
             }}
-            rows={3}
-            className="min-h-[60px] max-h-[240px] w-full resize-none rounded-xl p-3 outline-none"
+            style={fieldStyle}
           />
-          <button
-            onClick={send}
-            disabled={streaming || !input.trim()}
-            className={cx(
-              "primary rounded-xl px-4 py-2 text-sm font-medium",
-              (streaming || !input.trim()) && "opacity-50 cursor-not-allowed"
-            )}
-          >
+          <button onClick={send} disabled={streaming || !input.trim()} style={askBtnStyle}>
             {streaming ? "…" : "Ask"}
           </button>
         </div>
 
-        <div className="mt-2 flex items-center justify-between text-xs text-zinc-500">
+        <div
+          style={{
+            marginTop: 6,
+            display: "flex",
+            justifyContent: "space-between",
+            font: "12px system-ui",
+            color: "var(--mc-muted)",
+          }}
+        >
           <span>{ministryOn ? "Create • Ministry overlay" : modeHint || "Neutral"}</span>
-          {!!filters.size && (
-            <span className="truncate max-w-[60%]">Filters: {Array.from(filters).join(", ")}</span>
+          {filters.size > 0 && (
+            <span style={{ maxWidth: "60%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              Filters: {Array.from(filters).join(", ")}
+            </span>
           )}
         </div>
       </div>
@@ -349,52 +461,4 @@ export default function SolaceDock() {
   return createPortal(panel, document.body);
 }
 
-/* ---- UI atoms ---- */
-
-function Chip({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cx(
-        "rounded-md px-2.5 py-1.5 text-xs font-semibold leading-none",
-        active ? "bg-zinc-200 text-zinc-900" : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
-      )}
-      title={`${label} mode`}
-      type="button"
-    >
-      {label}
-    </button>
-  );
-}
-
-function MinistryTab({
-  active,
-  onToggle,
-}: {
-  active: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      onClick={onToggle}
-      className={cx(
-        "rounded-md px-2.5 py-1.5 text-xs font-semibold leading-none",
-        active
-          ? "bg-amber-300 text-black shadow-[0_0_22px_-4px_rgba(251,191,36,.75)]"
-          : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
-      )}
-      title="Ministry mode"
-      type="button"
-    >
-      Ministry
-    </button>
-  );
-}
+/* ========= end component ========= */
