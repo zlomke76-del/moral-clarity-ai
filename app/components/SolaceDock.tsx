@@ -13,14 +13,10 @@ declare global {
 type Message = { role: "user" | "assistant"; content: string };
 type ModeHint = "Create" | "Next Steps" | "Red Team" | "Neutral";
 
-/** classNames helper */
 const cx = (...xs: Array<string | false | null | undefined>) =>
   xs.filter(Boolean).join(" ");
 
-/** Bump the key to bypass any previously-saved bad positions */
 const POS_KEY = "solace:pos:v2";
-
-/** minimum “sane” distance from edges to consider a saved pos valid */
 const MIN_PAD = 12;
 
 export default function SolaceDock() {
@@ -46,16 +42,16 @@ export default function SolaceDock() {
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
 
-  // Ministry overlay (additional guidance)
+  // Ministry overlay
   const ministryOn = useMemo(
     () => filters.has("abrahamic") && filters.has("ministry"),
     [filters]
   );
 
-  // Wider by default, user can resize
-  const width = "clamp(520px, 56vw, 980px)";
+  // Wider + taller defaults; user can resize
+  const width = "clamp(560px, 56vw, 980px)";
 
-  // Track size for clamping movement
+  // track size for clamping
   const [panelH, setPanelH] = useState(0);
   const [panelW, setPanelW] = useState(0);
   const [posReady, setPosReady] = useState(false);
@@ -78,14 +74,13 @@ export default function SolaceDock() {
     };
   }, []);
 
-  // Center or restore saved position. Don’t show until position is set.
+  // center or restore saved pos (ignore bogus values)
   useEffect(() => {
     if (typeof window === "undefined" || !canRender || !visible) return;
 
     const vw = window.innerWidth;
     const vh = window.innerHeight;
 
-    // try RESTORE (but ignore bogus coords like 0,0 or off-screen)
     try {
       const raw = localStorage.getItem(POS_KEY);
       if (raw) {
@@ -93,23 +88,18 @@ export default function SolaceDock() {
         if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
           const sx = Math.max(MIN_PAD, Math.min(vw - MIN_PAD, saved.x));
           const sy = Math.max(MIN_PAD, Math.min(vh - MIN_PAD, saved.y));
-          const looksValid =
-            sx >= MIN_PAD && sy >= MIN_PAD && (sx !== 0 || sy !== 0);
-          if (looksValid) {
+          if (sx >= MIN_PAD && sy >= MIN_PAD && (sx !== 0 || sy !== 0)) {
             setPos(sx, sy);
             setPosReady(true);
             return;
           }
         }
       }
-    } catch {
-      /* ignore */
-    }
+    } catch {}
 
-    // otherwise CENTER
     requestAnimationFrame(() => {
-      const w = panelW || Math.min(980, Math.max(520, Math.round(vw * 0.56)));
-      const h = panelH || 260;
+      const w = panelW || Math.min(980, Math.max(560, Math.round(vw * 0.56)));
+      const h = panelH || Math.min(820, Math.max(420, Math.round(vh * 0.62)));
       const startX = Math.max(MIN_PAD, Math.round((vw - w) / 2));
       const startY = Math.max(MIN_PAD, Math.round((vh - h) / 2));
       setPos(startX, startY);
@@ -117,19 +107,16 @@ export default function SolaceDock() {
     });
   }, [canRender, visible, panelW, panelH, setPos]);
 
-  // Persist position (only once we’ve confirmed it’s ready & sane)
+  // persist pos once sane
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!posReady) return;
-    if (x < MIN_PAD || y < MIN_PAD) return; // ignore bogus 0,0 writes
+    if (typeof window === "undefined" || !posReady) return;
+    if (x < MIN_PAD || y < MIN_PAD) return;
     try {
       localStorage.setItem(POS_KEY, JSON.stringify({ x, y }));
-    } catch {
-      /* ignore */
-    }
+    } catch {}
   }, [x, y, posReady]);
 
-  // Dragging
+  // dragging
   function onHeaderMouseDown(e: React.MouseEvent) {
     const rect = containerRef.current?.getBoundingClientRect();
     setOffset({
@@ -156,7 +143,7 @@ export default function SolaceDock() {
     const ta = taRef.current;
     if (!ta) return;
     ta.style.height = "0px";
-    ta.style.height = Math.min(200, ta.scrollHeight) + "px";
+    ta.style.height = Math.min(220, ta.scrollHeight) + "px";
   }, [input]);
 
   async function send() {
@@ -217,7 +204,16 @@ export default function SolaceDock() {
   const tx = Math.min(Math.max(0, x - MIN_PAD), maxX);
   const ty = Math.min(Math.max(0, y - MIN_PAD), maxY);
 
-  const invisible = !posReady; // prevent top-left flash
+  const invisible = !posReady;
+
+  const panelGlow = ministryOn
+    ? {
+        boxShadow:
+          "0 0 0 1px rgba(251,191,36,.25) inset, 0 0 90px rgba(251,191,36,.14), 0 22px 70px rgba(0,0,0,.55)",
+        background:
+          "radial-gradient(40% 60% at 20% -30%, rgba(251,191,36,.12), transparent 60%), radial-gradient(45% 60% at 80% -30%, rgba(251,191,36,.10), transparent 60%)",
+      }
+    : {};
 
   const panel = (
     <section
@@ -229,75 +225,70 @@ export default function SolaceDock() {
         left: MIN_PAD,
         top: MIN_PAD,
         width,
+        // **taller by default & resizable**
+        height: "clamp(420px, 62vh, 820px)",
+        maxHeight: "90vh",
         zIndex: 70000,
         pointerEvents: invisible ? "none" : "auto",
         transform: `translate3d(${tx}px, ${ty}px, 0)`,
         opacity: invisible ? 0 : 1,
         transition: "opacity 120ms ease",
         resize: "both",
-        overflow: "auto",
+        overflow: "hidden",
+        ...panelGlow,
       }}
       className={cx(
-        "solace-dock rounded-3xl border shadow-2xl backdrop-blur",
-        ministryOn && "ring-1 ring-amber-300/30 shadow-[0_0_40px_-10px_rgba(251,191,36,0.25)]"
+        "solace-dock rounded-3xl border shadow-2xl backdrop-blur flex flex-col",
+        ministryOn && "ring-1 ring-amber-300/30"
       )}
     >
-      {/* Header: drag handle + mode chips + ministry overlay */}
+      {/* Header */}
       <header
         onMouseDown={onHeaderMouseDown}
-        className="cursor-move select-none px-4 py-2.5 flex items-center justify-between border-b border-zinc-800"
+        className="cursor-move select-none px-4 py-2.5 flex items-center gap-3 border-b border-zinc-800"
         onClick={(e) => {
-          // ALT + click title area => reset pos (handy if someone drags it off)
           if (e.altKey) {
-            const w = panelW || Math.min(980, Math.max(520, Math.round(vw * 0.56)));
-            const h = panelH || 260;
-            const startX = Math.max(MIN_PAD, Math.round((vw - w) / 2));
-            const startY = Math.max(MIN_PAD, Math.round((vh - h) / 2));
+            const startX = Math.max(MIN_PAD, Math.round((vw - (panelW || 760)) / 2));
+            const startY = Math.max(MIN_PAD, Math.round((vh - (panelH || 560)) / 2));
             setPos(startX, startY);
             try { localStorage.removeItem(POS_KEY); } catch {}
           }
         }}
       >
+        {/* title + golden orb */}
         <div className="flex items-center gap-3">
-          {/* golden orb accent (matches marketing vibe) */}
           <span
             aria-hidden
-            className="inline-block h-4 w-4 rounded-full"
+            className="inline-block h-5 w-5 rounded-full"
             style={{
               background:
-                "radial-gradient(60% 60% at 50% 40%, rgba(251,191,36,0.95) 0%, rgba(251,191,36,0.55) 35%, rgba(251,191,36,0.2) 70%, rgba(251,191,36,0.1) 100%)",
-              boxShadow: "0 0 24px rgba(251,191,36,0.45)",
+                "radial-gradient(62% 62% at 50% 42%, rgba(251,191,36,1) 0%, rgba(251,191,36,.65) 38%, rgba(251,191,36,.22) 72%, rgba(251,191,36,.12) 100%)",
+              boxShadow: "0 0 38px rgba(251,191,36,.55)",
             }}
             title="Alt+Click to center/reset"
           />
-          <span className="text-sm font-medium">Solace</span>
-          <span className="text-xs text-zinc-400">Create with moral clarity</span>
+          <span className="text-sm font-semibold leading-none">Solace</span>
+          <span className="text-xs text-zinc-400 leading-none">Create with moral clarity</span>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* lenses in the middle */}
+        <div className="flex items-center gap-2 ml-4">
           <Chip label="Create" active={modeHint === "Create"} onClick={() => setModeHint("Create")} />
           <Chip label="Next"   active={modeHint === "Next Steps"} onClick={() => setModeHint("Next Steps")} />
           <Chip label="Red"    active={modeHint === "Red Team"}   onClick={() => setModeHint("Red Team")} />
-          <TogglePill label="Ministry" value={ministryOn} onToggle={toggleMinistry} />
+        </div>
+
+        {/* push Ministry all the way right */}
+        <div className="ml-auto">
+          <MinistryTab active={ministryOn} onToggle={toggleMinistry} />
         </div>
       </header>
 
-      {/* Transcript */}
-      <div className="max-h-[44vh] overflow-auto px-4 py-3 space-y-2" aria-live="polite">
+      {/* Transcript (roomy) */}
+      <div className="flex-1 overflow-auto px-4 py-3 space-y-2" aria-live="polite">
         {messages.length === 0 ? (
           <div className="rounded-xl px-3 py-3 text-zinc-400 text-sm">
-            <div className="flex items-center gap-2">
-              <span
-                aria-hidden
-                className="inline-block h-3 w-3 rounded-full"
-                style={{
-                  background:
-                    "radial-gradient(60% 60% at 50% 40%, rgba(251,191,36,0.95) 0%, rgba(251,191,36,0.55) 35%, rgba(251,191,36,0.2) 70%, rgba(251,191,36,0.1) 100%)",
-                  boxShadow: "0 0 18px rgba(251,191,36,0.35)",
-                }}
-              />
-              <span>Ready when you are.</span>
-            </div>
+            Ready when you are.
           </div>
         ) : (
           messages.map((m, i) => (
@@ -330,8 +321,8 @@ export default function SolaceDock() {
                 send();
               }
             }}
-            rows={2}
-            className="min-h-[52px] max-h-[220px] w-full resize-none rounded-xl p-3 outline-none"
+            rows={3}
+            className="min-h-[60px] max-h-[240px] w-full resize-none rounded-xl p-3 outline-none"
           />
           <button
             onClick={send}
@@ -358,7 +349,7 @@ export default function SolaceDock() {
   return createPortal(panel, document.body);
 }
 
-/* ---- tiny UI atoms ---- */
+/* ---- UI atoms ---- */
 
 function Chip({
   label,
@@ -373,10 +364,10 @@ function Chip({
     <button
       onClick={onClick}
       className={cx(
-        "rounded-md px-2 py-1 text-xs",
+        "rounded-md px-2.5 py-1.5 text-xs font-semibold leading-none",
         active ? "bg-zinc-200 text-zinc-900" : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
       )}
-      title={`${label} mode hint`}
+      title={`${label} mode`}
       type="button"
     >
       {label}
@@ -384,28 +375,26 @@ function Chip({
   );
 }
 
-function TogglePill({
-  label,
-  value,
+function MinistryTab({
+  active,
   onToggle,
 }: {
-  label: string;
-  value: boolean;
+  active: boolean;
   onToggle: () => void;
 }) {
   return (
     <button
       onClick={onToggle}
       className={cx(
-        "rounded-full px-2.5 py-1 text-xs font-medium transition",
-        value
-          ? "bg-amber-300 text-black shadow-[0_0_16px_-4px_rgba(251,191,36,0.6)]"
+        "rounded-md px-2.5 py-1.5 text-xs font-semibold leading-none",
+        active
+          ? "bg-amber-300 text-black shadow-[0_0_22px_-4px_rgba(251,191,36,.75)]"
           : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
       )}
-      title={`${label} overlay`}
+      title="Ministry mode"
       type="button"
     >
-      {label}
+      Ministry
     </button>
   );
 }
