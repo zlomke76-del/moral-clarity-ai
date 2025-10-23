@@ -173,6 +173,55 @@ button:disabled{ opacity:.5; cursor:not-allowed; }
   border: 1px solid color-mix(in oklab, var(--sd-border) 85%, transparent) !important;
   box-shadow: 0 14px 40px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.03) !important;
 }
+/* Solace dock: subtle glass, clearer edges, nice hover/focus */
+.solace-dock {
+  background: color-mix(in oklab, rgba(12,18,28,.86) 92%, transparent);
+  border: 1px solid rgba(255,255,255,.06);
+  box-shadow:
+    0 22px 70px rgba(0,0,0,.55),
+    inset 0 1px 0 rgba(255,255,255,.04);
+  backdrop-filter: blur(10px);
+}
+
+/* faint ambient glow (very subtle) */
+.solace-dock::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  z-index: -1;
+  filter: blur(18px);
+  opacity: .2;
+  background:
+    radial-gradient(140px 60px at 18% 92%, rgba(90,140,255,.30), transparent 70%),
+    radial-gradient(220px 84px at 82% 96%, rgba(40,120,255,.28), transparent 70%);
+  pointer-events: none;
+}
+
+.solace-dock header {
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+
+.solace-dock textarea {
+  background: rgba(12,18,28,.85);
+  border: 1px solid rgba(255,255,255,.06);
+  color: #e8eef6;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.02);
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.solace-dock textarea:focus {
+  border-color: rgba(120,160,255,.6);
+  box-shadow: 0 0 0 3px rgba(120,160,255,.22);
+}
+
+/* primary button style/hover */
+.solace-dock .primary {
+  background: #e7ecf7;
+  color: #0d1220;
+  border: 1px solid rgba(255,255,255,.06);
+  transition: background .15s ease, transform .05s ease, opacity .15s ease;
+}
+.solace-dock .primary:hover { background: white; }
+.solace-dock .primary:active { transform: translateY(1px); }
 
 /* ambient glow under the dock (very subtle) */
 .solace-dock::before {
