@@ -17,6 +17,8 @@ type ModeHint = "Create" | "Next Steps" | "Red Team" | "Neutral";
 const cx = (...xs: Array<string | false | null | undefined>) =>
   xs.filter(Boolean).join(" ");
 
+const POS_KEY = "solace:pos:v1";
+
 export default function SolaceDock() {
   // ----- singleton mount guard -----
   const [canRender, setCanRender] = useState(false);
@@ -31,16 +33,6 @@ export default function SolaceDock() {
 
   const { visible, x, y, setPos, filters, setFilters } = useSolaceStore();
   const containerRef = useRef<HTMLDivElement | null>(null);
-// center dock on first render
-useEffect(() => {
-  if (typeof window === "undefined") return;
-  // only center once (if not already set)
-  if (x === 0 && y === 0) {
-    const startX = window.innerWidth / 2 - 360;   // ~half of 720px width
-    const startY = window.innerHeight / 2 - 200;  // visually balanced center
-    setPos(startX, startY);
-  }
-}, [x, y, setPos]);
 
   // ---- UI / state ----
   const [dragging, setDragging] = useState(false);
@@ -72,12 +64,17 @@ useEffect(() => {
     }
   }, [messages.length]);
 
-  // --- track dock height for proper vertical clamping ---
+  // --- track dock size to clamp movement within viewport ---
   const [panelH, setPanelH] = useState(0);
+  const [panelW, setPanelW] = useState(0);
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const measure = () => setPanelH(el.getBoundingClientRect().height || 0);
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      setPanelH(r.height || 0);
+      setPanelW(r.width || 0);
+    };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
@@ -87,6 +84,47 @@ useEffect(() => {
       window.removeEventListener("resize", measure);
     };
   }, []);
+
+  // --- center on first open or load saved position ---
+  useEffect(() => {
+    if (typeof window === "undefined" || !canRender || !visible) return;
+
+    // try restore saved position first
+    try {
+      const raw = localStorage.getItem(POS_KEY);
+      if (raw) {
+        const { x: sx, y: sy } = JSON.parse(raw) || {};
+        if (typeof sx === "number" && typeof sy === "number") {
+          setPos(sx, sy);
+          return;
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+
+    // if no saved pos and store still at (0,0), center it
+    if (x === 0 && y === 0) {
+      // wait a frame so the element renders and we can measure width/height
+      requestAnimationFrame(() => {
+        const w = panelW || Math.min(720, window.innerWidth - 32);
+        const h = panelH || 220;
+        const startX = Math.max(16, Math.round((window.innerWidth - w) / 2));
+        const startY = Math.max(16, Math.round((window.innerHeight - h) / 2));
+        setPos(startX, startY);
+      });
+    }
+  }, [x, y, setPos, canRender, visible, panelW, panelH]);
+
+  // --- persist position whenever it changes ---
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(POS_KEY, JSON.stringify({ x, y }));
+    } catch {
+      /* ignore */
+    }
+  }, [x, y]);
 
   // --- drag handlers ---
   function onHeaderMouseDown(e: React.MouseEvent) {
@@ -100,8 +138,7 @@ useEffect(() => {
 
   useEffect(() => {
     if (!dragging) return;
-    const onMove = (e: MouseEvent) =>
-      setPos(e.clientX - offset.dx, e.clientY - offset.dy);
+    const onMove = (e: MouseEvent) => setPos(e.clientX - offset.dx, e.clientY - offset.dy);
     const onUp = () => setDragging(false);
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
@@ -181,6 +218,12 @@ useEffect(() => {
 
   if (!canRender || !visible) return null;
 
+  // clamp to viewport (so you can’t drag it off-screen)
+  const maxX = Math.max(0, (typeof window !== "undefined" ? window.innerWidth : 0) - panelW - 16);
+  const maxY = Math.max(0, (typeof window !== "undefined" ? window.innerHeight : 0) - panelH - 16);
+  const tx = Math.min(Math.max(0, x - 16), maxX);
+  const ty = Math.min(Math.max(0, y - 16), maxY);
+
   const panel = (
     <section
       ref={containerRef}
@@ -193,14 +236,7 @@ useEffect(() => {
         width,
         zIndex: 70000,
         pointerEvents: "auto",
-        transform: `translate3d(${
-          Math.max(0, x - 16)
-        }px, ${
-          Math.min(
-            Math.max(0, y - 16),
-            Math.max(0, (window?.innerHeight || 0) - panelH - 16)
-          )
-        }px, 0)`,
+        transform: `translate3d(${tx}px, ${ty}px, 0)`,
       }}
       className={cx(
         "solace-dock rounded-3xl border shadow-2xl backdrop-blur",
@@ -220,34 +256,15 @@ useEffect(() => {
         </div>
 
         <div className="flex items-center gap-2">
-          <Chip
-            label="Create"
-            active={modeHint === "Create"}
-            onClick={() => setModeHint("Create")}
-          />
-          <Chip
-            label="Next"
-            active={modeHint === "Next Steps"}
-            onClick={() => setModeHint("Next Steps")}
-          />
-          <Chip
-            label="Red"
-            active={modeHint === "Red Team"}
-            onClick={() => setModeHint("Red Team")}
-          />
-          <TogglePill
-            label="Ministry"
-            value={ministryOn}
-            onToggle={toggleMinistry}
-          />
+          <Chip label="Create" active={modeHint === "Create"} onClick={() => setModeHint("Create")} />
+          <Chip label="Next"   active={modeHint === "Next Steps"} onClick={() => setModeHint("Next Steps")} />
+          <Chip label="Red"    active={modeHint === "Red Team"}   onClick={() => setModeHint("Red Team")} />
+          <TogglePill label="Ministry" value={ministryOn} onToggle={toggleMinistry} />
         </div>
       </header>
 
       {/* Transcript */}
-      <div
-        className="max-h-[44vh] overflow-auto px-4 py-3 space-y-2"
-        aria-live="polite"
-      >
+      <div className="max-h-[44vh] overflow-auto px-4 py-3 space-y-2" aria-live="polite">
         {messages.map((m, i) => (
           <div
             key={i}
@@ -292,13 +309,9 @@ useEffect(() => {
         </div>
 
         <div className="mt-2 flex items-center justify-between text-xs text-zinc-500">
-          <span>
-            {ministryOn ? "Create • Ministry overlay" : modeHint || "Neutral"}
-          </span>
+          <span>{ministryOn ? "Create • Ministry overlay" : modeHint || "Neutral"}</span>
           {!!filters.size && (
-            <span className="truncate max-w-[60%]">
-              Filters: {Array.from(filters).join(", ")}
-            </span>
+            <span className="truncate max-w-[60%]">Filters: {Array.from(filters).join(", ")}</span>
           )}
         </div>
       </div>
