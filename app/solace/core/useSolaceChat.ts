@@ -38,3 +38,4 @@ export function useSolaceChat(opts?: { filters?: string[]; lastMode?: string }) 
 
   return { messages, busy, send, stop, clear };
 }
+
