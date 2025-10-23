@@ -57,3 +57,4 @@ export const useSolaceStore: UseBoundStore<StoreApi<SolaceState>> =
 
     clearFilters: () => set({ filters: new Set() }),
   }));
+
