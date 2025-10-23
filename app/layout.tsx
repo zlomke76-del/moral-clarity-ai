@@ -7,7 +7,7 @@ import DemoBadge from "@/components/DemoBadge";
 import dynamic from "next/dynamic";
 
 // Mount Solace once, client-only
-const SolaceDock = dynamic(() => import("@/app/components/SolaceDock"), { ssr: false });
+const SolaceDock = dynamic(() => import("@/components/SolaceDock"), { ssr: false });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.moralclarity.ai"),
@@ -32,10 +32,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="h-full">
-      <body className="min-h-screen bg-zinc-950 text-zinc-100">
+    // enable dark + apply your CSS variable “skin”
+    <html lang="en" className="dark h-full" data-skin="glass">
+      {/* use neutral palette + antialias to tighten type */}
+      <body className="min-h-screen bg-neutral-950 text-neutral-100 antialiased">
         {/* ===== HEADER ===== */}
-        <header className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur">
+        <header className="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-950/80 backdrop-blur">
           <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
             <div className="flex items-center gap-2">
               <Link href="/" className="flex items-center gap-2">
@@ -47,7 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   priority
                   className="rounded"
                 />
-                <span className="brand font-semibold leading-none tracking-tight">
+                <span className="font-semibold leading-none tracking-tight">
                   Moral Clarity AI
                 </span>
               </Link>
@@ -55,15 +57,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
 
             <div className="hidden sm:flex items-center gap-6 text-sm">
-              <Link href="/pricing" className="hover:opacity-80 leading-none">
-                Pricing
-              </Link>
-              <Link href="/docs" className="hover:opacity-80 leading-none">
-                Docs
-              </Link>
-              <Link href="/contact" className="hover:opacity-80 leading-none">
-                Contact
-              </Link>
+              <Link href="/pricing" className="hover:opacity-80 leading-none">Pricing</Link>
+              <Link href="/docs" className="hover:opacity-80 leading-none">Docs</Link>
+              <Link href="/contact" className="hover:opacity-80 leading-none">Contact</Link>
               <Link
                 href="/app"
                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
@@ -90,19 +86,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SolaceDock />
 
         {/* ===== FOOTER ===== */}
-        <footer className="mx-auto max-w-6xl border-t border-zinc-800 px-4 py-12 text-sm text-zinc-400">
+        <footer className="mx-auto max-w-6xl border-t border-neutral-800 px-4 py-12 text-sm text-neutral-400">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <span>© {new Date().getFullYear()} Moral Clarity AI</span>
             <div className="flex gap-6">
-              <Link href="/privacy" className="hover:text-zinc-300">
-                Privacy
-              </Link>
-              <Link href="/terms" className="hover:text-zinc-300">
-                Terms
-              </Link>
-              <Link href="/status" className="hover:text-zinc-300">
-                Status
-              </Link>
+              <Link href="/privacy" className="hover:text-neutral-300">Privacy</Link>
+              <Link href="/terms" className="hover:text-neutral-300">Terms</Link>
+              <Link href="/status" className="hover:text-neutral-300">Status</Link>
             </div>
           </div>
         </footer>
