@@ -7,7 +7,7 @@ import DemoBadge from "@/components/DemoBadge";
 import dynamic from "next/dynamic";
 
 // Mount Solace once, client-only
-const SolaceDock = dynamic(() => import("@/components/SolaceDock"), { ssr: false });
+const SolaceDock = dynamic(() => import("@/app/components/SolaceDock"), { ssr: false });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.moralclarity.ai"),
