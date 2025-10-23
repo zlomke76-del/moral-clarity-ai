@@ -246,7 +246,7 @@ export default function SolaceDock() {
                 send();
               }
             }}
-            className="min-h-[44px] max-h-[160px] w-full resize-none rounded-xl bg-zinc-900/80 p-3 text-zinc-100 outline-none ring-1 ring-zinc-800 focus:ring-zinc-600"
+            className="min-h-[44px] max-h-[160px] w-full resize-none rounded-xl p-3 outline-none"
           />
           <button
             onClick={send}
