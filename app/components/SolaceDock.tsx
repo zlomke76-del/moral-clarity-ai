@@ -62,7 +62,23 @@ export default function SolaceDock() {
     }
   }, [messages.length]);
 
-  // drag handlers
+  // --- track dock height for proper vertical clamping ---
+  const [panelH, setPanelH] = useState(0);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const measure = () => setPanelH(el.getBoundingClientRect().height || 0);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
+
+  // --- drag handlers ---
   function onHeaderMouseDown(e: React.MouseEvent) {
     const rect = containerRef.current?.getBoundingClientRect();
     setOffset({
@@ -71,6 +87,7 @@ export default function SolaceDock() {
     });
     setDragging(true);
   }
+
   useEffect(() => {
     if (!dragging) return;
     const onMove = (e: MouseEvent) =>
@@ -162,20 +179,24 @@ export default function SolaceDock() {
       style={{
         position: "fixed",
         left: 16,
-        bottom: 16, // friendlier on mobile; still draggable
-        transform: `translate3d(${Math.max(0, x - 16)}px, ${Math.max(
-          0,
-          y - (window?.innerHeight ? window.innerHeight - 16 : 0)
-        )}px, 0)`,
+        top: 16,
         width,
-        zIndex: 70_000,
+        zIndex: 70000,
         pointerEvents: "auto",
+        transform: `translate3d(${
+          Math.max(0, x - 16)
+        }px, ${
+          Math.min(
+            Math.max(0, y - 16),
+            Math.max(0, (window?.innerHeight || 0) - panelH - 16)
+          )
+        }px, 0)`,
       }}
       className={cx(
-  "solace-dock rounded-3xl border shadow-2xl backdrop-blur",
-  ministryOn && "ring-1 ring-amber-300/30 shadow-[0_0_40px_-10px_rgba(251,191,36,0.25)]"
-)}
-
+        "solace-dock rounded-3xl border shadow-2xl backdrop-blur",
+        ministryOn &&
+          "ring-1 ring-amber-300/30 shadow-[0_0_40px_-10px_rgba(251,191,36,0.25)]"
+      )}
     >
       {/* Header: drag handle + mode chips + ministry overlay */}
       <header
@@ -252,10 +273,9 @@ export default function SolaceDock() {
             onClick={send}
             disabled={streaming || !input.trim()}
             className={cx(
-  "primary rounded-xl px-4 py-2 text-sm font-medium",
-  (streaming || !input.trim()) && "opacity-50 cursor-not-allowed"
-)}
-
+              "primary rounded-xl px-4 py-2 text-sm font-medium",
+              (streaming || !input.trim()) && "opacity-50 cursor-not-allowed"
+            )}
           >
             {streaming ? "…" : "Ask"}
           </button>
