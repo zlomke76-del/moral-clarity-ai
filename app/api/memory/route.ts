@@ -1,30 +1,37 @@
-// app/api/memory/route.ts
-import { NextResponse } from 'next/server';
-import { remember } from '@/lib/memory';
-import { createClient } from '@supabase/supabase-js';
+// app/api/memory/create/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { quotaOk, encryptIfNeeded, writeAudit } from "@/server/memory-utils";
 
-function getUserKey(req: Request) {
-  // TODO: replace with real auth; for now, a cookie or header fallback
-  return req.headers.get('x-user-key') || 'guest';
-}
+const supa = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
-export async function GET(req: Request) {
-  const user_key = getUserKey(req);
-  const sb = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-  const { data, error } = await sb.from('user_memories')
-    .select('id, kind, content, weight, created_at, expires_at')
-    .eq('user_key', user_key)
-    .order('created_at', { ascending: false })
-    .limit(100);
-  if (error) return new NextResponse(error.message, { status: 400 });
-  return NextResponse.json({ items: data });
-}
+export async function POST(req: NextRequest) {
+  const { workspaceId, bucketId, content, title, tags, sensitivity, authorUid } = await req.json();
 
-export async function POST(req: Request) {
-  const body = await req.json().catch(()=> ({}));
-  const user_key = getUserKey(req);
-  const { kind = 'note', content = '', weight = 1.0, expires_at = null } = body || {};
-  if (!content) return new NextResponse('content required', { status: 400 });
-  const row = await remember({ user_key, kind, content, weight, expires_at });
-  return NextResponse.json(row);
+  // 1) quota
+  const ok = await quotaOk(supa, authorUid, Buffer.byteLength(content, "utf8"));
+  if (!ok) return NextResponse.json({ error: "Memory quota exceeded." }, { status: 402 });
+
+  // 2) encrypt if restricted
+  const { storedContent, isEncrypted } = await encryptIfNeeded(supa, workspaceId, content, sensitivity);
+
+  // 3) insert
+  const { data, error } = await supa.from("mca.memory_items").insert({
+    bucket_id: bucketId,
+    author_uid: authorUid,
+    title,
+    content: storedContent,
+    tags,
+    sensitivity
+  }).select("id").single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  // 4) vectorize (optional async queue)
+  // enqueueVectorize(data.id, storedContent, isEncrypted);
+
+  // 5) audit
+  await writeAudit(supa, { item_id: data.id, actor_uid: authorUid, action: "create", details: { isEncrypted } });
+
+  return NextResponse.json({ id: data.id }, { status: 201 });
 }
