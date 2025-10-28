@@ -128,7 +128,7 @@ export async function createMemory(
   workspaceId: string,
   title: string,
   content?: string
-): Promise[MemoryDetailRow] {
+): Promise<MemoryDetailRow> {
   const path = "mca.memories";
   const payload = [{ workspace_id: workspaceId, title, ...(content ? { content } : {}) }];
   const rows = await restPost<MemoryDetailRow[]>(path, payload, true); // service role
