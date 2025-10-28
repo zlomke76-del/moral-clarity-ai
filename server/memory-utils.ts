@@ -1,11 +1,13 @@
 // server/memory-utils.ts
-import { randomBytes, createHash } from "crypto";
+import { randomBytes, createHash, webcrypto } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/supabase";
 
-/* -------------------------- helpers: encoding / ids ------------------------- */
+/* =============================================================================
+ * Encoding & small utils
+ * ========================================================================== */
 
-function b64url(bytes: Uint8Array): string {
+function b64urlEncode(bytes: Uint8Array): string {
   return Buffer.from(bytes)
     .toString("base64")
     .replace(/\+/g, "-")
@@ -13,26 +15,30 @@ function b64url(bytes: Uint8Array): string {
     .replace(/=+$/g, "");
 }
 
-function keyFingerprint(keyBytes: Uint8Array): string {
-  const h = createHash("sha256").update(keyBytes).digest();
-  return b64url(h.subarray(0, 16)); // compact id
+function b64urlDecode(b64u: string): Uint8Array {
+  const pad = b64u.length % 4 === 2 ? "==" : b64u.length % 4 === 3 ? "=" : "";
+  const base64 = b64u.replace(/-/g, "+").replace(/_/g, "/") + pad;
+  return new Uint8Array(Buffer.from(base64, "base64"));
 }
 
-/* ---------------------------- workspace key logic --------------------------- */
+function keyFingerprint(keyBytes: Uint8Array): string {
+  const h = createHash("sha256").update(keyBytes).digest();
+  return b64urlEncode(h.subarray(0, 16)); // compact id
+}
+
+const subtle = webcrypto.subtle;
+
+/* =============================================================================
+ * Workspace Key Management
+ *  - Table: public.mca.workspace_keys { workspace_id uuid, key_b64url text, key_id text, created_at timestamptz }
+ *  - RLS: allow service role only for select/insert on key_b64url
+ * ========================================================================== */
 
 export type InitKeyRef = {
   workspace_id: string;
   key_id: string; // non-secret id of key
 };
 
-/**
- * Ensure a symmetric key exists for a workspace.
- * Assumes table public.mca.workspace_keys with:
- *  - workspace_id uuid
- *  - key_b64url text (secret, protect w/ RLS)
- *  - key_id text unique (non-secret fingerprint)
- *  - created_at timestamptz default now()
- */
 export async function initWorkspaceKey(
   supabase: SupabaseClient<Database>,
   workspaceId: string
@@ -49,8 +55,8 @@ export async function initWorkspaceKey(
   if (existErr) throw existErr;
   if (existing) return { workspace_id: existing.workspace_id, key_id: existing.key_id };
 
-  const keyBytes = randomBytes(32);
-  const key_b64url = b64url(keyBytes);
+  const keyBytes = randomBytes(32); // 256-bit
+  const key_b64url = b64urlEncode(keyBytes);
   const fingerprint = keyFingerprint(keyBytes);
 
   const { data: inserted, error: insErr } = await supabase
@@ -67,38 +73,137 @@ export async function initWorkspaceKey(
   return { workspace_id: inserted.workspace_id, key_id: inserted.key_id };
 }
 
-/* ------------------------ memory encryption (placeholder) ------------------- */
-/**
- * encryptIfNeeded
- * Signature matches /app/api/memory/route.ts expectations:
- *   encryptIfNeeded(supa, workspaceId, content, sensitivity)
- * Returns:
- *   { storedContent: string, isEncrypted: boolean }
- *
- * Currently pass-through (no encryption). You can later:
- *  1) fetch key from mca.workspace_keys by workspaceId,
- *  2) AES-GCM encrypt `content`,
- *  3) return { storedContent: base64url(ciphertext), isEncrypted: true }.
- */
-export async function encryptIfNeeded(
-  _supabase: SupabaseClient<Database>,
-  _workspaceId: string,
-  content: string,
-  _sensitivity?: string // e.g., 'public' | 'restricted' | 'secret'
-): Promise<{ storedContent: string; isEncrypted: boolean }> {
-  // TODO: implement real encryption when ready.
-  return { storedContent: content, isEncrypted: false };
+/* Cache keys in-memory for the serverless lifetime to reduce round trips */
+const keyCache = new Map<string, Uint8Array>();
+
+async function getWorkspaceKeyBytes(
+  supabase: SupabaseClient<Database>,
+  workspaceId: string
+): Promise<Uint8Array> {
+  const cached = keyCache.get(workspaceId);
+  if (cached) return cached;
+
+  const { data, error } = await supabase
+    .from("mca.workspace_keys")
+    .select("key_b64url")
+    .eq("workspace_id", workspaceId)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data?.key_b64url) {
+    // If key is missing, create it proactively
+    const ref = await initWorkspaceKey(supabase, workspaceId);
+    // Fetch again to get the actual key material
+    const { data: data2, error: e2 } = await supabase
+      .from("mca.workspace_keys")
+      .select("key_b64url")
+      .eq("workspace_id", workspaceId)
+      .limit(1)
+      .maybeSingle();
+    if (e2) throw e2;
+    if (!data2?.key_b64url) throw new Error("workspace key missing after init");
+    const kb2 = b64urlDecode(data2.key_b64url);
+    keyCache.set(workspaceId, kb2);
+    return kb2;
+  }
+
+  const keyBytes = b64urlDecode(data.key_b64url);
+  keyCache.set(workspaceId, keyBytes);
+  return keyBytes;
 }
 
-/* ------------------------------ quotas (simple) ----------------------------- */
+/* =============================================================================
+ * AES-GCM (v1)
+ *  - We encrypt when sensitivity !== 'public'
+ *  - Payload format (base64url):
+ *      version(1 byte = 0x01) | iv(12 bytes) | ciphertext+authTag(...)
+ * ========================================================================== */
+
+const PAYLOAD_VERSION_V1 = 0x01;
+
+async function importAesKey(raw: Uint8Array): Promise<CryptoKey> {
+  return await subtle.importKey("raw", raw, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+}
+
+function concatBytes(a: Uint8Array, b: Uint8Array, c: Uint8Array): Uint8Array {
+  const out = new Uint8Array(a.length + b.length + c.length);
+  out.set(a, 0);
+  out.set(b, a.length);
+  out.set(c, a.length + b.length);
+  return out;
+}
+
+function textEncoder() {
+  return new TextEncoder();
+}
+
+function textDecoder() {
+  return new TextDecoder();
+}
+
 /**
- * quotaOk
- * Simple gate using an env-configured byte quota. For now it doesn't query totals;
- * it just checks incoming size against a max chunk limit. Replace with a true total
- * usage calculation when ready.
- *
- * ENV: MEMORY_QUOTA_BYTES (default 40 MiB)
+ * Encrypt content if sensitivity indicates we should.
+ * Returns { storedContent, isEncrypted }.
  */
+export async function encryptIfNeeded(
+  supabase: SupabaseClient<Database>,
+  workspaceId: string,
+  content: string,
+  sensitivity?: string // 'public' | 'restricted' | 'secret'
+): Promise<{ storedContent: string; isEncrypted: boolean }> {
+  const shouldEncrypt = sensitivity && sensitivity !== "public";
+
+  if (!shouldEncrypt) {
+    return { storedContent: content, isEncrypted: false };
+  }
+
+  const keyBytes = await getWorkspaceKeyBytes(supabase, workspaceId);
+  const key = await importAesKey(keyBytes);
+
+  const iv = randomBytes(12); // recommended length for GCM
+  const data = textEncoder().encode(content);
+
+  const cipherBuf = await subtle.encrypt({ name: "AES-GCM", iv }, key, data);
+  const cipher = new Uint8Array(cipherBuf);
+
+  const version = new Uint8Array([PAYLOAD_VERSION_V1]);
+  const full = concatBytes(version, iv, cipher);
+  const storedContent = b64urlEncode(full); // compact, safe for text columns
+
+  return { storedContent, isEncrypted: true };
+}
+
+/**
+ * Attempt decryption. If payload is not encrypted (no version byte), returns it as-is.
+ * Useful for admin tools / migrations.
+ */
+export async function decryptIfPossible(
+  supabase: SupabaseClient<Database>,
+  workspaceId: string,
+  storedContent: string
+): Promise<{ plaintext: string; wasEncrypted: boolean }> {
+  const bytes = b64urlDecode(storedContent);
+  if (bytes.length > 0 && bytes[0] === PAYLOAD_VERSION_V1) {
+    if (bytes.length < 1 + 12 + 1) throw new Error("cipher payload too short");
+    const iv = bytes.subarray(1, 13);
+    const cipher = bytes.subarray(13);
+
+    const keyBytes = await getWorkspaceKeyBytes(supabase, workspaceId);
+    const key = await importAesKey(keyBytes);
+
+    const plainBuf = await subtle.decrypt({ name: "AES-GCM", iv }, key, cipher);
+    const plaintext = textDecoder().decode(new Uint8Array(plainBuf));
+    return { plaintext, wasEncrypted: true };
+  }
+  // Not our encrypted format; treat as plaintext
+  return { plaintext: storedContent, wasEncrypted: false };
+}
+
+/* =============================================================================
+ * Quotas (placeholder: per-item gate). Replace with total-usage calc later.
+ * ========================================================================== */
+
 export async function quotaOk(
   _supabase: SupabaseClient<Database>,
   _userId: string,
@@ -108,18 +213,11 @@ export async function quotaOk(
   return incomingBytes <= limit;
 }
 
-/* --------------------------------- audit log -------------------------------- */
-/**
- * writeAudit
- * Accepts multiple calling shapes, including:
- *   { item_id, actor_uid, action, details, workspace_id }
- *   { user_id, action, meta, workspace_id }
- * Maps them to a consistent insert payload.
- *
- * Assumes table: public.mca.audit_log with columns:
- *   action text, user_id uuid/null, workspace_id uuid/null,
- *   item_id uuid/null, meta jsonb/null, created_at timestamptz default now()
- */
+/* =============================================================================
+ * Audit Log (accepts multiple shapes)
+ *  - Table: public.mca.audit_log { action text, user_id uuid?, workspace_id uuid?, item_id uuid?, meta jsonb?, created_at timestamptz }
+ * ========================================================================== */
+
 export async function writeAudit(
   supabase: SupabaseClient<Database>,
   params: {
@@ -135,17 +233,13 @@ export async function writeAudit(
   try {
     const payload = {
       action: params.action,
-      // prefer explicit user_id; else fallback to actor_uid
       user_id: params.user_id ?? params.actor_uid ?? null,
       workspace_id: params.workspace_id ?? null,
       item_id: params.item_id ?? null,
-      // prefer details; else meta
       meta: (params.details ?? params.meta) ?? null,
     };
-
     await supabase.from("mca.audit_log").insert(payload);
   } catch (err) {
-    // Non-fatal by design
     console.warn("writeAudit warning:", err);
   }
 }
