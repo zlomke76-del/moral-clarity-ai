@@ -16,6 +16,13 @@ export type MemoryDetailRow = {
   workspace_id: string;
 };
 
+export type WorkspaceRow = {
+  id: string;
+  name: string | null;
+  owner_uid: string;
+  created_at: string;
+};
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!; // server-only
@@ -38,7 +45,11 @@ async function restGet<T = unknown>(path: string, query: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-async function restPost<T = unknown>(path: string, body: unknown, useService = false): Promise<T> {
+async function restPost<T = unknown>(
+  path: string,
+  body: unknown,
+  useService = false
+): Promise<T> {
   const key = useService ? SUPABASE_SERVICE_ROLE_KEY : SUPABASE_ANON_KEY;
   const url = `${SUPABASE_URL}/rest/v1/${path}`;
   const res = await fetch(url, {
@@ -60,7 +71,11 @@ async function restPost<T = unknown>(path: string, body: unknown, useService = f
   return res.json() as Promise<T>;
 }
 
-async function restPatch<T = unknown>(path: string, query: string, body: unknown): Promise<T> {
+async function restPatch<T = unknown>(
+  path: string,
+  query: string,
+  body: unknown
+): Promise<T> {
   const key = SUPABASE_SERVICE_ROLE_KEY;
   const url = `${SUPABASE_URL}/rest/v1/${path}?${query}`;
   const res = await fetch(url, {
@@ -101,7 +116,7 @@ async function restDelete(path: string, query: string): Promise<void> {
   }
 }
 
-// ---------- public API ----------
+// ---------- public API: memories ----------
 export async function listMemories(workspaceId: string): Promise<MemoryListRow[]> {
   const path = "mca.memories";
   const query = new URLSearchParams({
@@ -150,3 +165,16 @@ export async function deleteMemory(id: string): Promise<void> {
   const query = new URLSearchParams({ id: `eq.${id}` }).toString();
   await restDelete(path, query);
 }
+
+// ---------- public API: workspaces ----------
+export async function listWorkspacesForUser(userId: string): Promise<WorkspaceRow[]> {
+  const path = "mca.workspaces";
+  const query = new URLSearchParams({
+    owner_uid: `eq.${userId}`,
+    select: "id,name,owner_uid,created_at",
+    order: "created_at.asc",
+    limit: "25",
+  }).toString();
+  return restGet<WorkspaceRow[]>(path, query);
+}
+
