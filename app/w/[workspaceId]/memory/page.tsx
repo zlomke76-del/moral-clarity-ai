@@ -1,78 +1,57 @@
-// Server component that renders the current workspace’s memory list.
-// Uses @supabase/ssr so auth cookies work on the server.
+// app/w/[workspaceId]/memory/page.tsx
+import { supaMca } from "@/server/supabase-clients";
+import Link from "next/link";
 
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
-import type { Database } from "@/types/supabase";
+type PageProps = { params: { workspaceId: string } };
 
-export const dynamic = "force-dynamic";
+export const dynamic = "force-dynamic"; // always SSR
 
-type Params = { params: { workspaceId: string } };
+export default async function MemoryPage({ params }: PageProps) {
+  const workspaceId = params.workspaceId;
 
-export default async function MemoryPage({ params }: Params) {
-  const cookieStore = await cookies();
-
-  const supa = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (key: string) => cookieStore.get(key)?.value,
-      },
-    }
-  );
-
-  // Optional: confirm user session (redirect if you want)
-  const {
-    data: { user },
-  } = await supa.auth.getUser();
-
-  // Load recent memories for this workspace
-  const { data: memories, error } = await supa
-    .schema("mca")
+  // Fetch recent memories for this workspace (typed via 'mca' client)
+  const { data: memories, error } = await supaMca
     .from("memories")
     .select("id,title,created_at")
-    .eq("workspace_id", params.workspaceId)
+    .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: false })
     .limit(50);
 
   if (error) {
-    return (
-      <div className="p-6">
-        <h1 className="text-xl font-semibold mb-2">Memory</h1>
-        <p className="text-red-600">Error: {error.message}</p>
-      </div>
-    );
+    // surface a readable error in dev; Next will render 500 page in prod
+    throw new Error(`Failed to load memories: ${error.message}`);
   }
 
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex items-baseline justify-between">
-        <h1 className="text-2xl font-semibold">Memory</h1>
-        {user && (
-          <span className="text-sm opacity-70">
-            signed in as {user.email ?? user.id}
-          </span>
-        )}
-      </div>
+    <main className="max-w-3xl mx-auto p-6 space-y-6">
+      <header className="space-y-1">
+        <h1 className="text-2xl font-semibold">Your Memories</h1>
+        <p className="text-sm text-zinc-500">
+          Workspace: <code className="px-1 py-0.5 bg-zinc-100 rounded">{workspaceId}</code>
+        </p>
+      </header>
 
-      {!memories || memories.length === 0 ? (
-        <p className="opacity-70">No memories yet.</p>
-      ) : (
-        <ul className="space-y-2">
-          {memories.map((m) => (
-            <li
-              key={m.id}
-              className="rounded-lg border px-4 py-3 shadow-sm"
-            >
-              <div className="font-medium">{m.title ?? m.id}</div>
-              <div className="text-xs opacity-60">
-                {m.created_at ? new Date(m.created_at).toLocaleString() : ""}
-              </div>
-            </li>
-          ))}
-        </ul>
+      {(!memories || memories.length === 0) && (
+        <p className="text-zinc-600">No memories yet.</p>
       )}
-    </div>
+
+      <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 overflow-hidden">
+        {memories?.map((m) => (
+          <li key={m.id} className="p-4 hover:bg-zinc-50">
+            <div className="flex items-center justify-between gap-4">
+              <Link
+                className="font-medium text-blue-600 hover:underline"
+                href={`/memory/${m.id}`}
+              >
+                {m.title || "(untitled)"}
+              </Link>
+              <time className="text-xs text-zinc-500">
+                {new Date(m.created_at!).toLocaleString()}
+              </time>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </main>
   );
 }
