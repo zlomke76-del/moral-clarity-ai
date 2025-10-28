@@ -68,28 +68,29 @@ export async function initWorkspaceKey(
 }
 
 /* ------------------------ memory encryption (placeholder) ------------------- */
-
 /**
  * encryptIfNeeded
- * For now: pass-through (no encryption). Return shape matches a future encrypted flow.
- * You can upgrade this to fetch the workspace key and encrypt payloads.
+ * Signature matches /app/api/memory/route.ts expectations:
+ *   encryptIfNeeded(supa, workspaceId, content, sensitivity)
+ * Returns:
+ *   { storedContent: string, isEncrypted: boolean }
+ *
+ * Currently pass-through (no encryption). You can later:
+ *  1) fetch key from mca.workspace_keys by workspaceId,
+ *  2) AES-GCM encrypt `content`,
+ *  3) return { storedContent: base64url(ciphertext), isEncrypted: true }.
  */
-export type EncryptResult = {
-  cipher: "none" | "v1-aesgcm";
-  payload: string; // the stored value (ciphertext or plaintext)
-};
-
 export async function encryptIfNeeded(
   _supabase: SupabaseClient<Database>,
   _workspaceId: string,
-  plaintext: string
-): Promise<EncryptResult> {
-  // TODO: implement AES-GCM with key from mca.workspace_keys if required
-  return { cipher: "none", payload: plaintext };
+  content: string,
+  _sensitivity?: string // e.g., 'public' | 'restricted' | 'secret'
+): Promise<{ storedContent: string; isEncrypted: boolean }> {
+  // TODO: implement real encryption when ready.
+  return { storedContent: content, isEncrypted: false };
 }
 
 /* ------------------------------ quotas (simple) ----------------------------- */
-
 /**
  * quotaOk
  * Simple gate using an env-configured byte quota. For now it doesn't query totals;
@@ -104,12 +105,10 @@ export async function quotaOk(
   incomingBytes: number
 ): Promise<boolean> {
   const limit = parseInt(process.env.MEMORY_QUOTA_BYTES || "", 10) || 40 * 1024 * 1024;
-  // allow writes up to limit per item (conservative). Replace with sum(current_usage)+incomingBytes check.
   return incomingBytes <= limit;
 }
 
 /* --------------------------------- audit log -------------------------------- */
-
 /**
  * writeAudit
  * Non-fatal attempt to persist an audit record. Schema is intentionally generic;
