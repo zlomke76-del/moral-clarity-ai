@@ -3,6 +3,11 @@
 
 import { useEffect, useState } from "react";
 
+/**
+ * A simple, zero-dependency toast system.
+ * Listens for `window.dispatchEvent(new CustomEvent("mca:toast", { detail: { text } }))`
+ * and displays it as a floating notification for ~2.4s.
+ */
 type ToastMsg = { id: number; text: string };
 
 export default function Toaster() {
@@ -13,11 +18,9 @@ export default function Toaster() {
     const onToast = (e: Event) => {
       const detail = (e as CustomEvent<{ text: string }>).detail;
       if (!detail?.text) return;
-
       const toast = { id: idCounter++, text: detail.text };
       setToasts((t) => [...t, toast]);
-
-      // Auto-dismiss after 2.4s
+      // Auto-remove after 2.4s
       setTimeout(() => {
         setToasts((t) => t.filter((x) => x.id !== toast.id));
       }, 2400);
@@ -28,13 +31,35 @@ export default function Toaster() {
   }, []);
 
   return (
-    <div
-      className="fixed inset-x-0 bottom-6 z-[60] flex w-full justify-center px-4 pointer-events-none"
-      aria-live="polite"
-    >
+    <div className="fixed inset-x-0 bottom-6 z-[60] flex w-full justify-center px-4 pointer-events-none">
       <div className="flex max-w-md flex-col gap-2">
         {toasts.map((t) => (
           <div
             key={t.id}
             className="pointer-events-auto rounded-md border border-neutral-800 bg-neutral-950/95 
-                       px-4 py-2 text-sm text-neutral-100 shadow-2xl transition
+                       px-4 py-2 text-sm text-neutral-100 shadow-2xl animate-fade-in"
+          >
+            {t.text}
+          </div>
+        ))}
+      </div>
+
+      {/* fade animation (no external CSS file required) */}
+      <style jsx global>{`
+        @keyframes fade-in {
+          0% {
+            opacity: 0;
+            transform: translateY(8px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.25s ease-out;
+        }
+      `}</style>
+    </div>
+  );
+}
