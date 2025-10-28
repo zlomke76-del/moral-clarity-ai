@@ -38,7 +38,7 @@ export type InitKeyRef = {
 };
 
 export async function initWorkspaceKey(
-  supabase: SupabaseClient<Database, "public" | "mca">,
+  supabase: SupabaseClient<Database>,
   workspaceId: string
 ): Promise<InitKeyRef> {
   if (!workspaceId) throw new Error("workspaceId is required");
@@ -77,7 +77,7 @@ export async function initWorkspaceKey(
 const keyCache = new Map<string, Uint8Array>();
 
 async function getWorkspaceKeyBytes(
-  supabase: SupabaseClient<Database, "public" | "mca">,
+  supabase: SupabaseClient<Database>,
   workspaceId: string
 ): Promise<Uint8Array> {
   const cached = keyCache.get(workspaceId);
@@ -139,7 +139,7 @@ function textDecoder() {
 }
 
 export async function encryptIfNeeded(
-  supabase: SupabaseClient<Database, "public" | "mca">,
+  supabase: SupabaseClient<Database>,
   workspaceId: string,
   content: string,
   sensitivity?: string // 'public' | 'restricted' | 'secret'
@@ -159,7 +159,7 @@ export async function encryptIfNeeded(
 }
 
 export async function decryptIfPossible(
-  supabase: SupabaseClient<Database, "public" | "mca">,
+  supabase: SupabaseClient<Database>,
   workspaceId: string,
   storedContent: string
 ): Promise<{ plaintext: string; wasEncrypted: boolean }> {
@@ -182,7 +182,7 @@ export async function decryptIfPossible(
  * ========================================================================== */
 
 export async function quotaOk(
-  _supabase: SupabaseClient<Database, "public" | "mca">,
+  _supabase: SupabaseClient<Database>,
   _userId: string,
   incomingBytes: number
 ): Promise<boolean> {
@@ -195,7 +195,7 @@ export async function quotaOk(
  * ========================================================================== */
 
 export async function writeAudit(
-  supabase: SupabaseClient<Database, "public" | "mca">,
+  supabase: SupabaseClient<Database>,
   params: {
     action: string;
     user_id?: string | null;
