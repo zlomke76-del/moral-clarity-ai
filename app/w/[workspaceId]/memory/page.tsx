@@ -1,14 +1,15 @@
 // app/w/[workspaceId]/memory/page.tsx
+// Memory list + create form (server action). Uses REST helpers (no supabase-js generics).
+
 import Link from "next/link";
-import { listMemories, type MemoryListRow } from "@/lib/mca-rest";
-import { supaServiceMca } from "@/server/supabase-clients";
 import { revalidatePath } from "next/cache";
+import { listMemories, createMemory, type MemoryListRow } from "@/lib/mca-rest";
 
 type PageProps = { params: { workspaceId: string } };
 
 export const dynamic = "force-dynamic";
 
-// Server Action: create a memory (title + optional content)
+// Server Action: create a memory via REST (service role), then revalidate
 async function createMemoryAction(formData: FormData) {
   "use server";
   const workspaceId = String(formData.get("workspace_id") || "");
@@ -18,13 +19,7 @@ async function createMemoryAction(formData: FormData) {
   if (!workspaceId) throw new Error("workspace_id required");
   if (!title) throw new Error("title required");
 
-  const { error } = await supaServiceMca
-    .from("memories")
-    .insert({ workspace_id: workspaceId, title, ...(content ? { content } : {}) });
-
-  if (error) throw new Error(error.message);
-
-  // Refresh the list
+  await createMemory(workspaceId, title, content || undefined);
   revalidatePath(`/w/${workspaceId}/memory`);
 }
 
@@ -48,8 +43,7 @@ export default async function MemoryPage({ params }: PageProps) {
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold">Your Memories</h1>
         <p className="text-sm text-zinc-500">
-          Workspace:{" "}
-          <code className="px-1 py-0.5 bg-zinc-100 rounded">{workspaceId}</code>
+          Workspace: <code className="px-1 py-0.5 bg-zinc-100 rounded">{workspaceId}</code>
         </p>
       </header>
 
