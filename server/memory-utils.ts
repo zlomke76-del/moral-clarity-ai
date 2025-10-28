@@ -111,29 +111,41 @@ export async function quotaOk(
 /* --------------------------------- audit log -------------------------------- */
 /**
  * writeAudit
- * Non-fatal attempt to persist an audit record. Schema is intentionally generic;
- * adjust to your table when ready.
+ * Accepts multiple calling shapes, including:
+ *   { item_id, actor_uid, action, details, workspace_id }
+ *   { user_id, action, meta, workspace_id }
+ * Maps them to a consistent insert payload.
  *
- * Assumes table: public.mca.audit_log { id, action, user_id, workspace_id, meta, created_at }
+ * Assumes table: public.mca.audit_log with columns:
+ *   action text, user_id uuid/null, workspace_id uuid/null,
+ *   item_id uuid/null, meta jsonb/null, created_at timestamptz default now()
  */
 export async function writeAudit(
   supabase: SupabaseClient<Database>,
   params: {
     action: string;
     user_id?: string | null;
+    actor_uid?: string | null;
     workspace_id?: string | null;
+    item_id?: string | null;
     meta?: Record<string, unknown> | null;
+    details?: Record<string, unknown> | null;
   }
 ): Promise<void> {
   try {
-    await supabase.from("mca.audit_log").insert({
+    const payload = {
       action: params.action,
-      user_id: params.user_id ?? null,
+      // prefer explicit user_id; else fallback to actor_uid
+      user_id: params.user_id ?? params.actor_uid ?? null,
       workspace_id: params.workspace_id ?? null,
-      meta: params.meta ?? null,
-    });
+      item_id: params.item_id ?? null,
+      // prefer details; else meta
+      meta: (params.details ?? params.meta) ?? null,
+    };
+
+    await supabase.from("mca.audit_log").insert(payload);
   } catch (err) {
-    // Don't fail the request for audit write issues
+    // Non-fatal by design
     console.warn("writeAudit warning:", err);
   }
 }
