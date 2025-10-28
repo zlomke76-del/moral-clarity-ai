@@ -23,8 +23,8 @@ function json(data: unknown, status = 200) {
   });
 }
 
-// Strongly-typed Supabase client for both schemas
-const supa: SupabaseClient<Database, "public" | "mca"> = createClient<Database>(
+// Strongly-typed Supabase client (types cover public+mca if generated with --schema public,mca)
+const supa: SupabaseClient<Database> = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
