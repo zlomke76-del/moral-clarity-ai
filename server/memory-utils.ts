@@ -30,7 +30,7 @@ const subtle = webcrypto.subtle;
 
 /* =============================================================================
  * Workspace Key Management
- *  - Table: public.mca.workspace_keys { workspace_id uuid, key_b64url text, key_id text, created_at timestamptz }
+ *  - Table: mca.workspace_keys { workspace_id uuid, key_b64url text, key_id text, created_at timestamptz }
  *  - RLS: allow service role only for select/insert on key_b64url
  * ========================================================================== */
 
@@ -46,7 +46,8 @@ export async function initWorkspaceKey(
   if (!workspaceId) throw new Error("workspaceId is required");
 
   const { data: existing, error: existErr } = await supabase
-    .from("mca.workspace_keys")
+    .schema("mca")
+    .from("workspace_keys")
     .select("workspace_id,key_id")
     .eq("workspace_id", workspaceId)
     .limit(1)
@@ -60,7 +61,8 @@ export async function initWorkspaceKey(
   const fingerprint = keyFingerprint(keyBytes);
 
   const { data: inserted, error: insErr } = await supabase
-    .from("mca.workspace_keys")
+    .schema("mca")
+    .from("workspace_keys")
     .insert({
       workspace_id: workspaceId,
       key_b64url,
@@ -84,7 +86,8 @@ async function getWorkspaceKeyBytes(
   if (cached) return cached;
 
   const { data, error } = await supabase
-    .from("mca.workspace_keys")
+    .schema("mca")
+    .from("workspace_keys")
     .select("key_b64url")
     .eq("workspace_id", workspaceId)
     .limit(1)
@@ -93,10 +96,10 @@ async function getWorkspaceKeyBytes(
   if (error) throw error;
   if (!data?.key_b64url) {
     // If key is missing, create it proactively
-    const ref = await initWorkspaceKey(supabase, workspaceId);
-    // Fetch again to get the actual key material
+    await initWorkspaceKey(supabase, workspaceId);
     const { data: data2, error: e2 } = await supabase
-      .from("mca.workspace_keys")
+      .schema("mca")
+      .from("workspace_keys")
       .select("key_b64url")
       .eq("workspace_id", workspaceId)
       .limit(1)
@@ -123,7 +126,7 @@ async function getWorkspaceKeyBytes(
 const PAYLOAD_VERSION_V1 = 0x01;
 
 async function importAesKey(raw: Uint8Array): Promise<CryptoKey> {
-  return await subtle.importKey("raw", raw, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+  return subtle.importKey("raw", raw, { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
 }
 
 function concatBytes(a: Uint8Array, b: Uint8Array, c: Uint8Array): Uint8Array {
@@ -215,7 +218,7 @@ export async function quotaOk(
 
 /* =============================================================================
  * Audit Log (accepts multiple shapes)
- *  - Table: public.mca.audit_log { action text, user_id uuid?, workspace_id uuid?, item_id uuid?, meta jsonb?, created_at timestamptz }
+ *  - Table: mca.audit_log { action text, user_id uuid?, workspace_id uuid?, item_id uuid?, meta jsonb?, created_at timestamptz }
  * ========================================================================== */
 
 export async function writeAudit(
@@ -238,7 +241,7 @@ export async function writeAudit(
       item_id: params.item_id ?? null,
       meta: (params.details ?? params.meta) ?? null,
     };
-    await supabase.from("mca.audit_log").insert(payload);
+    await supabase.schema("mca").from("audit_log").insert(payload);
   } catch (err) {
     console.warn("writeAudit warning:", err);
   }
