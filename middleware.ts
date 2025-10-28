@@ -1,37 +1,43 @@
 // middleware.ts
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { createMiddlewareClient } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 
 export const config = {
-  // You can include /api if you want auth refreshes there too, but it adds overhead.
-  matcher: ["/app/:path*", "/w/:path*"], 
+  matcher: ["/app/:path*", "/w/:path*"], // keep API out unless you need refreshes there
 };
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Allow unauthenticated preview routes
+  // Let public preview routes pass
   if (pathname.startsWith("/app/preview")) {
     return NextResponse.next();
   }
 
-  // Create a mutable response so cookies can be updated
+  // Mutable response so Supabase can refresh cookies
   const res = NextResponse.next({ request: { headers: req.headers } });
 
-  // Supabase client for middleware (handles cookie refresh internally)
-  const supabase = createMiddlewareClient(
-    { req, res },
+  // Supabase client (middleware-safe) using cookies adapter
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      // Cast keeps TS happy across ssr package versions
+      cookies: {
+        get: (name: string) => req.cookies.get(name)?.value,
+        set: (name: string, value: string, options?: any) =>
+          res.cookies.set({ name, value, ...(options ?? {}) }),
+        remove: (name: string, options?: any) =>
+          res.cookies.set({ name, value: "", ...(options ?? {}), maxAge: 0 }),
+      } as any,
     }
   );
 
-  // Touch the session to auto-refresh if needed
+  // Touch session so it auto-refreshes if needed
   await supabase.auth.getSession();
 
-  // Optional: gate /app behind auth later
+  // Optional gate for /app:
   // const { data } = await supabase.auth.getUser();
   // if (!data.user && pathname.startsWith("/app")) {
   //   return NextResponse.redirect(new URL("/login", req.url));
