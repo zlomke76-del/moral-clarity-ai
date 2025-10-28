@@ -39,25 +39,34 @@ export default async function MemoryDetail({ params }: PageProps) {
 
   return (
     <main className="max-w-3xl mx-auto p-6 space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold">{mem.title || "(untitled)"}</h1>
-        <div className="text-sm text-zinc-500">
-          <time>{new Date(mem.created_at).toLocaleString()}</time>
-          <span className="mx-2">•</span>
-          <span>Workspace: {mem.workspace_id}</span>
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold">{mem.title || "(untitled)"}</h1>
+          <div className="text-sm text-zinc-500">
+            <time>{new Date(mem.created_at).toLocaleString()}</time>
+            <span className="mx-2">•</span>
+            <span>Workspace: {mem.workspace_id}</span>
+          </div>
         </div>
+        <Link
+          href={`/memory/${mem.id}/edit`}
+          className="rounded bg-black text-white px-3 py-2 text-sm hover:opacity-90"
+        >
+          Edit
+        </Link>
       </div>
 
       {mem.content ? (
-        <article className="prose max-w-none whitespace-pre-wrap">
-          {mem.content}
-        </article>
+        <article className="prose max-w-none whitespace-pre-wrap">{mem.content}</article>
       ) : (
         <p className="text-zinc-600">No content.</p>
       )}
 
       <div>
-        <Link href={`/w/${mem.workspace_id}/memory`} className="text-blue-600 hover:underline">
+        <Link
+          href={`/w/${mem.workspace_id}/memory`}
+          className="text-blue-600 hover:underline"
+        >
           ← Back to list
         </Link>
       </div>
