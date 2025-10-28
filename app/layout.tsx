@@ -5,10 +5,11 @@ import Image from "next/image";
 import "./globals.css";
 import DemoBadge from "@/components/DemoBadge";
 import dynamic from "next/dynamic";
-import TopNav from "@/components/TopNav";        // new global nav
-import Breadcrumb from "@/components/Breadcrumb"; // optional contextual crumb bar
+import TopNav from "@/components/TopNav";        // global sub-nav
+import Breadcrumb from "@/components/Breadcrumb"; // contextual crumb bar
+import Toaster from "@/components/Toaster";       // global toast system
 
-// Client-only mount of Solace
+// Client-only singleton for Solace
 const SolaceDock = dynamic(() => import("@/app/components/SolaceDock"), { ssr: false });
 
 export const metadata: Metadata = {
@@ -96,13 +97,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {/* optional breadcrumb container (renders nothing if none passed) */}
           <div id="breadcrumb-slot">
             {/* Example static crumb if you want a default: */}
-            {/* <Breadcrumb items={[{label:'Home',href:'/'},{label:'App'}]} /> */}
+            {/* <Breadcrumb items={[{ label: 'Home', href: '/' }, { label: 'App' }]} /> */}
           </div>
           {children}
         </main>
 
-        {/* Floating Solace (singleton) */}
+        {/* ===== GLOBAL FLOATING COMPONENTS ===== */}
         <SolaceDock />
+        <Toaster /> {/* global toast listener */}
 
         {/* ===== FOOTER ===== */}
         <footer className="mx-auto w-full max-w-6xl border-t border-neutral-800 px-4 py-12 text-sm text-neutral-400">
