@@ -61,12 +61,14 @@ export async function POST(req: NextRequest) {
 
     // init all missing
     const { data: workspaces, error: wsErr } = await supa
-      .from("mca.workspaces")
+      .schema("mca")
+      .from("workspaces")
       .select("id");
     if (wsErr) throw wsErr;
 
     const { data: haveKeys, error: hkErr } = await supa
-      .from("mca.workspace_keys")
+      .schema("mca")
+      .from("workspace_keys")
       .select("workspace_id");
     if (hkErr) throw hkErr;
 
@@ -86,4 +88,3 @@ export async function POST(req: NextRequest) {
     return json({ error: e?.message ?? String(e) }, 500);
   }
 }
-
