@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿export type Json =
   | string
   | number
@@ -2264,3 +2265,12 @@ export const Constants = {
     },
   },
 } as const
+=======
+// types/supabase.ts
+// Minimal placeholder. Replace with real generated types when available.
+// Run (example):
+//   supabase gen types typescript --project-id <id> --schema public > types/supabase.ts
+// and export `Database`.
+
+export type Database = any;
+>>>>>>> 7ecd048aa320dc75b3e6028cbdbba0a37155b083

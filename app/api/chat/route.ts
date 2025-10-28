@@ -7,6 +7,10 @@ import type OpenAI from 'openai';
 import { getOpenAI } from '@/lib/openai';
 import { routeMode } from '@/core/mode-router';
 
+/* ========= NEW (MEMORY) ========= */
+import { searchMemories, remember } from '@/lib/memory'; // requires the memory utils we added
+/* ================================= */
+
 /* ========= MODEL / TIMEOUT ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -204,6 +208,19 @@ function headersToRecord(h: Headers): Record<string, string> {
   return out;
 }
 
+/* ========= NEW (MEMORY HELPERS) ========= */
+function getUserKeyFromReq(req: NextRequest, body: any) {
+  // prefer explicit header; fall back to body.userId; else guest
+  return req.headers.get('x-user-key') || body?.userId || 'guest';
+}
+
+function detectExplicitRemember(text: string) {
+  // crude, explicit signal only (keeps this controllable)
+  const m = text?.match(/^\s*remember that\s*(.*)$/i);
+  return m?.[1]?.trim() || null;
+}
+/* ======================================== */
+
 /* ========= HEALTHCHECK ========= */
 export async function GET(req: NextRequest) {
   const origin = pickAllowedOrigin(req.headers.get('origin'));
@@ -284,31 +301,67 @@ export async function POST(req: NextRequest) {
     const rolled = trimConversation(messages);
     const userAskedForSecular = wantsSecular(rolled);
 
-    const lastUser = [...rolled].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content || '';
+    const lastUser =
+      [...rolled].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content || '';
     const lastModeHeader = req.headers.get('x-last-mode');
     const route = routeMode(lastUser, { lastMode: lastModeHeader as any });
 
     // ---------- ADDITIVE FILTER LOGIC (Ministry as overlay) ----------
-    // Start with any filters the client sent
     const incoming = new Set(rawFilters);
-
-    // Router suggestion (soft-add; never removes)
     if (route.mode === 'Guidance') incoming.add('guidance');
     if (route.mode === 'Ministry') {
       incoming.add('ministry');
       incoming.add('abrahamic');
     }
-
-    // Explicit overlay boolean from client (optional)
     if (body?.ministry === true) {
       incoming.add('ministry');
       incoming.add('abrahamic');
     }
-
     const effectiveFilters = Array.from(incoming);
     // ---------------------------------------------------------------
 
-    const { prompt: system } = buildSystemPrompt(effectiveFilters, userAskedForSecular, rolled);
+    const { prompt: baseSystem } = buildSystemPrompt(effectiveFilters, userAskedForSecular, rolled);
+
+    /* ========= MEMORY: assemble Memory Pack ========= */
+    const userKey = getUserKeyFromReq(req, body);
+    const memoryEnabled = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+    let memorySection = '';
+    if (memoryEnabled) {
+      try {
+        // Use last user utterance as the query; if empty, fuse last few user lines
+        const fallbackQuery =
+          rolled.filter((m) => m.role === 'user').map((m) => m.content).slice(-3).join('\n') || 'general';
+        const query = lastUser || fallbackQuery;
+
+        const hits = await searchMemories(userKey, query, 8);
+        const pack = hits
+          .sort((a: any, b: any) => (b.weight ?? 1) - (a.weight ?? 1))
+          .map((m: any) => `• (${m.kind}) ${m.content}`)
+          .slice(0, 12)
+          .join('\n');
+
+        memorySection =
+          `\n\nMEMORY PACK (private, user-scoped)\nUse these stable facts/preferences **only if relevant**:\n` +
+          (pack || '• (none)');
+      } catch {
+        // If memory fetch fails, just omit silently
+        memorySection = '';
+      }
+    }
+
+    const system = baseSystem + memorySection;
+    /* ================================================= */
+
+    /* ========= MEMORY: capture explicit "remember that ..." ========= */
+    const explicit = detectExplicitRemember(lastUser);
+    if (explicit && memoryEnabled) {
+      try {
+        await remember({ user_key: userKey, kind: 'fact', content: explicit, weight: 1.2 });
+      } catch {
+        // non-fatal
+      }
+    }
+    /* ================================================================= */
 
     // ----- Prefer SOLACE if configured -----
     const useSolace = Boolean(SOLACE_URL && SOLACE_KEY);
@@ -327,6 +380,9 @@ export async function POST(req: NextRequest) {
             }),
             REQUEST_TIMEOUT_MS
           );
+
+          /* (Optional) future: auto-extract new durable facts here, if you want a smarter memory writer */
+
           return NextResponse.json(
             { text, model: 'solace', identity: SOLACE_NAME, mode: route.mode, confidence: route.confidence, filters: effectiveFilters },
             { headers: corsHeaders(echoOrigin) }
@@ -353,6 +409,8 @@ export async function POST(req: NextRequest) {
       );
 
       const text = (resp as any).output_text?.trim() || '[No reply from model]';
+
+      /* (Optional) future: auto-extract new durable facts here */
 
       return NextResponse.json(
         { text, model: MODEL, identity: SOLACE_NAME, mode: route.mode, confidence: route.confidence, filters: effectiveFilters },

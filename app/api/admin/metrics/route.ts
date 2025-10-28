@@ -12,10 +12,11 @@ export async function GET(req: Request) {
 
     const SUPA = process.env.SUPABASE_URL!;
     const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    if (!SUPA || !KEY) throw new Error("Missing Supabase env vars");
     const headers = { apikey: KEY, Authorization: `Bearer ${KEY}` };
 
     // ---- helpers ----------------------------------------------------------
-    async function countByStatus(status: string) {
+    const countByStatus = async (status: string): Promise<number> => {
       const url = new URL(`${SUPA}/rest/v1/support_requests`);
       url.searchParams.set("select", "id");
       url.searchParams.set("status", `eq.${status}`);
@@ -25,7 +26,7 @@ export async function GET(req: Request) {
       });
       if (!r.ok) throw new Error(await r.text());
       return Number(r.headers.get("content-range")?.split("/")[1] || "0");
-    }
+    };
 
     // ---- counts -----------------------------------------------------------
     const [open, inprog, resolved] = await Promise.all([
@@ -38,7 +39,7 @@ export async function GET(req: Request) {
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const recentUrl = new URL(`${SUPA}/rest/v1/support_requests`);
     recentUrl.searchParams.set("select", "id");
-    recentUrl.searchParams.append("created_at", `gte.${since}`);
+    recentUrl.searchParams.set("created_at", `gte.${since}`);
     const recentRes = await fetch(recentUrl, {
       headers: { ...headers, Prefer: "count=exact" },
       cache: "no-store",
@@ -68,7 +69,7 @@ export async function GET(req: Request) {
       },
     });
   } catch (e: any) {
-    const code = e.message === "Unauthorized" ? 401 : 400;
-    return new NextResponse(e.message || "Bad Request", { status: code });
+    const code = e?.message === "Unauthorized" ? 401 : 400;
+    return new NextResponse(e?.message || "Bad Request", { status: code });
   }
 }
