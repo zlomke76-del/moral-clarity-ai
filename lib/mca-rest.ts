@@ -177,4 +177,15 @@ export async function listWorkspacesForUser(userId: string): Promise<WorkspaceRo
   }).toString();
   return restGet<WorkspaceRow[]>(path, query);
 }
+// --- Single workspace (read) ---
+export async function getWorkspaceById(id: string): Promise<WorkspaceRow | null> {
+  const path = "mca.workspaces";
+  const query = new URLSearchParams({
+    id: `eq.${id}`,
+    select: "id,name,owner_uid,created_at",
+    limit: "1",
+  }).toString();
+  const rows = await restGet<WorkspaceRow[]>(path, query);
+  return rows[0] ?? null;
+}
 
