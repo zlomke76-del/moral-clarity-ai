@@ -1,72 +1,85 @@
 // server/memory-utils.ts
-import { createClient } from "@supabase/supabase-js";
-import { aesGcmEncryptRaw, unwrapWorkspaceKey } from "./crypto";
+import { randomBytes, createHash } from "crypto";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/supabase";
 
-type Supa = ReturnType<typeof createClient>;
-
-//— Encrypt content if sensitivity === 'restricted'
-export async function encryptIfNeeded(
-  supa: Supa,
-  workspaceId: string,
-  content: string,
-  sensitivity: string
-): Promise<{ storedContent: string; isEncrypted: boolean }> {
-  if (sensitivity !== "restricted") {
-    return { storedContent: content, isEncrypted: false };
-  }
-
-  // get key_ref from DB
-  const { data, error } = await supa
-    .from("mca.workspace_keys")
-    .select("key_ref")
-    .eq("workspace_id", workspaceId)
-    .maybeSingle();
-
-  if (error || !data) {
-    throw new Error("Workspace key not found; initialize a key for this workspace.");
-  }
-
-  const rawKey = unwrapWorkspaceKey(data.key_ref);
-  const { ciphertext, iv, tag } = aesGcmEncryptRaw(rawKey, content);
-  return {
-    storedContent: JSON.stringify({ ct: ciphertext, iv, tag }),
-    isEncrypted: true,
-  };
-}
-
-export async function quotaOk(supa: Supa, userUid: string, incomingBytes: number) {
-  const [{ data: used, error: e1 }, { data: lim, error: e2 }] = await Promise.all([
-    supa.rpc("mca.user_bytes_used", { p_user: userUid }),
-    supa.rpc("mca.user_bytes_limit", { p_user: userUid }),
-  ]);
-  if (e1 || e2) throw new Error((e1?.message ?? e2?.message) || "Quota check failed");
-  const usedNum = Number(used ?? 0);
-  const limNum = Number(lim ?? 0);
-  return usedNum + incomingBytes < limNum;
-}
-
-export async function writeAudit(
-  supa: Supa,
-  row: { item_id: string; actor_uid: string; action: "create" | "update" | "delete" | "read" | "share"; details?: any }
-) {
-  await supa.from("mca.memory_audit").insert({ ...row });
+/**
+ * Base64url encode without padding.
+ */
+function b64url(bytes: Uint8Array): string {
+  return Buffer.from(bytes)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
 }
 
 /**
- * One-time helper: create & store a workspace key.
- * Returns the stored key_ref string.
+ * Deterministic, short id for a key material (non-secret).
+ * We DO NOT store raw key material here—this is only a fingerprint for reference.
  */
-export async function initWorkspaceKey(supa: Supa, workspaceId: string) {
-  // if exists, return
-  const existing = await supa.from("mca.workspace_keys").select("key_ref").eq("workspace_id", workspaceId).maybeSingle();
-  if (existing.data) return existing.data.key_ref;
+function keyFingerprint(keyBytes: Uint8Array): string {
+  const h = createHash("sha256").update(keyBytes).digest();
+  // take first 16 bytes for a compact id
+  return b64url(h.subarray(0, 16));
+}
 
-  // generate 32-byte key
-  const key = Buffer.from(require("crypto").randomBytes(32));
-  const { wrapWorkspaceKeyLocal } = await import("./crypto");
-  const key_ref = wrapWorkspaceKeyLocal(key);
+export type InitKeyRef = {
+  workspace_id: string;
+  key_id: string; // fingerprint/id of the stored key (non-secret)
+};
 
-  const { error } = await supa.from("mca.workspace_keys").insert({ workspace_id: workspaceId, key_ref });
-  if (error) throw new Error(error.message);
-  return key_ref;
+/**
+ * Ensure a symmetric key exists for a workspace.
+ * - If missing, generates a new 32-byte key and stores it in mca.workspace_keys.
+ * - Returns a stable reference containing {workspace_id, key_id}.
+ *
+ * Table assumptions:
+ *   - public.mca.workspace_keys has columns:
+ *       - workspace_id (uuid, pk/fk to mca.workspaces.id)
+ *       - key_b64url (text)         // the secret, stored server-side; restrict RLS!
+ *       - key_id (text, unique)     // non-secret fingerprint/id
+ *       - created_at (timestamptz)  // default now()
+ *   - RLS allows service role insert/select
+ */
+export async function initWorkspaceKey(
+  supabase: SupabaseClient<Database>,
+  workspaceId: string
+): Promise<InitKeyRef> {
+  if (!workspaceId) {
+    throw new Error("workspaceId is required");
+  }
+
+  // 1) Does a key already exist?
+  const { data: existing, error: existErr } = await supabase
+    .from("mca.workspace_keys")
+    .select("workspace_id,key_id")
+    .eq("workspace_id", workspaceId)
+    .limit(1)
+    .maybeSingle();
+
+  if (existErr) throw existErr;
+
+  if (existing) {
+    return { workspace_id: existing.workspace_id, key_id: existing.key_id };
+  }
+
+  // 2) Generate a new 32-byte random key and store it
+  const keyBytes = randomBytes(32);
+  const key_b64url = b64url(keyBytes);
+  const fingerprint = keyFingerprint(keyBytes); // non-secret id
+
+  const { data: inserted, error: insErr } = await supabase
+    .from("mca.workspace_keys")
+    .insert({
+      workspace_id: workspaceId,
+      key_b64url,
+      key_id: fingerprint,
+    })
+    .select("workspace_id,key_id")
+    .single();
+
+  if (insErr) throw insErr;
+
+  return { workspace_id: inserted.workspace_id, key_id: inserted.key_id };
 }
