@@ -23,15 +23,13 @@ function b64urlDecode(b64u: string): Uint8Array {
 
 function keyFingerprint(keyBytes: Uint8Array): string {
   const h = createHash("sha256").update(keyBytes).digest();
-  return b64urlEncode(h.subarray(0, 16)); // compact id
+  return b64urlEncode(h.subarray(0, 16));
 }
 
 const subtle = webcrypto.subtle;
 
 /* =============================================================================
- * Workspace Key Management
- *  - Table: mca.workspace_keys { workspace_id uuid, key_b64url text, key_id text, created_at timestamptz }
- *  - RLS: allow service role only for select/insert on key_b64url
+ * Workspace Key Management  (schema: mca)
  * ========================================================================== */
 
 export type InitKeyRef = {
@@ -40,7 +38,7 @@ export type InitKeyRef = {
 };
 
 export async function initWorkspaceKey(
-  supabase: SupabaseClient<Database>,
+  supabase: SupabaseClient<Database, "public" | "mca">,
   workspaceId: string
 ): Promise<InitKeyRef> {
   if (!workspaceId) throw new Error("workspaceId is required");
@@ -75,11 +73,11 @@ export async function initWorkspaceKey(
   return { workspace_id: inserted.workspace_id, key_id: inserted.key_id };
 }
 
-/* Cache keys in-memory for the serverless lifetime to reduce round trips */
+/* Cache keys per workspace for the serverless lifetime */
 const keyCache = new Map<string, Uint8Array>();
 
 async function getWorkspaceKeyBytes(
-  supabase: SupabaseClient<Database>,
+  supabase: SupabaseClient<Database, "public" | "mca">,
   workspaceId: string
 ): Promise<Uint8Array> {
   const cached = keyCache.get(workspaceId);
@@ -95,7 +93,6 @@ async function getWorkspaceKeyBytes(
 
   if (error) throw error;
   if (!data?.key_b64url) {
-    // If key is missing, create it proactively
     await initWorkspaceKey(supabase, workspaceId);
     const { data: data2, error: e2 } = await supabase
       .schema("mca")
@@ -118,9 +115,6 @@ async function getWorkspaceKeyBytes(
 
 /* =============================================================================
  * AES-GCM (v1)
- *  - We encrypt when sensitivity !== 'public'
- *  - Payload format (base64url):
- *      version(1 byte = 0x01) | iv(12 bytes) | ciphertext+authTag(...)
  * ========================================================================== */
 
 const PAYLOAD_VERSION_V1 = 0x01;
@@ -140,75 +134,55 @@ function concatBytes(a: Uint8Array, b: Uint8Array, c: Uint8Array): Uint8Array {
 function textEncoder() {
   return new TextEncoder();
 }
-
 function textDecoder() {
   return new TextDecoder();
 }
 
-/**
- * Encrypt content if sensitivity indicates we should.
- * Returns { storedContent, isEncrypted }.
- */
 export async function encryptIfNeeded(
-  supabase: SupabaseClient<Database>,
+  supabase: SupabaseClient<Database, "public" | "mca">,
   workspaceId: string,
   content: string,
   sensitivity?: string // 'public' | 'restricted' | 'secret'
 ): Promise<{ storedContent: string; isEncrypted: boolean }> {
   const shouldEncrypt = sensitivity && sensitivity !== "public";
-
-  if (!shouldEncrypt) {
-    return { storedContent: content, isEncrypted: false };
-  }
+  if (!shouldEncrypt) return { storedContent: content, isEncrypted: false };
 
   const keyBytes = await getWorkspaceKeyBytes(supabase, workspaceId);
   const key = await importAesKey(keyBytes);
 
-  const iv = randomBytes(12); // recommended length for GCM
+  const iv = randomBytes(12);
   const data = textEncoder().encode(content);
-
   const cipherBuf = await subtle.encrypt({ name: "AES-GCM", iv }, key, data);
-  const cipher = new Uint8Array(cipherBuf);
-
   const version = new Uint8Array([PAYLOAD_VERSION_V1]);
-  const full = concatBytes(version, iv, cipher);
-  const storedContent = b64urlEncode(full); // compact, safe for text columns
-
-  return { storedContent, isEncrypted: true };
+  const full = concatBytes(version, iv, new Uint8Array(cipherBuf));
+  return { storedContent: b64urlEncode(full), isEncrypted: true };
 }
 
-/**
- * Attempt decryption. If payload is not encrypted (no version byte), returns it as-is.
- * Useful for admin tools / migrations.
- */
 export async function decryptIfPossible(
-  supabase: SupabaseClient<Database>,
+  supabase: SupabaseClient<Database, "public" | "mca">,
   workspaceId: string,
   storedContent: string
 ): Promise<{ plaintext: string; wasEncrypted: boolean }> {
   const bytes = b64urlDecode(storedContent);
   if (bytes.length > 0 && bytes[0] === PAYLOAD_VERSION_V1) {
-    if (bytes.length < 1 + 12 + 1) throw new Error("cipher payload too short");
+    if (bytes.length < 14) throw new Error("cipher payload too short");
     const iv = bytes.subarray(1, 13);
     const cipher = bytes.subarray(13);
 
     const keyBytes = await getWorkspaceKeyBytes(supabase, workspaceId);
     const key = await importAesKey(keyBytes);
-
     const plainBuf = await subtle.decrypt({ name: "AES-GCM", iv }, key, cipher);
-    const plaintext = textDecoder().decode(new Uint8Array(plainBuf));
-    return { plaintext, wasEncrypted: true };
+    return { plaintext: textDecoder().decode(new Uint8Array(plainBuf)), wasEncrypted: true };
   }
-  // Not our encrypted format; treat as plaintext
   return { plaintext: storedContent, wasEncrypted: false };
 }
 
 /* =============================================================================
- * Quotas (placeholder: per-item gate). Replace with total-usage calc later.
+ * Quotas (placeholder)
  * ========================================================================== */
 
 export async function quotaOk(
-  _supabase: SupabaseClient<Database>,
+  _supabase: SupabaseClient<Database, "public" | "mca">,
   _userId: string,
   incomingBytes: number
 ): Promise<boolean> {
@@ -217,12 +191,11 @@ export async function quotaOk(
 }
 
 /* =============================================================================
- * Audit Log (accepts multiple shapes)
- *  - Table: mca.audit_log { action text, user_id uuid?, workspace_id uuid?, item_id uuid?, meta jsonb?, created_at timestamptz }
+ * Audit Log (schema: mca)
  * ========================================================================== */
 
 export async function writeAudit(
-  supabase: SupabaseClient<Database>,
+  supabase: SupabaseClient<Database, "public" | "mca">,
   params: {
     action: string;
     user_id?: string | null;
