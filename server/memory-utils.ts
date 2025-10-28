@@ -3,6 +3,10 @@ import { randomBytes, createHash, webcrypto } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/supabase";
 
+/* Small helper so we can call schema('mca') even if Database lacks that schema in types */
+const mca = (s: SupabaseClient<Database>) =>
+  (s as unknown as SupabaseClient<any>).schema("mca");
+
 /* =============================================================================
  * Encoding & small utils
  * ========================================================================== */
@@ -43,8 +47,7 @@ export async function initWorkspaceKey(
 ): Promise<InitKeyRef> {
   if (!workspaceId) throw new Error("workspaceId is required");
 
-  const { data: existing, error: existErr } = await supabase
-    .schema("mca")
+  const { data: existing, error: existErr } = await mca(supabase)
     .from("workspace_keys")
     .select("workspace_id,key_id")
     .eq("workspace_id", workspaceId)
@@ -58,8 +61,7 @@ export async function initWorkspaceKey(
   const key_b64url = b64urlEncode(keyBytes);
   const fingerprint = keyFingerprint(keyBytes);
 
-  const { data: inserted, error: insErr } = await supabase
-    .schema("mca")
+  const { data: inserted, error: insErr } = await mca(supabase)
     .from("workspace_keys")
     .insert({
       workspace_id: workspaceId,
@@ -83,8 +85,7 @@ async function getWorkspaceKeyBytes(
   const cached = keyCache.get(workspaceId);
   if (cached) return cached;
 
-  const { data, error } = await supabase
-    .schema("mca")
+  const { data, error } = await mca(supabase)
     .from("workspace_keys")
     .select("key_b64url")
     .eq("workspace_id", workspaceId)
@@ -94,8 +95,7 @@ async function getWorkspaceKeyBytes(
   if (error) throw error;
   if (!data?.key_b64url) {
     await initWorkspaceKey(supabase, workspaceId);
-    const { data: data2, error: e2 } = await supabase
-      .schema("mca")
+    const { data: data2, error: e2 } = await mca(supabase)
       .from("workspace_keys")
       .select("key_b64url")
       .eq("workspace_id", workspaceId)
@@ -214,7 +214,7 @@ export async function writeAudit(
       item_id: params.item_id ?? null,
       meta: (params.details ?? params.meta) ?? null,
     };
-    await supabase.schema("mca").from("audit_log").insert(payload);
+    await mca(supabase).from("audit_log").insert(payload);
   } catch (err) {
     console.warn("writeAudit warning:", err);
   }
