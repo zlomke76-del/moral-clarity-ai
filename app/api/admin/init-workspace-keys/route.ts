@@ -1,7 +1,8 @@
 // app/api/admin/init-workspace-keys/route.ts
 import { NextRequest } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { initWorkspaceKey } from "@/server/memory-utils";
+import type { Database } from "@/types/supabase";
 
 // Ensure Node runtime (not Edge) for crypto + service role
 export const runtime = "nodejs";
@@ -15,14 +16,15 @@ function badAuth() {
   });
 }
 
-function json(data: any, status = 200) {
+function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { "Content-Type": "application/json" },
   });
 }
 
-const supa = createClient(
+// Strongly-typed Supabase client
+const supa: SupabaseClient<Database> = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
@@ -68,8 +70,10 @@ export async function POST(req: NextRequest) {
       .select("workspace_id");
     if (hkErr) throw hkErr;
 
-    const have = new Set((haveKeys ?? []).map((r) => r.workspace_id));
-    const targets = (workspaces ?? []).map((w) => w.id).filter((id) => !have.has(id));
+    const have = new Set((haveKeys ?? []).map((r: any) => r.workspace_id));
+    const targets = (workspaces ?? [])
+      .map((w: any) => w.id)
+      .filter((id: string) => !have.has(id));
 
     const initialized: string[] = [];
     for (const id of targets) {
@@ -78,6 +82,7 @@ export async function POST(req: NextRequest) {
     }
     return json({ initialized, count: initialized.length }, 201);
   } catch (e: any) {
+    console.error("init-workspace-keys error:", e);
     return json({ error: e?.message ?? String(e) }, 500);
   }
 }
