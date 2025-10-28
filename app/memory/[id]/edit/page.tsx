@@ -15,7 +15,7 @@ async function updateMemoryAction(formData: FormData) {
   const workspaceId = String(formData.get("workspace_id") || "");
   const title = (formData.get("title") || "").toString().trim();
   const contentRaw = (formData.get("content") || "").toString();
-  const content = contentRaw.length ? contentRaw : null; // allow clearing content
+  const content = contentRaw.length ? contentRaw : null;
 
   if (!id || !workspaceId) throw new Error("id and workspace_id required");
   if (!title) throw new Error("title required");
@@ -74,7 +74,7 @@ export default async function EditMemory({ params }: PageProps) {
             placeholder="Title"
             className="w-full rounded border px-3 py-2"
           />
-        <textarea
+          <textarea
             name="content"
             defaultValue={mem.content ?? ""}
             rows={12}
