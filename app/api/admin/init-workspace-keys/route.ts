@@ -6,7 +6,6 @@ import type { Database } from "@/types/supabase";
 
 // Ensure Node runtime (not Edge) for crypto + service role
 export const runtime = "nodejs";
-// Force this to run server-side every call
 export const dynamic = "force-dynamic";
 
 function badAuth() {
@@ -23,18 +22,21 @@ function json(data: unknown, status = 200) {
   });
 }
 
-// Strongly-typed Supabase client (types cover public+mca if generated with --schema public,mca)
+// Strongly-typed client for your DB (public). We'll cast for mca schema locally.
 const supa: SupabaseClient<Database> = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+// Helper to access the mca schema without fighting TS generics
+const mca = () => (supa as unknown as SupabaseClient<any>).schema("mca");
 
 // OPTIONS for good CORS hygiene
 export async function OPTIONS() {
   return new Response(null, { status: 204 });
 }
 
-// Simple existence check (should return 200 OK if deployed)
+// Health check
 export async function GET() {
   return json({ ok: true, route: "init-workspace-keys" }, 200);
 }
@@ -60,14 +62,12 @@ export async function POST(req: NextRequest) {
     }
 
     // init all missing
-    const { data: workspaces, error: wsErr } = await supa
-      .schema("mca")
+    const { data: workspaces, error: wsErr } = await mca()
       .from("workspaces")
       .select("id");
     if (wsErr) throw wsErr;
 
-    const { data: haveKeys, error: hkErr } = await supa
-      .schema("mca")
+    const { data: haveKeys, error: hkErr } = await mca()
       .from("workspace_keys")
       .select("workspace_id");
     if (hkErr) throw hkErr;
