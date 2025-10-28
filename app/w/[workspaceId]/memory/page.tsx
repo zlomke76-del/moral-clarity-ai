@@ -1,42 +1,30 @@
 // app/w/[workspaceId]/memory/page.tsx
-import { supaMca } from "@/server/supabase-clients";
+// Server component that renders the memory list via Supabase REST
+// to avoid supabase-js generic recursion. Clean, fast, and typed.
+
 import Link from "next/link";
+import { listMemories, type MemoryListRow } from "@/lib/mca-rest";
 
 type PageProps = { params: { workspaceId: string } };
 
-// Force server render (no caching of user-scoped data)
-export const dynamic = "force-dynamic";
-
-// Minimal row type to avoid deep generic expansion
-type MemoryListRow = {
-  id: string;
-  title: string | null;
-  created_at: string;
-  workspace_id: string;
-};
+export const dynamic = "force-dynamic"; // always SSR (no cached user data)
 
 export default async function MemoryPage({ params }: PageProps) {
   const workspaceId = params.workspaceId;
 
-  // ✅ NO generics on `.from()`; keep the query simple and cast after
-  const { data, error } = await supaMca
-    .from("memories")
-    .select("id,title,created_at,workspace_id")
-    .eq("workspace_id", workspaceId)
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  if (error) {
-    console.error("Failed to load memories:", error.message);
+  let memories: MemoryListRow[] = [];
+  try {
+    memories = await listMemories(workspaceId);
+  } catch (e: any) {
     return (
       <main className="max-w-3xl mx-auto p-6">
-        <h1 className="text-xl font-semibold mb-4">Error Loading Memories</h1>
-        <p className="text-red-600">{error.message}</p>
+        <h1 className="text-xl font-semibold mb-2">Memory</h1>
+        <p className="text-red-600">
+          Failed to load memories: {e?.message ?? String(e)}
+        </p>
       </main>
     );
   }
-
-  const memories = (data ?? []) as MemoryListRow[];
 
   return (
     <main className="max-w-3xl mx-auto p-6 space-y-6">
@@ -48,27 +36,27 @@ export default async function MemoryPage({ params }: PageProps) {
         </p>
       </header>
 
-      {memories.length === 0 && (
+      {memories.length === 0 ? (
         <p className="text-zinc-600">No memories yet.</p>
+      ) : (
+        <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 overflow-hidden">
+          {memories.map((m) => (
+            <li key={m.id} className="p-4 hover:bg-zinc-50">
+              <div className="flex items-center justify-between gap-4">
+                <Link
+                  className="font-medium text-blue-600 hover:underline"
+                  href={`/memory/${m.id}`}
+                >
+                  {m.title || "(untitled)"}
+                </Link>
+                <time className="text-xs text-zinc-500">
+                  {new Date(m.created_at).toLocaleString()}
+                </time>
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
-
-      <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 overflow-hidden">
-        {memories.map((m) => (
-          <li key={m.id} className="p-4 hover:bg-zinc-50">
-            <div className="flex items-center justify-between gap-4">
-              <Link
-                className="font-medium text-blue-600 hover:underline"
-                href={`/memory/${m.id}`}
-              >
-                {m.title || "(untitled)"}
-              </Link>
-              <time className="text-xs text-zinc-500">
-                {new Date(m.created_at).toLocaleString()}
-              </time>
-            </div>
-          </li>
-        ))}
-      </ul>
     </main>
   );
 }
