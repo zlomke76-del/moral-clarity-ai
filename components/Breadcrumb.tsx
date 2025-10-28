@@ -3,27 +3,26 @@
 
 import Link from "next/link";
 
-export type Crumb = {
-  label: string;
-  href?: string;
-};
+export type Crumb = { label: string; href?: string };
 
 export default function Breadcrumb({ items }: { items: Crumb[] }) {
+  if (!items?.length) return null;
+
   return (
-    <nav aria-label="Breadcrumb" className="text-sm text-zinc-600">
+    <nav aria-label="Breadcrumb" className="text-sm text-neutral-400">
       <ol className="flex flex-wrap items-center gap-1">
-        {items.map((item, idx) => {
-          const isLast = idx === items.length - 1;
+        {items.map((item, i) => {
+          const last = i === items.length - 1;
           return (
-            <li key={idx} className="flex items-center gap-1">
-              {item.href && !isLast ? (
-                <Link href={item.href} className="hover:underline">
+            <li key={i} className="flex items-center gap-1">
+              {item.href && !last ? (
+                <Link href={item.href} className="hover:text-white transition-colors">
                   {item.label}
                 </Link>
               ) : (
-                <span className={isLast ? "text-zinc-900" : undefined}>{item.label}</span>
+                <span className={last ? "text-white" : ""}>{item.label}</span>
               )}
-              {!isLast && <span className="text-zinc-400">/</span>}
+              {!last && <span className="text-neutral-600">/</span>}
             </li>
           );
         })}
