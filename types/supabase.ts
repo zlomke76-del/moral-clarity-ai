@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ﻿export type Json =
   | string
   | number
@@ -12,6 +11,289 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
+  }
+  mca: {
+    Tables: {
+      audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          item_id: string | null
+          meta: Json | null
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          meta?: Json | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          meta?: Json | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: []
+      }
+      entitlements: {
+        Row: {
+          memory_bytes_limit: number
+          memory_packs: number
+          tier: string
+          updated_at: string
+          user_uid: string
+        }
+        Insert: {
+          memory_bytes_limit?: number
+          memory_packs?: number
+          tier?: string
+          updated_at?: string
+          user_uid: string
+        }
+        Update: {
+          memory_bytes_limit?: number
+          memory_packs?: number
+          tier?: string
+          updated_at?: string
+          user_uid?: string
+        }
+        Relationships: []
+      }
+      memory_audit: {
+        Row: {
+          action: string | null
+          actor_uid: string | null
+          at: string
+          details: Json | null
+          id: number
+          item_id: string | null
+        }
+        Insert: {
+          action?: string | null
+          actor_uid?: string | null
+          at?: string
+          details?: Json | null
+          id?: number
+          item_id?: string | null
+        }
+        Update: {
+          action?: string | null
+          actor_uid?: string | null
+          at?: string
+          details?: Json | null
+          id?: number
+          item_id?: string | null
+        }
+        Relationships: []
+      }
+      memory_buckets: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          purpose: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          purpose?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          purpose?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memory_buckets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      memory_items: {
+        Row: {
+          author_uid: string
+          bucket_id: string
+          content: string
+          content_hash: string | null
+          created_at: string
+          id: string
+          provenance: Json
+          sensitivity: string
+          tags: string[] | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          author_uid: string
+          bucket_id: string
+          content: string
+          content_hash?: string | null
+          created_at?: string
+          id?: string
+          provenance?: Json
+          sensitivity?: string
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          author_uid?: string
+          bucket_id?: string
+          content?: string
+          content_hash?: string | null
+          created_at?: string
+          id?: string
+          provenance?: Json
+          sensitivity?: string
+          tags?: string[] | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memory_items_bucket_id_fkey"
+            columns: ["bucket_id"]
+            isOneToOne: false
+            referencedRelation: "memory_buckets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      memory_vectors: {
+        Row: {
+          embedding: string | null
+          item_id: string
+        }
+        Insert: {
+          embedding?: string | null
+          item_id: string
+        }
+        Update: {
+          embedding?: string | null
+          item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memory_vectors_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: true
+            referencedRelation: "memory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_keys: {
+        Row: {
+          created_at: string
+          key_ref: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          key_ref: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          key_ref?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_keys_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_members: {
+        Row: {
+          created_at: string
+          role: string
+          user_uid: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          role: string
+          user_uid: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          role?: string
+          user_uid?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspaces: {
+        Row: {
+          created_at: string
+          id: string
+          is_personal: boolean
+          name: string
+          owner_uid: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_personal?: boolean
+          name: string
+          owner_uid: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_personal?: boolean
+          name?: string
+          owner_uid?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      is_member: { Args: { p_workspace: string }; Returns: boolean }
+      user_bytes_limit: { Args: { p_user: string }; Returns: number }
+      user_bytes_used: { Args: { p_user: string }; Returns: number }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -2254,6 +2536,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  mca: {
+    Enums: {},
+  },
   public: {
     Enums: {
       mode_t: ["create", "next_steps", "red_team", "ministry", "neutral"],
@@ -2265,12 +2550,3 @@ export const Constants = {
     },
   },
 } as const
-=======
-// types/supabase.ts
-// Minimal placeholder. Replace with real generated types when available.
-// Run (example):
-//   supabase gen types typescript --project-id <id> --schema public > types/supabase.ts
-// and export `Database`.
-
-export type Database = any;
->>>>>>> 7ecd048aa320dc75b3e6028cbdbba0a37155b083
