@@ -1,6 +1,5 @@
 // lib/mca-rest.ts
-// REST helpers for the mca schema. Works around supabase-js generic recursion.
-// Read operations use the anon key; write operations use the service key (server-only).
+// REST helpers for the mca schema. Clean, TS-safe, and build-friendly.
 
 export type MemoryListRow = {
   id: string;
@@ -49,7 +48,6 @@ async function restPost<T = unknown>(path: string, body: unknown, useService = f
       Authorization: `Bearer ${key}`,
       Accept: "application/json",
       "Content-Type": "application/json",
-      // ask PostgREST to return the inserted row
       Prefer: "return=representation",
     },
     cache: "no-store",
@@ -60,6 +58,47 @@ async function restPost<T = unknown>(path: string, body: unknown, useService = f
     throw new Error(`Supabase REST POST ${path} (${res.status}): ${text}`);
   }
   return res.json() as Promise<T>;
+}
+
+async function restPatch<T = unknown>(path: string, query: string, body: unknown): Promise<T> {
+  const key = SUPABASE_SERVICE_ROLE_KEY;
+  const url = `${SUPABASE_URL}/rest/v1/${path}?${query}`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    },
+    cache: "no-store",
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Supabase REST PATCH ${path} (${res.status}): ${text}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+async function restDelete(path: string, query: string): Promise<void> {
+  const key = SUPABASE_SERVICE_ROLE_KEY;
+  const url = `${SUPABASE_URL}/rest/v1/${path}?${query}`;
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      Accept: "application/json",
+      Prefer: "return=minimal",
+    },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Supabase REST DELETE ${path} (${res.status}): ${text}`);
+  }
 }
 
 // ---------- public API ----------
@@ -89,10 +128,25 @@ export async function createMemory(
   workspaceId: string,
   title: string,
   content?: string
-): Promise<MemoryDetailRow> {
+): Promise[MemoryDetailRow] {
   const path = "mca.memories";
   const payload = [{ workspace_id: workspaceId, title, ...(content ? { content } : {}) }];
-  // use service role for writes (server-only)
-  const rows = await restPost<MemoryDetailRow[]>(path, payload, true);
+  const rows = await restPost<MemoryDetailRow[]>(path, payload, true); // service role
   return rows[0];
+}
+
+export async function updateMemory(
+  id: string,
+  updates: { title?: string; content?: string | null }
+): Promise<MemoryDetailRow> {
+  const path = "mca.memories";
+  const query = new URLSearchParams({ id: `eq.${id}` }).toString();
+  const rows = await restPatch<MemoryDetailRow[]>(path, query, updates);
+  return rows[0];
+}
+
+export async function deleteMemory(id: string): Promise<void> {
+  const path = "mca.memories";
+  const query = new URLSearchParams({ id: `eq.${id}` }).toString();
+  await restDelete(path, query);
 }
