@@ -1,145 +1,69 @@
-'use client';
+// Server component that routes the user to their primary workspace’s memory page.
 
-import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { createServerClient } from "@supabase/ssr";
+import type { Database } from "@/types/supabase";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+export const dynamic = "force-dynamic";
 
-// set whatever your free cap is
-const FREE_LIMIT = 50;
+export default async function MemoriesIndex() {
+  const cookieStore = await cookies();
 
-type Usage = {
-  used: number;
-  isPro: boolean;
-};
-
-export default function MemoriesPage() {
-  const [content, setContent] = useState('');
-  const [msg, setMsg] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [usage, setUsage] = useState<Usage | null>(null);
-
-  // Load usage & pro flag
-  useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return setMsg('Please sign in.');
-
-      // 1) usage count
-      const { data: count, error: rpcErr } = await supabase
-        .rpc('memory_usage', { uid: user.id });
-
-      if (rpcErr) {
-        setMsg(rpcErr.message);
-        return;
-      }
-
-      // 2) pro flag from profiles
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('pro')
-        .eq('id', user.id)
-        .single();
-
-      setUsage({
-        used: typeof count === 'number' ? count : 0,
-        isPro: !!profile?.pro,
-      });
-    })();
-  }, []);
-
-  const canWrite =
-    usage?.isPro || ((usage?.used ?? 0) < FREE_LIMIT);
-
-  async function save() {
-    setMsg('');
-    setLoading(true);
-    try {
-      const { data: { user }, error: authErr } = await supabase.auth.getUser();
-      if (authErr || !user) throw new Error('Please sign in.');
-
-      const { error } = await supabase
-        .from('memories')
-        .insert([{ user_id: user.id, content }]);
-
-      if (error) {
-        // RLS/quota failures bubble up here
-        throw new Error(
-          error.code === '42501' || error.message.includes('row-level security')
-            ? 'Free limit reached. Upgrade for unlimited storage.'
-            : error.message
-        );
-      }
-
-      setContent('');
-      setMsg('Saved ✅');
-
-      // refresh usage after save
-      const { data: count } = await supabase
-        .rpc('memory_usage', { uid: user.id });
-      setUsage(u => u ? { ...u, used: Number(count ?? u.used) } : u);
-
-    } catch (e: any) {
-      setMsg(e.message);
-    } finally {
-      setLoading(false);
+  const supa = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get: (key: string) => cookieStore.get(key)?.value,
+      },
     }
+  );
+
+  const {
+    data: { user },
+  } = await supa.auth.getUser();
+
+  if (!user) {
+    // Adjust to your login route
+    redirect("/login");
   }
 
-  async function startCheckout() {
-    setMsg('');
-    setLoading(true);
-    try {
-      // You can pass seats/org here if/when you support them
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-      if (!res.ok) throw new Error('Checkout failed to start.');
-      const { url } = await res.json();
-      window.location.href = url;
-    } catch (e: any) {
-      setMsg(e.message);
-    } finally {
-      setLoading(false);
-    }
+  // Find a personal workspace for this user (or any membership)
+  const { data: owned } = await supa
+    .schema("mca")
+    .from("workspaces")
+    .select("id")
+    .eq("owner_uid", user!.id)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (owned?.id) {
+    redirect(`/w/${owned.id}/memory`);
   }
 
+  // If not owner, try membership
+  const { data: member } = await supa
+    .schema("mca")
+    .from("workspace_members")
+    .select("workspace_id")
+    .eq("user_uid", user!.id)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (member?.workspace_id) {
+    redirect(`/w/${member.workspace_id}/memory`);
+  }
+
+  // Fallback: keep user on a friendly screen
   return (
-    <div style={{ maxWidth: 720, margin: '2rem auto', display: 'grid', gap: 12 }}>
-      <h2>Memories</h2>
-
-      {usage && (
-        <p style={{ opacity: 0.8 }}>
-          {usage.isPro
-            ? `Pro account — unlimited storage`
-            : `${usage.used} / ${FREE_LIMIT} memories used`}
-        </p>
-      )}
-
-      {!canWrite && !usage?.isPro && (
-        <button onClick={startCheckout} disabled={loading}>
-          {loading ? 'Redirecting…' : 'Upgrade for unlimited storage'}
-        </button>
-      )}
-
-      <textarea
-        rows={6}
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        placeholder="Write something memorable…"
-      />
-
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={save} disabled={loading || !content.trim() || !canWrite}>
-          {loading ? 'Saving…' : 'Save Memory'}
-        </button>
-        {msg && <span style={{ alignSelf: 'center' }}>{msg}</span>}
-      </div>
+    <div className="p-6">
+      <h1 className="text-xl font-semibold mb-2">Memories</h1>
+      <p className="opacity-70">
+        You don’t have a workspace yet. Use the admin tool to create one.
+      </p>
     </div>
   );
 }
