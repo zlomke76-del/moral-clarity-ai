@@ -4,10 +4,10 @@ import Link from "next/link";
 
 type PageProps = { params: { workspaceId: string } };
 
-// Always render this page dynamically (server-rendered)
+// Force server render (no caching of user-scoped data)
 export const dynamic = "force-dynamic";
 
-// Lightweight type to avoid Supabase/TypeScript recursion
+// Minimal row type to avoid deep generic expansion
 type MemoryListRow = {
   id: string;
   title: string | null;
@@ -18,9 +18,9 @@ type MemoryListRow = {
 export default async function MemoryPage({ params }: PageProps) {
   const workspaceId = params.workspaceId;
 
-  // Fetch memories for the given workspace
-  const { data: memories, error } = await supaMca
-    .from<MemoryListRow>("memories")
+  // ✅ NO generics on `.from()`; keep the query simple and cast after
+  const { data, error } = await supaMca
+    .from("memories")
     .select("id,title,created_at,workspace_id")
     .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: false })
@@ -36,6 +36,8 @@ export default async function MemoryPage({ params }: PageProps) {
     );
   }
 
+  const memories = (data ?? []) as MemoryListRow[];
+
   return (
     <main className="max-w-3xl mx-auto p-6 space-y-6">
       <header className="space-y-1">
@@ -46,12 +48,12 @@ export default async function MemoryPage({ params }: PageProps) {
         </p>
       </header>
 
-      {(!memories || memories.length === 0) && (
+      {memories.length === 0 && (
         <p className="text-zinc-600">No memories yet.</p>
       )}
 
       <ul className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 overflow-hidden">
-        {memories?.map((m) => (
+        {memories.map((m) => (
           <li key={m.id} className="p-4 hover:bg-zinc-50">
             <div className="flex items-center justify-between gap-4">
               <Link
