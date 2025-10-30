@@ -1,15 +1,15 @@
-// app/viewer/page.tsx
 'use client';
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import NextDynamic from 'next/dynamic'; // renamed to avoid naming conflict with export below
+import nextDynamic from 'next/dynamic';
 
-// ✅ Tell Next not to prerender or cache this route
+// Tell Next never to prerender this route (fixes CSR bailout/prerender error)
 export const dynamic = 'force-dynamic';
+export const revalidate = false;
 
-// ✅ Dynamically import react-pdf (client-only)
-const ReactPDF = NextDynamic(async () => {
+// react-pdf must only run on the client
+const ReactPDF = nextDynamic(async () => {
   const mod = await import('react-pdf');
   return {
     default: mod,
@@ -19,49 +19,23 @@ const ReactPDF = NextDynamic(async () => {
   } as any;
 }, { ssr: false });
 
-// ---------------------------------------------------------------------------
-
 export default function ViewerPage() {
   return (
-    // ⚡ Suspense boundary is required for useSearchParams
-    <Suspense fallback={<Shell>Loading document viewer…</Shell>}>
+    <Suspense fallback={<Shell><div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">Loading…</div></Shell>}>
       <ViewerInner />
     </Suspense>
   );
 }
 
-// ---------------------------------------------------------------------------
-
-function Shell({ children }: { children?: React.ReactNode }) {
-  return (
-    <main className="min-h-screen bg-[#0b1220] text-zinc-100">
-      <div className="mx-auto max-w-5xl px-4 py-6">
-        <header className="mb-4 flex items-center justify-between">
-          <h1 className="text-lg font-semibold">Document Viewer</h1>
-          <a
-            href="/"
-            className="rounded border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
-          >
-            Back
-          </a>
-        </header>
-        {children}
-      </div>
-    </main>
-  );
-}
-
-// ---------------------------------------------------------------------------
-
 function ViewerInner() {
-  const params = useSearchParams(); // safe inside Suspense
+  const params = useSearchParams();
   const src = params.get('url') || '';
 
   const [pdfReady, setPdfReady] = useState(false);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  // Configure the PDF.js worker once react-pdf loads
+  // Configure the PDF.js worker once the dynamic import is present
   useEffect(() => {
     (async () => {
       try {
@@ -83,8 +57,7 @@ function ViewerInner() {
       {!hasSrc ? (
         <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
           <p className="text-sm text-zinc-300">
-            Provide a PDF via query param, e.g.:
-            <code className="text-zinc-200"> /viewer?url=/files/sample.pdf</code>
+            Provide a PDF via query param, e.g.: <code className="text-zinc-200">/viewer?url=/files/sample.pdf</code>
           </p>
         </div>
       ) : err ? (
@@ -92,15 +65,9 @@ function ViewerInner() {
           Error: {err}
         </div>
       ) : !pdfReady ? (
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
-          Loading PDF engine…
-        </div>
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">Loading PDF engine…</div>
       ) : (
-        <PDFFrame
-          src={src}
-          onPages={(n) => setNumPages(n)}
-          onError={(m) => setErr(m)}
-        />
+        <PDFFrame src={src} onPages={(n) => setNumPages(n)} onError={(m) => setErr(m)} />
       )}
 
       {numPages ? (
@@ -110,7 +77,24 @@ function ViewerInner() {
   );
 }
 
-// ---------------------------------------------------------------------------
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <main className="min-h-screen bg-[#0b1220] text-zinc-100">
+      <div className="mx-auto max-w-5xl px-4 py-6">
+        <header className="mb-4 flex items-center justify-between">
+          <h1 className="text-lg font-semibold">Document Viewer</h1>
+          <a
+            href="/"
+            className="rounded border border-zinc-700 px-3 py-1.5 text-sm text-zinc-200 hover:bg-zinc-800"
+          >
+            Back
+          </a>
+        </header>
+        {children}
+      </div>
+    </main>
+  );
+}
 
 function PDFFrame({
   src,
@@ -159,14 +143,11 @@ function PDFFrame({
   );
 }
 
-// ---------------------------------------------------------------------------
-
 function AutoPager({ Page }: { Page: any }) {
   const [pages, setPages] = useState<number>(1);
   useEffect(() => {
-    setPages(8); // render first 8 pages
+    setPages(8); // simple first pass; render first 8 pages
   }, []);
-
   return (
     <div className="flex flex-col items-center gap-4">
       {Array.from({ length: pages }).map((_, i) => (
