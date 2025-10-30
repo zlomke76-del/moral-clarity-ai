@@ -1,32 +1,35 @@
+// app/components/SolaceDock.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import supabase from "@/lib/supabaseClient";
 import { useSolaceStore } from "@/app/providers/solace-store";
 
 declare global {
   interface Window {
     __solaceDockMounted?: boolean;
+    webkitSpeechRecognition?: any;
+    SpeechRecognition?: any;
   }
 }
 
 type Message = { role: "user" | "assistant"; content: string };
 type ModeHint = "Create" | "Next Steps" | "Red Team" | "Neutral";
+type Attachment = { name: string; url: string; type: string };
 
 const POS_KEY = "solace:pos:v3";
+const MINISTRY_KEY = "solace:ministry";
 const PAD = 12;
 
 const ui = {
-  // colors pull from your globals.css tokens where possible
   panelBg:
     "radial-gradient(140% 160% at 50% -60%, rgba(26,35,53,0.85) 0%, rgba(14,21,34,0.88) 60%)",
   border: "1px solid var(--mc-border)",
   edge: "1px solid rgba(255,255,255,.06)",
   text: "var(--mc-text)",
   sub: "var(--mc-muted)",
-  surface: "rgba(14,21,34,.85)",
   surface2: "rgba(12,19,30,.85)",
-  line: "var(--mc-border)",
   glowOn:
     "0 0 0 1px rgba(251,191,36,.25) inset, 0 0 90px rgba(251,191,36,.14), 0 22px 70px rgba(0,0,0,.55)",
   shadow: "0 14px 44px rgba(0,0,0,.45)",
@@ -36,7 +39,7 @@ const cx = (...xs: Array<string | false | null | undefined>) =>
   xs.filter(Boolean).join(" ");
 
 export default function SolaceDock() {
-  // single mount
+  // ensure single mount
   const [canRender, setCanRender] = useState(false);
   useEffect(() => {
     if (window.__solaceDockMounted) return;
@@ -49,7 +52,7 @@ export default function SolaceDock() {
 
   const { visible, x, y, setPos, filters, setFilters } = useSolaceStore();
 
-  // state
+  // --- state ----------------------------------------------------
   const [dragging, setDragging] = useState(false);
   const [offset, setOffset] = useState({ dx: 0, dy: 0 });
   const [posReady, setPosReady] = useState(false);
@@ -60,6 +63,22 @@ export default function SolaceDock() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
+
+  // attachments
+  const [pendingFiles, setPendingFiles] = useState<Attachment[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // speech
+  const [listening, setListening] = useState(false);
+  const recogRef = useRef<any>(null);
+
+  // transcript auto-scroll
+  const transcriptRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = transcriptRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [messages]);
 
   const ministryOn = useMemo(
     () => filters.has("abrahamic") && filters.has("ministry"),
@@ -75,7 +94,7 @@ export default function SolaceDock() {
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // measure for clamp
+  // measure/clamp container
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -94,7 +113,7 @@ export default function SolaceDock() {
     };
   }, []);
 
-  // restore or center
+  // restore position or center
   useEffect(() => {
     if (!canRender || !visible) return;
 
@@ -125,7 +144,7 @@ export default function SolaceDock() {
     });
   }, [canRender, visible, panelW, panelH, setPos]);
 
-  // persist
+  // persist position
   useEffect(() => {
     if (!posReady) return;
     try {
@@ -133,7 +152,7 @@ export default function SolaceDock() {
     } catch {}
   }, [x, y, posReady]);
 
-  // drag
+  // dragging
   function onHeaderMouseDown(e: React.MouseEvent) {
     const rect = containerRef.current?.getBoundingClientRect();
     setOffset({
@@ -163,13 +182,36 @@ export default function SolaceDock() {
     ta.style.height = Math.min(220, ta.scrollHeight) + "px";
   }, [input]);
 
-  // send
+  // default ministry ON (with persist), unless explicitly turned off before
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(MINISTRY_KEY);
+      if (saved === "0") return; // user previously turned it off
+    } catch {}
+
+    const hasAbrahamic = filters.has("abrahamic");
+    const hasMinistry = filters.has("ministry");
+    if (!hasAbrahamic || !hasMinistry) {
+      const next = new Set(filters);
+      next.add("abrahamic");
+      next.add("ministry");
+      setFilters(next);
+      try {
+        localStorage.setItem(MINISTRY_KEY, "1");
+      } catch {}
+    }
+  }, []); // run once
+
+  // ---------- actions -------------------------------------------------
+
   async function send() {
     const text = input.trim();
-    if (!text || streaming) return;
+    if (!text && pendingFiles.length === 0) return;
+    if (streaming) return;
 
     setInput("");
-    const next: Message[] = [...messages, { role: "user", content: text }];
+    const userMsg = text || (pendingFiles.length ? "Attachments:" : "");
+    const next: Message[] = [...messages, { role: "user", content: userMsg }];
     setMessages(next);
     setStreaming(true);
 
@@ -182,8 +224,16 @@ export default function SolaceDock() {
           "Content-Type": "application/json",
           "X-Last-Mode": modeHint,
         },
-        body: JSON.stringify({ messages: next, filters: activeFilters, stream: false }),
+        body: JSON.stringify({
+          messages: next,
+          filters: activeFilters,
+          stream: false,
+          attachments: pendingFiles, // pass to backend (your /api/chat we updated)
+          ministry: activeFilters.includes("ministry"),
+        }),
       });
+
+      setPendingFiles([]);
 
       if (!res.ok) {
         const t = await res.text().catch(() => "");
@@ -199,22 +249,91 @@ export default function SolaceDock() {
     }
   }
 
-  // ministry toggle
+  async function handleFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    const out: Attachment[] = [];
+    for (const f of Array.from(files)) {
+      try {
+        const path = `${crypto.randomUUID()}_${encodeURIComponent(f.name)}`;
+        const { error } = await supabase.storage.from("uploads").upload(path, f, {
+          upsert: false,
+          cacheControl: "3600",
+        });
+        if (error) throw error;
+        const { data } = supabase.storage.from("uploads").getPublicUrl(path);
+        out.push({ name: f.name, url: data.publicUrl, type: f.type || "application/octet-stream" });
+      } catch (err: any) {
+        setMessages((m) => [
+          ...m,
+          { role: "assistant", content: `⚠️ Upload failed for ${f.name}: ${err.message || err}` },
+        ]);
+      }
+    }
+    if (out.length) {
+      setPendingFiles((prev) => [...prev, ...out]);
+      // show a small preview note
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content: `Attached ${out.length} file${out.length > 1 ? "s" : ""}. They will be included in your next message.`,
+        },
+      ]);
+    }
+  }
+
   function toggleMinistry() {
     if (ministryOn) {
       const next = Array.from(filters).filter((f) => f !== "abrahamic" && f !== "ministry");
       setFilters(next);
+      try {
+        localStorage.setItem(MINISTRY_KEY, "0");
+      } catch {}
     } else {
       const next = new Set(filters);
       next.add("abrahamic");
       next.add("ministry");
       setFilters(next);
+      try {
+        localStorage.setItem(MINISTRY_KEY, "1");
+      } catch {}
     }
+  }
+
+  function toggleMic() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: "🎤 Microphone is not supported in this browser." },
+      ]);
+      return;
+    }
+    if (listening) {
+      try {
+        recogRef.current?.stop();
+      } catch {}
+      setListening(false);
+      return;
+    }
+    const sr = new SR();
+    sr.lang = "en-US";
+    sr.interimResults = false;
+    sr.maxAlternatives = 1;
+    sr.onresult = (e: any) => {
+      const t = Array.from(e.results).map((r: any) => r[0].transcript).join(" ");
+      setInput((prev) => (prev ? prev + " " : "") + t);
+    };
+    sr.onend = () => setListening(false);
+    sr.onerror = () => setListening(false);
+    recogRef.current = sr;
+    sr.start();
+    setListening(true);
   }
 
   if (!canRender || !visible) return null;
 
-  // clamp
+  // clamp within viewport
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const maxX = Math.max(0, vw - panelW - PAD);
@@ -223,6 +342,7 @@ export default function SolaceDock() {
   const ty = Math.min(Math.max(0, y - PAD), maxY);
   const invisible = !posReady;
 
+  // ---------- styles --------------------------------------------------
   const panelStyle: React.CSSProperties = {
     position: "fixed",
     left: PAD,
@@ -296,8 +416,8 @@ export default function SolaceDock() {
     background: "#6e8aff",
     color: "#fff",
     font: "600 13px/1 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
-    cursor: streaming || !input.trim() ? "not-allowed" : "pointer",
-    opacity: streaming || !input.trim() ? 0.55 : 1,
+    cursor: streaming || (!input.trim() && pendingFiles.length === 0) ? "not-allowed" : "pointer",
+    opacity: streaming || (!input.trim() && pendingFiles.length === 0) ? 0.55 : 1,
   };
 
   const orbStyle: React.CSSProperties = {
@@ -349,6 +469,7 @@ export default function SolaceDock() {
     </button>
   );
 
+  // ---------- UI ------------------------------------------------------
   const panel = (
     <section
       ref={containerRef}
@@ -356,30 +477,24 @@ export default function SolaceDock() {
       aria-label="Solace"
       style={panelStyle}
       onClick={(e) => {
-        // Alt+Click header area to center
-        // (keeping the convenience from earlier builds)
+        // Alt+Click to re-center (kept convenience)
+        if (!containerRef.current) return;
+        if ((e as any).altKey) {
+          const vw = window.innerWidth;
+          const vh = window.innerHeight;
+          const w = panelW || 760;
+          const h = panelH || 560;
+          const startX = Math.max(PAD, Math.round((vw - w) / 2));
+          const startY = Math.max(PAD, Math.round((vh - h) / 2));
+          setPos(startX, startY);
+          try {
+            localStorage.removeItem(POS_KEY);
+          } catch {}
+        }
       }}
     >
       {/* HEADER */}
-      <header
-        style={headerStyle}
-        onMouseDown={onHeaderMouseDown}
-        onClick={(e) => {
-          if (!containerRef.current) return;
-          if (e.altKey) {
-            const vw = window.innerWidth;
-            const vh = window.innerHeight;
-            const w = panelW || 760;
-            const h = panelH || 560;
-            const startX = Math.max(PAD, Math.round((vw - w) / 2));
-            const startY = Math.max(PAD, Math.round((vh - h) / 2));
-            setPos(startX, startY);
-            try {
-              localStorage.removeItem(POS_KEY);
-            } catch {}
-          }
-        }}
-      >
+      <header style={headerStyle} onMouseDown={onHeaderMouseDown}>
         {/* left: orb + title */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span aria-hidden style={orbStyle} title="Alt+Click header to center/reset" />
@@ -399,7 +514,7 @@ export default function SolaceDock() {
       </header>
 
       {/* TRANSCRIPT */}
-      <div style={transcriptStyle} aria-live="polite">
+      <div ref={transcriptRef} style={transcriptStyle} aria-live="polite">
         {messages.map((m, i) => (
           <div
             key={i}
@@ -417,9 +532,85 @@ export default function SolaceDock() {
         ))}
       </div>
 
-      {/* COMPOSER (ALWAYS AT BOTTOM) */}
+      {/* COMPOSER */}
       <div style={composerWrapStyle}>
+        {/* pending attachments preview */}
+        {pendingFiles.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 6,
+              marginBottom: 8,
+              color: ui.text,
+              font: "12px system-ui",
+            }}
+          >
+            {pendingFiles.map((f, idx) => (
+              <a
+                key={idx}
+                href={f.url}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  padding: "4px 8px",
+                  borderRadius: 8,
+                  border: "1px solid var(--mc-border)",
+                  background: "#0e1726",
+                  textDecoration: "none",
+                }}
+                title={f.name}
+              >
+                📎 {f.name}
+              </a>
+            ))}
+          </div>
+        )}
+
         <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              title="Attach files"
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 12,
+                border: "1px solid var(--mc-border)",
+                background: "#0e1726",
+                color: ui.text,
+                cursor: "pointer",
+              }}
+            >
+              📎
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              multiple
+              onChange={(e) => handleFiles(e.target.files)}
+            />
+
+            <button
+              type="button"
+              onClick={toggleMic}
+              title={listening ? "Stop mic" : "Speak"}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 12,
+                border: "1px solid var(--mc-border)",
+                background: listening ? "#244a1f" : "#0e1726",
+                color: ui.text,
+                cursor: "pointer",
+              }}
+            >
+              {listening ? "■" : "🎤"}
+            </button>
+          </div>
+
           <textarea
             ref={taRef}
             value={input}
@@ -433,7 +624,7 @@ export default function SolaceDock() {
             }}
             style={fieldStyle}
           />
-          <button onClick={send} disabled={streaming || !input.trim()} style={askBtnStyle}>
+          <button onClick={send} disabled={streaming || (!input.trim() && pendingFiles.length === 0)} style={askBtnStyle}>
             {streaming ? "…" : "Ask"}
           </button>
         </div>
@@ -449,7 +640,14 @@ export default function SolaceDock() {
         >
           <span>{ministryOn ? "Create • Ministry overlay" : modeHint || "Neutral"}</span>
           {filters.size > 0 && (
-            <span style={{ maxWidth: "60%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <span
+              style={{
+                maxWidth: "60%",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
               Filters: {Array.from(filters).join(", ")}
             </span>
           )}
