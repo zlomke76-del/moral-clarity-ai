@@ -3,13 +3,12 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import NextDynamic from 'next/dynamic'; // Renamed to avoid name clash
+import NextDynamic from 'next/dynamic'; // renamed to avoid naming conflict with export below
 
-// Tell Next never to prerender this route
+// ✅ Tell Next not to prerender or cache this route
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
-// react-pdf must only run on the client
+// ✅ Dynamically import react-pdf (client-only)
 const ReactPDF = NextDynamic(async () => {
   const mod = await import('react-pdf');
   return {
@@ -20,13 +19,18 @@ const ReactPDF = NextDynamic(async () => {
   } as any;
 }, { ssr: false });
 
+// ---------------------------------------------------------------------------
+
 export default function ViewerPage() {
   return (
-    <Suspense fallback={<Shell>Loading…</Shell>}>
+    // ⚡ Suspense boundary is required for useSearchParams
+    <Suspense fallback={<Shell>Loading document viewer…</Shell>}>
       <ViewerInner />
     </Suspense>
   );
 }
+
+// ---------------------------------------------------------------------------
 
 function Shell({ children }: { children?: React.ReactNode }) {
   return (
@@ -47,6 +51,8 @@ function Shell({ children }: { children?: React.ReactNode }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+
 function ViewerInner() {
   const params = useSearchParams(); // safe inside Suspense
   const src = params.get('url') || '';
@@ -55,6 +61,7 @@ function ViewerInner() {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
+  // Configure the PDF.js worker once react-pdf loads
   useEffect(() => {
     (async () => {
       try {
@@ -76,12 +83,102 @@ function ViewerInner() {
       {!hasSrc ? (
         <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
           <p className="text-sm text-zinc-300">
-            Provide a PDF via query param, e.g.:{' '}
-            <code className="text-zinc-200">/viewer?url=/files/sample.pdf</code>
+            Provide a PDF via query param, e.g.:
+            <code className="text-zinc-200"> /viewer?url=/files/sample.pdf</code>
           </p>
         </div>
       ) : err ? (
-        <
-📎
-No file chosen
-🎤
+        <div className="rounded-lg border border-red-900 bg-red-950/40 p-4 text-red-200">
+          Error: {err}
+        </div>
+      ) : !pdfReady ? (
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
+          Loading PDF engine…
+        </div>
+      ) : (
+        <PDFFrame
+          src={src}
+          onPages={(n) => setNumPages(n)}
+          onError={(m) => setErr(m)}
+        />
+      )}
+
+      {numPages ? (
+        <div className="mt-3 text-xs text-zinc-400">{numPages} page(s)</div>
+      ) : null}
+    </Shell>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+function PDFFrame({
+  src,
+  onPages,
+  onError,
+}: {
+  src: string;
+  onPages: (n: number) => void;
+  onError: (m: string) => void;
+}) {
+  const [Doc, setDoc] = useState<any>(null);
+  const [Page, setPage] = useState<any>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const mod: any = await import('react-pdf');
+        setDoc(() => mod.Document);
+        setPage(() => mod.Page);
+      } catch (e: any) {
+        onError(e?.message || 'Failed to load PDF components.');
+      }
+    })();
+  }, [onError]);
+
+  if (!Doc || !Page) {
+    return (
+      <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
+        Preparing viewer…
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
+      <Doc
+        file={src}
+        onLoadSuccess={(meta: any) => onPages(meta.numPages)}
+        onLoadError={(e: any) => onError(e?.message || 'Failed to load PDF.')}
+        loading={<div className="p-4">Loading document…</div>}
+        error={<div className="p-4 text-red-300">Could not open this PDF.</div>}
+      >
+        <AutoPager Page={Page} />
+      </Doc>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+function AutoPager({ Page }: { Page: any }) {
+  const [pages, setPages] = useState<number>(1);
+  useEffect(() => {
+    setPages(8); // render first 8 pages
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center gap-4">
+      {Array.from({ length: pages }).map((_, i) => (
+        <Page
+          key={i}
+          pageNumber={i + 1}
+          width={920}
+          renderTextLayer={false}
+          renderAnnotationLayer={false}
+          loading={<div className="p-4">Rendering page {i + 1}…</div>}
+        />
+      ))}
+    </div>
+  );
+}
