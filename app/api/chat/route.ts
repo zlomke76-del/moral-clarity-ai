@@ -21,7 +21,7 @@ const STATIC_ALLOWED_ORIGINS = [
   'https://moralclarity.ai',
   'https://www.moralclarity.ai',
   'https://studio.moralclarity.ai',
-  'https://studio-founder.moralclarity.ai', // <— added
+  'https://studio-founder.moralclarity.ai',
   'https://moralclarityai.com',
   'https://www.moralclarityai.com',
   'http://localhost:3000',
@@ -29,7 +29,7 @@ const STATIC_ALLOWED_ORIGINS = [
 
 const ENV_ALLOWED_ORIGINS = (process.env.MCAI_ALLOWED_ORIGINS || '')
   .split(',')
-  .map(s => s.trim())
+  .map((s) => s.trim())
   .filter(Boolean);
 
 const ALLOWED_SET = new Set<string>([...STATIC_ALLOWED_ORIGINS, ...ENV_ALLOWED_ORIGINS]);
@@ -49,7 +49,7 @@ function pickAllowedOrigin(origin: string | null): string | null {
     const url = new URL(origin);
     if (hostIsAllowedWildcard(url.hostname)) return origin;
   } catch {
-    // ignore parse errors
+    /* ignore parse errors */
   }
   return null;
 }
@@ -58,16 +58,22 @@ function corsHeaders(origin: string | null): Headers {
   const h = new Headers();
   h.set('Vary', 'Origin');
   h.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  h.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Context-Id, X-Last-Mode');
+  h.set(
+    'Access-Control-Allow-Headers',
+    // Added X-User-Key explicitly so the browser lets us send it
+    'Content-Type, Authorization, X-Requested-With, X-Context-Id, X-Last-Mode, X-User-Key'
+  );
   h.set('Access-Control-Max-Age', '86400');
   if (origin) h.set('Access-Control-Allow-Origin', origin);
-  // if you need cookies later: h.set('Access-Control-Allow-Credentials','true');
+  // If you later use cookies: h.set('Access-Control-Allow-Credentials','true');
   return h;
 }
 
 function headersToRecord(h: Headers): Record<string, string> {
   const out: Record<string, string> = {};
-  h.forEach((v, k) => { out[k] = v; });
+  h.forEach((v, k) => {
+    out[k] = v;
+  });
   return out;
 }
 
@@ -165,13 +171,41 @@ function isFirstRealTurn(messages: Array<{ role: string; content: string }>) {
 function hasEmotionalOrMoralCue(text: string) {
   const t = text.toLowerCase();
   const emo = [
-    'hope','lost','afraid','fear','anxious','anxiety','grief','sad','sorrow',
-    'depressed','stress','overwhelmed','lonely','alone','comfort','forgive',
-    'forgiveness','guilt','shame','purpose','meaning',
+    'hope',
+    'lost',
+    'afraid',
+    'fear',
+    'anxious',
+    'anxiety',
+    'grief',
+    'sad',
+    'sorrow',
+    'depressed',
+    'stress',
+    'overwhelmed',
+    'lonely',
+    'alone',
+    'comfort',
+    'forgive',
+    'forgiveness',
+    'guilt',
+    'shame',
+    'purpose',
+    'meaning',
   ];
   const moral = [
-    'right','wrong','unfair','injustice','justice','truth','honest','dishonest',
-    'integrity','mercy','compassion','courage',
+    'right',
+    'wrong',
+    'unfair',
+    'injustice',
+    'justice',
+    'truth',
+    'honest',
+    'dishonest',
+    'integrity',
+    'mercy',
+    'compassion',
+    'courage',
   ];
   const hit = (arr: string[]) => arr.some((w) => t.includes(w));
   return hit(emo) || hit(moral);
@@ -216,13 +250,19 @@ function buildSystemPrompt(
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const id = setTimeout(() => reject(new Error('Request timed out')), ms);
-    p.then(v => { clearTimeout(id); resolve(v); })
-     .catch(e => { clearTimeout(id); reject(e); });
+    p.then((v) => {
+      clearTimeout(id);
+      resolve(v);
+    }).catch((e) => {
+      clearTimeout(id);
+      reject(e);
+    });
   });
 }
 
 /* ========= NEW (MEMORY HELPERS) ========= */
 function getUserKeyFromReq(req: NextRequest, body: any) {
+  // Prefer explicit header; fall back to body.userId; else guest
   return req.headers.get('x-user-key') || body?.userId || 'guest';
 }
 
@@ -236,8 +276,9 @@ function detectExplicitRemember(text: string) {
 export async function GET(req: NextRequest) {
   const origin = pickAllowedOrigin(req.headers.get('origin'));
   const backend = SOLACE_URL && SOLACE_KEY ? 'solace' : 'openai';
+  const memoryEnabled = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
   return NextResponse.json(
-    { ok: true, model: MODEL, identity: SOLACE_NAME, backend },
+    { ok: true, model: MODEL, identity: SOLACE_NAME, backend, memoryEnabled },
     { headers: corsHeaders(origin) }
   );
 }
@@ -304,8 +345,7 @@ export async function POST(req: NextRequest) {
     const rolled = trimConversation(messages);
     const userAskedForSecular = wantsSecular(rolled);
 
-    const lastUser =
-      [...rolled].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content || '';
+    const lastUser = [...rolled].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content || '';
     const lastModeHeader = req.headers.get('x-last-mode');
     const route = routeMode(lastUser, { lastMode: lastModeHeader as any });
 
@@ -359,7 +399,7 @@ export async function POST(req: NextRequest) {
       try {
         await remember({ user_key: userKey, kind: 'fact', content: explicit, weight: 1.2 });
       } catch {
-        // non-fatal
+        /* non-fatal */
       }
     }
     /* ================================================================= */
@@ -383,7 +423,14 @@ export async function POST(req: NextRequest) {
           );
 
           return NextResponse.json(
-            { text, model: 'solace', identity: SOLACE_NAME, mode: route.mode, confidence: route.confidence, filters: effectiveFilters },
+            {
+              text,
+              model: 'solace',
+              identity: SOLACE_NAME,
+              mode: route.mode,
+              confidence: route.confidence,
+              filters: effectiveFilters,
+            },
             { headers: corsHeaders(echoOrigin) }
           );
         } catch {
@@ -395,10 +442,7 @@ export async function POST(req: NextRequest) {
       const resp = await withTimeout(
         openai.responses.create({
           model: MODEL,
-          input:
-            system +
-            '\n\n' +
-            rolled.map((m) => `${m.role}: ${m.content}`).join('\n'),
+          input: system + '\n\n' + rolled.map((m) => `${m.role}: ${m.content}`).join('\n'),
           max_output_tokens: 800,
           temperature: 0.2,
         }),
@@ -408,7 +452,14 @@ export async function POST(req: NextRequest) {
       const text = (resp as any).output_text?.trim() || '[No reply from model]';
 
       return NextResponse.json(
-        { text, model: MODEL, identity: SOLACE_NAME, mode: route.mode, confidence: route.confidence, filters: effectiveFilters },
+        {
+          text,
+          model: MODEL,
+          identity: SOLACE_NAME,
+          mode: route.mode,
+          confidence: route.confidence,
+          filters: effectiveFilters,
+        },
         { headers: corsHeaders(echoOrigin) }
       );
     }
@@ -459,7 +510,10 @@ export async function POST(req: NextRequest) {
 
     if (!r.ok || !r.body) {
       const t = await r.text().catch(() => '');
-      return new NextResponse(`Model error: ${r.status} ${t}`, { status: 500, headers: corsHeaders(echoOrigin) });
+      return new NextResponse(`Model error: ${r.status} ${t}`, {
+        status: 500,
+        headers: corsHeaders(echoOrigin),
+      });
     }
 
     return new NextResponse(r.body as any, {
