@@ -1,12 +1,11 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import nextDynamic from 'next/dynamic';
-
-// Tell Next never to prerender this route (fixes CSR bailout/prerender error)
 export const dynamic = 'force-dynamic';
 export const revalidate = false;
+
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import nextDynamic from 'next/dynamic'; // ← avoid name clash with `export const dynamic`
 
 // react-pdf must only run on the client
 const ReactPDF = nextDynamic(async () => {
@@ -19,15 +18,15 @@ const ReactPDF = nextDynamic(async () => {
   } as any;
 }, { ssr: false });
 
-export default function ViewerPage() {
+export default function Page() {
   return (
-    <Suspense fallback={<Shell><div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">Loading…</div></Shell>}>
-      <ViewerInner />
+    <Suspense fallback={<div className="p-4 text-zinc-200">Loading…</div>}>
+      <ViewerPage />
     </Suspense>
   );
 }
 
-function ViewerInner() {
+function ViewerPage() {
   const params = useSearchParams();
   const src = params.get('url') || '';
 
@@ -35,7 +34,6 @@ function ViewerInner() {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  // Configure the PDF.js worker once the dynamic import is present
   useEffect(() => {
     (async () => {
       try {
@@ -53,32 +51,6 @@ function ViewerInner() {
   const hasSrc = useMemo(() => typeof src === 'string' && src.length > 0, [src]);
 
   return (
-    <Shell>
-      {!hasSrc ? (
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
-          <p className="text-sm text-zinc-300">
-            Provide a PDF via query param, e.g.: <code className="text-zinc-200">/viewer?url=/files/sample.pdf</code>
-          </p>
-        </div>
-      ) : err ? (
-        <div className="rounded-lg border border-red-900 bg-red-950/40 p-4 text-red-200">
-          Error: {err}
-        </div>
-      ) : !pdfReady ? (
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">Loading PDF engine…</div>
-      ) : (
-        <PDFFrame src={src} onPages={(n) => setNumPages(n)} onError={(m) => setErr(m)} />
-      )}
-
-      {numPages ? (
-        <div className="mt-3 text-xs text-zinc-400">{numPages} page(s)</div>
-      ) : null}
-    </Shell>
-  );
-}
-
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
     <main className="min-h-screen bg-[#0b1220] text-zinc-100">
       <div className="mx-auto max-w-5xl px-4 py-6">
         <header className="mb-4 flex items-center justify-between">
@@ -90,7 +62,25 @@ function Shell({ children }: { children: React.ReactNode }) {
             Back
           </a>
         </header>
-        {children}
+
+        {!hasSrc ? (
+          <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
+            <p className="text-sm text-zinc-300">
+              Provide a PDF via query param, e.g.:{' '}
+              <code className="text-zinc-200">/viewer?url=/files/sample.pdf</code>
+            </p>
+          </div>
+        ) : err ? (
+          <div className="rounded-lg border border-red-900 bg-red-950/40 p-4 text-red-200">
+            Error: {err}
+          </div>
+        ) : !pdfReady ? (
+          <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">Loading PDF engine…</div>
+        ) : (
+          <PDFFrame src={src} onPages={(n) => setNumPages(n)} onError={(m) => setErr(m)} />
+        )}
+
+        {numPages ? <div className="mt-3 text-xs text-zinc-400">{numPages} page(s)</div> : null}
       </div>
     </main>
   );
@@ -121,11 +111,7 @@ function PDFFrame({
   }, [onError]);
 
   if (!Doc || !Page) {
-    return (
-      <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
-        Preparing viewer…
-      </div>
-    );
+    return <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">Preparing viewer…</div>;
   }
 
   return (
@@ -145,9 +131,7 @@ function PDFFrame({
 
 function AutoPager({ Page }: { Page: any }) {
   const [pages, setPages] = useState<number>(1);
-  useEffect(() => {
-    setPages(8); // simple first pass; render first 8 pages
-  }, []);
+  useEffect(() => setPages(8), []);
   return (
     <div className="flex flex-col items-center gap-4">
       {Array.from({ length: pages }).map((_, i) => (
