@@ -1,10 +1,9 @@
-// next.config.mjs
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
 
-  // NEW: react-pdf ships ESM that needs transpilation
-  transpilePackages: ['react-pdf'],
+  // Needed for react-pdf/pdfjs (it’s ESM and bundles worker)
+  transpilePackages: ['react-pdf', 'pdfjs-dist'],
 
   async redirects() {
     return [
@@ -18,11 +17,9 @@ const nextConfig = {
   },
 
   async headers() {
-    // --- CSP ---
-    // We add cdnjs for the pdf.js worker and allow https: in connect-src so remote PDFs can load.
     const csp = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdnjs.cloudflare.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       [
@@ -34,8 +31,6 @@ const nextConfig = {
         "https://api.openai.com",
         "https://api.stripe.com",
         "https://vitals.vercel-insights.com",
-        "https://cdnjs.cloudflare.com",         // <-- allow fetching worker + remote PDFs if needed
-        "https:"                                // <-- allow viewing PDFs hosted offsite (optional but handy)
       ].join(' '),
       [
         "frame-ancestors 'self'",
@@ -46,7 +41,8 @@ const nextConfig = {
       "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://*.supabase.co",
       "font-src 'self' data: https:",
       "media-src 'self' blob:",
-      "worker-src 'self' blob: https://cdnjs.cloudflare.com", // <-- allow pdf.js worker from CDN
+      // Allow pdfjs worker from CDN; also blob: for inline worker
+      "worker-src 'self' blob: https://cdnjs.cloudflare.com",
       "upgrade-insecure-requests",
     ].join('; ');
 
@@ -58,7 +54,6 @@ const nextConfig = {
           { key: 'Access-Control-Allow-Methods', value: 'GET,POST,OPTIONS' },
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
-
           { key: 'Content-Security-Policy', value: csp },
           { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
           { key: 'Referrer-Policy', value: 'no-referrer-when-downgrade' },
@@ -70,9 +65,7 @@ const nextConfig = {
   },
 
   async rewrites() {
-    return [
-      { source: '/api/:path*', destination: 'https://www.moralclarity.ai/api/:path*' },
-    ];
+    return [{ source: '/api/:path*', destination: 'https://www.moralclarity.ai/api/:path*' }];
   },
 };
 
