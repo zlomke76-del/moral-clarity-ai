@@ -7,16 +7,15 @@ import type OpenAI from 'openai';
 import { getOpenAI } from '@/lib/openai';
 import { routeMode } from '@/core/mode-router';
 
-/* ========= NEW (MEMORY) ========= */
+/* ========= MEMORY (uses /lib/memory.ts) ========= */
 import { searchMemories, remember } from '@/lib/memory';
-/* ================================= */
+/* =============================================== */
 
 /* ========= MODEL / TIMEOUT ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const REQUEST_TIMEOUT_MS = 20_000;
 
 /* ========= ORIGINS ========= */
-/** Base allow-list; can be extended via MCAI_ALLOWED_ORIGINS (comma-separated). */
 const STATIC_ALLOWED_ORIGINS = [
   'https://moralclarity.ai',
   'https://www.moralclarity.ai',
@@ -34,7 +33,6 @@ const ENV_ALLOWED_ORIGINS = (process.env.MCAI_ALLOWED_ORIGINS || '')
 
 const ALLOWED_SET = new Set<string>([...STATIC_ALLOWED_ORIGINS, ...ENV_ALLOWED_ORIGINS]);
 
-/** Allow any subdomain under our two public roots. */
 function hostIsAllowedWildcard(hostname: string) {
   return (
     /^([a-z0-9-]+\.)*moralclarity\.ai$/i.test(hostname) ||
@@ -60,12 +58,10 @@ function corsHeaders(origin: string | null): Headers {
   h.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   h.set(
     'Access-Control-Allow-Headers',
-    // Added X-User-Key explicitly so the browser lets us send it
     'Content-Type, Authorization, X-Requested-With, X-Context-Id, X-Last-Mode, X-User-Key'
   );
   h.set('Access-Control-Max-Age', '86400');
   if (origin) h.set('Access-Control-Allow-Origin', origin);
-  // If you later use cookies: h.set('Access-Control-Allow-Credentials','true');
   return h;
 }
 
@@ -260,17 +256,21 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-/* ========= NEW (MEMORY HELPERS) ========= */
+/* ========= MEMORY HELPERS ========= */
 function getUserKeyFromReq(req: NextRequest, body: any) {
-  // Prefer explicit header; fall back to body.userId; else guest
-  return req.headers.get('x-user-key') || body?.userId || 'guest';
+  // Prefer explicit header; then body.user_key; then 'guest'
+  return req.headers.get('x-user-key') || body?.user_key || 'guest';
 }
 
+/** catch "remember that ..." or "please remember ..." at sentence start */
 function detectExplicitRemember(text: string) {
-  const m = text?.match(/^\s*remember that\s*(.*)$/i);
+  if (!text) return null;
+  const m =
+    text.match(/^\s*(?:please\s+)?remember(?:\s+that)?\s+(.+)$/i) ||
+    text.match(/^\s*store\s+this:\s+(.+)$/i);
   return m?.[1]?.trim() || null;
 }
-/* ======================================== */
+/* ================================== */
 
 /* ========= HEALTHCHECK ========= */
 export async function GET(req: NextRequest) {
@@ -349,23 +349,19 @@ export async function POST(req: NextRequest) {
     const lastModeHeader = req.headers.get('x-last-mode');
     const route = routeMode(lastUser, { lastMode: lastModeHeader as any });
 
-    // ---------- ADDITIVE FILTER LOGIC (Ministry as overlay) ----------
+    // ---------- Additive filters ----------
     const incoming = new Set(rawFilters);
     if (route.mode === 'Guidance') incoming.add('guidance');
-    if (route.mode === 'Ministry') {
-      incoming.add('ministry');
-      incoming.add('abrahamic');
-    }
-    if (body?.ministry === true) {
+    if (route.mode === 'Ministry' || body?.ministry === true) {
       incoming.add('ministry');
       incoming.add('abrahamic');
     }
     const effectiveFilters = Array.from(incoming);
-    // ---------------------------------------------------------------
+    // -------------------------------------
 
     const { prompt: baseSystem } = buildSystemPrompt(effectiveFilters, userAskedForSecular, rolled);
 
-    /* ========= MEMORY: assemble Memory Pack ========= */
+    /* ========= MEMORY: recall pack ========= */
     const userKey = getUserKeyFromReq(req, body);
     const memoryEnabled = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
     let memorySection = '';
@@ -376,10 +372,10 @@ export async function POST(req: NextRequest) {
         const query = lastUser || fallbackQuery;
 
         const hits = await searchMemories(userKey, query, 8);
-        const pack = hits
-  .map((m: any) => `• (${m.purpose ?? 'fact'}) ${m.content}`)
-  .slice(0, 12)
-  .join('\n');
+        const pack = (hits ?? [])
+          .map((m: any) => `• (${m.purpose ?? 'fact'}) ${m.content}`)
+          .slice(0, 12)
+          .join('\n');
 
         memorySection =
           `\n\nMEMORY PACK (private, user-scoped)\nUse these stable facts/preferences **only if relevant**:\n` +
@@ -388,22 +384,21 @@ export async function POST(req: NextRequest) {
         memorySection = '';
       }
     }
-
     const system = baseSystem + memorySection;
-    /* ================================================= */
+    /* ====================================== */
 
-    /* ========= MEMORY: capture explicit "remember that ..." ========= */
+    /* ========= MEMORY: capture explicit "remember ..." ========= */
     const explicit = detectExplicitRemember(lastUser);
     if (explicit && memoryEnabled) {
       try {
-     await remember({ user_key: userKey, content: explicit, purpose: 'fact' });
+        await remember({ user_key: userKey, content: explicit, purpose: 'fact', title: '' });
       } catch {
         /* non-fatal */
       }
     }
-    /* ================================================================= */
+    /* =========================================================== */
 
-    // ----- Prefer SOLACE if configured -----
+    // Prefer SOLACE if configured
     const useSolace = Boolean(SOLACE_URL && SOLACE_KEY);
 
     if (!wantStream) {
