@@ -47,7 +47,7 @@ function pickAllowedOrigin(origin: string | null): string | null {
     const url = new URL(origin);
     if (hostIsAllowedWildcard(url.hostname)) return origin;
   } catch {
-    /* ignore parse errors */
+    /* ignore */
   }
   return null;
 }
@@ -67,9 +67,7 @@ function corsHeaders(origin: string | null): Headers {
 
 function headersToRecord(h: Headers): Record<string, string> {
   const out: Record<string, string> = {};
-  h.forEach((v, k) => {
-    out[k] = v;
-  });
+  h.forEach((v, k) => (out[k] = v));
   return out;
 }
 
@@ -118,7 +116,6 @@ function scripturePolicyText(opts: {
   wantsAbrahamic: boolean;
   forceFirstTurnSeeding: boolean;
   userAskedForSecular: boolean;
-  allowCompareSecular: boolean;
 }) {
   const base =
     `SCRIPTURE POLICY\n` +
@@ -129,24 +126,15 @@ function scripturePolicyText(opts: {
     return base + `- Abrahamic references DISABLED due to secular framing or inactive Abrahamic layer. Do not include scripture.`;
   }
 
-  const stance =
-    `MINISTRY ANCHORING STANCE\n` +
-    `- When Ministry/Abrahamic is ON: do NOT introduce or promote secular frameworks.\n` +
-    `- Only discuss secular **if the user explicitly asks to compare** (e.g., "compare secular", "vs secular").\n` +
-    (opts.allowCompareSecular
-      ? `- Comparison is allowed in this turn, but keep the anchored conclusion explicit.`
-      : `- No comparison requested this turn: keep the counsel anchored; omit secular framing.`);
-
   if (opts.forceFirstTurnSeeding) {
     return (
       base +
-      stance +
-      `\n- FIRST REAL TURN IS MORAL/EMOTIONAL: Provide ONE gentle reference (max 1–2) to anchor hope/justice/mercy.\n` +
+      `- FIRST REAL TURN IS MORAL/EMOTIONAL: Provide ONE gentle reference (max 1–2) to anchor hope/justice/mercy.\n` +
       `- Subsequent turns: include references only when clearly helpful or requested.`
     );
   }
 
-  return base + stance;
+  return base + `- Include references only when clearly helpful or explicitly requested.`;
 }
 
 /* ========= HELPERS ========= */
@@ -161,22 +149,10 @@ function trimConversation(messages: Array<{ role: string; content: string }>) {
   return messages.length <= limit ? messages : messages.slice(-limit);
 }
 
-/** Strict secular-only trigger (opt-out of Abrahamic content) */
 function wantsSecular(messages: Array<{ role: string; content: string }>) {
   const text = messages.slice(-6).map((m) => m.content).join(' ').toLowerCase();
   return /\bsecular framing\b|\bsecular only\b|\bno scripture\b|\bno religious\b|\bkeep it secular\b|\bstrictly secular\b/.test(
     text
-  );
-}
-
-/** Explicit compare-with-secular trigger (opt-in comparison inside Ministry) */
-function wantsExplicitSecularCompare(messages: Array<{ role: string; content: string }>) {
-  const text = messages.slice(-6).map((m) => m.content).join(' ').toLowerCase();
-  return (
-    /\bcompare (with )?secular\b/.test(text) ||
-    /\bsecular comparison\b/.test(text) ||
-    /\bvs\.?\s*secular\b/.test(text) ||
-    /\bsecular vs\.?\b/.test(text)
   );
 }
 
@@ -187,43 +163,12 @@ function isFirstRealTurn(messages: Array<{ role: string; content: string }>) {
 }
 
 function hasEmotionalOrMoralCue(text: string) {
-  const t = text.toLowerCase();
+  const t = (text || '').toLowerCase();
   const emo = [
-    'hope',
-    'lost',
-    'afraid',
-    'fear',
-    'anxious',
-    'anxiety',
-    'grief',
-    'sad',
-    'sorrow',
-    'depressed',
-    'stress',
-    'overwhelmed',
-    'lonely',
-    'alone',
-    'comfort',
-    'forgive',
-    'forgiveness',
-    'guilt',
-    'shame',
-    'purpose',
-    'meaning',
+    'hope','lost','afraid','fear','anxious','anxiety','grief','sad','sorrow','depressed','stress','overwhelmed','lonely','alone','comfort','forgive','forgiveness','guilt','shame','purpose','meaning',
   ];
   const moral = [
-    'right',
-    'wrong',
-    'unfair',
-    'injustice',
-    'justice',
-    'truth',
-    'honest',
-    'dishonest',
-    'integrity',
-    'mercy',
-    'compassion',
-    'courage',
+    'right','wrong','unfair','injustice','justice','truth','honest','dishonest','integrity','mercy','compassion','courage',
   ];
   const hit = (arr: string[]) => arr.some((w) => t.includes(w));
   return hit(emo) || hit(moral);
@@ -232,7 +177,6 @@ function hasEmotionalOrMoralCue(text: string) {
 function buildSystemPrompt(
   filters: string[],
   userWantsSecular: boolean,
-  allowCompareSecular: boolean,
   messages: Array<{ role: string; content: string }>
 ) {
   const wantsAbrahamic = filters.includes('abrahamic') || filters.includes('ministry');
@@ -254,46 +198,41 @@ function buildSystemPrompt(
       wantsAbrahamic,
       forceFirstTurnSeeding,
       userAskedForSecular: userWantsSecular,
-      allowCompareSecular,
     })
   );
   if (wantsAbrahamic && !userWantsSecular) parts.push(GUIDELINE_ABRAHAMIC);
   if (wantsGuidance) parts.push(GUIDELINE_GUIDANCE);
 
-  return {
-    prompt: parts.join('\n\n'),
-    wantsAbrahamic,
-    forceFirstTurnSeeding,
-  };
+  return { prompt: parts.join('\n\n'), wantsAbrahamic, forceFirstTurnSeeding };
 }
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const id = setTimeout(() => reject(new Error('Request timed out')), ms);
-    p.then((v) => {
-      clearTimeout(id);
-      resolve(v);
-    }).catch((e) => {
-      clearTimeout(id);
-      reject(e);
-    });
+    p.then((v) => { clearTimeout(id); resolve(v); })
+     .catch((e) => { clearTimeout(id); reject(e); });
   });
 }
 
 /* ========= MEMORY HELPERS ========= */
 function getUserKeyFromReq(req: NextRequest, body: any) {
-  // Prefer explicit header; then body.user_key; then 'guest'
   return req.headers.get('x-user-key') || body?.user_key || 'guest';
 }
 
-/** catch "remember that ..." / "please remember ..." / "store this: ..." at sentence start */
+/** Accept: "remember X", "remember that X", "please remember X", "store this: X" */
 function detectExplicitRemember(text: string) {
   if (!text) return null;
-  const m =
-    text.match(/^\s*(?:please\s+)?remember(?:\s+that)?\s+(.+)$/i) ||
-    text.match(/^\s*store\s+this:\s+(.+)$/i);
-  return m?.[1]?.trim() || null;
+  const patterns = [
+    /^\s*(?:please\s+)?remember(?:\s+that)?\s+(.+)$/i,
+    /^\s*store\s+this:\s+(.+)$/i,
+  ];
+  for (const rx of patterns) {
+    const m = text.match(rx);
+    if (m?.[1]) return m[1].trim();
+  }
+  return null;
 }
+/* ================================== */
 
 /* ========= HEALTHCHECK ========= */
 export async function GET(req: NextRequest) {
@@ -367,7 +306,6 @@ export async function POST(req: NextRequest) {
 
     const rolled = trimConversation(messages);
     const userAskedForSecular = wantsSecular(rolled);
-    const explicitCompareSecular = wantsExplicitSecularCompare(rolled);
 
     const lastUser = [...rolled].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content || '';
     const lastModeHeader = req.headers.get('x-last-mode');
@@ -383,12 +321,7 @@ export async function POST(req: NextRequest) {
     const effectiveFilters = Array.from(incoming);
     // -------------------------------------
 
-    const { prompt: baseSystem } = buildSystemPrompt(
-      effectiveFilters,
-      userAskedForSecular,
-      explicitCompareSecular,
-      rolled
-    );
+    const { prompt: baseSystem } = buildSystemPrompt(effectiveFilters, userAskedForSecular, rolled);
 
     /* ========= MEMORY: recall pack ========= */
     const userKey = getUserKeyFromReq(req, body);
@@ -417,13 +350,44 @@ export async function POST(req: NextRequest) {
     /* ====================================== */
 
     /* ========= MEMORY: capture explicit "remember ..." ========= */
-    const explicit = detectExplicitRemember(lastUser);
-    if (explicit && memoryEnabled) {
-      try {
-        // NOTE: remember() implementation determines the actual table; currently inserts to mca.memories as a durable fact.
-        await remember({ user_key: userKey, content: explicit, purpose: 'fact', title: '' });
-      } catch {
-        /* non-fatal */
+    if (memoryEnabled) {
+      const explicit = detectExplicitRemember(lastUser);
+      if (explicit) {
+        try {
+          await remember({ user_key: userKey, content: explicit, purpose: 'fact', title: '' });
+          const ack = `Got it — I'll remember that: ${explicit}`;
+          if (!wantStream) {
+            return NextResponse.json(
+              {
+                text: ack,
+                model: 'memory',
+                identity: SOLACE_NAME,
+                mode: route.mode,
+                confidence: route.confidence,
+                filters: effectiveFilters,
+              },
+              { headers: corsHeaders(echoOrigin) }
+            );
+          } else {
+            const enc = new TextEncoder();
+            const stream = new ReadableStream<Uint8Array>({
+              start(controller) {
+                controller.enqueue(enc.encode(ack));
+                controller.close();
+              },
+            });
+            return new NextResponse(stream as any, {
+              headers: {
+                ...headersToRecord(corsHeaders(echoOrigin)),
+                'Content-Type': 'text/plain; charset=utf-8',
+                'Cache-Control': 'no-cache, no-transform',
+                'X-Accel-Buffering': 'no',
+              },
+            });
+          }
+        } catch {
+          // non-fatal: fall through to normal answering
+        }
       }
     }
     /* =========================================================== */
