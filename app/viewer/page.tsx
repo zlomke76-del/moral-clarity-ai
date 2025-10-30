@@ -1,44 +1,23 @@
 // app/viewer/page.tsx
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import dynamic from 'next/dynamic';
+import { Document, Page, pdfjs } from 'react-pdf';
 
-// react-pdf must only run on the client
-const ReactPDF = dynamic(async () => {
-  const mod = await import('react-pdf');
-  return {
-    default: mod,
-    Document: mod.Document,
-    Page: mod.Page,
-    pdfjs: mod.pdfjs,
-  } as any;
-}, { ssr: false });
+// If your CSP allows it, this CDN worker is simplest.
+// (If it’s blocked, switch to bundling the worker and point to it.)
+pdfjs.GlobalWorkerOptions.workerSrc =
+  `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 export default function ViewerPage() {
   const params = useSearchParams();
   const src = params.get('url') || '';
 
-  const [pdfReady, setPdfReady] = useState(false);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
-
-  // Configure the PDF.js worker once the dynamic import is present
-  useEffect(() => {
-    (async () => {
-      try {
-        const mod: any = await import('react-pdf');
-        const { pdfjs } = mod;
-        // Use a CDN worker that matches the installed pdfjs version
-        pdfjs.GlobalWorkerOptions.workerSrc =
-          `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-        setPdfReady(true);
-      } catch (e: any) {
-        setErr(e?.message || 'Failed to initialize PDF engine.');
-      }
-    })();
-  }, []);
 
   const hasSrc = useMemo(() => typeof src === 'string' && src.length > 0, [src]);
 
@@ -58,17 +37,26 @@ export default function ViewerPage() {
         {!hasSrc ? (
           <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
             <p className="text-sm text-zinc-300">
-              Provide a PDF via query param, e.g.: <code className="text-zinc-200">/viewer?url=/files/sample.pdf</code>
+              Provide a PDF via query param, e.g.:{' '}
+              <code className="text-zinc-200">/viewer?url=/files/sample.pdf</code>
             </p>
           </div>
         ) : err ? (
           <div className="rounded-lg border border-red-900 bg-red-950/40 p-4 text-red-200">
             Error: {err}
           </div>
-        ) : !pdfReady ? (
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">Loading PDF engine…</div>
         ) : (
-          <PDFFrame src={src} onPages={(n) => setNumPages(n)} onError={(m) => setErr(m)} />
+          <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
+            <Document
+              file={src}
+              onLoadSuccess={(meta) => setNumPages(meta.numPages)}
+              onLoadError={(e: any) => setErr(e?.message || 'Failed to load PDF.')}
+              loading={<div className="p-4">Loading document…</div>}
+              error={<div className="p-4 text-red-300">Could not open this PDF.</div>}
+            >
+              <Pages numPages={numPages ?? 0} />
+            </Document>
+          </div>
         )}
 
         {numPages ? (
@@ -79,56 +67,12 @@ export default function ViewerPage() {
   );
 }
 
-function PDFFrame({ src, onPages, onError }: { src: string; onPages: (n: number) => void; onError: (m: string) => void; }) {
-  // re-import inside to access the components we dynamically loaded
-  const [Doc, setDoc] = useState<any>(null);
-  const [Page, setPage] = useState<any>(null);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const mod: any = await import('react-pdf');
-        setDoc(() => mod.Document);
-        setPage(() => mod.Page);
-      } catch (e: any) {
-        onError(e?.message || 'Failed to load PDF components.');
-      }
-    })();
-  }, [onError]);
-
-  if (!Doc || !Page) {
-    return (
-      <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
-        Preparing viewer…
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
-      <Doc
-        file={src}
-        onLoadSuccess={(meta: any) => onPages(meta.numPages)}
-        onLoadError={(e: any) => onError(e?.message || 'Failed to load PDF.')}
-        loading={<div className="p-4">Loading document…</div>}
-        error={<div className="p-4 text-red-300">Could not open this PDF.</div>}
-      >
-        <AutoPager Page={Page} />
-      </Doc>
-    </div>
-  );
-}
-
-function AutoPager({ Page }: { Page: any }) {
-  const [pages, setPages] = useState<number>(1);
-  // We receive total pages through parent via onPages; just render a growing list
-  // For simplicity, render first 8 pages; you can add paging UX later.
-  useEffect(() => {
-    setPages(8);
-  }, []);
+function Pages({ numPages }: { numPages: number }) {
+  if (!numPages) return null;
+  // If you want to cap pages for performance, replace numPages with Math.min(numPages, 8)
   return (
     <div className="flex flex-col items-center gap-4">
-      {Array.from({ length: pages }).map((_, i) => (
+      {Array.from({ length: numPages }).map((_, i) => (
         <Page
           key={i}
           pageNumber={i + 1}
