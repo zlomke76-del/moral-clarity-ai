@@ -1,19 +1,19 @@
-// lib/memory.ts
+// /lib/memory.ts
 import 'server-only';
 import { createClient } from '@supabase/supabase-js';
+
+export const EMBEDDING_MODEL = 'text-embedding-3-small';
 
 const supa = () =>
   createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
     auth: { persistSession: false }
   });
 
-// Replace this with your embedding provider call.
-// If you're already calling OpenAI elsewhere, reuse that util.
 async function embed(text: string): Promise<number[]> {
   const res = await fetch('https://api.openai.com/v1/embeddings', {
     method: 'POST',
     headers: { 'Content-Type':'application/json', 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` },
-    body: JSON.stringify({ model: 'text-embedding-3-small', input: text })
+    body: JSON.stringify({ model: EMBEDDING_MODEL, input: text })
   });
   const j = await res.json();
   return j?.data?.[0]?.embedding ?? [];
@@ -43,7 +43,6 @@ export async function remember(m: Memory) {
 export async function searchMemories(user_key: string, query: string, k = 8) {
   const sb = supa();
   const qvec = await embed(query);
-  // cosine similarity: smaller distance = closer; we’ll invert to score later if needed
   const { data, error } = await sb.rpc('match_user_memories', {
     p_user_key: user_key,
     p_query_embedding: qvec,
