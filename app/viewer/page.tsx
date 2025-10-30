@@ -1,11 +1,12 @@
 'use client';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = false;
+export const revalidate = 0;              // <= must be a number or false (not an object)
+export const dynamicParams = true;        // safe default
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import nextDynamic from 'next/dynamic'; // ← avoid name clash with `export const dynamic`
+import nextDynamic from 'next/dynamic';   // avoid name clash with exported `dynamic`
 
 // react-pdf must only run on the client
 const ReactPDF = nextDynamic(async () => {
@@ -66,8 +67,7 @@ function ViewerPage() {
         {!hasSrc ? (
           <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
             <p className="text-sm text-zinc-300">
-              Provide a PDF via query param, e.g.:{' '}
-              <code className="text-zinc-200">/viewer?url=/files/sample.pdf</code>
+              Provide a PDF via query param, e.g.: <code className="text-zinc-200">/viewer?url=/files/sample.pdf</code>
             </p>
           </div>
         ) : err ? (
