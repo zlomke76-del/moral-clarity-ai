@@ -1,14 +1,12 @@
-// /lib/memory.ts
 import 'server-only';
 import { createClient } from '@supabase/supabase-js';
 
 export const EMBEDDING_MODEL = 'text-embedding-3-small'; // 1536 dims
 
-// Use the SERVICE ROLE key (not anon) and the mca schema
 const sb = () =>
   createClient(
     process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,   // << must exist in Vercel
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,   // must be set in Vercel (Production)
     { auth: { persistSession: false } }
   );
 
@@ -22,14 +20,18 @@ async function embed(text: string): Promise<number[]> {
     body: JSON.stringify({ model: EMBEDDING_MODEL, input: text }),
   });
   const j = await r.json();
-  return j?.data?.[0]?.embedding ?? [];
+  if (!j?.data?.[0]?.embedding) {
+    console.error('EMBED_ERROR', j);
+    throw new Error('Failed to embed');
+  }
+  return j.data[0].embedding;
 }
 
 export type Memory = {
   id?: string;
   user_key: string;
   content: string;
-  purpose?: 'profile' | 'preference' | 'fact' | 'task' | 'note';
+  purpose?: 'profile'|'preference'|'fact'|'task'|'note';
   title?: string | null;
   workspace_id?: string | null;
 };
@@ -38,43 +40,46 @@ export async function remember(m: Memory) {
   const client = sb();
   const vec = await embed(m.content);
 
-  // insert into mca.memories (schema-qualified)
-  const { data, error } = await client
-    .schema('mca')
-    .from('memories')
-    .insert([{
-      user_key: m.user_key,
-      content: m.content,
-      purpose: m.purpose ?? 'fact',
-      title: m.title ?? null,
-      workspace_id: m.workspace_id ?? null,
-      embedding: vec,
-    }])
-    .select()
-    .single();
+  const payload = {
+    user_key: m.user_key,
+    content: m.content,
+    purpose: m.purpose ?? 'fact',
+    title: m.title ?? '',                  // NOT NULL on DB
+    workspace_id: m.workspace_id!,         // must be provided by caller
+    embedding: vec,
+  };
 
-  if (error) throw error;
+  const { data, error } = await client.schema('mca').from('memories')
+    .insert([payload]).select().single();
+
+  if (error) {
+    console.error('MEMORY_INSERT_ERROR', error, { payloadMeta: {
+      user_key: payload.user_key,
+      purpose: payload.purpose,
+      title: payload.title,
+      hasWorkspace: !!payload.workspace_id,
+      embLen: payload.embedding?.length,
+    }});
+    throw error;
+  }
   return data;
 }
 
 export async function searchMemories(user_key: string, query: string, k = 8) {
   const client = sb();
   const qvec = await embed(query);
-
-  // uses the mca.match_memories RPC below
   const { data, error } = await client
     .rpc('match_memories', {
       p_user_key: user_key,
       p_query_embedding: qvec,
       p_match_count: k,
-    }, { head: false });
+    });
 
-  if (error) throw error;
+  if (error) {
+    console.error('MEMORY_SEARCH_ERROR', error);
+    throw error;
+  }
   return (data ?? []) as Array<{
-    id: string;
-    content: string;
-    purpose: string;
-    user_key: string;
-    similarity: number;
+    id: string; content: string; purpose: string; user_key: string; similarity: number;
   }>;
 }
