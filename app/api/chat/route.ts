@@ -118,6 +118,7 @@ function scripturePolicyText(opts: {
   wantsAbrahamic: boolean;
   forceFirstTurnSeeding: boolean;
   userAskedForSecular: boolean;
+  allowCompareSecular: boolean;
 }) {
   const base =
     `SCRIPTURE POLICY\n` +
@@ -128,15 +129,24 @@ function scripturePolicyText(opts: {
     return base + `- Abrahamic references DISABLED due to secular framing or inactive Abrahamic layer. Do not include scripture.`;
   }
 
+  const stance =
+    `MINISTRY ANCHORING STANCE\n` +
+    `- When Ministry/Abrahamic is ON: do NOT introduce or promote secular frameworks.\n` +
+    `- Only discuss secular **if the user explicitly asks to compare** (e.g., "compare secular", "vs secular").\n` +
+    (opts.allowCompareSecular
+      ? `- Comparison is allowed in this turn, but keep the anchored conclusion explicit.`
+      : `- No comparison requested this turn: keep the counsel anchored; omit secular framing.`);
+
   if (opts.forceFirstTurnSeeding) {
     return (
       base +
-      `- FIRST REAL TURN IS MORAL/EMOTIONAL: Provide ONE gentle reference (max 1–2) to anchor hope/justice/mercy.\n` +
+      stance +
+      `\n- FIRST REAL TURN IS MORAL/EMOTIONAL: Provide ONE gentle reference (max 1–2) to anchor hope/justice/mercy.\n` +
       `- Subsequent turns: include references only when clearly helpful or requested.`
     );
   }
 
-  return base + `- Include references only when clearly helpful or explicitly requested.`;
+  return base + stance;
 }
 
 /* ========= HELPERS ========= */
@@ -151,10 +161,22 @@ function trimConversation(messages: Array<{ role: string; content: string }>) {
   return messages.length <= limit ? messages : messages.slice(-limit);
 }
 
+/** Strict secular-only trigger (opt-out of Abrahamic content) */
 function wantsSecular(messages: Array<{ role: string; content: string }>) {
   const text = messages.slice(-6).map((m) => m.content).join(' ').toLowerCase();
   return /\bsecular framing\b|\bsecular only\b|\bno scripture\b|\bno religious\b|\bkeep it secular\b|\bstrictly secular\b/.test(
     text
+  );
+}
+
+/** Explicit compare-with-secular trigger (opt-in comparison inside Ministry) */
+function wantsExplicitSecularCompare(messages: Array<{ role: string; content: string }>) {
+  const text = messages.slice(-6).map((m) => m.content).join(' ').toLowerCase();
+  return (
+    /\bcompare (with )?secular\b/.test(text) ||
+    /\bsecular comparison\b/.test(text) ||
+    /\bvs\.?\s*secular\b/.test(text) ||
+    /\bsecular vs\.?\b/.test(text)
   );
 }
 
@@ -210,6 +232,7 @@ function hasEmotionalOrMoralCue(text: string) {
 function buildSystemPrompt(
   filters: string[],
   userWantsSecular: boolean,
+  allowCompareSecular: boolean,
   messages: Array<{ role: string; content: string }>
 ) {
   const wantsAbrahamic = filters.includes('abrahamic') || filters.includes('ministry');
@@ -231,6 +254,7 @@ function buildSystemPrompt(
       wantsAbrahamic,
       forceFirstTurnSeeding,
       userAskedForSecular: userWantsSecular,
+      allowCompareSecular,
     })
   );
   if (wantsAbrahamic && !userWantsSecular) parts.push(GUIDELINE_ABRAHAMIC);
@@ -262,7 +286,7 @@ function getUserKeyFromReq(req: NextRequest, body: any) {
   return req.headers.get('x-user-key') || body?.user_key || 'guest';
 }
 
-/** catch "remember that ..." or "please remember ..." at sentence start */
+/** catch "remember that ..." / "please remember ..." / "store this: ..." at sentence start */
 function detectExplicitRemember(text: string) {
   if (!text) return null;
   const m =
@@ -270,7 +294,6 @@ function detectExplicitRemember(text: string) {
     text.match(/^\s*store\s+this:\s+(.+)$/i);
   return m?.[1]?.trim() || null;
 }
-/* ================================== */
 
 /* ========= HEALTHCHECK ========= */
 export async function GET(req: NextRequest) {
@@ -344,6 +367,7 @@ export async function POST(req: NextRequest) {
 
     const rolled = trimConversation(messages);
     const userAskedForSecular = wantsSecular(rolled);
+    const explicitCompareSecular = wantsExplicitSecularCompare(rolled);
 
     const lastUser = [...rolled].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content || '';
     const lastModeHeader = req.headers.get('x-last-mode');
@@ -359,7 +383,12 @@ export async function POST(req: NextRequest) {
     const effectiveFilters = Array.from(incoming);
     // -------------------------------------
 
-    const { prompt: baseSystem } = buildSystemPrompt(effectiveFilters, userAskedForSecular, rolled);
+    const { prompt: baseSystem } = buildSystemPrompt(
+      effectiveFilters,
+      userAskedForSecular,
+      explicitCompareSecular,
+      rolled
+    );
 
     /* ========= MEMORY: recall pack ========= */
     const userKey = getUserKeyFromReq(req, body);
@@ -391,6 +420,7 @@ export async function POST(req: NextRequest) {
     const explicit = detectExplicitRemember(lastUser);
     if (explicit && memoryEnabled) {
       try {
+        // NOTE: remember() implementation determines the actual table; currently inserts to mca.memories as a durable fact.
         await remember({ user_key: userKey, content: explicit, purpose: 'fact', title: '' });
       } catch {
         /* non-fatal */
