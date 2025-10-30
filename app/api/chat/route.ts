@@ -2,6 +2,7 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+import { webSearch } from "@/lib/search";
 import { NextRequest, NextResponse } from 'next/server';
 import type OpenAI from 'openai';
 import { getOpenAI } from '@/lib/openai';
@@ -307,21 +308,38 @@ export async function POST(req: NextRequest) {
     const rolled = trimConversation(messages);
     const userAskedForSecular = wantsSecular(rolled);
 
-    const lastUser = [...rolled].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content || '';
+    const lastUser =
+      [...rolled].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content || '';
     const lastModeHeader = req.headers.get('x-last-mode');
     const route = routeMode(lastUser, { lastMode: lastModeHeader as any });
 
     // ---------- Additive filters ----------
     const incoming = new Set(rawFilters);
+
+    // 1) Auto-add Guidance if router hints it.
     if (route.mode === 'Guidance') incoming.add('guidance');
-    if (route.mode === 'Ministry' || body?.ministry === true) {
+
+    // 2) **Default Ministry ON** unless user explicitly asked for secular framing.
+    //    (This satisfies “start in ministry mode by default”.)
+    if (!userAskedForSecular) {
       incoming.add('ministry');
       incoming.add('abrahamic');
     }
+
+    // Allow explicit body.ministry===false to force it off (escape hatch).
+    if (body?.ministry === false) {
+      incoming.delete('ministry');
+      incoming.delete('abrahamic');
+    }
+
     const effectiveFilters = Array.from(incoming);
     // -------------------------------------
 
-    const { prompt: baseSystem } = buildSystemPrompt(effectiveFilters, userAskedForSecular, rolled);
+    const { prompt: baseSystem } = buildSystemPrompt(
+      effectiveFilters,
+      userAskedForSecular,
+      rolled
+    );
 
     /* ========= MEMORY: recall pack ========= */
     const userKey = getUserKeyFromReq(req, body);
@@ -346,8 +364,29 @@ export async function POST(req: NextRequest) {
         memorySection = '';
       }
     }
-    const system = baseSystem + memorySection;
     /* ====================================== */
+
+    /* ========= WEB SEARCH (fresh info auto-context) ========= */
+    let webSection = '';
+    try {
+      const wantsFresh = /\b(latest|today|this week|news|recent|update|updates|look up|search|what happened|breaking)\b/i
+        .test(lastUser);
+      if (wantsFresh) {
+        const results = await webSearch(lastUser, { news: true, max: 5 });
+        if (Array.isArray(results) && results.length) {
+          const lines = results
+            .map((r: any, i: number) => `• [${i + 1}] ${r.title} — ${r.url}`)
+            .join('\n');
+          webSection = `\n\nWEB CONTEXT (recent search)\n${lines}`;
+        }
+      }
+    } catch (err) {
+      // Non-fatal; just log and continue
+      console.error('webSearch failed:', err);
+    }
+    /* ======================================================== */
+
+    const system = baseSystem + memorySection + webSection;
 
     /* ========= MEMORY: capture explicit "remember ..." ========= */
     if (memoryEnabled) {
