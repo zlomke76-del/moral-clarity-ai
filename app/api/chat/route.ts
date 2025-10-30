@@ -8,7 +8,7 @@ import { getOpenAI } from '@/lib/openai';
 import { routeMode } from '@/core/mode-router';
 
 /* ========= NEW (MEMORY) ========= */
-import { searchMemories, remember } from '@/lib/memory'; // requires the memory utils we added
+import { searchMemories, remember } from '@/lib/memory';
 /* ================================= */
 
 /* ========= MODEL / TIMEOUT ========= */
@@ -16,14 +16,60 @@ const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const REQUEST_TIMEOUT_MS = 20_000;
 
 /* ========= ORIGINS ========= */
-const ALLOWED_ORIGINS = [
+/** Base allow-list; can be extended via MCAI_ALLOWED_ORIGINS (comma-separated). */
+const STATIC_ALLOWED_ORIGINS = [
   'https://moralclarity.ai',
   'https://www.moralclarity.ai',
   'https://studio.moralclarity.ai',
-  // Official domain (added)
+  'https://studio-founder.moralclarity.ai', // <— added
   'https://moralclarityai.com',
   'https://www.moralclarityai.com',
+  'http://localhost:3000',
 ];
+
+const ENV_ALLOWED_ORIGINS = (process.env.MCAI_ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+const ALLOWED_SET = new Set<string>([...STATIC_ALLOWED_ORIGINS, ...ENV_ALLOWED_ORIGINS]);
+
+/** Allow any subdomain under our two public roots. */
+function hostIsAllowedWildcard(hostname: string) {
+  return (
+    /^([a-z0-9-]+\.)*moralclarity\.ai$/i.test(hostname) ||
+    /^([a-z0-9-]+\.)*moralclarityai\.com$/i.test(hostname)
+  );
+}
+
+function pickAllowedOrigin(origin: string | null): string | null {
+  if (!origin) return null; // same-origin
+  try {
+    if (ALLOWED_SET.has(origin)) return origin;
+    const url = new URL(origin);
+    if (hostIsAllowedWildcard(url.hostname)) return origin;
+  } catch {
+    // ignore parse errors
+  }
+  return null;
+}
+
+function corsHeaders(origin: string | null): Headers {
+  const h = new Headers();
+  h.set('Vary', 'Origin');
+  h.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  h.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Context-Id, X-Last-Mode');
+  h.set('Access-Control-Max-Age', '86400');
+  if (origin) h.set('Access-Control-Allow-Origin', origin);
+  // if you need cookies later: h.set('Access-Control-Allow-Credentials','true');
+  return h;
+}
+
+function headersToRecord(h: Headers): Record<string, string> {
+  const out: Record<string, string> = {};
+  h.forEach((v, k) => { out[k] = v; });
+  return out;
+}
 
 /* ========= SOLACE (IDENTITY / BACKEND) ========= */
 const SOLACE_NAME = 'Solace';
@@ -110,30 +156,27 @@ function wantsSecular(messages: Array<{ role: string; content: string }>) {
   );
 }
 
-/** Detects if this is effectively the user's first substantive message in the thread. */
 function isFirstRealTurn(messages: Array<{ role: string; content: string }>) {
   const userCount = messages.filter((m) => m.role?.toLowerCase() === 'user').length;
   const assistantCount = messages.filter((m) => m.role?.toLowerCase() === 'assistant').length;
   return userCount <= 1 || messages.length < 3 || assistantCount === 0;
 }
 
-/** Gentle emotional/moral cue detector for seeding references. */
 function hasEmotionalOrMoralCue(text: string) {
   const t = text.toLowerCase();
   const emo = [
-    'hope', 'lost', 'afraid', 'fear', 'anxious', 'anxiety', 'grief', 'sad', 'sorrow',
-    'depressed', 'stress', 'overwhelmed', 'lonely', 'alone', 'comfort', 'forgive',
-    'forgiveness', 'guilt', 'shame', 'purpose', 'meaning',
+    'hope','lost','afraid','fear','anxious','anxiety','grief','sad','sorrow',
+    'depressed','stress','overwhelmed','lonely','alone','comfort','forgive',
+    'forgiveness','guilt','shame','purpose','meaning',
   ];
   const moral = [
-    'right', 'wrong', 'unfair', 'injustice', 'justice', 'truth', 'honest', 'dishonest',
-    'integrity', 'mercy', 'compassion', 'courage',
+    'right','wrong','unfair','injustice','justice','truth','honest','dishonest',
+    'integrity','mercy','compassion','courage',
   ];
   const hit = (arr: string[]) => arr.some((w) => t.includes(w));
   return hit(emo) || hit(moral);
 }
 
-/** Build the full Solace system prompt. */
 function buildSystemPrompt(
   filters: string[],
   userWantsSecular: boolean,
@@ -146,7 +189,6 @@ function buildSystemPrompt(
     [...messages].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content ?? '';
   const firstTurn = isFirstRealTurn(messages);
   const moralOrEmo = hasEmotionalOrMoralCue(firstUserText);
-
   const forceFirstTurnSeeding = wantsAbrahamic && !userWantsSecular && firstTurn && moralOrEmo;
 
   const parts: string[] = [];
@@ -174,48 +216,17 @@ function buildSystemPrompt(
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const id = setTimeout(() => reject(new Error('Request timed out')), ms);
-    p.then((v) => {
-      clearTimeout(id);
-      resolve(v);
-    }).catch((e) => {
-      clearTimeout(id);
-      reject(e);
-    });
+    p.then(v => { clearTimeout(id); resolve(v); })
+     .catch(e => { clearTimeout(id); reject(e); });
   });
-}
-
-/* ========= CORS ========= */
-function pickAllowedOrigin(origin: string | null): string | null {
-  if (!origin) return null; // same-origin
-  return ALLOWED_ORIGINS.includes(origin) ? origin : null;
-}
-
-function corsHeaders(origin: string | null): Headers {
-  const h = new Headers();
-  h.set('Vary', 'Origin');
-  h.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  h.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Context-Id, X-Last-Mode');
-  h.set('Access-Control-Max-Age', '86400');
-  if (origin) h.set('Access-Control-Allow-Origin', origin);
-  return h;
-}
-
-function headersToRecord(h: Headers): Record<string, string> {
-  const out: Record<string, string> = {};
-  h.forEach((v, k) => {
-    out[k] = v;
-  });
-  return out;
 }
 
 /* ========= NEW (MEMORY HELPERS) ========= */
 function getUserKeyFromReq(req: NextRequest, body: any) {
-  // prefer explicit header; fall back to body.userId; else guest
   return req.headers.get('x-user-key') || body?.userId || 'guest';
 }
 
 function detectExplicitRemember(text: string) {
-  // crude, explicit signal only (keeps this controllable)
   const m = text?.match(/^\s*remember that\s*(.*)$/i);
   return m?.[1]?.trim() || null;
 }
@@ -233,8 +244,7 @@ export async function GET(req: NextRequest) {
 
 /* ========= OPTIONS (preflight) ========= */
 export async function OPTIONS(req: NextRequest) {
-  const reqOrigin = req.headers.get('origin');
-  const origin = pickAllowedOrigin(reqOrigin);
+  const origin = pickAllowedOrigin(req.headers.get('origin'));
   return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
 }
 
@@ -242,17 +252,13 @@ export async function OPTIONS(req: NextRequest) {
 async function solaceNonStream(payload: any) {
   const r = await fetch(SOLACE_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${SOLACE_KEY}`,
-    },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SOLACE_KEY}` },
     body: JSON.stringify({ ...payload, stream: false }),
   });
   if (!r.ok) {
     const t = await r.text().catch(() => '');
     throw new Error(`Solace ${r.status}: ${t}`);
   }
-  // Expecting { text: "..." } or plain text
   const ct = r.headers.get('content-type') || '';
   if (ct.includes('application/json')) {
     const j = await r.json().catch(() => ({}));
@@ -264,10 +270,7 @@ async function solaceNonStream(payload: any) {
 async function solaceStream(payload: any) {
   const r = await fetch(SOLACE_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${SOLACE_KEY}`,
-    },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SOLACE_KEY}` },
     body: JSON.stringify({ ...payload, stream: true }),
   });
   if (!r.ok || !r.body) {
@@ -286,7 +289,7 @@ export async function POST(req: NextRequest) {
 
     if (!echoOrigin && !sameOrNoOrigin) {
       return NextResponse.json(
-        { error: 'Origin not allowed', allowed: ALLOWED_ORIGINS },
+        { error: 'Origin not allowed', allowed: Array.from(ALLOWED_SET) },
         { status: 403, headers: corsHeaders(null) }
       );
     }
@@ -328,7 +331,6 @@ export async function POST(req: NextRequest) {
     let memorySection = '';
     if (memoryEnabled) {
       try {
-        // Use last user utterance as the query; if empty, fuse last few user lines
         const fallbackQuery =
           rolled.filter((m) => m.role === 'user').map((m) => m.content).slice(-3).join('\n') || 'general';
         const query = lastUser || fallbackQuery;
@@ -344,7 +346,6 @@ export async function POST(req: NextRequest) {
           `\n\nMEMORY PACK (private, user-scoped)\nUse these stable facts/preferences **only if relevant**:\n` +
           (pack || '• (none)');
       } catch {
-        // If memory fetch fails, just omit silently
         memorySection = '';
       }
     }
@@ -381,8 +382,6 @@ export async function POST(req: NextRequest) {
             REQUEST_TIMEOUT_MS
           );
 
-          /* (Optional) future: auto-extract new durable facts here, if you want a smarter memory writer */
-
           return NextResponse.json(
             { text, model: 'solace', identity: SOLACE_NAME, mode: route.mode, confidence: route.confidence, filters: effectiveFilters },
             { headers: corsHeaders(echoOrigin) }
@@ -399,9 +398,7 @@ export async function POST(req: NextRequest) {
           input:
             system +
             '\n\n' +
-            rolled
-              .map((m) => `${m.role}: ${m.content}`)
-              .join('\n'),
+            rolled.map((m) => `${m.role}: ${m.content}`).join('\n'),
           max_output_tokens: 800,
           temperature: 0.2,
         }),
@@ -409,8 +406,6 @@ export async function POST(req: NextRequest) {
       );
 
       const text = (resp as any).output_text?.trim() || '[No reply from model]';
-
-      /* (Optional) future: auto-extract new durable facts here */
 
       return NextResponse.json(
         { text, model: MODEL, identity: SOLACE_NAME, mode: route.mode, confidence: route.confidence, filters: effectiveFilters },
