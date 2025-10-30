@@ -377,10 +377,9 @@ export async function POST(req: NextRequest) {
 
         const hits = await searchMemories(userKey, query, 8);
         const pack = hits
-          .sort((a: any, b: any) => (b.weight ?? 1) - (a.weight ?? 1))
-          .map((m: any) => `• (${m.kind}) ${m.content}`)
-          .slice(0, 12)
-          .join('\n');
+  .map((m: any) => `• (${m.purpose ?? 'fact'}) ${m.content}`)
+  .slice(0, 12)
+  .join('\n');
 
         memorySection =
           `\n\nMEMORY PACK (private, user-scoped)\nUse these stable facts/preferences **only if relevant**:\n` +
@@ -397,7 +396,7 @@ export async function POST(req: NextRequest) {
     const explicit = detectExplicitRemember(lastUser);
     if (explicit && memoryEnabled) {
       try {
-        await remember({ user_key: userKey, kind: 'fact', content: explicit, weight: 1.2 });
+     await remember({ user_key: userKey, content: explicit, purpose: 'fact' });
       } catch {
         /* non-fatal */
       }
