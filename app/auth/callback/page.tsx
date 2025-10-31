@@ -1,73 +1,71 @@
 // app/auth/callback/page.tsx
+export const dynamic = 'force-dynamic';
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 
-export default function AuthCallback() {
-  const router = useRouter();
+export default function AuthCallbackPage() {
   const supabase = createSupabaseBrowser();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [status, setStatus] = useState<"verifying" | "ok" | "error">("verifying");
+  const [message, setMessage] = useState<string>("Verifying your sign-in…");
 
   useEffect(() => {
-    let cancelled = false;
+    let active = true;
 
     (async () => {
-      const url = new URL(window.location.href);
-      const next = url.searchParams.get("next") || "/app";
-      const code = url.searchParams.get("code");
-      const hash = window.location.hash || "";
-
-      const scrub = (to: string) => {
-        const clean = new URL(window.location.href);
-        clean.hash = "";
-        clean.search = `?next=${encodeURIComponent(to)}`;
-        window.history.replaceState({}, "", clean.pathname + clean.search);
-      };
-
       try {
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (cancelled) return;
-          if (!error) {
-            scrub(next);
-            router.replace(next);
+        // Exchange the OTP in the URL fragment/query for a session (handled by supabase-js)
+        const { data, error } = await supabase.auth.getSession();
+
+        if (!active) return;
+
+        if (error) {
+          setStatus("error");
+          setMessage(error.message || "Could not complete sign-in.");
+          return;
+        }
+
+        // If no session yet, try to parse the URL again (handles fragment)
+        if (!data.session) {
+          const { error: hashErr } = await supabase.auth.exchangeCodeForSession(window.location.href);
+          if (hashErr) {
+            setStatus("error");
+            setMessage(hashErr.message || "Could not complete sign-in.");
             return;
           }
         }
 
-        if (hash.includes("access_token")) {
-          const params = new URLSearchParams(hash.replace(/^#/, ""));
-          const access_token = params.get("access_token");
-          const refresh_token = params.get("refresh_token");
-          if (access_token && refresh_token) {
-            const { error } = await supabase.auth.setSession({
-              access_token,
-              refresh_token,
-            });
-            if (cancelled) return;
-            if (!error) {
-              scrub(next);
-              router.replace(next);
-              return;
-            }
-          }
-        }
+        setStatus("ok");
+        setMessage("Signed in. Redirecting…");
 
-        router.replace(`/auth?next=${encodeURIComponent(next)}`);
-      } catch {
-        router.replace(`/auth?next=${encodeURIComponent(next)}`);
+        const next = searchParams.get("next") ?? "/app";
+        router.replace(next);
+      } catch (e: any) {
+        if (!active) return;
+        setStatus("error");
+        setMessage(e?.message ?? "Unexpected error during sign-in.");
       }
     })();
 
     return () => {
-      cancelled = true;
+      active = false;
     };
-  }, [router, supabase]);
+  }, [router, searchParams, supabase]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center text-zinc-400">
-      Completing sign-in…
-    </div>
+    <main className="min-h-[60vh] flex items-center justify-center">
+      <div
+        className={
+          status === "error" ? "text-red-400 opacity-90" : "opacity-80"
+        }
+      >
+        {message}
+      </div>
+    </main>
   );
 }
