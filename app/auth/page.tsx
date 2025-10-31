@@ -1,54 +1,110 @@
 // app/auth/page.tsx
+export const dynamic = 'force-dynamic';
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 
-export default function AuthPage({
-  searchParams,
-}: {
-  searchParams?: { next?: string };
-}) {
+export default function AuthPage() {
   const supabase = createSupabaseBrowser();
+  const searchParams = useSearchParams();
+
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
-  const next = encodeURIComponent(searchParams?.next || "/app");
-  const emailRedirectTo = `${process.env.NEXT_PUBLIC_APP_BASE_URL}/auth/callback?next=${next}`;
+  const nextParamRaw = searchParams.get("next") ?? "/app";
+  const nextParam = encodeURIComponent(nextParamRaw);
 
-  async function send() {
+  // Safely resolve base URL (works in local dev/preview/prod)
+  const base =
+    process.env.NEXT_PUBLIC_APP_BASE_URL ??
+    (typeof window !== "undefined" ? window.location.origin : "");
+
+  const emailRedirectTo =
+    base ? `${base}/auth/callback?next=${nextParam}` : undefined;
+
+  const send = useCallback(async () => {
     setErr(null);
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo },
-    });
-    if (error) setErr(error.message);
-    else setSent(true);
-  }
+    setSent(false);
+
+    if (!email || !email.includes("@")) {
+      setErr("Please enter a valid email.");
+      return;
+    }
+    if (!emailRedirectTo) {
+      setErr("Missing base URL. Set NEXT_PUBLIC_APP_BASE_URL or run in browser.");
+      return;
+    }
+
+    setPending(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo },
+      });
+      if (error) {
+        setErr(error.message);
+      } else {
+        setSent(true);
+      }
+    } catch (e: any) {
+      setErr(e?.message ?? "Something went wrong sending the magic link.");
+    } finally {
+      setPending(false);
+    }
+  }, [email, emailRedirectTo, supabase]);
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      void send();
+    }
+  };
 
   return (
     <main className="mx-auto max-w-md p-6">
-      <h1 className="mb-4 text-2xl font-semibold">Sign in</h1>
+      <h1 className="mb-1 text-2xl font-semibold">Sign in</h1>
+      <p className="mb-6 text-sm opacity-70">
+        We’ll email you a one-time magic link.
+      </p>
+
+      <label htmlFor="email" className="mb-1 block text-sm opacity-80">
+        Email
+      </label>
       <input
+        id="email"
         className="mb-3 w-full rounded border border-zinc-700 bg-zinc-900 p-2"
         placeholder="you@example.com"
         onChange={(e) => setEmail(e.target.value)}
+        onKeyDown={onKeyDown}
         value={email}
         type="email"
+        autoComplete="email"
+        inputMode="email"
       />
+
       <button
-        className="rounded bg-blue-600 px-4 py-2 text-white"
+        className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-60"
         onClick={send}
+        disabled={pending}
+        aria-busy={pending}
       >
-        Send magic link
+        {pending ? "Sending…" : "Send magic link"}
       </button>
+
       {sent && (
-        <p className="mt-3 text-sm text-zinc-400">
-          Check your email for the sign-in link.
+        <p className="mt-3 text-sm text-zinc-300">
+          Check <strong>{email}</strong> for your sign-in link.
         </p>
       )}
       {err && <p className="mt-3 text-sm text-red-400">{err}</p>}
+
+      <p className="mt-6 text-xs opacity-60">
+        After sign-in you’ll be sent to: <code className="opacity-80">{nextParamRaw}</code>
+      </p>
     </main>
   );
 }
