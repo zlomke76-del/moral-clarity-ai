@@ -12,6 +12,40 @@ import { routeMode } from '@/core/mode-router';
 import { searchMemories, remember } from '@/lib/memory';
 /* =============================================== */
 
+/* ========= (NEW) ATTACHMENT INGEST ========= */
+import pdfParse from 'pdf-parse'; // <<< NEW
+
+type Attachment = { name: string; url: string; type?: string }; // <<< NEW
+
+async function fetchAttachmentAsText(att: Attachment): Promise<string> { // <<< NEW
+  const res = await fetch(att.url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const ct = (res.headers.get('content-type') || att.type || '').toLowerCase();
+  // PDF
+  if (ct.includes('pdf') || /\.pdf(?:$|\?)/i.test(att.url)) {
+    const buf = Buffer.from(await res.arrayBuffer());
+    const out = await pdfParse(buf);
+    return out.text || '';
+  }
+  // Text-ish
+  if (
+    ct.includes('text/') ||
+    ct.includes('json') ||
+    ct.includes('csv') ||
+    /\.(?:txt|md|csv|json)$/i.test(att.name)
+  ) {
+    return await res.text();
+  }
+  // Fallback stub
+  return `[Unsupported file type: ${att.name} (${ct || 'unknown'})]`;
+}
+
+function clampText(s: string, n: number) { // <<< NEW
+  if (s.length <= n) return s;
+  return s.slice(0, n) + '\n[...truncated...]';
+}
+/* =========================================== */
+
 /* ========= MODEL / TIMEOUT ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -386,6 +420,44 @@ export async function POST(req: NextRequest) {
     }
     /* ======================================================== */
 
+    /* ========= (NEW) ATTACHMENTS DIGEST ========= */
+    let attachmentSection = '';
+    try {
+      const atts = (Array.isArray(body?.attachments) ? body.attachments : []) as Attachment[];
+      if (atts.length) {
+        const MAX_PER_FILE = 200_000;
+        const MAX_TOTAL = 350_000;
+        const parts: string[] = [];
+        let total = 0;
+
+        for (const att of atts) {
+          try {
+            const raw = await fetchAttachmentAsText(att);
+            const clipped = clampText(raw, MAX_PER_FILE);
+            const block =
+              `\n--- Attachment: ${att.name}\n` +
+              `(source: ${att.url})\n` +
+              '```\n' + clipped + '\n```\n';
+            if (total + block.length > MAX_TOTAL) {
+              parts.push(`\n--- [Skipping remaining attachments: token cap reached]`);
+              break;
+            }
+            parts.push(block);
+            total += block.length;
+          } catch (e: any) {
+            parts.push(`\n--- Attachment: ${att.name}\n[Error reading file: ${e?.message || e}]`);
+          }
+        }
+
+        attachmentSection =
+          `\n\nATTACHMENT DIGEST\nThe user provided ${atts.length} attachment(s). Use the content below in your analysis.\n` +
+          parts.join('');
+      }
+    } catch {
+      attachmentSection = '';
+    }
+    /* ======================================================== */
+
     const system = baseSystem + memorySection + webSection;
 
     /* ========= MEMORY: capture explicit "remember ..." ========= */
@@ -434,6 +506,12 @@ export async function POST(req: NextRequest) {
     // Prefer SOLACE if configured
     const useSolace = Boolean(SOLACE_URL && SOLACE_KEY);
 
+    // (NEW) roll in attachments as an extra user message so both backends see it
+    const rolledWithAttachments =
+      attachmentSection
+        ? [...rolled, { role: 'user', content: attachmentSection }]
+        : rolled;
+
     if (!wantStream) {
       if (useSolace) {
         try {
@@ -443,7 +521,7 @@ export async function POST(req: NextRequest) {
               userId,
               userName,
               system,
-              messages: rolled,
+              messages: rolledWithAttachments, // <<< NEW
               temperature: 0.2,
             }),
             REQUEST_TIMEOUT_MS
@@ -469,7 +547,7 @@ export async function POST(req: NextRequest) {
       const resp = await withTimeout(
         openai.responses.create({
           model: MODEL,
-          input: system + '\n\n' + rolled.map((m) => `${m.role}: ${m.content}`).join('\n'),
+          input: system + '\n\n' + rolledWithAttachments.map((m) => `${m.role}: ${m.content}`).join('\n'), // <<< NEW
           max_output_tokens: 800,
           temperature: 0.2,
         }),
@@ -499,7 +577,7 @@ export async function POST(req: NextRequest) {
           userId,
           userName,
           system,
-          messages: rolled,
+          messages: rolledWithAttachments, // <<< NEW
           temperature: 0.2,
         });
 
@@ -527,7 +605,7 @@ export async function POST(req: NextRequest) {
         temperature: 0.2,
         messages: [
           { role: 'system', content: system },
-          ...rolled.map((m) => ({
+          ...rolledWithAttachments.map((m) => ({ // <<< NEW
             role: m.role === 'assistant' ? 'assistant' : 'user',
             content: m.content,
           })),
