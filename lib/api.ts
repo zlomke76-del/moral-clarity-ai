@@ -1,5 +1,5 @@
 // lib/api.ts
-import { supabase } from '../path/to/your/supabaseClient'; // Adjust the path as necessary
+import supabase from './supabaseClient'; // Adjust the path as necessary
 
 const API_BASE = 'https://studio.moralclarity.ai';
 
