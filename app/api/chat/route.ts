@@ -24,7 +24,7 @@ async function fetchAttachmentAsText(att: Attachment): Promise<string> { // <<< 
   // PDF
   if (ct.includes('pdf') || /\.pdf(?:$|\?)/i.test(att.url)) {
     const buf = Buffer.from(await res.arrayBuffer());
-    const out = await pdfParse(buf);
+    const out = await pdfText(buf);
     return out.text || '';
   }
   // Text-ish
