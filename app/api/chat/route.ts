@@ -277,19 +277,31 @@ async function solaceStream(payload: any) {
   return r.body as ReadableStream<Uint8Array>;
 }
 
-/* ========= ATTACHMENT INGEST (PDF + optional OCR) ========= */
-
-// dynamic import keeps build happy across environments
-let _pdfParseFn: ((buf: Buffer) => Promise<{ text?: string }>) | null = null;
-
-async function pdfText(buf: Buffer): Promise<string> {
-  if (!_pdfParseFn) {
-    // cjs compatibility
-    const mod: any = await import('pdf-parse');
-    _pdfParseFn = (mod?.default ?? mod) as any;
+// Optional OCR for images; safe + env-gated (no build-time import)
+async function imageOcrText(buf: Buffer): Promise<string> {
+  // Only attempt OCR if you explicitly enable it
+  if (process.env.MCAI_ENABLE_OCR !== '1') {
+    return '[Image attached: OCR not enabled on this deployment]';
   }
-  const out = await _pdfParseFn!(buf);
-  return (out?.text ?? '').toString();
+  try {
+    // Avoid static analysis by Next/Webpack
+    // eslint-disable-next-line no-new-func
+    const dynImport = new Function('m', 'return import(m)');
+    const { createWorker } = await dynImport('tesseract.js') as any;
+
+    const worker = await createWorker();
+    try {
+      const { data } = await worker.recognize(buf);
+      await worker.terminate();
+      const s = (data?.text || '').trim();
+      return s || '[Image text: (no text detected)]';
+    } catch {
+      try { await worker.terminate(); } catch {}
+      return '[Image attached: OCR failed]';
+    }
+  } catch {
+    return '[Image attached: OCR library unavailable]';
+  }
 }
 
 // Optional OCR for images; if the dependency isn't installed, we just fall back gracefully.
