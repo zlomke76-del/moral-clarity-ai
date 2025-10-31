@@ -12,39 +12,14 @@ import { routeMode } from '@/core/mode-router';
 import { searchMemories, remember } from '@/lib/memory';
 /* =============================================== */
 
-/* ========= (NEW) ATTACHMENT INGEST ========= */
-import pdfParse from 'pdf-parse'; // <<< NEW
+/* ========= ATTACHMENT TYPES ========= */
+type Attachment = { name: string; url: string; type?: string };
 
-type Attachment = { name: string; url: string; type?: string }; // <<< NEW
-
-async function fetchAttachmentAsText(att: Attachment): Promise<string> { // <<< NEW
-  const res = await fetch(att.url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const ct = (res.headers.get('content-type') || att.type || '').toLowerCase();
-  // PDF
-  if (ct.includes('pdf') || /\.pdf(?:$|\?)/i.test(att.url)) {
-    const buf = Buffer.from(await res.arrayBuffer());
-    const out = await pdfText(buf);
-    return out.text || '';
-  }
-  // Text-ish
-  if (
-    ct.includes('text/') ||
-    ct.includes('json') ||
-    ct.includes('csv') ||
-    /\.(?:txt|md|csv|json)$/i.test(att.name)
-  ) {
-    return await res.text();
-  }
-  // Fallback stub
-  return `[Unsupported file type: ${att.name} (${ct || 'unknown'})]`;
-}
-
-function clampText(s: string, n: number) { // <<< NEW
+function clampText(s: string, n: number) {
   if (s.length <= n) return s;
   return s.slice(0, n) + '\n[...truncated...]';
 }
-/* =========================================== */
+/* =================================== */
 
 /* ========= MODEL / TIMEOUT ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
@@ -317,17 +292,51 @@ async function solaceStream(payload: any) {
   }
   return r.body as ReadableStream<Uint8Array>;
 }
-// --- PDF helper (dynamic import keeps Edge/SSR happy) -----------------
+
+/* ========= PDF helper (dynamic import) ========= */
 let _pdfParseFn: ((buf: Buffer) => Promise<{ text?: string }>) | null = null;
 
 async function pdfText(buf: Buffer): Promise<string> {
   if (!_pdfParseFn) {
-    const mod: any = await import('pdf-parse');        // CJS module
-    _pdfParseFn = (mod?.default ?? mod) as any;         // grab the default
+    const mod: any = await import('pdf-parse'); // CJS module
+    _pdfParseFn = (mod?.default ?? mod) as any;  // callable function
   }
   const out = await _pdfParseFn!(buf);
   return (out?.text ?? '').toString();
 }
+
+/* ========= ATTACHMENT INGEST ========= */
+async function fetchAttachmentAsText(att: Attachment): Promise<string> {
+  const res = await fetch(att.url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const ct = (res.headers.get('content-type') || att.type || '').toLowerCase();
+
+  // PDF
+  if (ct.includes('pdf') || /\.pdf(?:$|\?)/i.test(att.url)) {
+    const buf = Buffer.from(await res.arrayBuffer());
+    const text = await pdfText(buf);
+    return text || '';
+  }
+
+  // Image — keep a readable marker instead of failing
+  if (ct.startsWith('image/')) {
+    return `[Image attachment: ${att.name}](${att.url})`;
+  }
+
+  // Text-ish
+  if (
+    ct.includes('text/') ||
+    ct.includes('json') ||
+    ct.includes('csv') ||
+    /\.(?:txt|md|csv|json)$/i.test(att.name)
+  ) {
+    return await res.text();
+  }
+
+  // Fallback stub
+  return `[Unsupported file type: ${att.name} (${ct || 'unknown'})]`;
+}
+/* ===================================== */
 
 /* ========= POST ========= */
 export async function POST(req: NextRequest) {
@@ -365,7 +374,6 @@ export async function POST(req: NextRequest) {
     if (route.mode === 'Guidance') incoming.add('guidance');
 
     // 2) **Default Ministry ON** unless user explicitly asked for secular framing.
-    //    (This satisfies “start in ministry mode by default”.)
     if (!userAskedForSecular) {
       incoming.add('ministry');
       incoming.add('abrahamic');
@@ -431,7 +439,7 @@ export async function POST(req: NextRequest) {
     }
     /* ======================================================== */
 
-    /* ========= (NEW) ATTACHMENTS DIGEST ========= */
+    /* ========= ATTACHMENTS DIGEST ========= */
     let attachmentSection = '';
     try {
       const atts = (Array.isArray(body?.attachments) ? body.attachments : []) as Attachment[];
@@ -517,7 +525,7 @@ export async function POST(req: NextRequest) {
     // Prefer SOLACE if configured
     const useSolace = Boolean(SOLACE_URL && SOLACE_KEY);
 
-    // (NEW) roll in attachments as an extra user message so both backends see it
+    // roll in attachments as an extra user message so both backends see it
     const rolledWithAttachments =
       attachmentSection
         ? [...rolled, { role: 'user', content: attachmentSection }]
@@ -532,7 +540,7 @@ export async function POST(req: NextRequest) {
               userId,
               userName,
               system,
-              messages: rolledWithAttachments, // <<< NEW
+              messages: rolledWithAttachments,
               temperature: 0.2,
             }),
             REQUEST_TIMEOUT_MS
@@ -558,7 +566,7 @@ export async function POST(req: NextRequest) {
       const resp = await withTimeout(
         openai.responses.create({
           model: MODEL,
-          input: system + '\n\n' + rolledWithAttachments.map((m) => `${m.role}: ${m.content}`).join('\n'), // <<< NEW
+          input: system + '\n\n' + rolledWithAttachments.map((m) => `${m.role}: ${m.content}`).join('\n'),
           max_output_tokens: 800,
           temperature: 0.2,
         }),
@@ -588,7 +596,7 @@ export async function POST(req: NextRequest) {
           userId,
           userName,
           system,
-          messages: rolledWithAttachments, // <<< NEW
+          messages: rolledWithAttachments,
           temperature: 0.2,
         });
 
@@ -616,7 +624,7 @@ export async function POST(req: NextRequest) {
         temperature: 0.2,
         messages: [
           { role: 'system', content: system },
-          ...rolledWithAttachments.map((m) => ({ // <<< NEW
+          ...rolledWithAttachments.map((m) => ({
             role: m.role === 'assistant' ? 'assistant' : 'user',
             content: m.content,
           })),
