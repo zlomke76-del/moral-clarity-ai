@@ -1,6 +1,5 @@
-// app/page.tsx
-export const dynamic = 'force-dynamic';
 "use client";
+export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -14,7 +13,6 @@ export default function Home() {
 
   useEffect(() => {
     let active = true;
-
     (async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
@@ -34,9 +32,9 @@ export default function Home() {
         router.replace("/auth?next=%2Fapp");
       }
     })();
-
-    return () => { active = false; };
-    // supabase is a stable singleton; no need in deps
+    return () => {
+      active = false;
+    };
   }, [router]);
 
   return (
