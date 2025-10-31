@@ -317,6 +317,17 @@ async function solaceStream(payload: any) {
   }
   return r.body as ReadableStream<Uint8Array>;
 }
+// --- PDF helper (dynamic import keeps Edge/SSR happy) -----------------
+let _pdfParseFn: ((buf: Buffer) => Promise<{ text?: string }>) | null = null;
+
+async function pdfText(buf: Buffer): Promise<string> {
+  if (!_pdfParseFn) {
+    const mod: any = await import('pdf-parse');        // CJS module
+    _pdfParseFn = (mod?.default ?? mod) as any;         // grab the default
+  }
+  const out = await _pdfParseFn!(buf);
+  return (out?.text ?? '').toString();
+}
 
 /* ========= POST ========= */
 export async function POST(req: NextRequest) {
