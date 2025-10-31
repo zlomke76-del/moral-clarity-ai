@@ -277,9 +277,23 @@ async function solaceStream(payload: any) {
   return r.body as ReadableStream<Uint8Array>;
 }
 
+/* ========= ATTACHMENT INGEST (PDF + optional OCR) ========= */
+
+// dynamic import keeps build happy across environments (no top-level import of 'pdf-parse')
+let _pdfParseFn: ((buf: Buffer) => Promise<{ text?: string }>) | null = null;
+
+async function pdfText(buf: Buffer): Promise<string> {
+  if (!_pdfParseFn) {
+    const mod: any = await import('pdf-parse');   // CJS-compatible dynamic import
+    _pdfParseFn = (mod?.default ?? mod) as any;
+  }
+  const out = await _pdfParseFn!(buf);
+  return (out?.text ?? '').toString();
+}
+
 // Optional OCR for images; safe + env-gated (no build-time import)
 async function imageOcrText(buf: Buffer): Promise<string> {
-  // Only attempt OCR if you explicitly enable it
+  // Only attempt OCR if explicitly enabled
   if (process.env.MCAI_ENABLE_OCR !== '1') {
     return '[Image attached: OCR not enabled on this deployment]';
   }
@@ -300,27 +314,8 @@ async function imageOcrText(buf: Buffer): Promise<string> {
       return '[Image attached: OCR failed]';
     }
   } catch {
+    // tesseract.js not installed/available
     return '[Image attached: OCR library unavailable]';
-  }
-}
-
-// Optional OCR for images; if the dependency isn't installed, we just fall back gracefully.
-async function imageOcrText(buf: Buffer): Promise<string> {
-  try {
-    const { createWorker } = await import('tesseract.js');
-    const worker = await createWorker();
-    try {
-      const { data } = await worker.recognize(buf);
-      await worker.terminate();
-      const s = (data?.text || '').trim();
-      return s || '[Image text: (no text detected)]';
-    } catch (e) {
-      try { await worker.terminate(); } catch {}
-      return '[Image attached: OCR failed]';
-    }
-  } catch {
-    // tesseract.js not installed, or not usable in this environment
-    return '[Image attached: OCR not enabled on this deployment]';
   }
 }
 
@@ -337,8 +332,8 @@ async function fetchAttachmentAsText(att: Attachment): Promise<string> {
   // PDF
   if (ct.includes('pdf') || /\.pdf(?:$|\?)/i.test(att.url)) {
     const buf = Buffer.from(await res.arrayBuffer());
-    const text = await pdfText(buf);          // <- return string
-    return text;                               // <- return the string directly
+    const text = await pdfText(buf);
+    return text;
   }
 
   // Image → OCR (optional)
