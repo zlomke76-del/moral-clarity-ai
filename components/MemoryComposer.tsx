@@ -11,11 +11,15 @@ type Props = {
 
 type Uploaded = { name: string; url: string; type: string; key: string };
 
+// Centralize bucket name (env wins; fallback keeps things working locally)
+const BUCKET =
+  process.env.NEXT_PUBLIC_SUPABASE_BUCKET || 'moralclarity_uploads';
+
 export default function MemoryComposer({ workspaceId }: Props) {
   const [tab, setTab] = useState<'workspace' | 'user'>('workspace');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [kind, setKind] = useState<'profile'|'preference'|'fact'|'task'|'note'>('note');
+  const [kind, setKind] = useState<'profile' | 'preference' | 'fact' | 'task' | 'note'>('note');
 
   // file upload state
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -43,14 +47,14 @@ export default function MemoryComposer({ workspaceId }: Props) {
       for (const f of files) {
         const safe = f.name.replace(/[^\w.\-]+/g, '_');
         const key = `${userKey}/${Date.now()}_${safe}`; // no leading slash
-        const { error } = await supabase.storage.from('uploads').upload(key, f, {
+        const { error } = await supabase.storage.from(BUCKET).upload(key, f, {
           upsert: false,
           contentType: f.type || 'application/octet-stream',
         });
         if (error) {
           throw new Error(error.message || 'Upload failed');
         }
-        const { data: pub } = supabase.storage.from('uploads').getPublicUrl(key);
+        const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(key);
         out.push({ name: f.name, url: pub.publicUrl, type: f.type || 'application/octet-stream', key });
       }
       return out;
@@ -74,7 +78,6 @@ export default function MemoryComposer({ workspaceId }: Props) {
       const payload: any = {
         mode: tab,
         workspace_id: workspaceId,
-        // Let backend optionally use a structured attachments array if it wants
         attachments: uploaded,
       };
 
@@ -114,13 +117,13 @@ export default function MemoryComposer({ workspaceId }: Props) {
       <div className="flex items-center gap-2 border-b border-neutral-800 px-4 py-2 text-sm">
         <button
           onClick={() => setTab('workspace')}
-          className={`rounded px-2 py-1 ${tab==='workspace' ? 'bg-neutral-800' : 'hover:bg-neutral-800/60'}`}
+          className={`rounded px-2 py-1 ${tab === 'workspace' ? 'bg-neutral-800' : 'hover:bg-neutral-800/60'}`}
         >
           Workspace note
         </button>
         <button
           onClick={() => setTab('user')}
-          className={`rounded px-2 py-1 ${tab==='user' ? 'bg-neutral-800' : 'hover:bg-neutral-800/60'}`}
+          className={`rounded px-2 py-1 ${tab === 'user' ? 'bg-neutral-800' : 'hover:bg-neutral-800/60'}`}
         >
           User memory (vector)
         </button>
@@ -156,9 +159,11 @@ export default function MemoryComposer({ workspaceId }: Props) {
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder={tab === 'workspace'
-            ? 'Write a workspace note (stored in mca.memories)'
-            : 'Write a user memory (embedded for vector search)'}
+          placeholder={
+            tab === 'workspace'
+              ? 'Write a workspace note (stored in mca.memories)'
+              : 'Write a user memory (embedded for vector search)'
+          }
           rows={4}
           className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm outline-none focus:border-neutral-500"
         />
@@ -191,7 +196,9 @@ export default function MemoryComposer({ workspaceId }: Props) {
             <ul className="space-y-1 text-xs text-neutral-300">
               {pendingFiles.map((f, i) => (
                 <li key={i} className="flex items-center justify-between rounded border border-neutral-800 px-2 py-1">
-                  <span className="truncate">{f.name} <span className="opacity-60">({f.type || 'unknown'})</span></span>
+                  <span className="truncate">
+                    {f.name} <span className="opacity-60">({f.type || 'unknown'})</span>
+                  </span>
                   <button
                     className="ml-3 rounded px-2 py-0.5 text-red-300 hover:bg-red-900/30"
                     onClick={() => removePending(i)}
