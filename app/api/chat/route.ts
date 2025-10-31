@@ -12,14 +12,37 @@ import { routeMode } from '@/core/mode-router';
 import { searchMemories, remember } from '@/lib/memory';
 /* =============================================== */
 
-/* ========= ATTACHMENT TYPES ========= */
+/* ========= (NEW) ATTACHMENT INGEST ========= */
 type Attachment = { name: string; url: string; type?: string };
+
+async function fetchAttachmentAsText(att: Attachment): Promise<string> {
+  const res = await fetch(att.url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const ct = (res.headers.get('content-type') || att.type || '').toLowerCase();
+  // PDF
+  if (ct.includes('pdf') || /\.pdf(?:$|\?)/i.test(att.url)) {
+    const buf = Buffer.from(await res.arrayBuffer());
+    const text = await pdfText(buf);
+    return text || '';
+  }
+  // Text-ish
+  if (
+    ct.includes('text/') ||
+    ct.includes('json') ||
+    ct.includes('csv') ||
+    /\.(?:txt|md|csv|json)$/i.test(att.name)
+  ) {
+    return await res.text();
+  }
+  // Fallback (images, binaries, etc.)
+  return `[Unsupported file type: ${att.name} (${ct || 'unknown'})]`;
+}
 
 function clampText(s: string, n: number) {
   if (s.length <= n) return s;
   return s.slice(0, n) + '\n[...truncated...]';
 }
-/* =================================== */
+/* =========================================== */
 
 /* ========= MODEL / TIMEOUT ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
@@ -56,9 +79,7 @@ function pickAllowedOrigin(origin: string | null): string | null {
     if (ALLOWED_SET.has(origin)) return origin;
     const url = new URL(origin);
     if (hostIsAllowedWildcard(url.hostname)) return origin;
-  } catch {
-    /* ignore */
-  }
+  } catch { /* ignore */ }
   return null;
 }
 
@@ -128,9 +149,10 @@ function scripturePolicyText(opts: {
   userAskedForSecular: boolean;
 }) {
   const base =
-    `SCRIPTURE POLICY\n` +
-    `- Use very short references only (e.g., "Exodus 20", "Matthew 5", "Qur'an 4:135"); no long quotes by default.\n` +
-    `- Weave 1–2 references inline only when relevant; avoid overwhelming the user.\n`;
+    `SCRIPTURE POLICY
+- Use very short references only (e.g., "Exodus 20", "Matthew 5", "Qur'an 4:135"); no long quotes by default.
+- Weave 1–2 references inline only when relevant; avoid overwhelming the user.
+`;
 
   if (!opts.wantsAbrahamic || opts.userAskedForSecular) {
     return base + `- Abrahamic references DISABLED due to secular framing or inactive Abrahamic layer. Do not include scripture.`;
@@ -139,8 +161,8 @@ function scripturePolicyText(opts: {
   if (opts.forceFirstTurnSeeding) {
     return (
       base +
-      `- FIRST REAL TURN IS MORAL/EMOTIONAL: Provide ONE gentle reference (max 1–2) to anchor hope/justice/mercy.\n` +
-      `- Subsequent turns: include references only when clearly helpful or requested.`
+      `- FIRST REAL TURN IS MORAL/EMOTIONAL: Provide ONE gentle reference (max 1–2) to anchor hope/justice/mercy.
+- Subsequent turns: include references only when clearly helpful or requested.`
     );
   }
 
@@ -200,7 +222,8 @@ function buildSystemPrompt(
 
   const parts: string[] = [];
   parts.push(
-    `IDENTITY\nYou are ${SOLACE_NAME} — a steady, principled presence. You listen first, then offer concise counsel with moral clarity.`,
+    `IDENTITY
+You are ${SOLACE_NAME} — a steady, principled presence. You listen first, then offer concise counsel with moral clarity.`,
     HOUSE_RULES,
     GUIDELINE_NEUTRAL,
     RESPONSE_FORMAT,
@@ -293,50 +316,17 @@ async function solaceStream(payload: any) {
   return r.body as ReadableStream<Uint8Array>;
 }
 
-/* ========= PDF helper (dynamic import) ========= */
+// --- PDF helper (dynamic import keeps Edge/SSR happy) -----------------
 let _pdfParseFn: ((buf: Buffer) => Promise<{ text?: string }>) | null = null;
 
 async function pdfText(buf: Buffer): Promise<string> {
   if (!_pdfParseFn) {
-    const mod: any = await import('pdf-parse'); // CJS module
-    _pdfParseFn = (mod?.default ?? mod) as any;  // callable function
+    const mod: any = await import('pdf-parse');        // CJS module
+    _pdfParseFn = (mod?.default ?? mod) as any;         // grab the callable export
   }
   const out = await _pdfParseFn!(buf);
   return (out?.text ?? '').toString();
 }
-
-/* ========= ATTACHMENT INGEST ========= */
-async function fetchAttachmentAsText(att: Attachment): Promise<string> {
-  const res = await fetch(att.url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const ct = (res.headers.get('content-type') || att.type || '').toLowerCase();
-
-  // PDF
-  if (ct.includes('pdf') || /\.pdf(?:$|\?)/i.test(att.url)) {
-    const buf = Buffer.from(await res.arrayBuffer());
-    const text = await pdfText(buf);
-    return text || '';
-  }
-
-  // Image — keep a readable marker instead of failing
-  if (ct.startsWith('image/')) {
-    return `[Image attachment: ${att.name}](${att.url})`;
-  }
-
-  // Text-ish
-  if (
-    ct.includes('text/') ||
-    ct.includes('json') ||
-    ct.includes('csv') ||
-    /\.(?:txt|md|csv|json)$/i.test(att.name)
-  ) {
-    return await res.text();
-  }
-
-  // Fallback stub
-  return `[Unsupported file type: ${att.name} (${ct || 'unknown'})]`;
-}
-/* ===================================== */
 
 /* ========= POST ========= */
 export async function POST(req: NextRequest) {
@@ -370,16 +360,11 @@ export async function POST(req: NextRequest) {
     // ---------- Additive filters ----------
     const incoming = new Set(rawFilters);
 
-    // 1) Auto-add Guidance if router hints it.
     if (route.mode === 'Guidance') incoming.add('guidance');
-
-    // 2) **Default Ministry ON** unless user explicitly asked for secular framing.
     if (!userAskedForSecular) {
       incoming.add('ministry');
       incoming.add('abrahamic');
     }
-
-    // Allow explicit body.ministry===false to force it off (escape hatch).
     if (body?.ministry === false) {
       incoming.delete('ministry');
       incoming.delete('abrahamic');
@@ -417,7 +402,6 @@ export async function POST(req: NextRequest) {
         memorySection = '';
       }
     }
-    /* ====================================== */
 
     /* ========= WEB SEARCH (fresh info auto-context) ========= */
     let webSection = '';
@@ -434,12 +418,10 @@ export async function POST(req: NextRequest) {
         }
       }
     } catch (err) {
-      // Non-fatal; just log and continue
       console.error('webSearch failed:', err);
     }
-    /* ======================================================== */
 
-    /* ========= ATTACHMENTS DIGEST ========= */
+    /* ========= (NEW) ATTACHMENTS DIGEST ========= */
     let attachmentSection = '';
     try {
       const atts = (Array.isArray(body?.attachments) ? body.attachments : []) as Attachment[];
@@ -475,7 +457,6 @@ export async function POST(req: NextRequest) {
     } catch {
       attachmentSection = '';
     }
-    /* ======================================================== */
 
     const system = baseSystem + memorySection + webSection;
 
@@ -516,16 +497,14 @@ export async function POST(req: NextRequest) {
             });
           }
         } catch {
-          // non-fatal: fall through to normal answering
+          // continue to normal answering
         }
       }
     }
-    /* =========================================================== */
 
     // Prefer SOLACE if configured
     const useSolace = Boolean(SOLACE_URL && SOLACE_KEY);
 
-    // roll in attachments as an extra user message so both backends see it
     const rolledWithAttachments =
       attachmentSection
         ? [...rolled, { role: 'user', content: attachmentSection }]
