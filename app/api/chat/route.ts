@@ -2,19 +2,21 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-import { webSearch } from "@/lib/search";
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import type OpenAI from 'openai';
+
+import { webSearch } from '@/lib/search';
 import { getOpenAI } from '@/lib/openai';
 import { routeMode } from '@/core/mode-router';
 
-/* ========= MEMORY (uses /lib/memory.ts) ========= */
-import { searchMemories, remember } from '@/lib/memory';
-/* =============================================== */
+/* ========= MEMORY (recall API still available) ========= */
+import { searchMemories /* , remember (not used for writes here) */ } from '@/lib/memory';
+/* ====================================================== */
 
 /* ========= ATTACHMENT TYPES ========= */
 type Attachment = { name: string; url: string; type?: string };
-/* =================================== */
 
 /* ========= MODEL / TIMEOUT ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
@@ -30,12 +32,10 @@ const STATIC_ALLOWED_ORIGINS = [
   'https://www.moralclarityai.com',
   'http://localhost:3000',
 ];
-
 const ENV_ALLOWED_ORIGINS = (process.env.MCAI_ALLOWED_ORIGINS || '')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean);
-
 const ALLOWED_SET = new Set<string>([...STATIC_ALLOWED_ORIGINS, ...ENV_ALLOWED_ORIGINS]);
 
 function hostIsAllowedWildcard(hostname: string) {
@@ -44,17 +44,15 @@ function hostIsAllowedWildcard(hostname: string) {
     /^([a-z0-9-]+\.)*moralclarityai\.com$/i.test(hostname)
   );
 }
-
 function pickAllowedOrigin(origin: string | null): string | null {
   if (!origin) return null; // same-origin
   try {
     if (ALLOWED_SET.has(origin)) return origin;
     const url = new URL(origin);
     if (hostIsAllowedWildcard(url.hostname)) return origin;
-  } catch { /* ignore */ }
+  } catch {}
   return null;
 }
-
 function corsHeaders(origin: string | null): Headers {
   const h = new Headers();
   h.set('Vary', 'Origin');
@@ -67,7 +65,6 @@ function corsHeaders(origin: string | null): Headers {
   if (origin) h.set('Access-Control-Allow-Origin', origin);
   return h;
 }
-
 function headersToRecord(h: Headers): Record<string, string> {
   const out: Record<string, string> = {};
   h.forEach((v, k) => (out[k] = v));
@@ -95,23 +92,21 @@ const GUIDELINE_NEUTRAL = `NEUTRAL MODE BASELINE
 
 const GUIDELINE_ABRAHAMIC = `ABRAHAMIC COUNSEL LAYER
 - Root counsel in God across the Abrahamic tradition, drawing respectfully from:
-  • Torah/Tanakh (Hebrew Scriptures),
-  • New Testament (Gospels and apostolic writings),
-  • Qur'an (with Sunnah as general moral guidance).
-- Honor the continuity of revelation (Abraham, Moses, Jesus, Muhammad — peace be upon them).
-- Emphasize human dignity, stewardship, mercy, justice, truthfulness, responsibility before God.
-- Avoid sectarian polemics; do not proselytize; inclusive language ("people of faith," "believers").
-- Pastoral sensitivity; acknowledge suffering; encourage reflection/prayer/community.
-- Do not issue detailed legal rulings in any single tradition unless explicitly asked; recommend qualified local clergy/scholars when appropriate.`;
+  • Torah/Tanakh,
+  • New Testament,
+  • Qur'an (with Sunnah as general guidance).
+- Emphasize dignity, stewardship, mercy, justice, truthfulness, responsibility before God.
+- Avoid sectarian polemics or proselytizing; inclusive language.
+- Recommend local clergy/scholars for detailed rulings when appropriate.`;
 
 const GUIDELINE_GUIDANCE = `GUIDANCE ADD-ON
 - Briefly red-team the plan if stakes are high.
-- Offer a compact risk register (top 3–5) and a simple options matrix/decision path when asked.
+- Offer a compact risk register (top 3–5) and simple options matrix when asked.
 - End with a short actionable checklist when the user explicitly requests steps.`;
 
 const RESPONSE_FORMAT = `RESPONSE FORMAT (DEFAULT)
 - Default to a single "Brief Answer" (2–5 sentences, plain language).
-- Include "Rationale" and/or "Next Steps" ONLY IF the user explicitly asks for them (e.g., "why", "explain", "give steps", "how do I proceed").
+- Include "Rationale" and/or "Next Steps" ONLY IF the user explicitly asks for them.
 - Keep paragraphs short; avoid verbosity.`;
 
 /* ========= SCRIPTURE POLICY (DYNAMIC) ========= */
@@ -122,18 +117,16 @@ function scripturePolicyText(opts: {
 }) {
   const base =
     `SCRIPTURE POLICY\n` +
-    `- Use very short references only (e.g., "Exodus 20", "Matthew 5", "Qur'an 4:135"); no long quotes by default.\n` +
-    `- Weave 1–2 references inline only when relevant; avoid overwhelming the user.\n`;
-
+    `- Very short references only (e.g., "Exodus 20", "Matthew 5", "Qur'an 4:135"); no long quotes by default.\n` +
+    `- Weave 1–2 references inline only when relevant.\n`;
   if (!opts.wantsAbrahamic || opts.userAskedForSecular) {
-    return base + `- Abrahamic references DISABLED due to secular framing or inactive Abrahamic layer. Do not include scripture.`;
+    return base + `- Abrahamic references DISABLED due to secular framing or inactive Abrahamic layer.`;
   }
-
   if (opts.forceFirstTurnSeeding) {
     return (
       base +
-      `- FIRST REAL TURN IS MORAL/EMOTIONAL: Provide ONE gentle reference (max 1–2) to anchor hope/justice/mercy.\n` +
-      `- Subsequent turns: include references only when clearly helpful or requested.`
+      `- FIRST TURN: Offer ONE gentle reference (max 1–2) to anchor hope/justice/mercy.\n` +
+      `- Later turns: include only when clearly helpful or requested.`
     );
   }
   return base + `- Include references only when clearly helpful or explicitly requested.`;
@@ -144,24 +137,20 @@ function normalizeFilters(filters: unknown): string[] {
   if (!Array.isArray(filters)) return [];
   return filters.map((f) => String(f ?? '').toLowerCase().trim()).filter(Boolean);
 }
-
 function trimConversation(messages: Array<{ role: string; content: string }>) {
   const MAX_TURNS = 5; // last 5 user+assistant pairs
   const limit = MAX_TURNS * 2;
   return messages.length <= limit ? messages : messages.slice(-limit);
 }
-
 function wantsSecular(messages: Array<{ role: string; content: string }>) {
   const text = messages.slice(-6).map((m) => m.content).join(' ').toLowerCase();
   return /\bsecular framing\b|\bsecular only\b|\bno scripture\b|\bno religious\b|\bkeep it secular\b|\bstrictly secular\b/.test(text);
 }
-
 function isFirstRealTurn(messages: Array<{ role: string; content: string }>) {
   const userCount = messages.filter((m) => m.role?.toLowerCase() === 'user').length;
   const assistantCount = messages.filter((m) => m.role?.toLowerCase() === 'assistant').length;
   return userCount <= 1 || messages.length < 3 || assistantCount === 0;
 }
-
 function hasEmotionalOrMoralCue(text: string) {
   const t = (text || '').toLowerCase();
   const emo = ['hope','lost','afraid','fear','anxious','anxiety','grief','sad','sorrow','depressed','stress','overwhelmed','lonely','alone','comfort','forgive','forgiveness','guilt','shame','purpose','meaning'];
@@ -169,7 +158,6 @@ function hasEmotionalOrMoralCue(text: string) {
   const hit = (arr: string[]) => arr.some((w) => t.includes(w));
   return hit(emo) || hit(moral);
 }
-
 function buildSystemPrompt(
   filters: string[],
   userWantsSecular: boolean,
@@ -189,18 +177,13 @@ function buildSystemPrompt(
     HOUSE_RULES,
     GUIDELINE_NEUTRAL,
     RESPONSE_FORMAT,
-    scripturePolicyText({
-      wantsAbrahamic,
-      forceFirstTurnSeeding,
-      userAskedForSecular: userWantsSecular,
-    })
+    scripturePolicyText({ wantsAbrahamic, forceFirstTurnSeeding, userAskedForSecular: userWantsSecular })
   );
   if (wantsAbrahamic && !userWantsSecular) parts.push(GUIDELINE_ABRAHAMIC);
   if (wantsGuidance) parts.push(GUIDELINE_GUIDANCE);
 
   return { prompt: parts.join('\n\n'), wantsAbrahamic, forceFirstTurnSeeding };
 }
-
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const id = setTimeout(() => reject(new Error('Request timed out')), ms);
@@ -213,7 +196,6 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 function getUserKeyFromReq(req: NextRequest, body: any) {
   return req.headers.get('x-user-key') || body?.user_key || 'guest';
 }
-
 /** Accept: "remember X", "remember that X", "please remember X", "store this: X" */
 function detectExplicitRemember(text: string) {
   if (!text) return null;
@@ -232,7 +214,7 @@ function detectExplicitRemember(text: string) {
 export async function GET(req: NextRequest) {
   const origin = pickAllowedOrigin(req.headers.get('origin'));
   const backend = SOLACE_URL && SOLACE_KEY ? 'solace' : 'openai';
-  const memoryEnabled = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const memoryEnabled = Boolean(process.env.SUPABASE_URL); // presence check only
   return NextResponse.json(
     { ok: true, model: MODEL, identity: SOLACE_NAME, backend, memoryEnabled },
     { headers: corsHeaders(origin) }
@@ -263,7 +245,6 @@ async function solaceNonStream(payload: any) {
   }
   return await r.text();
 }
-
 async function solaceStream(payload: any) {
   const r = await fetch(SOLACE_URL, {
     method: 'POST',
@@ -277,32 +258,23 @@ async function solaceStream(payload: any) {
   return r.body as ReadableStream<Uint8Array>;
 }
 
-/* ========= ATTACHMENT INGEST (PDF + optional OCR) ========= */
+/* ========= ATTACHMENT DIGEST ========= */
 
-// dynamic import keeps build happy across environments (no top-level import of 'pdf-parse')
 let _pdfParseFn: ((buf: Buffer) => Promise<{ text?: string }>) | null = null;
-
 async function pdfText(buf: Buffer): Promise<string> {
   if (!_pdfParseFn) {
-    const mod: any = await import('pdf-parse');   // CJS-compatible dynamic import
+    const mod: any = await import('pdf-parse');
     _pdfParseFn = (mod?.default ?? mod) as any;
   }
   const out = await _pdfParseFn!(buf);
   return (out?.text ?? '').toString();
 }
-
-// Optional OCR for images; safe + env-gated (no build-time import)
 async function imageOcrText(buf: Buffer): Promise<string> {
-  // Only attempt OCR if explicitly enabled
-  if (process.env.MCAI_ENABLE_OCR !== '1') {
-    return '[Image attached: OCR not enabled on this deployment]';
-  }
+  if (process.env.MCAI_ENABLE_OCR !== '1') return '[Image attached: OCR not enabled]';
   try {
-    // Avoid static analysis by Next/Webpack
     // eslint-disable-next-line no-new-func
     const dynImport = new Function('m', 'return import(m)');
-    const { createWorker } = await dynImport('tesseract.js') as any;
-
+    const { createWorker } = (await dynImport('tesseract.js')) as any;
     const worker = await createWorker();
     try {
       const { data } = await worker.recognize(buf);
@@ -314,49 +286,47 @@ async function imageOcrText(buf: Buffer): Promise<string> {
       return '[Image attached: OCR failed]';
     }
   } catch {
-    // tesseract.js not installed/available
     return '[Image attached: OCR library unavailable]';
   }
 }
-
-function clampText(s: string, n: number) {
-  if (s.length <= n) return s;
-  return s.slice(0, n) + '\n[...truncated...]';
-}
-
+function clampText(s: string, n: number) { return s.length <= n ? s : s.slice(0, n) + '\n[...truncated...]'; }
 async function fetchAttachmentAsText(att: Attachment): Promise<string> {
   const res = await fetch(att.url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const ct = (res.headers.get('content-type') || att.type || '').toLowerCase();
 
-  // PDF
   if (ct.includes('pdf') || /\.pdf(?:$|\?)/i.test(att.url)) {
     const buf = Buffer.from(await res.arrayBuffer());
-    const text = await pdfText(buf);
-    return text;
+    return pdfText(buf);
   }
-
-  // Image → OCR (optional)
   if (ct.startsWith('image/')) {
     const buf = Buffer.from(await res.arrayBuffer());
-    const text = await imageOcrText(buf);
-    return text;
+    return imageOcrText(buf);
   }
-
-  // Text-like
-  if (
-    ct.startsWith('text/') ||
-    ct.includes('json') ||
-    ct.includes('csv') ||
-    /\.(?:txt|md|csv|json)$/i.test(att.name)
-  ) {
+  if (ct.startsWith('text/') || ct.includes('json') || ct.includes('csv') || /\.(?:txt|md|csv|json)$/i.test(att.name)) {
     return await res.text();
   }
-
-  // Fallback
   return `[Unsupported file type: ${att.name} (${ct || 'unknown'})]`;
 }
-/* =========================================================== */
+
+/* ========= DB helpers (isolation-critical) ========= */
+
+async function getAuthedUserAndWorkspace(req: NextRequest) {
+  const supabase = createRouteHandlerClient({ cookies });
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { supabase, user: null, workspaceId: null as string | null };
+
+  // Resolve primary workspace via membership; fail closed if none
+  const { data: membership } = await supabase
+    .from('workspace_members')
+    .select('workspace_id')
+    .eq('user_uid', user.id)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  return { supabase, user, workspaceId: membership?.workspace_id ?? null };
+}
 
 /* ========= POST ========= */
 export async function POST(req: NextRequest) {
@@ -376,14 +346,17 @@ export async function POST(req: NextRequest) {
     const messages = Array.isArray(body?.messages) ? body.messages : [];
     const rawFilters = normalizeFilters(body?.filters ?? []);
     const wantStream = !!body?.stream;
-    const userId = body?.userId ?? null;
-    const userName = body?.userName ?? null;
+    const userIdHeader = body?.userId ?? null;   // forwarded to model only
+    const userNameHeader = body?.userName ?? null;
+
+    // —— Auth & workspace (critical for isolation) ——
+    const { supabase, user, workspaceId } = await getAuthedUserAndWorkspace(req);
+    const memoryEnabled = Boolean(user && workspaceId);
 
     const rolled = trimConversation(messages);
     const userAskedForSecular = wantsSecular(rolled);
+    const lastUser = [...rolled].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content || '';
 
-    const lastUser =
-      [...rolled].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content || '';
     const lastModeHeader = req.headers.get('x-last-mode');
     const route = routeMode(lastUser, { lastMode: lastModeHeader as any });
 
@@ -408,11 +381,10 @@ export async function POST(req: NextRequest) {
     );
 
     /* ========= MEMORY: recall pack ========= */
-    const userKey = getUserKeyFromReq(req, body);
-    const memoryEnabled = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
     let memorySection = '';
     if (memoryEnabled) {
       try {
+        const userKey = user!.id; // ensure recall is scoped to the authed user
         const fallbackQuery =
           rolled.filter((m) => m.role === 'user').map((m) => m.content).slice(-3).join('\n') || 'general';
         const query = lastUser || fallbackQuery;
@@ -431,7 +403,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    /* ========= WEB SEARCH (fresh info auto-context) ========= */
+    /* ========= WEB SEARCH (fresh info) ========= */
     let webSection = '';
     try {
       const wantsFresh = /\b(latest|today|this week|news|recent|update|updates|look up|search|what happened|breaking)\b/i
@@ -439,15 +411,11 @@ export async function POST(req: NextRequest) {
       if (wantsFresh) {
         const results = await webSearch(lastUser, { news: true, max: 5 });
         if (Array.isArray(results) && results.length) {
-          const lines = results
-            .map((r: any, i: number) => `• [${i + 1}] ${r.title} — ${r.url}`)
-            .join('\n');
+          const lines = results.map((r: any, i: number) => `• [${i + 1}] ${r.title} — ${r.url}`).join('\n');
           webSection = `\n\nWEB CONTEXT (recent search)\n${lines}`;
         }
       }
-    } catch (err) {
-      console.error('webSearch failed:', err);
-    }
+    } catch {}
 
     /* ========= ATTACHMENTS DIGEST ========= */
     let attachmentSection = '';
@@ -463,10 +431,7 @@ export async function POST(req: NextRequest) {
           try {
             const raw = await fetchAttachmentAsText(att);
             const clipped = clampText(raw, MAX_PER_FILE);
-            const block =
-              `\n--- Attachment: ${att.name}\n` +
-              `(source: ${att.url})\n` +
-              '```\n' + clipped + '\n```\n';
+            const block = `\n--- Attachment: ${att.name}\n(source: ${att.url})\n\`\`\`\n${clipped}\n\`\`\`\n`;
             if (total + block.length > MAX_TOTAL) {
               parts.push(`\n--- [Skipping remaining attachments: token cap reached]`);
               break;
@@ -482,18 +447,26 @@ export async function POST(req: NextRequest) {
           `\n\nATTACHMENT DIGEST\nThe user provided ${atts.length} attachment(s). Use the content below in your analysis.\n` +
           parts.join('');
       }
-    } catch {
-      attachmentSection = '';
-    }
+    } catch {}
 
     const system = baseSystem + memorySection + webSection;
 
-    /* ========= MEMORY: capture explicit "remember ..." ========= */
+    /* ========= MEMORY: capture explicit "remember ..." (DB write as USER) ========= */
     if (memoryEnabled) {
       const explicit = detectExplicitRemember(lastUser);
       if (explicit) {
         try {
-          await remember({ user_key: userKey, content: explicit, purpose: 'fact', title: '' });
+          // Insert directly with anon+session; RLS enforces isolation.
+          const { error: insErr } = await supabase.from('memories').insert({
+            user_id: user!.id,
+            author_user_id: user!.id,
+            workspace_id: workspaceId,         // <- critical link
+            content: explicit,
+            tokens: 0,
+            source: { by: 'user', ingest: 'chat' },
+          });
+          if (insErr) throw insErr;
+
           const ack = `Got it — I'll remember that: ${explicit}`;
           if (!wantStream) {
             return NextResponse.json(
@@ -525,19 +498,15 @@ export async function POST(req: NextRequest) {
             });
           }
         } catch {
-          // fall through
+          // If memory write fails, fall through to answering normally.
         }
       }
     }
 
     // Prefer SOLACE if configured
     const useSolace = Boolean(SOLACE_URL && SOLACE_KEY);
-
-    // Roll attachments in as an extra user message so both backends see it
     const rolledWithAttachments =
-      attachmentSection
-        ? [...rolled, { role: 'user', content: attachmentSection }]
-        : rolled;
+      attachmentSection ? [...rolled, { role: 'user', content: attachmentSection }] : rolled;
 
     if (!wantStream) {
       if (useSolace) {
@@ -545,15 +514,14 @@ export async function POST(req: NextRequest) {
           const text = await withTimeout(
             solaceNonStream({
               mode: route.mode,
-              userId,
-              userName,
+              userId: userIdHeader,
+              userName: userNameHeader,
               system,
               messages: rolledWithAttachments,
               temperature: 0.2,
             }),
             REQUEST_TIMEOUT_MS
           );
-
           return NextResponse.json(
             {
               text,
@@ -580,7 +548,6 @@ export async function POST(req: NextRequest) {
         }),
         REQUEST_TIMEOUT_MS
       );
-
       const text = (resp as any).output_text?.trim() || '[No reply from model]';
 
       return NextResponse.json(
@@ -601,13 +568,12 @@ export async function POST(req: NextRequest) {
       try {
         const stream = await solaceStream({
           mode: route.mode,
-          userId,
-          userName,
+          userId: userIdHeader,
+          userName: userNameHeader,
           system,
           messages: rolledWithAttachments,
           temperature: 0.2,
         });
-
         return new NextResponse(stream as any, {
           headers: {
             ...headersToRecord(corsHeaders(echoOrigin)),
@@ -621,7 +587,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // OpenAI SSE streaming fallback
+    // OpenAI SSE fallback
     const apiKey = process.env.OPENAI_API_KEY || '';
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -639,7 +605,6 @@ export async function POST(req: NextRequest) {
         ],
       }),
     });
-
     if (!r.ok || !r.body) {
       const t = await r.text().catch(() => '');
       return new NextResponse(`Model error: ${r.status} ${t}`, {
@@ -647,7 +612,6 @@ export async function POST(req: NextRequest) {
         headers: corsHeaders(echoOrigin),
       });
     }
-
     return new NextResponse(r.body as any, {
       headers: {
         ...headersToRecord(corsHeaders(echoOrigin)),
@@ -662,13 +626,9 @@ export async function POST(req: NextRequest) {
       err?.message === 'Request timed out'
         ? '⚠️ Connection timed out. Please try again.'
         : err?.message || String(err);
-
     return NextResponse.json(
       { error: msg, identity: SOLACE_NAME },
-      {
-        status: err?.message === 'Request timed out' ? 504 : 500,
-        headers: corsHeaders(echoOrigin),
-      }
+      { status: err?.message === 'Request timed out' ? 504 : 500, headers: corsHeaders(echoOrigin) }
     );
   }
 }
