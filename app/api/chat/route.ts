@@ -12,69 +12,9 @@ import { routeMode } from '@/core/mode-router';
 import { searchMemories, remember } from '@/lib/memory';
 /* =============================================== */
 
-/* ========= ATTACHMENT INGEST (PDF + text + images) ========= */
+/* ========= ATTACHMENT TYPES ========= */
 type Attachment = { name: string; url: string; type?: string };
-
-const IMAGE_EXTS = new Set(['jpg','jpeg','png','gif','webp','bmp','tif','tiff']);
-const TEXT_EXTS  = new Set(['txt','md','csv','json','log','xml','yaml','yml']);
-const PDF_EXTS   = new Set(['pdf']);
-
-function extFromNameOrUrl(name: string, url: string): string {
-  const from = (s: string) => (s.split('?')[0].split('#')[0].split('.').pop() || '').toLowerCase();
-  const a = from(name || '');
-  const b = from(url || '');
-  return a || b || '';
-}
-
-async function pdfText(buf: Buffer): Promise<string> {
-  // dynamic import of CJS module avoids ESM/CJS mismatch and keeps edge-friendly bundling
-  const mod: any = await import('pdf-parse');
-  const parse = (mod?.default ?? mod) as (b: Buffer) => Promise<{ text?: string }>;
-  const out = await parse(buf);
-  return (out?.text ?? '').toString();
-}
-
-function clampText(s: string, n: number) {
-  if (!s) return '';
-  return s.length <= n ? s : s.slice(0, n) + '\n[...truncated...]';
-}
-
-async function fetchAttachmentAsText(att: Attachment): Promise<{ kind: 'text'|'image'|'other'; text: string }> {
-  const res = await fetch(att.url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const ct = (res.headers.get('content-type') || att.type || '').toLowerCase();
-  const ext = extFromNameOrUrl(att.name || '', att.url || '');
-
-  // Handle PDF
-  if (ct.includes('pdf') || PDF_EXTS.has(ext)) {
-    const buf = Buffer.from(await res.arrayBuffer());
-    const text = await pdfText(buf).catch((e) => `[[PDF read error: ${e?.message || e}]]`);
-    return { kind: 'text', text };
-  }
-
-  // Handle text-likes
-  if (
-    ct.startsWith('text/') ||
-    ct.includes('json') ||
-    ct.includes('csv') ||
-    TEXT_EXTS.has(ext)
-  ) {
-    const text = await res.text().catch(() => '');
-    return { kind: 'text', text };
-  }
-
-  // Handle images (screenshots, camera shots)
-  if (ct.startsWith('image/') || IMAGE_EXTS.has(ext)) {
-    // No OCR in this pass — provide a clear digest for the model + link to the image
-    const descr = `[[Image attachment]] ${att.name || '(unnamed)'}\nURL: ${att.url}\n(Describe what I should analyze or modify in this image.)`;
-    return { kind: 'image', text: descr };
-  }
-
-  // Fallback
-  const label = ct || (ext ? `.${ext}` : 'unknown');
-  return { kind: 'other', text: `[[Unsupported attachment type: ${att.name} (${label})]]` };
-}
-/* =========================================================== */
+/* =================================== */
 
 /* ========= MODEL / TIMEOUT ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
@@ -196,7 +136,6 @@ function scripturePolicyText(opts: {
       `- Subsequent turns: include references only when clearly helpful or requested.`
     );
   }
-
   return base + `- Include references only when clearly helpful or explicitly requested.`;
 }
 
@@ -288,7 +227,6 @@ function detectExplicitRemember(text: string) {
   }
   return null;
 }
-/* ================================== */
 
 /* ========= HEALTHCHECK ========= */
 export async function GET(req: NextRequest) {
@@ -339,6 +277,80 @@ async function solaceStream(payload: any) {
   return r.body as ReadableStream<Uint8Array>;
 }
 
+/* ========= ATTACHMENT INGEST (PDF + optional OCR) ========= */
+
+// dynamic import keeps build happy across environments
+let _pdfParseFn: ((buf: Buffer) => Promise<{ text?: string }>) | null = null;
+
+async function pdfText(buf: Buffer): Promise<string> {
+  if (!_pdfParseFn) {
+    // cjs compatibility
+    const mod: any = await import('pdf-parse');
+    _pdfParseFn = (mod?.default ?? mod) as any;
+  }
+  const out = await _pdfParseFn!(buf);
+  return (out?.text ?? '').toString();
+}
+
+// Optional OCR for images; if the dependency isn't installed, we just fall back gracefully.
+async function imageOcrText(buf: Buffer): Promise<string> {
+  try {
+    const { createWorker } = await import('tesseract.js');
+    const worker = await createWorker();
+    try {
+      const { data } = await worker.recognize(buf);
+      await worker.terminate();
+      const s = (data?.text || '').trim();
+      return s || '[Image text: (no text detected)]';
+    } catch (e) {
+      try { await worker.terminate(); } catch {}
+      return '[Image attached: OCR failed]';
+    }
+  } catch {
+    // tesseract.js not installed, or not usable in this environment
+    return '[Image attached: OCR not enabled on this deployment]';
+  }
+}
+
+function clampText(s: string, n: number) {
+  if (s.length <= n) return s;
+  return s.slice(0, n) + '\n[...truncated...]';
+}
+
+async function fetchAttachmentAsText(att: Attachment): Promise<string> {
+  const res = await fetch(att.url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const ct = (res.headers.get('content-type') || att.type || '').toLowerCase();
+
+  // PDF
+  if (ct.includes('pdf') || /\.pdf(?:$|\?)/i.test(att.url)) {
+    const buf = Buffer.from(await res.arrayBuffer());
+    const text = await pdfText(buf);          // <- return string
+    return text;                               // <- return the string directly
+  }
+
+  // Image → OCR (optional)
+  if (ct.startsWith('image/')) {
+    const buf = Buffer.from(await res.arrayBuffer());
+    const text = await imageOcrText(buf);
+    return text;
+  }
+
+  // Text-like
+  if (
+    ct.startsWith('text/') ||
+    ct.includes('json') ||
+    ct.includes('csv') ||
+    /\.(?:txt|md|csv|json)$/i.test(att.name)
+  ) {
+    return await res.text();
+  }
+
+  // Fallback
+  return `[Unsupported file type: ${att.name} (${ct || 'unknown'})]`;
+}
+/* =========================================================== */
+
 /* ========= POST ========= */
 export async function POST(req: NextRequest) {
   try {
@@ -370,22 +382,15 @@ export async function POST(req: NextRequest) {
 
     // ---------- Additive filters ----------
     const incoming = new Set(rawFilters);
-
-    // 1) Auto-add Guidance if router hints it.
     if (route.mode === 'Guidance') incoming.add('guidance');
-
-    // 2) Default Ministry ON unless user explicitly asked for secular framing.
     if (!userAskedForSecular) {
       incoming.add('ministry');
       incoming.add('abrahamic');
     }
-
-    // Escape hatch
     if (body?.ministry === false) {
       incoming.delete('ministry');
       incoming.delete('abrahamic');
     }
-
     const effectiveFilters = Array.from(incoming);
     // -------------------------------------
 
@@ -418,7 +423,6 @@ export async function POST(req: NextRequest) {
         memorySection = '';
       }
     }
-    /* ====================================== */
 
     /* ========= WEB SEARCH (fresh info auto-context) ========= */
     let webSection = '';
@@ -437,25 +441,24 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       console.error('webSearch failed:', err);
     }
-    /* ======================================================== */
 
     /* ========= ATTACHMENTS DIGEST ========= */
     let attachmentSection = '';
     try {
       const atts = (Array.isArray(body?.attachments) ? body.attachments : []) as Attachment[];
       if (atts.length) {
-        const MAX_PER_FILE = 200_000;  // per-file safety cap
-        const MAX_TOTAL    = 350_000;  // total digest safety cap
+        const MAX_PER_FILE = 200_000;
+        const MAX_TOTAL = 350_000;
         const parts: string[] = [];
         let total = 0;
 
         for (const att of atts) {
           try {
-            const out = await fetchAttachmentAsText(att);
-            const clipped = clampText(out.text, MAX_PER_FILE);
+            const raw = await fetchAttachmentAsText(att);
+            const clipped = clampText(raw, MAX_PER_FILE);
             const block =
-              `\n--- Attachment: ${att.name || '(unnamed)'}\n` +
-              `(type: ${out.kind}; source: ${att.url})\n` +
+              `\n--- Attachment: ${att.name}\n` +
+              `(source: ${att.url})\n` +
               '```\n' + clipped + '\n```\n';
             if (total + block.length > MAX_TOTAL) {
               parts.push(`\n--- [Skipping remaining attachments: token cap reached]`);
@@ -475,7 +478,6 @@ export async function POST(req: NextRequest) {
     } catch {
       attachmentSection = '';
     }
-    /* ======================================================== */
 
     const system = baseSystem + memorySection + webSection;
 
@@ -516,16 +518,15 @@ export async function POST(req: NextRequest) {
             });
           }
         } catch {
-          // non-fatal: continue
+          // fall through
         }
       }
     }
-    /* =========================================================== */
 
     // Prefer SOLACE if configured
     const useSolace = Boolean(SOLACE_URL && SOLACE_KEY);
 
-    // Roll in attachments as an extra user message so both backends see it
+    // Roll attachments in as an extra user message so both backends see it
     const rolledWithAttachments =
       attachmentSection
         ? [...rolled, { role: 'user', content: attachmentSection }]
