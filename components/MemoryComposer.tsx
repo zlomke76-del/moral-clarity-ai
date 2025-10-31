@@ -1,12 +1,15 @@
 // /components/MemoryComposer.tsx
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from '@/lib/toast';
+import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
 
 type Props = {
   workspaceId: string;
 };
+
+type Uploaded = { name: string; url: string; type: string; key: string };
 
 export default function MemoryComposer({ workspaceId }: Props) {
   const [tab, setTab] = useState<'workspace' | 'user'>('workspace');
@@ -14,36 +17,96 @@ export default function MemoryComposer({ workspaceId }: Props) {
   const [content, setContent] = useState('');
   const [kind, setKind] = useState<'profile'|'preference'|'fact'|'task'|'note'>('note');
 
-  async function submit() {
-    const payload: any = {
-      mode: tab,
-      workspace_id: workspaceId,
-    };
-    if (tab === 'workspace') {
-      payload.title = title.trim() || undefined;
-      payload.content = content.trim() || undefined;
-    } else {
-      // user memory path (requires content)
-      payload.kind = kind;
-      payload.content = content.trim();
-      payload.user_key = 'owner'; // replace with a stable per-user key of your choosing
-    }
+  // file upload state
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-    const res = await fetch('/api/memory', {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const j = await res.json();
-    if (!res.ok) {
-      toast(j?.error ?? 'Failed to save');
-      return;
+  const supabase = createSupabaseBrowser();
+
+  function onPickFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length) setPendingFiles(prev => [...prev, ...files]);
+    if (fileRef.current) fileRef.current.value = ''; // allow re-picking same file name
+  }
+
+  function removePending(idx: number) {
+    setPendingFiles(prev => prev.filter((_, i) => i !== idx));
+  }
+
+  // Minimal in-file uploader (unique keys, preserves contentType)
+  async function uploadAll(files: File[], userKey = 'owner'): Promise<Uploaded[]> {
+    if (!files.length) return [];
+    setUploading(true);
+    try {
+      const out: Uploaded[] = [];
+      for (const f of files) {
+        const safe = f.name.replace(/[^\w.\-]+/g, '_');
+        const key = `${userKey}/${Date.now()}_${safe}`; // no leading slash
+        const { error } = await supabase.storage.from('uploads').upload(key, f, {
+          upsert: false,
+          contentType: f.type || 'application/octet-stream',
+        });
+        if (error) {
+          throw new Error(error.message || 'Upload failed');
+        }
+        const { data: pub } = supabase.storage.from('uploads').getPublicUrl(key);
+        out.push({ name: f.name, url: pub.publicUrl, type: f.type || 'application/octet-stream', key });
+      }
+      return out;
+    } finally {
+      setUploading(false);
     }
-    toast('Saved.');
-    setTitle('');
-    setContent('');
-    // simple refresh
-    window.location.reload();
+  }
+
+  async function submit() {
+    try {
+      // 1) Upload any staged files first
+      const uploaded = await uploadAll(pendingFiles, 'owner');
+
+      // 2) Build attachment text block to embed links into content
+      const attachmentBlock =
+        uploaded.length > 0
+          ? '\n\nAttachments:\n' + uploaded.map(a => `• ${a.name}: ${a.url}`).join('\n')
+          : '';
+
+      // 3) Construct payload for your /api/memory route
+      const payload: any = {
+        mode: tab,
+        workspace_id: workspaceId,
+        // Let backend optionally use a structured attachments array if it wants
+        attachments: uploaded,
+      };
+
+      if (tab === 'workspace') {
+        payload.title = title.trim() || undefined;
+        payload.content = (content.trim() + attachmentBlock).trim() || undefined;
+      } else {
+        payload.kind = kind;
+        payload.content = (content.trim() + attachmentBlock).trim();
+        payload.user_key = 'owner'; // TODO: replace with your stable per-user key/uid
+      }
+
+      const res = await fetch('/api/memory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const j = await res.json();
+      if (!res.ok) {
+        toast(j?.error ?? 'Failed to save');
+        return;
+      }
+
+      toast('Saved.');
+      setTitle('');
+      setContent('');
+      setPendingFiles([]);
+      // simple refresh
+      window.location.reload();
+    } catch (err: any) {
+      toast(err?.message ?? 'Failed to save');
+    }
   }
 
   return (
@@ -100,12 +163,55 @@ export default function MemoryComposer({ workspaceId }: Props) {
           className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm outline-none focus:border-neutral-500"
         />
 
+        {/* File picker + staged files */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={onPickFiles}
+            />
+            <button
+              className="rounded-md border border-neutral-700 px-3 py-2 text-sm hover:bg-neutral-800/60"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+            >
+              Choose files
+            </button>
+            {pendingFiles.length > 0 && (
+              <span className="text-xs text-neutral-400">
+                {pendingFiles.length} file{pendingFiles.length > 1 ? 's' : ''} attached
+              </span>
+            )}
+          </div>
+
+          {pendingFiles.length > 0 && (
+            <ul className="space-y-1 text-xs text-neutral-300">
+              {pendingFiles.map((f, i) => (
+                <li key={i} className="flex items-center justify-between rounded border border-neutral-800 px-2 py-1">
+                  <span className="truncate">{f.name} <span className="opacity-60">({f.type || 'unknown'})</span></span>
+                  <button
+                    className="ml-3 rounded px-2 py-0.5 text-red-300 hover:bg-red-900/30"
+                    onClick={() => removePending(i)}
+                    aria-label="Remove file"
+                  >
+                    remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         <div className="flex justify-end">
           <button
             onClick={submit}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
+            disabled={uploading}
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-60"
           >
-            Save
+            {uploading ? 'Uploading…' : 'Save'}
           </button>
         </div>
       </div>
