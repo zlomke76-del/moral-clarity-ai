@@ -1,6 +1,5 @@
 // app/page.tsx
 export const dynamic = 'force-dynamic';
-// app/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -17,23 +16,28 @@ export default function Home() {
     let active = true;
 
     (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!active) return;
-
-      const session: Session | null = data.session ?? null;
-      setChecked(true);
-
-      if (session) {
-        router.replace("/app");
-      } else {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (!active) return;
+        if (error) {
+          console.warn("getSession error:", error);
+          setChecked(true);
+          router.replace("/auth?next=%2Fapp");
+          return;
+        }
+        const session: Session | null = data.session ?? null;
+        setChecked(true);
+        router.replace(session ? "/app" : "/auth?next=%2Fapp");
+      } catch (e) {
+        console.warn("getSession threw:", e);
+        setChecked(true);
         router.replace("/auth?next=%2Fapp");
       }
     })();
 
-    return () => {
-      active = false;
-    };
-  }, [router, supabase]);
+    return () => { active = false; };
+    // supabase is a stable singleton; no need in deps
+  }, [router]);
 
   return (
     <main className="min-h-[60vh] flex items-center justify-center">
