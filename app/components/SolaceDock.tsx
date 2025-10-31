@@ -22,6 +22,10 @@ const POS_KEY = "solace:pos:v3";
 const MINISTRY_KEY = "solace:ministry";
 const PAD = 12;
 
+// 👇 Use env bucket everywhere (falls back to "uploads" if missing)
+const UPLOAD_BUCKET =
+  process.env.NEXT_PUBLIC_SUPABASE_UPLOAD_BUCKET || "uploads";
+
 const ui = {
   panelBg:
     "radial-gradient(140% 160% at 50% -60%, rgba(26,35,53,0.85) 0%, rgba(14,21,34,0.88) 60%)",
@@ -228,7 +232,7 @@ export default function SolaceDock() {
           messages: next,
           filters: activeFilters,
           stream: false,
-          attachments: pendingFiles, // pass to backend (your /api/chat we updated)
+          attachments: pendingFiles, // pass to backend
           ministry: activeFilters.includes("ministry"),
         }),
       });
@@ -255,13 +259,21 @@ export default function SolaceDock() {
     for (const f of Array.from(files)) {
       try {
         const path = `${crypto.randomUUID()}_${encodeURIComponent(f.name)}`;
-        const { error } = await supabase.storage.from("uploads").upload(path, f, {
-          upsert: false,
-          cacheControl: "3600",
-        });
+        // 👇 use env bucket
+        const { error } = await supabase.storage
+          .from(UPLOAD_BUCKET)
+          .upload(path, f, {
+            upsert: false,
+            cacheControl: "3600",
+            contentType: f.type || "application/octet-stream",
+          });
         if (error) throw error;
-        const { data } = supabase.storage.from("uploads").getPublicUrl(path);
-        out.push({ name: f.name, url: data.publicUrl, type: f.type || "application/octet-stream" });
+        const { data } = supabase.storage.from(UPLOAD_BUCKET).getPublicUrl(path);
+        out.push({
+          name: f.name,
+          url: data.publicUrl,
+          type: f.type || "application/octet-stream",
+        });
       } catch (err: any) {
         setMessages((m) => [
           ...m,
@@ -271,7 +283,6 @@ export default function SolaceDock() {
     }
     if (out.length) {
       setPendingFiles((prev) => [...prev, ...out]);
-      // show a small preview note
       setMessages((m) => [
         ...m,
         {
@@ -477,7 +488,6 @@ export default function SolaceDock() {
       aria-label="Solace"
       style={panelStyle}
       onClick={(e) => {
-        // Alt+Click to re-center (kept convenience)
         if (!containerRef.current) return;
         if ((e as any).altKey) {
           const vw = window.innerWidth;
@@ -495,21 +505,18 @@ export default function SolaceDock() {
     >
       {/* HEADER */}
       <header style={headerStyle} onMouseDown={onHeaderMouseDown}>
-        {/* left: orb + title */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span aria-hidden style={orbStyle} title="Alt+Click header to center/reset" />
           <span style={{ font: "600 13px system-ui", color: ui.text }}>Solace</span>
           <span style={{ font: "12px system-ui", color: ui.sub }}>Create with moral clarity</span>
         </div>
 
-        {/* middle: lenses */}
         <div style={{ display: "flex", gap: 8, marginLeft: 12 }}>
           {chip("Create", modeHint === "Create", () => setModeHint("Create"))}
           {chip("Next", modeHint === "Next Steps", () => setModeHint("Next Steps"))}
           {chip("Red", modeHint === "Red Team", () => setModeHint("Red Team"))}
         </div>
 
-        {/* right: ministry */}
         <div style={{ marginLeft: "auto" }}>{ministryTab}</div>
       </header>
 
@@ -534,7 +541,6 @@ export default function SolaceDock() {
 
       {/* COMPOSER */}
       <div style={composerWrapStyle}>
-        {/* pending attachments preview */}
         {pendingFiles.length > 0 && (
           <div
             style={{
@@ -660,3 +666,4 @@ export default function SolaceDock() {
 }
 
 /* ========= end component ========= */
+
