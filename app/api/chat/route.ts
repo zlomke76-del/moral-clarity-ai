@@ -12,37 +12,69 @@ import { routeMode } from '@/core/mode-router';
 import { searchMemories, remember } from '@/lib/memory';
 /* =============================================== */
 
-/* ========= (NEW) ATTACHMENT INGEST ========= */
+/* ========= ATTACHMENT INGEST (PDF + text + images) ========= */
 type Attachment = { name: string; url: string; type?: string };
 
-async function fetchAttachmentAsText(att: Attachment): Promise<string> {
-  const res = await fetch(att.url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const ct = (res.headers.get('content-type') || att.type || '').toLowerCase();
-  // PDF
-  if (ct.includes('pdf') || /\.pdf(?:$|\?)/i.test(att.url)) {
-    const buf = Buffer.from(await res.arrayBuffer());
-    const text = await pdfText(buf);
-    return text || '';
-  }
-  // Text-ish
-  if (
-    ct.includes('text/') ||
-    ct.includes('json') ||
-    ct.includes('csv') ||
-    /\.(?:txt|md|csv|json)$/i.test(att.name)
-  ) {
-    return await res.text();
-  }
-  // Fallback (images, binaries, etc.)
-  return `[Unsupported file type: ${att.name} (${ct || 'unknown'})]`;
+const IMAGE_EXTS = new Set(['jpg','jpeg','png','gif','webp','bmp','tif','tiff']);
+const TEXT_EXTS  = new Set(['txt','md','csv','json','log','xml','yaml','yml']);
+const PDF_EXTS   = new Set(['pdf']);
+
+function extFromNameOrUrl(name: string, url: string): string {
+  const from = (s: string) => (s.split('?')[0].split('#')[0].split('.').pop() || '').toLowerCase();
+  const a = from(name || '');
+  const b = from(url || '');
+  return a || b || '';
+}
+
+async function pdfText(buf: Buffer): Promise<string> {
+  // dynamic import of CJS module avoids ESM/CJS mismatch and keeps edge-friendly bundling
+  const mod: any = await import('pdf-parse');
+  const parse = (mod?.default ?? mod) as (b: Buffer) => Promise<{ text?: string }>;
+  const out = await parse(buf);
+  return (out?.text ?? '').toString();
 }
 
 function clampText(s: string, n: number) {
-  if (s.length <= n) return s;
-  return s.slice(0, n) + '\n[...truncated...]';
+  if (!s) return '';
+  return s.length <= n ? s : s.slice(0, n) + '\n[...truncated...]';
 }
-/* =========================================== */
+
+async function fetchAttachmentAsText(att: Attachment): Promise<{ kind: 'text'|'image'|'other'; text: string }> {
+  const res = await fetch(att.url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const ct = (res.headers.get('content-type') || att.type || '').toLowerCase();
+  const ext = extFromNameOrUrl(att.name || '', att.url || '');
+
+  // Handle PDF
+  if (ct.includes('pdf') || PDF_EXTS.has(ext)) {
+    const buf = Buffer.from(await res.arrayBuffer());
+    const text = await pdfText(buf).catch((e) => `[[PDF read error: ${e?.message || e}]]`);
+    return { kind: 'text', text };
+  }
+
+  // Handle text-likes
+  if (
+    ct.startsWith('text/') ||
+    ct.includes('json') ||
+    ct.includes('csv') ||
+    TEXT_EXTS.has(ext)
+  ) {
+    const text = await res.text().catch(() => '');
+    return { kind: 'text', text };
+  }
+
+  // Handle images (screenshots, camera shots)
+  if (ct.startsWith('image/') || IMAGE_EXTS.has(ext)) {
+    // No OCR in this pass — provide a clear digest for the model + link to the image
+    const descr = `[[Image attachment]] ${att.name || '(unnamed)'}\nURL: ${att.url}\n(Describe what I should analyze or modify in this image.)`;
+    return { kind: 'image', text: descr };
+  }
+
+  // Fallback
+  const label = ct || (ext ? `.${ext}` : 'unknown');
+  return { kind: 'other', text: `[[Unsupported attachment type: ${att.name} (${label})]]` };
+}
+/* =========================================================== */
 
 /* ========= MODEL / TIMEOUT ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
@@ -149,10 +181,9 @@ function scripturePolicyText(opts: {
   userAskedForSecular: boolean;
 }) {
   const base =
-    `SCRIPTURE POLICY
-- Use very short references only (e.g., "Exodus 20", "Matthew 5", "Qur'an 4:135"); no long quotes by default.
-- Weave 1–2 references inline only when relevant; avoid overwhelming the user.
-`;
+    `SCRIPTURE POLICY\n` +
+    `- Use very short references only (e.g., "Exodus 20", "Matthew 5", "Qur'an 4:135"); no long quotes by default.\n` +
+    `- Weave 1–2 references inline only when relevant; avoid overwhelming the user.\n`;
 
   if (!opts.wantsAbrahamic || opts.userAskedForSecular) {
     return base + `- Abrahamic references DISABLED due to secular framing or inactive Abrahamic layer. Do not include scripture.`;
@@ -161,8 +192,8 @@ function scripturePolicyText(opts: {
   if (opts.forceFirstTurnSeeding) {
     return (
       base +
-      `- FIRST REAL TURN IS MORAL/EMOTIONAL: Provide ONE gentle reference (max 1–2) to anchor hope/justice/mercy.
-- Subsequent turns: include references only when clearly helpful or requested.`
+      `- FIRST REAL TURN IS MORAL/EMOTIONAL: Provide ONE gentle reference (max 1–2) to anchor hope/justice/mercy.\n` +
+      `- Subsequent turns: include references only when clearly helpful or requested.`
     );
   }
 
@@ -183,9 +214,7 @@ function trimConversation(messages: Array<{ role: string; content: string }>) {
 
 function wantsSecular(messages: Array<{ role: string; content: string }>) {
   const text = messages.slice(-6).map((m) => m.content).join(' ').toLowerCase();
-  return /\bsecular framing\b|\bsecular only\b|\bno scripture\b|\bno religious\b|\bkeep it secular\b|\bstrictly secular\b/.test(
-    text
-  );
+  return /\bsecular framing\b|\bsecular only\b|\bno scripture\b|\bno religious\b|\bkeep it secular\b|\bstrictly secular\b/.test(text);
 }
 
 function isFirstRealTurn(messages: Array<{ role: string; content: string }>) {
@@ -196,12 +225,8 @@ function isFirstRealTurn(messages: Array<{ role: string; content: string }>) {
 
 function hasEmotionalOrMoralCue(text: string) {
   const t = (text || '').toLowerCase();
-  const emo = [
-    'hope','lost','afraid','fear','anxious','anxiety','grief','sad','sorrow','depressed','stress','overwhelmed','lonely','alone','comfort','forgive','forgiveness','guilt','shame','purpose','meaning',
-  ];
-  const moral = [
-    'right','wrong','unfair','injustice','justice','truth','honest','dishonest','integrity','mercy','compassion','courage',
-  ];
+  const emo = ['hope','lost','afraid','fear','anxious','anxiety','grief','sad','sorrow','depressed','stress','overwhelmed','lonely','alone','comfort','forgive','forgiveness','guilt','shame','purpose','meaning'];
+  const moral = ['right','wrong','unfair','injustice','justice','truth','honest','dishonest','integrity','mercy','compassion','courage'];
   const hit = (arr: string[]) => arr.some((w) => t.includes(w));
   return hit(emo) || hit(moral);
 }
@@ -214,16 +239,14 @@ function buildSystemPrompt(
   const wantsAbrahamic = filters.includes('abrahamic') || filters.includes('ministry');
   const wantsGuidance = filters.includes('guidance');
 
-  const firstUserText =
-    [...messages].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content ?? '';
+  const firstUserText = [...messages].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content ?? '';
   const firstTurn = isFirstRealTurn(messages);
   const moralOrEmo = hasEmotionalOrMoralCue(firstUserText);
   const forceFirstTurnSeeding = wantsAbrahamic && !userWantsSecular && firstTurn && moralOrEmo;
 
   const parts: string[] = [];
   parts.push(
-    `IDENTITY
-You are ${SOLACE_NAME} — a steady, principled presence. You listen first, then offer concise counsel with moral clarity.`,
+    `IDENTITY\nYou are ${SOLACE_NAME} — a steady, principled presence. You listen first, then offer concise counsel with moral clarity.`,
     HOUSE_RULES,
     GUIDELINE_NEUTRAL,
     RESPONSE_FORMAT,
@@ -316,18 +339,6 @@ async function solaceStream(payload: any) {
   return r.body as ReadableStream<Uint8Array>;
 }
 
-// --- PDF helper (dynamic import keeps Edge/SSR happy) -----------------
-let _pdfParseFn: ((buf: Buffer) => Promise<{ text?: string }>) | null = null;
-
-async function pdfText(buf: Buffer): Promise<string> {
-  if (!_pdfParseFn) {
-    const mod: any = await import('pdf-parse');        // CJS module
-    _pdfParseFn = (mod?.default ?? mod) as any;         // grab the callable export
-  }
-  const out = await _pdfParseFn!(buf);
-  return (out?.text ?? '').toString();
-}
-
 /* ========= POST ========= */
 export async function POST(req: NextRequest) {
   try {
@@ -360,11 +371,16 @@ export async function POST(req: NextRequest) {
     // ---------- Additive filters ----------
     const incoming = new Set(rawFilters);
 
+    // 1) Auto-add Guidance if router hints it.
     if (route.mode === 'Guidance') incoming.add('guidance');
+
+    // 2) Default Ministry ON unless user explicitly asked for secular framing.
     if (!userAskedForSecular) {
       incoming.add('ministry');
       incoming.add('abrahamic');
     }
+
+    // Escape hatch
     if (body?.ministry === false) {
       incoming.delete('ministry');
       incoming.delete('abrahamic');
@@ -402,6 +418,7 @@ export async function POST(req: NextRequest) {
         memorySection = '';
       }
     }
+    /* ====================================== */
 
     /* ========= WEB SEARCH (fresh info auto-context) ========= */
     let webSection = '';
@@ -420,24 +437,25 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       console.error('webSearch failed:', err);
     }
+    /* ======================================================== */
 
-    /* ========= (NEW) ATTACHMENTS DIGEST ========= */
+    /* ========= ATTACHMENTS DIGEST ========= */
     let attachmentSection = '';
     try {
       const atts = (Array.isArray(body?.attachments) ? body.attachments : []) as Attachment[];
       if (atts.length) {
-        const MAX_PER_FILE = 200_000;
-        const MAX_TOTAL = 350_000;
+        const MAX_PER_FILE = 200_000;  // per-file safety cap
+        const MAX_TOTAL    = 350_000;  // total digest safety cap
         const parts: string[] = [];
         let total = 0;
 
         for (const att of atts) {
           try {
-            const raw = await fetchAttachmentAsText(att);
-            const clipped = clampText(raw, MAX_PER_FILE);
+            const out = await fetchAttachmentAsText(att);
+            const clipped = clampText(out.text, MAX_PER_FILE);
             const block =
-              `\n--- Attachment: ${att.name}\n` +
-              `(source: ${att.url})\n` +
+              `\n--- Attachment: ${att.name || '(unnamed)'}\n` +
+              `(type: ${out.kind}; source: ${att.url})\n` +
               '```\n' + clipped + '\n```\n';
             if (total + block.length > MAX_TOTAL) {
               parts.push(`\n--- [Skipping remaining attachments: token cap reached]`);
@@ -457,6 +475,7 @@ export async function POST(req: NextRequest) {
     } catch {
       attachmentSection = '';
     }
+    /* ======================================================== */
 
     const system = baseSystem + memorySection + webSection;
 
@@ -497,14 +516,16 @@ export async function POST(req: NextRequest) {
             });
           }
         } catch {
-          // continue to normal answering
+          // non-fatal: continue
         }
       }
     }
+    /* =========================================================== */
 
     // Prefer SOLACE if configured
     const useSolace = Boolean(SOLACE_URL && SOLACE_KEY);
 
+    // Roll in attachments as an extra user message so both backends see it
     const rolledWithAttachments =
       attachmentSection
         ? [...rolled, { role: 'user', content: attachmentSection }]
