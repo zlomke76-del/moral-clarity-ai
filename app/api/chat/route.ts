@@ -269,6 +269,8 @@ async function pdfText(buf: Buffer): Promise<string> {
   const out = await _pdfParseFn!(buf);
   return (out?.text ?? '').toString();
 }
+
+// OCR via env-gated dynamic import
 async function imageOcrText(buf: Buffer): Promise<string> {
   if (process.env.MCAI_ENABLE_OCR !== '1') return '[Image attached: OCR not enabled]';
   try {
@@ -289,24 +291,62 @@ async function imageOcrText(buf: Buffer): Promise<string> {
     return '[Image attached: OCR library unavailable]';
   }
 }
+
 function clampText(s: string, n: number) { return s.length <= n ? s : s.slice(0, n) + '\n[...truncated...]'; }
+
+// **Hardened** attachment parser: content-type + extension + octet-stream sniff + explicit .xlsx message
 async function fetchAttachmentAsText(att: Attachment): Promise<string> {
+  if (!att?.url) throw new Error('no url');
+
   const res = await fetch(att.url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const ct = (res.headers.get('content-type') || att.type || '').toLowerCase();
 
-  if (ct.includes('pdf') || /\.pdf(?:$|\?)/i.test(att.url)) {
+  const ct = (res.headers.get('content-type') || att.type || '').toLowerCase();
+  const url = att.url || '';
+  const name = (att.name || '').toLowerCase();
+  const urlHas = (re: RegExp) => re.test(url);
+  const nameHas = (re: RegExp) => re.test(name);
+
+  // ----- PDF -----
+  if (ct.includes('pdf') || urlHas(/\.pdf(?:$|\?)/i) || nameHas(/\.pdf$/i)) {
     const buf = Buffer.from(await res.arrayBuffer());
     return pdfText(buf);
   }
-  if (ct.startsWith('image/')) {
+
+  // ----- Images → OCR -----
+  const isImage =
+    ct.startsWith('image/') ||
+    urlHas(/\.(?:png|jpe?g|bmp|gif|webp)(?:$|\?)/i) ||
+    nameHas(/\.(?:png|jpe?g|bmp|gif|webp)$/i);
+  if (isImage) {
     const buf = Buffer.from(await res.arrayBuffer());
     return imageOcrText(buf);
   }
-  if (ct.startsWith('text/') || ct.includes('json') || ct.includes('csv') || /\.(?:txt|md|csv|json)$/i.test(att.name)) {
+
+  // ----- Text-like (by CT or extension) -----
+  const isTextLikeCT = ct.startsWith('text/') || ct.includes('json') || ct.includes('csv');
+  const isTextLikeExt = urlHas(/\.(?:txt|md|csv|json)(?:$|\?)/i) || nameHas(/\.(?:txt|md|csv|json)$/i);
+  if (isTextLikeCT || isTextLikeExt) {
     return await res.text();
   }
-  return `[Unsupported file type: ${att.name} (${ct || 'unknown'})]`;
+
+  // ----- Excel explicitly unsupported for now -----
+  const isXlsx =
+    ct.includes('spreadsheetml') || urlHas(/\.xlsx(?:$|\?)/i) || nameHas(/\.xlsx$/i);
+  if (isXlsx) {
+    return '[Unsupported: Excel .xlsx not supported. Please upload CSV or TXT.]';
+  }
+
+  // ----- Small octet-stream sniff (try decode if small and looks textual) -----
+  if (ct === 'application/octet-stream') {
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length <= 2_000_000) {
+      const asText = new TextDecoder().decode(buf);
+      if (/[\x09\x0A\x0D\x20-\x7E]/.test(asText)) return asText;
+    }
+  }
+
+  return `[Unsupported file type: ${att.name || 'file'} (${ct || 'unknown'})]`;
 }
 
 /* ========= DB helpers (isolation-critical) ========= */
@@ -346,10 +386,16 @@ export async function POST(req: NextRequest) {
     const messages = Array.isArray(body?.messages) ? body.messages : [];
     const rawFilters = normalizeFilters(body?.filters ?? []);
     const wantStream = !!body?.stream;
-    const userIdHeader = body?.userId ?? null;   // forwarded to model only
+
+    // For downstream payloads only (not used for auth)
+    const userIdHeader = body?.userId ?? null;
     const userNameHeader = body?.userName ?? null;
 
-    // —— Auth & workspace (critical for isolation) ——
+    // —— Log request identity mapping to catch any “Joy as Tim” confusion —— //
+    const xUserKey = req.headers.get('x-user-key');
+    console.info('[REQ] x-user-key:', xUserKey ? 'present' : 'null', 'body.userId:', userIdHeader ? 'present' : 'null');
+
+    // —— Auth & workspace (critical for isolation) —— //
     const { supabase, user, workspaceId } = await getAuthedUserAndWorkspace(req);
     const memoryEnabled = Boolean(user && workspaceId);
 
@@ -360,7 +406,7 @@ export async function POST(req: NextRequest) {
     const lastModeHeader = req.headers.get('x-last-mode');
     const route = routeMode(lastUser, { lastMode: lastModeHeader as any });
 
-    // ---------- Additive filters ----------
+    // ---------- Additive filters ---------- //
     const incoming = new Set(rawFilters);
     if (route.mode === 'Guidance') incoming.add('guidance');
     if (!userAskedForSecular) {
@@ -372,7 +418,6 @@ export async function POST(req: NextRequest) {
       incoming.delete('abrahamic');
     }
     const effectiveFilters = Array.from(incoming);
-    // -------------------------------------
 
     const { prompt: baseSystem } = buildSystemPrompt(
       effectiveFilters,
@@ -429,6 +474,7 @@ export async function POST(req: NextRequest) {
 
         for (const att of atts) {
           try {
+            console.info('[ATT] fetching', att?.name || '(unnamed)', att?.url?.slice(0, 80) || '');
             const raw = await fetchAttachmentAsText(att);
             const clipped = clampText(raw, MAX_PER_FILE);
             const block = `\n--- Attachment: ${att.name}\n(source: ${att.url})\n\`\`\`\n${clipped}\n\`\`\`\n`;
@@ -438,8 +484,10 @@ export async function POST(req: NextRequest) {
             }
             parts.push(block);
             total += block.length;
+            console.info('[ATT] ok →', att?.name || 'file', 'chars=', clipped.length);
           } catch (e: any) {
             parts.push(`\n--- Attachment: ${att.name}\n[Error reading file: ${e?.message || e}]`);
+            console.warn('[ATT] parse failed:', att?.name || 'file', String(e));
           }
         }
 
@@ -563,7 +611,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ----- Stream path -----
+    // ----- Stream path ----- //
     if (useSolace) {
       try {
         const stream = await solaceStream({
@@ -632,3 +680,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
