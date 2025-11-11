@@ -328,13 +328,19 @@ export async function POST(req: NextRequest) {
 
     /* ===== WEB SEARCH (fresh context) ===== */
     let webSection = '';
+    let hasWebContext = false;
     try {
-      const wantsFresh = /\b(latest|today|this week|news|recent|update|updates|look up|search|what happened|breaking)\b/i.test(lastUser);
-      if (wantsFresh) {
+      const wantsFresh = /\b(latest|today|this week|news|recent|update|updates|look up|search|what happened|breaking|breaking news|headlines|top stories)\b/i.test(lastUser);
+      const webFlag =
+        process.env.NEXT_PUBLIC_OPENAI_WEB_ENABLED_flag ??
+        process.env.OPENAI_WEB_ENABLED_flag ??
+        null;
+      if (wantsFresh && webFlag) {
         const results = await webSearch(lastUser, { news: true, max: 5 });
         if (Array.isArray(results) && results.length) {
           const lines = results.map((r: any, i: number) => `• [${i + 1}] ${r.title} — ${r.url}`).join('\n');
-          webSection = `\n\nWEB CONTEXT (recent search)\n${lines}`;
+          webSection = `\n\nWEB CONTEXT (recent search)\n${lines}\n\nGuidance:\n- Use these results to answer directly.\n- Prefer the most recent and reputable sources.\n- If uncertain, say what is unknown.\n- When referencing items, use bracket numbers like [1], [2].`;
+          hasWebContext = true;
         }
       }
     } catch (err) {
@@ -373,7 +379,12 @@ export async function POST(req: NextRequest) {
       attachmentSection = '';
     }
 
-    const system = baseSystem + memorySection + webSection;
+    // If web context exists, add a strong “no-disclaimer” instruction
+    const webAssertion = hasWebContext
+      ? `\n\nREAL-TIME CONTEXT\n- You DO have recent web results above. Do NOT say you cannot provide real-time updates.\n- Synthesize a brief answer using those results, and include bracketed refs like [1], [3].`
+      : '';
+
+    const system = baseSystem + memorySection + webSection + webAssertion;
 
     /* ===== Explicit "remember ..." capture ===== */
     if (memoryEnabled) {
