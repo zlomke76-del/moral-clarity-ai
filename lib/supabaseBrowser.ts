@@ -1,10 +1,11 @@
 // lib/supabaseBrowser.ts
-import { createBrowserClient, type SupabaseClient } from '@supabase/ssr';
+import { createBrowserClient } from '@supabase/ssr';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/supabase';
 
 let _client: SupabaseClient<Database> | null = null;
 
-export function createSupabaseBrowser() {
+export function createSupabaseBrowser(): SupabaseClient<Database> {
   if (typeof window === 'undefined') {
     throw new Error('createSupabaseBrowser() must be called in the browser.');
   }
