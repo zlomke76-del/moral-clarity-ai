@@ -1,127 +1,102 @@
-// app/help/page.tsx
-"use client";
+// app/health/page.tsx
+'use client';
 
-import { useState } from "react";
+import { useEffect, useState } from 'react';
 
-const faqs = [
-  {
-    section: "Getting Started",
-    items: [
-      {
-        q: "What is Moral Clarity AI?",
-        a: "A calm workspace for questions, reflection, and wise decisions—alone or with your family, team, or ministry."
-      },
-      {
-        q: "How do I create a project?",
-        a: "Go to Projects → New Project, name it, then use the tabs (Chat, Notes, Files, Briefs)."
-      },
-      {
-        q: "What are Clarity Reports?",
-        a: "Clarity Reports are dignified PDFs that summarize your project’s reflections and decisions."
-      },
-    ],
-  },
-  {
-    section: "Plans & Billing",
-    items: [
-      {
-        q: "Can I switch plans later?",
-        a: "Yes. Upgrades apply immediately; downgrades take effect at the next billing cycle."
-      },
-      {
-        q: "Do you offer trials?",
-        a: "We offer a guided demo. Stewards may grant 30-day courtesy subscriptions at their discretion."
-      },
-      {
-        q: "How do Ministry and 10% support work?",
-        a: "10% support flows only to active ministries. If not active, funds accrue in escrow for up to 6 months before conversion."
-      },
-    ],
-  },
-  {
-    section: "Privacy & Security",
-    items: [
-      {
-        q: "Who can see my reflections?",
-        a: "Only you, unless you share them inside a Family, Business, or Ministry workspace."
-      },
-      {
-        q: "Do you sell data or run ads?",
-        a: "No and no. We never sell personal data or run advertising."
-      },
-      {
-        q: "Can I export my data?",
-        a: "Yes—use Settings → Data & Privacy to export projects and Clarity Reports."
-      },
-    ],
-  },
-  {
-    section: "Teams & Ministries",
-    items: [
-      {
-        q: "How do I invite others?",
-        a: "Stewards and Co-Stewards can invite via Hub → Invite. Invites expire in 7 days."
-      },
-      {
-        q: "What if someone leaves?",
-        a: "Revoke their seat (7-day grace), then reassign. Their personal reflections stay private."
-      },
-      {
-        q: "Can ministries post weekly reflections?",
-        a: "Yes. Ministry Feed supports posts and announcements; comments are off by default."
-      },
-    ],
-  },
-  {
-    section: "Principles & Philosophy",
-    items: [
-      {
-        q: "Why Truth · Reason · Stewardship · Peace?",
-        a: "They are the north star for every feature and decision in Moral Clarity AI."
-      },
-      {
-        q: "What is a Clarity Moment?",
-        a: "A calm banner for meaningful updates—never noise or marketing."
-      },
-    ],
-  },
-];
+type Health = {
+  ok: boolean;
+  message: string;
+  memoryEnabled: boolean;
+  flags: { webEnabled: boolean };
+  timestamps: { server: string };
+  env: { NEXT_PUBLIC_SUPABASE_URL: boolean; NEXT_PUBLIC_SUPABASE_ANON_KEY: boolean };
+};
 
-export default function HelpPage() {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
+export default function HealthPage() {
+  const [data, setData] = useState<Health | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function load() {
+    setErr(null);
+    try {
+      const r = await fetch('/api/health', { cache: 'no-store' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j = (await r.json()) as Health;
+      setData(j);
+    } catch (e: any) {
+      setErr(e?.message ?? 'failed to load');
+    }
+  }
+
+  useEffect(() => {
+    load();
+    const id = setInterval(load, 15000); // auto-refresh every 15s
+    return () => clearInterval(id);
+  }, []);
+
+  const badge = (on: boolean, label: string) => (
+    <div className="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2">
+      <span className={`h-2.5 w-2.5 rounded-full ${on ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+      <span className="text-sm opacity-90">{label}</span>
+    </div>
+  );
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12 prose prose-neutral">
-      <h1>Help &amp; Frequently Asked Questions</h1>
-      <p className="mb-8">
-        If you can’t find what you need,{" "}
-        <a href="mailto:support@moralclarity.ai">contact support</a>.
-      </p>
+    <main className="min-h-screen bg-neutral-950 text-neutral-100">
+      <div className="mx-auto max-w-4xl px-4 py-10">
+        <h1 className="text-2xl font-semibold tracking-tight">System Health</h1>
+        <p className="mt-1 text-sm opacity-70">Live status pulled from <code className="opacity-80">/api/health</code>.</p>
 
-      {faqs.map((section, sIdx) => (
-        <section key={sIdx} className="mb-10">
-          <h2>{section.section}</h2>
-          <div className="divide-y divide-gray-300">
-            {section.items.map((item, iIdx) => {
-              const idx = Number(`${sIdx}${iIdx}`);
-              const isOpen = openIndex === idx;
-              return (
-                <div key={idx} className="py-3">
-                  <button
-                    onClick={() => setOpenIndex(isOpen ? null : idx)}
-                    className="w-full text-left font-medium hover:text-indigo-600"
-                  >
-                    {item.q}
-                  </button>
-                  {isOpen && (
-                    <p className="mt-2 text-gray-700">{item.a}</p>
-                  )}
+        <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
+          {err && (
+            <div className="mb-4 rounded-lg border border-rose-400/30 bg-rose-400/10 px-4 py-2 text-rose-200">
+              Failed to load health: {err}
+            </div>
+          )}
+
+          {!data && !err && (
+            <div className="opacity-70">Loading…</div>
+          )}
+
+          {data && (
+            <>
+              <div className="flex flex-wrap gap-3">
+                {badge(data.ok, 'Backend reachable')}
+                {badge(data.memoryEnabled, 'Supabase (SRK)')}
+                {badge(data.flags.webEnabled, 'Web search enabled')}
+                {badge(data.env.NEXT_PUBLIC_SUPABASE_URL, 'SUPABASE_URL')}
+                {badge(data.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, 'ANON_KEY')}
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+                  <div className="text-xs uppercase tracking-wide opacity-60">Message</div>
+                  <div className="mt-1 text-sm">{data.message}</div>
                 </div>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+                <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+                  <div className="text-xs uppercase tracking-wide opacity-60">Server Time</div>
+                  <div className="mt-1 text-sm">{new Date(data.timestamps.server).toLocaleString()}</div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex gap-2">
+                <button
+                  onClick={load}
+                  className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm hover:bg-white/15"
+                >
+                  Refresh
+                </button>
+                <a
+                  href="/api/health"
+                  className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm hover:bg-white/15"
+                >
+                  View JSON
+                </a>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </main>
   );
 }
