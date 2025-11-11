@@ -1,61 +1,52 @@
-// /lib/mca-memory-client.ts
-import { MCA_USER_KEY, MCA_WORKSPACE_ID } from './mca-config';
+// lib/mca-memory-client.ts
+import { MCA_WORKSPACE_ID } from '@/lib/mca-config';
 
-const API_BASE = process.env.NEXT_PUBLIC_APP_ORIGIN ?? ''; // "" works for same-origin
-
-export type SavedMemory = {
+export type WorkspaceMemoryRow = {
   id: string;
-  user_key: string;
-  kind: string;
-  title?: string | null;
-  content: string;
-  weight?: number;
-  created_at?: string;
-  similarity?: number;
+  workspace_id: string;
+  title: string | null;
+  content: string | null;
+  created_at: string;
 };
 
-export async function saveUserMemory(input: {
-  content: string;
-  kind?: 'fact'|'note'|'task'|'profile'|'preference';
+export async function listWorkspaceMemories(limit = 25) {
+  const url = `/api/memory?mode=workspace&workspace_id=${encodeURIComponent(
+    MCA_WORKSPACE_ID
+  )}&limit=${limit}`;
+  const r = await fetch(url, { method: 'GET', cache: 'no-store' });
+  if (!r.ok) throw new Error(`memory list ${r.status}`);
+  const j = await r.json();
+  return (j.rows || []) as WorkspaceMemoryRow[];
+}
+
+export async function createWorkspaceMemory(input: {
   title?: string;
-  weight?: number;
+  content: string;
 }) {
-  const res = await fetch(`${API_BASE}/api/memory`, {
+  const r = await fetch('/api/memory', {
     method: 'POST',
-    headers: { 'Content-Type':'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      mode: 'user',
+      mode: 'workspace',
       workspace_id: MCA_WORKSPACE_ID,
-      user_key: MCA_USER_KEY,
-      kind: input.kind ?? 'note',
-      title: input.title ?? '',
+      title: input.title ?? null,
       content: input.content,
-      weight: input.weight ?? 1,
     }),
   });
-  if (!res.ok) throw new Error(`saveUserMemory failed: ${res.status}`);
-  return (await res.json()) as { id: string };
+  if (!r.ok) throw new Error(`memory create ${r.status}: ${await r.text().catch(() => '')}`);
+  return r.json() as Promise<{ id: string }>;
 }
 
-export async function searchUserMemories(q: string, k = 8) {
-  const url = new URL(`${API_BASE}/api/memory`, globalThis.location?.origin ?? 'http://localhost');
-  url.searchParams.set('mode', 'user');
-  url.searchParams.set('user_key', MCA_USER_KEY);
-  url.searchParams.set('q', q);
-  url.searchParams.set('limit', String(k));
-  const res = await fetch(url.toString(), { method: 'GET' });
-  if (!res.ok) throw new Error(`searchUserMemories failed: ${res.status}`);
-  const j = await res.json();
-  return (j.rows ?? []) as SavedMemory[];
-}
-
-export async function recentUserMemories(k = 8) {
-  const url = new URL(`${API_BASE}/api/memory`, globalThis.location?.origin ?? 'http://localhost');
-  url.searchParams.set('mode', 'user');
-  url.searchParams.set('user_key', MCA_USER_KEY);
-  url.searchParams.set('limit', String(k));
-  const res = await fetch(url.toString(), { method: 'GET' });
-  if (!res.ok) throw new Error(`recentUserMemories failed: ${res.status}`);
-  const j = await res.json();
-  return (j.rows ?? []) as SavedMemory[];
+/**
+ * Optional helper for user-scoped vector search (if you’re using user_memories + RPC).
+ * Pass the same user key you send to /api/chat via X-User-Key, or centralize it in mca-config.
+ */
+export async function searchUserMemories(userKey: string, q: string, limit = 8) {
+  const url = `/api/memory?mode=user&user_key=${encodeURIComponent(
+    userKey
+  )}&q=${encodeURIComponent(q)}&limit=${limit}`;
+  const r = await fetch(url, { method: 'GET', cache: 'no-store' });
+  if (!r.ok) throw new Error(`user memory search ${r.status}`);
+  const j = await r.json();
+  return j.rows || [];
 }
