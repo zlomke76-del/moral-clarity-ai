@@ -8,28 +8,25 @@ export function supabaseServer() {
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-      },
-    }
+    { cookies: { get: (n: string) => cookieStore.get(n)?.value } }
   );
 }
 
 export function supabaseService() {
-  // Service-role server client (no cookies, server only)
+  // Accept SUPABASE_URL or fall back to NEXT_PUBLIC_SUPABASE_URL
+  const url =
+    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY; // must be set in Vercel (Server-only)
+
+  if (!url) throw new Error('supabaseUrl is required.');
+  if (!key) throw new Error('service-role key missing (SUPABASE_SERVICE_ROLE_KEY).');
+
+  // Lazy import server SDK only on server
   const { createClient } = require('@supabase/supabase-js');
-  return createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  );
+  return createClient(url, key, { auth: { persistSession: false } });
 }
 
 export function supabaseBrowser() {
-  // For client components that need RLS-protected reads (optional)
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
