@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { Session } from '@supabase/supabase-js';
 import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
@@ -9,26 +9,19 @@ export default function HomeShell() {
   const router = useRouter();
   const pathname = usePathname();
 
-  // instantiate only on client
-  const supabase = useMemo(() => {
-    if (typeof window === 'undefined') return null;
-    return createSupabaseBrowser();
-  }, []);
-
   useEffect(() => {
+    // create the client only in the browser
+    const supabase = typeof window === 'undefined' ? null : createSupabaseBrowser();
     if (!supabase) return;
-    let alive = true;
 
+    let alive = true;
     (async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
         if (!alive) return;
 
         if (error) {
-          // if we’re already on /auth, don’t loop
-          if (!pathname?.startsWith('/auth')) {
-            router.replace('/auth?next=%2Fapp');
-          }
+          if (!pathname?.startsWith('/auth')) router.replace('/auth?next=%2Fapp');
           return;
         }
 
@@ -36,21 +29,15 @@ export default function HomeShell() {
         if (session) {
           if (pathname !== '/app') router.replace('/app');
         } else {
-          if (!pathname?.startsWith('/auth')) {
-            router.replace('/auth?next=%2Fapp');
-          }
+          if (!pathname?.startsWith('/auth')) router.replace('/auth?next=%2Fapp');
         }
       } catch {
-        if (!pathname?.startsWith('/auth')) {
-          router.replace('/auth?next=%2Fapp');
-        }
+        if (!pathname?.startsWith('/auth')) router.replace('/auth?next=%2Fapp');
       }
     })();
 
-    return () => {
-      alive = false;
-    };
-  }, [supabase, router, pathname]);
+    return () => { alive = false; };
+  }, [router, pathname]);
 
   return (
     <main className="min-h-[60vh] flex items-center justify-center">
