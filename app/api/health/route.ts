@@ -1,4 +1,8 @@
+// app/api/health/route.ts
 import { NextResponse } from "next/server";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 const ORIGIN_LIST = [
   "https://moralclarity.ai",
