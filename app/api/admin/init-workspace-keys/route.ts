@@ -1,10 +1,8 @@
-// app/api/admin/init-workspace-keys/route.ts
 import { NextRequest } from "next/server";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { initWorkspaceKey } from "../../../server/memory-utils"; // <<< changed from "@/server/memory-utils"
+import { initWorkspaceKey } from "../../../../server/memory-utils"; // <-- fixed depth
 import type { Database } from "@/types/supabase";
 
-// Ensure Node runtime (not Edge) for crypto + service role
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -14,7 +12,6 @@ function badAuth() {
     headers: { "Content-Type": "application/json" },
   });
 }
-
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -22,38 +19,22 @@ function json(data: unknown, status = 200) {
   });
 }
 
-// Strongly-typed client for your DB (public). We'll cast for mca schema locally.
 const supa: SupabaseClient<Database> = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-
-// Helper to access the mca schema without fighting TS generics
 const mca = () => (supa as unknown as SupabaseClient<any>).schema("mca");
 
-// OPTIONS for good CORS hygiene
-export async function OPTIONS() {
-  return new Response(null, { status: 204 });
-}
+export async function OPTIONS() { return new Response(null, { status: 204 }); }
+export async function GET() { return json({ ok: true, route: "init-workspace-keys" }, 200); }
 
-// Health check
-export async function GET() {
-  return json({ ok: true, route: "init-workspace-keys" }, 200);
-}
-
-// The actual initializer
 export async function POST(req: NextRequest) {
   const auth = req.headers.get("authorization") || "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : auth;
   if (!token || token !== process.env.ADMIN_TASKS_TOKEN) return badAuth();
 
   let workspaceId: string | undefined;
-  try {
-    const body = await req.json();
-    workspaceId = body?.workspaceId;
-  } catch {
-    // allow empty body
-  }
+  try { workspaceId = (await req.json())?.workspaceId; } catch {}
 
   try {
     if (workspaceId) {
@@ -61,10 +42,7 @@ export async function POST(req: NextRequest) {
       return json({ initialized: [workspaceId], keyRef }, 201);
     }
 
-    // init all missing
-    const { data: workspaces, error: wsErr } = await mca()
-      .from("workspaces")
-      .select("id");
+    const { data: workspaces, error: wsErr } = await mca().from("workspaces").select("id");
     if (wsErr) throw wsErr;
 
     const { data: haveKeys, error: hkErr } = await mca()
@@ -73,9 +51,7 @@ export async function POST(req: NextRequest) {
     if (hkErr) throw hkErr;
 
     const have = new Set((haveKeys ?? []).map((r: any) => r.workspace_id));
-    const targets = (workspaces ?? [])
-      .map((w: any) => w.id)
-      .filter((id: string) => !have.has(id));
+    const targets = (workspaces ?? []).map((w: any) => w.id).filter((id: string) => !have.has(id));
 
     const initialized: string[] = [];
     for (const id of targets) {
