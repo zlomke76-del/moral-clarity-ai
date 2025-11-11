@@ -225,31 +225,48 @@ export default function SolaceDock() {
     }
   }, []); // run once
 
-  // ---------- MEMORY BOOTSTRAP ---------------------------------------
-  const memoryCacheRef = useRef<MemoryRow[]>([]);
-  const [memReady, setMemReady] = useState(false);
+// ---------- MEMORY BOOTSTRAP (REPLACE THIS WHOLE useEffect) ----------
+useEffect(() => {
+  let alive = true;
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const qs = new URLSearchParams({ workspace_id: MCA_WORKSPACE_ID });
-        const r = await fetch(`/api/memory?${qs.toString()}`, { cache: "no-store" });
-        if (!alive) return;
-        if (r.ok) {
-          const j = await r.json().catch(() => ({ rows: [] }));
-          memoryCacheRef.current = Array.isArray(j?.rows) ? j.rows : [];
-        }
-      } catch {
-        // keep dock usable even if memory fetch fails
-      } finally {
-        if (alive) setMemReady(true);
+  (async () => {
+    try {
+      // Always send the active user key so we don’t fall back to "guest"
+      const userKey = MCA_USER_KEY || 'guest';
+
+      const r = await fetch(`/api/memory?limit=50`, {
+        cache: 'no-store',
+        headers: { 'X-User-Key': userKey },
+      });
+      if (!alive) return;
+
+      if (r.ok) {
+        const j = await r.json().catch(() => ({ rows: [] as any[] }));
+        const rows = Array.isArray(j?.rows) ? j.rows : [];
+
+        // Normalize to the local MemoryRow shape
+        memoryCacheRef.current = rows.map((m: any) => ({
+          id: String(m.id),
+          title: m.title ?? null,
+          content: String(m.content ?? ''),
+          created_at: m.created_at ?? undefined,
+        })) as MemoryRow[];
+      } else {
+        // Non-200 — clear cache so Solace doesn’t assume stale hints
+        memoryCacheRef.current = [];
       }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, []);
+    } catch {
+      // Silent failure — dock remains usable, just without hints
+      memoryCacheRef.current = [];
+    } finally {
+      if (alive) setMemReady(true);
+    }
+  })();
+
+  return () => {
+    alive = false;
+  };
+}, []);
 
   // ---------- actions -------------------------------------------------
   async function send() {
