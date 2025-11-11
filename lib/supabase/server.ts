@@ -1,11 +1,12 @@
 // lib/supabase/server.ts
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import type { Database } from "@/types/supabase";
 
-export function createServerSupabase() {
+export function createSupabaseServer() {
   const cookieStore = cookies();
 
-  return createServerClient(
+  return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -14,13 +15,13 @@ export function createServerSupabase() {
           return cookieStore.get(name)?.value;
         },
         set(name: string, value: string, options: any) {
-          // Next headers cookies are mutable in RSC
           cookieStore.set({ name, value, ...options });
         },
         remove(name: string, options: any) {
           cookieStore.set({ name, value: "", ...options, maxAge: 0 });
         },
       },
+      db: { schema: "mca" }, // <-- This is the critical part
     }
   );
 }
