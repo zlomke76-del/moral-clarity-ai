@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { initWorkspaceKey } from "../../../../server/memory-utils"; // <-- fixed depth
+import { initWorkspaceKey } from "@/lib/memory-utils"; // <— use alias via barrel
 import type { Database } from "@/types/supabase";
 
 export const runtime = "nodejs";
