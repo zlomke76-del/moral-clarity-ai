@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { initWorkspaceKey } from "@/lib/memory-utils"; // <— use alias via barrel
+import { initWorkspaceKey } from "@/lib/memory-utils";
 import type { Database } from "@/types/supabase";
 
 export const runtime = "nodejs";
@@ -19,6 +19,7 @@ function json(data: unknown, status = 200) {
   });
 }
 
+// Typed client; cast to reach mca schema tables without fighting generics
 const supa: SupabaseClient<Database> = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest) {
       return json({ initialized: [workspaceId], keyRef }, 201);
     }
 
+    // Initialize keys for all workspaces missing entries
     const { data: workspaces, error: wsErr } = await mca().from("workspaces").select("id");
     if (wsErr) throw wsErr;
 
@@ -51,7 +53,9 @@ export async function POST(req: NextRequest) {
     if (hkErr) throw hkErr;
 
     const have = new Set((haveKeys ?? []).map((r: any) => r.workspace_id));
-    const targets = (workspaces ?? []).map((w: any) => w.id).filter((id: string) => !have.has(id));
+    const targets = (workspaces ?? [])
+      .map((w: any) => w.id)
+      .filter((id: string) => !have.has(id));
 
     const initialized: string[] = [];
     for (const id of targets) {
