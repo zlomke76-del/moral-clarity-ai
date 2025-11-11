@@ -30,25 +30,6 @@ const POS_KEY = "solace:pos:v3";
 const MINISTRY_KEY = "solace:ministry";
 const PAD = 12;
 
-// ---- per-user key (guest-safe) ------------------------------------
-const USER_KEY_STORAGE = "mca_user_key_v1";
-function getUserKey(): string {
-  try {
-    // Prefer persisted key
-    let k = localStorage.getItem(USER_KEY_STORAGE);
-    if (!k) {
-      // Seed from env fallback if present, else random
-      const seed = MCA_USER_KEY && MCA_USER_KEY !== "guest" ? MCA_USER_KEY : "";
-      k = seed || "u_" + (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2));
-      localStorage.setItem(USER_KEY_STORAGE, k);
-    }
-    return k;
-  } catch {
-    // Hard fallback (server will still accept)
-    return MCA_USER_KEY || "guest";
-  }
-}
-
 const ui = {
   panelBg:
     "radial-gradient(140% 160% at 50% -60%, rgba(26,35,53,0.85) 0%, rgba(14,21,34,0.88) 60%)",
@@ -106,6 +87,21 @@ export default function SolaceDock() {
     if (!el) return;
     el.scrollTop = el.scrollHeight;
   }, [messages]);
+
+  // durable per-browser user key (default to MCA_USER_KEY, upgrade to local UUID)
+  const [userKey, setUserKey] = useState<string>(MCA_USER_KEY);
+  useEffect(() => {
+    try {
+      let k = localStorage.getItem("mc:user_key");
+      if (!k || k === "guest") {
+        k = "u_" + crypto.randomUUID();
+        localStorage.setItem("mc:user_key", k);
+      }
+      setUserKey(k);
+    } catch {
+      setUserKey(MCA_USER_KEY || "guest");
+    }
+  }, []);
 
   const ministryOn = useMemo(
     () => filters.has("abrahamic") && filters.has("ministry"),
@@ -268,7 +264,6 @@ export default function SolaceDock() {
     setStreaming(true);
 
     const activeFilters: string[] = Array.from(filters);
-    const userKey = getUserKey();
 
     try {
       const res = await fetch("/api/chat", {
@@ -276,7 +271,7 @@ export default function SolaceDock() {
         headers: {
           "Content-Type": "application/json",
           "X-Last-Mode": modeHint,
-          "X-User-Key": userKey, // ✅ server binds memory to this key
+          "X-User-Key": userKey, // ✅ header for server-side binding
         },
         body: JSON.stringify({
           messages: nextMsgs,
@@ -284,8 +279,10 @@ export default function SolaceDock() {
           stream: false,
           attachments: pendingFiles,
           ministry: activeFilters.includes("ministry"),
+          // 🔑 always pass identifiers
           workspace_id: MCA_WORKSPACE_ID,
-          user_key: userKey, // echo in body (optional)
+          user_key: userKey, // ✅ body for redundancy
+          // optional client-side preview cache
           memory_preview: memReady ? memoryCacheRef.current.slice(0, 50) : [],
         }),
       });
@@ -363,7 +360,7 @@ export default function SolaceDock() {
   }
 
   function toggleMic() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) {
       setMessages((m) => [
         ...m,
