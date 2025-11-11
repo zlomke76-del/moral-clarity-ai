@@ -1,52 +1,49 @@
-"use client";
+'use client';
 
 import { useState } from "react";
-import sendChat from "@/lib/sendChat";
+import { sendChat } from "@/lib/sendChat"; // ← named import
 
 export default function MoralClarityBox() {
   const [input, setInput] = useState("");
-  const [log, setLog] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
-  const [busy, setBusy] = useState(false);
 
-  async function handleSend() {
-    if (!input.trim()) return;
-    setBusy(true);
-
-    const next = [...log, { role: "user" as const, content: input }];
-    setLog(next);
+  async function onAsk() {
+    const text = input.trim();
+    if (!text) return;
     setInput("");
 
     try {
-      const text = await sendChat(next);
-      setLog([...next, { role: "assistant" as const, content: text }]);
-    } catch (e: any) {
-      setLog([...next, { role: "assistant" as const, content: `Error: ${e.message}` }]);
-    } finally {
-      setBusy(false);
+      const resp = await sendChat({
+        messages: [{ role: "user", content: text }],
+        stream: false,
+      });
+
+      // naive demo handling — adjust to your UI as needed
+      if (typeof resp === "string") {
+        console.log(resp);
+      } else if (resp?.text) {
+        console.log(resp.text);
+      } else {
+        console.log(resp);
+      }
+    } catch (e) {
+      console.error("sendChat failed:", e);
     }
   }
 
   return (
-    <div style={{ border: "1px solid #ccc", padding: "1rem", borderRadius: "8px" }}>
-      <div style={{ minHeight: "200px", marginBottom: "1rem", overflowY: "auto" }}>
-        {log.map((msg, i) => (
-          <div key={i}>
-            <strong>{msg.role === "user" ? "You" : "AI"}:</strong> {msg.content}
-          </div>
-        ))}
-      </div>
-      <div style={{ display: "flex", gap: "0.5rem" }}>
+    <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+      <div className="flex gap-2">
         <input
-          type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          style={{ flex: 1, padding: "0.5rem" }}
-          placeholder="Type your message..."
-          disabled={busy}
-          onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
+          placeholder="Ask anything…"
+          className="flex-1 rounded-md bg-neutral-800 px-3 py-2 text-sm text-neutral-100 outline-none"
         />
-        <button onClick={handleSend} disabled={busy || !input.trim()}>
-          {busy ? "..." : "Send"}
+        <button
+          onClick={onAsk}
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
+        >
+          Ask
         </button>
       </div>
     </div>
