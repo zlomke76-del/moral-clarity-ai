@@ -5,7 +5,7 @@ import {
   initWorkspaceKey,
   encryptIfNeeded,
   decryptIfPossible,
-} from "@/server/memory-utils";
+} from "../../../server/memory-utils"; // <<< changed from "@/server/memory-utils"
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -62,6 +62,9 @@ export async function GET(req: Request) {
       { status: ok ? 200 : 500 }
     );
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: e?.message ?? String(e) },
+      { status: 500 }
+    );
   }
 }
