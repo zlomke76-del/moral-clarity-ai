@@ -16,6 +16,7 @@ function corsHeaders(origin: string | null) {
     "Access-Control-Allow-Origin": allowed ? origin! : "null",
     "Access-Control-Allow-Methods": "GET,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Cache-Control": "no-store",
   };
 }
 
@@ -28,12 +29,24 @@ export async function GET(req: Request) {
   const origin = req.headers.get("origin");
   const headers = corsHeaders(origin);
 
+  const ok = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const memoryEnabled = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const webFlag =
+    process.env.NEXT_PUBLIC_OPENAI_WEB_ENABLED_flag ??
+    process.env.OPENAI_WEB_ENABLED_flag ??
+    null;
+
   return NextResponse.json(
     {
-      status: "ok",
+      ok,
       message: "Moral Clarity AI backend responding correctly.",
-      allowedOrigin: headers["Access-Control-Allow-Origin"],
-      timestamp: new Date().toISOString(),
+      memoryEnabled,
+      flags: { webEnabled: !!webFlag },
+      timestamps: { server: new Date().toISOString() },
+      env: {
+        NEXT_PUBLIC_SUPABASE_URL: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      },
     },
     { headers }
   );
