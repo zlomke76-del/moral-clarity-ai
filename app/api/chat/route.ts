@@ -131,7 +131,8 @@ const GUIDELINE_GUIDANCE = `GUIDANCE ADD-ON
 
 const RESPONSE_FORMAT = `RESPONSE FORMAT
 - Default: a single "Brief Answer" (2–5 sentences).
-- Add "Rationale" / "Next Steps" only if asked.`;
+- Add "Rationale" / "Next Steps" only if asked.
+- If a MEMORY PACK is present, prefer it over general disclaimers. On prompts like "What do you remember about me?", list the relevant memory items succinctly.`;
 
 /* scripture policy */
 function scripturePolicyText(opts: {
@@ -181,39 +182,13 @@ function isFirstRealTurn(messages: Array<{ role: string; content: string }>) {
 function hasEmotionalOrMoralCue(text: string) {
   const t = (text || '').toLowerCase();
   const emo = [
-    'hope',
-    'lost',
-    'afraid',
-    'fear',
-    'anxious',
-    'grief',
-    'sad',
-    'sorrow',
-    'depressed',
-    'stress',
-    'overwhelmed',
-    'lonely',
-    'comfort',
-    'forgive',
-    'forgiveness',
-    'guilt',
-    'shame',
-    'purpose',
-    'meaning',
+    'hope','lost','afraid','fear','anxious','grief','sad','sorrow','depressed',
+    'stress','overwhelmed','lonely','comfort','forgive','forgiveness','guilt',
+    'shame','purpose','meaning',
   ];
   const moral = [
-    'right',
-    'wrong',
-    'unfair',
-    'injustice',
-    'justice',
-    'truth',
-    'honest',
-    'dishonest',
-    'integrity',
-    'mercy',
-    'compassion',
-    'courage',
+    'right','wrong','unfair','injustice','justice','truth','honest','dishonest',
+    'integrity','mercy','compassion','courage',
   ];
   const hit = (arr: string[]) => arr.some((w) => t.includes(w));
   return hit(emo) || hit(moral);
@@ -253,13 +228,8 @@ function buildSystemPrompt(
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const id = setTimeout(() => reject(new Error('Request timed out')), ms);
-    p.then((v) => {
-      clearTimeout(id);
-      resolve(v);
-    }).catch((e) => {
-      clearTimeout(id);
-      reject(e);
-    });
+    p.then((v) => { clearTimeout(id); resolve(v); })
+     .catch((e) => { clearTimeout(id); reject(e); });
   });
 }
 
@@ -277,12 +247,8 @@ async function fetchAttachmentAsText(att: Attachment): Promise<string> {
     return out.text || '';
   }
 
-  if (
-    ct.includes('text/') ||
-    ct.includes('json') ||
-    ct.includes('csv') ||
-    /\.(?:txt|md|csv|json)$/i.test(att.name)
-  ) {
+  if (ct.includes('text/') || ct.includes('json') || ct.includes('csv') ||
+      /\.(?:txt|md|csv|json)$/i.test(att.name)) {
     return await res.text();
   }
 
@@ -317,9 +283,7 @@ function detectExplicitRemember(text: string) {
 export async function GET(req: NextRequest) {
   const origin = pickAllowedOrigin(req.headers.get('origin'));
   const backend = SOLACE_URL && SOLACE_KEY ? 'solace' : 'openai';
-  const memoryEnabled = Boolean(
-    process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
+  const memoryEnabled = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
   return NextResponse.json(
     { ok: true, model: MODEL, identity: SOLACE_NAME, backend, memoryEnabled },
     { headers: corsHeaders(origin) }
@@ -355,8 +319,7 @@ export async function POST(req: NextRequest) {
 
     const rolled = trimConversation(messages);
     const userAskedForSecular = wantsSecular(rolled);
-    const lastUser =
-      [...rolled].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content || '';
+    const lastUser = [...rolled].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content || '';
 
     /* Route -> Guidance flag */
     const lastModeHeader = req.headers.get('x-last-mode');
@@ -375,11 +338,7 @@ export async function POST(req: NextRequest) {
     }
     const effectiveFilters = Array.from(incoming);
 
-    const { prompt: baseSystem } = buildSystemPrompt(
-      effectiveFilters,
-      userAskedForSecular,
-      rolled
-    );
+    const { prompt: baseSystem } = buildSystemPrompt(effectiveFilters, userAskedForSecular, rolled);
 
     /* ===== MEMORY: recall pack (scoped) ===== */
     let userKey = getUserKeyFromReq(req, body);
@@ -389,23 +348,29 @@ export async function POST(req: NextRequest) {
     }
     const workspaceId: string = body?.workspace_id || MCA_WORKSPACE_ID;
 
-    const memoryEnabled = Boolean(
-      process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
+    const memoryEnabled = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 
+    // We keep hits accessible for the echo path
+    let hits: Array<any> = [];
     let memorySection = '';
+
     if (memoryEnabled) {
       try {
         const fallbackQuery =
-          rolled
-            .filter((m) => m.role === 'user')
-            .map((m) => m.content)
-            .slice(-3)
-            .join('\n') || 'general';
-        const query = lastUser || fallbackQuery;
+          rolled.filter((m) => m.role === 'user').map((m) => m.content).slice(-3).join('\n') || 'general';
+
+        // fold recent explicit "remember ..." clauses into query
+        const explicitInTurns = rolled
+          .filter((m) => m.role === 'user')
+          .map((m) => m.content.match(/\bremember(?:\s+that)?\s+(.+)/i)?.[1])
+          .filter(Boolean)
+          .join(' ; ');
+
+        const baseQuery = lastUser || fallbackQuery;
+        const query = [baseQuery, explicitInTurns].filter(Boolean).join(' | ');
 
         // ✅ Correct call signature: (user_key, query, k)
-        const hits = await searchMemories(userKey, query, 8);
+        hits = await searchMemories(userKey, query, 8);
 
         const pack = (hits ?? [])
           .map((m: any) => `• (${m.purpose ?? 'fact'}) ${m.content}`)
@@ -418,6 +383,17 @@ export async function POST(req: NextRequest) {
       } catch {
         memorySection = '';
       }
+    }
+
+    /* ===== Memory Echo: "what do you remember" fast path ===== */
+    const askedWhatYouRemember = /what\s+do\s+you\s+remember\b|remember\s+about\s+me\b/i.test(lastUser);
+    if (askedWhatYouRemember && hits && hits.length) {
+      const top = hits.slice(0, 10).map((m: any, i: number) => `${i + 1}. ${m.content}`).join('\n');
+      const text = `Here’s what I have noted:\n${top}`;
+      return NextResponse.json(
+        { text, model: 'memory-echo', identity: SOLACE_NAME, mode: route.mode, confidence: route.confidence, filters: effectiveFilters },
+        { headers: corsHeaders(echoOrigin) }
+      );
     }
 
     /* ===== WEB SEARCH (fresh context) ===== */
@@ -434,9 +410,7 @@ export async function POST(req: NextRequest) {
       if (wantsFresh && webFlag) {
         const results = await webSearch(lastUser, { news: true, max: 5 });
         if (Array.isArray(results) && results.length) {
-          const lines = results
-            .map((r: any, i: number) => `• [${i + 1}] ${r.title} — ${r.url}`)
-            .join('\n');
+          const lines = results.map((r: any, i: number) => `• [${i + 1}] ${r.title} — ${r.url}`).join('\n');
           webSection =
             `\n\nWEB CONTEXT (recent search)\n${lines}\n\nGuidance:\n- Use these results to answer directly.\n- Prefer the most recent and reputable sources.\n- If uncertain, say what is unknown.\n- When referencing items, use bracket numbers like [1], [2].`;
           hasWebContext = true;
@@ -468,9 +442,7 @@ export async function POST(req: NextRequest) {
             parts.push(block);
             total += block.length;
           } catch (e: any) {
-            parts.push(
-              `\n--- Attachment: ${att.name}\n[Error reading file: ${e?.message || e}]`
-            );
+            parts.push(`\n--- Attachment: ${att.name}\n[Error reading file: ${e?.message || e}]`);
           }
         }
 
@@ -505,23 +477,13 @@ export async function POST(req: NextRequest) {
           const ack = `Got it — I'll remember that: ${explicit}`;
           if (!wantStream) {
             return NextResponse.json(
-              {
-                text: ack,
-                model: 'memory',
-                identity: SOLACE_NAME,
-                mode: route.mode,
-                confidence: route.confidence,
-                filters: effectiveFilters,
-              },
+              { text: ack, model: 'memory', identity: SOLACE_NAME, mode: route.mode, confidence: route.confidence, filters: effectiveFilters },
               { headers: corsHeaders(echoOrigin) }
             );
           } else {
             const enc = new TextEncoder();
             const stream = new ReadableStream<Uint8Array>({
-              start(controller) {
-                controller.enqueue(enc.encode(ack));
-                controller.close();
-              },
+              start(controller) { controller.enqueue(enc.encode(ack)); controller.close(); },
             });
             return new NextResponse(stream as any, {
               headers: {
@@ -532,9 +494,7 @@ export async function POST(req: NextRequest) {
               },
             });
           }
-        } catch {
-          // fall through to normal generation
-        }
+        } catch { /* fall through */ }
       }
     }
 
@@ -549,40 +509,21 @@ export async function POST(req: NextRequest) {
       if (useSolace) {
         try {
           const text = await withTimeout(
-            solaceNonStream({
-              mode: route.mode,
-              userId,
-              userName,
-              system,
-              messages: rolledWithAttachments,
-              temperature: 0.2,
-            }),
+            solaceNonStream({ mode: route.mode, userId, userName, system, messages: rolledWithAttachments, temperature: 0.2 }),
             REQUEST_TIMEOUT_MS
           );
           return NextResponse.json(
-            {
-              text,
-              model: 'solace',
-              identity: SOLACE_NAME,
-              mode: route.mode,
-              confidence: route.confidence,
-              filters: effectiveFilters,
-            },
+            { text, model: 'solace', identity: SOLACE_NAME, mode: route.mode, confidence: route.confidence, filters: effectiveFilters },
             { headers: corsHeaders(echoOrigin) }
           );
-        } catch {
-          /* fallback to OpenAI */
-        }
+        } catch { /* fallback to OpenAI */ }
       }
 
       const openai: OpenAI = await getOpenAI();
       const resp = await withTimeout(
         openai.responses.create({
           model: MODEL,
-          input:
-            system +
-            '\n\n' +
-            rolledWithAttachments.map((m) => `${m.role}: ${m.content}`).join('\n'),
+          input: system + '\n\n' + rolledWithAttachments.map((m) => `${m.role}: ${m.content}`).join('\n'),
           max_output_tokens: 800,
           temperature: 0.2,
         }),
@@ -591,14 +532,7 @@ export async function POST(req: NextRequest) {
 
       const text = (resp as any).output_text?.trim() || '[No reply from model]';
       return NextResponse.json(
-        {
-          text,
-          model: MODEL,
-          identity: SOLACE_NAME,
-          mode: route.mode,
-          confidence: route.confidence,
-          filters: effectiveFilters,
-        },
+        { text, model: MODEL, identity: SOLACE_NAME, mode: route.mode, confidence: route.confidence, filters: effectiveFilters },
         { headers: corsHeaders(echoOrigin) }
       );
     }
@@ -606,14 +540,7 @@ export async function POST(req: NextRequest) {
     /* ===== Stream ===== */
     if (useSolace) {
       try {
-        const stream = await solaceStream({
-          mode: route.mode,
-          userId,
-          userName,
-          system,
-          messages: rolledWithAttachments,
-          temperature: 0.2,
-        });
+        const stream = await solaceStream({ mode: route.mode, userId, userName, system, messages: rolledWithAttachments, temperature: 0.2 });
         return new NextResponse(stream as any, {
           headers: {
             ...headersToRecord(corsHeaders(echoOrigin)),
@@ -622,9 +549,7 @@ export async function POST(req: NextRequest) {
             'X-Accel-Buffering': 'no',
           },
         });
-      } catch {
-        /* fallback to OpenAI */
-      }
+      } catch { /* fallback to OpenAI */ }
     }
 
     // OpenAI SSE fallback
@@ -638,20 +563,14 @@ export async function POST(req: NextRequest) {
         temperature: 0.2,
         messages: [
           { role: 'system', content: system },
-          ...rolledWithAttachments.map((m) => ({
-            role: m.role === 'assistant' ? 'assistant' : 'user',
-            content: m.content,
-          })),
+          ...rolledWithAttachments.map((m) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content })),
         ],
       }),
     });
 
     if (!r.ok || !r.body) {
       const t = await r.text().catch(() => '');
-      return new NextResponse(`Model error: ${r.status} ${t}`, {
-        status: 500,
-        headers: corsHeaders(echoOrigin),
-      });
+      return new NextResponse(`Model error: ${r.status} ${t}`, { status: 500, headers: corsHeaders(echoOrigin) });
     }
 
     return new NextResponse(r.body as any, {
@@ -664,16 +583,10 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     const echoOrigin = pickAllowedOrigin(req.headers.get('origin'));
-    const msg =
-      err?.message === 'Request timed out'
-        ? '⚠️ Connection timed out. Please try again.'
-        : err?.message || String(err);
+    const msg = err?.message === 'Request timed out' ? '⚠️ Connection timed out. Please try again.' : err?.message || String(err);
     return NextResponse.json(
       { error: msg, identity: SOLACE_NAME },
-      {
-        status: err?.message === 'Request timed out' ? 504 : 500,
-        headers: corsHeaders(echoOrigin),
-      }
+      { status: err?.message === 'Request timed out' ? 504 : 500, headers: corsHeaders(echoOrigin) }
     );
   }
 }
