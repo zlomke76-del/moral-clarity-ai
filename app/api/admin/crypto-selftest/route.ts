@@ -5,7 +5,7 @@ import {
   initWorkspaceKey,
   encryptIfNeeded,
   decryptIfPossible,
-} from "../../../../server/memory-utils"; // <-- fixed depth
+} from "@/lib/memory-utils"; // <— use alias via barrel
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
