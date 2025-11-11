@@ -3,8 +3,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { bucket } from "@/lib/storage";               // ✅ use helper that reads the env bucket
+import { bucket } from "@/lib/storage";
 import { useSolaceStore } from "@/app/providers/solace-store";
+import { MCA_WORKSPACE_ID, MCA_USER_KEY } from "@/lib/mca-config";
 
 declare global {
   interface Window {
@@ -17,6 +18,13 @@ declare global {
 type Message = { role: "user" | "assistant"; content: string };
 type ModeHint = "Create" | "Next Steps" | "Red Team" | "Neutral";
 type Attachment = { name: string; url: string; type: string };
+
+type MemoryRow = {
+  id: string;
+  title: string | null;
+  content: string;
+  created_at?: string;
+};
 
 const POS_KEY = "solace:pos:v3";
 const MINISTRY_KEY = "solace:ministry";
@@ -186,7 +194,7 @@ export default function SolaceDock() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(MINISTRY_KEY);
-      if (saved === "0") return; // user previously turned it off
+      if (saved === "0") return;
     } catch {}
 
     const hasAbrahamic = filters.has("abrahamic");
@@ -202,8 +210,37 @@ export default function SolaceDock() {
     }
   }, []); // run once
 
-  // ---------- actions -------------------------------------------------
+  // ---------- MEMORY BOOTSTRAP ---------------------------------------
+  // We keep memory rows in a ref (not shown in transcript) so we can
+  // include hints to the backend if needed, but primarily the server
+  // will re-query using workspace_id.
+  const memoryCacheRef = useRef<MemoryRow[]>([]);
+  const [memReady, setMemReady] = useState(false);
 
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        // Ensure workspace id is always present
+        const qs = new URLSearchParams({ workspace_id: MCA_WORKSPACE_ID });
+        const r = await fetch(`/api/memory?${qs.toString()}`, { cache: "no-store" });
+        if (!alive) return;
+        if (r.ok) {
+          const j = await r.json().catch(() => ({ rows: [] }));
+          memoryCacheRef.current = Array.isArray(j?.rows) ? j.rows : [];
+        }
+      } catch {
+        // silent — we keep the dock usable even if memory fetch fails
+      } finally {
+        if (alive) setMemReady(true);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // ---------- actions -------------------------------------------------
   async function send() {
     const text = input.trim();
     if (!text && pendingFiles.length === 0) return;
@@ -211,8 +248,8 @@ export default function SolaceDock() {
 
     setInput("");
     const userMsg = text || (pendingFiles.length ? "Attachments:" : "");
-    const next: Message[] = [...messages, { role: "user", content: userMsg }];
-    setMessages(next);
+    const nextMsgs: Message[] = [...messages, { role: "user", content: userMsg }];
+    setMessages(nextMsgs);
     setStreaming(true);
 
     const activeFilters: string[] = Array.from(filters);
@@ -225,11 +262,16 @@ export default function SolaceDock() {
           "X-Last-Mode": modeHint,
         },
         body: JSON.stringify({
-          messages: next,
+          messages: nextMsgs,
           filters: activeFilters,
           stream: false,
-          attachments: pendingFiles, // pass to backend
+          attachments: pendingFiles,
           ministry: activeFilters.includes("ministry"),
+          // 🔑 always pass identifiers so the server can bind/query memory
+          workspace_id: MCA_WORKSPACE_ID,
+          user_key: MCA_USER_KEY,
+          // optional client-side cache (server can ignore)
+          memory_preview: memReady ? memoryCacheRef.current.slice(0, 50) : [],
         }),
       });
 
@@ -252,7 +294,7 @@ export default function SolaceDock() {
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
     const out: Attachment[] = [];
-    const b = bucket(); // ✅ resolves to the env-configured bucket
+    const b = bucket();
     for (const f of Array.from(files)) {
       try {
         const path = `${crypto.randomUUID()}_${encodeURIComponent(f.name)}`;
@@ -505,6 +547,18 @@ export default function SolaceDock() {
           <span aria-hidden style={orbStyle} title="Alt+Click header to center/reset" />
           <span style={{ font: "600 13px system-ui", color: ui.text }}>Solace</span>
           <span style={{ font: "12px system-ui", color: ui.sub }}>Create with moral clarity</span>
+          {/* tiny status dot for memory load */}
+          <span
+            title={memReady ? "Memory ready" : "Loading memory…"}
+            style={{
+              marginLeft: 8,
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: memReady ? "#34d399" : "#f59e0b",
+              boxShadow: memReady ? "0 0 8px #34d399aa" : "none",
+            }}
+          />
         </div>
 
         {/* middle: lenses */}
@@ -669,5 +723,4 @@ export default function SolaceDock() {
 }
 
 /* ========= end component ========= */
-
 
