@@ -1,7 +1,7 @@
 // app/api/admin/init-workspace-keys/route.ts
 import { NextRequest } from "next/server";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { initWorkspaceKey } from "@/server/memory-utils";
+import { initWorkspaceKey } from "../../../server/memory-utils"; // <<< changed from "@/server/memory-utils"
 import type { Database } from "@/types/supabase";
 
 // Ensure Node runtime (not Edge) for crypto + service role
