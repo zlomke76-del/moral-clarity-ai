@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { Session } from '@supabase/supabase-js';
-import { createSupabaseBrowser } from '@/lib/supabase/client'; // ← unified client
+import { createSupabaseBrowser } from '@/lib/supabase/client';
 
 export default function HomeShell() {
   const router = useRouter();
