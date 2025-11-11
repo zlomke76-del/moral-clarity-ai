@@ -1,10 +1,10 @@
-// /app/api/memory/route.ts
+// app/api/memory/route.ts
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { supabaseService } from '@/lib/supabase';
 import { EMBEDDING_MODEL } from '@/lib/memory';
-
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 // --- helpers ---
 async function embed(text: string): Promise<number[]> {
@@ -133,3 +133,4 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: e?.message ?? String(e) }, { status: 500 });
   }
 }
+
