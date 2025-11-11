@@ -225,48 +225,50 @@ export default function SolaceDock() {
     }
   }, []); // run once
 
-// ---------- MEMORY BOOTSTRAP (REPLACE THIS WHOLE useEffect) ----------
-useEffect(() => {
-  let alive = true;
+  // ---------- MEMORY (refs + ready flag) ----------
+  const memoryCacheRef = useRef<MemoryRow[]>([]);
+  const [memReady, setMemReady] = useState(false);
 
-  (async () => {
-    try {
-      // Always send the active user key so we don’t fall back to "guest"
-      const userKey = MCA_USER_KEY || 'guest';
+  // ---------- MEMORY BOOTSTRAP ----------
+  useEffect(() => {
+    let alive = true;
 
-      const r = await fetch(`/api/memory?limit=50`, {
-        cache: 'no-store',
-        headers: { 'X-User-Key': userKey },
-      });
-      if (!alive) return;
+    (async () => {
+      try {
+        // Always send the active user key so we don’t fall back to "guest"
+        const r = await fetch(`/api/memory?limit=50`, {
+          cache: "no-store",
+          headers: { "X-User-Key": userKey || MCA_USER_KEY || "guest" },
+        });
+        if (!alive) return;
 
-      if (r.ok) {
-        const j = await r.json().catch(() => ({ rows: [] as any[] }));
-        const rows = Array.isArray(j?.rows) ? j.rows : [];
+        if (r.ok) {
+          const j = await r.json().catch(() => ({ rows: [] as any[] }));
+          const rows = Array.isArray(j?.rows) ? j.rows : [];
 
-        // Normalize to the local MemoryRow shape
-        memoryCacheRef.current = rows.map((m: any) => ({
-          id: String(m.id),
-          title: m.title ?? null,
-          content: String(m.content ?? ''),
-          created_at: m.created_at ?? undefined,
-        })) as MemoryRow[];
-      } else {
-        // Non-200 — clear cache so Solace doesn’t assume stale hints
+          // Normalize to the local MemoryRow shape
+          memoryCacheRef.current = rows.map((m: any) => ({
+            id: String(m.id),
+            title: m.title ?? null,
+            content: String(m.content ?? ""),
+            created_at: m.created_at ?? undefined,
+          })) as MemoryRow[];
+        } else {
+          // Non-200 — clear cache so Solace doesn’t assume stale hints
+          memoryCacheRef.current = [];
+        }
+      } catch {
+        // Silent failure — dock remains usable, just without hints
         memoryCacheRef.current = [];
+      } finally {
+        if (alive) setMemReady(true);
       }
-    } catch {
-      // Silent failure — dock remains usable, just without hints
-      memoryCacheRef.current = [];
-    } finally {
-      if (alive) setMemReady(true);
-    }
-  })();
+    })();
 
-  return () => {
-    alive = false;
-  };
-}, []);
+    return () => {
+      alive = false;
+    };
+  }, [userKey]);
 
   // ---------- actions -------------------------------------------------
   async function send() {
@@ -288,7 +290,7 @@ useEffect(() => {
         headers: {
           "Content-Type": "application/json",
           "X-Last-Mode": modeHint,
-          "X-User-Key": userKey, // ✅ header for server-side binding
+          "X-User-Key": userKey, // header for server-side binding
         },
         body: JSON.stringify({
           messages: nextMsgs,
@@ -296,9 +298,9 @@ useEffect(() => {
           stream: false,
           attachments: pendingFiles,
           ministry: activeFilters.includes("ministry"),
-          // 🔑 always pass identifiers
+          // always pass identifiers
           workspace_id: MCA_WORKSPACE_ID,
-          user_key: userKey, // ✅ body for redundancy
+          user_key: userKey, // body for redundancy
           // optional client-side preview cache
           memory_preview: memReady ? memoryCacheRef.current.slice(0, 50) : [],
         }),
