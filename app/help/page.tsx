@@ -1,7 +1,9 @@
 // app/health/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+export const metadata = { robots: { index: false, follow: false } };
 
 type Health = {
   ok: boolean;
@@ -15,23 +17,45 @@ type Health = {
 export default function HealthPage() {
   const [data, setData] = useState<Health | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [ms, setMs] = useState<number | null>(null);
+  const timer = useRef<number | null>(null);
 
   async function load() {
     setErr(null);
+    const t0 = performance.now();
     try {
-      const r = await fetch('/api/health', { cache: 'no-store' });
+      const r = await fetch('/api/health', {
+        cache: 'no-store',
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' },
+      });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const j = (await r.json()) as Health;
       setData(j);
+      setMs(Math.round(performance.now() - t0));
     } catch (e: any) {
       setErr(e?.message ?? 'failed to load');
+      setMs(null);
     }
   }
 
   useEffect(() => {
-    load();
-    const id = setInterval(load, 15000); // auto-refresh every 15s
-    return () => clearInterval(id);
+    function start() {
+      load();
+      timer.current = window.setInterval(load, 15000);
+    }
+    function stop() {
+      if (timer.current) window.clearInterval(timer.current);
+      timer.current = null;
+    }
+    // start/stop with tab visibility
+    const onVis = () => (document.hidden ? stop() : start());
+    start();
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', onVis);
+    };
   }, []);
 
   const badge = (on: boolean, label: string) => (
@@ -45,7 +69,10 @@ export default function HealthPage() {
     <main className="min-h-screen bg-neutral-950 text-neutral-100">
       <div className="mx-auto max-w-4xl px-4 py-10">
         <h1 className="text-2xl font-semibold tracking-tight">System Health</h1>
-        <p className="mt-1 text-sm opacity-70">Live status pulled from <code className="opacity-80">/api/health</code>.</p>
+        <p className="mt-1 text-sm opacity-70">
+          Live status pulled from <code className="opacity-80">/api/health</code>
+          {ms !== null ? <span className="ml-2 opacity-60">· {ms} ms</span> : null}
+        </p>
 
         <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
           {err && (
@@ -54,49 +81,4 @@ export default function HealthPage() {
             </div>
           )}
 
-          {!data && !err && (
-            <div className="opacity-70">Loading…</div>
-          )}
-
-          {data && (
-            <>
-              <div className="flex flex-wrap gap-3">
-                {badge(data.ok, 'Backend reachable')}
-                {badge(data.memoryEnabled, 'Supabase (SRK)')}
-                {badge(data.flags.webEnabled, 'Web search enabled')}
-                {badge(data.env.NEXT_PUBLIC_SUPABASE_URL, 'SUPABASE_URL')}
-                {badge(data.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, 'ANON_KEY')}
-              </div>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl border border-white/10 bg-black/20 p-4">
-                  <div className="text-xs uppercase tracking-wide opacity-60">Message</div>
-                  <div className="mt-1 text-sm">{data.message}</div>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-black/20 p-4">
-                  <div className="text-xs uppercase tracking-wide opacity-60">Server Time</div>
-                  <div className="mt-1 text-sm">{new Date(data.timestamps.server).toLocaleString()}</div>
-                </div>
-              </div>
-
-              <div className="mt-6 flex gap-2">
-                <button
-                  onClick={load}
-                  className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm hover:bg-white/15"
-                >
-                  Refresh
-                </button>
-                <a
-                  href="/api/health"
-                  className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm hover:bg-white/15"
-                >
-                  View JSON
-                </a>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    </main>
-  );
-}
+          {!data && !err && <div className="
