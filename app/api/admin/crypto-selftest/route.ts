@@ -5,7 +5,7 @@ import {
   initWorkspaceKey,
   encryptIfNeeded,
   decryptIfPossible,
-} from "@/lib/memory-utils"; // <— use alias via barrel
+} from "@/lib/memory-utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,3 +63,4 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 500 });
   }
 }
+
