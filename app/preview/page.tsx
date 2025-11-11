@@ -3,10 +3,10 @@
 // Visit: https://studio.moralclarity.ai/preview?k=YOUR_PREVIEW_KEY
 // Set PREVIEW_KEY in Vercel env. Delete this file when done.
 
-import { notFound, redirect } from "next/navigation";
-import FeatureGrid from "@/app/components/FeatureGrid";
+import { notFound, redirect } from 'next/navigation';
+import FeatureGrid from '@/app/(marketing)/_components/FeatureGrid';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 export const metadata = { robots: { index: false, follow: false } };
 
 export default function PreviewPage({
@@ -16,8 +16,8 @@ export default function PreviewPage({
 }) {
   const requiredKey = process.env.PREVIEW_KEY;
 
-  if (process.env.PREVIEW_DISABLED === "true") {
-    redirect("/");
+  if (process.env.PREVIEW_DISABLED === 'true') {
+    redirect('/');
   }
 
   if (requiredKey) {
