@@ -6,12 +6,15 @@ import { EMBEDDING_MODEL } from '@/lib/memory';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// Utility: create an embedding via OpenAI
+// --- helpers ---
 async function embed(text: string): Promise<number[]> {
   const res = await fetch('https://api.openai.com/v1/embeddings', {
     method: 'POST',
-    headers: { 'Content-Type':'application/json', 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` },
-    body: JSON.stringify({ model: EMBEDDING_MODEL, input: text })
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({ model: EMBEDDING_MODEL, input: text }),
   });
   const j = await res.json();
   return j?.data?.[0]?.embedding ?? [];
@@ -19,13 +22,9 @@ async function embed(text: string): Promise<number[]> {
 
 /**
  * POST /api/memory
- * Body: { workspace_id: string, title?: string, content?: string, kind?: 'profile'|'preference'|'fact'|'task'|'note', user_key?: string, weight?: number, expires_at?: string|null }
- * - If 'content' is present, we compute and store an embedding (for user_memories path).
- * - If only title/content for workspace memory catalog is desired, it inserts into mca.memories.
- *
- * Choose behavior via 'mode':
- *   mode = 'user' (default) => writes to public.user_memories (vector search path).
- *   mode = 'workspace' => writes to mca.memories (simple catalog/listing).
+ * mode = 'user' | 'workspace'  (default 'user')
+ *  - user: writes to public.user_memories (requires content; no workspace_id)
+ *  - workspace: writes to mca.memories (requires workspace_id)
  */
 export async function POST(req: Request) {
   try {
@@ -38,40 +37,35 @@ export async function POST(req: Request) {
       title,
       content,
       kind = 'note',
-      user_key = 'owner', // you can pass a stable per-user key here
+      user_key = 'owner',
       weight = 1,
-      expires_at = null
+      expires_at = null,
     } = body ?? {};
 
-    if (!workspace_id) {
-      return NextResponse.json({ error: 'workspace_id required' }, { status: 400 });
-    }
-
     if (mode === 'workspace') {
-      // Insert into schema mca.memories (no vector embedding)
+      if (!workspace_id) {
+        return NextResponse.json({ error: 'workspace_id required' }, { status: 400 });
+      }
       const { data, error } = await sb
         .schema('mca')
         .from('memories')
         .insert([{ workspace_id, title: title ?? (content ?? '').slice(0, 80), content }])
         .select('id')
         .single();
-
       if (error) throw error;
       return NextResponse.json({ id: data.id }, { status: 201 });
     }
 
-    // Default: user memory with embedding into public.user_memories
+    // mode === 'user'
     if (!content) {
       return NextResponse.json({ error: 'content required for user memory' }, { status: 400 });
     }
     const vector = await embed(content);
-
     const { data, error } = await sb
       .from('user_memories')
       .insert([{ user_key, kind, content, weight, expires_at, embedding: vector }])
       .select('id')
       .single();
-
     if (error) throw error;
     return NextResponse.json({ id: data.id }, { status: 201 });
   } catch (e: any) {
@@ -81,12 +75,9 @@ export async function POST(req: Request) {
 
 /**
  * GET /api/memory
- * Query:
- *   mode = 'user' | 'workspace' (default 'workspace' to list mca.memories)
- *   workspace_id (required for workspace mode)
- *   user_key (required for user search)
- *   q = string (optional; if set and mode=user => vector search via RPC; if blank => no-op)
- *   limit (optional; default 25)
+ * mode=workspace&workspace_id=... -> list mca.memories
+ * mode=user&user_key=...&q=...   -> vector search via RPC
+ * mode=user&user_key=...         -> latest raw user_memories
  */
 export async function GET(req: Request) {
   try {
@@ -107,19 +98,18 @@ export async function GET(req: Request) {
         .eq('workspace_id', workspace_id)
         .order('created_at', { ascending: false })
         .limit(limit);
-
       if (error) throw error;
       return NextResponse.json({ rows: data ?? [] });
     }
 
-    // user vector search
+    // mode === 'user'
     const user_key = url.searchParams.get('user_key');
     const q = url.searchParams.get('q') ?? '';
     if (!user_key) {
       return NextResponse.json({ error: 'user_key required for mode=user' }, { status: 400 });
     }
+
     if (!q) {
-      // No query? Return the most recent raw user_memories
       const { data, error } = await sb
         .from('user_memories')
         .select('id,kind,content,weight,created_at')
@@ -130,25 +120,13 @@ export async function GET(req: Request) {
       return NextResponse.json({ rows: data ?? [] });
     }
 
-    // Vector search via RPC
-    // NOTE: expects the RPC function `match_user_memories(p_user_key, p_query_embedding, p_match_count)`
-    //       to exist in your database (as per your earlier setup).
-    const qvec = await (async () => {
-      const res = await fetch('https://api.openai.com/v1/embeddings', {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json', 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` },
-        body: JSON.stringify({ model: EMBEDDING_MODEL, input: q })
-      });
-      const j = await res.json();
-      return j?.data?.[0]?.embedding ?? [];
-    })();
-
+    // vector search via RPC match_user_memories
+    const qvec = await embed(q);
     const { data, error } = await sb.rpc('match_user_memories', {
       p_user_key: user_key,
       p_query_embedding: qvec,
-      p_match_count: limit
+      p_match_count: limit,
     });
-
     if (error) throw error;
     return NextResponse.json({ rows: data ?? [] });
   } catch (e: any) {
