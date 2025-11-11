@@ -30,6 +30,25 @@ const POS_KEY = "solace:pos:v3";
 const MINISTRY_KEY = "solace:ministry";
 const PAD = 12;
 
+// ---- per-user key (guest-safe) ------------------------------------
+const USER_KEY_STORAGE = "mca_user_key_v1";
+function getUserKey(): string {
+  try {
+    // Prefer persisted key
+    let k = localStorage.getItem(USER_KEY_STORAGE);
+    if (!k) {
+      // Seed from env fallback if present, else random
+      const seed = MCA_USER_KEY && MCA_USER_KEY !== "guest" ? MCA_USER_KEY : "";
+      k = seed || "u_" + (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2));
+      localStorage.setItem(USER_KEY_STORAGE, k);
+    }
+    return k;
+  } catch {
+    // Hard fallback (server will still accept)
+    return MCA_USER_KEY || "guest";
+  }
+}
+
 const ui = {
   panelBg:
     "radial-gradient(140% 160% at 50% -60%, rgba(26,35,53,0.85) 0%, rgba(14,21,34,0.88) 60%)",
@@ -211,9 +230,6 @@ export default function SolaceDock() {
   }, []); // run once
 
   // ---------- MEMORY BOOTSTRAP ---------------------------------------
-  // We keep memory rows in a ref (not shown in transcript) so we can
-  // include hints to the backend if needed, but primarily the server
-  // will re-query using workspace_id.
   const memoryCacheRef = useRef<MemoryRow[]>([]);
   const [memReady, setMemReady] = useState(false);
 
@@ -221,7 +237,6 @@ export default function SolaceDock() {
     let alive = true;
     (async () => {
       try {
-        // Ensure workspace id is always present
         const qs = new URLSearchParams({ workspace_id: MCA_WORKSPACE_ID });
         const r = await fetch(`/api/memory?${qs.toString()}`, { cache: "no-store" });
         if (!alive) return;
@@ -230,7 +245,7 @@ export default function SolaceDock() {
           memoryCacheRef.current = Array.isArray(j?.rows) ? j.rows : [];
         }
       } catch {
-        // silent — we keep the dock usable even if memory fetch fails
+        // keep dock usable even if memory fetch fails
       } finally {
         if (alive) setMemReady(true);
       }
@@ -253,6 +268,7 @@ export default function SolaceDock() {
     setStreaming(true);
 
     const activeFilters: string[] = Array.from(filters);
+    const userKey = getUserKey();
 
     try {
       const res = await fetch("/api/chat", {
@@ -260,6 +276,7 @@ export default function SolaceDock() {
         headers: {
           "Content-Type": "application/json",
           "X-Last-Mode": modeHint,
+          "X-User-Key": userKey, // ✅ server binds memory to this key
         },
         body: JSON.stringify({
           messages: nextMsgs,
@@ -267,10 +284,8 @@ export default function SolaceDock() {
           stream: false,
           attachments: pendingFiles,
           ministry: activeFilters.includes("ministry"),
-          // 🔑 always pass identifiers so the server can bind/query memory
           workspace_id: MCA_WORKSPACE_ID,
-          user_key: MCA_USER_KEY,
-          // optional client-side cache (server can ignore)
+          user_key: userKey, // echo in body (optional)
           memory_preview: memReady ? memoryCacheRef.current.slice(0, 50) : [],
         }),
       });
@@ -723,4 +738,3 @@ export default function SolaceDock() {
 }
 
 /* ========= end component ========= */
-
