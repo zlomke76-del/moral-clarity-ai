@@ -9,6 +9,7 @@ export function createSupabaseBrowser() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: {
+        // PKCE flow, matches server-side client
         flowType: 'pkce',
       },
     }
