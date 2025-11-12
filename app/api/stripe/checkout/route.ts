@@ -1,22 +1,31 @@
 // app/api/checkout/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
 import crypto from "crypto";
 import { PLAN_TO_PRICE, PLAN_META, inferPlanFromPriceId, type PlanSlug } from "@/lib/pricing";
 
-// Let Stripe pick the account's default API version to avoid TS literal issues
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+type StripeCtor = typeof import("stripe").default;
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) return null;
+  const Stripe = (require("stripe") as { default: StripeCtor }).default;
+  // Let Stripe choose default account API version
+  return new Stripe(key);
+}
+
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://moralclarity.ai";
 
 export async function POST(req: NextRequest) {
   try {
+    const stripe = getStripe();
+    if (!stripe) {
+      return NextResponse.json({ error: "Stripe is not configured" }, { status: 503 });
+    }
+
     const { userId, priceId: rawPriceId, orgName, plan: rawPlan } = await req.json();
 
-    // Accept either a plan slug or a priceId
     const plan = (rawPlan as PlanSlug | undefined)?.toLowerCase() as PlanSlug | undefined;
     const priceId = rawPriceId || (plan ? PLAN_TO_PRICE[plan] : undefined);
 
-    // If still no plan, try to infer from priceId
     const canonicalPlan = plan ?? (priceId ? inferPlanFromPriceId(priceId) : null);
     if (!priceId || !canonicalPlan) {
       return NextResponse.json({ error: "Missing plan/priceId" }, { status: 400 });
@@ -24,7 +33,6 @@ export async function POST(req: NextRequest) {
 
     const meta = PLAN_META[canonicalPlan];
 
-    // userId is optional; still recorded if present
     const idempotencyKey = crypto
       .createHash("sha256")
       .update(`${userId ?? "anon"}:${priceId}:${Date.now()}`)
@@ -54,4 +62,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Failed to create checkout" }, { status: 500 });
   }
 }
-
