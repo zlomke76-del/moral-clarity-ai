@@ -1,3 +1,4 @@
+// lib/supabaseBrowser.ts
 'use client';
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
@@ -26,7 +27,7 @@ export function getSupabaseBrowser(): SupabaseClient {
       autoRefreshToken: true,
       detectSessionInUrl: true,
       flowType: 'pkce',
-      multiTab: false, // flip to true later if you need cross-tab sync
+      multiTab: false, // enable later if you want cross-tab auth
       storageKey,
     },
     global: { headers: { 'x-app': 'moralclarity-studio' } },
@@ -35,3 +36,6 @@ export function getSupabaseBrowser(): SupabaseClient {
   globalThis.__SB_CLIENT__ = client;
   return client;
 }
+
+// 🔁 Back-compat alias for older imports:
+export const createSupabaseBrowser = getSupabaseBrowser;
