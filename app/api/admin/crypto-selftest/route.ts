@@ -7,9 +7,9 @@ import {
   initWorkspaceKey,
   encryptIfNeeded,
   decryptIfPossible,
-} from "../../../server/memory-utils";
+} from "../../../../server/memory-utils";
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "../../../types/supabase";
+import type { Database } from "../../../../types/supabase";
 
 function getAdminSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -19,15 +19,14 @@ function getAdminSupabase() {
 }
 
 /**
- * Simple round-trip to verify workspace AES-GCM:
- *   GET/POST with { workspaceId } or ?workspaceId=
- *   Returns { ok, workspace_id, key_id, ciphertext, roundtripPlain, wasEncrypted }
+ * Round-trip AES-GCM self-test:
+ *  - POST/GET { workspaceId } or ?workspaceId=
+ *  - returns { ok, workspace_id, key_id, ciphertext, roundtripPlain, wasEncrypted }
  */
 export async function POST(req: Request) {
   try {
     const supabase = getAdminSupabase();
 
-    // Accept workspaceId from JSON body or query string
     const url = new URL(req.url);
     const contentType = req.headers.get("content-type") || "";
     let workspaceId: string | undefined =
@@ -41,10 +40,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "workspaceId required" }, { status: 400 });
     }
 
-    // Ensure key exists / fetch key id
     const ref = await initWorkspaceKey(supabase, workspaceId);
 
-    // Encrypt a probe string then decrypt it
     const probe = `mca-crypto-selftest:${new Date().toISOString()}`;
     const enc = await encryptIfNeeded(supabase, workspaceId, probe, "secret");
     const dec = await decryptIfPossible(supabase, workspaceId, enc.storedContent);
@@ -63,12 +60,11 @@ export async function POST(req: Request) {
     console.error("[crypto-selftest] error:", err?.message ?? err);
     return NextResponse.json(
       { ok: false, error: err?.message ?? "selftest error" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
 
 export async function GET(req: Request) {
-  // Convenience GET for quick checks
   return POST(req);
 }
