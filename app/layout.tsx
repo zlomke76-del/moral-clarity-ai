@@ -5,6 +5,11 @@ import "./globals.css";
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+export const runtime = 'nodejs';
+
 import TopNav from "@/components/TopNav";          // global sub-nav
 import Breadcrumb from "@/components/Breadcrumb";  // contextual crumb bar
 import DemoBadge from "@/components/DemoBadge";    // small “Demo” chip
