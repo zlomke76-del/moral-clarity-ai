@@ -15,8 +15,10 @@ export default function CallbackShell() {
 
   useEffect(() => {
     let active = true;
+
     (async () => {
       try {
+        // Ensure we have a session or exchange the code from the URL
         const { data, error } = await supabase.auth.getSession();
         if (!active) return;
 
@@ -27,8 +29,10 @@ export default function CallbackShell() {
         }
 
         if (!data.session) {
-          const { error: xErr } =
-            await supabase.auth.exchangeCodeForSession(window.location.href);
+          // Supabase can parse the current URL for the `code` param
+          const { error: xErr } = await supabase.auth.exchangeCodeForSession(
+            typeof window !== "undefined" ? window.location.href : ""
+          );
           if (xErr) {
             setStatus("error");
             setMessage(xErr.message || "Could not complete sign-in.");
@@ -38,7 +42,9 @@ export default function CallbackShell() {
 
         setStatus("ok");
         setMessage("Signed in. Redirecting…");
-        const next = searchParams.get("next") ?? "/app";
+
+        // Null-safe read of query param under strictNullChecks
+        const next = (searchParams?.get("next") ?? "/app").toString();
         router.replace(next);
       } catch (e: any) {
         if (!active) return;
@@ -46,7 +52,10 @@ export default function CallbackShell() {
         setMessage(e?.message ?? "Unexpected error during sign-in.");
       }
     })();
-    return () => { active = false; };
+
+    return () => {
+      active = false;
+    };
   }, [router, searchParams, supabase]);
 
   return (
