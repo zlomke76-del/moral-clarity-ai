@@ -3,8 +3,9 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { initWorkspaceKey } from "@/lib/memory-utils";
 import type { Database } from "@/types/supabase";
 
-export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 
 function badAuth() {
   return new Response(JSON.stringify({ error: "Unauthorized" }), {
