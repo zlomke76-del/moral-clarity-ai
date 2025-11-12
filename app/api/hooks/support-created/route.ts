@@ -1,3 +1,4 @@
+export const runtime = "nodejs";
 // Mark as a module and keep Next from statically optimizing this
 export const dynamic = "force-dynamic";
 
