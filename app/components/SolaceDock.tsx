@@ -1,4 +1,3 @@
-// app/components/SolaceDock.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -42,9 +41,6 @@ const ui = {
     "0 0 0 1px rgba(251,191,36,.25) inset, 0 0 90px rgba(251,191,36,.14), 0 22px 70px rgba(0,0,0,.55)",
   shadow: "0 14px 44px rgba(0,0,0,.45)",
 };
-
-const cx = (...xs: Array<string | false | null | undefined>) =>
-  xs.filter(Boolean).join(" ");
 
 export default function SolaceDock() {
   // ensure single mount
@@ -754,3 +750,4 @@ export default function SolaceDock() {
 }
 
 /* ========= end component ========= */
+
