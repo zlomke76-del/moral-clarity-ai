@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
-import { getSupabaseBrowser } from '@/lib/supabaseBrowser';
+import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
 
 type RetryState = {
   tries: number;
@@ -10,7 +10,9 @@ type RetryState = {
 };
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
-  const supabase = getSupabaseBrowser();
+  // Correct Supabase client factory
+  const supabase = createSupabaseBrowser();
+
   const [ready, setReady] = useState(false);
   const unsubRef = useRef<() => void>();
   const retryRef = useRef<RetryState>({ tries: 0 });
@@ -21,10 +23,10 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     const backoff = (status?: number) => {
       if (status !== 429) return 0;
       const tries = ++retryRef.current.tries;
-      // Exponential backoff: 0.5s → 1s → 2s → 4s → 8s (capped)
-      return Math.min(8000, 500 * Math.pow(2, tries - 1));
+      return Math.min(8000, 500 * Math.pow(2, tries - 1)); // 0.5s → 1 → 2 → 4 → 8
     };
 
+    // Initial session load
     (async () => {
       const { error } = await supabase.auth.getSession();
       if (!alive) return;
@@ -32,14 +34,16 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       setReady(true);
     })();
 
+    // Auth state change subscription
     const { data: sub } = supabase.auth.onAuthStateChange(
       async (_event: AuthChangeEvent, session: Session | null) => {
         try {
-          // Optionally ping a tiny authorized endpoint to detect 429/400
-        } catch (e: any) {
-          const status = e?.status ?? e?.response?.status;
+          // Optionally: call an authenticated endpoint to detect 429s
+        } catch (err: any) {
+          const status = err?.status ?? err?.response?.status;
           const delay = backoff(status);
           if (delay > 0) {
+            // Retry refresh with exponential backoff
             if (retryRef.current.timer) clearTimeout(retryRef.current.timer);
             retryRef.current.timer = setTimeout(
               () => supabase.auth.refreshSession(),
@@ -50,13 +54,14 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (!session) {
+          // Signed out → make sure client reflects that
           try {
             await supabase.auth.signOut();
           } catch {
-            // ignore signOut failures
+            // ignore
           }
         } else {
-          // Successful auth → reset backoff
+          // Reset retry state on success
           retryRef.current.tries = 0;
         }
       }
@@ -67,9 +72,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       alive = false;
       unsubRef.current?.();
-      if (retryRef.current.timer) {
-        clearTimeout(retryRef.current.timer);
-      }
+      if (retryRef.current.timer) clearTimeout(retryRef.current.timer);
     };
   }, [supabase]);
 
