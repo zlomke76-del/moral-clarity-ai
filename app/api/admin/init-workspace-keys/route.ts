@@ -1,53 +1,29 @@
-// app/api/admin/init-workspace-keys/route.ts
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
-import { initWorkspaceKey } from "../../../../server/memory-utils";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "../../../../types/supabase";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
+import { initWorkspaceKey } from "@/server/memory-utils";
 
-function getAdminSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-  if (!url || !key) throw new Error("Supabase env not configured");
-  return createClient<Database>(url, key, { db: { schema: "mca" } });
-}
+export const runtime = "nodejs";
 
-/**
- * Initialize (or fetch) the per-workspace encryption key.
- * Accepts workspaceId via JSON body { workspaceId } or search param ?workspaceId=
- */
-export async function POST(req: Request) {
-  try {
-    const supabase = getAdminSupabase();
-
-    const contentType = req.headers.get("content-type") || "";
-    let workspaceId: string | undefined;
-
-    if (contentType.includes("application/json")) {
-      const body = (await req.json()) ?? {};
-      workspaceId = body.workspaceId || body.workspace_id;
-    } else {
-      const url = new URL(req.url);
-      workspaceId = url.searchParams.get("workspaceId") ?? undefined;
-    }
-
-    if (!workspaceId) {
-      return NextResponse.json({ error: "workspaceId required" }, { status: 400 });
-    }
-
-    const ref = await initWorkspaceKey(supabase, workspaceId);
-    return NextResponse.json({ ok: true, ...ref });
-  } catch (err: any) {
-    console.error("[init-workspace-keys] error:", err?.message ?? err);
-    return NextResponse.json(
-      { ok: false, error: err?.message ?? "init error" },
-      { status: 500 }
-    );
+export async function POST(request: Request) {
+  const { workspaceId } = await request.json();
+  if (!workspaceId) {
+    return NextResponse.json({ ok: false, error: "workspaceId required" }, { status: 400 });
   }
-}
 
-export async function GET(req: Request) {
-  return POST(req);
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get: (name: string) => cookies().get(name)?.value,
+        set: () => {},
+        remove: () => {},
+      } as any,
+    }
+  );
+
+  const ref = await initWorkspaceKey(supabase as any, workspaceId);
+  return NextResponse.json({ ok: true, ref });
 }
