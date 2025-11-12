@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
         },
       },
       auth: {
-        // Must match the browser client
+        // Must match browser client (PKCE)
         flowType: 'pkce',
       },
     },
