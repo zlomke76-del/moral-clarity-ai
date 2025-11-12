@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import type { FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
 
 export default function SignIn() {
@@ -9,7 +8,6 @@ export default function SignIn() {
   const [email, setEmail] = useState('');
   const [err, setErr] = useState<string | null>(null);
 
-  // pick up any ?err= from callback redirects
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const e = params.get('err');
@@ -26,16 +24,11 @@ export default function SignIn() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          // Supabase will send a link that lands here, then our route
-          // will call auth.exchangeCodeForSession and redirect to /app.
           emailRedirectTo: `${window.location.origin}/auth/callback?next=/app`,
         },
       });
 
-      if (error) {
-        throw error;
-      }
-
+      if (error) throw error;
       setEmailSent(true);
     } catch (e: any) {
       console.error('[auth/sign-in] magic link error', e);
@@ -47,7 +40,6 @@ export default function SignIn() {
     <main className="min-h-screen grid place-items-center p-6">
       <div className="w-full max-w-md rounded-xl border border-neutral-800 p-6 bg-black/40">
         <h1 className="text-xl font-semibold mb-4">Sign in</h1>
-
         {emailSent ? (
           <p>Check your email for a magic link.</p>
         ) : (
@@ -60,14 +52,12 @@ export default function SignIn() {
               onChange={(e) => setEmail(e.target.value)}
               required
             />
-
             <button
               className="w-full rounded-md bg-amber-500/90 hover:bg-amber-500 p-3 font-medium"
               type="submit"
             >
               Send magic link
             </button>
-
             {err && <p className="text-red-400 text-sm">{err}</p>}
           </form>
         )}
@@ -75,3 +65,4 @@ export default function SignIn() {
     </main>
   );
 }
+
