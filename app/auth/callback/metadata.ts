@@ -1,5 +1,7 @@
-import type { Metadata } from "next";
+// app/auth/callback/metadata.ts
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  robots: { index: false, follow: false },
+  title: 'Sign in – Moral Clarity AI',
+  robots: { index: false },
 };
