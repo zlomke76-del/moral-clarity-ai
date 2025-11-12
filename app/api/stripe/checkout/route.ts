@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { PLAN_TO_PRICE, PLAN_META, inferPlanFromPriceId, type PlanSlug } from "@/lib/pricing";
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 type StripeCtor = typeof import("stripe").default;
 function getStripe() {
