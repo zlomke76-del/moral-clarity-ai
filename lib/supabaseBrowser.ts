@@ -1,31 +1,17 @@
 // lib/supabaseBrowser.ts
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+'use client';
 
-let client: SupabaseClient | null = null;
+import { createBrowserClient } from '@supabase/ssr';
 
-export function getSupabaseBrowser() {
-  if (client) return client;
-
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  const storageKey =
-    process.env.NEXT_PUBLIC_SUPABASE_STORAGE_KEY || 'mc-auth';
-
-  client = createClient(url, anon, {
-    auth: {
-      // valid v2 options
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      flowType: 'pkce',
-      storageKey,
-      // ❌ no "multiTab" option in v2
-    },
-    global: { headers: { 'x-app': 'moralclarity-studio' } },
-  });
-
-  return client;
+export function createSupabaseBrowser() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        // Critical: tells Supabase to use PKCE and store code_verifier
+        flowType: 'pkce',
+      },
+    }
+  );
 }
-
-// keep backward compatibility for files importing createSupabaseBrowser
-export const createSupabaseBrowser = getSupabaseBrowser;
