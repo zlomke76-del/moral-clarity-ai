@@ -1,61 +1,58 @@
-// app/auth/callback/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  const [status, setStatus] = useState<'loading' | 'error'>('loading');
-  const [message, setMessage] = useState<string | null>(null);
+  const supabase = createSupabaseBrowser();
 
   useEffect(() => {
+    let cancelled = false;
+
     const run = async () => {
+      // pull params from the URL
       const code = searchParams.get('code');
       const next = searchParams.get('next') || '/app';
 
+      // if there's no code, bounce back to sign-in with an error
       if (!code) {
-        setStatus('error');
-        setMessage('Missing auth code in URL.');
+        router.replace(
+          '/auth/sign-in?err=Auth+exchange+failed%3A+invalid+request%3A+missing+code'
+        );
         return;
       }
 
-      try {
-        const supabase = createSupabaseBrowser();
+      // exchange the auth code for a Supabase session
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (error) throw error;
+      if (cancelled) return;
 
-        router.replace(next);
-      } catch (err: any) {
-        console.error('[auth/callback] exchange failed', err);
-        const msg = err?.message ?? 'Auth exchange failed';
-        setStatus('error');
-        setMessage(msg);
-        router.replace(`/auth/sign-in?err=${encodeURIComponent(msg)}`);
+      if (error) {
+        router.replace(
+          `/auth/sign-in?err=${encodeURIComponent(
+            `Auth exchange failed: ${error.message}`
+          )}`
+        );
+        return;
       }
+
+      // on success, send them where they were headed (default /app)
+      router.replace(next);
     };
 
     run();
-  }, [router, searchParams]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router, searchParams, supabase]);
 
   return (
-    <main className="min-h-screen grid place-items-center p-6">
-      <div className="max-w-md w-full rounded-xl border border-neutral-800 p-6 bg-black/40 text-center">
-        <h1 className="text-xl font-semibold mb-4">Signing you in…</h1>
-        {status === 'loading' ? (
-          <p className="text-neutral-300 text-sm">
-            Please wait a moment while we complete your sign-in.
-          </p>
-        ) : (
-          <p className="text-red-400 text-sm">
-            {message ?? 'Something went wrong during the sign-in process.'}
-          </p>
-        )}
-      </div>
-    </main>
+    <div className="flex min-h-screen items-center justify-center">
+      <p className="text-sm text-gray-500">Finishing sign-in…</p>
+    </div>
   );
 }
