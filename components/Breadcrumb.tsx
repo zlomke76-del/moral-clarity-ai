@@ -5,8 +5,9 @@ import Link from "next/link";
 
 export type Crumb = { label: string; href?: string };
 
-export default function Breadcrumb({ items }: { items: Crumb[] }) {
-  if (!items?.length) return null;
+// make items optional + default to []
+export default function Breadcrumb({ items = [] }: { items?: Crumb[] }) {
+  if (!items.length) return null;
 
   return (
     <nav aria-label="Breadcrumb" className="text-sm text-neutral-400">
