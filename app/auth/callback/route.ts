@@ -12,7 +12,6 @@ export async function GET(request: Request) {
     const next = url.searchParams.get("next") || "/app";
 
     if (!code) {
-      // No code to exchange — bounce back to sign-in with a friendly error
       return NextResponse.redirect(
         new URL(`/auth/sign-in?err=missing_code`, url.origin),
         { status: 302 }
@@ -28,25 +27,30 @@ export async function GET(request: Request) {
       );
     }
 
-    // Adapt Next.js cookies() to the shape expected by @supabase/ssr:
-    // The current CookieMethodsServer type uses getAll/set/remove (no "get")
     const store = cookies();
-    const supabase = createServerClient(supabaseUrl, supabaseKey, {
-      cookies: {
-        getAll() {
-          return store.getAll();
-        },
-        set(name: string, value: string, options: any) {
-          store.set({ name, value, ...options });
-        },
-        remove(name: string, options: any) {
-          // remove by setting empty value + maxAge 0
-          store.set({ name, value: "", ...options, maxAge: 0 });
-        },
+
+    // Supply BOTH method shapes; cast to any to satisfy union types across versions.
+    const cookieAdapter = {
+      // v0.x (deprecated) shape
+      get(name: string) {
+        return store.get(name)?.value;
       },
+      set(name: string, value: string, options?: any) {
+        store.set({ name, value, ...(options || {}) });
+      },
+      remove(name: string, options?: any) {
+        store.set({ name, value: "", ...(options || {}), maxAge: 0 });
+      },
+      // newer shape
+      getAll() {
+        return store.getAll();
+      },
+    } as any;
+
+    const supabase = createServerClient(supabaseUrl, supabaseKey, {
+      cookies: cookieAdapter,
     });
 
-    // Exchange the one-time code for a session
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
       return NextResponse.redirect(
@@ -55,11 +59,11 @@ export async function GET(request: Request) {
       );
     }
 
-    // Success → go to wherever we intended
     return NextResponse.redirect(new URL(next, url.origin), { status: 302 });
-  } catch (e: any) {
+  } catch {
+    const origin = new URL(request.url).origin;
     return NextResponse.redirect(
-      new URL(`/auth/sign-in?err=callback_exception`, new URL(request.url).origin),
+      new URL(`/auth/sign-in?err=callback_exception`, origin),
       { status: 302 }
     );
   }
