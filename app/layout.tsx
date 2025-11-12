@@ -3,8 +3,9 @@ import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import "./globals.css";
-import NextDynamic from "next/dynamic"; // ← rename to avoid clash with export const dynamic
+import NextDynamic from "next/dynamic"; // avoid clash with `export const dynamic`
 import { Suspense } from "react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import TopNav from "@/components/TopNav";
 import Breadcrumb from "@/components/Breadcrumb";
@@ -124,6 +125,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Suspense>
             <Toaster />
           </Suspense>
+
+          {/* Vercel Speed Insights */}
+          <SpeedInsights />
 
           {/* ===== FOOTER ===== */}
           <footer className="mx-auto w-full max-w-6xl border-t border-neutral-800 px-4 py-12 text-sm text-neutral-400">
