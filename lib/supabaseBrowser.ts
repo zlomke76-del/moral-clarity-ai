@@ -1,19 +1,19 @@
 // lib/supabaseBrowser.ts
-import { createBrowserClient } from '@supabase/ssr';
-import type { Database } from '@/types/supabase';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-let _client: any = null;
+let client: SupabaseClient | null = null;
 
-/** Singleton browser client. No typing from @supabase/ssr to avoid TS export issues. */
-export function createSupabaseBrowser() {
-  if (_client) return _client;
-  if (typeof window === 'undefined') return null; // safety: never create on server
-
-  _client = createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
-  return _client;
+export function getSupabaseBrowser() {
+  if (client) return client;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  client = createClient(url, anon, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true, // PKCE-friendly if you use it
+    },
+    global: { headers: { 'x-app': 'moralclarity-studio' } },
+  });
+  return client;
 }
-
