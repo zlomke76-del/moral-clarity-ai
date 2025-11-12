@@ -7,24 +7,16 @@ const nextConfig = {
 
   async redirects() {
     return [
-      // 1️⃣ Canonicalize www → apex
+      // 1) Canonicalize www → apex
       {
         source: '/:path*',
         has: [{ type: 'host', value: 'www.moralclarity.ai' }],
         destination: 'https://moralclarity.ai/:path*',
         permanent: true,
       },
-      // 2️⃣ Legacy redirect for old studio route
-      {
-        source: '/workspace2',
-        destination: '/app',
-        permanent: true,
-      },
-      {
-        source: '/workspace2/:path*',
-        destination: '/app',
-        permanent: true,
-      },
+      // 2) Legacy studio route → app
+      { source: '/workspace2', destination: '/app', permanent: true },
+      { source: '/workspace2/:path*', destination: '/app', permanent: true },
     ];
   },
 
@@ -53,7 +45,6 @@ const nextConfig = {
       "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://*.supabase.co",
       "font-src 'self' data: https:",
       "media-src 'self' blob:",
-      // Allow pdfjs worker from CDN; also blob: for inline worker
       "worker-src 'self' blob: https://cdnjs.cloudflare.com",
       "upgrade-insecure-requests",
     ].join('; ');
@@ -76,15 +67,16 @@ const nextConfig = {
     ];
   },
 
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'https://www.moralclarity.ai/api/:path*',
-      },
-    ];
-  },
+  // No broad /api rewrite. If you truly need one, enumerate it and scope by host, e.g.:
+  // async rewrites() {
+  //   return [
+  //     {
+  //       source: '/api/public/:path*',
+  //       has: [{ type: 'host', value: 'studio.moralclarity.ai' }],
+  //       destination: 'https://www.moralclarity.ai/api/public/:path*',
+  //     },
+  //   ];
+  // },
 };
 
 export default nextConfig;
-
