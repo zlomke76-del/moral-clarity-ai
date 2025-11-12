@@ -13,10 +13,10 @@ export async function GET(request: NextRequest) {
 
   const origin = url.origin;
 
-  // If there's no code, send back to sign-in with an error
+  // No code → bounce back with clear error
   if (!code) {
     const errUrl = new URL("/auth/sign-in", origin);
-    errUrl.searchParams.set("err", "exchange_failed");
+    errUrl.searchParams.set("err", "Missing auth code from Supabase");
     return NextResponse.redirect(errUrl.toString(), 302);
   }
 
@@ -26,13 +26,16 @@ export async function GET(request: NextRequest) {
   if (!supabaseUrl || !supabaseAnon) {
     console.error("Missing Supabase env vars");
     const errUrl = new URL("/auth/sign-in", origin);
-    errUrl.searchParams.set("err", "exchange_failed");
+    errUrl.searchParams.set(
+      "err",
+      "Server is missing Supabase configuration (URL or anon key)."
+    );
     return NextResponse.redirect(errUrl.toString(), 302);
   }
 
   const cookieStore = cookies();
 
-  // NOTE: cast cookies object as any so we don't fight TS over the shape.
+  // Bridge Next cookies ↔ Supabase, and cast as any so TS stops complaining
   const supabase = createServerClient(supabaseUrl, supabaseAnon, {
     cookies: {
       get(name: string) {
@@ -41,30 +44,4 @@ export async function GET(request: NextRequest) {
       set(name: string, value: string, options: any) {
         cookieStore.set({ name, value, ...options });
       },
-      remove(name: string, options: any) {
-        cookieStore.set({ name, value: "", ...options, maxAge: 0 });
-      },
-    } as any,
-  });
-
-  try {
-    // Ask Supabase to turn the code into a session + set the auth cookie
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-
-    if (error || !data.session) {
-      console.error("exchangeCodeForSession error:", error?.message);
-      const errUrl = new URL("/auth/sign-in", origin);
-      errUrl.searchParams.set("err", "exchange_failed");
-      return NextResponse.redirect(errUrl.toString(), 302);
-    }
-
-    // Success → send them to the requested next page (default /app)
-    const redirectUrl = new URL(next, origin);
-    return NextResponse.redirect(redirectUrl.toString(), 302);
-  } catch (err: any) {
-    console.error("Callback route exception:", err);
-    const errUrl = new URL("/auth/sign-in", origin);
-    errUrl.searchParams.set("err", "exchange_failed");
-    return NextResponse.redirect(errUrl.toString(), 302);
-  }
-}
+      remove(name: string, options
