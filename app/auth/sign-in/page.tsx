@@ -24,6 +24,7 @@ export default function SignIn() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
+          // Supabase will send the link here
           emailRedirectTo: `${window.location.origin}/auth/callback?next=/app`,
         },
       });
@@ -65,4 +66,3 @@ export default function SignIn() {
     </main>
   );
 }
-
