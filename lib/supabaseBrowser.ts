@@ -9,7 +9,6 @@ export function createSupabaseBrowser() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: {
-        // Critical: tells Supabase to use PKCE and store code_verifier
         flowType: 'pkce',
       },
     }
