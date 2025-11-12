@@ -6,28 +6,34 @@ import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const params = useSearchParams(); // Vercel still marks this as possibly null
   const supabase = createSupabaseBrowser();
 
   useEffect(() => {
     let cancelled = false;
 
     const run = async () => {
-      const code = searchParams.get('code');
-      const next = searchParams.get('next') || '/app';
-
-      // If there's no code, bounce back to sign-in with an error
-      if (!code) {
+      // ❗ Absolute TS-safe guard required by Vercel
+      if (!params) {
         router.replace(
           '/auth/sign-in?err=' +
-            encodeURIComponent(
-              'Auth exchange failed: invalid request: missing code'
-            )
+            encodeURIComponent('Auth exchange failed: missing search params')
         );
         return;
       }
 
-      // Do the PKCE exchange in the *browser* (where the verifier lives)
+      const code = params.get('code');
+      const next = params.get('next') || '/app';
+
+      if (!code) {
+        router.replace(
+          '/auth/sign-in?err=' +
+            encodeURIComponent('Auth exchange failed: missing code')
+        );
+        return;
+      }
+
+      // PKCE exchange happens *in the browser* (where verifier exists)
       const { error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (cancelled) return;
@@ -40,7 +46,6 @@ export default function AuthCallbackPage() {
         return;
       }
 
-      // On success, go to the app (or whatever was passed as next)
       router.replace(next);
     };
 
@@ -49,7 +54,7 @@ export default function AuthCallbackPage() {
     return () => {
       cancelled = true;
     };
-  }, [router, searchParams, supabase]);
+  }, [params, router, supabase]);
 
   return (
     <div className="flex min-h-screen items-center justify-center">
