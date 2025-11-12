@@ -1,23 +1,25 @@
+// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import "./globals.css";
-import dynamic from "next/dynamic";
+import NextDynamic from "next/dynamic"; // ← rename to avoid clash with export const dynamic
 import { Suspense } from "react";
 
-export const dynamic = 'force-dynamic';
+import TopNav from "@/components/TopNav";
+import Breadcrumb from "@/components/Breadcrumb";
+import DemoBadge from "@/components/DemoBadge";
+import AuthProvider from "@/components/AuthProvider";
+import Toaster from "@/components/Toaster";
+
+// Route segment config — keep these named exports
+export const dynamic = "force-dynamic";
 export const revalidate = 0;
-export const fetchCache = 'force-no-store';
-export const runtime = 'nodejs';
+export const fetchCache = "force-no-store";
+export const runtime = "nodejs";
 
-import TopNav from "@/components/TopNav";          // global sub-nav
-import Breadcrumb from "@/components/Breadcrumb";  // contextual crumb bar
-import DemoBadge from "@/components/DemoBadge";    // small “Demo” chip
-import AuthProvider from "@/components/AuthProvider"; // ← mounts once app-wide
-import Toaster from "@/components/Toaster";        // global toast system (client)
-
-// 🔧 Point directly to where the file actually is:
-const SolaceDock = dynamic(() => import("@/app/components/SolaceDock"), { ssr: false });
+// SolaceDock lives under /app/components
+const SolaceDock = NextDynamic(() => import("@/app/components/SolaceDock"), { ssr: false });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.moralclarity.ai"),
@@ -49,7 +51,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="dark h-full" data-skin="glass">
       <body className="min-h-screen bg-neutral-950 text-neutral-100 antialiased flex flex-col">
-        {/* ===== AUTH BOOTSTRAP (prevents refresh-storms; mounts once) ===== */}
         <AuthProvider>
           {/* ===== HEADER ===== */}
           <header className="sticky top-0 z-50 border-b border-neutral-800 bg-neutral-950/80 backdrop-blur">
@@ -110,12 +111,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
           {/* ===== MAIN CONTENT ===== */}
           <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-10 space-y-6">
-            {/* Optional breadcrumb container (renders nothing if none passed) */}
             <div id="breadcrumb-slot">
-              {/* Example:
-              <Breadcrumb items={[{ label: 'Home', href: '/' }, { label: 'App' }]} />
-              */}
-              <Breadcrumb />
+              <Breadcrumb /* pass items where you render this if needed */ items={[]} />
             </div>
             {children}
           </main>
@@ -139,7 +136,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <Link href="/terms" className="hover:text-neutral-300" prefetch>
                   Terms
                 </Link>
-                {/* Disable prefetch if /status isn’t live yet to avoid 404 prefetches */}
                 <Link href="/status" className="hover:text-neutral-300" prefetch={false}>
                   Status
                 </Link>
