@@ -1,70 +1,70 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { NextResponse } from "next/server";
+
+import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
 export const runtime = "nodejs";
 
-export async function GET(request: Request) {
-  try {
-    const url = new URL(request.url);
-    const code = url.searchParams.get("code");
-    const next = url.searchParams.get("next") || "/app";
+export async function GET(request: NextRequest) {
+  const url = new URL(request.url);
+  const code = url.searchParams.get("code");
+  const next = url.searchParams.get("next") ?? "/app";
 
-    if (!code) {
-      return NextResponse.redirect(
-        new URL(`/auth/sign-in?err=missing_code`, url.origin),
-        { status: 302 }
-      );
-    }
+  const origin = url.origin;
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-    if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.redirect(
-        new URL(`/auth/sign-in?err=env_missing`, url.origin),
-        { status: 302 }
-      );
-    }
+  // If there's no code, send back to sign-in with an error
+  if (!code) {
+    const errUrl = new URL("/auth/sign-in", origin);
+    errUrl.searchParams.set("err", "exchange_failed");
+    return NextResponse.redirect(errUrl.toString(), 302);
+  }
 
-    const store = cookies();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    // Supply BOTH method shapes; cast to any to satisfy union types across versions.
-    const cookieAdapter = {
-      // v0.x (deprecated) shape
+  if (!supabaseUrl || !supabaseAnon) {
+    console.error("Missing Supabase env vars");
+    const errUrl = new URL("/auth/sign-in", origin);
+    errUrl.searchParams.set("err", "exchange_failed");
+    return NextResponse.redirect(errUrl.toString(), 302);
+  }
+
+  const cookieStore = cookies();
+
+  // NOTE: cast cookies object as any so we don't fight TS over the shape.
+  const supabase = createServerClient(supabaseUrl, supabaseAnon, {
+    cookies: {
       get(name: string) {
-        return store.get(name)?.value;
+        return cookieStore.get(name)?.value;
       },
-      set(name: string, value: string, options?: any) {
-        store.set({ name, value, ...(options || {}) });
+      set(name: string, value: string, options: any) {
+        cookieStore.set({ name, value, ...options });
       },
-      remove(name: string, options?: any) {
-        store.set({ name, value: "", ...(options || {}), maxAge: 0 });
+      remove(name: string, options: any) {
+        cookieStore.set({ name, value: "", ...options, maxAge: 0 });
       },
-      // newer shape
-      getAll() {
-        return store.getAll();
-      },
-    } as any;
+    } as any,
+  });
 
-    const supabase = createServerClient(supabaseUrl, supabaseKey, {
-      cookies: cookieAdapter,
-    });
+  try {
+    // Ask Supabase to turn the code into a session + set the auth cookie
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) {
-      return NextResponse.redirect(
-        new URL(`/auth/sign-in?err=exchange_failed`, url.origin),
-        { status: 302 }
-      );
+    if (error || !data.session) {
+      console.error("exchangeCodeForSession error:", error?.message);
+      const errUrl = new URL("/auth/sign-in", origin);
+      errUrl.searchParams.set("err", "exchange_failed");
+      return NextResponse.redirect(errUrl.toString(), 302);
     }
 
-    return NextResponse.redirect(new URL(next, url.origin), { status: 302 });
-  } catch {
-    const origin = new URL(request.url).origin;
-    return NextResponse.redirect(
-      new URL(`/auth/sign-in?err=callback_exception`, origin),
-      { status: 302 }
-    );
+    // Success → send them to the requested next page (default /app)
+    const redirectUrl = new URL(next, origin);
+    return NextResponse.redirect(redirectUrl.toString(), 302);
+  } catch (err: any) {
+    console.error("Callback route exception:", err);
+    const errUrl = new URL("/auth/sign-in", origin);
+    errUrl.searchParams.set("err", "exchange_failed");
+    return NextResponse.redirect(errUrl.toString(), 302);
   }
 }
