@@ -10,13 +10,12 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const next = url.searchParams.get("next") ?? "/app";
-
   const origin = url.origin;
 
-  // No code → bounce back with clear error
+  // If Supabase didn't send us a code, bounce back with a clear error
   if (!code) {
     const errUrl = new URL("/auth/sign-in", origin);
-    errUrl.searchParams.set("err", "Missing auth code from Supabase");
+    errUrl.searchParams.set("err", "Missing auth code from Supabase.");
     return NextResponse.redirect(errUrl.toString(), 302);
   }
 
@@ -24,18 +23,22 @@ export async function GET(request: NextRequest) {
   const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnon) {
-    console.error("Missing Supabase env vars");
+    console.error("[auth/callback] Missing Supabase env vars", {
+      hasUrl: !!supabaseUrl,
+      hasAnon: !!supabaseAnon,
+    });
     const errUrl = new URL("/auth/sign-in", origin);
     errUrl.searchParams.set(
       "err",
-      "Server is missing Supabase configuration (URL or anon key)."
+      "Server misconfigured: missing Supabase URL or anon key."
     );
     return NextResponse.redirect(errUrl.toString(), 302);
   }
 
   const cookieStore = cookies();
 
-  // Bridge Next cookies ↔ Supabase, and cast as any so TS stops complaining
+  // Bridge Next.js cookies ↔ Supabase cookies.
+  // Cast to `any` so TS stops arguing about CookieMethodsServer vs deprecated types.
   const supabase = createServerClient(supabaseUrl, supabaseAnon, {
     cookies: {
       get(name: string) {
@@ -44,4 +47,35 @@ export async function GET(request: NextRequest) {
       set(name: string, value: string, options: any) {
         cookieStore.set({ name, value, ...options });
       },
-      remove(name: string, options
+      remove(name: string, options: any) {
+        cookieStore.set({ name, value: "", ...options });
+      },
+    } as any,
+  });
+
+  try {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (error) {
+      console.error("[auth/callback] exchangeCodeForSession error:", error);
+      const errUrl = new URL("/auth/sign-in", origin);
+      errUrl.searchParams.set(
+        "err",
+        `Auth exchange failed: ${error.message ?? "Unknown error"}`
+      );
+      return NextResponse.redirect(errUrl.toString(), 302);
+    }
+
+    // Success – user is now signed in via Supabase session cookie.
+    const redirectUrl = new URL(next, origin);
+    return NextResponse.redirect(redirectUrl.toString(), 302);
+  } catch (e: any) {
+    console.error("[auth/callback] unexpected error:", e);
+    const errUrl = new URL("/auth/sign-in", origin);
+    errUrl.searchParams.set(
+      "err",
+      `Unexpected auth error: ${e?.message ?? String(e)}`
+    );
+    return NextResponse.redirect(errUrl.toString(), 302);
+  }
+}
