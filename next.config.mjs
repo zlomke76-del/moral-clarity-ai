@@ -7,10 +7,22 @@ const nextConfig = {
 
   async redirects() {
     return [
+      // 1️⃣ Canonicalize www → apex
       {
         source: '/:path*',
         has: [{ type: 'host', value: 'www.moralclarity.ai' }],
         destination: 'https://moralclarity.ai/:path*',
+        permanent: true,
+      },
+      // 2️⃣ Legacy redirect for old studio route
+      {
+        source: '/workspace2',
+        destination: '/app',
+        permanent: true,
+      },
+      {
+        source: '/workspace2/:path*',
+        destination: '/app',
         permanent: true,
       },
     ];
@@ -65,7 +77,12 @@ const nextConfig = {
   },
 
   async rewrites() {
-    return [{ source: '/api/:path*', destination: 'https://www.moralclarity.ai/api/:path*' }];
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'https://www.moralclarity.ai/api/:path*',
+      },
+    ];
   },
 };
 
