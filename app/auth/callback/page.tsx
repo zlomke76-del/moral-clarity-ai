@@ -13,11 +13,10 @@ export default function AuthCallbackPage() {
     let cancelled = false;
 
     const run = async () => {
-      // pull params from the URL
-      const code = searchParams.get('code');
-      const next = searchParams.get('next') || '/app';
+      // ‼️ Explicit null-safe guards (Vercel TS fix)
+      const code = searchParams ? searchParams.get('code') : null;
+      const next = searchParams ? searchParams.get('next') || '/app' : '/app';
 
-      // if there's no code, bounce back to sign-in with an error
       if (!code) {
         router.replace(
           '/auth/sign-in?err=Auth+exchange+failed%3A+invalid+request%3A+missing+code'
@@ -25,9 +24,7 @@ export default function AuthCallbackPage() {
         return;
       }
 
-      // exchange the auth code for a Supabase session
       const { error } = await supabase.auth.exchangeCodeForSession(code);
-
       if (cancelled) return;
 
       if (error) {
@@ -39,7 +36,6 @@ export default function AuthCallbackPage() {
         return;
       }
 
-      // on success, send them where they were headed (default /app)
       router.replace(next);
     };
 
