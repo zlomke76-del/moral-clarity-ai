@@ -10,7 +10,6 @@ export async function GET(req: NextRequest) {
   const code = url.searchParams.get('code');
   const next = url.searchParams.get('next') ?? '/app';
 
-  // If no code, bounce back to sign-in with an error
   if (!code) {
     const redirectUrl = new URL(
       '/auth/sign-in?err=Auth+exchange+failed%3A+invalid+request%3A+missing+code',
@@ -37,6 +36,7 @@ export async function GET(req: NextRequest) {
         },
       },
       auth: {
+        // Must match the browser client
         flowType: 'pkce',
       },
     },
@@ -54,7 +54,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // On success, redirect into the app; cookies are now set on studio.moralclarity.ai
   const redirectUrl = new URL(next, req.url);
   return NextResponse.redirect(redirectUrl);
 }
