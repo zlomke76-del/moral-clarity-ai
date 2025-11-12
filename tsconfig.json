@@ -1,50 +1,35 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "resolveJsonModule": true,
     "jsx": "preserve",
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
     "allowJs": false,
+    "noEmit": true,
+
+    "strict": true,
+    "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
+    "isolatedModules": true,
+    "useDefineForClassFields": true,
+    "resolveJsonModule": true,
+
     "baseUrl": ".",
-<<<<<<< HEAD
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["*"]
     },
-    "types": ["node"]
+
+    "types": ["node", "react", "react-dom"]
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "server/**/*.ts"
+    ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
-=======
-    "paths": { "@/*": ["*"] },              // tiny cleanup; same effect as "./*"
-    "moduleResolution": "bundler",          // Next.js + TS5 recommended
-    "target": "ES2020",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "module": "esnext",
-    "jsx": "preserve",
-    "noEmit": true,
-    "isolatedModules": true,
-    "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "strict": false,                        // consider true (see below)
-    "allowJs": true,
-    "plugins": [{ "name": "next" }],
-    "incremental": true,
-    "forceConsistentCasingInFileNames": true
-  },
-  "include": ["next-env.d.ts", ".next/types/**/*.ts", "**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", ".next", "archive", ".vercel"]
->>>>>>> origin/speedinsights-install
+  "exclude": [
+    "node_modules"
+  ]
 }
