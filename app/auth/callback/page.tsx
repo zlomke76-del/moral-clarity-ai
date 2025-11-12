@@ -1,3 +1,4 @@
+// app/auth/callback/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -17,7 +18,6 @@ export default function AuthCallbackPage() {
       const next = searchParams.get('next') || '/app';
 
       if (!code) {
-        // No code in URL – nothing to exchange
         setStatus('error');
         setMessage('Missing auth code in URL.');
         return;
@@ -26,19 +26,15 @@ export default function AuthCallbackPage() {
       try {
         const supabase = createSupabaseBrowser();
 
-        // Browser client knows about the PKCE verifier it set earlier
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) throw error;
 
-        // Success – send them into the app
         router.replace(next);
       } catch (err: any) {
         console.error('[auth/callback] exchange failed', err);
         const msg = err?.message ?? 'Auth exchange failed';
         setStatus('error');
         setMessage(msg);
-
-        // Bounce back to sign-in with a clean error in the URL
         router.replace(`/auth/sign-in?err=${encodeURIComponent(msg)}`);
       }
     };
