@@ -1,34 +1,40 @@
-// app/auth/callback/CallbackClient.tsx
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
 
-export default function CallbackClient() {
+export function CallbackClient() {
   const router = useRouter();
-  const params = useSearchParams(); // may be null during build/type-check paths
 
   useEffect(() => {
+    const supabase = createSupabaseBrowser();
+
     (async () => {
       try {
-        const code = params?.get("code") ?? null;
-        const next = params?.get("next") ?? "/app";
+        const { data, error } = await supabase.auth.getSession();
 
-        if (code) {
-          const supabase = getSupabaseBrowser();
-          // Ignore exchange errors like "already used" – just continue
-          await supabase.auth.exchangeCodeForSession(code).catch(() => {});
+        // If there’s no session, kick them to sign-in
+        if (error || !data?.session) {
+          router.replace('/auth/sign-in');
+          return;
         }
 
-        router.replace(next);
-      } catch {
-        router.replace("/app");
+        // If there IS a session, default to the app home
+        router.replace('/app');
+      } catch (e) {
+        console.error('[CallbackClient] session check failed', e);
+        router.replace('/auth/sign-in');
       }
     })();
-    // It’s fine to depend on params; it’s stable for this page load.
-  }, [params, router]);
+  }, [router]);
 
-  return null;
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <p className="text-sm text-gray-500">Finishing sign-in…</p>
+    </div>
+  );
 }
 
+// Export both named + default to be compatible with any existing imports
+export default CallbackClient;
