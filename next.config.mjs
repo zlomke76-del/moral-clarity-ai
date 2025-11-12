@@ -5,20 +5,24 @@ const nextConfig = {
   // Needed for react-pdf/pdfjs (it’s ESM and bundles worker)
   transpilePackages: ['react-pdf', 'pdfjs-dist'],
 
-  async redirects() {
-    return [
-      // 1) Canonicalize www → apex
-      {
-        source: '/:path*',
-        has: [{ type: 'host', value: 'www.moralclarity.ai' }],
-        destination: 'https://moralclarity.ai/:path*',
-        permanent: true,
-      },
-      // 2) Legacy studio route → app
-      { source: '/workspace2', destination: '/app', permanent: true },
-      { source: '/workspace2/:path*', destination: '/app', permanent: true },
-    ];
-  },
+async redirects() {
+  return [
+    // 1) Canonicalize www → apex
+    {
+      source: '/:path*',
+      has: [{ type: 'host', value: 'www.moralclarity.ai' }],
+      destination: 'https://moralclarity.ai/:path*',
+      permanent: true,
+    },
+    // 2) Hard-stop any legacy /workspace2 hits (path or nested)
+    {
+      source: '/workspace2/:path*',
+      destination: '/app',
+      permanent: true,
+    },
+  ];
+},
+
 
   async headers() {
     const csp = [
