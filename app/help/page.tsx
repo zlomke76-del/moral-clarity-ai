@@ -1,127 +1,40 @@
 // app/help/page.tsx
-"use client";
 
-import { useState } from "react";
-
-const faqs = [
-  {
-    section: "Getting Started",
-    items: [
-      {
-        q: "What is Moral Clarity AI?",
-        a: "A calm workspace for questions, reflection, and wise decisions—alone or with your family, team, or ministry."
-      },
-      {
-        q: "How do I create a project?",
-        a: "Go to Projects → New Project, name it, then use the tabs (Chat, Notes, Files, Briefs)."
-      },
-      {
-        q: "What are Clarity Reports?",
-        a: "Clarity Reports are dignified PDFs that summarize your project’s reflections and decisions."
-      },
-    ],
-  },
-  {
-    section: "Plans & Billing",
-    items: [
-      {
-        q: "Can I switch plans later?",
-        a: "Yes. Upgrades apply immediately; downgrades take effect at the next billing cycle."
-      },
-      {
-        q: "Do you offer trials?",
-        a: "We offer a guided demo. Stewards may grant 30-day courtesy subscriptions at their discretion."
-      },
-      {
-        q: "How do Ministry and 10% support work?",
-        a: "10% support flows only to active ministries. If not active, funds accrue in escrow for up to 6 months before conversion."
-      },
-    ],
-  },
-  {
-    section: "Privacy & Security",
-    items: [
-      {
-        q: "Who can see my reflections?",
-        a: "Only you, unless you share them inside a Family, Business, or Ministry workspace."
-      },
-      {
-        q: "Do you sell data or run ads?",
-        a: "No and no. We never sell personal data or run advertising."
-      },
-      {
-        q: "Can I export my data?",
-        a: "Yes—use Settings → Data & Privacy to export projects and Clarity Reports."
-      },
-    ],
-  },
-  {
-    section: "Teams & Ministries",
-    items: [
-      {
-        q: "How do I invite others?",
-        a: "Stewards and Co-Stewards can invite via Hub → Invite. Invites expire in 7 days."
-      },
-      {
-        q: "What if someone leaves?",
-        a: "Revoke their seat (7-day grace), then reassign. Their personal reflections stay private."
-      },
-      {
-        q: "Can ministries post weekly reflections?",
-        a: "Yes. Ministry Feed supports posts and announcements; comments are off by default."
-      },
-    ],
-  },
-  {
-    section: "Principles & Philosophy",
-    items: [
-      {
-        q: "Why Truth · Reason · Stewardship · Peace?",
-        a: "They are the north star for every feature and decision in Moral Clarity AI."
-      },
-      {
-        q: "What is a Clarity Moment?",
-        a: "A calm banner for meaningful updates—never noise or marketing."
-      },
-    ],
-  },
-];
+export const metadata = {
+  title: 'Help · Moral Clarity AI',
+  description: 'How to get support and contact the team.',
+  robots: { index: true, follow: true },
+};
 
 export default function HelpPage() {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
-
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12 prose prose-neutral">
-      <h1>Help &amp; Frequently Asked Questions</h1>
-      <p className="mb-8">
-        If you can’t find what you need,{" "}
-        <a href="mailto:support@moralclarity.ai">contact support</a>.
-      </p>
+    <main className="min-h-screen bg-neutral-950 text-neutral-100">
+      <div className="mx-auto max-w-4xl px-4 py-10">
+        <h1 className="text-3xl font-semibold tracking-tight">Help & Support</h1>
+        <p className="mt-2 text-sm opacity-75">
+          Need a hand? Start here. For live system status, see{' '}
+          <a href="/health" className="underline decoration-dotted underline-offset-4">/health</a>.
+        </p>
 
-      {faqs.map((section, sIdx) => (
-        <section key={sIdx} className="mb-10">
-          <h2>{section.section}</h2>
-          <div className="divide-y divide-gray-300">
-            {section.items.map((item, iIdx) => {
-              const idx = Number(`${sIdx}${iIdx}`);
-              const isOpen = openIndex === idx;
-              return (
-                <div key={idx} className="py-3">
-                  <button
-                    onClick={() => setOpenIndex(isOpen ? null : idx)}
-                    className="w-full text-left font-medium hover:text-indigo-600"
-                  >
-                    {item.q}
-                  </button>
-                  {isOpen && (
-                    <p className="mt-2 text-gray-700">{item.a}</p>
-                  )}
-                </div>
-              );
-            })}
+        <section className="mt-8 grid gap-4">
+          <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+            <h2 className="text-lg font-medium">Common actions</h2>
+            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm opacity-90">
+              <li>Manage your subscription on the <a className="underline" href="/subscribe">Subscribe</a> page.</li>
+              <li>Check recent changes on the <a className="underline" href="/journey">Journey</a> page.</li>
+              <li>Review the <a className="underline" href="/privacy">Privacy</a> and <a className="underline" href="/terms">Terms</a>.</li>
+            </ul>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+            <h2 className="text-lg font-medium">Contact support</h2>
+            <p className="mt-2 text-sm opacity-90">
+              Use the <a className="underline" href="/support">Support form</a> to open a ticket.
+              You’ll receive an email confirmation with a ticket ID.
+            </p>
           </div>
         </section>
-      ))}
+      </div>
     </main>
   );
 }

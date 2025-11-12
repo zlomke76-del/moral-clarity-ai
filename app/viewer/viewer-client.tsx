@@ -18,7 +18,7 @@ const ReactPDF = dynamic(async () => {
 
 export default function ViewerClient() {
   const params = useSearchParams();
-  const src = params.get('url') || '';
+  const src = params?.get('url') ?? '';
 
   const [pdfReady, setPdfReady] = useState(false);
   const [numPages, setNumPages] = useState<number | null>(null);
@@ -57,7 +57,8 @@ export default function ViewerClient() {
         {!hasSrc ? (
           <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
             <p className="text-sm text-zinc-300">
-              Provide a PDF via query param, e.g.: <code className="text-zinc-200">/viewer?url=/files/sample.pdf</code>
+              Provide a PDF via query param, e.g.:{' '}
+              <code className="text-zinc-200">/viewer?url=/files/sample.pdf</code>
             </p>
           </div>
         ) : err ? (
@@ -65,7 +66,9 @@ export default function ViewerClient() {
             Error: {err}
           </div>
         ) : !pdfReady ? (
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">Loading PDF engine…</div>
+          <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
+            Loading PDF engine…
+          </div>
         ) : (
           <PDFFrame src={src} onPages={(n) => setNumPages(n)} onError={(m) => setErr(m)} />
         )}

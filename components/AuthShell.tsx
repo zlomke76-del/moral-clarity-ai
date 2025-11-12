@@ -14,7 +14,8 @@ export default function AuthShell() {
   const [err, setErr] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  const nextParamRaw = searchParams.get("next") ?? "/app";
+  // null-safe in strict mode
+  const nextParamRaw = searchParams?.get("next") ?? "/app";
   const nextParam = encodeURIComponent(nextParamRaw);
 
   const base =
@@ -27,8 +28,15 @@ export default function AuthShell() {
   const send = useCallback(async () => {
     setErr(null);
     setSent(false);
-    if (!email || !email.includes("@")) { setErr("Please enter a valid email."); return; }
-    if (!emailRedirectTo) { setErr("Missing base URL."); return; }
+
+    if (!email || !email.includes("@")) {
+      setErr("Please enter a valid email.");
+      return;
+    }
+    if (!emailRedirectTo) {
+      setErr("Missing base URL.");
+      return;
+    }
 
     setPending(true);
     try {
@@ -48,9 +56,13 @@ export default function AuthShell() {
   return (
     <main className="mx-auto max-w-md p-6">
       <h1 className="mb-1 text-2xl font-semibold">Sign in</h1>
-      <p className="mb-6 text-sm opacity-70">We’ll email you a one-time magic link.</p>
+      <p className="mb-6 text-sm opacity-70">
+        We’ll email you a one-time magic link.
+      </p>
 
-      <label htmlFor="email" className="mb-1 block text-sm opacity-80">Email</label>
+      <label htmlFor="email" className="mb-1 block text-sm opacity-80">
+        Email
+      </label>
       <input
         id="email"
         className="mb-3 w-full rounded border border-zinc-700 bg-zinc-900 p-2"
@@ -59,7 +71,12 @@ export default function AuthShell() {
         value={email}
         type="email"
         autoComplete="email"
-        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void send(); } }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            void send();
+          }
+        }}
       />
 
       <button
@@ -71,11 +88,16 @@ export default function AuthShell() {
         {pending ? "Sending…" : "Send magic link"}
       </button>
 
-      {sent && <p className="mt-3 text-sm text-zinc-300">Check <strong>{email}</strong> for your sign-in link.</p>}
+      {sent && (
+        <p className="mt-3 text-sm text-zinc-300">
+          Check <strong>{email}</strong> for your sign-in link.
+        </p>
+      )}
       {err && <p className="mt-3 text-sm text-red-400">{err}</p>}
 
       <p className="mt-6 text-xs opacity-60">
-        After sign-in you’ll be sent to: <code className="opacity-80">{nextParamRaw}</code>
+        After sign-in you’ll be sent to:{" "}
+        <code className="opacity-80">{nextParamRaw}</code>
       </p>
     </main>
   );

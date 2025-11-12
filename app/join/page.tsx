@@ -1,3 +1,4 @@
+// app/join/page.tsx
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
@@ -6,12 +7,11 @@ import { createClient } from '@supabase/supabase-js';
 
 // Prevent prerendering — render client-side only
 export const dynamic = 'force-dynamic';
-// (Remove the revalidate export that was causing the error)
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
 
 function JoinInner() {
   const router = useRouter();
@@ -20,31 +20,54 @@ function JoinInner() {
 
   useEffect(() => {
     (async () => {
-      const token = searchParams.get('token');
-      if (!token) {
-        setMessage('Missing invite token.');
-        return;
+      try {
+        // ✅ strictNullChecks-safe access
+        const token = searchParams?.get?.('token') ?? null;
+        if (!token) {
+          setMessage('Missing invite token.');
+          return;
+        }
+
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        const accessToken = session?.access_token;
+        if (!accessToken) {
+          router.replace(`/login?next=${encodeURIComponent(`/join?token=${token}`)}`);
+          return;
+        }
+
+        // ✅ Correct Supabase Edge Functions URL
+        const fnUrl = `${SUPABASE_URL}/functions/v1/join?token=${encodeURIComponent(token)}`;
+
+        const res = await fetch(fnUrl, {
+          method: 'POST',
+          headers: {
+            // ✅ Functions need apikey (anon) and user bearer if you check auth
+            apikey: SUPABASE_ANON,
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        // Try to read JSON; fall back to generic error if unexpected
+        let data: any = {};
+        try {
+          data = await res.json();
+        } catch {
+          /* ignore parse errors */
+        }
+
+        if (res.ok) {
+          setMessage(data.message || 'Joined successfully.');
+          // Optional: redirect on success
+          // router.replace('/app');
+        } else {
+          setMessage(data.error || `Join failed (${res.status}).`);
+        }
+      } catch (err: any) {
+        setMessage(err?.message || 'Unexpected error while joining.');
       }
-
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-      if (!accessToken) {
-        router.replace(`/login?next=/join?token=${encodeURIComponent(token)}`);
-        return;
-      }
-
-      const base = process.env.NEXT_PUBLIC_SUPABASE_URL!; // e.g. https://abc123xyz.supabase.co
-      const fnUrl = `${base.replace('.supabase.co', '')}.functions.supabase.co/join?token=${encodeURIComponent(token)}`;
-
-      const res = await fetch(fnUrl, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      const data = await res.json();
-
-      setMessage(res.ok ? (data.message || 'Joined successfully.') : (data.error || 'Join failed.'));
-      // Optionally redirect after success:
-      // if (res.ok) router.replace('/dashboard');
     })();
   }, [router, searchParams]);
 
@@ -58,12 +81,14 @@ function JoinInner() {
 
 export default function JoinPage() {
   return (
-    <Suspense fallback={
-      <main className="mx-auto max-w-xl px-6 py-16 text-center">
-        <h1 className="text-2xl font-semibold mb-4">Invite</h1>
-        <p>Preparing…</p>
-      </main>
-    }>
+    <Suspense
+      fallback={
+        <main className="mx-auto max-w-xl px-6 py-16 text-center">
+          <h1 className="text-2xl font-semibold mb-4">Invite</h1>
+          <p>Preparing…</p>
+        </main>
+      }
+    >
       <JoinInner />
     </Suspense>
   );

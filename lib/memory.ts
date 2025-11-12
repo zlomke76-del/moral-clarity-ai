@@ -55,6 +55,10 @@ export async function remember(m: Memory) {
   return data;
 }
 
+/**
+ * Vector search across user_memories via RPC
+ * match_user_memories(p_user_key text, p_query_embedding vector, p_match_count int)
+ */
 export async function searchMemories(user_key: string, query: string, k = 8) {
   const client = sb();
   const qvec = await embed(query);

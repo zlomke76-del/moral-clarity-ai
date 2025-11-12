@@ -1,25 +1,19 @@
-// /lib/storage.ts
-import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
+'use client';
 
-export const UPLOAD_BUCKET =
-  process.env.NEXT_PUBLIC_SUPABASE_UPLOAD_BUCKET || "uploads";
+import { getSupabaseBrowser } from '@/lib/supabaseBrowser';
 
-export function bucket() {
-  const sb = createSupabaseBrowser();
-  return sb.storage.from(UPLOAD_BUCKET);
-}
+const DEFAULT_BUCKET =
+  process.env.NEXT_PUBLIC_SUPABASE_BUCKET ||
+  'attachments'; // ensure this bucket exists and is public if you need public URLs
 
-export async function uploadBlob(
-  key: string,
-  file: Blob,
-  contentType?: string
-) {
-  const b = bucket();
-  const { error } = await b.upload(key, file, {
-    upsert: false,
-    contentType: contentType || "application/octet-stream",
-  });
-  if (error) throw error;
-  const { data } = b.getPublicUrl(key);
-  return data.publicUrl;
+export function bucket(name: string = DEFAULT_BUCKET) {
+  const supabase = getSupabaseBrowser();
+  const storage = supabase.storage.from(name);
+
+  return {
+    upload: storage.upload.bind(storage),
+    getPublicUrl: storage.getPublicUrl.bind(storage),
+    // expose the raw instance if needed:
+    _raw: storage,
+  };
 }

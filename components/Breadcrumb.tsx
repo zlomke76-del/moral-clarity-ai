@@ -1,13 +1,10 @@
-// components/Breadcrumb.tsx
 "use client";
-
 import Link from "next/link";
 
 export type Crumb = { label: string; href?: string };
 
-export default function Breadcrumb({ items }: { items: Crumb[] }) {
-  if (!items?.length) return null;
-
+export default function Breadcrumb({ items = [] }: { items?: Crumb[] }) {
+  if (!items.length) return null;
   return (
     <nav aria-label="Breadcrumb" className="text-sm text-neutral-400">
       <ol className="flex flex-wrap items-center gap-1">

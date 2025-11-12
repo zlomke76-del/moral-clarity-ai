@@ -13,6 +13,9 @@ import { routeMode } from '@/core/mode-router';
 /* ========= MEMORY ========= */
 import { searchMemories, remember } from '@/lib/memory';
 
+/* ========= MCA CONFIG (defaults for user/workspace) ========= */
+import { MCA_WORKSPACE_ID, MCA_USER_KEY } from '@/lib/mca-config';
+
 /* ========= MODEL / TIMEOUT ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -56,7 +59,10 @@ function corsHeaders(origin: string | null): Headers {
   const h = new Headers();
   h.set('Vary', 'Origin');
   h.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  h.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Context-Id, X-Last-Mode, X-User-Key');
+  h.set(
+    'Access-Control-Allow-Headers',
+    'Content-Type, Authorization, X-Requested-With, X-Context-Id, X-Last-Mode, X-User-Key'
+  );
   h.set('Access-Control-Max-Age', '86400');
   if (origin) h.set('Access-Control-Allow-Origin', origin);
   return h;
@@ -125,10 +131,15 @@ const GUIDELINE_GUIDANCE = `GUIDANCE ADD-ON
 
 const RESPONSE_FORMAT = `RESPONSE FORMAT
 - Default: a single "Brief Answer" (2–5 sentences).
-- Add "Rationale" / "Next Steps" only if asked.`;
+- Add "Rationale" / "Next Steps" only if asked.
+- If a MEMORY PACK is present, prefer it over general disclaimers. On prompts like "What do you remember about me?", list the relevant memory items succinctly.`;
 
 /* scripture policy */
-function scripturePolicyText(opts: { wantsAbrahamic: boolean; forceFirstTurnSeeding: boolean; userAskedForSecular: boolean; }) {
+function scripturePolicyText(opts: {
+  wantsAbrahamic: boolean;
+  forceFirstTurnSeeding: boolean;
+  userAskedForSecular: boolean;
+}) {
   const base =
     `SCRIPTURE POLICY
 - Very short references only (e.g., "Exodus 20", "Matthew 5", "Qur'an 4:135"); no long quotes by default.
@@ -157,7 +168,9 @@ function trimConversation(messages: Array<{ role: string; content: string }>) {
 
 function wantsSecular(messages: Array<{ role: string; content: string }>) {
   const text = messages.slice(-6).map((m) => m.content).join(' ').toLowerCase();
-  return /\bsecular framing\b|\bsecular only\b|\bno scripture\b|\bno religious\b|\bkeep it secular\b|\bstrictly secular\b/.test(text);
+  return /\bsecular framing\b|\bsecular only\b|\bno scripture\b|\bno religious\b|\bkeep it secular\b|\bstrictly secular\b/.test(
+    text
+  );
 }
 
 function isFirstRealTurn(messages: Array<{ role: string; content: string }>) {
@@ -168,18 +181,31 @@ function isFirstRealTurn(messages: Array<{ role: string; content: string }>) {
 
 function hasEmotionalOrMoralCue(text: string) {
   const t = (text || '').toLowerCase();
-  const emo = ['hope','lost','afraid','fear','anxious','grief','sad','sorrow','depressed','stress','overwhelmed','lonely','comfort','forgive','forgiveness','guilt','shame','purpose','meaning'];
-  const moral = ['right','wrong','unfair','injustice','justice','truth','honest','dishonest','integrity','mercy','compassion','courage'];
+  const emo = [
+    'hope','lost','afraid','fear','anxious','grief','sad','sorrow','depressed',
+    'stress','overwhelmed','lonely','comfort','forgive','forgiveness','guilt',
+    'shame','purpose','meaning',
+  ];
+  const moral = [
+    'right','wrong','unfair','injustice','justice','truth','honest','dishonest',
+    'integrity','mercy','compassion','courage',
+  ];
   const hit = (arr: string[]) => arr.some((w) => t.includes(w));
   return hit(emo) || hit(moral);
 }
 
-function buildSystemPrompt(filters: string[], userWantsSecular: boolean, messages: Array<{ role: string; content: string }>) {
+function buildSystemPrompt(
+  filters: string[],
+  userWantsSecular: boolean,
+  messages: Array<{ role: string; content: string }>
+) {
   const wantsAbrahamic = filters.includes('abrahamic') || filters.includes('ministry');
   const wantsGuidance = filters.includes('guidance');
-  const lastUserText = [...messages].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content ?? '';
+  const lastUserText =
+    [...messages].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content ?? '';
   const firstTurn = isFirstRealTurn(messages);
-  const forceFirstTurnSeeding = wantsAbrahamic && !userWantsSecular && firstTurn && hasEmotionalOrMoralCue(lastUserText);
+  const forceFirstTurnSeeding =
+    wantsAbrahamic && !userWantsSecular && firstTurn && hasEmotionalOrMoralCue(lastUserText);
 
   const parts: string[] = [];
   parts.push(
@@ -187,7 +213,11 @@ function buildSystemPrompt(filters: string[], userWantsSecular: boolean, message
     HOUSE_RULES,
     GUIDELINE_NEUTRAL,
     RESPONSE_FORMAT,
-    scripturePolicyText({ wantsAbrahamic, forceFirstTurnSeeding, userAskedForSecular: userWantsSecular })
+    scripturePolicyText({
+      wantsAbrahamic,
+      forceFirstTurnSeeding,
+      userAskedForSecular: userWantsSecular,
+    })
   );
   if (wantsAbrahamic && !userWantsSecular) parts.push(GUIDELINE_ABRAHAMIC);
   if (wantsGuidance) parts.push(GUIDELINE_GUIDANCE);
@@ -217,7 +247,8 @@ async function fetchAttachmentAsText(att: Attachment): Promise<string> {
     return out.text || '';
   }
 
-  if (ct.includes('text/') || ct.includes('json') || ct.includes('csv') || /\.(?:txt|md|csv|json)$/i.test(att.name)) {
+  if (ct.includes('text/') || ct.includes('json') || ct.includes('csv') ||
+      /\.(?:txt|md|csv|json)$/i.test(att.name)) {
     return await res.text();
   }
 
@@ -231,12 +262,16 @@ function clampText(s: string, n: number) {
 
 /* ========= Memory helpers ========= */
 function getUserKeyFromReq(req: NextRequest, body: any) {
-  return req.headers.get('x-user-key') || body?.user_key || 'guest';
+  // default to configured MCA_USER_KEY instead of hard-coded "guest"
+  return req.headers.get('x-user-key') || body?.user_key || MCA_USER_KEY || 'guest';
 }
 
 function detectExplicitRemember(text: string) {
   if (!text) return null;
-  const patterns = [/^\s*(?:please\s+)?remember(?:\s+that)?\s+(.+)$/i, /^\s*store\s+this:\s+(.+)$/i];
+  const patterns = [
+    /^\s*(?:please\s+)?remember(?:\s+that)?\s+(.+)$/i,
+    /^\s*store\s+this:\s+(.+)$/i,
+  ];
   for (const rx of patterns) {
     const m = text.match(rx);
     if (m?.[1]) return m[1].trim();
@@ -298,21 +333,45 @@ export async function POST(req: NextRequest) {
       incoming.add('abrahamic');
     }
     if (body?.ministry === false) {
-      incoming.delete('ministry'); incoming.delete('abrahamic');
+      incoming.delete('ministry');
+      incoming.delete('abrahamic');
     }
     const effectiveFilters = Array.from(incoming);
 
     const { prompt: baseSystem } = buildSystemPrompt(effectiveFilters, userAskedForSecular, rolled);
 
-    /* ===== MEMORY: recall pack ===== */
-    const userKey = getUserKeyFromReq(req, body);
+    /* ===== MEMORY: recall pack (scoped) ===== */
+    let userKey = getUserKeyFromReq(req, body);
+    if (!userKey || userKey === 'guest') {
+      // last-resort server-side key if client didn't provide one
+      userKey = `u_${crypto.randomUUID()}`;
+    }
+    const workspaceId: string = body?.workspace_id || MCA_WORKSPACE_ID;
+
     const memoryEnabled = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+    // We keep hits accessible for the echo path
+    let hits: Array<any> = [];
     let memorySection = '';
+
     if (memoryEnabled) {
       try {
-        const fallbackQuery = rolled.filter((m) => m.role === 'user').map((m) => m.content).slice(-3).join('\n') || 'general';
-        const query = lastUser || fallbackQuery;
-        const hits = await searchMemories(userKey, query, 8);
+        const fallbackQuery =
+          rolled.filter((m) => m.role === 'user').map((m) => m.content).slice(-3).join('\n') || 'general';
+
+        // fold recent explicit "remember ..." clauses into query
+        const explicitInTurns = rolled
+          .filter((m) => m.role === 'user')
+          .map((m) => m.content.match(/\bremember(?:\s+that)?\s+(.+)/i)?.[1])
+          .filter(Boolean)
+          .join(' ; ');
+
+        const baseQuery = lastUser || fallbackQuery;
+        const query = [baseQuery, explicitInTurns].filter(Boolean).join(' | ');
+
+        // ✅ Correct call signature: (user_key, query, k)
+        hits = await searchMemories(userKey, query, 8);
+
         const pack = (hits ?? [])
           .map((m: any) => `• (${m.purpose ?? 'fact'}) ${m.content}`)
           .slice(0, 12)
@@ -326,15 +385,35 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    /* ===== Memory Echo: "what do you remember" fast path ===== */
+    const askedWhatYouRemember = /what\s+do\s+you\s+remember\b|remember\s+about\s+me\b/i.test(lastUser);
+    if (askedWhatYouRemember && hits && hits.length) {
+      const top = hits.slice(0, 10).map((m: any, i: number) => `${i + 1}. ${m.content}`).join('\n');
+      const text = `Here’s what I have noted:\n${top}`;
+      return NextResponse.json(
+        { text, model: 'memory-echo', identity: SOLACE_NAME, mode: route.mode, confidence: route.confidence, filters: effectiveFilters },
+        { headers: corsHeaders(echoOrigin) }
+      );
+    }
+
     /* ===== WEB SEARCH (fresh context) ===== */
     let webSection = '';
+    let hasWebContext = false;
     try {
-      const wantsFresh = /\b(latest|today|this week|news|recent|update|updates|look up|search|what happened|breaking)\b/i.test(lastUser);
-      if (wantsFresh) {
+      const wantsFresh = /\b(latest|today|this week|news|recent|update|updates|look up|search|what happened|breaking|breaking news|headlines|top stories)\b/i.test(
+        lastUser
+      );
+      const webFlag =
+        process.env.NEXT_PUBLIC_OPENAI_WEB_ENABLED_flag ??
+        process.env.OPENAI_WEB_ENABLED_flag ??
+        null;
+      if (wantsFresh && webFlag) {
         const results = await webSearch(lastUser, { news: true, max: 5 });
         if (Array.isArray(results) && results.length) {
           const lines = results.map((r: any, i: number) => `• [${i + 1}] ${r.title} — ${r.url}`).join('\n');
-          webSection = `\n\nWEB CONTEXT (recent search)\n${lines}`;
+          webSection =
+            `\n\nWEB CONTEXT (recent search)\n${lines}\n\nGuidance:\n- Use these results to answer directly.\n- Prefer the most recent and reputable sources.\n- If uncertain, say what is unknown.\n- When referencing items, use bracket numbers like [1], [2].`;
+          hasWebContext = true;
         }
       }
     } catch (err) {
@@ -367,20 +446,34 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        attachmentSection = `\n\nATTACHMENT DIGEST\nThe user provided ${atts.length} attachment(s). Use the content below in your analysis.\n` + parts.join('');
+        attachmentSection =
+          `\n\nATTACHMENT DIGEST\nThe user provided ${atts.length} attachment(s). Use the content below in your analysis.\n` +
+          parts.join('');
       }
     } catch {
       attachmentSection = '';
     }
 
-    const system = baseSystem + memorySection + webSection;
+    // If web context exists, add a strong “no-disclaimer” instruction
+    const webAssertion = hasWebContext
+      ? `\n\nREAL-TIME CONTEXT\n- You DO have recent web results above. Do NOT say you cannot provide real-time updates.\n- Synthesize a brief answer using those results, and include bracketed refs like [1], [3].`
+      : '';
 
-    /* ===== Explicit "remember ..." capture ===== */
+    const system = baseSystem + memorySection + webSection + webAssertion;
+
+    /* ===== Explicit "remember ..." capture (scoped) ===== */
     if (memoryEnabled) {
       const explicit = detectExplicitRemember(lastUser);
       if (explicit) {
         try {
-          await remember({ user_key: userKey, content: explicit, purpose: 'fact', title: '' });
+          await (remember as any)({
+            // user_memories is user-scoped; we still forward workspace for future compatibility
+            workspace_id: workspaceId,
+            user_key: userKey,
+            content: explicit,
+            purpose: 'fact',
+            title: '',
+          });
           const ack = `Got it — I'll remember that: ${explicit}`;
           if (!wantStream) {
             return NextResponse.json(
@@ -491,9 +584,9 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     const echoOrigin = pickAllowedOrigin(req.headers.get('origin'));
     const msg = err?.message === 'Request timed out' ? '⚠️ Connection timed out. Please try again.' : err?.message || String(err);
-    return NextResponse.json({ error: msg, identity: SOLACE_NAME }, {
-      status: err?.message === 'Request timed out' ? 504 : 500,
-      headers: corsHeaders(echoOrigin),
-    });
+    return NextResponse.json(
+      { error: msg, identity: SOLACE_NAME },
+      { status: err?.message === 'Request timed out' ? 504 : 500, headers: corsHeaders(echoOrigin) }
+    );
   }
 }

@@ -5,16 +5,24 @@ const nextConfig = {
   // Needed for react-pdf/pdfjs (it’s ESM and bundles worker)
   transpilePackages: ['react-pdf', 'pdfjs-dist'],
 
-  async redirects() {
-    return [
-      {
-        source: '/:path*',
-        has: [{ type: 'host', value: 'www.moralclarity.ai' }],
-        destination: 'https://moralclarity.ai/:path*',
-        permanent: true,
-      },
-    ];
-  },
+async redirects() {
+  return [
+    // 1) Canonicalize www → apex
+    {
+      source: '/:path*',
+      has: [{ type: 'host', value: 'www.moralclarity.ai' }],
+      destination: 'https://moralclarity.ai/:path*',
+      permanent: true,
+    },
+    // 2) Hard-stop any legacy /workspace2 hits (path or nested)
+    {
+      source: '/workspace2/:path*',
+      destination: '/app',
+      permanent: true,
+    },
+  ];
+},
+
 
   async headers() {
     const csp = [
@@ -41,7 +49,6 @@ const nextConfig = {
       "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://*.supabase.co",
       "font-src 'self' data: https:",
       "media-src 'self' blob:",
-      // Allow pdfjs worker from CDN; also blob: for inline worker
       "worker-src 'self' blob: https://cdnjs.cloudflare.com",
       "upgrade-insecure-requests",
     ].join('; ');
@@ -64,9 +71,16 @@ const nextConfig = {
     ];
   },
 
-  async rewrites() {
-    return [{ source: '/api/:path*', destination: 'https://www.moralclarity.ai/api/:path*' }];
-  },
+  // No broad /api rewrite. If you truly need one, enumerate it and scope by host, e.g.:
+  // async rewrites() {
+  //   return [
+  //     {
+  //       source: '/api/public/:path*',
+  //       has: [{ type: 'host', value: 'studio.moralclarity.ai' }],
+  //       destination: 'https://www.moralclarity.ai/api/public/:path*',
+  //     },
+  //   ];
+  // },
 };
 
 export default nextConfig;

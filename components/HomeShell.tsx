@@ -1,49 +1,49 @@
 'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import type { Session } from "@supabase/supabase-js";
-import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
+import { useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import type { Session } from '@supabase/supabase-js';
+import { createSupabaseBrowser } from '@/lib/supabase/client';
 
 export default function HomeShell() {
   const router = useRouter();
-  const [checked, setChecked] = useState(false);
-  const [supabase, setSupabase] = useState<any>(null);
+  const pathname = usePathname();
 
-  // Initialize Supabase only in the browser
   useEffect(() => {
-    const client = createSupabaseBrowser();
-    setSupabase(client);
-  }, []);
-
-  // Once client is ready, perform auth check
-  useEffect(() => {
+    // create the client only in the browser
+    const supabase = typeof window === 'undefined' ? null : createSupabaseBrowser();
     if (!supabase) return;
-    let active = true;
 
+    let alive = true;
     (async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
-        if (!active) return;
-        if (error) throw error;
+        if (!alive) return;
+
+        if (error) {
+          if (!pathname?.startsWith('/auth')) router.replace('/auth?next=%2Fapp');
+          return;
+        }
 
         const session: Session | null = data.session ?? null;
-        router.replace(session ? "/app" : "/auth?next=%2Fapp");
+        if (session) {
+          if (pathname !== '/app') router.replace('/app');
+        } else {
+          if (!pathname?.startsWith('/auth')) router.replace('/auth?next=%2Fapp');
+        }
       } catch {
-        router.replace("/auth?next=%2Fapp");
-      } finally {
-        if (active) setChecked(true);
+        if (!pathname?.startsWith('/auth')) router.replace('/auth?next=%2Fapp');
       }
     })();
 
     return () => {
-      active = false;
+      alive = false;
     };
-  }, [supabase, router]);
+  }, [router, pathname]);
 
   return (
     <main className="min-h-[60vh] flex items-center justify-center">
-      <div className="opacity-70">{checked ? "Redirecting…" : "Loading…"}</div>
+      <div className="opacity-70">Loading…</div>
     </main>
   );
 }

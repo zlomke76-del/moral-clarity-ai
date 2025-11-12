@@ -1,10 +1,10 @@
-// app/components/SolaceDock.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { bucket } from "@/lib/storage";               // ✅ use helper that reads the env bucket
+import { bucket } from "@/lib/storage";
 import { useSolaceStore } from "@/app/providers/solace-store";
+import { MCA_WORKSPACE_ID, MCA_USER_KEY } from "@/lib/mca-config";
 
 declare global {
   interface Window {
@@ -17,6 +17,13 @@ declare global {
 type Message = { role: "user" | "assistant"; content: string };
 type ModeHint = "Create" | "Next Steps" | "Red Team" | "Neutral";
 type Attachment = { name: string; url: string; type: string };
+
+type MemoryRow = {
+  id: string;
+  title: string | null;
+  content: string;
+  created_at?: string;
+};
 
 const POS_KEY = "solace:pos:v3";
 const MINISTRY_KEY = "solace:ministry";
@@ -34,9 +41,6 @@ const ui = {
     "0 0 0 1px rgba(251,191,36,.25) inset, 0 0 90px rgba(251,191,36,.14), 0 22px 70px rgba(0,0,0,.55)",
   shadow: "0 14px 44px rgba(0,0,0,.45)",
 };
-
-const cx = (...xs: Array<string | false | null | undefined>) =>
-  xs.filter(Boolean).join(" ");
 
 export default function SolaceDock() {
   // ensure single mount
@@ -79,6 +83,21 @@ export default function SolaceDock() {
     if (!el) return;
     el.scrollTop = el.scrollHeight;
   }, [messages]);
+
+  // durable per-browser user key (default to MCA_USER_KEY, upgrade to local UUID)
+  const [userKey, setUserKey] = useState<string>(MCA_USER_KEY);
+  useEffect(() => {
+    try {
+      let k = localStorage.getItem("mc:user_key");
+      if (!k || k === "guest") {
+        k = "u_" + crypto.randomUUID();
+        localStorage.setItem("mc:user_key", k);
+      }
+      setUserKey(k);
+    } catch {
+      setUserKey(MCA_USER_KEY || "guest");
+    }
+  }, []);
 
   const ministryOn = useMemo(
     () => filters.has("abrahamic") && filters.has("ministry"),
@@ -186,7 +205,7 @@ export default function SolaceDock() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(MINISTRY_KEY);
-      if (saved === "0") return; // user previously turned it off
+      if (saved === "0") return;
     } catch {}
 
     const hasAbrahamic = filters.has("abrahamic");
@@ -202,8 +221,52 @@ export default function SolaceDock() {
     }
   }, []); // run once
 
-  // ---------- actions -------------------------------------------------
+  // ---------- MEMORY (refs + ready flag) ----------
+  const memoryCacheRef = useRef<MemoryRow[]>([]);
+  const [memReady, setMemReady] = useState(false);
 
+  // ---------- MEMORY BOOTSTRAP ----------
+  useEffect(() => {
+    let alive = true;
+
+    (async () => {
+      try {
+        // Always send the active user key so we don’t fall back to "guest"
+        const r = await fetch(`/api/memory?limit=50`, {
+          cache: "no-store",
+          headers: { "X-User-Key": userKey || MCA_USER_KEY || "guest" },
+        });
+        if (!alive) return;
+
+        if (r.ok) {
+          const j = await r.json().catch(() => ({ rows: [] as any[] }));
+          const rows = Array.isArray(j?.rows) ? j.rows : [];
+
+          // Normalize to the local MemoryRow shape
+          memoryCacheRef.current = rows.map((m: any) => ({
+            id: String(m.id),
+            title: m.title ?? null,
+            content: String(m.content ?? ""),
+            created_at: m.created_at ?? undefined,
+          })) as MemoryRow[];
+        } else {
+          // Non-200 — clear cache so Solace doesn’t assume stale hints
+          memoryCacheRef.current = [];
+        }
+      } catch {
+        // Silent failure — dock remains usable, just without hints
+        memoryCacheRef.current = [];
+      } finally {
+        if (alive) setMemReady(true);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [userKey]);
+
+  // ---------- actions -------------------------------------------------
   async function send() {
     const text = input.trim();
     if (!text && pendingFiles.length === 0) return;
@@ -211,8 +274,8 @@ export default function SolaceDock() {
 
     setInput("");
     const userMsg = text || (pendingFiles.length ? "Attachments:" : "");
-    const next: Message[] = [...messages, { role: "user", content: userMsg }];
-    setMessages(next);
+    const nextMsgs: Message[] = [...messages, { role: "user", content: userMsg }];
+    setMessages(nextMsgs);
     setStreaming(true);
 
     const activeFilters: string[] = Array.from(filters);
@@ -223,13 +286,19 @@ export default function SolaceDock() {
         headers: {
           "Content-Type": "application/json",
           "X-Last-Mode": modeHint,
+          "X-User-Key": userKey, // header for server-side binding
         },
         body: JSON.stringify({
-          messages: next,
+          messages: nextMsgs,
           filters: activeFilters,
           stream: false,
-          attachments: pendingFiles, // pass to backend
+          attachments: pendingFiles,
           ministry: activeFilters.includes("ministry"),
+          // always pass identifiers
+          workspace_id: MCA_WORKSPACE_ID,
+          user_key: userKey, // body for redundancy
+          // optional client-side preview cache
+          memory_preview: memReady ? memoryCacheRef.current.slice(0, 50) : [],
         }),
       });
 
@@ -252,7 +321,7 @@ export default function SolaceDock() {
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
     const out: Attachment[] = [];
-    const b = bucket(); // ✅ resolves to the env-configured bucket
+    const b = bucket();
     for (const f of Array.from(files)) {
       try {
         const path = `${crypto.randomUUID()}_${encodeURIComponent(f.name)}`;
@@ -306,7 +375,7 @@ export default function SolaceDock() {
   }
 
   function toggleMic() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) {
       setMessages((m) => [
         ...m,
@@ -505,6 +574,18 @@ export default function SolaceDock() {
           <span aria-hidden style={orbStyle} title="Alt+Click header to center/reset" />
           <span style={{ font: "600 13px system-ui", color: ui.text }}>Solace</span>
           <span style={{ font: "12px system-ui", color: ui.sub }}>Create with moral clarity</span>
+          {/* tiny status dot for memory load */}
+          <span
+            title={memReady ? "Memory ready" : "Loading memory…"}
+            style={{
+              marginLeft: 8,
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: memReady ? "#34d399" : "#f59e0b",
+              boxShadow: memReady ? "0 0 8px #34d399aa" : "none",
+            }}
+          />
         </div>
 
         {/* middle: lenses */}
@@ -669,5 +750,4 @@ export default function SolaceDock() {
 }
 
 /* ========= end component ========= */
-
 

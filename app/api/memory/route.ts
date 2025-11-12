@@ -1,135 +1,139 @@
-// /app/api/memory/route.ts
-import { NextResponse } from 'next/server';
-import { supabaseService } from '@/lib/supabase';
-import { EMBEDDING_MODEL } from '@/lib/memory';
+// app/api/memory/route.ts
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-// --- helpers ---
-async function embed(text: string): Promise<number[]> {
-  const res = await fetch('https://api.openai.com/v1/embeddings', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({ model: EMBEDDING_MODEL, input: text }),
-  });
-  const j = await res.json();
-  return j?.data?.[0]?.embedding ?? [];
+/* ================= CORS (mirrors /api/chat) ================= */
+const STATIC_ALLOWED_ORIGINS = [
+  "https://moralclarity.ai",
+  "https://www.moralclarity.ai",
+  "https://studio.moralclarity.ai",
+  "https://studio-founder.moralclarity.ai",
+  "https://moralclarityai.com",
+  "https://www.moralclarityai.com",
+  "http://localhost:3000",
+];
+const ENV_ALLOWED_ORIGINS = (process.env.MCAI_ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+const ALLOWED_SET = new Set<string>([
+  ...STATIC_ALLOWED_ORIGINS,
+  ...ENV_ALLOWED_ORIGINS,
+]);
+
+function hostIsAllowedWildcard(hostname: string) {
+  return (
+    /^([a-z0-9-]+\.)*moralclarity\.ai$/i.test(hostname) ||
+    /^([a-z0-9-]+\.)*moralclarityai\.com$/i.test(hostname)
+  );
+}
+function pickAllowedOrigin(origin: string | null): string | null {
+  if (!origin) return null;
+  try {
+    if (ALLOWED_SET.has(origin)) return origin;
+    const url = new URL(origin);
+    if (hostIsAllowedWildcard(url.hostname)) return origin;
+  } catch {}
+  return null;
+}
+function corsHeaders(origin: string | null): Headers {
+  const h = new Headers();
+  h.set("Vary", "Origin");
+  h.set("Access-Control-Allow-Methods", "GET,OPTIONS");
+  h.set("Access-Control-Allow-Headers", "Content-Type, X-User-Key");
+  h.set("Access-Control-Max-Age", "86400");
+  if (origin) h.set("Access-Control-Allow-Origin", origin);
+  return h;
 }
 
-/**
- * POST /api/memory
- * mode = 'user' | 'workspace'  (default 'user')
- *  - user: writes to public.user_memories (requires content; no workspace_id)
- *  - workspace: writes to mca.memories (requires workspace_id)
- */
-export async function POST(req: Request) {
-  try {
-    const sb = supabaseService();
-    const body = await req.json();
+/* ================= Utils ================= */
+const DEBUG = process.env.NODE_ENV !== "production";
 
-    const {
-      mode = 'user',
-      workspace_id,
-      title,
-      content,
-      kind = 'note',
-      user_key = 'owner',
-      weight = 1,
-      expires_at = null,
-    } = body ?? {};
-
-    if (mode === 'workspace') {
-      if (!workspace_id) {
-        return NextResponse.json({ error: 'workspace_id required' }, { status: 400 });
-      }
-      const { data, error } = await sb
-        .schema('mca')
-        .from('memories')
-        .insert([{ workspace_id, title: title ?? (content ?? '').slice(0, 80), content }])
-        .select('id')
-        .single();
-      if (error) throw error;
-      return NextResponse.json({ id: data.id }, { status: 201 });
-    }
-
-    // mode === 'user'
-    if (!content) {
-      return NextResponse.json({ error: 'content required for user memory' }, { status: 400 });
-    }
-    const vector = await embed(content);
-    const { data, error } = await sb
-      .from('user_memories')
-      .insert([{ user_key, kind, content, weight, expires_at, embedding: vector }])
-      .select('id')
-      .single();
-    if (error) throw error;
-    return NextResponse.json({ id: data.id }, { status: 201 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? String(e) }, { status: 500 });
-  }
+function getUserKey(req: NextRequest): string {
+  const url = new URL(req.url);
+  // Priority: explicit header → query param → env default → "guest"
+  return (
+    req.headers.get("x-user-key") ||
+    url.searchParams.get("user_key") ||
+    process.env.NEXT_PUBLIC_MCA_USER_KEY ||
+    "guest"
+  );
 }
 
-/**
- * GET /api/memory
- * mode=workspace&workspace_id=... -> list mca.memories
- * mode=user&user_key=...&q=...   -> vector search via RPC
- * mode=user&user_key=...         -> latest raw user_memories
- */
-export async function GET(req: Request) {
+function badRequest(msg: string, origin: string | null) {
+  return NextResponse.json({ ok: false, error: msg }, { status: 400, headers: corsHeaders(origin) });
+}
+
+/* ================= OPTIONS (CORS preflight) ================= */
+export async function OPTIONS(req: NextRequest) {
+  const origin = pickAllowedOrigin(req.headers.get("origin"));
+  return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
+}
+
+/* ================= GET: recent memories for user_key ================= */
+export async function GET(req: NextRequest) {
+  const origin = pickAllowedOrigin(req.headers.get("origin"));
   try {
-    const sb = supabaseService();
     const url = new URL(req.url);
-    const mode = url.searchParams.get('mode') ?? 'workspace';
-    const limit = Number(url.searchParams.get('limit') ?? '25');
+    const user_key = getUserKey(req);
+    const limit = Math.min(Number(url.searchParams.get("limit") || 50), 200);
+    const kind = url.searchParams.get("kind"); // optional: 'profile' | 'preference' | 'fact' | 'task' | 'note'
 
-    if (mode === 'workspace') {
-      const workspace_id = url.searchParams.get('workspace_id');
-      if (!workspace_id) {
-        return NextResponse.json({ error: 'workspace_id required' }, { status: 400 });
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      if (DEBUG) {
+        // eslint-disable-next-line no-console
+        console.error("Memory route missing Supabase envs", {
+          hasUrl: !!process.env.SUPABASE_URL,
+          hasKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+        });
       }
-      const { data, error } = await sb
-        .schema('mca')
-        .from('memories')
-        .select('id,title,created_at,workspace_id')
-        .eq('workspace_id', workspace_id)
-        .order('created_at', { ascending: false })
-        .limit(limit);
-      if (error) throw error;
-      return NextResponse.json({ rows: data ?? [] });
+      return badRequest("Server not configured for memory access.", origin);
     }
 
-    // mode === 'user'
-    const user_key = url.searchParams.get('user_key');
-    const q = url.searchParams.get('q') ?? '';
-    if (!user_key) {
-      return NextResponse.json({ error: 'user_key required for mode=user' }, { status: 400 });
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      { auth: { persistSession: false } }
+    );
+
+    let q = supabase
+      .from("user_memories")
+      .select("id,title,content,created_at,user_key,kind")
+      .eq("user_key", user_key)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (kind) q = q.eq("kind", kind);
+
+    const { data, error } = await q;
+
+    if (error) {
+      if (DEBUG) {
+        // eslint-disable-next-line no-console
+        console.error("Supabase query error (/api/memory):", error);
+      }
+      return NextResponse.json(
+        { ok: false, error: error.message || String(error) },
+        { status: 500, headers: corsHeaders(origin) }
+      );
     }
 
-    if (!q) {
-      const { data, error } = await sb
-        .from('user_memories')
-        .select('id,kind,content,weight,created_at')
-        .eq('user_key', user_key)
-        .order('created_at', { ascending: false })
-        .limit(limit);
-      if (error) throw error;
-      return NextResponse.json({ rows: data ?? [] });
+    return NextResponse.json(
+      { ok: true, rows: data ?? [], user_key },
+      { headers: corsHeaders(origin) }
+    );
+  } catch (err: any) {
+    if (DEBUG) {
+      // eslint-disable-next-line no-console
+      console.error("Memory route unhandled error:", err);
     }
-
-    // vector search via RPC match_user_memories
-    const qvec = await embed(q);
-    const { data, error } = await sb.rpc('match_user_memories', {
-      p_user_key: user_key,
-      p_query_embedding: qvec,
-      p_match_count: limit,
-    });
-    if (error) throw error;
-    return NextResponse.json({ rows: data ?? [] });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? String(e) }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: err?.message || String(err) },
+      { status: 500, headers: corsHeaders(origin) }
+    );
   }
 }

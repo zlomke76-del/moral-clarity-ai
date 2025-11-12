@@ -1,29 +1,31 @@
 // lib/supabaseBrowser.ts
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-let _client: SupabaseClient | null = null;
+let client: SupabaseClient | null = null;
 
-export function createSupabaseBrowser(): SupabaseClient {
-  if (typeof window === "undefined") {
-    throw new Error("createSupabaseBrowser() must be called in the browser.");
-  }
-  if (_client) return _client;
+export function getSupabaseBrowser() {
+  if (client) return client;
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
-  }
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const storageKey =
+    process.env.NEXT_PUBLIC_SUPABASE_STORAGE_KEY || 'mc-auth';
 
-  _client = createClient(url, key, {
+  client = createClient(url, anon, {
     auth: {
+      // valid v2 options
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: true, // keep true if you use /auth/callback
+      detectSessionInUrl: true,
+      flowType: 'pkce',
+      storageKey,
+      // ❌ no "multiTab" option in v2
     },
+    global: { headers: { 'x-app': 'moralclarity-studio' } },
   });
-  return _client;
+
+  return client;
 }
 
-// Back-compat default import:  import supabase from '@/lib/supabaseBrowser'
-export default createSupabaseBrowser;
+// keep backward compatibility for files importing createSupabaseBrowser
+export const createSupabaseBrowser = getSupabaseBrowser;
