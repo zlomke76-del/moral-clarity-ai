@@ -14,7 +14,7 @@ type Status =
 
 export default function AuthCallbackPage() {
   const router = useRouter();
-  const params = useSearchParams(); // TS thinks this might be null in your env
+  const params = useSearchParams();
   const supabase = createSupabaseBrowser();
 
   const [status, setStatus] = useState<Status>('idle');
@@ -24,16 +24,15 @@ export default function AuthCallbackPage() {
     let cancelled = false;
 
     const run = async () => {
-      console.log('[callback] effect started');
+      console.log('[auth/callback] effect start');
 
-      // Explicit guard to satisfy TypeScript / Vercel
       if (!params) {
-        console.warn('[callback] search params object is null');
+        console.warn('[auth/callback] params is null');
         setStatus('no-params');
         setMessage('Missing search params');
         router.replace(
           '/auth/sign-in?err=' +
-            encodeURIComponent('Auth exchange failed: missing search params')
+            encodeURIComponent('Auth exchange failed: missing search params'),
         );
         return;
       }
@@ -41,43 +40,43 @@ export default function AuthCallbackPage() {
       const code = params.get('code');
       const next = params.get('next') || '/app';
 
-      console.log('[callback] code:', code, 'next:', next);
+      console.log('[auth/callback] code:', code, 'next:', next);
 
       if (!code) {
-        console.warn('[callback] no code found in URL');
+        console.warn('[auth/callback] no code in URL');
         setStatus('no-code');
-        setMessage('No code found in callback URL');
+        setMessage('No code in callback URL');
         router.replace(
           '/auth/sign-in?err=' +
-            encodeURIComponent('Auth exchange failed: missing code')
+            encodeURIComponent('Auth exchange failed: missing code'),
         );
         return;
       }
 
       setStatus('exchanging');
       setMessage('Exchanging auth code…');
-      console.log('[callback] calling exchangeCodeForSession');
+      console.log('[auth/callback] calling exchangeCodeForSession');
 
       const { error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (cancelled) {
-        console.log('[callback] cancelled, aborting');
+        console.log('[auth/callback] cancelled, aborting');
         return;
       }
 
       if (error) {
-        console.error('[callback] exchangeCodeForSession error:', error);
+        console.error('[auth/callback] exchange error:', error);
         setStatus('error');
         setMessage(error.message || 'Unknown auth error');
 
         router.replace(
           '/auth/sign-in?err=' +
-            encodeURIComponent(`Auth exchange failed: ${error.message}`)
+            encodeURIComponent(`Auth exchange failed: ${error.message}`),
         );
         return;
       }
 
-      console.log('[callback] exchange success, redirecting to', next);
+      console.log('[auth/callback] success, redirecting to', next);
       setStatus('success');
       setMessage('Sign-in successful, redirecting…');
 
@@ -88,19 +87,22 @@ export default function AuthCallbackPage() {
 
     return () => {
       cancelled = true;
-      console.log('[callback] cleanup');
+      console.log('[auth/callback] cleanup');
     };
   }, [params, router, supabase]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-black">
-      <div className="text-center text-sm text-gray-200">
-        <p className="mb-2">Finishing sign-in…</p>
-        <p className="opacity-70">
-          Status: <span className="font-mono">{status}</span>
+      <div className="text-center text-sm text-white">
+        <p className="mb-2 font-medium">Auth callback page</p>
+        <p className="mb-1">
+          Status:{' '}
+          <span className="font-mono bg-neutral-800 px-2 py-1 rounded">
+            {status}
+          </span>
         </p>
         {message && (
-          <p className="mt-1 text-xs opacity-60 break-all">{message}</p>
+          <p className="mt-1 text-xs opacity-70 break-all">{message}</p>
         )}
       </div>
     </div>
