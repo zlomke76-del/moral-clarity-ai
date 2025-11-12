@@ -49,7 +49,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) {
+      return NextResponse.json({ error: "Stripe is not configured" }, { status: 503 });
+    }
+    const stripe = new Stripe(key);
+
     const session = await stripe.billingPortal.sessions.create({
       customer: link.stripe_customer_id,
       return_url: returnUrl,
