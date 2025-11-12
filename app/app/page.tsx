@@ -1,6 +1,8 @@
 // app/app/page.tsx
 import FeatureGrid from "@/app/components/FeatureGrid";
 
+export const runtime = "nodejs";
+
 export default function AppHome() {
   return (
     <div className="min-h-[60vh]">
@@ -9,4 +11,3 @@ export default function AppHome() {
     </div>
   );
 }
-
