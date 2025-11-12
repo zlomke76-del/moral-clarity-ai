@@ -1,4 +1,3 @@
-// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import Image from "next/image";
@@ -12,8 +11,8 @@ import DemoBadge from "@/components/DemoBadge";    // small “Demo” chip
 import AuthProvider from "@/components/AuthProvider"; // ← mounts once app-wide
 import Toaster from "@/components/Toaster";        // global toast system (client)
 
-// ⚠️ Prefer placing SolaceDock under /components to avoid weird app/ bundling gotchas.
-const SolaceDock = dynamic(() => import("@/components/SolaceDock"), { ssr: false });
+// 🔧 Point directly to where the file actually is:
+const SolaceDock = dynamic(() => import("@/app/components/SolaceDock"), { ssr: false });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.moralclarity.ai"),
