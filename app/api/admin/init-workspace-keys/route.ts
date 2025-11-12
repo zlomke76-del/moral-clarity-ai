@@ -3,10 +3,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-// Use relative imports to avoid alias resolution issues in build
-import { initWorkspaceKey } from "../../../../server/memory-utils";
+import { initWorkspaceKey } from "../../../server/memory-utils";
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "../../../../types/supabase";
+import type { Database } from "../../../types/supabase";
 
 function getAdminSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
