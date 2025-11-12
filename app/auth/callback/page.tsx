@@ -26,6 +26,7 @@ export default function AuthCallbackPage() {
     const run = async () => {
       console.log('[auth/callback] effect start');
 
+      // TS / Vercel guard
       if (!params) {
         console.warn('[auth/callback] params is null');
         setStatus('no-params');
@@ -94,7 +95,7 @@ export default function AuthCallbackPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-black">
       <div className="text-center text-sm text-white">
-        <p className="mb-2 font-medium">Auth callback page</p>
+        <p className="mb-2 font-semibold">Auth callback page</p>
         <p className="mb-1">
           Status:{' '}
           <span className="font-mono bg-neutral-800 px-2 py-1 rounded">
