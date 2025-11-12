@@ -3,9 +3,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { initWorkspaceKey } from "../../../server/memory-utils";
+import { initWorkspaceKey } from "../../../../server/memory-utils";
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "../../../types/supabase";
+import type { Database } from "../../../../types/supabase";
 
 function getAdminSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -43,12 +43,11 @@ export async function POST(req: Request) {
     console.error("[init-workspace-keys] error:", err?.message ?? err);
     return NextResponse.json(
       { ok: false, error: err?.message ?? "init error" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
 
 export async function GET(req: Request) {
-  // Convenience GET for quick checks (reads workspaceId from query)
   return POST(req);
 }
