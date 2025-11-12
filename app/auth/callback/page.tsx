@@ -1,32 +1,32 @@
 // app/auth/callback/page.tsx
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { getSupabaseBrowser } from '@/lib/supabaseBrowser';
+import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 
 export default function AuthCallback() {
   const router = useRouter();
-  const params = useSearchParams();
-  const code = params.get('code');
-  const next = params.get('next') || '/app';
+  const params = useSearchParams(); // can be null in type space
 
   useEffect(() => {
     (async () => {
       try {
-        if (!code) {
-          router.replace(next);
-          return;
+        const code = params?.get?.("code") ?? null;
+        const next = params?.get?.("next") ?? "/app";
+
+        if (code) {
+          const supabase = getSupabaseBrowser();
+          // Ignore “already used/invalid” — just continue to the app
+          await supabase.auth.exchangeCodeForSession(code).catch(() => {});
         }
-        const supabase = getSupabaseBrowser();
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        // Ignore “already used” errors; just push to app
+
         router.replace(next);
       } catch {
-        router.replace(next);
+        router.replace("/app");
       }
     })();
-  }, [code, next, router]);
+  }, [params, router]);
 
   return null;
 }
