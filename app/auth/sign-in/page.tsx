@@ -14,8 +14,8 @@ export default function SignInPage() {
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // 1) If someone hits this page on the wrong origin (e.g. moralclarity.ai),
-  //    bounce them to the canonical studio sign-in, preserving query params.
+  // If someone lands on auth at the wrong origin (e.g. moralclarity.ai),
+  // bounce them to studio.moralclarity.ai so auth is consistent.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!CANONICAL_BASE) return;
@@ -34,28 +34,12 @@ export default function SignInPage() {
     }
   }, []);
 
-  // 2) Surfacing ?err= from callback (if any)
+  // Surface ?err= from callback
   useEffect(() => {
     if (typeof window === 'undefined') return;
-
     const params = new URLSearchParams(window.location.search);
     const e = params.get('err');
-
-    if (e) {
-      const lower = e.toLowerCase();
-
-      if (lower.includes('exchange failed')) {
-        setErr(
-          'Sign-in link could not be verified. Please open the link on the same device and browser where you requested it, or request a new link.',
-        );
-      } else if (lower.includes('code') && lower.includes('verifier')) {
-        setErr(
-          'We could not complete the secure login exchange. Please request a new sign-in link and open it on the same device.',
-        );
-      } else {
-        setErr(e);
-      }
-    }
+    if (e) setErr(e);
   }, []);
 
   async function onSubmit(e: FormEvent) {
@@ -66,8 +50,6 @@ export default function SignInPage() {
     try {
       const supabase = createSupabaseBrowser();
 
-      // 🔑 Always use the canonical origin for the callback.
-      // Fallback to window.origin if NEXT_PUBLIC_SITE_URL isn't set (dev).
       const baseUrl =
         CANONICAL_BASE && typeof window !== 'undefined'
           ? new URL(CANONICAL_BASE).origin
@@ -78,8 +60,7 @@ export default function SignInPage() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          // Supabase will send the magic link here (PKCE flow)
-          // e.g. https://studio.moralclarity.ai/auth/callback?code=...&next=%2Fapp
+          // Magic link will redirect back here; implicit flow will read tokens from URL.
           emailRedirectTo: `${baseUrl}/auth/callback?next=${encodeURIComponent(
             '/app',
           )}`,
@@ -90,22 +71,10 @@ export default function SignInPage() {
       setEmailSent(true);
     } catch (e: any) {
       console.error('[auth/sign-in] magic link error', e);
-
-      const message: string =
+      setErr(
         e?.message ??
-        'Failed to send magic link. Please double-check your email and try again.';
-
-      if (
-        message.toLowerCase().includes('exchange_failed') ||
-        (message.toLowerCase().includes('code') &&
-          message.toLowerCase().includes('verifier'))
-      ) {
-        setErr(
-          'Sign-in link could not be verified. Please open the link on the same device and browser where you requested it, or request a new magic link.',
-        );
-      } else {
-        setErr(message);
-      }
+          'Failed to send magic link. Please double-check your email and try again.',
+      );
     } finally {
       setLoading(false);
     }
