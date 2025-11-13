@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
 
-type Status = 'idle' | 'checking' | 'exchanging' | 'no-session' | 'success' | 'error';
+type Status = 'idle' | 'exchanging' | 'success' | 'error' | 'missing-code';
 
 export default function CallbackShell() {
   const router = useRouter();
@@ -19,81 +19,44 @@ export default function CallbackShell() {
     let cancelled = false;
 
     const run = async () => {
-      const code = params?.get('code');        // PKCE / SSO code
+      setStatus('exchanging');
+      setMessage('Finishing sign-in…');
+
+      const code = params?.get('code');
       const next = params?.get('next') || '/app';
 
-      try {
-        // 1) If we have a ?code=..., exchange it for a session (PKCE flow)
-        if (code) {
-          setStatus('exchanging');
-          setMessage('Exchanging auth code for session…');
-
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-
-          if (cancelled) return;
-
-          if (error) {
-            console.error('[CallbackShell] exchangeCodeForSession error', error);
-            setStatus('error');
-            setMessage(error.message ?? 'Auth code exchange failed');
-            router.replace(
-              '/auth/sign-in?err=' +
-                encodeURIComponent('Auth failed: ' + (error.message ?? 'code exchange error')),
-            );
-            return;
-          }
-
-          // If we got a session from exchange, we’re done: go to next
-          if (data.session) {
-            setStatus('success');
-            setMessage('Sign-in successful, redirecting…');
-            router.replace(next);
-            return;
-          }
-        }
-
-        // 2) No code, or exchange didn’t produce a session: check existing session (implicit / hash flow)
-        setStatus('checking');
-        setMessage('Checking session…');
-
-        const { data, error } = await supabase.auth.getSession();
-
+      if (!code) {
         if (cancelled) return;
-
-        if (error) {
-          console.error('[CallbackShell] getSession error', error);
-          setStatus('error');
-          setMessage(error.message ?? 'Failed to load session');
-          router.replace(
-            '/auth/sign-in?err=' +
-              encodeURIComponent('Auth failed: unable to load session'),
-          );
-          return;
-        }
-
-        if (!data.session) {
-          setStatus('no-session');
-          setMessage('No active session');
-          router.replace(
-            '/auth/sign-in?err=' +
-              encodeURIComponent('Auth failed: no active session'),
-          );
-          return;
-        }
-
-        setStatus('success');
-        setMessage('Sign-in successful, redirecting…');
-        router.replace(next);
-      } catch (err: any) {
-        if (cancelled) return;
-        console.error('[CallbackShell] unexpected error', err);
-        setStatus('error');
-        setMessage(err?.message ?? 'Unexpected auth error');
+        setStatus('missing-code');
+        setMessage('Missing auth code in callback URL.');
         router.replace(
           '/auth/sign-in?err=' +
-            encodeURIComponent('Auth failed: unexpected error'),
+            encodeURIComponent('Auth failed: missing auth code'),
         );
+        return;
       }
+
+      // 🔑 This is the critical PKCE step we were missing
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error('[CallbackShell] exchangeCodeForSession error', error);
+        setStatus('error');
+        setMessage(error.message ?? 'Failed to complete sign-in');
+        router.replace(
+          '/auth/sign-in?err=' +
+            encodeURIComponent(
+              'Auth failed: ' + (error.message ?? 'unable to complete sign-in'),
+            ),
+        );
+        return;
+      }
+
+      setStatus('success');
+      setMessage('Sign-in successful, redirecting…');
+      router.replace(next);
     };
 
     run();
