@@ -6,7 +6,9 @@ import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
-  const params = useSearchParams();
+
+  // Non-null assertion: on the client, this is always defined.
+  const params = useSearchParams()!;
   const supabase = createSupabaseBrowser();
 
   useEffect(() => {
@@ -19,24 +21,30 @@ export default function AuthCallbackPage() {
         return;
       }
 
-      // ⭐ This is the missing piece
+      // ⭐ Critical PKCE step: exchange code for session
       const { error } = await supabase.auth.exchangeCodeForSession({ code });
 
       if (error) {
         console.error('[Callback] exchange error', error);
-        router.replace('/auth/sign-in?err=' + encodeURIComponent(error.message));
+        router.replace(
+          '/auth/sign-in?err=' +
+            encodeURIComponent(error.message ?? 'Auth exchange failed'),
+        );
         return;
       }
 
       router.replace(next);
     };
 
-    run();
+    void run();
   }, [params, router, supabase]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center text-white">
-      <p>Finishing sign-in…</p>
+    <div className="flex min-h-screen items-center justify-center bg-black text-white">
+      <div className="text-center text-sm">
+        <p className="mb-2 font-semibold">Finishing sign-in…</p>
+        <p className="opacity-70">Exchanging auth code for a session…</p>
+      </div>
     </div>
   );
 }
