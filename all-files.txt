@@ -22,7 +22,6 @@
 .husky/_/prepare-commit-msg
 README.md
 all-files.txt
-app/(auth)/sign-in/actions.ts
 app/(dashboard)/spaces/page.tsx
 app/(marketing)/_components/FeatureGrid.tsx
 app/admin/page.tsx
@@ -61,11 +60,8 @@ app/app/preview/page.tsx
 app/app/red-team/page.tsx
 app/app/risk/page.tsx
 app/aup/page.tsx
-app/auth/callback/CallbackClient.tsx
-app/auth/callback/metadata.ts
-app/auth/callback/route.ts
+app/auth/callback/page.tsx
 app/auth/error/page.tsx
-app/auth/page.tsx
 app/auth/sign-in/page.tsx
 app/auth/sign-out/route.ts
 app/buy/[plan]/route.ts
@@ -220,7 +216,6 @@ public/MoralClarityAI_QuietDepth_Logos/icon-512.png
 public/MoralClarityAI_QuietDepth_Logos/manifest.webmanifest
 public/anchor-compass-lockup.svg
 public/favicon.svg
-r.json()).then(console.log)
 server/memory-utils.ts
 tailwind.config.js
 telemetry/schemas/mode_event.schema.json
