@@ -1,3 +1,4 @@
+// components/AuthProvider.tsx
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
@@ -10,9 +11,7 @@ type RetryState = {
 };
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
-  // Correct Supabase client factory
   const supabase = createSupabaseBrowser();
-
   const [ready, setReady] = useState(false);
   const unsubRef = useRef<() => void>();
   const retryRef = useRef<RetryState>({ tries: 0 });
@@ -23,10 +22,9 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     const backoff = (status?: number) => {
       if (status !== 429) return 0;
       const tries = ++retryRef.current.tries;
-      return Math.min(8000, 500 * Math.pow(2, tries - 1)); // 0.5s → 1 → 2 → 4 → 8
+      return Math.min(8000, 500 * Math.pow(2, tries - 1)); // 0.5s → 8s
     };
 
-    // Initial session load
     (async () => {
       const { error } = await supabase.auth.getSession();
       if (!alive) return;
@@ -34,37 +32,33 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       setReady(true);
     })();
 
-    // Auth state change subscription
     const { data: sub } = supabase.auth.onAuthStateChange(
       async (_event: AuthChangeEvent, session: Session | null) => {
         try {
-          // Optionally: call an authenticated endpoint to detect 429s
+          // optional: ping a small authorized endpoint here if you want
         } catch (err: any) {
           const status = err?.status ?? err?.response?.status;
           const delay = backoff(status);
           if (delay > 0) {
-            // Retry refresh with exponential backoff
             if (retryRef.current.timer) clearTimeout(retryRef.current.timer);
             retryRef.current.timer = setTimeout(
               () => supabase.auth.refreshSession(),
-              delay
+              delay,
             );
             return;
           }
         }
 
         if (!session) {
-          // Signed out → make sure client reflects that
           try {
             await supabase.auth.signOut();
           } catch {
             // ignore
           }
         } else {
-          // Reset retry state on success
           retryRef.current.tries = 0;
         }
-      }
+      },
     );
 
     unsubRef.current = () => sub.subscription.unsubscribe();
