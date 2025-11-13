@@ -17,17 +17,15 @@ export default function SignInPage() {
     const e = params.get('err');
 
     if (e) {
-      // Normalize common Supabase PKCE error into something human-readable
-      if (e.toLowerCase().includes('exchange_failed')) {
+      const lower = e.toLowerCase();
+
+      if (lower.includes('exchange failed')) {
         setErr(
-          'Sign-in link could not be verified. Please open the link on the same device where you requested it, or request a new link.'
+          'Sign-in link could not be verified. Please open the link on the same device and browser where you requested it, or request a new link.',
         );
-      } else if (
-        e.toLowerCase().includes('code') &&
-        e.toLowerCase().includes('verifier')
-      ) {
+      } else if (lower.includes('code') && lower.includes('verifier')) {
         setErr(
-          'We could not complete the secure login exchange. Please request a new sign-in link and open it on the same device.'
+          'We could not complete the secure login exchange. Please request a new sign-in link and open it on the same device.',
         );
       } else {
         setErr(e);
@@ -43,9 +41,8 @@ export default function SignInPage() {
     try {
       const supabase = createSupabaseBrowser();
 
-      // Use NEXT_PUBLIC_SITE_URL if defined, otherwise fall back to the current origin.
-      const baseUrl =
-        process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
+      // 🔑 Critical: always use the *current origin* for PKCE, not NEXT_PUBLIC_SITE_URL
+      const baseUrl = window.location.origin;
 
       const { error } = await supabase.auth.signInWithOtp({
         email,
@@ -53,7 +50,7 @@ export default function SignInPage() {
           // Supabase will send the magic link here (PKCE flow)
           // e.g. https://studio.moralclarity.ai/auth/callback?code=...&next=%2Fapp
           emailRedirectTo: `${baseUrl}/auth/callback?next=${encodeURIComponent(
-            '/app'
+            '/app',
           )}`,
         },
       });
@@ -67,14 +64,13 @@ export default function SignInPage() {
         e?.message ??
         'Failed to send magic link. Please double-check your email and try again.';
 
-      // Same-device PKCE failure sometimes bubbles through here too
       if (
         message.toLowerCase().includes('exchange_failed') ||
         (message.toLowerCase().includes('code') &&
           message.toLowerCase().includes('verifier'))
       ) {
         setErr(
-          'Sign-in link could not be verified. Please open the link on the same device where you requested it, or request a new link.'
+          'Sign-in link could not be verified. Please open the link on the same device and browser where you requested it, or request a new link.',
         );
       } else {
         setErr(message);
