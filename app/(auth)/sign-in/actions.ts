@@ -1,9 +1,9 @@
 // app/(auth)/sign-in/actions.ts
 'use client';
 
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
 
-const supabase = createClientComponentClient();
+const supabase = createSupabaseBrowser();
 
 export async function signInWithPassword(email: string, password: string) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -15,7 +15,7 @@ export async function signInWithPassword(email: string, password: string) {
 
 /**
  * Standard magic-link for any user (uses the current origin for redirect).
- * IMPORTANT: sends magic links to /auth, not /auth/callback.
+ * Uses implicit flow via the browser client and lands on /auth?next=/app.
  */
 export async function sendMagicLink(email: string) {
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -24,7 +24,7 @@ export async function sendMagicLink(email: string) {
     email,
     options: {
       // Supabase will redirect here after the user clicks the magic link
-      // Example: https://studio.moralclarity.ai/auth?next=%2Fapp
+      // Example: https://studio.moralclarity.ai/auth?next=%2Fapp#access_token=...
       emailRedirectTo: `${origin}/auth?next=%2Fapp`,
     },
   });
