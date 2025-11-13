@@ -1,40 +1,40 @@
 // components/AuthShell.tsx
-"use client";
+'use client';
 
-import { useState, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
-import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
+import { useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
 
 export default function AuthShell() {
   const supabase = createSupabaseBrowser();
   const searchParams = useSearchParams();
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   // null-safe in strict mode
-  const nextParamRaw = searchParams?.get("next") ?? "/app";
+  const nextParamRaw = searchParams?.get('next') ?? '/app';
   const nextParam = encodeURIComponent(nextParamRaw);
 
   const base =
     process.env.NEXT_PUBLIC_APP_BASE_URL ??
-    (typeof window !== "undefined" ? window.location.origin : "");
+    (typeof window !== 'undefined' ? window.location.origin : '');
 
-  const emailRedirectTo =
-    base ? `${base}/auth/callback?next=${nextParam}` : undefined;
+  // 🔑 IMPORTANT: no /auth/callback — use /auth?next=...
+  const emailRedirectTo = base ? `${base}/auth?next=${nextParam}` : undefined;
 
   const send = useCallback(async () => {
     setErr(null);
     setSent(false);
 
-    if (!email || !email.includes("@")) {
-      setErr("Please enter a valid email.");
+    if (!email || !email.includes('@')) {
+      setErr('Please enter a valid email.');
       return;
     }
     if (!emailRedirectTo) {
-      setErr("Missing base URL.");
+      setErr('Missing base URL.');
       return;
     }
 
@@ -47,7 +47,7 @@ export default function AuthShell() {
       if (error) setErr(error.message);
       else setSent(true);
     } catch (e: any) {
-      setErr(e?.message ?? "Something went wrong.");
+      setErr(e?.message ?? 'Something went wrong.');
     } finally {
       setPending(false);
     }
@@ -72,7 +72,7 @@ export default function AuthShell() {
         type="email"
         autoComplete="email"
         onKeyDown={(e) => {
-          if (e.key === "Enter") {
+          if (e.key === 'Enter') {
             e.preventDefault();
             void send();
           }
@@ -85,7 +85,7 @@ export default function AuthShell() {
         disabled={pending}
         aria-busy={pending}
       >
-        {pending ? "Sending…" : "Send magic link"}
+        {pending ? 'Sending…' : 'Send magic link'}
       </button>
 
       {sent && (
@@ -96,7 +96,7 @@ export default function AuthShell() {
       {err && <p className="mt-3 text-sm text-red-400">{err}</p>}
 
       <p className="mt-6 text-xs opacity-60">
-        After sign-in you’ll be sent to:{" "}
+        After sign-in you’ll be sent to:{' '}
         <code className="opacity-80">{nextParamRaw}</code>
       </p>
     </main>
