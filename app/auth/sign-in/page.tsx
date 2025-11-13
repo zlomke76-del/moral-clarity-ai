@@ -7,65 +7,58 @@ export default function SignInPage() {
   const [emailSent, setEmailSent] = useState(false);
   const [email, setEmail] = useState('');
   const [err, setErr] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
+  // Pull any ?err=... from the URL (e.g. from /auth/callback redirect)
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
     const params = new URLSearchParams(window.location.search);
     const e = params.get('err');
-    if (e) setErr(e);
+
+    if (e) {
+      // Normalize common Supabase PKCE error into something human-readable
+      if (e.toLowerCase().includes('exchange_failed')) {
+        setErr(
+          'Sign-in link could not be verified. Please open the link on the same device where you requested it, or request a new link.'
+        );
+      } else if (
+        e.toLowerCase().includes('code') &&
+        e.toLowerCase().includes('verifier')
+      ) {
+        setErr(
+          'We could not complete the secure login exchange. Please request a new sign-in link and open it on the same device.'
+        );
+      } else {
+        setErr(e);
+      }
+    }
   }, []);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setErr(null);
+    setLoading(true);
 
     try {
       const supabase = createSupabaseBrowser();
+
+      // Use NEXT_PUBLIC_SITE_URL if defined, otherwise fall back to the current origin.
+      const baseUrl =
+        process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
 
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
           // Supabase will send the magic link here (PKCE flow)
           // e.g. https://studio.moralclarity.ai/auth/callback?code=...&next=%2Fapp
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=%2Fapp`,
+          emailRedirectTo: `${baseUrl}/auth/callback?next=${encodeURIComponent(
+            '/app'
+          )}`,
         },
       });
 
       if (error) throw error;
       setEmailSent(true);
     } catch (e: any) {
-      console.error('[auth/sign-in] magic link error', e);
-      setErr(e?.message ?? 'Failed to send magic link');
-    }
-  }
-
-  return (
-    <main className="min-h-screen grid place-items-center p-6 bg-black text-white">
-      <div className="w-full max-w-md rounded-xl border border-neutral-800 p-6 bg-black/40">
-        <h1 className="text-xl font-semibold mb-4">Sign in</h1>
-
-        {emailSent ? (
-          <p>Check your email for a magic link.</p>
-        ) : (
-          <form onSubmit={onSubmit} className="space-y-4">
-            <input
-              type="email"
-              className="w-full rounded-md bg-neutral-900 p-3 outline-none"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <button
-              className="w-full rounded-md bg-amber-500/90 hover:bg-amber-500 p-3 font-medium"
-              type="submit"
-            >
-              Send magic link
-            </button>
-            {err && <p className="text-red-400 text-sm">{err}</p>}
-          </form>
-        )}
-      </div>
-    </main>
-  );
-}
+      cons
