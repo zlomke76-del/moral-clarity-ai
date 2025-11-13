@@ -3,13 +3,38 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
 
+const CANONICAL_BASE =
+  typeof process.env.NEXT_PUBLIC_SITE_URL === 'string'
+    ? process.env.NEXT_PUBLIC_SITE_URL.replace(/\/+$/, '')
+    : undefined;
+
 export default function SignInPage() {
   const [emailSent, setEmailSent] = useState(false);
   const [email, setEmail] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Pull any ?err=... from the URL (e.g. from /auth/callback redirect)
+  // 1) If someone hits this page on the wrong origin (e.g. moralclarity.ai),
+  //    bounce them to the canonical studio sign-in, preserving query params.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!CANONICAL_BASE) return;
+
+    try {
+      const currentOrigin = window.location.origin;
+      const canonicalOrigin = new URL(CANONICAL_BASE).origin;
+
+      if (currentOrigin !== canonicalOrigin) {
+        const search = window.location.search || '';
+        const canonicalUrl = `${canonicalOrigin}/auth/sign-in${search}`;
+        window.location.replace(canonicalUrl);
+      }
+    } catch (e) {
+      console.error('[auth/sign-in] canonical redirect error', e);
+    }
+  }, []);
+
+  // 2) Surfacing ?err= from callback (if any)
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -41,8 +66,14 @@ export default function SignInPage() {
     try {
       const supabase = createSupabaseBrowser();
 
-      // 🔑 Critical: always use the *current origin* for PKCE, not NEXT_PUBLIC_SITE_URL
-      const baseUrl = window.location.origin;
+      // 🔑 Always use the canonical origin for the callback.
+      // Fallback to window.origin if NEXT_PUBLIC_SITE_URL isn't set (dev).
+      const baseUrl =
+        CANONICAL_BASE && typeof window !== 'undefined'
+          ? new URL(CANONICAL_BASE).origin
+          : typeof window !== 'undefined'
+          ? window.location.origin
+          : '';
 
       const { error } = await supabase.auth.signInWithOtp({
         email,
@@ -70,7 +101,7 @@ export default function SignInPage() {
           message.toLowerCase().includes('verifier'))
       ) {
         setErr(
-          'Sign-in link could not be verified. Please open the link on the same device and browser where you requested it, or request a new link.',
+          'Sign-in link could not be verified. Please open the link on the same device and browser where you requested it, or request a new magic link.',
         );
       } else {
         setErr(message);
