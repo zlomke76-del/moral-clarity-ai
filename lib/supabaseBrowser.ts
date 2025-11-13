@@ -8,8 +8,9 @@ type SupabaseClientType = ReturnType<typeof createBrowserClient>;
 let browserClient: SupabaseClientType | null = null;
 
 /**
- * Preferred helper: create (or reuse) a browser Supabase client.
- * Using implicit flow so magic links can be opened from any browser/tab.
+ * Browser Supabase client using implicit auth flow.
+ * - No PKCE exchangeCodeForSession calls.
+ * - Supabase auto-detects the session from the magic link URL.
  */
 export function createSupabaseBrowser(): SupabaseClientType {
   if (!browserClient) {
@@ -18,10 +19,13 @@ export function createSupabaseBrowser(): SupabaseClientType {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         auth: {
-          // implicit is default, we’re explicit for clarity
+          // Use implicit flow for magic links so we don't depend on PKCE verifier cookies
           flowType: 'implicit',
+          detectSessionInUrl: true,
+          persistSession: true,
+          autoRefreshToken: true,
         },
-      }
+      },
     );
   }
 
