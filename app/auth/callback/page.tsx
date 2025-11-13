@@ -6,17 +6,25 @@ import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
-  const supabase = createSupabaseBrowser();
 
   useEffect(() => {
+    // Ensure we're in the browser
+    if (typeof window === 'undefined') return;
+
     const run = async () => {
       try {
         const url = new URL(window.location.href);
         const code = url.searchParams.get('code');
-        const next = url.searchParams.get('next') || '/app';
+        const nextParam = url.searchParams.get('next') || '/app';
+
+        // Simple open-redirect protection: require a leading slash
+        const next =
+          typeof nextParam === 'string' && nextParam.startsWith('/')
+            ? nextParam
+            : '/app';
 
         if (!code) {
-          console.error('[Callback] missing auth code in URL');
+          console.error('[Callback] missing auth code in URL', url.toString());
           router.replace(
             '/auth/error?err=' +
               encodeURIComponent('Auth exchange failed: missing code in URL'),
@@ -24,21 +32,43 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        // PKCE exchange: Supabase handles code_verifier internally
-        const { data, error } =
-          await supabase.auth.exchangeCodeForSession(window.location.href);
+        const supabase = createSupabaseBrowser();
+
+        // PKCE exchange: Supabase handles code_verifier internally (stored client-side)
+        const { data, error } = await supabase.auth.exchangeCodeForSession(
+          url.toString(),
+        );
 
         if (error) {
           console.error('[Callback] exchange error', error);
+
+          const message = (error as any)?.message ?? String(error ?? '');
+
+          // Normalize common PKCE error into more helpful copy
+          if (
+            message.toLowerCase().includes('code') &&
+            message.toLowerCase().includes('verifier')
+          ) {
+            router.replace(
+              '/auth/error?err=' +
+                encodeURIComponent(
+                  'Auth exchange failed: both code and verifier must be present. ' +
+                    'Please open the sign-in link on the same device and browser where you requested it, ' +
+                    'or request a new magic link.',
+                ),
+            );
+            return;
+          }
+
           router.replace(
             '/auth/error?err=' +
-              encodeURIComponent(error.message || 'Auth exchange failed'),
+              encodeURIComponent(message || 'Auth exchange failed'),
           );
           return;
         }
 
-        if (!data.session) {
-          console.error('[Callback] no session returned');
+        if (!data?.session) {
+          console.error('[Callback] no session returned from exchange');
           router.replace(
             '/auth/error?err=' +
               encodeURIComponent('Auth exchange failed: no session returned'),
@@ -46,6 +76,7 @@ export default function AuthCallbackPage() {
           return;
         }
 
+        // Success: go to the requested page
         router.replace(next);
       } catch (err: any) {
         console.error('[Callback] unexpected error', err);
@@ -57,7 +88,7 @@ export default function AuthCallbackPage() {
     };
 
     void run();
-  }, [router, supabase]);
+  }, [router]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-black text-white">
