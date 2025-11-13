@@ -1,91 +1,80 @@
-"use client";
+// components/CallbackShell.tsx
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
+
+type Status = 'idle' | 'checking' | 'no-session' | 'success' | 'error';
 
 export default function CallbackShell() {
-  const supabase = createSupabaseBrowser();
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const params = useSearchParams();
+  const supabase = createSupabaseBrowser();
 
-  const [status, setStatus] = useState<"verifying" | "ok" | "error">("verifying");
-  const [message, setMessage] = useState<string>("Verifying your sign-in…");
-
-  // Tiny helpers to safely read params even if the hook is typed as nullable
-  const getParam = (key: string): string | null => {
-    const fromHook =
-      (searchParams && "get" in searchParams ? searchParams.get(key) : null) ?? null;
-    if (fromHook !== null) return fromHook;
-    if (typeof window !== "undefined") {
-      return new URLSearchParams(window.location.search).get(key);
-    }
-    return null;
-  };
+  const [status, setStatus] = useState<Status>('idle');
+  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    let active = true;
+    let cancelled = false;
 
-    (async () => {
-      try {
-        // 1) If we already have a session, just go.
-        const { data: sess0, error: err0 } = await supabase.auth.getSession();
-        if (!active) return;
+    const run = async () => {
+      setStatus('checking');
+      setMessage('Checking session…');
 
-        if (err0) {
-          setStatus("error");
-          setMessage(err0.message || "Could not complete sign-in.");
-          return;
-        }
+      const next = params?.get('next') || '/app';
 
-        // 2) If no session yet, exchange the authorization code ONLY (not the full URL).
-        if (!sess0.session) {
-          const code = getParam("code");
-          if (!code) {
-            setStatus("error");
-            setMessage("Missing authorization code.");
-            return;
-          }
+      const { data, error } = await supabase.auth.getSession();
 
-          const { data: sess1, error: err1 } =
-            await supabase.auth.exchangeCodeForSession(code);
+      if (cancelled) return;
 
-          if (!active) return;
-          if (err1) {
-            setStatus("error");
-            setMessage(err1.message || "Could not complete sign-in.");
-            return;
-          }
-
-          if (!sess1.session) {
-            setStatus("error");
-            setMessage("No session returned from exchange.");
-            return;
-          }
-        }
-
-        // 3) Success → redirect to next (defaults to /app)
-        setStatus("ok");
-        setMessage("Signed in. Redirecting…");
-        const next = getParam("next") ?? "/app";
-        router.replace(next);
-      } catch (e: any) {
-        if (!active) return;
-        setStatus("error");
-        setMessage(e?.message ?? "Unexpected error during sign-in.");
+      if (error) {
+        console.error('[CallbackShell] getSession error', error);
+        setStatus('error');
+        setMessage(error.message ?? 'Failed to load session');
+        router.replace(
+          '/auth/sign-in?err=' +
+            encodeURIComponent('Auth failed: unable to load session'),
+        );
+        return;
       }
-    })();
+
+      if (!data.session) {
+        setStatus('no-session');
+        setMessage('No active session');
+        router.replace(
+          '/auth/sign-in?err=' +
+            encodeURIComponent('Auth failed: no active session'),
+        );
+        return;
+      }
+
+      setStatus('success');
+      setMessage('Sign-in successful, redirecting…');
+      router.replace(next);
+    };
+
+    run();
 
     return () => {
-      active = false;
+      cancelled = true;
     };
-  }, [router, supabase, searchParams]);
+  }, [params, router, supabase]);
 
   return (
-    <main className="min-h-[60vh] flex items-center justify-center">
-      <div className={status === "error" ? "text-red-400 opacity-90" : "opacity-80"}>
-        {message}
+    <div className="flex min-h-screen items-center justify-center bg-black">
+      <div className="text-center text-sm text-white">
+        <p className="mb-2 font-semibold">Finishing sign-in…</p>
+        <p className="mb-1">
+          Status:{' '}
+          <span className="font-mono bg-neutral-800 px-2 py-1 rounded">
+            {status}
+          </span>
+        </p>
+        {message && (
+          <p className="mt-1 text-xs opacity-70 break-all">{message}</p>
+        )}
       </div>
-    </main>
+    </div>
   );
 }
