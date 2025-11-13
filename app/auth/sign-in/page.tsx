@@ -61,4 +61,63 @@ export default function SignInPage() {
       if (error) throw error;
       setEmailSent(true);
     } catch (e: any) {
-      cons
+      console.error('[auth/sign-in] magic link error', e);
+
+      const message: string =
+        e?.message ??
+        'Failed to send magic link. Please double-check your email and try again.';
+
+      // Same-device PKCE failure sometimes bubbles through here too
+      if (
+        message.toLowerCase().includes('exchange_failed') ||
+        (message.toLowerCase().includes('code') &&
+          message.toLowerCase().includes('verifier'))
+      ) {
+        setErr(
+          'Sign-in link could not be verified. Please open the link on the same device where you requested it, or request a new link.'
+        );
+      } else {
+        setErr(message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main className="min-h-screen grid place-items-center p-6 bg-black text-white">
+      <div className="w-full max-w-md rounded-xl border border-neutral-800 p-6 bg-black/40">
+        <h1 className="text-xl font-semibold mb-4">Sign in</h1>
+
+        {emailSent ? (
+          <div className="space-y-2 text-sm text-neutral-200">
+            <p>Check your email for a magic sign-in link.</p>
+            <p className="text-neutral-400">
+              For security, open the link on the same device and browser where
+              you requested it.
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={onSubmit} className="space-y-4">
+            <input
+              type="email"
+              className="w-full rounded-md bg-neutral-900 p-3 outline-none"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <button
+              className="w-full rounded-md bg-amber-500/90 hover:bg-amber-500 p-3 font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+              type="submit"
+              disabled={loading || !email}
+            >
+              {loading ? 'Sending magic link…' : 'Send magic link'}
+            </button>
+            {err && <p className="text-red-400 text-sm">{err}</p>}
+          </form>
+        )}
+      </div>
+    </main>
+  );
+}
