@@ -24,7 +24,7 @@ export default function SignIn() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          // Supabase will send the magic link directly to /app
+          // ⬅️ KEY: go directly to /app, no callback route
           emailRedirectTo: `${window.location.origin}/app`,
         },
       });
