@@ -1,7 +1,6 @@
 // app/auth/page.tsx
-export const dynamic = 'force-dynamic';
+import CallbackShell from '@/components/CallbackShell';
 
-import AuthShell from '@/components/AuthShell';
 export default function AuthPage() {
-  return <AuthShell />;
+  return <CallbackShell />;
 }
