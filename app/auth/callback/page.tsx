@@ -1,50 +1,48 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
-
-  // Non-null assertion: on the client, this is always defined.
-  const params = useSearchParams()!;
   const supabase = createSupabaseBrowser();
 
   useEffect(() => {
     const run = async () => {
-      const code = params.get('code');
-      const next = params.get('next') || '/app';
+      try {
+        const { data, error } =
+          await supabase.auth.exchangeCodeForSession(window.location.href);
 
-      if (!code) {
-        router.replace('/auth/sign-in?err=Missing code');
-        return;
-      }
+        if (error) {
+          console.error('[Callback] exchange error', error);
+          router.replace(
+            '/auth/sign-in?err=' +
+              encodeURIComponent(error.message || 'Auth exchange failed')
+          );
+          return;
+        }
 
-      // ⭐ Critical PKCE step: exchange code for session
-      const { error } = await supabase.auth.exchangeCodeForSession({ code });
+        // Redirect to next or default
+        const url = new URL(window.location.href);
+        const next = url.searchParams.get('next') || '/app';
 
-      if (error) {
-        console.error('[Callback] exchange error', error);
+        router.replace(next);
+      } catch (err: any) {
+        console.error('[Callback] unexpected error', err);
         router.replace(
           '/auth/sign-in?err=' +
-            encodeURIComponent(error.message ?? 'Auth exchange failed'),
+            encodeURIComponent('Unexpected error during callback')
         );
-        return;
       }
-
-      router.replace(next);
     };
 
-    void run();
-  }, [params, router, supabase]);
+    run();
+  }, [router, supabase]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-black text-white">
-      <div className="text-center text-sm">
-        <p className="mb-2 font-semibold">Finishing sign-in…</p>
-        <p className="opacity-70">Exchanging auth code for a session…</p>
-      </div>
+      <p>Finishing sign-in…</p>
     </div>
   );
 }
