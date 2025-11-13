@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
 
-type Status = 'idle' | 'exchanging' | 'success' | 'error' | 'missing-code';
+type Status = 'idle' | 'exchanging' | 'success' | 'error' | 'no-code';
 
 export default function CallbackShell() {
   const router = useRouter();
@@ -20,36 +20,45 @@ export default function CallbackShell() {
 
     const run = async () => {
       setStatus('exchanging');
-      setMessage('Finishing sign-in…');
+      setMessage('Exchanging auth code for session…');
 
-      const code = params?.get('code');
+      const code = params?.get('code') ?? null;
       const next = params?.get('next') || '/app';
 
       if (!code) {
-        if (cancelled) return;
-        setStatus('missing-code');
-        setMessage('Missing auth code in callback URL.');
+        setStatus('no-code');
+        setMessage('Missing auth code in URL');
         router.replace(
           '/auth/sign-in?err=' +
-            encodeURIComponent('Auth failed: missing auth code'),
+            encodeURIComponent('Auth exchange failed: missing code in URL'),
         );
         return;
       }
 
-      // 🔑 This is the critical PKCE step we were missing
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      // IMPORTANT: pass a plain string, not an object
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (cancelled) return;
 
       if (error) {
         console.error('[CallbackShell] exchangeCodeForSession error', error);
         setStatus('error');
-        setMessage(error.message ?? 'Failed to complete sign-in');
+        setMessage(error.message ?? 'Unable to finish sign-in');
         router.replace(
           '/auth/sign-in?err=' +
             encodeURIComponent(
-              'Auth failed: ' + (error.message ?? 'unable to complete sign-in'),
+              'Auth exchange failed: ' + (error.message || 'unknown error'),
             ),
+        );
+        return;
+      }
+
+      if (!data.session) {
+        setStatus('error');
+        setMessage('No session returned from auth exchange');
+        router.replace(
+          '/auth/sign-in?err=' +
+            encodeURIComponent('Auth exchange failed: no session returned'),
         );
         return;
       }
