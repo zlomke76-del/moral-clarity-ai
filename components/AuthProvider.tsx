@@ -10,12 +10,6 @@ type RetryState = {
   timer?: ReturnType<typeof setTimeout>;
 };
 
-/**
- * Lightweight auth wiring:
- * - Does NOT gate rendering on "ready"
- * - Sets up onAuthStateChange with basic backoff for 429s
- * - Keeps the UI always visible (no more black screen while waiting)
- */
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = createSupabaseBrowser();
   const retryRef = useRef<RetryState>({ tries: 0 });
@@ -29,7 +23,6 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       return Math.min(8000, 500 * Math.pow(2, tries - 1)); // 0.5s → 8s
     };
 
-    // Prime session once on mount (but don't block rendering on it)
     (async () => {
       const { error } = await supabase.auth.getSession();
       if (!alive) return;
@@ -53,13 +46,8 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        if (!session) {
-          try {
-            await supabase.auth.signOut();
-          } catch {
-            // ignore
-          }
-        } else {
+        // Just reset backoff on non-null session; don't force signOut on null
+        if (session) {
           retryRef.current.tries = 0;
         }
       },
@@ -72,6 +60,5 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [supabase]);
 
-  // 🔑 Key change: ALWAYS render children; don't hide them behind `ready`
   return <>{children}</>;
 }
