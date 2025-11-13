@@ -8,7 +8,6 @@ export default function AuthCallbackPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Ensure we're in the browser
     if (typeof window === 'undefined') return;
 
     const run = async () => {
@@ -17,7 +16,7 @@ export default function AuthCallbackPage() {
         const code = url.searchParams.get('code');
         const nextParam = url.searchParams.get('next') || '/app';
 
-        // Simple open-redirect protection: require a leading slash
+        // Guard against weird external URLs
         const next =
           typeof nextParam === 'string' && nextParam.startsWith('/')
             ? nextParam
@@ -34,9 +33,9 @@ export default function AuthCallbackPage() {
 
         const supabase = createSupabaseBrowser();
 
-        // PKCE exchange: Supabase handles code_verifier internally (stored client-side)
+        // 🔑 PKCE exchange: pass just the code, Supabase uses stored verifier
         const { data, error } = await supabase.auth.exchangeCodeForSession(
-          url.toString(),
+          code,
         );
 
         if (error) {
@@ -44,7 +43,6 @@ export default function AuthCallbackPage() {
 
           const message = (error as any)?.message ?? String(error ?? '');
 
-          // Normalize common PKCE error into more helpful copy
           if (
             message.toLowerCase().includes('code') &&
             message.toLowerCase().includes('verifier')
@@ -52,9 +50,7 @@ export default function AuthCallbackPage() {
             router.replace(
               '/auth/error?err=' +
                 encodeURIComponent(
-                  'Auth exchange failed: both code and verifier must be present. ' +
-                    'Please open the sign-in link on the same device and browser where you requested it, ' +
-                    'or request a new magic link.',
+                  'Auth exchange failed: both code and verifier must be present. Please open the sign-in link on the same device and browser where you requested it, or request a new magic link.',
                 ),
             );
             return;
@@ -76,7 +72,6 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        // Success: go to the requested page
         router.replace(next);
       } catch (err: any) {
         console.error('[Callback] unexpected error', err);
