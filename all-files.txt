@@ -3,6 +3,23 @@
 .github/workflows/checksums-verify.yml
 .github/workflows/nightly-billing.yml
 .gitignore
+.husky/_/.gitignore
+.husky/_/applypatch-msg
+.husky/_/commit-msg
+.husky/_/h
+.husky/_/husky.sh
+.husky/_/post-applypatch
+.husky/_/post-checkout
+.husky/_/post-commit
+.husky/_/post-merge
+.husky/_/post-rewrite
+.husky/_/pre-applypatch
+.husky/_/pre-auto-gc
+.husky/_/pre-commit
+.husky/_/pre-merge-commit
+.husky/_/pre-push
+.husky/_/pre-rebase
+.husky/_/prepare-commit-msg
 README.md
 all-files.txt
 app/(auth)/sign-in/actions.ts
@@ -25,9 +42,6 @@ app/api/memory/route.ts
 app/api/memory/search/route.ts
 app/api/mini-chat/route.ts
 app/api/spaces/route.ts
-app/api/stripe/checkout/route.ts
-app/api/stripe/portal/route.ts
-app/api/stripe/webhook/route.ts
 app/api/subscribe/route.ts
 app/api/support/auto/route.ts
 app/api/support/bulk/close/route.ts
@@ -36,7 +50,6 @@ app/api/support/list/route.ts
 app/api/support/reply/route.ts
 app/api/support/thread/route.ts
 app/api/support/update/route.ts
-app/api/support/update/route.ts.disabled
 app/api/test-email/route.ts
 app/api/whoami/route.ts
 app/app/creative/page.tsx
@@ -50,7 +63,7 @@ app/app/risk/page.tsx
 app/aup/page.tsx
 app/auth/callback/CallbackClient.tsx
 app/auth/callback/metadata.ts
-app/auth/callback/page.tsx
+app/auth/callback/route.ts
 app/auth/error/page.tsx
 app/auth/page.tsx
 app/auth/sign-in/page.tsx
@@ -104,6 +117,7 @@ app/viewer/page.tsx
 app/viewer/viewer-client.tsx
 app/w/[workspaceId]/memory/page.tsx
 archive/api/admin/founder-login
+archive/app/api/support/update.route.ts.disabled
 archive/client/components/Quota.tsx
 archive/mcai_unified_scaffold/ARCHITECTURE_UNIFIED.md
 archive/mcai_unified_scaffold/app/(auth)/layout.tsx
@@ -183,6 +197,7 @@ next-env.d.ts
 next.config.mjs
 package-lock.json
 package.json
+pages/api/stripe/webhook.ts
 public/Journey/Queenstown.jpg
 public/Journey/aoraki.jpg
 public/Journey/arthurs_pass.jpg
@@ -206,6 +221,7 @@ public/MoralClarityAI_QuietDepth_Logos/manifest.webmanifest
 public/anchor-compass-lockup.svg
 public/favicon.svg
 r.json()).then(console.log)
+server/memory-utils.ts
 tailwind.config.js
 telemetry/schemas/mode_event.schema.json
 tools/canon-lint/check.js
