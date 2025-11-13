@@ -24,8 +24,8 @@ export default function SignIn() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          // Supabase will send the link here
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/app`,
+          // Supabase will send the magic link directly to /app
+          emailRedirectTo: `${window.location.origin}/app`,
         },
       });
 
