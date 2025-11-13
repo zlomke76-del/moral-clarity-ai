@@ -1,3 +1,4 @@
+// app/auth/sign-in/page.tsx
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
@@ -24,8 +25,8 @@ export default function SignIn() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          // ⬅️ KEY: go directly to /app, no callback route
-          emailRedirectTo: `${window.location.origin}/app`,
+          // MAGIC LINK TARGET: /auth?next=/app
+          emailRedirectTo: `${window.location.origin}/auth?next=/app`,
         },
       });
 
