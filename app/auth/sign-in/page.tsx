@@ -1,19 +1,16 @@
-// app/auth/sign-in/page.tsx
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
 
-/**
- * /auth/sign-in
- * Magic link sign-in screen for studio.moralclarity.ai
- */
-export default function AuthSignInPage() {
+export default function SignInPage() {
   const [emailSent, setEmailSent] = useState(false);
   const [email, setEmail] = useState('');
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
+    // Surface any ?err=... message from redirects
+    if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const e = params.get('err');
     if (e) setErr(e);
@@ -29,8 +26,10 @@ export default function AuthSignInPage() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          // Magic link goes to /auth?next=/app
-          emailRedirectTo: `${window.location.origin}/auth?next=%2Fapp`,
+          // Supabase will send the magic link here (PKCE flow)
+          // The email link will look like:
+          //   https://studio.moralclarity.ai/auth/callback?code=...&next=%2Fapp
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=%2Fapp`,
         },
       });
 
@@ -43,25 +42,24 @@ export default function AuthSignInPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-xl border border-neutral-800 p-6 bg-black/60">
+    <main className="min-h-screen grid place-items-center p-6">
+      <div className="w-full max-w-md rounded-xl border border-neutral-800 p-6 bg-black/40">
         <h1 className="text-xl font-semibold mb-4">Sign in</h1>
+
         {emailSent ? (
-          <p className="text-sm text-neutral-200">
-            Check your email for a magic link to open the app.
-          </p>
+          <p>Check your email for a magic link.</p>
         ) : (
           <form onSubmit={onSubmit} className="space-y-4">
             <input
               type="email"
-              className="w-full rounded-md bg-neutral-900 p-3 outline-none text-sm"
+              className="w-full rounded-md bg-neutral-900 p-3 outline-none"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
             <button
-              className="w-full rounded-md bg-amber-500/90 hover:bg-amber-500 p-3 font-medium text-sm"
+              className="w-full rounded-md bg-amber-500/90 hover:bg-amber-500 p-3 font-medium"
               type="submit"
             >
               Send magic link
