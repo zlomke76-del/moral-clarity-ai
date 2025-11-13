@@ -11,28 +11,46 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const run = async () => {
       try {
+        const url = new URL(window.location.href);
+        const code = url.searchParams.get('code');
+        const next = url.searchParams.get('next') || '/app';
+
+        if (!code) {
+          console.error('[Callback] missing auth code in URL');
+          router.replace(
+            '/auth/sign-in?err=' +
+              encodeURIComponent('Auth exchange failed: missing code in URL'),
+          );
+          return;
+        }
+
         const { data, error } =
-          await supabase.auth.exchangeCodeForSession(window.location.href);
+          await supabase.auth.exchangeCodeForSession(code);
 
         if (error) {
           console.error('[Callback] exchange error', error);
           router.replace(
             '/auth/sign-in?err=' +
-              encodeURIComponent(error.message || 'Auth exchange failed')
+              encodeURIComponent(error.message || 'Auth exchange failed'),
           );
           return;
         }
 
-        // Redirect to next or default
-        const url = new URL(window.location.href);
-        const next = url.searchParams.get('next') || '/app';
+        if (!data.session) {
+          console.error('[Callback] no session returned');
+          router.replace(
+            '/auth/sign-in?err=' +
+              encodeURIComponent('Auth exchange failed: no session returned'),
+          );
+          return;
+        }
 
         router.replace(next);
       } catch (err: any) {
         console.error('[Callback] unexpected error', err);
         router.replace(
           '/auth/sign-in?err=' +
-            encodeURIComponent('Unexpected error during callback')
+            encodeURIComponent('Unexpected error during callback'),
         );
       }
     };
