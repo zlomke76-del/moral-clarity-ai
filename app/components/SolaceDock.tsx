@@ -46,6 +46,7 @@ export default function SolaceDock() {
   // ensure single mount
   const [canRender, setCanRender] = useState(false);
   useEffect(() => {
+    if (typeof window === "undefined") return;
     if (window.__solaceDockMounted) return;
     window.__solaceDockMounted = true;
     setCanRender(true);
@@ -75,6 +76,10 @@ export default function SolaceDock() {
   // speech
   const [listening, setListening] = useState(false);
   const recogRef = useRef<any>(null);
+
+  // mobile responsiveness
+  const [isMobile, setIsMobile] = useState(false);
+  const [collapsed, setCollapsed] = useState(false); // mobile-only pill mode
 
   // transcript auto-scroll
   const transcriptRef = useRef<HTMLDivElement | null>(null);
@@ -132,12 +137,35 @@ export default function SolaceDock() {
     };
   }, []);
 
-  // restore position or center
+  // basic viewport breakpoint
+  useEffect(() => {
+    if (!canRender) return;
+    const check = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [canRender]);
+
+  // when we flip into mobile, default to collapsed pill so it doesn’t block UI
+  useEffect(() => {
+    if (isMobile) setCollapsed(true);
+    else setCollapsed(false);
+  }, [isMobile]);
+
+  // restore position or center (desktop only)
   useEffect(() => {
     if (!canRender || !visible) return;
 
     const vw = window.innerWidth;
     const vh = window.innerHeight;
+
+    // On mobile we ignore custom positioning and use a bottom sheet
+    if (vw <= 768) {
+      setPosReady(true);
+      return;
+    }
 
     try {
       const raw = localStorage.getItem(POS_KEY);
@@ -163,16 +191,17 @@ export default function SolaceDock() {
     });
   }, [canRender, visible, panelW, panelH, setPos]);
 
-  // persist position
+  // persist position (desktop only)
   useEffect(() => {
-    if (!posReady) return;
+    if (!posReady || isMobile) return;
     try {
       localStorage.setItem(POS_KEY, JSON.stringify({ x, y }));
     } catch {}
-  }, [x, y, posReady]);
+  }, [x, y, posReady, isMobile]);
 
-  // dragging
+  // dragging (desktop only)
   function onHeaderMouseDown(e: React.MouseEvent) {
+    if (isMobile) return;
     const rect = containerRef.current?.getBoundingClientRect();
     setOffset({
       dx: e.clientX - (rect?.left ?? 0),
@@ -231,7 +260,6 @@ export default function SolaceDock() {
 
     (async () => {
       try {
-        // Always send the active user key so we don’t fall back to "guest"
         const r = await fetch(`/api/memory?limit=50`, {
           cache: "no-store",
           headers: { "X-User-Key": userKey || MCA_USER_KEY || "guest" },
@@ -242,7 +270,6 @@ export default function SolaceDock() {
           const j = await r.json().catch(() => ({ rows: [] as any[] }));
           const rows = Array.isArray(j?.rows) ? j.rows : [];
 
-          // Normalize to the local MemoryRow shape
           memoryCacheRef.current = rows.map((m: any) => ({
             id: String(m.id),
             title: m.title ?? null,
@@ -250,11 +277,9 @@ export default function SolaceDock() {
             created_at: m.created_at ?? undefined,
           })) as MemoryRow[];
         } else {
-          // Non-200 — clear cache so Solace doesn’t assume stale hints
           memoryCacheRef.current = [];
         }
       } catch {
-        // Silent failure — dock remains usable, just without hints
         memoryCacheRef.current = [];
       } finally {
         if (alive) setMemReady(true);
@@ -286,7 +311,7 @@ export default function SolaceDock() {
         headers: {
           "Content-Type": "application/json",
           "X-Last-Mode": modeHint,
-          "X-User-Key": userKey, // header for server-side binding
+          "X-User-Key": userKey,
         },
         body: JSON.stringify({
           messages: nextMsgs,
@@ -294,10 +319,8 @@ export default function SolaceDock() {
           stream: false,
           attachments: pendingFiles,
           ministry: activeFilters.includes("ministry"),
-          // always pass identifiers
           workspace_id: MCA_WORKSPACE_ID,
-          user_key: userKey, // body for redundancy
-          // optional client-side preview cache
+          user_key: userKey,
           memory_preview: memReady ? memoryCacheRef.current.slice(0, 50) : [],
         }),
       });
@@ -407,7 +430,7 @@ export default function SolaceDock() {
 
   if (!canRender || !visible) return null;
 
-  // clamp within viewport
+  // clamp within viewport (desktop)
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const maxX = Math.max(0, vw - panelW - PAD);
@@ -417,27 +440,52 @@ export default function SolaceDock() {
   const invisible = !posReady;
 
   // ---------- styles --------------------------------------------------
-  const panelStyle: React.CSSProperties = {
-    position: "fixed",
-    left: PAD,
-    top: PAD,
-    width: "clamp(560px, 56vw, 980px)",
-    height: "clamp(460px, 62vh, 820px)",
-    maxHeight: "90vh",
-    background: ui.panelBg,
-    borderRadius: 20,
-    border: ui.border,
-    boxShadow: ministryOn ? ui.glowOn : ui.shadow,
-    backdropFilter: "blur(8px)",
-    display: "flex",
-    flexDirection: "column",
-    overflow: "hidden",
-    pointerEvents: invisible ? "none" : "auto",
-    transform: `translate3d(${tx}px, ${ty}px, 0)`,
-    opacity: invisible ? 0 : 1,
-    transition: "opacity 120ms ease",
-    resize: "both",
-  };
+  const panelStyle: React.CSSProperties = isMobile
+    ? {
+        position: "fixed",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        top: "auto",
+        width: "100%",
+        maxWidth: "100%",
+        height: "70vh",
+        maxHeight: "80vh",
+        background: ui.panelBg,
+        borderRadius: "20px 20px 0 0",
+        border: ui.border,
+        boxShadow: ministryOn ? ui.glowOn : ui.shadow,
+        backdropFilter: "blur(8px)",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        pointerEvents: invisible ? "none" : "auto",
+        opacity: invisible ? 0 : 1,
+        transition: "opacity 120ms ease",
+        zIndex: 60,
+      }
+    : {
+        position: "fixed",
+        left: PAD,
+        top: PAD,
+        width: "clamp(560px, 56vw, 980px)",
+        height: "clamp(460px, 62vh, 820px)",
+        maxHeight: "90vh",
+        background: ui.panelBg,
+        borderRadius: 20,
+        border: ui.border,
+        boxShadow: ministryOn ? ui.glowOn : ui.shadow,
+        backdropFilter: "blur(8px)",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        pointerEvents: invisible ? "none" : "auto",
+        transform: `translate3d(${tx}px, ${ty}px, 0)`,
+        opacity: invisible ? 0 : 1,
+        transition: "opacity 120ms ease",
+        resize: "both",
+        zIndex: 60,
+      };
 
   const headerStyle: React.CSSProperties = {
     display: "flex",
@@ -445,7 +493,7 @@ export default function SolaceDock() {
     gap: 12,
     padding: "10px 14px",
     borderBottom: ui.edge,
-    cursor: "move",
+    cursor: isMobile ? "default" : "move",
     userSelect: "none",
     background: "linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.00))",
     color: ui.text,
@@ -465,14 +513,18 @@ export default function SolaceDock() {
     padding: 10,
   };
 
+  const borderColor =
+    typeof document !== "undefined"
+      ? getComputedStyle(document.documentElement).getPropertyValue("--mc-border") ||
+        "rgba(34,48,71,.9)"
+      : "rgba(34,48,71,.9)";
+
   const fieldStyle: React.CSSProperties = {
     flex: "1 1 auto",
     minHeight: 60,
     maxHeight: 240,
     overflow: "auto",
-    border: `1px solid ${getComputedStyle(document.documentElement).getPropertyValue(
-      "--mc-border"
-    ) || "rgba(34,48,71,.9)"}`,
+    border: `1px solid ${borderColor}`,
     background: "#0e1726",
     color: ui.text,
     borderRadius: 12,
@@ -543,7 +595,45 @@ export default function SolaceDock() {
     </button>
   );
 
-  // ---------- UI ------------------------------------------------------
+  // ---------- MOBILE PILL (collapsed) ---------------------------------
+  if (isMobile && collapsed) {
+    const pillStyle: React.CSSProperties = {
+      position: "fixed",
+      left: 16,
+      right: 16,
+      bottom: 20,
+      padding: "10px 14px",
+      borderRadius: 9999,
+      border: ui.border,
+      background: "rgba(6,12,20,0.96)",
+      color: ui.text,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12,
+      boxShadow: ui.shadow,
+      backdropFilter: "blur(10px)",
+      zIndex: 60,
+    };
+
+    return createPortal(
+      <button
+        type="button"
+        style={pillStyle}
+        onClick={() => setCollapsed(false)}
+        aria-label="Open Solace"
+      >
+        <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span aria-hidden style={orbStyle} />
+          <span style={{ font: "600 13px system-ui" }}>Solace</span>
+        </span>
+        <span style={{ font: "12px system-ui", color: ui.sub }}>Tap to open</span>
+      </button>,
+      document.body
+    );
+  }
+
+  // ---------- FULL PANEL UI -------------------------------------------
   const panel = (
     <section
       ref={containerRef}
@@ -551,8 +641,8 @@ export default function SolaceDock() {
       aria-label="Solace"
       style={panelStyle}
       onClick={(e) => {
-        // Alt+Click to re-center
-        if (!containerRef.current) return;
+        // Alt+Click header area (desktop) to re-center
+        if (!containerRef.current || isMobile) return;
         if ((e as any).altKey) {
           const vw = window.innerWidth;
           const vh = window.innerHeight;
@@ -595,8 +685,37 @@ export default function SolaceDock() {
           {chip("Red", modeHint === "Red Team", () => setModeHint("Red Team"))}
         </div>
 
-        {/* right: ministry */}
-        <div style={{ marginLeft: "auto" }}>{ministryTab}</div>
+        {/* right: ministry + collapse (mobile) */}
+        <div
+          style={{
+            marginLeft: "auto",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          {ministryTab}
+          {isMobile && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setCollapsed(true);
+              }}
+              title="Collapse Solace"
+              style={{
+                borderRadius: 999,
+                padding: "4px 8px",
+                font: "600 11px system-ui",
+                border: ui.edge,
+                background: "rgba(8,15,26,0.9)",
+                color: ui.sub,
+              }}
+            >
+              Hide
+            </button>
+          )}
+        </div>
       </header>
 
       {/* TRANSCRIPT */}
@@ -750,4 +869,3 @@ export default function SolaceDock() {
 }
 
 /* ========= end component ========= */
-
