@@ -1,10 +1,11 @@
+// app/components/SolaceDock.tsx
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { bucket } from "@/lib/storage";
 import { useSolaceStore } from "@/app/providers/solace-store";
 import { MCA_WORKSPACE_ID, MCA_USER_KEY } from "@/lib/mca-config";
+import { uploadFromInput, uploadFromPasteEvent } from "@/lib/uploads/client";
 
 declare global {
   interface Window {
@@ -341,43 +342,76 @@ export default function SolaceDock() {
     }
   }
 
+  // === UPLOADS PACK INTEGRATION ======================================
   async function handleFiles(files: FileList | null) {
-    if (!files || files.length === 0) return;
-    const out: Attachment[] = [];
-    const b = bucket();
-    for (const f of Array.from(files)) {
-      try {
-        const path = `${crypto.randomUUID()}_${encodeURIComponent(f.name)}`;
-        const { error } = await b.upload(path, f, {
-          upsert: false,
-          cacheControl: "3600",
-          contentType: f.type || "application/octet-stream",
-        });
-        if (error) throw error;
-        const { data } = b.getPublicUrl(path);
-        out.push({
-          name: f.name,
-          url: data.publicUrl,
-          type: f.type || "application/octet-stream",
-        });
-      } catch (err: any) {
-        setMessages((m) => [
-          ...m,
-          { role: "assistant", content: `⚠️ Upload failed for ${f.name}: ${err.message || err}` },
-        ]);
-      }
-    }
-    if (out.length) {
-      setPendingFiles((prev) => [...prev, ...out]);
+    const { attachments, errors } = await uploadFromInput(files, { prefix: "solace" });
+
+    if (errors.length) {
       setMessages((m) => [
         ...m,
         {
           role: "assistant",
-          content: `Attached ${out.length} file${out.length > 1 ? "s" : ""}. They will be included in your next message.`,
+          content:
+            "⚠️ Some uploads failed: " +
+            errors.map((e) => `${e.fileName} (${e.message})`).join("; "),
+        },
+      ]);
+    }
+
+    if (attachments.length) {
+      const mapped: Attachment[] = attachments.map((a) => ({
+        name: a.name,
+        url: a.url,
+        type: a.type,
+      }));
+
+      setPendingFiles((prev) => [...prev, ...mapped]);
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content: `Attached ${mapped.length} file${
+            mapped.length > 1 ? "s" : ""
+          }. They will be included in your next message.`,
         },
       ]);
     }
   }
+
+  function handlePaste(e: React.ClipboardEvent<HTMLDivElement>) {
+    uploadFromPasteEvent(e.nativeEvent, { prefix: "solace" }).then(({ attachments, errors }) => {
+      if (errors.length) {
+        setMessages((m) => [
+          ...m,
+          {
+            role: "assistant",
+            content:
+              "⚠️ Some pasted items failed: " +
+              errors.map((er) => `${er.fileName} (${er.message})`).join("; "),
+          },
+        ]);
+      }
+      if (attachments.length) {
+        const mapped: Attachment[] = attachments.map((a) => ({
+          name: a.name,
+          url: a.url,
+          type: a.type,
+        }));
+        setPendingFiles((prev) => [...prev, ...mapped]);
+        setMessages((m) => [
+          ...m,
+          {
+            role: "assistant",
+            content: `Attached ${mapped.length} pasted item${
+              mapped.length > 1 ? "s" : ""
+            }. They will be included in your next message.`,
+          },
+        ]);
+      }
+    });
+  }
+
+  // ===================================================================
 
   function toggleMinistry() {
     if (ministryOn) {
@@ -644,12 +678,12 @@ export default function SolaceDock() {
         // Alt+Click header area (desktop) to re-center
         if (!containerRef.current || isMobile) return;
         if ((e as any).altKey) {
-          const vw = window.innerWidth;
-          const vh = window.innerHeight;
+          const vw2 = window.innerWidth;
+          const vh2 = window.innerHeight;
           const w = panelW || 760;
           const h = panelH || 560;
-          const startX = Math.max(PAD, Math.round((vw - w) / 2));
-          const startY = Math.max(PAD, Math.round((vh - h) / 2));
+          const startX = Math.max(PAD, Math.round((vw2 - w) / 2));
+          const startY = Math.max(PAD, Math.round((vh2 - h) / 2));
           setPos(startX, startY);
           try {
             localStorage.removeItem(POS_KEY);
@@ -698,8 +732,8 @@ export default function SolaceDock() {
           {isMobile && (
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation();
+              onClick={(ev) => {
+                ev.stopPropagation();
                 setCollapsed(true);
               }}
               title="Collapse Solace"
@@ -738,7 +772,7 @@ export default function SolaceDock() {
       </div>
 
       {/* COMPOSER */}
-      <div style={composerWrapStyle}>
+      <div style={composerWrapStyle} onPaste={handlePaste}>
         {/* pending attachments preview */}
         {pendingFiles.length > 0 && (
           <div
