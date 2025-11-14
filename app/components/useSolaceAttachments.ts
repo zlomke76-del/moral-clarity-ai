@@ -1,67 +1,78 @@
-// app/components/useSolaceAttachments.ts
 "use client";
 
-import { useRef, useState } from "react";
-import {
-  uploadFromInput,
-  uploadFromPasteEvent,
-} from "@/lib/uploads/client";
-import type { UploadResult } from "@/lib/uploads/types";
+import { useState } from "react";
+import type React from "react";
+import { uploadFromInput, uploadFromPasteEvent } from "@/lib/uploads/client";
 
-export type Attachment = {
-  name: string;
-  url: string;
-  type: string;
+export type Attachment = { name: string; url: string; type: string };
+
+type UseSolaceAttachmentsArgs = {
+  onInfoMessage: (content: string) => void;
 };
 
-export function useSolaceAttachments(opts?: { prefix?: string }) {
+export function useSolaceAttachments({ onInfoMessage }: UseSolaceAttachmentsArgs) {
   const [pendingFiles, setPendingFiles] = useState<Attachment[]>([]);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const prefix = opts?.prefix ?? "solace";
 
-  async function handleFiles(fileList: FileList | null): Promise<UploadResult> {
-    if (!fileList || fileList.length === 0) {
-      return { attachments: [], errors: [] };
+  async function handleFiles(
+    fileList: FileList | null,
+    opts?: { prefix?: string }
+  ) {
+    const { attachments, errors } = await uploadFromInput(fileList, opts);
+
+    if (errors.length) {
+      onInfoMessage(
+        "⚠️ Some uploads failed: " +
+          errors.map((e) => `${e.fileName} (${e.message})`).join("; ")
+      );
     }
 
-    const result = await uploadFromInput(fileList, { prefix });
-
-    if (result.attachments.length) {
-      const mapped: Attachment[] = result.attachments.map((a) => ({
+    if (attachments.length) {
+      const mapped: Attachment[] = attachments.map((a) => ({
         name: a.name,
         url: a.url,
         type: a.type,
       }));
-      setPendingFiles((prev) => [...prev, ...mapped]);
-    }
 
-    return result;
+      setPendingFiles((prev) => [...prev, ...mapped]);
+      onInfoMessage(
+        `Attached ${mapped.length} file${
+          mapped.length > 1 ? "s" : ""
+        }. They will be included in your next message.`
+      );
+    }
   }
 
-  async function handlePaste(nativeEvent: ClipboardEvent): Promise<UploadResult> {
-    const result = await uploadFromPasteEvent(nativeEvent, { prefix });
-
-    if (result.attachments.length) {
-      const mapped: Attachment[] = result.attachments.map((a) => ({
-        name: a.name,
-        url: a.url,
-        type: a.type,
-      }));
-      setPendingFiles((prev) => [...prev, ...mapped]);
-    }
-
-    return result;
+  function handlePaste(
+    e: React.ClipboardEvent<HTMLDivElement>,
+    opts?: { prefix?: string }
+  ) {
+    uploadFromPasteEvent(e.nativeEvent, opts).then(({ attachments, errors }) => {
+      if (errors.length) {
+        onInfoMessage(
+          "⚠️ Some pasted items failed: " +
+            errors.map((er) => `${er.fileName} (${er.message})`).join("; ")
+        );
+      }
+      if (attachments.length) {
+        const mapped: Attachment[] = attachments.map((a) => ({
+          name: a.name,
+          url: a.url,
+          type: a.type,
+        }));
+        setPendingFiles((prev) => [...prev, ...mapped]);
+        onInfoMessage(
+          `Attached ${mapped.length} pasted item${
+            mapped.length > 1 ? "s" : ""
+          }. They will be included in your next message.`
+        );
+      }
+    });
   }
 
-  function clearPendingFiles() {
+  function clearPending() {
     setPendingFiles([]);
   }
 
-  return {
-    pendingFiles,
-    fileInputRef,
-    handleFiles,
-    handlePaste,
-    clearPendingFiles,
-  };
+  return { pendingFiles, handleFiles, handlePaste, clearPending };
 }
+
