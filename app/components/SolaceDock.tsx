@@ -4,9 +4,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSolaceStore } from "@/app/providers/solace-store";
-import { MCA_WORKSPACE_ID, MCA_USER_KEY } from "@/lib/mca-config";
-import { uploadFromInput, uploadFromPasteEvent } from "@/lib/uploads/client";
+import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
 import { generateImage } from "@/lib/sendImage";
+import { useSolaceMemory } from "./useSolaceMemory";
+import { useSolaceAttachments } from "./useSolaceAttachments";
 
 declare global {
   interface Window {
@@ -18,14 +19,6 @@ declare global {
 
 type Message = { role: "user" | "assistant"; content: string };
 type ModeHint = "Create" | "Next Steps" | "Red Team" | "Neutral";
-type Attachment = { name: string; url: string; type: string };
-
-type MemoryRow = {
-  id: string;
-  title: string | null;
-  content: string;
-  created_at?: string;
-};
 
 const POS_KEY = "solace:pos:v3";
 const MINISTRY_KEY = "solace:ministry";
@@ -74,10 +67,6 @@ export default function SolaceDock() {
   // image generation
   const [imgLoading, setImgLoading] = useState(false);
 
-  // attachments
-  const [pendingFiles, setPendingFiles] = useState<Attachment[]>([]);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
   // speech
   const [listening, setListening] = useState(false);
   const recogRef = useRef<any>(null);
@@ -94,20 +83,23 @@ export default function SolaceDock() {
     el.scrollTop = el.scrollHeight;
   }, [messages]);
 
-  // durable per-browser user key (default to MCA_USER_KEY, upgrade to local UUID)
-  const [userKey, setUserKey] = useState<string>(MCA_USER_KEY);
-  useEffect(() => {
-    try {
-      let k = localStorage.getItem("mc:user_key");
-      if (!k || k === "guest") {
-        k = "u_" + crypto.randomUUID();
-        localStorage.setItem("mc:user_key", k);
-      }
-      setUserKey(k);
-    } catch {
-      setUserKey(MCA_USER_KEY || "guest");
-    }
-  }, []);
+  // MEMORY hook: userKey + memory cache
+  const { userKey, memReady, memoryCacheRef } = useSolaceMemory();
+
+  // helper: append assistant-side info/system messages
+  const appendInfo = (content: string) => {
+    setMessages((m) => [...m, { role: "assistant", content }]);
+  };
+
+  // ATTACHMENTS hook
+  const {
+    pendingFiles,
+    handleFiles,
+    handlePaste,
+    clearPending,
+  } = useSolaceAttachments({
+    onInfoMessage: appendInfo,
+  });
 
   const ministryOn = useMemo(
     () => filters.has("abrahamic") && filters.has("ministry"),
@@ -256,47 +248,6 @@ export default function SolaceDock() {
     }
   }, []); // run once
 
-  // ---------- MEMORY (refs + ready flag) ----------
-  const memoryCacheRef = useRef<MemoryRow[]>([]);
-  const [memReady, setMemReady] = useState(false);
-
-  // ---------- MEMORY BOOTSTRAP ----------
-  useEffect(() => {
-    let alive = true;
-
-    (async () => {
-      try {
-        const r = await fetch(`/api/memory?limit=50`, {
-          cache: "no-store",
-          headers: { "X-User-Key": userKey || MCA_USER_KEY || "guest" },
-        });
-        if (!alive) return;
-
-        if (r.ok) {
-          const j = await r.json().catch(() => ({ rows: [] as any[] }));
-          const rows = Array.isArray(j?.rows) ? j.rows : [];
-
-          memoryCacheRef.current = rows.map((m: any) => ({
-            id: String(m.id),
-            title: m.title ?? null,
-            content: String(m.content ?? ""),
-            created_at: m.created_at ?? undefined,
-          })) as MemoryRow[];
-        } else {
-          memoryCacheRef.current = [];
-        }
-      } catch {
-        memoryCacheRef.current = [];
-      } finally {
-        if (alive) setMemReady(true);
-      }
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, [userKey]);
-
   // ---------- actions -------------------------------------------------
   async function send() {
     const text = input.trim();
@@ -332,7 +283,7 @@ export default function SolaceDock() {
         }),
       });
 
-      setPendingFiles([]);
+      clearPending();
 
       if (!res.ok) {
         const t = await res.text().catch(() => "");
@@ -387,81 +338,6 @@ export default function SolaceDock() {
     }
   }
 
-  // === UPLOADS PACK INTEGRATION ======================================
-  async function handleFiles(files: FileList | null) {
-    const { attachments, errors } = await uploadFromInput(files, {
-      prefix: "solace",
-    });
-
-    if (errors.length) {
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          content:
-            "⚠️ Some uploads failed: " +
-            errors.map((e) => `${e.fileName} (${e.message})`).join("; "),
-        },
-      ]);
-    }
-
-    if (attachments.length) {
-      const mapped: Attachment[] = attachments.map((a) => ({
-        name: a.name,
-        url: a.url,
-        type: a.type,
-      }));
-
-      setPendingFiles((prev) => [...prev, ...mapped]);
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          content: `Attached ${mapped.length} file${
-            mapped.length > 1 ? "s" : ""
-          }. They will be included in your next message.`,
-        },
-      ]);
-    }
-  }
-
-  function handlePaste(e: React.ClipboardEvent<HTMLDivElement>) {
-    uploadFromPasteEvent(e.nativeEvent, { prefix: "solace" }).then(
-      ({ attachments, errors }) => {
-        if (errors.length) {
-          setMessages((m) => [
-            ...m,
-            {
-              role: "assistant",
-              content:
-                "⚠️ Some pasted items failed: " +
-                errors
-                  .map((er) => `${er.fileName} (${er.message})`)
-                  .join("; "),
-            },
-          ]);
-        }
-        if (attachments.length) {
-          const mapped: Attachment[] = attachments.map((a) => ({
-            name: a.name,
-            url: a.url,
-            type: a.type,
-          }));
-          setPendingFiles((prev) => [...prev, ...mapped]);
-          setMessages((m) => [
-            ...m,
-            {
-              role: "assistant",
-              content: `Attached ${mapped.length} pasted item${
-                mapped.length > 1 ? "s" : ""
-              }. They will be included in your next message.`,
-            },
-          ]);
-        }
-      }
-    );
-  }
-
   // ===================================================================
 
   function toggleMinistry() {
@@ -489,13 +365,7 @@ export default function SolaceDock() {
       (window as any).SpeechRecognition ||
       (window as any).webkitSpeechRecognition;
     if (!SR) {
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          content: "🎤 Microphone is not supported in this browser.",
-        },
-      ]);
+      appendInfo("🎤 Microphone is not supported in this browser.");
       return;
     }
     if (listening) {
@@ -874,7 +744,10 @@ export default function SolaceDock() {
       </div>
 
       {/* COMPOSER */}
-      <div style={composerWrapStyle} onPaste={handlePaste}>
+      <div
+        style={composerWrapStyle}
+        onPaste={(e) => handlePaste(e, { prefix: "solace" })}
+      >
         {/* pending attachments preview */}
         {pendingFiles.length > 0 && (
           <div
@@ -912,7 +785,11 @@ export default function SolaceDock() {
           <div style={{ display: "flex", gap: 6 }}>
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() =>
+                (document.querySelector<HTMLInputElement>(
+                  "#solace-file-input"
+                )?.click())
+              }
               title="Attach files"
               style={{
                 width: 40,
@@ -927,11 +804,11 @@ export default function SolaceDock() {
               📎
             </button>
             <input
-              ref={fileInputRef}
+              id="solace-file-input"
               type="file"
               className="hidden"
               multiple
-              onChange={(e) => handleFiles(e.target.files)}
+              onChange={(e) => handleFiles(e.target.files, { prefix: "solace" })}
             />
 
             <button
@@ -1017,3 +894,4 @@ export default function SolaceDock() {
 }
 
 /* ========= end component ========= */
+
