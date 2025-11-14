@@ -18,7 +18,7 @@ export async function generateImage(prompt: string): Promise<string> {
   });
 
   const url = res?.data?.[0]?.url;
-  if (!url) throw new Error("No image URL returned");
+  if (!url) throw new Error("No image URL returned from image model");
 
   return url;
 }
