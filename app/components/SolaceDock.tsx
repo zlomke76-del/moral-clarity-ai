@@ -4,9 +4,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSolaceStore } from "@/app/providers/solace-store";
-import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
-import { useSolaceMemory } from "./useSolaceMemory";
-import { useSolaceAttachments } from "./useSolaceAttachments";
+import { MCA_WORKSPACE_ID, MCA_USER_KEY } from "@/lib/mca-config";
+import { uploadFromInput, uploadFromPasteEvent } from "@/lib/uploads/client";
+import { generateImage } from "@/lib/sendImage";
 
 declare global {
   interface Window {
@@ -15,6 +15,17 @@ declare global {
     SpeechRecognition?: any;
   }
 }
+
+type Message = { role: "user" | "assistant"; content: string };
+type ModeHint = "Create" | "Next Steps" | "Red Team" | "Neutral";
+type Attachment = { name: string; url: string; type: string };
+
+type MemoryRow = {
+  id: string;
+  title: string | null;
+  content: string;
+  created_at?: string;
+};
 
 const POS_KEY = "solace:pos:v3";
 const MINISTRY_KEY = "solace:ministry";
@@ -48,12 +59,24 @@ export default function SolaceDock() {
 
   const { visible, x, y, setPos, filters, setFilters } = useSolaceStore();
 
-  // --- layout / drag state --------------------------------------------
+  // --- state ----------------------------------------------------
   const [dragging, setDragging] = useState(false);
   const [offset, setOffset] = useState({ dx: 0, dy: 0 });
   const [posReady, setPosReady] = useState(false);
   const [panelH, setPanelH] = useState(0);
   const [panelW, setPanelW] = useState(0);
+
+  const [modeHint, setModeHint] = useState<ModeHint>("Neutral");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [streaming, setStreaming] = useState(false);
+
+  // image generation
+  const [imgLoading, setImgLoading] = useState(false);
+
+  // attachments
+  const [pendingFiles, setPendingFiles] = useState<Attachment[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // speech
   const [listening, setListening] = useState(false);
@@ -63,33 +86,6 @@ export default function SolaceDock() {
   const [isMobile, setIsMobile] = useState(false);
   const [collapsed, setCollapsed] = useState(false); // mobile-only pill mode
 
-  // MEMORY + CHAT (hook)
-  const {
-    messages,
-    setMessages,
-    input,
-    setInput,
-    modeHint,
-    setModeHint,
-    streaming,
-    memReady,
-    send,
-  } = useSolaceMemory();
-
-  // ATTACHMENTS (hook)
-  const {
-    pendingFiles,
-    fileInputRef,
-    handleFiles,
-    handlePaste,
-    clearPendingFiles,
-  } = useSolaceAttachments({ prefix: "solace" });
-
-  const ministryOn = useMemo(
-    () => filters.has("abrahamic") && filters.has("ministry"),
-    [filters]
-  );
-
   // transcript auto-scroll
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -97,6 +93,33 @@ export default function SolaceDock() {
     if (!el) return;
     el.scrollTop = el.scrollHeight;
   }, [messages]);
+
+  // durable per-browser user key (default to MCA_USER_KEY, upgrade to local UUID)
+  const [userKey, setUserKey] = useState<string>(MCA_USER_KEY);
+  useEffect(() => {
+    try {
+      let k = localStorage.getItem("mc:user_key");
+      if (!k || k === "guest") {
+        k = "u_" + crypto.randomUUID();
+        localStorage.setItem("mc:user_key", k);
+      }
+      setUserKey(k);
+    } catch {
+      setUserKey(MCA_USER_KEY || "guest");
+    }
+  }, []);
+
+  const ministryOn = useMemo(
+    () => filters.has("abrahamic") && filters.has("ministry"),
+    [filters]
+  );
+
+  // seed welcome once
+  useEffect(() => {
+    if (messages.length === 0) {
+      setMessages([{ role: "assistant", content: "Ready when you are." }]);
+    }
+  }, [messages.length]);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -233,16 +256,213 @@ export default function SolaceDock() {
     }
   }, []); // run once
 
+  // ---------- MEMORY (refs + ready flag) ----------
+  const memoryCacheRef = useRef<MemoryRow[]>([]);
+  const [memReady, setMemReady] = useState(false);
+
+  // ---------- MEMORY BOOTSTRAP ----------
+  useEffect(() => {
+    let alive = true;
+
+    (async () => {
+      try {
+        const r = await fetch(`/api/memory?limit=50`, {
+          cache: "no-store",
+          headers: { "X-User-Key": userKey || MCA_USER_KEY || "guest" },
+        });
+        if (!alive) return;
+
+        if (r.ok) {
+          const j = await r.json().catch(() => ({ rows: [] as any[] }));
+          const rows = Array.isArray(j?.rows) ? j.rows : [];
+
+          memoryCacheRef.current = rows.map((m: any) => ({
+            id: String(m.id),
+            title: m.title ?? null,
+            content: String(m.content ?? ""),
+            created_at: m.created_at ?? undefined,
+          })) as MemoryRow[];
+        } else {
+          memoryCacheRef.current = [];
+        }
+      } catch {
+        memoryCacheRef.current = [];
+      } finally {
+        if (alive) setMemReady(true);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [userKey]);
+
   // ---------- actions -------------------------------------------------
-  async function handleSend() {
-    await send({
-      filters,
-      pendingFiles,
-      ministryOn,
-      workspaceId: MCA_WORKSPACE_ID,
-      clearPendingFiles,
-    });
+  async function send() {
+    const text = input.trim();
+    if (!text && pendingFiles.length === 0) return;
+    if (streaming) return;
+
+    setInput("");
+    const userMsg = text || (pendingFiles.length ? "Attachments:" : "");
+    const nextUser: Message = { role: "user", content: userMsg };
+    const nextMsgs: Message[] = [...messages, nextUser];
+    setMessages(nextMsgs);
+    setStreaming(true);
+
+    const activeFilters: string[] = Array.from(filters);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Last-Mode": modeHint,
+          "X-User-Key": userKey,
+        },
+        body: JSON.stringify({
+          messages: nextMsgs,
+          filters: activeFilters,
+          stream: false,
+          attachments: pendingFiles,
+          ministry: activeFilters.includes("ministry"),
+          workspace_id: MCA_WORKSPACE_ID,
+          user_key: userKey,
+          memory_preview: memReady ? memoryCacheRef.current.slice(0, 50) : [],
+        }),
+      });
+
+      setPendingFiles([]);
+
+      if (!res.ok) {
+        const t = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status}: ${t}`);
+      }
+      const data = await res.json();
+      const reply = String(data.text ?? "[No reply]");
+      setMessages((m) => [...m, { role: "assistant", content: reply }]);
+    } catch (e: any) {
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: `⚠️ ${e?.message ?? "Error"}` },
+      ]);
+    } finally {
+      setStreaming(false);
+    }
   }
+
+  // === IMAGE GENERATION ===============================================
+  async function generateImageFromInput() {
+    const text = input.trim();
+    if (!text || imgLoading) return;
+
+    setImgLoading(true);
+    setInput("");
+
+    // Show the user's prompt in the transcript
+    setMessages((m) => [...m, { role: "user", content: text }]);
+
+    try {
+      const url = await generateImage(text);
+
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content: `🎨 Generated image for you:\n${url}`,
+        },
+      ]);
+    } catch (e: any) {
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content: `⚠️ Image error: ${
+            e?.message ?? "Image generation failed."
+          }`,
+        },
+      ]);
+    } finally {
+      setImgLoading(false);
+    }
+  }
+
+  // === UPLOADS PACK INTEGRATION ======================================
+  async function handleFiles(files: FileList | null) {
+    const { attachments, errors } = await uploadFromInput(files, {
+      prefix: "solace",
+    });
+
+    if (errors.length) {
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content:
+            "⚠️ Some uploads failed: " +
+            errors.map((e) => `${e.fileName} (${e.message})`).join("; "),
+        },
+      ]);
+    }
+
+    if (attachments.length) {
+      const mapped: Attachment[] = attachments.map((a) => ({
+        name: a.name,
+        url: a.url,
+        type: a.type,
+      }));
+
+      setPendingFiles((prev) => [...prev, ...mapped]);
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content: `Attached ${mapped.length} file${
+            mapped.length > 1 ? "s" : ""
+          }. They will be included in your next message.`,
+        },
+      ]);
+    }
+  }
+
+  function handlePaste(e: React.ClipboardEvent<HTMLDivElement>) {
+    uploadFromPasteEvent(e.nativeEvent, { prefix: "solace" }).then(
+      ({ attachments, errors }) => {
+        if (errors.length) {
+          setMessages((m) => [
+            ...m,
+            {
+              role: "assistant",
+              content:
+                "⚠️ Some pasted items failed: " +
+                errors
+                  .map((er) => `${er.fileName} (${er.message})`)
+                  .join("; "),
+            },
+          ]);
+        }
+        if (attachments.length) {
+          const mapped: Attachment[] = attachments.map((a) => ({
+            name: a.name,
+            url: a.url,
+            type: a.type,
+          }));
+          setPendingFiles((prev) => [...prev, ...mapped]);
+          setMessages((m) => [
+            ...m,
+            {
+              role: "assistant",
+              content: `Attached ${mapped.length} pasted item${
+                mapped.length > 1 ? "s" : ""
+              }. They will be included in your next message.`,
+            },
+          ]);
+        }
+      }
+    );
+  }
+
+  // ===================================================================
 
   function toggleMinistry() {
     if (ministryOn) {
@@ -429,6 +649,19 @@ export default function SolaceDock() {
       streaming || (!input.trim() && pendingFiles.length === 0) ? 0.55 : 1,
   };
 
+  const imageBtnStyle: React.CSSProperties = {
+    minWidth: 80,
+    height: 40,
+    borderRadius: 12,
+    border: "0",
+    background: "#374151",
+    color: "#e5e7eb",
+    font:
+      "600 13px/1 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
+    cursor: imgLoading || !input.trim() ? "not-allowed" : "pointer",
+    opacity: imgLoading || !input.trim() ? 0.55 : 1,
+  };
+
   const orbStyle: React.CSSProperties = {
     width: 22,
     height: 22,
@@ -579,9 +812,7 @@ export default function SolaceDock() {
           {chip("Next", modeHint === "Next Steps", () =>
             setModeHint("Next Steps")
           )}
-          {chip("Red", modeHint === "Red Team", () =>
-            setModeHint("Red Team")
-          )}
+          {chip("Red", modeHint === "Red Team", () => setModeHint("Red Team"))}
         </div>
 
         {/* right: ministry + collapse (mobile) */}
@@ -618,11 +849,7 @@ export default function SolaceDock() {
       </header>
 
       {/* TRANSCRIPT */}
-      <div
-        ref={transcriptRef}
-        style={transcriptStyle}
-        aria-live="polite"
-      >
+      <div ref={transcriptRef} style={transcriptStyle} aria-live="polite">
         {messages.map((m, i) => (
           <div
             key={i}
@@ -647,38 +874,7 @@ export default function SolaceDock() {
       </div>
 
       {/* COMPOSER */}
-      <div
-        style={composerWrapStyle}
-        onPaste={(e) => {
-          // use native ClipboardEvent for uploads helper
-          handlePaste(e.nativeEvent).then(({ attachments, errors }) => {
-            if (errors.length) {
-              setMessages((m) => [
-                ...m,
-                {
-                  role: "assistant",
-                  content:
-                    "⚠️ Some pasted items failed: " +
-                    errors
-                      .map((er) => `${er.fileName} (${er.message})`)
-                      .join("; "),
-                },
-              ]);
-            }
-            if (attachments.length) {
-              setMessages((m) => [
-                ...m,
-                {
-                  role: "assistant",
-                  content: `Attached ${attachments.length} pasted item${
-                    attachments.length > 1 ? "s" : ""
-                  }. They will be included in your next message.`,
-                },
-              ]);
-            }
-          });
-        }}
-      >
+      <div style={composerWrapStyle} onPaste={handlePaste}>
         {/* pending attachments preview */}
         {pendingFiles.length > 0 && (
           <div
@@ -712,9 +908,7 @@ export default function SolaceDock() {
           </div>
         )}
 
-        <div
-          style={{ display: "flex", gap: 8, alignItems: "flex-end" }}
-        >
+        <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
           <div style={{ display: "flex", gap: 6 }}>
             <button
               type="button"
@@ -737,39 +931,7 @@ export default function SolaceDock() {
               type="file"
               className="hidden"
               multiple
-              onChange={async (e) => {
-                const result = await handleFiles(e.target.files);
-                if (result.errors.length) {
-                  setMessages((m) => [
-                    ...m,
-                    {
-                      role: "assistant",
-                      content:
-                        "⚠️ Some uploads failed: " +
-                        result.errors
-                          .map(
-                            (er) => `${er.fileName} (${er.message})`
-                          )
-                          .join("; "),
-                    },
-                  ]);
-                }
-                if (result.attachments.length) {
-                  setMessages((m) => [
-                    ...m,
-                    {
-                      role: "assistant",
-                      content: `Attached ${
-                        result.attachments.length
-                      } file${
-                        result.attachments.length > 1 ? "s" : ""
-                      }. They will be included in your next message.`,
-                    },
-                  ]);
-                }
-                // Reset the input so selecting the same file again works
-                if (e.target) e.target.value = "";
-              }}
+              onChange={(e) => handleFiles(e.target.files)}
             />
 
             <button
@@ -798,16 +960,24 @@ export default function SolaceDock() {
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                void handleSend();
+                send();
               }
             }}
             style={fieldStyle}
           />
+
           <button
-            onClick={() => void handleSend()}
-            disabled={
-              streaming || (!input.trim() && pendingFiles.length === 0)
-            }
+            type="button"
+            onClick={generateImageFromInput}
+            disabled={imgLoading || !input.trim()}
+            style={imageBtnStyle}
+          >
+            {imgLoading ? "…" : "Image"}
+          </button>
+
+          <button
+            onClick={send}
+            disabled={streaming || (!input.trim() && pendingFiles.length === 0)}
             style={askBtnStyle}
           >
             {streaming ? "…" : "Ask"}
