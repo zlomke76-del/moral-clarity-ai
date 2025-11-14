@@ -303,10 +303,12 @@ async function describeImageWithOpenAI(att: Attachment): Promise<string> {
               {
                 type: 'text',
                 text:
-                  'You are helping with document understanding. ' +
-                  'Describe this image in structured text: if it is a diagram, explain the components and relationships; ' +
-                  'if there is visible text, transcribe the key labels; if it is a photo, describe the main elements. ' +
-                  'Keep it concise but information-dense.',
+                  'You CAN see the image directly. Do NOT say that you cannot view or analyze images. ' +
+                  'Your job is to convert the image into structured text so a text-only model can reason about it. ' +
+                  'If it is a diagram, list the main boxes/nodes and how they connect. ' +
+                  'If there is visible text, transcribe key labels and headings. ' +
+                  'If it is a photo, describe the important objects and relationships. ' +
+                  'Be concise but information-dense.',
               },
               {
                 type: 'image_url',
@@ -324,16 +326,27 @@ async function describeImageWithOpenAI(att: Attachment): Promise<string> {
     }
 
     const j = await r.json().catch(() => ({} as any));
-    const text =
-      j?.choices?.[0]?.message?.content
-        ?.map((c: any) => (typeof c?.text === 'string' ? c.text : ''))
+
+    // Chat completions for 4o/4o-mini often return a single text string
+    const choice = j?.choices?.[0]?.message;
+    let text = '';
+
+    if (Array.isArray(choice?.content)) {
+      text = choice.content
+        .map((c: any) => (typeof c?.text === 'string' ? c.text : ''))
         .join(' ')
-        .trim() ||
-      j?.choices?.[0]?.message?.content ||
-      '';
+        .trim();
+    } else if (typeof choice?.content === 'string') {
+      text = choice.content;
+    }
 
     if (!text) {
       return `[Image file: ${att.name} (${att.type || 'image'}) — vision produced no description.]`;
+    }
+
+    // Extra guard: if the model tried to disclaim anyway, wrap it as metadata
+    if (/cannot (view|see|analy[sz]e) images/i.test(text)) {
+      return `[Image file: ${att.name}] Vision call returned a generic disclaimer instead of a description. Ask the user to briefly describe the image in text.`;
     }
 
     return text;
@@ -341,6 +354,7 @@ async function describeImageWithOpenAI(att: Attachment): Promise<string> {
     return `[Image file: ${att.name} (${att.type || 'image'}) — vision exception: ${e?.message || e}]`;
   }
 }
+
 
 async function fetchAttachmentAsText(att: Attachment): Promise<string> {
   const res = await fetch(att.url);
