@@ -1,3 +1,4 @@
+// app/components/FeatureGrid.tsx
 "use client";
 
 import Link from "next/link";
@@ -11,7 +12,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-// Define each workspace block
+// Workspace tiles for the in-app home (/app)
 const tiles = [
   {
     slug: "decision-brief",
@@ -88,6 +89,7 @@ export default function FeatureGrid() {
                   <div className="rounded-xl bg-zinc-800/70 p-3 ring-1 ring-black/20 group-hover:scale-105 transition">
                     <Icon className="h-6 w-6" />
                   </div>
+
                   <div>
                     <h3 className="font-medium text-lg text-white">
                       {t.title}
@@ -96,7 +98,8 @@ export default function FeatureGrid() {
                       {t.description}
                     </p>
                   </div>
-                  <ChevronRight className="mt-1 h-5 w-5 text-zinc-500 transition group-hover:translate-x-1 group-hover:text-zinc-300 self-end" />
+
+                  <ChevronRight className="mt-1 h-5 w-5 self-end text-zinc-500 transition group-hover:translate-x-1 group-hover:text-zinc-300" />
                 </div>
               </Link>
             </li>
