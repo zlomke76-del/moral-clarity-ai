@@ -5,8 +5,6 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import type OpenAI from 'openai';
 import pdfParse from 'pdf-parse';
-import mammoth from 'mammoth';
-import * as XLSX from 'xlsx';
 
 import { getOpenAI } from '@/lib/openai';
 import { webSearch } from '@/lib/search';
@@ -18,9 +16,11 @@ import { searchMemories, remember } from '@/lib/memory';
 /* ========= MCA CONFIG (defaults for user/workspace) ========= */
 import { MCA_WORKSPACE_ID, MCA_USER_KEY } from '@/lib/mca-config';
 
+/* ========= IMAGE GENERATION ========= */
+import { generateImage } from '@/lib/chat/image-gen';
+
 /* ========= MODEL / TIMEOUT ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-const VISION_MODEL = process.env.OPENAI_VISION_MODEL || MODEL;
 const REQUEST_TIMEOUT_MS = 20_000;
 
 /* ========= ORIGINS ========= */
@@ -176,6 +176,22 @@ function wantsSecular(messages: Array<{ role: string; content: string }>) {
   );
 }
 
+/* NEW: detect when user is asking for an image */
+function wantsImageGeneration(text: string) {
+  const t = (text || '').toLowerCase().trim();
+  if (!t) return false;
+  return (
+    t.startsWith('img:') ||
+    t.includes('generate an image') ||
+    t.includes('create an image') ||
+    t.includes('make an image') ||
+    t.includes('draw a diagram') ||
+    t.includes('make a visual') ||
+    t.includes('create a diagram') ||
+    t.includes('design a diagram')
+  );
+}
+
 function isFirstRealTurn(messages: Array<{ role: string; content: string }>) {
   const userCount = messages.filter((m) => m.role?.toLowerCase() === 'user').length;
   const assistantCount = messages.filter((m) => m.role?.toLowerCase() === 'assistant').length;
@@ -185,39 +201,13 @@ function isFirstRealTurn(messages: Array<{ role: string; content: string }>) {
 function hasEmotionalOrMoralCue(text: string) {
   const t = (text || '').toLowerCase();
   const emo = [
-    'hope',
-    'lost',
-    'afraid',
-    'fear',
-    'anxious',
-    'grief',
-    'sad',
-    'sorrow',
-    'depressed',
-    'stress',
-    'overwhelmed',
-    'lonely',
-    'comfort',
-    'forgive',
-    'forgiveness',
-    'guilt',
-    'shame',
-    'purpose',
-    'meaning',
+    'hope','lost','afraid','fear','anxious','grief','sad','sorrow','depressed',
+    'stress','overwhelmed','lonely','comfort','forgive','forgiveness','guilt',
+    'shame','purpose','meaning',
   ];
   const moral = [
-    'right',
-    'wrong',
-    'unfair',
-    'injustice',
-    'justice',
-    'truth',
-    'honest',
-    'dishonest',
-    'integrity',
-    'mercy',
-    'compassion',
-    'courage',
+    'right','wrong','unfair','injustice','justice','truth','honest','dishonest',
+    'integrity','mercy','compassion','courage',
   ];
   const hit = (arr: string[]) => arr.some((w) => t.includes(w));
   return hit(emo) || hit(moral);
@@ -225,7 +215,6 @@ function hasEmotionalOrMoralCue(text: string) {
 
 function buildSystemPrompt(
   filters: string[],
-// eslint-disable-next-line max-len
   userWantsSecular: boolean,
   messages: Array<{ role: string; content: string }>
 ) {
@@ -258,150 +247,25 @@ function buildSystemPrompt(
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const id = setTimeout(() => reject(new Error('Request timed out')), ms);
-    p.then((v) => {
-      clearTimeout(id);
-      resolve(v);
-    }).catch((e) => {
-      clearTimeout(id);
-      reject(e);
-    });
+    p.then((v) => { clearTimeout(id); resolve(v); })
+     .catch((e) => { clearTimeout(id); reject(e); });
   });
 }
 
 /* ========= Attachments ========= */
 type Attachment = { name: string; url: string; type?: string };
 
-function clampText(s: string, n: number) {
-  if (s.length <= n) return s;
-  return s.slice(0, n) + '\n[...truncated...]';
-}
-
-/**
- * Use OpenAI vision to describe / OCR an image.
- * We keep the prompt structured so the output is useful in a text-only context.
- */
-async function describeImageWithOpenAI(att: Attachment): Promise<string> {
-  const apiKey = process.env.OPENAI_API_KEY || '';
-  if (!apiKey) {
-    return `[Image file: ${att.name} (${att.type || 'image'}) — vision disabled (no API key).]`;
-  }
-
-  try {
-    const r = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: VISION_MODEL,
-        max_tokens: 512,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text:
-                  'You CAN see the image directly. Do NOT say that you cannot view or analyze images. ' +
-                  'Your job is to convert the image into structured text so a text-only model can reason about it. ' +
-                  'If it is a diagram, list the main boxes/nodes and how they connect. ' +
-                  'If there is visible text, transcribe key labels and headings. ' +
-                  'If it is a photo, describe the important objects and relationships. ' +
-                  'Be concise but information-dense.',
-              },
-              {
-                type: 'image_url',
-                image_url: { url: att.url },
-              },
-            ],
-          },
-        ],
-      }),
-    });
-
-    if (!r.ok) {
-      const t = await r.text().catch(() => '');
-      return `[Image file: ${att.name} (${att.type || 'image'}) — vision error: ${r.status} ${t}]`;
-    }
-
-    const j = await r.json().catch(() => ({} as any));
-
-    // Chat completions for 4o/4o-mini often return a single text string
-    const choice = j?.choices?.[0]?.message;
-    let text = '';
-
-    if (Array.isArray(choice?.content)) {
-      text = choice.content
-        .map((c: any) => (typeof c?.text === 'string' ? c.text : ''))
-        .join(' ')
-        .trim();
-    } else if (typeof choice?.content === 'string') {
-      text = choice.content;
-    }
-
-    if (!text) {
-      return `[Image file: ${att.name} (${att.type || 'image'}) — vision produced no description.]`;
-    }
-
-    // Extra guard: if the model tried to disclaim anyway, wrap it as metadata
-    if (/cannot (view|see|analy[sz]e) images/i.test(text)) {
-      return `[Image file: ${att.name}] Vision call returned a generic disclaimer instead of a description. Ask the user to briefly describe the image in text.`;
-    }
-
-    return text;
-  } catch (e: any) {
-    return `[Image file: ${att.name} (${att.type || 'image'}) — vision exception: ${e?.message || e}]`;
-  }
-}
-
-
 async function fetchAttachmentAsText(att: Attachment): Promise<string> {
   const res = await fetch(att.url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const ct = (res.headers.get('content-type') || att.type || '').toLowerCase();
 
-  // ---- PDF ---------------------------------------------------------
   if (ct.includes('pdf') || /\.pdf(?:$|\?)/i.test(att.url)) {
     const buf = Buffer.from(await res.arrayBuffer());
     const out = await pdfParse(buf);
     return out.text || '';
   }
 
-  // ---- DOCX (Word) -------------------------------------------------
-  if (
-    ct.includes(
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    ) || /\.docx(?:$|\?)/i.test(att.name)
-  ) {
-    const buf = Buffer.from(await res.arrayBuffer());
-    const result = await mammoth.extractRawText({ buffer: buf });
-    return result.value || '';
-  }
-
-  // ---- XLSX (Excel) ------------------------------------------------
-  if (
-    ct.includes(
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    ) || /\.xlsx(?:$|\?)/i.test(att.name)
-  ) {
-    const buf = Buffer.from(await res.arrayBuffer());
-    const wb = XLSX.read(buf, { type: 'buffer' });
-
-    const lines: string[] = [];
-    for (const sheetName of wb.SheetNames.slice(0, 3)) {
-      const sheet = wb.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
-      lines.push(`Sheet: ${sheetName}`);
-      for (const row of rows.slice(0, 20)) {
-        lines.push((row || []).map((v) => String(v ?? '')).join('\t'));
-      }
-      lines.push('');
-    }
-    return lines.join('\n');
-  }
-
-  // ---- Text-like (txt, md, csv, json, etc.) ------------------------
   if (
     ct.includes('text/') ||
     ct.includes('json') ||
@@ -411,14 +275,12 @@ async function fetchAttachmentAsText(att: Attachment): Promise<string> {
     return await res.text();
   }
 
-  // ---- Images (PNG, JPG, etc.) via Vision --------------------------
-  if (ct.startsWith('image/') || /\.(?:png|jpe?g|gif|webp|bmp|tiff?)$/i.test(att.name)) {
-    const description = await describeImageWithOpenAI(att);
-    return description;
-  }
-
-  // ---- Fallback ----------------------------------------------------
   return `[Unsupported file type: ${att.name} (${ct || 'unknown'})]`;
+}
+
+function clampText(s: string, n: number) {
+  if (s.length <= n) return s;
+  return s.slice(0, n) + '\n[...truncated...]';
 }
 
 /* ========= Memory helpers ========= */
@@ -483,6 +345,43 @@ export async function POST(req: NextRequest) {
     const lastUser =
       [...rolled].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content || '';
 
+    /* ===== IMAGE GENERATION FAST-PATH ===== */
+    if (wantsImageGeneration(lastUser)) {
+      const rawPrompt = lastUser.replace(/^img:\s*/i, '').trim() || lastUser;
+      try {
+        const imageUrl = await generateImage(rawPrompt);
+        const text =
+          `Here is your generated image based on your description:\n` +
+          `${imageUrl}`;
+
+        return NextResponse.json(
+          {
+            text,
+            image_url: imageUrl,
+            model: 'gpt-image-1',
+            identity: SOLACE_NAME,
+            mode: 'Image',
+            confidence: 1,
+            filters: rawFilters,
+          },
+          { headers: corsHeaders(echoOrigin) }
+        );
+      } catch (e: any) {
+        const msg = e?.message || 'Image generation failed';
+        return NextResponse.json(
+          {
+            text: `⚠️ Image generation error: ${msg}`,
+            model: 'gpt-image-1',
+            identity: SOLACE_NAME,
+            mode: 'Image',
+            confidence: 0,
+            filters: rawFilters,
+          },
+          { headers: corsHeaders(echoOrigin) }
+        );
+      }
+    }
+
     /* Route -> Guidance flag */
     const lastModeHeader = req.headers.get('x-last-mode');
     const route = routeMode(lastUser, { lastMode: lastModeHeader as any });
@@ -541,7 +440,7 @@ export async function POST(req: NextRequest) {
         const baseQuery = lastUser || fallbackQuery;
         const query = [baseQuery, explicitInTurns].filter(Boolean).join(' | ');
 
-        // (user_key, query, k)
+        // ✅ Correct call signature: (user_key, query, k)
         hits = await searchMemories(userKey, query, 8);
 
         const pack = (hits ?? [])
@@ -596,14 +495,12 @@ export async function POST(req: NextRequest) {
         const results = await webSearch(lastUser, { news: true, max: 5 });
         if (Array.isArray(results) && results.length) {
           const lines = results
-            .map((r: any, i: number) => `• [${i + 1}] ${r.title} — ${r.url}`)
+            .map(
+              (r: any, i: number) => `• [${i + 1}] ${r.title} — ${r.url}`
+            )
             .join('\n');
           webSection =
-            `\n\nWEB CONTEXT (recent search)\n${lines}\n\nGuidance:\n` +
-            '- Use these results to answer directly.\n' +
-            '- Prefer the most recent and reputable sources.\n' +
-            '- If uncertain, say what is unknown.\n' +
-            '- When referencing items, use bracket numbers like [1], [2].';
+            `\n\nWEB CONTEXT (recent search)\n${lines}\n\nGuidance:\n- Use these results to answer directly.\n- Prefer the most recent and reputable sources.\n- If uncertain, say what is unknown.\n- When referencing items, use bracket numbers like [1], [2].`;
           hasWebContext = true;
         }
       }
@@ -625,20 +522,20 @@ export async function POST(req: NextRequest) {
           try {
             const raw = await fetchAttachmentAsText(att);
             const clipped = clampText(raw, MAX_PER_FILE);
-            const block =
-              `\n--- Attachment: ${att.name}\n(source: ${att.url})\n` +
-              '```text\n' +
-              clipped +
-              '\n```\n';
+            const block = `\n--- Attachment: ${att.name}\n(source: ${att.url})\n\`\`\`\n${clipped}\n\`\`\`\n`;
             if (total + block.length > MAX_TOTAL) {
-              parts.push(`\n--- [Skipping remaining attachments: token cap reached]`);
+              parts.push(
+                `\n--- [Skipping remaining attachments: token cap reached]`
+              );
               break;
             }
             parts.push(block);
             total += block.length;
           } catch (e: any) {
             parts.push(
-              `\n--- Attachment: ${att.name}\n[Error reading file: ${e?.message || e}]`
+              `\n--- Attachment: ${att.name}\n[Error reading file: ${
+                e?.message || e
+              }]`
             );
           }
         }
@@ -664,6 +561,7 @@ export async function POST(req: NextRequest) {
       if (explicit) {
         try {
           await (remember as any)({
+            // user_memories is user-scoped; we still forward workspace for future compatibility
             workspace_id: workspaceId,
             user_key: userKey,
             content: explicit,
@@ -701,7 +599,7 @@ export async function POST(req: NextRequest) {
             });
           }
         } catch {
-          // fall through
+          /* fall through */
         }
       }
     }
@@ -739,7 +637,7 @@ export async function POST(req: NextRequest) {
             { headers: corsHeaders(echoOrigin) }
           );
         } catch {
-          // fallback to OpenAI
+          /* fallback to OpenAI */
         }
       }
 
@@ -750,14 +648,17 @@ export async function POST(req: NextRequest) {
           input:
             system +
             '\n\n' +
-            rolledWithAttachments.map((m) => `${m.role}: ${m.content}`).join('\n'),
+            rolledWithAttachments
+              .map((m) => `${m.role}: ${m.content}`)
+              .join('\n'),
           max_output_tokens: 800,
           temperature: 0.2,
         }),
         REQUEST_TIMEOUT_MS
       );
 
-      const text = (resp as any).output_text?.trim() || '[No reply from model]';
+      const text =
+        (resp as any).output_text?.trim() || '[No reply from model]';
       return NextResponse.json(
         {
           text,
@@ -791,7 +692,7 @@ export async function POST(req: NextRequest) {
           },
         });
       } catch {
-        // fallback to OpenAI
+        /* fallback to OpenAI */
       }
     }
 
@@ -799,7 +700,10 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.OPENAI_API_KEY || '';
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
         model: MODEL,
         stream: true,
