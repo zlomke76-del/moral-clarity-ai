@@ -1,9 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* =========================================================
-   Minimal global styles for Moral Clarity AI (no Tailwind)
+   Minimal global styles for Moral Clarity AI (with Tailwind)
    ========================================================= */
 
 /* ---------- Design tokens ---------- */
-:root{
+:root {
   /* Brand / surfaces */
   --mc-bg:       #0a0d12;
   --mc-panel:    #0f1623;
@@ -21,7 +25,7 @@
   --mc-radius: 12px;
   --mc-shadow: 0 18px 60px rgba(0,0,0,.55);
 
-  /* --- Solace Dock token map (so components can use .solace-dock) --- */
+  /* --- Solace Dock token map --- */
   --sd-bg:      color-mix(in oklab, var(--mc-panel) 88%, transparent);
   --sd-border:  var(--mc-border);
   --sd-fg:      var(--mc-text);
@@ -34,152 +38,210 @@
 }
 
 /* ---------- Base ---------- */
-html,body{
-  height:100%;
-  margin:0;
-  background:var(--mc-bg);
-  color:var(--mc-text);
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI",
-               Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--mc-bg);
+  color: var(--mc-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    "Noto Sans",
+    sans-serif;
 }
-*{ box-sizing:border-box; }
 
-::selection{
+* {
+  box-sizing: border-box;
+}
+
+::selection {
   background: color-mix(in oklab, var(--mc-accent) 25%, transparent);
   color: var(--mc-text);
 }
 
 /* Accessible focus */
-:focus-visible{
-  outline:2px solid color-mix(in oklab, var(--mc-accent) 75%, white);
-  outline-offset:2px;
+:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--mc-accent) 75%, white);
+  outline-offset: 2px;
 }
 
 /* Motion safety */
-@media (prefers-reduced-motion: reduce){
-  *{ animation:none !important; transition:none !important; }
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 /* ---------- Typography ---------- */
-a{ color:var(--mc-accent); text-decoration:none; }
-a:hover{ text-decoration:underline; }
+a {
+  color: var(--mc-accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
 
-.prose{ max-width:65ch; }
-.prose h1{ font-size:2rem; margin:1.5rem 0 .75rem; }
-.prose h2{ font-size:1.5rem; margin:1.25rem 0 .5rem; }
-.prose p{ line-height:1.7; margin:1rem 0; }
-.prose ul{ margin:.75rem 0; padding-left:1.25rem; }
-.prose li{ margin:.25rem 0; }
+.prose {
+  max-width: 65ch;
+}
+.prose h1 {
+  font-size: 2rem;
+  margin: 1.5rem 0 0.75rem;
+}
+.prose h2 {
+  font-size: 1.5rem;
+  margin: 1.25rem 0 0.5rem;
+}
+.prose p {
+  line-height: 1.7;
+  margin: 1rem 0;
+}
+.prose ul {
+  margin: 0.75rem 0;
+  padding-left: 1.25rem;
+}
+.prose li {
+  margin: 0.25rem 0;
+}
 
 /* Kill any mask/gradient logo overrides that were applied elsewhere */
 .brand,
 .brand::before,
-.brand::after{
-  background:none !important;
-  content:none !important;
-  mask-image:none !important;
-  -webkit-mask-image:none !important;
+.brand::after {
+  background: none !important;
+  content: none !important;
+  mask-image: none !important;
+  -webkit-mask-image: none !important;
 }
 
-/* ---------- Layout helpers ---------- */
-.mx-auto{ margin-left:auto; margin-right:auto; }
-.max-w-3xl{ max-width:48rem; }
-.max-w-6xl{ max-width:72rem; }
-.px-6{ padding-left:1.5rem; padding-right:1.5rem; }
-.py-10{ padding-top:2.5rem; padding-bottom:2.5rem; }
-.py-12{ padding-top:3rem; padding-bottom:3rem; }
-.border{ border:1px solid var(--mc-border); }
-.rounded{ border-radius:.5rem; }
+/* ---------- Layout helpers (override Tailwind with brand tokens) ---------- */
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+.max-w-3xl {
+  max-width: 48rem;
+}
+.max-w-6xl {
+  max-width: 72rem;
+}
+.px-6 {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+.py-10 {
+  padding-top: 2.5rem;
+  padding-bottom: 2.5rem;
+}
+.py-12 {
+  padding-top: 3rem;
+  padding-bottom: 3rem;
+}
+.border {
+  border: 1px solid var(--mc-border);
+}
+.rounded {
+  border-radius: 0.5rem;
+}
 
 /* ---------- Site chrome ---------- */
-nav{
-  background:var(--mc-panel);
-  border-bottom:1px solid var(--mc-border);
-  padding:.75rem 1.5rem;
+nav {
+  background: var(--mc-panel);
+  border-bottom: 1px solid var(--mc-border);
+  padding: 0.75rem 1.5rem;
 }
-footer{
-  background:var(--mc-panel);
-  border-top:1px solid var(--mc-border);
-  padding:1.25rem 1.5rem;
-  color:var(--mc-muted);
-  font-size:.9rem;
+footer {
+  background: var(--mc-panel);
+  border-top: 1px solid var(--mc-border);
+  padding: 1.25rem 1.5rem;
+  color: var(--mc-muted);
+  font-size: 0.9rem;
 }
 
 /* ---------- Inputs & buttons ---------- */
-input,select,textarea{
-  width:100%;
-  border:1px solid var(--mc-border);
-  border-radius:.5rem;
-  background:var(--mc-surface);
-  color:var(--mc-text);
-  padding:.55rem .8rem;
-  font-size:.95rem;
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid var(--mc-border);
+  border-radius: 0.5rem;
+  background: var(--mc-surface);
+  color: var(--mc-text);
+  padding: 0.55rem 0.8rem;
+  font-size: 0.95rem;
 }
-input::placeholder, textarea::placeholder{ color: color-mix(in oklab, var(--mc-muted) 80%, transparent); }
+input::placeholder,
+textarea::placeholder {
+  color: color-mix(in oklab, var(--mc-muted) 80%, transparent);
+}
 
-button{
-  border:1px solid var(--mc-border);
-  border-radius:.5rem;
-  background:#121a28;
-  color:var(--mc-text);
-  padding:.55rem .95rem;
-  cursor:pointer;
-  transition: background .15s ease, color .15s ease, opacity .15s ease;
+button {
+  border: 1px solid var(--mc-border);
+  border-radius: 0.5rem;
+  background: #121a28;
+  color: var(--mc-text);
+  padding: 0.55rem 0.95rem;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    opacity 0.15s ease;
 }
-button:hover{ background:var(--mc-accent); color:#000; }
-button:disabled{ opacity:.5; cursor:not-allowed; }
+button:hover {
+  background: var(--mc-accent);
+  color: #000;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 /* Button variants */
-.btn-primary{
-  background:var(--mc-accent);
-  color:#000;
+.btn-primary {
+  background: var(--mc-accent);
+  color: #000;
   border-color: color-mix(in oklab, var(--mc-accent) 60%, var(--mc-border));
 }
-.btn-ghost{
+.btn-ghost {
   background: transparent;
   color: var(--mc-text);
 }
-.btn-ghost:hover{
+.btn-ghost:hover {
   background: color-mix(in oklab, var(--mc-accent) 18%, transparent);
   color: var(--mc-text);
 }
 
 /* Cards */
-.card{
+.card {
   background: var(--mc-panel);
-  border:1px solid var(--mc-border);
+  border: 1px solid var(--mc-border);
   border-radius: var(--mc-radius);
-  padding:1rem;
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.02);
+  padding: 1rem;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 
 /* =========================================================
    Solace Dock (no Tailwind required)
    ========================================================= */
-.solace-dock{
-  background: var(--sd-bg) !important;
-  border: 1px solid var(--sd-border) !important;
-  color: var(--sd-fg) !important;
-  border-radius: var(--sd-radius) !important;
-  box-shadow: var(--sd-shadow) !important;
-  backdrop-filter: blur(8px) !important;
-}
-/* --- Solace dock refinements --- */
+
 .solace-dock {
   position: relative;
-  background: color-mix(in oklab, var(--sd-bg) 92%, transparent) !important;
-  border: 1px solid color-mix(in oklab, var(--sd-border) 85%, transparent) !important;
-  box-shadow: 0 14px 40px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.03) !important;
-}
-/* Solace dock: subtle glass, clearer edges, nice hover/focus */
-.solace-dock {
-  background: color-mix(in oklab, rgba(12,18,28,.86) 92%, transparent);
-  border: 1px solid rgba(255,255,255,.06);
+  background: color-mix(in oklab, rgba(12, 18, 28, 0.86) 92%, transparent);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--sd-fg);
+  border-radius: var(--sd-radius);
   box-shadow:
-    0 22px 70px rgba(0,0,0,.55),
-    inset 0 1px 0 rgba(255,255,255,.04);
+    0 22px 70px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(10px);
 }
 
@@ -187,53 +249,17 @@ button:disabled{ opacity:.5; cursor:not-allowed; }
 .solace-dock::before {
   content: "";
   position: absolute;
-  inset: 8px;
-  z-index: -1;
-  filter: blur(18px);
-  opacity: .2;
-  background:
-    radial-gradient(140px 60px at 18% 92%, rgba(90,140,255,.30), transparent 70%),
-    radial-gradient(220px 84px at 82% 96%, rgba(40,120,255,.28), transparent 70%);
-  pointer-events: none;
-}
-
-.solace-dock header {
-  border-bottom: 1px solid rgba(255,255,255,.06);
-}
-
-.solace-dock textarea {
-  background: rgba(12,18,28,.85);
-  border: 1px solid rgba(255,255,255,.06);
-  color: #e8eef6;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.02);
-  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
-}
-.solace-dock textarea:focus {
-  border-color: rgba(120,160,255,.6);
-  box-shadow: 0 0 0 3px rgba(120,160,255,.22);
-}
-
-/* primary button style/hover */
-.solace-dock .primary {
-  background: #e7ecf7;
-  color: #0d1220;
-  border: 1px solid rgba(255,255,255,.06);
-  transition: background .15s ease, transform .05s ease, opacity .15s ease;
-}
-.solace-dock .primary:hover { background: white; }
-.solace-dock .primary:active { transform: translateY(1px); }
-
-/* ambient glow under the dock (very subtle) */
-.solace-dock::before {
-  content: "";
-  position: absolute;
   inset: 6px;
   z-index: -1;
   filter: blur(18px);
-  opacity: .22;
+  opacity: 0.22;
   background:
-    radial-gradient(120px 60px at 20% 90%, color-mix(in oklab, var(--sd-accent) 30%, transparent), transparent 70%),
-    radial-gradient(200px 80px at 80% 95%, rgba(40,120,255,.35), transparent 70%);
+    radial-gradient(
+      120px 60px at 20% 90%,
+      color-mix(in oklab, var(--sd-accent) 30%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(200px 80px at 80% 95%, rgba(40, 120, 255, 0.35), transparent 70%);
   pointer-events: none;
 }
 
@@ -244,17 +270,32 @@ button:disabled{ opacity:.5; cursor:not-allowed; }
 
 /* textarea slight inset + focus ring */
 .solace-dock textarea {
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.02);
-  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+  background: color-mix(in oklab, var(--sd-bg) 80%, black);
+  color: var(--sd-fg) !important;
+  border: 1px solid var(--sd-border) !important;
+  border-radius: 12px;
+  width: 100%;
+  resize: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
 }
 .solace-dock textarea:focus {
   border-color: color-mix(in oklab, var(--sd-accent) 60%, var(--sd-border));
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--sd-accent) 22%, transparent);
 }
 
-/* primary button hover/press */
+/* Primary action inside dock */
 .solace-dock button.primary {
-  transition: background .15s ease, transform .05s ease, opacity .15s ease;
+  background: var(--sd-accent) !important;
+  color: #fff !important;
+  border: none !important;
+  transition:
+    background 0.15s ease,
+    transform 0.05s ease,
+    opacity 0.15s ease;
 }
 .solace-dock button.primary:hover {
   background: color-mix(in oklab, var(--sd-accent) 90%, white);
@@ -262,42 +303,32 @@ button:disabled{ opacity:.5; cursor:not-allowed; }
 .solace-dock button.primary:active {
   transform: translateY(1px);
 }
+.solace-dock button.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 /* Text & chips */
-.solace-dock .muted{ color: var(--sd-muted) !important; }
-.solace-dock .chip{
+.solace-dock .muted {
+  color: var(--sd-muted) !important;
+}
+.solace-dock .chip {
   background: var(--sd-chip-bg) !important;
   color: var(--sd-chip-fg) !important;
   border-radius: 999px;
-  padding: .25rem .5rem;
-  font-size: .75rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
 }
-
-/* Inputs inside dock */
-.solace-dock textarea{
-  background: #0b0b0e; /* fallback */
-  background: color-mix(in oklab, var(--sd-bg) 80%, black);
-  color: var(--sd-fg) !important;
-  border: 1px solid var(--sd-border) !important;
-  border-radius: 12px;
-  width: 100%;
-  resize: none;
-}
-
-/* Primary action inside dock */
-.solace-dock button.primary{
-  background: var(--sd-accent) !important;
-  color: #fff !important;
-  border: none !important;
-  transition: transform .05s ease, opacity .15s ease;
-}
-.solace-dock button.primary:active{ transform: translateY(1px); }
-.solace-dock button.primary:disabled{ opacity:.5; cursor:not-allowed; }
 
 /* Layout helpers for the dock */
-.solace-dock .row{
-  display:flex; gap:.5rem; align-items:center;
+.solace-dock .row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
 }
-@media (max-width: 640px){
-  .solace-dock .row{ flex-direction:column; align-items:stretch; }
+@media (max-width: 640px) {
+  .solace-dock .row {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
