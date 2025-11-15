@@ -263,38 +263,38 @@ async function fetchAttachmentAsText(att: Attachment): Promise<string> {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const ct = (res.headers.get('content-type') || att.type || '').toLowerCase();
 
-  // 🔍 NEW: image analysis via OpenAI vision
-  if (ct.startsWith('image/')) {
-    try {
-      const openai: OpenAI = await getOpenAI();
-      const resp = await openai.responses.create({
-        model: process.env.OPENAI_VISION_MODEL || MODEL,
-        input: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'input_text',
-                text:
-                  'You are helping another assistant reason about this image. ' +
-                  'Describe the image in clear, structured detail so it can be used for downstream analysis.',
-              },
-              {
-                type: 'input_image_url',
-                image_url: { url: att.url },
-              },
-            ],
-          },
-        ],
-        max_output_tokens: 400,
-      });
+// 🔍 NEW: image analysis via OpenAI vision
+if (ct.startsWith('image/')) {
+  try {
+    const openai: OpenAI = await getOpenAI();
+    const resp = await openai.responses.create({
+      model: process.env.OPENAI_VISION_MODEL || MODEL,
+      input: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'input_text',
+              text:
+                'You are helping another assistant reason about this image. ' +
+                'Describe the image in clear, structured detail so it can be used for downstream analysis.',
+            },
+            {
+              type: 'input_image',          // 👈 changed from input_image_url
+              image_url: att.url,           // 👈 string is fine here
+            },
+          ],
+        },
+      ],
+      max_output_tokens: 400,
+    });
 
-      const desc = ((resp as any).output_text || '').trim() || '(no description returned)';
-      return `Image description for ${att.name} (${ct}):\n${desc}`;
-    } catch (e: any) {
-      return `[Error describing image ${att.name}: ${e?.message || e}]`;
-    }
+    const desc = ((resp as any).output_text || '').trim() || '(no description returned)';
+    return `Image description for ${att.name} (${ct}):\n${desc}`;
+  } catch (e: any) {
+    return `[Error describing image ${att.name}: ${e?.message || e}]`;
   }
+}
 
   // PDFs → text via pdf-parse
   if (ct.includes('pdf') || /\.pdf(?:$|\?)/i.test(att.url)) {
