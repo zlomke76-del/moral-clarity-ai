@@ -303,10 +303,8 @@ async function describeImageAttachment(att: Attachment): Promise<string> {
           },
           {
             type: 'input_image',
-            image_url: {
-              url: att.url,
-              detail: 'low', // keep token usage sane; bump to 'high' if you ever need more detail
-            },
+            // SDK version in this project expects image_url as a plain string
+            image_url: att.url,
           },
         ],
       },
@@ -820,4 +818,5 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
 
