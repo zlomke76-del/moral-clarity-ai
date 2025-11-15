@@ -137,7 +137,6 @@ const RESPONSE_FORMAT = `RESPONSE FORMAT
 - Add "Rationale" / "Next Steps" only if asked.
 - If a MEMORY PACK is present, prefer it over general disclaimers. On prompts like "What do you remember about me?", list the relevant memory items succinctly.`;
 
-/* scripture policy */
 function scripturePolicyText(opts: {
   wantsAbrahamic: boolean;
   forceFirstTurnSeeding: boolean;
@@ -176,7 +175,6 @@ function wantsSecular(messages: Array<{ role: string; content: string }>) {
   );
 }
 
-/* NEW: detect when user is asking for an image */
 function wantsImageGeneration(text: string) {
   const t = (text || '').toLowerCase().trim();
   if (!t) return false;
@@ -247,8 +245,13 @@ function buildSystemPrompt(
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const id = setTimeout(() => reject(new Error('Request timed out')), ms);
-    p.then((v) => { clearTimeout(id); resolve(v); })
-     .catch((e) => { clearTimeout(id); reject(e); });
+    p.then((v) => {
+      clearTimeout(id);
+      resolve(v);
+    }).catch((e) => {
+      clearTimeout(id);
+      reject(e);
+    });
   });
 }
 
@@ -260,12 +263,47 @@ async function fetchAttachmentAsText(att: Attachment): Promise<string> {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const ct = (res.headers.get('content-type') || att.type || '').toLowerCase();
 
+  // 🔍 NEW: image analysis via OpenAI vision
+  if (ct.startsWith('image/')) {
+    try {
+      const openai: OpenAI = await getOpenAI();
+      const resp = await openai.responses.create({
+        model: process.env.OPENAI_VISION_MODEL || MODEL,
+        input: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'input_text',
+                text:
+                  'You are helping another assistant reason about this image. ' +
+                  'Describe the image in clear, structured detail so it can be used for downstream analysis.',
+              },
+              {
+                type: 'input_image_url',
+                image_url: { url: att.url },
+              },
+            ],
+          },
+        ],
+        max_output_tokens: 400,
+      });
+
+      const desc = ((resp as any).output_text || '').trim() || '(no description returned)';
+      return `Image description for ${att.name} (${ct}):\n${desc}`;
+    } catch (e: any) {
+      return `[Error describing image ${att.name}: ${e?.message || e}]`;
+    }
+  }
+
+  // PDFs → text via pdf-parse
   if (ct.includes('pdf') || /\.pdf(?:$|\?)/i.test(att.url)) {
     const buf = Buffer.from(await res.arrayBuffer());
     const out = await pdfParse(buf);
     return out.text || '';
   }
 
+  // text-ish
   if (
     ct.includes('text/') ||
     ct.includes('json') ||
@@ -275,6 +313,7 @@ async function fetchAttachmentAsText(att: Attachment): Promise<string> {
     return await res.text();
   }
 
+  // Fallback
   return `[Unsupported file type: ${att.name} (${ct || 'unknown'})]`;
 }
 
@@ -285,7 +324,6 @@ function clampText(s: string, n: number) {
 
 /* ========= Memory helpers ========= */
 function getUserKeyFromReq(req: NextRequest, body: any) {
-  // default to configured MCA_USER_KEY instead of hard-coded "guest"
   return req.headers.get('x-user-key') || body?.user_key || MCA_USER_KEY || 'guest';
 }
 
@@ -408,7 +446,6 @@ export async function POST(req: NextRequest) {
     /* ===== MEMORY: recall pack (scoped) ===== */
     let userKey = getUserKeyFromReq(req, body);
     if (!userKey || userKey === 'guest') {
-      // last-resort server-side key if client didn't provide one
       userKey = `u_${crypto.randomUUID()}`;
     }
     const workspaceId: string = body?.workspace_id || MCA_WORKSPACE_ID;
@@ -417,7 +454,6 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // We keep hits accessible for the echo path
     let hits: Array<any> = [];
     let memorySection = '';
 
@@ -430,7 +466,6 @@ export async function POST(req: NextRequest) {
             .slice(-3)
             .join('\n') || 'general';
 
-        // fold recent explicit "remember ..." clauses into query
         const explicitInTurns = rolled
           .filter((m) => m.role === 'user')
           .map((m) => m.content.match(/\bremember(?:\s+that)?\s+(.+)/i)?.[1])
@@ -440,7 +475,6 @@ export async function POST(req: NextRequest) {
         const baseQuery = lastUser || fallbackQuery;
         const query = [baseQuery, explicitInTurns].filter(Boolean).join(' | ');
 
-        // ✅ Correct call signature: (user_key, query, k)
         hits = await searchMemories(userKey, query, 8);
 
         const pack = (hits ?? [])
@@ -495,9 +529,7 @@ export async function POST(req: NextRequest) {
         const results = await webSearch(lastUser, { news: true, max: 5 });
         if (Array.isArray(results) && results.length) {
           const lines = results
-            .map(
-              (r: any, i: number) => `• [${i + 1}] ${r.title} — ${r.url}`
-            )
+            .map((r: any, i: number) => `• [${i + 1}] ${r.title} — ${r.url}`)
             .join('\n');
           webSection =
             `\n\nWEB CONTEXT (recent search)\n${lines}\n\nGuidance:\n- Use these results to answer directly.\n- Prefer the most recent and reputable sources.\n- If uncertain, say what is unknown.\n- When referencing items, use bracket numbers like [1], [2].`;
@@ -541,27 +573,26 @@ export async function POST(req: NextRequest) {
         }
 
         attachmentSection =
-          `\n\nATTACHMENT DIGEST\nThe user provided ${atts.length} attachment(s). Use the content below in your analysis.\n` +
+          `\n\nATTACHMENT DIGEST\nThe user provided ${atts.length} attachment(s).\n` +
+          `Image files have been auto-described for you; treat descriptions as approximations.\n` +
           parts.join('');
       }
     } catch {
       attachmentSection = '';
     }
 
-    // If web context exists, add a strong “no-disclaimer” instruction
     const webAssertion = hasWebContext
       ? `\n\nREAL-TIME CONTEXT\n- You DO have recent web results above. Do NOT say you cannot provide real-time updates.\n- Synthesize a brief answer using those results, and include bracketed refs like [1], [3].`
       : '';
 
     const system = baseSystem + memorySection + webSection + webAssertion;
 
-    /* ===== Explicit "remember ..." capture (scoped) ===== */
+    /* ===== Explicit "remember ..." capture ===== */
     if (memoryEnabled) {
       const explicit = detectExplicitRemember(lastUser);
       if (explicit) {
         try {
           await (remember as any)({
-            // user_memories is user-scoped; we still forward workspace for future compatibility
             workspace_id: workspaceId,
             user_key: userKey,
             content: explicit,
@@ -604,7 +635,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    /* ===== Build message list (include attachments) ===== */
+    /* ===== Build message list (include attachments digest as extra turn) ===== */
     const rolledWithAttachments = attachmentSection
       ? [...rolled, { role: 'user', content: attachmentSection }]
       : rolled;
@@ -696,7 +727,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // OpenAI SSE fallback
     const apiKey = process.env.OPENAI_API_KEY || '';
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -749,3 +779,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
