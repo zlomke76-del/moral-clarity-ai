@@ -1,69 +1,144 @@
+// app/components/useSolaceMemory.ts
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { MCA_USER_KEY } from "@/lib/mca-config";
+import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 
-export type MemoryRow = {
+type MemoryRow = {
   id: string;
   title: string | null;
   content: string;
-  created_at?: string;
+  created_at: string;
+  user_key: string;
+  kind: string | null;
+  workspace_id: string | null;
 };
 
 export function useSolaceMemory() {
-  const [userKey, setUserKey] = useState<string>(MCA_USER_KEY);
+  const [userKey, setUserKey] = useState<string>(MCA_USER_KEY || "guest");
   const [memReady, setMemReady] = useState(false);
   const memoryCacheRef = useRef<MemoryRow[]>([]);
 
-  // Durable per-browser user key (fallback to MCA_USER_KEY / guest)
+  // Durable per-user key: prefer Supabase email, else per-browser UUID
   useEffect(() => {
-    try {
-      let k = localStorage.getItem("mc:user_key");
-      if (!k || k === "guest") {
-        k = "u_" + crypto.randomUUID();
-        localStorage.setItem("mc:user_key", k);
+    let cancelled = false;
+
+    async function resolveUserKey() {
+      // SSR safety
+      if (typeof window === "undefined") {
+        if (!cancelled) setUserKey(MCA_USER_KEY || "guest");
+        return;
       }
-      setUserKey(k);
-    } catch {
-      setUserKey(MCA_USER_KEY || "guest");
+
+      try {
+        const supabase = createSupabaseBrowser();
+
+        // Try to get the logged-in Supabase user
+        const { data, error } = await supabase.auth.getUser();
+        if (error) {
+          // No session, fall back to anonymous behavior
+          const anonKey =
+            localStorage.getItem("mc:user_key") && localStorage.getItem("mc:user_key") !== "guest"
+              ? (localStorage.getItem("mc:user_key") as string)
+              : (() => {
+                  const k = "u_" + crypto.randomUUID();
+                  localStorage.setItem("mc:user_key", k);
+                  return k;
+                })();
+
+          if (!cancelled) setUserKey(anonKey);
+          return;
+        }
+
+        const rawEmail = data.user?.email?.trim();
+        if (rawEmail) {
+          // Canonical identity: email
+          const emailKey = rawEmail.toLowerCase();
+          localStorage.setItem("mc:user_key", emailKey);
+          if (!cancelled) setUserKey(emailKey);
+          return;
+        }
+
+        // If somehow there is a user but no email, use anon key
+        const existing =
+          localStorage.getItem("mc:user_key") && localStorage.getItem("mc:user_key") !== "guest"
+            ? (localStorage.getItem("mc:user_key") as string)
+            : (() => {
+                const k = "u_" + crypto.randomUUID();
+                localStorage.setItem("mc:user_key", k);
+                return k;
+              })();
+
+        if (!cancelled) setUserKey(existing);
+      } catch {
+        // Hard fallback: MCA_USER_KEY or guest
+        if (!cancelled) {
+          try {
+            let k = localStorage.getItem("mc:user_key");
+            if (!k || k === "guest") {
+              k = "u_" + crypto.randomUUID();
+              localStorage.setItem("mc:user_key", k);
+            }
+            setUserKey(k);
+          } catch {
+            setUserKey(MCA_USER_KEY || "guest");
+          }
+        }
+      }
     }
+
+    resolveUserKey();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Bootstrap: fetch recent memory rows for this user key
+  // Load most recent memories for this user_key (when resolved)
   useEffect(() => {
     if (!userKey) return;
-    let alive = true;
+
+    let cancelled = false;
 
     (async () => {
       try {
-        const r = await fetch(`/api/memory?limit=50`, {
+        const res = await fetch(`/api/memory?user_key=${encodeURIComponent(userKey)}&limit=50`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "X-User-Key": userKey,
+          },
           cache: "no-store",
-          headers: { "X-User-Key": userKey || MCA_USER_KEY || "guest" },
         });
-        if (!alive) return;
 
-        if (r.ok) {
-          const j = await r.json().catch(() => ({ rows: [] as any[] }));
-          const rows = Array.isArray(j?.rows) ? j.rows : [];
-
-          memoryCacheRef.current = rows.map((m: any) => ({
-            id: String(m.id),
-            title: m.title ?? null,
-            content: String(m.content ?? ""),
-            created_at: m.created_at ?? undefined,
-          })) as MemoryRow[];
-        } else {
-          memoryCacheRef.current = [];
+        if (!res.ok) {
+          // eslint-disable-next-line no-console
+          console.warn("Solace memory bootstrap: GET /api/memory failed", res.status);
+          if (!cancelled) setMemReady(true);
+          return;
         }
-      } catch {
-        memoryCacheRef.current = [];
-      } finally {
-        if (alive) setMemReady(true);
+
+        const data = await res.json().catch(() => null);
+        if (!data || !Array.isArray(data.rows)) {
+          if (!cancelled) setMemReady(true);
+          return;
+        }
+
+        if (!cancelled) {
+          memoryCacheRef.current = data.rows as MemoryRow[];
+          setMemReady(true);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          // eslint-disable-next-line no-console
+          console.warn("Solace memory bootstrap: error fetching memories", err);
+          setMemReady(true);
+        }
       }
     })();
 
     return () => {
-      alive = false;
+      cancelled = true;
     };
   }, [userKey]);
 
