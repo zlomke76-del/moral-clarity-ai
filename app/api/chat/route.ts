@@ -175,6 +175,7 @@ function wantsSecular(messages: Array<{ role: string; content: string }>) {
   );
 }
 
+/* NEW: detect when user is asking for an image */
 function wantsImageGeneration(text: string) {
   const t = (text || '').toLowerCase().trim();
   if (!t) return false;
@@ -199,13 +200,39 @@ function isFirstRealTurn(messages: Array<{ role: string; content: string }>) {
 function hasEmotionalOrMoralCue(text: string) {
   const t = (text || '').toLowerCase();
   const emo = [
-    'hope','lost','afraid','fear','anxious','grief','sad','sorrow','depressed',
-    'stress','overwhelmed','lonely','comfort','forgive','forgiveness','guilt',
-    'shame','purpose','meaning',
+    'hope',
+    'lost',
+    'afraid',
+    'fear',
+    'anxious',
+    'grief',
+    'sad',
+    'sorrow',
+    'depressed',
+    'stress',
+    'overwhelmed',
+    'lonely',
+    'comfort',
+    'forgive',
+    'forgiveness',
+    'guilt',
+    'shame',
+    'purpose',
+    'meaning',
   ];
   const moral = [
-    'right','wrong','unfair','injustice','justice','truth','honest','dishonest',
-    'integrity','mercy','compassion','courage',
+    'right',
+    'wrong',
+    'unfair',
+    'injustice',
+    'justice',
+    'truth',
+    'honest',
+    'dishonest',
+    'integrity',
+    'mercy',
+    'compassion',
+    'courage',
   ];
   const hit = (arr: string[]) => arr.some((w) => t.includes(w));
   return hit(emo) || hit(moral);
@@ -258,52 +285,71 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 /* ========= Attachments ========= */
 type Attachment = { name: string; url: string; type?: string };
 
+/** Describe an image attachment using the Responses API (vision). */
+async function describeImageAttachment(att: Attachment): Promise<string> {
+  const openai: OpenAI = await getOpenAI();
+
+  const resp = await openai.responses.create({
+    model: process.env.OPENAI_VISION_MODEL || MODEL,
+    input: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'input_text',
+            text:
+              'You are helping another assistant reason about this image. ' +
+              'Describe the image in clear, structured detail so it can be used for downstream analysis.',
+          },
+          {
+            type: 'input_image',
+            image_url: {
+              url: att.url,
+              detail: 'low', // keep token usage sane; bump to 'high' if you ever need more detail
+            },
+          },
+        ],
+      },
+    ],
+    max_output_tokens: 400,
+  });
+
+  const anyResp: any = resp;
+  const value =
+    anyResp.output?.[0]?.content?.[0]?.text?.value ??
+    anyResp.output_text ??
+    anyResp.text ??
+    '';
+
+  return value || '[No description produced by vision model]';
+}
+
 async function fetchAttachmentAsText(att: Attachment): Promise<string> {
   const res = await fetch(att.url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const ct = (res.headers.get('content-type') || att.type || '').toLowerCase();
 
-// 🔍 NEW: image analysis via OpenAI vision
-if (ct.startsWith('image/')) {
-  try {
-    const openai: OpenAI = await getOpenAI();
-    const resp = await openai.responses.create({
-      model: process.env.OPENAI_VISION_MODEL || MODEL,
-      input: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'input_text',
-              text:
-                'You are helping another assistant reason about this image. ' +
-                'Describe the image in clear, structured detail so it can be used for downstream analysis.',
-            },
-            {
-              type: 'input_image',          // 👈 changed from input_image_url
-              image_url: att.url,           // 👈 string is fine here
-            },
-          ],
-        },
-      ],
-      max_output_tokens: 400,
-    });
-
-    const desc = ((resp as any).output_text || '').trim() || '(no description returned)';
-    return `Image description for ${att.name} (${ct}):\n${desc}`;
-  } catch (e: any) {
-    return `[Error describing image ${att.name}: ${e?.message || e}]`;
-  }
-}
-
-  // PDFs → text via pdf-parse
+  // PDFs
   if (ct.includes('pdf') || /\.pdf(?:$|\?)/i.test(att.url)) {
     const buf = Buffer.from(await res.arrayBuffer());
     const out = await pdfParse(buf);
     return out.text || '';
   }
 
-  // text-ish
+  // Images -> vision description
+  if (
+    ct.startsWith('image/') ||
+    /\.(?:png|jpe?g|gif|webp|heic|bmp|tiff?)(?:$|\?)/i.test(att.url)
+  ) {
+    try {
+      const desc = await describeImageAttachment(att);
+      return `Image description for ${att.name}:\n${desc}`;
+    } catch (e: any) {
+      return `[Image "${att.name}" could not be analyzed: ${e?.message || String(e)}]`;
+    }
+  }
+
+  // Plain text-ish
   if (
     ct.includes('text/') ||
     ct.includes('json') ||
@@ -313,7 +359,6 @@ if (ct.startsWith('image/')) {
     return await res.text();
   }
 
-  // Fallback
   return `[Unsupported file type: ${att.name} (${ct || 'unknown'})]`;
 }
 
@@ -324,6 +369,7 @@ function clampText(s: string, n: number) {
 
 /* ========= Memory helpers ========= */
 function getUserKeyFromReq(req: NextRequest, body: any) {
+  // default to configured MCA_USER_KEY instead of hard-coded "guest"
   return req.headers.get('x-user-key') || body?.user_key || MCA_USER_KEY || 'guest';
 }
 
@@ -446,6 +492,7 @@ export async function POST(req: NextRequest) {
     /* ===== MEMORY: recall pack (scoped) ===== */
     let userKey = getUserKeyFromReq(req, body);
     if (!userKey || userKey === 'guest') {
+      // last-resort server-side key if client didn't provide one
       userKey = `u_${crypto.randomUUID()}`;
     }
     const workspaceId: string = body?.workspace_id || MCA_WORKSPACE_ID;
@@ -556,25 +603,20 @@ export async function POST(req: NextRequest) {
             const clipped = clampText(raw, MAX_PER_FILE);
             const block = `\n--- Attachment: ${att.name}\n(source: ${att.url})\n\`\`\`\n${clipped}\n\`\`\`\n`;
             if (total + block.length > MAX_TOTAL) {
-              parts.push(
-                `\n--- [Skipping remaining attachments: token cap reached]`
-              );
+              parts.push(`\n--- [Skipping remaining attachments: token cap reached]`);
               break;
             }
             parts.push(block);
             total += block.length;
           } catch (e: any) {
             parts.push(
-              `\n--- Attachment: ${att.name}\n[Error reading file: ${
-                e?.message || e
-              }]`
+              `\n--- Attachment: ${att.name}\n[Error reading file: ${e?.message || e}]`
             );
           }
         }
 
         attachmentSection =
-          `\n\nATTACHMENT DIGEST\nThe user provided ${atts.length} attachment(s).\n` +
-          `Image files have been auto-described for you; treat descriptions as approximations.\n` +
+          `\n\nATTACHMENT DIGEST\nThe user provided ${atts.length} attachment(s). Use the content below in your analysis.\n` +
           parts.join('');
       }
     } catch {
@@ -587,7 +629,7 @@ export async function POST(req: NextRequest) {
 
     const system = baseSystem + memorySection + webSection + webAssertion;
 
-    /* ===== Explicit "remember ..." capture ===== */
+    /* ===== Explicit "remember ..." capture (scoped) ===== */
     if (memoryEnabled) {
       const explicit = detectExplicitRemember(lastUser);
       if (explicit) {
@@ -635,7 +677,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    /* ===== Build message list (include attachments digest as extra turn) ===== */
+    /* ===== Build message list (include attachments) ===== */
     const rolledWithAttachments = attachmentSection
       ? [...rolled, { role: 'user', content: attachmentSection }]
       : rolled;
@@ -688,8 +730,7 @@ export async function POST(req: NextRequest) {
         REQUEST_TIMEOUT_MS
       );
 
-      const text =
-        (resp as any).output_text?.trim() || '[No reply from model]';
+      const text = (resp as any).output_text?.trim() || '[No reply from model]';
       return NextResponse.json(
         {
           text,
