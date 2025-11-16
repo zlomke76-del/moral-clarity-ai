@@ -137,6 +137,7 @@ const RESPONSE_FORMAT = `RESPONSE FORMAT
 - Add "Rationale" / "Next Steps" only if asked.
 - If a MEMORY PACK is present, prefer it over general disclaimers. On prompts like "What do you remember about me?", list the relevant memory items succinctly.`;
 
+/* scripture policy */
 function scripturePolicyText(opts: {
   wantsAbrahamic: boolean;
   forceFirstTurnSeeding: boolean;
@@ -175,7 +176,7 @@ function wantsSecular(messages: Array<{ role: string; content: string }>) {
   );
 }
 
-/* NEW: detect when user is asking for an image */
+/* NEW: detect when user is asking for an image (generation) */
 function wantsImageGeneration(text: string) {
   const t = (text || '').toLowerCase().trim();
   if (!t) return false;
@@ -251,10 +252,22 @@ function buildSystemPrompt(
   const forceFirstTurnSeeding =
     wantsAbrahamic && !userWantsSecular && firstTurn && hasEmotionalOrMoralCue(lastUserText);
 
+  const today = new Date();
+  const iso = today.toISOString().slice(0, 10); // YYYY-MM-DD
+  const year = iso.slice(0, 4);
+
+  const TIME_ANCHOR = `TIME & CONTEXT
+- Today's date is ${iso} (YYYY-MM-DD). Treat this as "now".
+- If the user asks for the current year, answer with ${year}.
+- If information depends on events after your training cutoff, say so explicitly or rely on WEB CONTEXT when provided.
+- Never state that the current year is earlier than ${year}; that would be drift.`;
+
   const parts: string[] = [];
   parts.push(
-    `IDENTITY\nYou are ${SOLACE_NAME} — a steady, principled presence. Listen first, then offer concise counsel with moral clarity.`,
+    `IDENTITY
+You are ${SOLACE_NAME} — a steady, principled presence. Listen first, then offer concise counsel with moral clarity.`,
     HOUSE_RULES,
+    TIME_ANCHOR,
     GUIDELINE_NEUTRAL,
     RESPONSE_FORMAT,
     scripturePolicyText({
@@ -285,69 +298,17 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 /* ========= Attachments ========= */
 type Attachment = { name: string; url: string; type?: string };
 
-/** Describe an image attachment using the Responses API (vision). */
-async function describeImageAttachment(att: Attachment): Promise<string> {
-  const openai: OpenAI = await getOpenAI();
-
-  const resp = await openai.responses.create({
-    model: process.env.OPENAI_VISION_MODEL || MODEL,
-    input: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'input_text',
-            text:
-              'You are helping another assistant reason about this image. ' +
-              'Describe the image in clear, structured detail so it can be used for downstream analysis.',
-          },
-          {
-            type: 'input_image',
-            // SDK version in this project expects image_url as a plain string
-            image_url: att.url,
-          },
-        ],
-      },
-    ],
-    max_output_tokens: 400,
-  });
-
-  const anyResp: any = resp;
-  const value =
-    anyResp.output?.[0]?.content?.[0]?.text?.value ??
-    anyResp.output_text ??
-    anyResp.text ??
-    '';
-
-  return value || '[No description produced by vision model]';
-}
-
 async function fetchAttachmentAsText(att: Attachment): Promise<string> {
   const res = await fetch(att.url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const ct = (res.headers.get('content-type') || att.type || '').toLowerCase();
 
-  // PDFs
   if (ct.includes('pdf') || /\.pdf(?:$|\?)/i.test(att.url)) {
     const buf = Buffer.from(await res.arrayBuffer());
     const out = await pdfParse(buf);
     return out.text || '';
   }
 
-  // Images -> vision description
-  if (
-    ct.startsWith('image/') ||
-    /\.(?:png|jpe?g|gif|webp|heic|bmp|tiff?)(?:$|\?)/i.test(att.url)
-  ) {
-    try {
-      const desc = await describeImageAttachment(att);
-      return `Image description for ${att.name}:\n${desc}`;
-    } catch (e: any) {
-      return `[Image "${att.name}" could not be analyzed: ${e?.message || String(e)}]`;
-    }
-  }
-
-  // Plain text-ish
   if (
     ct.includes('text/') ||
     ct.includes('json') ||
@@ -427,7 +388,7 @@ export async function POST(req: NextRequest) {
     const lastUser =
       [...rolled].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content || '';
 
-    /* ===== IMAGE GENERATION FAST-PATH ===== */
+    /* ===== IMAGE GENERATION FAST-PATH (DALL·E style via /api/image) ===== */
     if (wantsImageGeneration(lastUser)) {
       const rawPrompt = lastUser.replace(/^img:\s*/i, '').trim() || lastUser;
       try {
@@ -499,6 +460,7 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
+    // We keep hits accessible for the echo path
     let hits: Array<any> = [];
     let memorySection = '';
 
@@ -511,6 +473,7 @@ export async function POST(req: NextRequest) {
             .slice(-3)
             .join('\n') || 'general';
 
+        // fold recent explicit "remember ..." clauses into query
         const explicitInTurns = rolled
           .filter((m) => m.role === 'user')
           .map((m) => m.content.match(/\bremember(?:\s+that)?\s+(.+)/i)?.[1])
@@ -520,6 +483,7 @@ export async function POST(req: NextRequest) {
         const baseQuery = lastUser || fallbackQuery;
         const query = [baseQuery, explicitInTurns].filter(Boolean).join(' | ');
 
+        // Correct call signature: (user_key, query, k)
         hits = await searchMemories(userKey, query, 8);
 
         const pack = (hits ?? [])
@@ -601,7 +565,9 @@ export async function POST(req: NextRequest) {
             const clipped = clampText(raw, MAX_PER_FILE);
             const block = `\n--- Attachment: ${att.name}\n(source: ${att.url})\n\`\`\`\n${clipped}\n\`\`\`\n`;
             if (total + block.length > MAX_TOTAL) {
-              parts.push(`\n--- [Skipping remaining attachments: token cap reached]`);
+              parts.push(
+                `\n--- [Skipping remaining attachments: token cap reached]`
+              );
               break;
             }
             parts.push(block);
@@ -621,6 +587,7 @@ export async function POST(req: NextRequest) {
       attachmentSection = '';
     }
 
+    // If web context exists, add a strong “no-disclaimer” instruction
     const webAssertion = hasWebContext
       ? `\n\nREAL-TIME CONTEXT\n- You DO have recent web results above. Do NOT say you cannot provide real-time updates.\n- Synthesize a brief answer using those results, and include bracketed refs like [1], [3].`
       : '';
@@ -633,6 +600,7 @@ export async function POST(req: NextRequest) {
       if (explicit) {
         try {
           await (remember as any)({
+            // user_memories is user-scoped; we still forward workspace for future compatibility
             workspace_id: workspaceId,
             user_key: userKey,
             content: explicit,
@@ -719,16 +687,15 @@ export async function POST(req: NextRequest) {
           input:
             system +
             '\n\n' +
-            rolledWithAttachments
-              .map((m) => `${m.role}: ${m.content}`)
-              .join('\n'),
+            rolledWithAttachments.map((m) => `${m.role}: ${m.content}`).join('\n'),
           max_output_tokens: 800,
           temperature: 0.2,
         }),
         REQUEST_TIMEOUT_MS
       );
 
-      const text = (resp as any).output_text?.trim() || '[No reply from model]';
+      const text =
+        (resp as any).output_text?.trim() || '[No reply from model]';
       return NextResponse.json(
         {
           text,
@@ -766,6 +733,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // OpenAI SSE fallback
     const apiKey = process.env.OPENAI_API_KEY || '';
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
