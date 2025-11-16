@@ -240,7 +240,7 @@ function hasEmotionalOrMoralCue(text: string) {
 }
 
 function buildSystemPrompt(
-  filters: string[],
+  filters: string[] ,
   userWantsSecular: boolean,
   messages: Array<{ role: string; content: string }>
 ) {
@@ -259,7 +259,8 @@ function buildSystemPrompt(
   const TIME_ANCHOR = `TIME & CONTEXT
 - Today's date is ${iso} (YYYY-MM-DD). Treat this as "now".
 - If the user asks for the current year, answer with ${year}.
-- If information depends on events after your training cutoff, say so explicitly or rely on WEB CONTEXT when provided.
+- If information depends on events after your training cutoff AND no WEB CONTEXT is provided, explicitly say that you do not have up-to-date information and DO NOT guess, invent headlines, or fabricate sources.
+- When a WEB CONTEXT section is present, rely on it for post-cutoff events.
 - Never state that the current year is earlier than ${year}; that would be drift.`;
 
   const parts: string[] = [];
@@ -523,18 +524,29 @@ export async function POST(req: NextRequest) {
     }
 
     /* ===== WEB SEARCH (fresh context) ===== */
+    const wantsFresh =
+      /\b(latest|today|this week|news|recent|update|updates|look up|search|what happened|breaking|breaking news|headlines|top stories)\b/i.test(
+        lastUser
+      );
+
+    const rawWebFlag =
+      process.env.NEXT_PUBLIC_OPENAI_WEB_ENABLED_flag ??
+      process.env.OPENAI_WEB_ENABLED_flag ??
+      '';
+
+    // Interpret "0"/"false" as off; anything else non-empty as on
+    const webFlag =
+      typeof rawWebFlag === 'string'
+        ? rawWebFlag.length > 0 && !/^0|false$/i.test(rawWebFlag)
+        : !!rawWebFlag;
+
     let webSection = '';
     let hasWebContext = false;
+    let webAttempted = false;
+
     try {
-      const wantsFresh =
-        /\b(latest|today|this week|news|recent|update|updates|look up|search|what happened|breaking|breaking news|headlines|top stories)\b/i.test(
-          lastUser
-        );
-      const webFlag =
-        process.env.NEXT_PUBLIC_OPENAI_WEB_ENABLED_flag ??
-        process.env.OPENAI_WEB_ENABLED_flag ??
-        null;
       if (wantsFresh && webFlag) {
+        webAttempted = true;
         const results = await webSearch(lastUser, { news: true, max: 5 });
         if (Array.isArray(results) && results.length) {
           const lines = results
@@ -547,6 +559,24 @@ export async function POST(req: NextRequest) {
       }
     } catch (err) {
       console.error('webSearch failed:', err);
+    }
+
+    /* ===== If user explicitly asked for fresh news but we have NO web results ===== */
+    if (wantsFresh && webFlag && webAttempted && !hasWebContext) {
+      const text =
+        'I tried to look up fresh news for you, but I do not currently have reliable real-time access to news data. ' +
+        'Please check a trusted news source (for example, AP, Reuters, or your preferred outlet) for today’s latest U.S. headlines.';
+      return NextResponse.json(
+        {
+          text,
+        model: 'no-web-fallback',
+          identity: SOLACE_NAME,
+          mode: route.mode,
+          confidence: route.confidence,
+          filters: effectiveFilters,
+        },
+        { headers: corsHeaders(echoOrigin) }
+      );
     }
 
     /* ===== Attachments digest ===== */
