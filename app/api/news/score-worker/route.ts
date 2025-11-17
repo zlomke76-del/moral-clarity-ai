@@ -20,14 +20,16 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 
 const supabaseAdmin =
   SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
-    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+        auth: { persistSession: false },
+      })
     : null;
 
 /* ========= MODEL CONFIG ========= */
 
 const SCORING_MODEL = process.env.OPENAI_SCORING_MODEL || 'gpt-4o';
 
-/* ========= TYPES (LOOSE) ========= */
+/* ========= TYPES ========= */
 
 type TruthFactRow = {
   id: string;
@@ -46,8 +48,14 @@ type TruthFactRow = {
   updated_at: string | null;
 };
 
-type ScoringResult = {
+type NeutralBriefResult = {
   neutral_summary: string;
+  key_facts: string[];
+  context_background: string;
+  stakeholder_positions: string;
+  timeline: string;
+  disputed_claims: string;
+  omissions_detected: string;
   bias_language_score: number;
   bias_source_score: number;
   bias_framing_score: number;
@@ -55,6 +63,13 @@ type ScoringResult = {
   bias_intent_score: number;
   pi_score: number;
   notes: string;
+};
+
+type ScoreBatchResult = {
+  totalCandidates: number;
+  scored: number;
+  errors: string[];
+  details: any[];
 };
 
 /* ========= HELPERS ========= */
@@ -113,29 +128,52 @@ function computeBiasIntentScore(parts: {
   return Math.round(clamped * 1000) / 1000;
 }
 
-/* ========= OPENAI SCORING LOGIC ========= */
+/**
+ * Predictability Index:
+ * pi_score = 1 - (bias_intent_score / 3)
+ */
+function computePiScore(biasIntent: number): number {
+  const pi = 1 - biasIntent / 3;
+  const clamped = Math.min(1, Math.max(0, pi));
+  return Math.round(clamped * 1000) / 1000;
+}
 
-async function scoreNewsStory(fact: TruthFactRow): Promise<ScoringResult | null> {
+/* ========= OPENAI NEUTRAL BRIEF + BIAS SCORING ========= */
+
+async function scoreNewsStory(fact: TruthFactRow): Promise<NeutralBriefResult | null> {
   const openai: OpenAI = await getOpenAI();
 
-  const title = fact.summary?.split('\n')[0] || '(untitled story)';
+  const title =
+    fact.summary?.split('\n')[0]?.trim() ||
+    '(untitled story)';
   const url = fact.raw_url || '';
   const outlet = outletFromUrl(url) || 'unknown-outlet';
 
   const body = clampText(fact.raw_snapshot || fact.summary || '', 6000);
 
   if (!body.trim()) {
-    console.warn('[news/score-worker] Empty body for fact id', fact.id);
+    console.warn('[news/score-worker] Empty body for truth_fact id', fact.id);
     return null;
   }
 
-  const scoringInstruction = `
-You are a neutral media analyst applying the Neutral News Protocol v1.0.
+  const instruction = `
+You are a neutral media analyst applying the Moral Clarity AI Neutral News Protocol v1.0.
 
-You will read a news story snapshot and return a JSON object with:
-- a neutral, bias-minimized summary, and
-- component bias intent scores from 0.0 to 3.0
-- a Predictability Index pi_score from 0.0 to 1.0
+You will read a news story snapshot and produce:
+1) A neutral, bias-minimized summary (200–400 words).
+2) A structured Neutral Brief with:
+   - key_facts: 5–10 concise, checkable facts.
+   - context_background: what prior events / history are needed to understand this.
+   - stakeholder_positions: what the major actors or sides are claiming.
+   - timeline: ordered bullet-style description of key events (or "N/A" if not temporal).
+   - disputed_claims: which claims are contested or reported differently elsewhere.
+   - omissions_detected: important context that appears likely missing.
+
+3) Bias intent scores (0.0–3.0) on four components:
+   - bias_language_score
+   - bias_source_score
+   - bias_framing_score
+   - bias_context_score
 
 Definitions (0 = no bias, 3 = strong bias):
 
@@ -167,8 +205,8 @@ Definitions (0 = no bias, 3 = strong bias):
    - 2 = important context is missing or downplayed.
    - 3 = critical context omitted or the story is highly misleading by omission.
 
-You do NOT need to agree with the story. You are only measuring *intent and framing*,
-not whether it is true or false.
+You are NOT judging whether the story is true or false.
+You are measuring *how* it is told, and what is included or omitted.
 
 Compute:
 - bias_language_score
@@ -176,20 +214,26 @@ Compute:
 - bias_framing_score
 - bias_context_score
 
-Then compute bias_intent_score using this exact weighted formula:
+Then compute bias_intent_score using this exact formula:
   bias_intent_score =
     0.30 * bias_language_score +
     0.25 * bias_source_score +
     0.25 * bias_framing_score +
     0.20 * bias_context_score
 
-Finally, choose:
-- pi_score (0–1): how confident you are in your scoring (0.0 = very uncertain, 1.0 = very confident)
+Also compute pi_score (0–1) as how predictable / neutral the article is:
+  pi_score = 1 - (bias_intent_score / 3)
 
-Return ONLY a JSON object with this structure:
+Return ONLY a JSON object with this exact structure:
 
 {
-  "neutral_summary": "200-300 word neutral summary with emotional language stripped out.",
+  "neutral_summary": "200-400 word neutral summary...",
+  "key_facts": ["fact 1", "fact 2", "..."],
+  "context_background": "string",
+  "stakeholder_positions": "string",
+  "timeline": "string",
+  "disputed_claims": "string",
+  "omissions_detected": "string",
   "bias_language_score": 0.0,
   "bias_source_score": 0.0,
   "bias_framing_score": 0.0,
@@ -199,9 +243,8 @@ Return ONLY a JSON object with this structure:
   "notes": "One or two sentences explaining your scoring."
 }
 
-- neutral_summary MUST be ~200–300 words, concise, factual, and non-partisan.
-- All scores must be numeric.
-- Do not include any extra keys or commentary.
+- Do not include any extra top-level keys.
+- If uncertainty is high (e.g., very short article), say so in "notes" and use conservative mid-range scores around 1.0–1.5.
 `.trim();
 
   const articleBlock = `
@@ -217,13 +260,13 @@ ${body}
 
   const resp = await openai.responses.create({
     model: SCORING_MODEL,
-    input: scoringInstruction + '\n\n' + articleBlock,
-    max_output_tokens: 800,
+    input: `${instruction}\n\n${articleBlock}`,
+    max_output_tokens: 1000,
   });
 
   const rawText = (resp as any).output_text as string | undefined;
   if (!rawText) {
-    console.error('[news/score-worker] No output_text from model for fact id', fact.id);
+    console.error('[news/score-worker] No output_text from model for truth_fact id', fact.id);
     return null;
   }
 
@@ -238,15 +281,26 @@ ${body}
   try {
     parsed = JSON.parse(cleaned);
   } catch (err) {
-    console.error('[news/score-worker] Failed to parse JSON for fact id', fact.id, cleaned);
+    console.error('[news/score-worker] Failed to parse JSON for truth_fact id', fact.id, cleaned);
     return null;
   }
+
+  const neutral_summary: string = String(parsed.neutral_summary || '').trim();
+  const key_facts: string[] = Array.isArray(parsed.key_facts)
+    ? parsed.key_facts.map((f: any) => String(f || '').trim()).filter(Boolean)
+    : [];
+  const context_background: string = String(parsed.context_background || '').trim();
+  const stakeholder_positions: string = String(parsed.stakeholder_positions || '').trim();
+  const timeline: string = String(parsed.timeline || '').trim();
+  const disputed_claims: string = String(parsed.disputed_claims || '').trim();
+  const omissions_detected: string = String(parsed.omissions_detected || '').trim();
 
   const bias_language_score = safeNumber(parsed.bias_language_score, 1.5, 0, 3);
   const bias_source_score = safeNumber(parsed.bias_source_score, 1.5, 0, 3);
   const bias_framing_score = safeNumber(parsed.bias_framing_score, 1.5, 0, 3);
   const bias_context_score = safeNumber(parsed.bias_context_score, 1.5, 0, 3);
 
+  // Recompute bias_intent_score ourselves to enforce exact formula
   const bias_intent_score = computeBiasIntentScore({
     language: bias_language_score,
     source: bias_source_score,
@@ -254,16 +308,23 @@ ${body}
     context: bias_context_score,
   });
 
-  const neutral_summary: string = String(parsed.neutral_summary || '').trim();
+  // Compute pi_score deterministically
+  const pi_score = computePiScore(bias_intent_score);
+
   const notes: string = String(parsed.notes || '').trim();
-  const pi_score = safeNumber(parsed.pi_score, 0.5, 0, 1);
 
   if (!neutral_summary) {
-    console.warn('[news/score-worker] Missing neutral_summary for fact id', fact.id);
+    console.warn('[news/score-worker] Missing neutral_summary for truth_fact id', fact.id);
   }
 
   return {
     neutral_summary,
+    key_facts,
+    context_background,
+    stakeholder_positions,
+    timeline,
+    disputed_claims,
+    omissions_detected,
     bias_language_score,
     bias_source_score,
     bias_framing_score,
@@ -279,10 +340,12 @@ ${body}
 async function fetchUnscoredTruthFacts(limit: number): Promise<TruthFactRow[]> {
   if (!supabaseAdmin) return [];
 
+  // 1) Pull recent news snapshots from truth_facts
   const { data: facts, error } = await supabaseAdmin
     .from('truth_facts')
     .select('*')
     .eq('scientific_domain', 'news')
+    .eq('category', 'news_story')
     .order('created_at', { ascending: false })
     .limit(limit * 3);
 
@@ -292,21 +355,24 @@ async function fetchUnscoredTruthFacts(limit: number): Promise<TruthFactRow[]> {
   }
 
   const result: TruthFactRow[] = [];
+
+  // 2) Filter those that do NOT yet have a row in news_neutrality_ledger
   for (const fact of facts as TruthFactRow[]) {
     if (!fact.id) continue;
 
     const { data: existing, error: existErr } = await supabaseAdmin
-      .from('neutrality_ledger')
+      .from('news_neutrality_ledger')
       .select('id')
       .eq('truth_fact_id', fact.id)
       .maybeSingle();
 
+    // PGRST116 is "No rows found" – this is fine.
     if (existErr && existErr.code !== 'PGRST116') {
-      console.error('[news/score-worker] neutrality_ledger check error', existErr);
+      console.error('[news/score-worker] news_neutrality_ledger check error', existErr);
       continue;
     }
 
-    if (existing && existing.id) {
+    if (existing && (existing as any).id) {
       continue;
     }
 
@@ -318,10 +384,10 @@ async function fetchUnscoredTruthFacts(limit: number): Promise<TruthFactRow[]> {
   return result;
 }
 
-async function scoreBatch(limit: number) {
+async function scoreBatch(limit: number): Promise<ScoreBatchResult> {
   if (!supabaseAdmin) {
     throw new Error(
-      'Supabase admin client not initialized – missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.'
+      '[news/score-worker] Supabase admin client not initialized – missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.'
     );
   }
 
@@ -330,14 +396,12 @@ async function scoreBatch(limit: number) {
     return {
       totalCandidates: 0,
       scored: 0,
-      skippedExisting: 0,
-      errors: [] as string[],
-      details: [] as any[],
+      errors: [],
+      details: [],
     };
   }
 
   let scored = 0;
-  let skippedExisting = 0;
   const errors: string[] = [];
   const details: any[] = [];
 
@@ -363,30 +427,40 @@ async function scoreBatch(limit: number) {
         story_url: fact.raw_url,
         outlet,
 
-        category: 'news',
+        category: 'news_story',
 
-        raw_story: fact.raw_snapshot || fact.summary,
+        // Neutral Brief fields
         neutral_summary: scoring.neutral_summary,
-        notes: scoring.notes || null,
+        key_facts: scoring.key_facts,
+        context_background: scoring.context_background,
+        stakeholder_positions: scoring.stakeholder_positions,
+        timeline: scoring.timeline,
+        disputed_claims: scoring.disputed_claims,
+        omissions_detected: scoring.omissions_detected,
 
-        pi_score: scoring.pi_score,
+        // Raw story snapshot for reference
+        raw_story: fact.raw_snapshot || fact.summary,
 
+        // Bias scores
         bias_language_score: scoring.bias_language_score,
         bias_source_score: scoring.bias_source_score,
         bias_framing_score: scoring.bias_framing_score,
         bias_context_score: scoring.bias_context_score,
         bias_intent_score: scoring.bias_intent_score,
+        pi_score: scoring.pi_score,
+
+        notes: scoring.notes || null,
 
         created_at: nowIso,
         updated_at: nowIso,
       };
 
       const { error: insertErr } = await supabaseAdmin
-        .from('neutrality_ledger')
+        .from('news_neutrality_ledger')
         .insert(rowToInsert);
 
       if (insertErr) {
-        console.error('[news/score-worker] insert error', {
+        console.error('[news/score-worker] news_neutrality_ledger insert error', {
           truth_fact_id: fact.id,
           message: insertErr.message,
           code: insertErr.code,
@@ -410,7 +484,7 @@ async function scoreBatch(limit: number) {
         pi_score: scoring.pi_score,
       });
     } catch (err: any) {
-      console.error('[news/score-worker] Fatal scoring error for fact', fact.id, err);
+      console.error('[news/score-worker] Fatal scoring error for truth_fact_id', fact.id, err);
       errors.push(
         `Fatal scoring error for truth_fact_id=${fact.id}: ${err?.message || String(err)}`
       );
@@ -420,7 +494,6 @@ async function scoreBatch(limit: number) {
   return {
     totalCandidates: toScore.length,
     scored,
-    skippedExisting,
     errors,
     details,
   };
@@ -440,7 +513,7 @@ export async function GET(req: NextRequest) {
 
     const url = new URL(req.url);
     const limitParam = url.searchParams.get('limit');
-    const limit = limitParam ? Math.max(1, Math.min(50, Number(limitParam) || 0)) : 20;
+    const limit = limitParam ? Math.max(1, Math.min(Number(limitParam) || 0, 50)) : 20;
 
     const startedAt = new Date().toISOString();
     const result = await scoreBatch(limit);
