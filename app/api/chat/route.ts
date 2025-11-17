@@ -9,6 +9,7 @@ import pdfParse from 'pdf-parse';
 import { getOpenAI } from '@/lib/openai';
 import { webSearch } from '@/lib/search';
 import { runDeepResearch } from '@/lib/research';
+import { logResearchSnapshot } from '@/lib/truth-ledger';
 import { routeMode } from '@/core/mode-router';
 
 /* ========= MEMORY ========= */
@@ -592,6 +593,20 @@ export async function POST(req: NextRequest) {
 
       if (webFlag && (wantsDeep || urlInUser)) {
         const pack = await runDeepResearch(lastUser);
+
+        // NEW: log to Truth Ledger (best-effort, non-blocking)
+        try {
+          await logResearchSnapshot({
+            workspaceId,
+            userKey,
+            userId,
+            query: lastUser,
+            researchPack: pack,
+          });
+        } catch (err) {
+          console.error('[truth-ledger] logResearchSnapshot failed (non-fatal)', err);
+        }
+
         const bulletsText = pack.bullets?.length
           ? pack.bullets.map((b) => `• ${b}`).join('\n')
           : '• (no external sources were found for this query)';
@@ -892,6 +907,5 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
 
 
