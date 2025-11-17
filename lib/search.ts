@@ -36,8 +36,12 @@ export async function webSearch(
     const body: any = {
       api_key: TVLY_KEY,
       query,
-      search_depth: 'basic',
+      // "advanced" gives deeper, multi-step search on Tavily's side
+      search_depth: 'advanced',
       max_results: Math.max(1, Math.min(opts.max ?? 5, 10)),
+      // Ask Tavily to return richer content when possible
+      include_answer: true,
+      include_raw_content: true,
     };
 
     if (opts.news) {
@@ -83,7 +87,12 @@ export async function webSearch(
     return items.map((x) => ({
       title: x.title || x.url || 'result',
       url: x.url,
-      content: x.content || x.snippet || '',
+      content:
+        x.content ||
+        x.raw_content ||
+        x.answer ||
+        x.snippet ||
+        '',
       score: x.score,
       published_date: x.published_date,
     }));
