@@ -24,6 +24,9 @@ import { generateImage } from '@/lib/chat/image-gen';
 /* ========= NEWS CACHE ========= */
 import { getNewsForDate } from '@/lib/news-cache';
 
+/* ========= NEWS → LEDGERS ========= */
+import { logNewsBatchToLedgers } from '@/lib/news-ledger';
+
 /* ========= MODEL / TIMEOUT ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -650,11 +653,13 @@ export async function POST(req: NextRequest) {
     /* ===== NEWS CACHE (generic "today's news" questions) ===== */
     let newsSection = '';
     let hasNewsContext = false;
+    let newsStoriesForLedger: any[] | null = null;
 
     if (wantsGenericNews) {
       try {
         const todayIso = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
         const stories = await getNewsForDate(todayIso, 5);
+        newsStoriesForLedger = stories;
 
         if (stories.length) {
           hasNewsContext = true;
@@ -685,11 +690,14 @@ export async function POST(req: NextRequest) {
     let webSection = '';
     let hasWebContext = false;
     let webAttempted = false;
+    let webNewsResultsForLedger: any[] | null = null;
 
     try {
       if (wantsFresh && webFlag && !hasNewsContext) {
         webAttempted = true;
         const results = await webSearch(lastUser, { news: true, max: 5 });
+        webNewsResultsForLedger = results;
+
         if (Array.isArray(results) && results.length) {
           const lines = results
             .map((r: any, i: number) => `• [${i + 1}] ${r.title} — ${r.url}`)
@@ -770,6 +778,22 @@ export async function POST(req: NextRequest) {
 
     const system =
       baseSystem + memorySection + newsSection + webSection + researchSection + webAssertion;
+
+    /* ===== News → Truth + Neutrality ledgers ===== */
+    if ((hasNewsContext || hasWebContext) && (newsStoriesForLedger || webNewsResultsForLedger)) {
+      try {
+        await logNewsBatchToLedgers({
+          workspaceId,
+          userKey,
+          userId,
+          query: lastUser,
+          cacheStories: newsStoriesForLedger || undefined,
+          webStories: webNewsResultsForLedger || undefined,
+        });
+      } catch (err) {
+        console.error('[news-ledger] batch logging failed (non-fatal)', err);
+      }
+    }
 
     /* ===== Explicit "remember ..." capture ===== */
     if (memoryEnabled) {
