@@ -288,13 +288,15 @@ You are ${SOLACE_NAME} — a steady, principled presence. Listen first, then off
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const id = setTimeout(() => reject(new Error('Request timed out')), ms);
-    p.then((v) => {
-      clearTimeout(id);
-      resolve(v);
-    }).catch((e) => {
-      clearTimeout(id);
-      reject(e);
-    });
+    p
+      .then((v) => {
+        clearTimeout(id);
+        resolve(v);
+      })
+      .catch((e) => {
+        clearTimeout(id);
+        reject(e);
+      });
   });
 }
 
@@ -342,11 +344,11 @@ function wantsDeepResearch(text: string): boolean {
   const t = (text || '').toLowerCase();
   if (!t.trim()) return false;
 
-  // Explicit trigger phrases
   const keywords = [
     'deep research',
     'full research',
     'full analysis',
+    'full review',
     'deep dive',
     'research this',
     'investigate this',
@@ -363,8 +365,6 @@ function wantsDeepResearch(text: string): boolean {
   ];
   if (keywords.some((k) => t.includes(k))) return true;
 
-  // If there's a URL, we *may* want deep research. We'll still let the model ask
-  // the user what specifically they care about if the intent is unclear.
   if (URL_REGEX.test(text)) return true;
 
   return false;
@@ -372,7 +372,6 @@ function wantsDeepResearch(text: string): boolean {
 
 /* ========= Memory helpers ========= */
 function getUserKeyFromReq(req: NextRequest, body: any) {
-  // default to configured MCA_USER_KEY instead of hard-coded "guest"
   return req.headers.get('x-user-key') || body?.user_key || MCA_USER_KEY || 'guest';
 }
 
@@ -432,7 +431,7 @@ export async function POST(req: NextRequest) {
     const lastUser =
       [...rolled].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content || '';
 
-    /* ===== IMAGE GENERATION FAST-PATH (DALL·E style via /api/image) ===== */
+    /* ===== IMAGE GENERATION FAST-PATH ===== */
     if (wantsImageGeneration(lastUser)) {
       const rawPrompt = lastUser.replace(/^img:\s*/i, '').trim() || lastUser;
       try {
@@ -492,10 +491,9 @@ export async function POST(req: NextRequest) {
       rolled
     );
 
-    /* ===== MEMORY: recall pack (scoped) ===== */
+    /* ===== MEMORY: recall pack ===== */
     let userKey = getUserKeyFromReq(req, body);
     if (!userKey || userKey === 'guest') {
-      // last-resort server-side key if client didn't provide one
       userKey = `u_${crypto.randomUUID()}`;
     }
     const workspaceId: string = body?.workspace_id || MCA_WORKSPACE_ID;
@@ -504,7 +502,6 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // We keep hits accessible for the echo path
     let hits: Array<any> = [];
     let memorySection = '';
 
@@ -517,7 +514,6 @@ export async function POST(req: NextRequest) {
             .slice(-3)
             .join('\n') || 'general';
 
-        // fold recent explicit "remember ..." clauses into query
         const explicitInTurns = rolled
           .filter((m) => m.role === 'user')
           .map((m) => m.content.match(/\bremember(?:\s+that)?\s+(.+)/i)?.[1])
@@ -527,7 +523,6 @@ export async function POST(req: NextRequest) {
         const baseQuery = lastUser || fallbackQuery;
         const query = [baseQuery, explicitInTurns].filter(Boolean).join(' | ');
 
-        // Correct call signature: (user_key, query, k)
         hits = await searchMemories(userKey, query, 8);
 
         const pack = (hits ?? [])
@@ -543,7 +538,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    /* ===== Memory Echo: "what do you remember" fast path ===== */
+    /* ===== Memory Echo fast path ===== */
     const askedWhatYouRemember = /what\s+do\s+you\s+remember\b|remember\s+about\s+me\b/i.test(
       lastUser
     );
@@ -567,23 +562,26 @@ export async function POST(req: NextRequest) {
     }
 
     /* ===== WEB / RESEARCH FLAGS ===== */
+
+    // NEWSY / HEADLINE QUERIES ONLY, and do NOT treat plain URLs as "news"
+    const lowerLast = lastUser.toLowerCase();
+    const isUrl = URL_REGEX.test(lastUser);
     const wantsFresh =
-      /\b(latest|today|this week|news|recent|update|updates|look up|search|what happened|breaking|breaking news|headlines|top stories)\b/i.test(
-        lastUser
-      );
+      /\b(latest|today|this week|news|recent|update|updates|breaking|breaking news|headlines|top stories)\b/i.test(
+        lowerLast
+      ) && !isUrl;
 
     const rawWebFlag =
       process.env.NEXT_PUBLIC_OPENAI_WEB_ENABLED_flag ??
       process.env.OPENAI_WEB_ENABLED_flag ??
       '';
 
-    // Interpret "0"/"false" as off; anything else non-empty as on
     const webFlag =
       typeof rawWebFlag === 'string'
         ? rawWebFlag.length > 0 && !/^0|false$/i.test(rawWebFlag)
         : !!rawWebFlag;
 
-    /* ===== DEEP RESEARCH (multi-search + optional URL fetch) ===== */
+    /* ===== DEEP RESEARCH ===== */
     let researchSection = '';
     let hasResearchContext = false;
 
@@ -594,7 +592,6 @@ export async function POST(req: NextRequest) {
       if (webFlag && (wantsDeep || urlInUser)) {
         const pack = await runDeepResearch(lastUser);
 
-        // NEW: log to Truth Ledger (best-effort, non-blocking)
         try {
           await logResearchSnapshot({
             workspaceId,
@@ -651,11 +648,11 @@ export async function POST(req: NextRequest) {
       console.error('webSearch failed:', err);
     }
 
-    /* ===== If user explicitly asked for fresh news but we have NO web results ===== */
+    /* ===== No WEB results for explicitly "fresh" queries ===== */
     if (wantsFresh && webFlag && webAttempted && !hasWebContext) {
       const text =
-        'I tried to look up fresh news for you, but I do not currently have reliable real-time access to news data. ' +
-        'Please check a trusted news source (for example, AP, Reuters, or your preferred outlet) for today’s latest headlines.';
+        'I tried to look up fresh information for you, but I do not currently have reliable real-time data for this query. ' +
+        'Please check a trusted live source (for example, a major news outlet, market dashboard, or your preferred real-time service) for the latest details.';
       return NextResponse.json(
         {
           text,
@@ -685,9 +682,7 @@ export async function POST(req: NextRequest) {
             const clipped = clampText(raw, MAX_PER_FILE);
             const block = `\n--- Attachment: ${att.name}\n(source: ${att.url})\n\`\`\`\n${clipped}\n\`\`\`\n`;
             if (total + block.length > MAX_TOTAL) {
-              parts.push(
-                `\n--- [Skipping remaining attachments: token cap reached]`
-              );
+              parts.push(`\n--- [Skipping remaining attachments: token cap reached]`);
               break;
             }
             parts.push(block);
@@ -707,7 +702,6 @@ export async function POST(req: NextRequest) {
       attachmentSection = '';
     }
 
-    // If any web or research context exists, add a strong “no-disclaimer” instruction
     const webAssertion =
       hasWebContext || hasResearchContext
         ? `\n\nREAL-TIME CONTEXT\n- You DO have recent web-derived context above (WEB CONTEXT and/or RESEARCH CONTEXT). Do NOT say you cannot provide real-time updates or that you lack internet access.\n- Synthesize a brief, accurate answer using that context, and include bracketed refs like [1], [2] or [R1], [R2] when you rely on specific items.`
@@ -715,13 +709,12 @@ export async function POST(req: NextRequest) {
 
     const system = baseSystem + memorySection + webSection + researchSection + webAssertion;
 
-    /* ===== Explicit "remember ..." capture (scoped) ===== */
+    /* ===== Explicit "remember ..." capture ===== */
     if (memoryEnabled) {
       const explicit = detectExplicitRemember(lastUser);
       if (explicit) {
         try {
           await (remember as any)({
-            // user_memories is user-scoped; we still forward workspace for future compatibility
             workspace_id: workspaceId,
             user_key: userKey,
             content: explicit,
@@ -759,7 +752,7 @@ export async function POST(req: NextRequest) {
             });
           }
         } catch {
-          /* fall through */
+          // fall through
         }
       }
     }
@@ -797,7 +790,7 @@ export async function POST(req: NextRequest) {
             { headers: corsHeaders(echoOrigin) }
           );
         } catch {
-          /* fallback to OpenAI */
+          // fallback to OpenAI
         }
       }
 
@@ -815,8 +808,7 @@ export async function POST(req: NextRequest) {
         REQUEST_TIMEOUT_MS
       );
 
-      const text =
-        (resp as any).output_text?.trim() || '[No reply from model]';
+      const text = (resp as any).output_text?.trim() || '[No reply from model]';
       return NextResponse.json(
         {
           text,
@@ -850,7 +842,7 @@ export async function POST(req: NextRequest) {
           },
         });
       } catch {
-        /* fallback to OpenAI */
+        // fallback to OpenAI
       }
     }
 
@@ -907,5 +899,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
 
 
