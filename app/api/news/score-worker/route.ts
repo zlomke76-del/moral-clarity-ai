@@ -18,9 +18,10 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   );
 }
 
-const supabaseAdmin = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
-  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-  : null;
+const supabaseAdmin =
+  SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    : null;
 
 /* ========= MODEL CONFIG ========= */
 
@@ -103,12 +104,11 @@ function computeBiasIntentScore(parts: {
 }): number {
   const { language, source, framing, context } = parts;
   const raw =
-    0.30 * language +
+    0.3 * language +
     0.25 * source +
     0.25 * framing +
-    0.20 * context;
+    0.2 * context;
 
-  // clamp & round to 3 decimals
   const clamped = Math.min(3, Math.max(0, raw));
   return Math.round(clamped * 1000) / 1000;
 }
@@ -218,21 +218,28 @@ ${body}
   const resp = await openai.responses.create({
     model: SCORING_MODEL,
     input: scoringInstruction + '\n\n' + articleBlock,
-    response_format: { type: 'json_object' },
     max_output_tokens: 800,
   });
 
-  const raw = (resp as any).output_text;
-  if (!raw || typeof raw !== 'string') {
+  const rawText = (resp as any).output_text as string | undefined;
+  if (!rawText) {
     console.error('[news/score-worker] No output_text from model for fact id', fact.id);
     return null;
   }
 
+  // Try to strip code fences if model wraps JSON in ```json ... ```
+  const cleaned = rawText
+    .trim()
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/```$/i, '')
+    .trim();
+
   let parsed: any;
   try {
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(cleaned);
   } catch (err) {
-    console.error('[news/score-worker] Failed to parse JSON for fact id', fact.id, raw);
+    console.error('[news/score-worker] Failed to parse JSON for fact id', fact.id, cleaned);
     return null;
   }
 
@@ -241,7 +248,6 @@ ${body}
   const bias_framing_score = safeNumber(parsed.bias_framing_score, 1.5, 0, 3);
   const bias_context_score = safeNumber(parsed.bias_context_score, 1.5, 0, 3);
 
-  // We re-compute bias_intent_score ourselves to guarantee the exact formula.
   const bias_intent_score = computeBiasIntentScore({
     language: bias_language_score,
     source: bias_source_score,
@@ -271,20 +277,15 @@ ${body}
 
 /* ========= CORE WORKFLOW ========= */
 
-/**
- * Fetch a batch of news truth_facts that do NOT yet have a neutrality_ledger row.
- * We keep this simple and defensively coded for our news volumes.
- */
 async function fetchUnscoredTruthFacts(limit: number): Promise<TruthFactRow[]> {
   if (!supabaseAdmin) return [];
 
-  // Step 1: grab a recent slice of news facts
   const { data: facts, error } = await supabaseAdmin
     .from('truth_facts')
     .select('*')
     .eq('scientific_domain', 'news')
     .order('created_at', { ascending: false })
-    .limit(limit * 3); // oversample, we will skip ones already scored
+    .limit(limit * 3);
 
   if (error) {
     console.error('[news/score-worker] Failed to fetch truth_facts', error);
@@ -295,7 +296,6 @@ async function fetchUnscoredTruthFacts(limit: number): Promise<TruthFactRow[]> {
   for (const fact of facts as TruthFactRow[]) {
     if (!fact.id) continue;
 
-    // Check if already scored in neutrality_ledger
     const { data: existing, error: existErr } = await supabaseAdmin
       .from('neutrality_ledger')
       .select('id')
@@ -308,7 +308,6 @@ async function fetchUnscoredTruthFacts(limit: number): Promise<TruthFactRow[]> {
     }
 
     if (existing && existing.id) {
-      // already scored
       continue;
     }
 
@@ -363,9 +362,9 @@ async function scoreBatch(limit: number) {
         story_id: fact.raw_url || fact.id,
         story_title: fact.summary || '(untitled story)',
         story_url: fact.raw_url,
-        outlet: outlet,
+        outlet,
 
-        category: 'news', // you can later refine by decoding sources[0].category if desired
+        category: 'news',
 
         raw_story: fact.raw_snapshot || fact.summary,
         neutral_summary: scoring.neutral_summary,
@@ -413,7 +412,9 @@ async function scoreBatch(limit: number) {
       });
     } catch (err: any) {
       console.error('[news/score-worker] Fatal scoring error for fact', fact.id, err);
-      errors.push(`Fatal scoring error for truth_fact_id=${fact.id}: ${err?.message || String(err)}`);
+      errors.push(
+        `Fatal scoring error for truth_fact_id=${fact.id}: ${err?.message || String(err)}`
+      );
     }
   }
 
@@ -465,6 +466,5 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  // Allow POST to trigger the same behavior (e.g., from a dashboard button).
   return GET(req);
 }
