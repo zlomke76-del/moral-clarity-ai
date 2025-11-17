@@ -288,15 +288,13 @@ You are ${SOLACE_NAME} — a steady, principled presence. Listen first, then off
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const id = setTimeout(() => reject(new Error('Request timed out')), ms);
-    p
-      .then((v) => {
-        clearTimeout(id);
-        resolve(v);
-      })
-      .catch((e) => {
-        clearTimeout(id);
-        reject(e);
-      });
+    p.then((v) => {
+      clearTimeout(id);
+      resolve(v);
+    }).catch((e) => {
+      clearTimeout(id);
+      reject(e);
+    });
   });
 }
 
@@ -340,6 +338,7 @@ function extractFirstUrl(text: string): string | null {
   return m ? m[0] : null;
 }
 
+/* Stronger signal to use Tavily + research when a URL or explicit deep-dive */
 function wantsDeepResearch(text: string): boolean {
   const t = (text || '').toLowerCase();
   if (!t.trim()) return false;
@@ -348,7 +347,6 @@ function wantsDeepResearch(text: string): boolean {
     'deep research',
     'full research',
     'full analysis',
-    'full review',
     'deep dive',
     'research this',
     'investigate this',
@@ -368,6 +366,15 @@ function wantsDeepResearch(text: string): boolean {
   if (URL_REGEX.test(text)) return true;
 
   return false;
+}
+
+/* ========= News query helper (stabilize Tavily) ========= */
+function buildNewsQuery(userText: string): string {
+  const base = 'latest us news headlines today';
+  const extra = (userText || '').trim();
+  const q = extra ? `${base} ${extra}` : base;
+  // guard against insanely long prompts going to Tavily
+  return q.slice(0, 400);
 }
 
 /* ========= Memory helpers ========= */
@@ -491,7 +498,7 @@ export async function POST(req: NextRequest) {
       rolled
     );
 
-    /* ===== MEMORY: recall pack ===== */
+    /* ===== MEMORY: recall pack (scoped) ===== */
     let userKey = getUserKeyFromReq(req, body);
     if (!userKey || userKey === 'guest') {
       userKey = `u_${crypto.randomUUID()}`;
@@ -562,14 +569,10 @@ export async function POST(req: NextRequest) {
     }
 
     /* ===== WEB / RESEARCH FLAGS ===== */
-
-    // NEWSY / HEADLINE QUERIES ONLY, and do NOT treat plain URLs as "news"
-    const lowerLast = lastUser.toLowerCase();
-    const isUrl = URL_REGEX.test(lastUser);
     const wantsFresh =
-      /\b(latest|today|this week|news|recent|update|updates|breaking|breaking news|headlines|top stories)\b/i.test(
-        lowerLast
-      ) && !isUrl;
+      /\b(latest|today|this week|news|recent|update|updates|look up|search|what happened|breaking|breaking news|headlines|top stories)\b/i.test(
+        lastUser
+      );
 
     const rawWebFlag =
       process.env.NEXT_PUBLIC_OPENAI_WEB_ENABLED_flag ??
@@ -605,7 +608,7 @@ export async function POST(req: NextRequest) {
         }
 
         const bulletsText = pack.bullets?.length
-          ? pack.bullets.map((b) => `• ${b}`).join('\n')
+          ? pack.bullets.map((b: string, idx: number) => `• [R${idx + 1}] ${b}`).join('\n')
           : '• (no external sources were found for this query)';
 
         const websiteSnippet = pack.urlTextSnippet
@@ -618,7 +621,7 @@ export async function POST(req: NextRequest) {
             : '';
 
         researchSection =
-          `\n\nRESEARCH CONTEXT\n- This section aggregates deeper web research (multiple searches and, when applicable, a direct fetch of the target website).\n\nSOURCES\n${bulletsText}${websiteSnippet}${clarificationHint}\n\nGuidance:\n- Use this RESEARCH CONTEXT for deeper analysis, comparisons, and website evaluations.\n- When you reference specific sources from this section, use [R1], [R2], etc., matching the labels in the bullet list.\n- Do NOT claim you lack internet access when this section is present.`;
+          `\n\nRESEARCH CONTEXT\n- This section aggregates deeper web research (multiple searches and, when applicable, a direct fetch of the target website).\n\nSOURCES\n${bulletsText}${websiteSnippet}${clarificationHint}\n\nGuidance:\n- Use this RESEARCH CONTEXT for deeper analysis, comparisons, and website evaluations.\n- When you reference specific sources from this section, use [R1], [R2], etc., matching the labels in the bullet list.\n- For website evaluations, stay close to what is actually present in the text; avoid projecting motives or politics.\n- Do NOT claim you lack internet access when this section is present.`;
 
         hasResearchContext = true;
       }
@@ -626,7 +629,7 @@ export async function POST(req: NextRequest) {
       console.error('runDeepResearch failed:', err);
     }
 
-    /* ===== WEB SEARCH (fresh news context) ===== */
+    /* ===== WEB SEARCH (news) ===== */
     let webSection = '';
     let hasWebContext = false;
     let webAttempted = false;
@@ -634,13 +637,25 @@ export async function POST(req: NextRequest) {
     try {
       if (wantsFresh && webFlag) {
         webAttempted = true;
-        const results = await webSearch(lastUser, { news: true, max: 5 });
+
+        const newsQuery = buildNewsQuery(lastUser);
+        const results = await webSearch(newsQuery, { news: true, max: 5 });
+
         if (Array.isArray(results) && results.length) {
           const lines = results
-            .map((r: any, i: number) => `• [${i + 1}] ${r.title} — ${r.url}`)
+            .map((r: any, i: number) => {
+              const snippet = r.content ? `\n  Snippet: ${r.content.slice(0, 260)}` : '';
+              return `• [${i + 1}] ${r.title} — ${r.url}${snippet}`;
+            })
             .join('\n');
+
           webSection =
-            `\n\nWEB CONTEXT (recent news search)\n${lines}\n\nGuidance:\n- Use these results to answer directly.\n- Prefer the most recent and reputable sources.\n- If uncertain, say what is unknown.\n- When referencing items, use bracket numbers like [1], [2].`;
+            `\n\nWEB CONTEXT (recent news search)\n${lines}\n\nGuidance:\n` +
+            `- When the user asks for "today's news", "headlines", or "top stories", answer ONLY by summarizing these items.\n` +
+            `- Do NOT add predictions, speculation, or extra political framing beyond what appears in these sources.\n` +
+            `- Prefer neutral wording; your job is to summarize, not to take a side.\n` +
+            `- When referencing items, use bracket numbers like [1], [2].`;
+
           hasWebContext = true;
         }
       }
@@ -648,11 +663,11 @@ export async function POST(req: NextRequest) {
       console.error('webSearch failed:', err);
     }
 
-    /* ===== No WEB results for explicitly "fresh" queries ===== */
+    /* ===== If user explicitly asked for fresh news but we have NO web results ===== */
     if (wantsFresh && webFlag && webAttempted && !hasWebContext) {
       const text =
-        'I tried to look up fresh information for you, but I do not currently have reliable real-time data for this query. ' +
-        'Please check a trusted live source (for example, a major news outlet, market dashboard, or your preferred real-time service) for the latest details.';
+        'I tried to look up fresh news for you, but I did not receive any usable results from my news search. ' +
+        'Please check a trusted live news source (for example, AP, Reuters, or your preferred outlet) for today’s latest headlines.';
       return NextResponse.json(
         {
           text,
@@ -704,7 +719,7 @@ export async function POST(req: NextRequest) {
 
     const webAssertion =
       hasWebContext || hasResearchContext
-        ? `\n\nREAL-TIME CONTEXT\n- You DO have recent web-derived context above (WEB CONTEXT and/or RESEARCH CONTEXT). Do NOT say you cannot provide real-time updates or that you lack internet access.\n- Synthesize a brief, accurate answer using that context, and include bracketed refs like [1], [2] or [R1], [R2] when you rely on specific items.`
+        ? `\n\nREAL-TIME CONTEXT\n- You DO have recent web-derived context above (WEB CONTEXT and/or RESEARCH CONTEXT). Do NOT say you cannot provide real-time updates or that you lack internet access.\n- For news questions ("today", "headlines", "breaking news"), summarize ONLY what appears in WEB CONTEXT; do not invent extra events.\n- Include bracketed refs like [1], [2] or [R1], [R2] when you rely on specific items.`
         : '';
 
     const system = baseSystem + memorySection + webSection + researchSection + webAssertion;
@@ -752,7 +767,7 @@ export async function POST(req: NextRequest) {
             });
           }
         } catch {
-          // fall through
+          /* fall through */
         }
       }
     }
@@ -790,7 +805,7 @@ export async function POST(req: NextRequest) {
             { headers: corsHeaders(echoOrigin) }
           );
         } catch {
-          // fallback to OpenAI
+          /* fallback to OpenAI */
         }
       }
 
@@ -842,11 +857,10 @@ export async function POST(req: NextRequest) {
           },
         });
       } catch {
-        // fallback to OpenAI
+        /* fallback to OpenAI */
       }
     }
 
-    // OpenAI SSE fallback
     const apiKey = process.env.OPENAI_API_KEY || '';
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -899,6 +913,5 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
 
 
