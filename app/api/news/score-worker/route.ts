@@ -227,7 +227,6 @@ ${body}
     return null;
   }
 
-  // Try to strip code fences if model wraps JSON in ```json ... ```
   const cleaned = rawText
     .trim()
     .replace(/^```json\s*/i, '')
