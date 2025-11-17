@@ -8,18 +8,19 @@ import type OpenAI from 'openai';
 
 import { webSearch } from '@/lib/search';
 import { getOpenAI } from '@/lib/openai';
-import { extractArticle } from '@/lib/news/extract';
 
 /**
  * This route:
- * - Pulls fresh news via Tavily (webSearch) to get URLs
- * - Extracts full article text via Browserless/Tavily/fetch (Balanced mode)
+ * - Pulls fresh news via Tavily (webSearch)
+ * - Uses HYBRID article extraction:
+ *    1) direct HTTP fetch + HTML strip
+ *    2) falls back to Browserless full-page extraction when needed
  * - Normalizes into "truth_facts" rows (Neutral News Protocol v1.0)
  * - Scores each story for bias + neutrality into "news_neutrality_ledger"
  *
- * Designed for:
- * - Cron / scheduled job
- * - Manual trigger from UI/tools
+ * Call from:
+ * - A cron / scheduled job (recommended)
+ * - Or manually:  GET /api/news/refresh
  */
 
 /* ========= ENV / SUPABASE / OPENAI INIT ========= */
@@ -40,6 +41,18 @@ const supabaseAdmin =
 
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const REQUEST_TIMEOUT_MS = 25_000;
+
+/* ========= BROWSERLESS / EXTRACTION CONFIG ========= */
+
+const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN || '';
+const BROWSERLESS_CONTENT_URL =
+  process.env.BROWSERLESS_CONTENT_URL ||
+  (BROWSERLESS_TOKEN
+    ? `https://chrome.browserless.io/content?token=${BROWSERLESS_TOKEN}`
+    : '');
+
+const MIN_DIRECT_LEN = 1500; // chars – if below, we try Browserless
+const MIN_BROWSERLESS_LEN = 800;
 
 /* ========= NEUTRAL NEWS CONFIG ========= */
 
@@ -73,7 +86,7 @@ const STORIES_PER_CATEGORY = 4;
 // How far back we allow the news pull to look (in days)
 const NEWS_WINDOW_DAYS = 1;
 
-/* ========= HELPERS ========= */
+/* ========= SMALL HELPERS ========= */
 
 function jsonError(
   message: string,
@@ -141,81 +154,106 @@ function extractOutletFromUrl(url: string): string {
   }
 }
 
+/* ========= HYBRID ARTICLE EXTRACTION ========= */
+
+function stripHtml(html: string): string {
+  // remove scripts/styles
+  let text = html.replace(/<script[\s\S]*?<\/script>/gi, '');
+  text = text.replace(/<style[\s\S]*?<\/style>/gi, '');
+  // crude block for head/footers could go here later
+  // strip tags
+  text = text.replace(/<\/?[^>]+(>|$)/g, ' ');
+  // collapse whitespace
+  text = text.replace(/\s+/g, ' ').trim();
+  return text;
+}
+
+async function simpleHttpExtract(url: string): Promise<string | null> {
+  try {
+    const res = await withTimeout(fetch(url, { method: 'GET' }), 10_000);
+    if (!res.ok) {
+      console.warn('[news/refresh] simpleHttpExtract non-200', url, res.status);
+      return null;
+    }
+    const html = await res.text();
+    const text = stripHtml(html);
+    return text || null;
+  } catch (err) {
+    console.warn('[news/refresh] simpleHttpExtract error', url, err);
+    return null;
+  }
+}
+
+async function browserlessExtract(url: string): Promise<string | null> {
+  if (!BROWSERLESS_CONTENT_URL) return null;
+  try {
+    const res = await withTimeout(
+      fetch(BROWSERLESS_CONTENT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      }),
+      20_000
+    );
+
+    if (!res.ok) {
+      console.warn('[news/refresh] browserlessExtract non-200', url, res.status);
+      return null;
+    }
+
+    const payload = await res.text();
+    // Browserless /content usually returns the rendered HTML body
+    const text = stripHtml(payload);
+    return text || null;
+  } catch (err) {
+    console.warn('[news/refresh] browserlessExtract error', url, err);
+    return null;
+  }
+}
+
 /**
- * Given a Tavily-style item + extraction, build a truth_facts row.
- * We treat each story as a "research_snapshot" in domain "news".
+ * Hybrid strategy:
+ *   1) Try direct HTTP + HTML strip
+ *   2) If too short, try Browserless
+ *   3) If still too short, fall back to Tavily snippet or title
  */
-function buildTruthFactRow(opts: {
-  workspaceId: string;
-  userKey: string;
-  category: NewsCategory;
-  query: string;
-  title: string;
+async function getArticleTextHybrid(opts: {
   url: string;
   tavilyContent?: string;
-  extractedText?: string;
-  extractorSource?: string;
-}): Record<string, unknown> {
-  const {
-    workspaceId,
-    userKey,
-    category,
-    query,
-    title,
-    url,
-    tavilyContent,
-    extractedText,
-    extractorSource,
-  } = opts;
+  title?: string;
+}): Promise<string> {
+  const { url, tavilyContent, title } = opts;
 
-  const bodyForSnapshot = extractedText || tavilyContent || '';
-  const summarySource = extractedText || tavilyContent || title;
-  const summary = clampSummary(summarySource);
-
-  const nowIso = new Date().toISOString();
-
-  const sources: any[] = [
-    {
-      kind: 'news',
-      provider: 'tavily',
-      title,
-      url,
-      category,
-      fetched_at: nowIso,
-    },
-  ];
-
-  if (extractorSource && extractorSource !== 'none') {
-    sources.push({
-      kind: 'extraction',
-      provider: extractorSource,
-      url,
-      fetched_at: nowIso,
-    });
+  let direct: string | null = null;
+  try {
+    direct = await simpleHttpExtract(url);
+  } catch {
+    direct = null;
   }
 
-  // We start news as "hypothesis" / "research_snapshot" until reconciled.
-  return {
-    workspace_id: workspaceId,
-    user_key: userKey,
-    user_id: null,
-    query,
-    summary,
+  if (direct && direct.length >= MIN_DIRECT_LEN) {
+    return direct;
+  }
 
-    pi_score: 0.5,
-    confidence_level: 'medium',
+  let blText: string | null = null;
+  try {
+    blText = await browserlessExtract(url);
+  } catch {
+    blText = null;
+  }
 
-    scientific_domain: 'news',
-    category: 'research_snapshot',
-    status: 'hypothesis',
+  if (blText && blText.length >= MIN_BROWSERLESS_LEN) {
+    return blText;
+  }
 
-    sources: JSON.stringify(sources),
-    raw_url: url,
-    raw_snapshot: clampLong(bodyForSnapshot || '', 4000),
-
-    created_at: nowIso,
-    updated_at: nowIso,
-  };
+  // Fallback ladder
+  return (
+    direct ||
+    blText ||
+    tavilyContent ||
+    title ||
+    ''
+  );
 }
 
 /* ========= BIAS SCORING MODEL ========= */
@@ -268,7 +306,7 @@ function computeBiasIntentScore(components: {
  *  - 1.000 = fully neutral, low editorial intent
  *  - 0.000 = highly biased / low predictability
  *
- * Derived from bias_intent_score:
+ * Derived deterministically from bias_intent_score:
  *   pi = 1 - (bias_intent_score / 3)
  */
 function computePiFromBiasIntent(biasIntent: number): number {
@@ -333,7 +371,7 @@ METADATA
 
 ARTICLE TEXT
 """${clippedStory}"""
-`;
+`.trim();
 
   try {
     const resp = await withTimeout(
@@ -384,6 +422,63 @@ ARTICLE TEXT
     console.error('[news/refresh] OpenAI scoring failed', err);
     return null;
   }
+}
+
+/* ========= TRUTH FACT ROW BUILDER ========= */
+
+function buildTruthFactRow(opts: {
+  workspaceId: string;
+  userKey: string;
+  category: NewsCategory;
+  query: string;
+  title: string;
+  url: string;
+  fullText: string;
+  tavilyContent?: string;
+}): Record<string, unknown> {
+  const {
+    workspaceId,
+    userKey,
+    category,
+    query,
+    title,
+    url,
+    fullText,
+    tavilyContent,
+  } = opts;
+
+  const summarySource = fullText || tavilyContent || title;
+  const summary = clampSummary(summarySource);
+
+  return {
+    workspace_id: workspaceId,
+    user_key: userKey,
+    user_id: null,
+    query,
+    summary,
+
+    pi_score: 0.5,
+    confidence_level: 'medium',
+
+    scientific_domain: 'news',
+    category: 'research_snapshot',
+    status: 'hypothesis',
+
+    sources: JSON.stringify([
+      {
+        kind: 'news',
+        title,
+        url,
+        category,
+        fetched_at: new Date().toISOString(),
+      },
+    ]),
+    raw_url: url,
+    raw_snapshot: clampLong(fullText || tavilyContent || '', 4000),
+
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
 }
 
 /* ========= CORE REFRESH LOGIC ========= */
@@ -471,14 +566,12 @@ async function refreshAllCategories() {
         continue;
       }
 
-      // Advanced extraction: Browserless -> Tavily -> fetch
-      const extraction = await extractArticle({
+      // HYBRID article text extraction
+      const fullText = await getArticleTextHybrid({
         url,
-        tavilyContent: tavilyContent,
-        tavilyTitle: title,
+        tavilyContent,
+        title,
       });
-
-      const articleText = extraction.full_text || tavilyContent || title;
 
       const factRow = buildTruthFactRow({
         workspaceId,
@@ -487,9 +580,8 @@ async function refreshAllCategories() {
         query,
         title,
         url,
+        fullText,
         tavilyContent,
-        extractedText: articleText,
-        extractorSource: extraction.source,
       });
 
       // 1) Insert into truth_facts
@@ -524,7 +616,7 @@ async function refreshAllCategories() {
           title,
           url,
           category,
-          rawContent: articleText,
+          rawContent: fullText || tavilyContent || title,
         });
 
         if (!scoring) {
@@ -558,7 +650,7 @@ async function refreshAllCategories() {
           category: 'news_story',
 
           neutral_summary: clampSummary(scoring.neutral_summary, 2000),
-          raw_story: clampLong(articleText, 6000),
+          raw_story: clampLong(fullText || scoring.neutral_summary, 6000),
 
           bias_language_score: scoring.bias_language_score,
           bias_source_score: scoring.bias_source_score,
