@@ -21,6 +21,9 @@ import { MCA_WORKSPACE_ID, MCA_USER_KEY } from '@/lib/mca-config';
 /* ========= IMAGE GENERATION ========= */
 import { generateImage } from '@/lib/chat/image-gen';
 
+/* ========= NEWS CACHE ========= */
+import { getNewsForDate } from '@/lib/news-cache';
+
 /* ========= MODEL / TIMEOUT ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -261,8 +264,8 @@ function buildSystemPrompt(
   const TIME_ANCHOR = `TIME & CONTEXT
 - Today's date is ${iso} (YYYY-MM-DD). Treat this as "now".
 - If the user asks for the current year, answer with ${year}.
-- If information depends on events after your training cutoff AND no WEB CONTEXT or RESEARCH CONTEXT is provided, explicitly say that you do not have up-to-date information and DO NOT guess, invent headlines, or fabricate sources.
-- When a WEB CONTEXT or RESEARCH CONTEXT section is present, rely on it for post-cutoff events.
+- If information depends on events after your training cutoff AND no WEB CONTEXT or RESEARCH CONTEXT or NEWS CONTEXT is provided, explicitly say that you do not have up-to-date information and DO NOT guess, invent headlines, or fabricate sources.
+- When a WEB CONTEXT, RESEARCH CONTEXT, or NEWS CONTEXT section is present, rely on it for post-cutoff events.
 - Never state that the current year is earlier than ${year}; that would be drift.`;
 
   const parts: string[] = [];
@@ -338,11 +341,11 @@ function extractFirstUrl(text: string): string | null {
   return m ? m[0] : null;
 }
 
-/* Stronger signal to use Tavily + research when a URL or explicit deep-dive */
 function wantsDeepResearch(text: string): boolean {
   const t = (text || '').toLowerCase();
   if (!t.trim()) return false;
 
+  // Explicit trigger phrases
   const keywords = [
     'deep research',
     'full research',
@@ -363,22 +366,37 @@ function wantsDeepResearch(text: string): boolean {
   ];
   if (keywords.some((k) => t.includes(k))) return true;
 
+  // If there's a URL, we *may* want deep research.
   if (URL_REGEX.test(text)) return true;
 
   return false;
 }
 
-/* ========= News query helper (stabilize Tavily) ========= */
-function buildNewsQuery(userText: string): string {
-  const base = 'latest us news headlines today';
-  const extra = (userText || '').trim();
-  const q = extra ? `${base} ${extra}` : base;
-  // guard against insanely long prompts going to Tavily
-  return q.slice(0, 400);
+/* ========= Generic news question helper ========= */
+function looksLikeGenericNewsQuestion(text: string): boolean {
+  const t = (text || '').toLowerCase();
+  if (!t.trim()) return false;
+
+  // Generic “what is the news today / top news today” style questions
+  const patterns = [
+    /\bwhat\s+is\s+the\s+news\s+today\b/,
+    /\bwhat'?s\s+the\s+news\s+today\b/,
+    /\bnews\s+today\b/,
+    /\btoday'?s\s+news\b/,
+    /\btop\s+news\s+today\b/,
+    /\btop\s+stories\s+today\b/,
+    /\blatest\s+news\b/,
+    /\bus\s+news\s+today\b/,
+    /\blatest\s+u\.s\.\s+news\b/,
+    /\bheadlines\s+today\b/,
+  ];
+
+  return patterns.some((rx) => rx.test(t));
 }
 
 /* ========= Memory helpers ========= */
 function getUserKeyFromReq(req: NextRequest, body: any) {
+  // default to configured MCA_USER_KEY instead of hard-coded "guest"
   return req.headers.get('x-user-key') || body?.user_key || MCA_USER_KEY || 'guest';
 }
 
@@ -438,7 +456,7 @@ export async function POST(req: NextRequest) {
     const lastUser =
       [...rolled].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content || '';
 
-    /* ===== IMAGE GENERATION FAST-PATH ===== */
+    /* ===== IMAGE GENERATION FAST-PATH (DALL·E style via /api/image) ===== */
     if (wantsImageGeneration(lastUser)) {
       const rawPrompt = lastUser.replace(/^img:\s*/i, '').trim() || lastUser;
       try {
@@ -501,6 +519,7 @@ export async function POST(req: NextRequest) {
     /* ===== MEMORY: recall pack (scoped) ===== */
     let userKey = getUserKeyFromReq(req, body);
     if (!userKey || userKey === 'guest') {
+      // last-resort server-side key if client didn't provide one
       userKey = `u_${crypto.randomUUID()}`;
     }
     const workspaceId: string = body?.workspace_id || MCA_WORKSPACE_ID;
@@ -509,6 +528,7 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
+    // We keep hits accessible for the echo path
     let hits: Array<any> = [];
     let memorySection = '';
 
@@ -521,6 +541,7 @@ export async function POST(req: NextRequest) {
             .slice(-3)
             .join('\n') || 'general';
 
+        // fold recent explicit "remember ..." clauses into query
         const explicitInTurns = rolled
           .filter((m) => m.role === 'user')
           .map((m) => m.content.match(/\bremember(?:\s+that)?\s+(.+)/i)?.[1])
@@ -530,6 +551,7 @@ export async function POST(req: NextRequest) {
         const baseQuery = lastUser || fallbackQuery;
         const query = [baseQuery, explicitInTurns].filter(Boolean).join(' | ');
 
+        // Correct call signature: (user_key, query, k)
         hits = await searchMemories(userKey, query, 8);
 
         const pack = (hits ?? [])
@@ -545,7 +567,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    /* ===== Memory Echo fast path ===== */
+    /* ===== Memory Echo: "what do you remember" fast path ===== */
     const askedWhatYouRemember = /what\s+do\s+you\s+remember\b|remember\s+about\s+me\b/i.test(
       lastUser
     );
@@ -574,17 +596,20 @@ export async function POST(req: NextRequest) {
         lastUser
       );
 
+    const wantsGenericNews = looksLikeGenericNewsQuestion(lastUser);
+
     const rawWebFlag =
       process.env.NEXT_PUBLIC_OPENAI_WEB_ENABLED_flag ??
       process.env.OPENAI_WEB_ENABLED_flag ??
       '';
 
+    // Interpret "0"/"false" as off; anything else non-empty as on
     const webFlag =
       typeof rawWebFlag === 'string'
         ? rawWebFlag.length > 0 && !/^0|false$/i.test(rawWebFlag)
         : !!rawWebFlag;
 
-    /* ===== DEEP RESEARCH ===== */
+    /* ===== DEEP RESEARCH (multi-search + optional URL fetch) ===== */
     let researchSection = '';
     let hasResearchContext = false;
 
@@ -595,6 +620,7 @@ export async function POST(req: NextRequest) {
       if (webFlag && (wantsDeep || urlInUser)) {
         const pack = await runDeepResearch(lastUser);
 
+        // NEW: log to Truth Ledger (best-effort, non-blocking)
         try {
           await logResearchSnapshot({
             workspaceId,
@@ -608,7 +634,7 @@ export async function POST(req: NextRequest) {
         }
 
         const bulletsText = pack.bullets?.length
-          ? pack.bullets.map((b: string, idx: number) => `• [R${idx + 1}] ${b}`).join('\n')
+          ? pack.bullets.map((b: string) => `• ${b}`).join('\n')
           : '• (no external sources were found for this query)';
 
         const websiteSnippet = pack.urlTextSnippet
@@ -621,7 +647,7 @@ export async function POST(req: NextRequest) {
             : '';
 
         researchSection =
-          `\n\nRESEARCH CONTEXT\n- This section aggregates deeper web research (multiple searches and, when applicable, a direct fetch of the target website).\n\nSOURCES\n${bulletsText}${websiteSnippet}${clarificationHint}\n\nGuidance:\n- Use this RESEARCH CONTEXT for deeper analysis, comparisons, and website evaluations.\n- When you reference specific sources from this section, use [R1], [R2], etc., matching the labels in the bullet list.\n- For website evaluations, stay close to what is actually present in the text; avoid projecting motives or politics.\n- Do NOT claim you lack internet access when this section is present.`;
+          `\n\nRESEARCH CONTEXT\n- This section aggregates deeper web research (multiple searches and, when applicable, a direct fetch of the target website).\n\nSOURCES\n${bulletsText}${websiteSnippet}${clarificationHint}\n\nGuidance:\n- Use this RESEARCH CONTEXT for deeper analysis, comparisons, and website evaluations.\n- When you reference specific sources from this section, use [R1], [R2], etc., matching the labels in the bullet list.\n- Do NOT claim you lack internet access when this section is present.`;
 
         hasResearchContext = true;
       }
@@ -629,33 +655,55 @@ export async function POST(req: NextRequest) {
       console.error('runDeepResearch failed:', err);
     }
 
-    /* ===== WEB SEARCH (news) ===== */
+    /* ===== NEWS CACHE (generic "today's news" questions) ===== */
+    let newsSection = '';
+    let hasNewsContext = false;
+
+    if (wantsGenericNews) {
+      try {
+        const todayIso = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+        const stories = await getNewsForDate(todayIso, 5);
+
+        if (stories.length) {
+          hasNewsContext = true;
+
+          const lines = stories
+            .map((s, i) => {
+              const label = `N${i + 1}`;
+              const src = s.source ? ` — ${s.source}` : '';
+              const url = s.url ? ` — ${s.url}` : '';
+              const summary = s.summary || '';
+              return `• [${label}] ${s.title}${src}${url}\n${summary}`;
+            })
+            .join('\n\n');
+
+          newsSection =
+            `\n\nNEWS CONTEXT (daily cached pull)\n${lines}\n\nGuidance:\n` +
+            `- Use ONLY this NEWS CONTEXT when answering generic questions like "what is the news today" or "top news today".\n` +
+            `- Do NOT invent additional headlines or stories.\n` +
+            `- When the user asks for 200–300 words per story, you may expand each summary slightly (context, implications), but do NOT introduce new concrete events beyond what is implied here.\n` +
+            `- Always include direct links (URLs) in your answer when you reference a specific story.`;
+        }
+      } catch (err) {
+        console.error('[news-cache] getNewsForDate failed', err);
+      }
+    }
+
+    /* ===== WEB SEARCH (fresh news context) ===== */
     let webSection = '';
     let hasWebContext = false;
     let webAttempted = false;
 
     try {
-      if (wantsFresh && webFlag) {
+      if (wantsFresh && webFlag && !hasNewsContext) {
         webAttempted = true;
-
-        const newsQuery = buildNewsQuery(lastUser);
-        const results = await webSearch(newsQuery, { news: true, max: 5 });
-
+        const results = await webSearch(lastUser, { news: true, max: 5 });
         if (Array.isArray(results) && results.length) {
           const lines = results
-            .map((r: any, i: number) => {
-              const snippet = r.content ? `\n  Snippet: ${r.content.slice(0, 260)}` : '';
-              return `• [${i + 1}] ${r.title} — ${r.url}${snippet}`;
-            })
+            .map((r: any, i: number) => `• [${i + 1}] ${r.title} — ${r.url}`)
             .join('\n');
-
           webSection =
-            `\n\nWEB CONTEXT (recent news search)\n${lines}\n\nGuidance:\n` +
-            `- When the user asks for "today's news", "headlines", or "top stories", answer ONLY by summarizing these items.\n` +
-            `- Do NOT add predictions, speculation, or extra political framing beyond what appears in these sources.\n` +
-            `- Prefer neutral wording; your job is to summarize, not to take a side.\n` +
-            `- When referencing items, use bracket numbers like [1], [2].`;
-
+            `\n\nWEB CONTEXT (recent news search)\n${lines}\n\nGuidance:\n- Use these results to answer directly.\n- Prefer the most recent and reputable sources.\n- If uncertain, say what is unknown.\n- When referencing items, use bracket numbers like [1], [2].`;
           hasWebContext = true;
         }
       }
@@ -663,11 +711,11 @@ export async function POST(req: NextRequest) {
       console.error('webSearch failed:', err);
     }
 
-    /* ===== If user explicitly asked for fresh news but we have NO web results ===== */
-    if (wantsFresh && webFlag && webAttempted && !hasWebContext) {
+    /* ===== If user explicitly asked for fresh news but we have NO web AND NO news cache ===== */
+    if (wantsFresh && webFlag && webAttempted && !hasWebContext && !hasNewsContext) {
       const text =
-        'I tried to look up fresh news for you, but I did not receive any usable results from my news search. ' +
-        'Please check a trusted live news source (for example, AP, Reuters, or your preferred outlet) for today’s latest headlines.';
+        'I tried to look up fresh news for you, but I do not currently have reliable real-time access to news data. ' +
+        'Please check a trusted news source (for example, AP, Reuters, or your preferred outlet) for today’s latest headlines.';
       return NextResponse.json(
         {
           text,
@@ -717,19 +765,21 @@ export async function POST(req: NextRequest) {
       attachmentSection = '';
     }
 
+    // If any web, research, or news context exists, add a strong “no-disclaimer” instruction
     const webAssertion =
-      hasWebContext || hasResearchContext
-        ? `\n\nREAL-TIME CONTEXT\n- You DO have recent web-derived context above (WEB CONTEXT and/or RESEARCH CONTEXT). Do NOT say you cannot provide real-time updates or that you lack internet access.\n- For news questions ("today", "headlines", "breaking news"), summarize ONLY what appears in WEB CONTEXT; do not invent extra events.\n- Include bracketed refs like [1], [2] or [R1], [R2] when you rely on specific items.`
+      hasWebContext || hasResearchContext || hasNewsContext
+        ? `\n\nREAL-TIME CONTEXT\n- You DO have recent web-derived context above (WEB CONTEXT, RESEARCH CONTEXT, and/or NEWS CONTEXT). Do NOT say you cannot provide real-time updates or that you lack internet access.\n- Synthesize a brief, accurate answer using that context, and include bracketed refs like [1], [2] or [R1], [R2] or [N1], [N2] when you rely on specific items.`
         : '';
 
-    const system = baseSystem + memorySection + webSection + researchSection + webAssertion;
+    const system = baseSystem + memorySection + newsSection + webSection + researchSection + webAssertion;
 
-    /* ===== Explicit "remember ..." capture ===== */
+    /* ===== Explicit "remember ..." capture (scoped) ===== */
     if (memoryEnabled) {
       const explicit = detectExplicitRemember(lastUser);
       if (explicit) {
         try {
           await (remember as any)({
+            // user_memories is user-scoped; we still forward workspace for future compatibility
             workspace_id: workspaceId,
             user_key: userKey,
             content: explicit,
@@ -861,6 +911,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // OpenAI SSE fallback
     const apiKey = process.env.OPENAI_API_KEY || '';
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
