@@ -8,6 +8,7 @@ import pdfParse from 'pdf-parse';
 
 import { getOpenAI } from '@/lib/openai';
 import { webSearch } from '@/lib/search';
+import { runDeepResearch } from '@/lib/research';
 import { routeMode } from '@/core/mode-router';
 
 /* ========= MEMORY ========= */
@@ -240,7 +241,7 @@ function hasEmotionalOrMoralCue(text: string) {
 }
 
 function buildSystemPrompt(
-  filters: string[] ,
+  filters: string[],
   userWantsSecular: boolean,
   messages: Array<{ role: string; content: string }>
 ) {
@@ -259,8 +260,8 @@ function buildSystemPrompt(
   const TIME_ANCHOR = `TIME & CONTEXT
 - Today's date is ${iso} (YYYY-MM-DD). Treat this as "now".
 - If the user asks for the current year, answer with ${year}.
-- If information depends on events after your training cutoff AND no WEB CONTEXT is provided, explicitly say that you do not have up-to-date information and DO NOT guess, invent headlines, or fabricate sources.
-- When a WEB CONTEXT section is present, rely on it for post-cutoff events.
+- If information depends on events after your training cutoff AND no WEB CONTEXT or RESEARCH CONTEXT is provided, explicitly say that you do not have up-to-date information and DO NOT guess, invent headlines, or fabricate sources.
+- When a WEB CONTEXT or RESEARCH CONTEXT section is present, rely on it for post-cutoff events.
 - Never state that the current year is earlier than ${year}; that would be drift.`;
 
   const parts: string[] = [];
@@ -325,6 +326,47 @@ async function fetchAttachmentAsText(att: Attachment): Promise<string> {
 function clampText(s: string, n: number) {
   if (s.length <= n) return s;
   return s.slice(0, n) + '\n[...truncated...]';
+}
+
+/* ========= URL & Deep Research helpers ========= */
+const URL_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/i;
+
+function extractFirstUrl(text: string): string | null {
+  if (!text) return null;
+  const m = text.match(URL_REGEX);
+  return m ? m[0] : null;
+}
+
+function wantsDeepResearch(text: string): boolean {
+  const t = (text || '').toLowerCase();
+  if (!t.trim()) return false;
+
+  // Explicit trigger phrases
+  const keywords = [
+    'deep research',
+    'full research',
+    'full analysis',
+    'deep dive',
+    'research this',
+    'investigate this',
+    'evaluate this website',
+    'evaluate this site',
+    'analyze this website',
+    'analyze this site',
+    'ux review',
+    'seo review',
+    'is this website good',
+    'is this site good',
+    'is this site legit',
+    'is this website legit',
+  ];
+  if (keywords.some((k) => t.includes(k))) return true;
+
+  // If there's a URL, we *may* want deep research. We'll still let the model ask
+  // the user what specifically they care about if the intent is unclear.
+  if (URL_REGEX.test(text)) return true;
+
+  return false;
 }
 
 /* ========= Memory helpers ========= */
@@ -523,7 +565,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    /* ===== WEB SEARCH (fresh context) ===== */
+    /* ===== WEB / RESEARCH FLAGS ===== */
     const wantsFresh =
       /\b(latest|today|this week|news|recent|update|updates|look up|search|what happened|breaking|breaking news|headlines|top stories)\b/i.test(
         lastUser
@@ -540,6 +582,39 @@ export async function POST(req: NextRequest) {
         ? rawWebFlag.length > 0 && !/^0|false$/i.test(rawWebFlag)
         : !!rawWebFlag;
 
+    /* ===== DEEP RESEARCH (multi-search + optional URL fetch) ===== */
+    let researchSection = '';
+    let hasResearchContext = false;
+
+    try {
+      const wantsDeep = wantsDeepResearch(lastUser);
+      const urlInUser = extractFirstUrl(lastUser);
+
+      if (webFlag && (wantsDeep || urlInUser)) {
+        const pack = await runDeepResearch(lastUser);
+        const bulletsText = pack.bullets?.length
+          ? pack.bullets.map((b) => `• ${b}`).join('\n')
+          : '• (no external sources were found for this query)';
+
+        const websiteSnippet = pack.urlTextSnippet
+          ? `\n\nWEBSITE TEXT SNAPSHOT (truncated)\n"""${pack.urlTextSnippet}"""`
+          : '';
+
+        const clarificationHint =
+          urlInUser && !wantsDeep
+            ? `\n\nNOTE FOR ASSISTANT\n- The user shared a URL (${urlInUser}) but did not clearly state what aspect they want evaluated (design/UX, messaging/clarity, SEO/traffic, trustworthiness, etc.). Before giving a long evaluation, briefly ask which of these they care about most, then tailor your analysis.`
+            : '';
+
+        researchSection =
+          `\n\nRESEARCH CONTEXT\n- This section aggregates deeper web research (multiple searches and, when applicable, a direct fetch of the target website).\n\nSOURCES\n${bulletsText}${websiteSnippet}${clarificationHint}\n\nGuidance:\n- Use this RESEARCH CONTEXT for deeper analysis, comparisons, and website evaluations.\n- When you reference specific sources from this section, use [R1], [R2], etc., matching the labels in the bullet list.\n- Do NOT claim you lack internet access when this section is present.`;
+
+        hasResearchContext = true;
+      }
+    } catch (err) {
+      console.error('runDeepResearch failed:', err);
+    }
+
+    /* ===== WEB SEARCH (fresh news context) ===== */
     let webSection = '';
     let hasWebContext = false;
     let webAttempted = false;
@@ -553,7 +628,7 @@ export async function POST(req: NextRequest) {
             .map((r: any, i: number) => `• [${i + 1}] ${r.title} — ${r.url}`)
             .join('\n');
           webSection =
-            `\n\nWEB CONTEXT (recent search)\n${lines}\n\nGuidance:\n- Use these results to answer directly.\n- Prefer the most recent and reputable sources.\n- If uncertain, say what is unknown.\n- When referencing items, use bracket numbers like [1], [2].`;
+            `\n\nWEB CONTEXT (recent news search)\n${lines}\n\nGuidance:\n- Use these results to answer directly.\n- Prefer the most recent and reputable sources.\n- If uncertain, say what is unknown.\n- When referencing items, use bracket numbers like [1], [2].`;
           hasWebContext = true;
         }
       }
@@ -565,11 +640,11 @@ export async function POST(req: NextRequest) {
     if (wantsFresh && webFlag && webAttempted && !hasWebContext) {
       const text =
         'I tried to look up fresh news for you, but I do not currently have reliable real-time access to news data. ' +
-        'Please check a trusted news source (for example, AP, Reuters, or your preferred outlet) for today’s latest U.S. headlines.';
+        'Please check a trusted news source (for example, AP, Reuters, or your preferred outlet) for today’s latest headlines.';
       return NextResponse.json(
         {
           text,
-        model: 'no-web-fallback',
+          model: 'no-web-fallback',
           identity: SOLACE_NAME,
           mode: route.mode,
           confidence: route.confidence,
@@ -617,12 +692,13 @@ export async function POST(req: NextRequest) {
       attachmentSection = '';
     }
 
-    // If web context exists, add a strong “no-disclaimer” instruction
-    const webAssertion = hasWebContext
-      ? `\n\nREAL-TIME CONTEXT\n- You DO have recent web results above. Do NOT say you cannot provide real-time updates.\n- Synthesize a brief answer using those results, and include bracketed refs like [1], [3].`
-      : '';
+    // If any web or research context exists, add a strong “no-disclaimer” instruction
+    const webAssertion =
+      hasWebContext || hasResearchContext
+        ? `\n\nREAL-TIME CONTEXT\n- You DO have recent web-derived context above (WEB CONTEXT and/or RESEARCH CONTEXT). Do NOT say you cannot provide real-time updates or that you lack internet access.\n- Synthesize a brief, accurate answer using that context, and include bracketed refs like [1], [2] or [R1], [R2] when you rely on specific items.`
+        : '';
 
-    const system = baseSystem + memorySection + webSection + webAssertion;
+    const system = baseSystem + memorySection + webSection + researchSection + webAssertion;
 
     /* ===== Explicit "remember ..." capture (scoped) ===== */
     if (memoryEnabled) {
@@ -816,5 +892,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
 
 
