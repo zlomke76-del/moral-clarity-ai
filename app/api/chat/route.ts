@@ -377,7 +377,6 @@ function looksLikeGenericNewsQuestion(text: string): boolean {
   const t = (text || '').toLowerCase();
   if (!t.trim()) return false;
 
-  // Generic “what is the news today / top news today” style questions
   const patterns = [
     /\bwhat\s+is\s+the\s+news\s+today\b/,
     /\bwhat'?s\s+the\s+news\s+today\b/,
@@ -396,7 +395,6 @@ function looksLikeGenericNewsQuestion(text: string): boolean {
 
 /* ========= Memory helpers ========= */
 function getUserKeyFromReq(req: NextRequest, body: any) {
-  // default to configured MCA_USER_KEY instead of hard-coded "guest"
   return req.headers.get('x-user-key') || body?.user_key || MCA_USER_KEY || 'guest';
 }
 
@@ -456,7 +454,7 @@ export async function POST(req: NextRequest) {
     const lastUser =
       [...rolled].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content || '';
 
-    /* ===== IMAGE GENERATION FAST-PATH (DALL·E style via /api/image) ===== */
+    /* ===== IMAGE GENERATION FAST-PATH ===== */
     if (wantsImageGeneration(lastUser)) {
       const rawPrompt = lastUser.replace(/^img:\s*/i, '').trim() || lastUser;
       try {
@@ -519,7 +517,6 @@ export async function POST(req: NextRequest) {
     /* ===== MEMORY: recall pack (scoped) ===== */
     let userKey = getUserKeyFromReq(req, body);
     if (!userKey || userKey === 'guest') {
-      // last-resort server-side key if client didn't provide one
       userKey = `u_${crypto.randomUUID()}`;
     }
     const workspaceId: string = body?.workspace_id || MCA_WORKSPACE_ID;
@@ -528,7 +525,6 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // We keep hits accessible for the echo path
     let hits: Array<any> = [];
     let memorySection = '';
 
@@ -541,7 +537,6 @@ export async function POST(req: NextRequest) {
             .slice(-3)
             .join('\n') || 'general';
 
-        // fold recent explicit "remember ..." clauses into query
         const explicitInTurns = rolled
           .filter((m) => m.role === 'user')
           .map((m) => m.content.match(/\bremember(?:\s+that)?\s+(.+)/i)?.[1])
@@ -551,7 +546,6 @@ export async function POST(req: NextRequest) {
         const baseQuery = lastUser || fallbackQuery;
         const query = [baseQuery, explicitInTurns].filter(Boolean).join(' | ');
 
-        // Correct call signature: (user_key, query, k)
         hits = await searchMemories(userKey, query, 8);
 
         const pack = (hits ?? [])
@@ -567,7 +561,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    /* ===== Memory Echo: "what do you remember" fast path ===== */
+    /* ===== Memory Echo fast path ===== */
     const askedWhatYouRemember = /what\s+do\s+you\s+remember\b|remember\s+about\s+me\b/i.test(
       lastUser
     );
@@ -603,13 +597,12 @@ export async function POST(req: NextRequest) {
       process.env.OPENAI_WEB_ENABLED_flag ??
       '';
 
-    // Interpret "0"/"false" as off; anything else non-empty as on
     const webFlag =
       typeof rawWebFlag === 'string'
         ? rawWebFlag.length > 0 && !/^0|false$/i.test(rawWebFlag)
         : !!rawWebFlag;
 
-    /* ===== DEEP RESEARCH (multi-search + optional URL fetch) ===== */
+    /* ===== DEEP RESEARCH ===== */
     let researchSection = '';
     let hasResearchContext = false;
 
@@ -620,7 +613,6 @@ export async function POST(req: NextRequest) {
       if (webFlag && (wantsDeep || urlInUser)) {
         const pack = await runDeepResearch(lastUser);
 
-        // NEW: log to Truth Ledger (best-effort, non-blocking)
         try {
           await logResearchSnapshot({
             workspaceId,
@@ -680,8 +672,8 @@ export async function POST(req: NextRequest) {
           newsSection =
             `\n\nNEWS CONTEXT (daily cached pull)\n${lines}\n\nGuidance:\n` +
             `- Use ONLY this NEWS CONTEXT when answering generic questions like "what is the news today" or "top news today".\n` +
-            `- Do NOT invent additional headlines or stories.\n` +
-            `- When the user asks for 200–300 words per story, you may expand each summary slightly (context, implications), but do NOT introduce new concrete events beyond what is implied here.\n` +
+            `- Do NOT invent additional headlines or stories beyond what appears here.\n` +
+            `- By default, return 2–4 stories. For each story, write a neutral, fact-focused summary of about 200–300 words, unless the user explicitly asks for a shorter or longer format.\n` +
             `- Always include direct links (URLs) in your answer when you reference a specific story.`;
         }
       } catch (err) {
@@ -703,7 +695,12 @@ export async function POST(req: NextRequest) {
             .map((r: any, i: number) => `• [${i + 1}] ${r.title} — ${r.url}`)
             .join('\n');
           webSection =
-            `\n\nWEB CONTEXT (recent news search)\n${lines}\n\nGuidance:\n- Use these results to answer directly.\n- Prefer the most recent and reputable sources.\n- If uncertain, say what is unknown.\n- When referencing items, use bracket numbers like [1], [2].`;
+            `\n\nWEB CONTEXT (recent news search)\n${lines}\n\nGuidance:\n` +
+            `- Use these results to answer directly.\n` +
+            `- Prefer the most recent and reputable sources.\n` +
+            `- If uncertain, say what is unknown.\n` +
+            `- When referencing items, use bracket numbers like [1], [2].\n` +
+            `- Unless the user explicitly asks only for brief headlines, for each main story you choose to describe, write a neutral, fact-focused summary of about 200–300 words.`;
           hasWebContext = true;
         }
       }
@@ -711,7 +708,7 @@ export async function POST(req: NextRequest) {
       console.error('webSearch failed:', err);
     }
 
-    /* ===== If user explicitly asked for fresh news but we have NO web AND NO news cache ===== */
+    /* ===== No news context + failed web ===== */
     if (wantsFresh && webFlag && webAttempted && !hasWebContext && !hasNewsContext) {
       const text =
         'I tried to look up fresh news for you, but I do not currently have reliable real-time access to news data. ' +
@@ -765,21 +762,21 @@ export async function POST(req: NextRequest) {
       attachmentSection = '';
     }
 
-    // If any web, research, or news context exists, add a strong “no-disclaimer” instruction
+    /* ===== REAL-TIME CONTEXT ASSERTION ===== */
     const webAssertion =
       hasWebContext || hasResearchContext || hasNewsContext
         ? `\n\nREAL-TIME CONTEXT\n- You DO have recent web-derived context above (WEB CONTEXT, RESEARCH CONTEXT, and/or NEWS CONTEXT). Do NOT say you cannot provide real-time updates or that you lack internet access.\n- Synthesize a brief, accurate answer using that context, and include bracketed refs like [1], [2] or [R1], [R2] or [N1], [N2] when you rely on specific items.`
         : '';
 
-    const system = baseSystem + memorySection + newsSection + webSection + researchSection + webAssertion;
+    const system =
+      baseSystem + memorySection + newsSection + webSection + researchSection + webAssertion;
 
-    /* ===== Explicit "remember ..." capture (scoped) ===== */
+    /* ===== Explicit "remember ..." capture ===== */
     if (memoryEnabled) {
       const explicit = detectExplicitRemember(lastUser);
       if (explicit) {
         try {
           await (remember as any)({
-            // user_memories is user-scoped; we still forward workspace for future compatibility
             workspace_id: workspaceId,
             user_key: userKey,
             content: explicit,
@@ -964,5 +961,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
-
