@@ -69,11 +69,11 @@ export async function GET(req: NextRequest) {
     const finishedAt = new Date().toISOString();
 
     // Pass through engine stats, plus top-level timing for this route.
+    // NOTE: result.ok is preserved; we don't redefine `ok` here to avoid TS duplicate-key error.
     return NextResponse.json({
-      ok: true,
+      ...result,
       route_started_at: startedAt,
       route_finished_at: finishedAt,
-      ...result,
     });
   } catch (err: any) {
     console.error('[news/refresh] fatal error', err);
