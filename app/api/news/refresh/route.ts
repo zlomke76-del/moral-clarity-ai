@@ -8,16 +8,18 @@ import type OpenAI from 'openai';
 
 import { webSearch } from '@/lib/search';
 import { getOpenAI } from '@/lib/openai';
+import { extractArticle } from '@/lib/news/extract';
 
 /**
  * This route:
- * - Pulls fresh news via Tavily (webSearch)
+ * - Pulls fresh news via Tavily (webSearch) to get URLs
+ * - Extracts full article text via Browserless/Tavily/fetch (Balanced mode)
  * - Normalizes into "truth_facts" rows (Neutral News Protocol v1.0)
  * - Scores each story for bias + neutrality into "news_neutrality_ledger"
  *
- * It is designed to be called by:
- * - A cron / scheduled job (recommended)
- * - Or manually from the UI / tools
+ * Designed for:
+ * - Cron / scheduled job
+ * - Manual trigger from UI/tools
  */
 
 /* ========= ENV / SUPABASE / OPENAI INIT ========= */
@@ -31,9 +33,10 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   );
 }
 
-const supabaseAdmin = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
-  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-  : null;
+const supabaseAdmin =
+  SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    : null;
 
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const REQUEST_TIMEOUT_MS = 25_000;
@@ -139,7 +142,7 @@ function extractOutletFromUrl(url: string): string {
 }
 
 /**
- * Given a Tavily-style item, build a truth_facts row.
+ * Given a Tavily-style item + extraction, build a truth_facts row.
  * We treat each story as a "research_snapshot" in domain "news".
  */
 function buildTruthFactRow(opts: {
@@ -149,7 +152,9 @@ function buildTruthFactRow(opts: {
   query: string;
   title: string;
   url: string;
-  content?: string;
+  tavilyContent?: string;
+  extractedText?: string;
+  extractorSource?: string;
 }): Record<string, unknown> {
   const {
     workspaceId,
@@ -158,10 +163,36 @@ function buildTruthFactRow(opts: {
     query,
     title,
     url,
-    content,
+    tavilyContent,
+    extractedText,
+    extractorSource,
   } = opts;
 
-  const summary = clampSummary(content || title);
+  const bodyForSnapshot = extractedText || tavilyContent || '';
+  const summarySource = extractedText || tavilyContent || title;
+  const summary = clampSummary(summarySource);
+
+  const nowIso = new Date().toISOString();
+
+  const sources: any[] = [
+    {
+      kind: 'news',
+      provider: 'tavily',
+      title,
+      url,
+      category,
+      fetched_at: nowIso,
+    },
+  ];
+
+  if (extractorSource && extractorSource !== 'none') {
+    sources.push({
+      kind: 'extraction',
+      provider: extractorSource,
+      url,
+      fetched_at: nowIso,
+    });
+  }
 
   // We start news as "hypothesis" / "research_snapshot" until reconciled.
   return {
@@ -171,27 +202,19 @@ function buildTruthFactRow(opts: {
     query,
     summary,
 
-    pi_score: 0.500,
+    pi_score: 0.5,
     confidence_level: 'medium',
 
     scientific_domain: 'news',
     category: 'research_snapshot',
     status: 'hypothesis',
 
-    sources: JSON.stringify([
-      {
-        kind: 'news',
-        title,
-        url,
-        category,
-        fetched_at: new Date().toISOString(),
-      },
-    ]),
+    sources: JSON.stringify(sources),
     raw_url: url,
-    raw_snapshot: clampLong(content || '', 4000),
+    raw_snapshot: clampLong(bodyForSnapshot || '', 4000),
 
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    created_at: nowIso,
+    updated_at: nowIso,
   };
 }
 
@@ -245,7 +268,7 @@ function computeBiasIntentScore(components: {
  *  - 1.000 = fully neutral, low editorial intent
  *  - 0.000 = highly biased / low predictability
  *
- * We derive it deterministically from bias_intent_score:
+ * Derived from bias_intent_score:
  *   pi = 1 - (bias_intent_score / 3)
  */
 function computePiFromBiasIntent(biasIntent: number): number {
@@ -300,7 +323,7 @@ Return ONLY a single JSON object with this exact shape and no extra keys:
 }
 
 If you are very uncertain about the article (e.g., content is extremely short), still return the JSON with conservative scores near 1 and explain uncertainty in "notes".
-`;
+`.trim();
 
   const input = `
 METADATA
@@ -440,13 +463,22 @@ async function refreshAllCategories() {
     for (const item of items) {
       const title: string = item.title || '(untitled)';
       const url: string = item.url || '';
-      const content: string | undefined = item.content;
+      const tavilyContent: string | undefined = item.content;
 
       if (!url) {
         perCategoryStats[category].failed_facts++;
         perCategoryStats[category].failed_neutrality++;
         continue;
       }
+
+      // Advanced extraction: Browserless -> Tavily -> fetch
+      const extraction = await extractArticle({
+        url,
+        tavilyContent: tavilyContent,
+        tavilyTitle: title,
+      });
+
+      const articleText = extraction.full_text || tavilyContent || title;
 
       const factRow = buildTruthFactRow({
         workspaceId,
@@ -455,7 +487,9 @@ async function refreshAllCategories() {
         query,
         title,
         url,
-        content,
+        tavilyContent,
+        extractedText: articleText,
+        extractorSource: extraction.source,
       });
 
       // 1) Insert into truth_facts
@@ -490,7 +524,7 @@ async function refreshAllCategories() {
           title,
           url,
           category,
-          rawContent: content || title,
+          rawContent: articleText,
         });
 
         if (!scoring) {
@@ -524,7 +558,7 @@ async function refreshAllCategories() {
           category: 'news_story',
 
           neutral_summary: clampSummary(scoring.neutral_summary, 2000),
-          raw_story: clampLong(content || scoring.neutral_summary, 6000),
+          raw_story: clampLong(articleText, 6000),
 
           bias_language_score: scoring.bias_language_score,
           bias_source_score: scoring.bias_source_score,
