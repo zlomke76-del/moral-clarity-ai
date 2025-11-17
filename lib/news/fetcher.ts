@@ -3,6 +3,7 @@
 
 import { createClient, type PostgrestError } from '@supabase/supabase-js';
 import { webSearch } from '@/lib/search';
+import { extractArticle } from '@/lib/news/extract';
 
 /* ========= ENV / SUPABASE INIT ========= */
 
@@ -21,18 +22,6 @@ const supabaseAdmin =
         auth: { persistSession: false },
       })
     : null;
-
-/* ========= BROWSERLESS / EXTRACTION CONFIG ========= */
-
-const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN || '';
-const BROWSERLESS_CONTENT_URL =
-  process.env.BROWSERLESS_CONTENT_URL ||
-  (BROWSERLESS_TOKEN
-    ? `https://chrome.browserless.io/content?token=${BROWSERLESS_TOKEN}`
-    : '');
-
-const MIN_DIRECT_LEN = 1500; // chars – if below, we try Browserless
-const MIN_BROWSERLESS_LEN = 800;
 
 /* ========= DEFAULT NEWS CONFIG ========= */
 
@@ -151,107 +140,6 @@ export const SOURCE_REGISTRY: NewsSource[] = [
 
 /* ========= SMALL HELPERS ========= */
 
-function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const id = setTimeout(() => reject(new Error('Request timed out')), ms);
-    p.then((v) => {
-      clearTimeout(id);
-      resolve(v);
-    }).catch((e) => {
-      clearTimeout(id);
-      reject(e);
-    });
-  });
-}
-
-function stripHtml(html: string): string {
-  let text = html.replace(/<script[\s\S]*?<\/script>/gi, '');
-  text = text.replace(/<style[\s\S]*?<\/style>/gi, '');
-  text = text.replace(/<\/?[^>]+(>|$)/g, ' ');
-  text = text.replace(/\s+/g, ' ').trim();
-  return text;
-}
-
-async function simpleHttpExtract(url: string): Promise<string | null> {
-  try {
-    const res = await withTimeout(fetch(url, { method: 'GET' }), 10_000);
-    if (!res.ok) {
-      console.warn('[news/fetcher] simpleHttpExtract non-200', url, res.status);
-      return null;
-    }
-    const html = await res.text();
-    const text = stripHtml(html);
-    return text || null;
-  } catch (err) {
-    console.warn('[news/fetcher] simpleHttpExtract error', url, err);
-    return null;
-  }
-}
-
-async function browserlessExtract(url: string): Promise<string | null> {
-  if (!BROWSERLESS_CONTENT_URL) return null;
-  try {
-    const res = await withTimeout(
-      fetch(BROWSERLESS_CONTENT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      }),
-      20_000
-    );
-
-    if (!res.ok) {
-      console.warn('[news/fetcher] browserlessExtract non-200', url, res.status);
-      return null;
-    }
-
-    const payload = await res.text();
-    const text = stripHtml(payload);
-    return text || null;
-  } catch (err) {
-    console.warn('[news/fetcher] browserlessExtract error', url, err);
-    return null;
-  }
-}
-
-/**
- * Hybrid strategy:
- *   1) Try direct HTTP + HTML strip
- *   2) If too short, try Browserless
- *   3) If still too short, fall back to Tavily snippet or title
- */
-async function getArticleTextHybrid(opts: {
-  url: string;
-  tavilyContent?: string;
-  title?: string;
-}): Promise<string> {
-  const { url, tavilyContent, title } = opts;
-
-  let direct: string | null = null;
-  try {
-    direct = await simpleHttpExtract(url);
-  } catch {
-    direct = null;
-  }
-
-  if (direct && direct.length >= MIN_DIRECT_LEN) {
-    return direct;
-  }
-
-  let blText: string | null = null;
-  try {
-    blText = await browserlessExtract(url);
-  } catch {
-    blText = null;
-  }
-
-  if (blText && blText.length >= MIN_BROWSERLESS_LEN) {
-    return blText;
-  }
-
-  return direct || blText || tavilyContent || title || '';
-}
-
 function clampSummary(text: string | undefined, max = 1200): string {
   if (!text) return '';
   if (text.length <= max) return text;
@@ -359,7 +247,7 @@ function pickSourcesForRefresh(
  * - Selects a diverse subset of sources from SOURCE_REGISTRY
  * - Uses Tavily (webSearch) per-domain with simple domain-focused queries
  * - Applies per-domain caps and dedupe
- * - Extracts article text via hybrid extraction
+ * - Extracts article text via the shared extractArticle() helper
  * - Inserts into truth_facts
  */
 export async function runNewsFetchRefresh(opts?: {
@@ -517,7 +405,7 @@ export async function runNewsFetchRefresh(opts?: {
   // Truncate total to storiesTarget if we overshot
   const finalCandidates = deduped.slice(0, storiesTarget);
 
-  // 5) Extract article text + insert into truth_facts
+  // 5) Extract article text via extractArticle + insert into truth_facts
   let totalInserted = 0;
   let totalFailed = 0;
 
@@ -534,18 +422,26 @@ export async function runNewsFetchRefresh(opts?: {
     domainStats[domain] = stat;
 
     try {
-      const fullText = await getArticleTextHybrid({
+      const extracted = await extractArticle({
         url,
         tavilyContent: content,
-        title,
+        tavilyTitle: title,
       });
+
+      if (!extracted.success || !extracted.clean_text?.trim()) {
+        totalFailed++;
+        stat.failed++;
+        continue;
+      }
+
+      const fullText = extracted.clean_text;
 
       const factRow = buildTruthFactRow({
         workspaceId,
         userKey,
         query,
-        title,
-        url,
+        title: extracted.title || title,
+        url: extracted.url || url,
         fullText,
         tavilyContent: content,
       });
