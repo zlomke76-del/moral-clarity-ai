@@ -2,18 +2,7 @@
 
 import pdfParse from 'pdf-parse';
 
-export type Attachment = {
-  name: string;
-  url: string;
-  type?: string;
-};
-
-export type ChatMessage = {
-  role: string;
-  content: string;
-};
-
-/* ========= Low-level helpers ========= */
+export type Attachment = { name: string; url: string; type?: string };
 
 async function fetchAttachmentAsText(att: Attachment): Promise<string> {
   const res = await fetch(att.url);
@@ -21,14 +10,14 @@ async function fetchAttachmentAsText(att: Attachment): Promise<string> {
 
   const ct = (res.headers.get('content-type') || att.type || '').toLowerCase();
 
-  // PDF → text via pdf-parse
+  // PDFs
   if (ct.includes('pdf') || /\.pdf(?:$|\?)/i.test(att.url)) {
     const buf = Buffer.from(await res.arrayBuffer());
     const out = await pdfParse(buf);
     return out.text || '';
   }
 
-  // Text-ish types
+  // Plain-ish text formats
   if (
     ct.includes('text/') ||
     ct.includes('json') ||
@@ -38,6 +27,7 @@ async function fetchAttachmentAsText(att: Attachment): Promise<string> {
     return await res.text();
   }
 
+  // Fallback
   return `[Unsupported file type: ${att.name} (${ct || 'unknown'})]`;
 }
 
@@ -46,21 +36,22 @@ function clampText(s: string, n: number) {
   return s.slice(0, n) + '\n[...truncated...]';
 }
 
-/* ========= Main builders ========= */
-
 /**
- * Build the ATTACHMENT DIGEST section as a single string.
+ * Build a single ATTACHMENT DIGEST section for Solace/system prompts.
  *
- * This mirrors the behavior we previously had inline in app/api/chat/route.ts:
- * - Truncates each file to MAX_PER_FILE chars
- * - Caps the total across all attachments at MAX_TOTAL
- * - Emits a nicely labeled markdown block Solace can read.
+ * Called from the chat orchestrator as:
+ *   const attachmentSection = attachments?.length
+ *     ? await processAttachments(attachments)
+ *     : "";
  */
-export async function buildAttachmentSection(attachments: Attachment[]): Promise<string> {
+export async function processAttachments(
+  attachments: Attachment[],
+  opts?: { maxPerFile?: number; maxTotal?: number }
+): Promise<string> {
   if (!attachments || !attachments.length) return '';
 
-  const MAX_PER_FILE = 200_000;
-  const MAX_TOTAL = 350_000;
+  const MAX_PER_FILE = opts?.maxPerFile ?? 200_000;
+  const MAX_TOTAL = opts?.maxTotal ?? 350_000;
 
   const parts: string[] = [];
   let total = 0;
@@ -69,10 +60,16 @@ export async function buildAttachmentSection(attachments: Attachment[]): Promise
     try {
       const raw = await fetchAttachmentAsText(att);
       const clipped = clampText(raw, MAX_PER_FILE);
-      const block = `\n--- Attachment: ${att.name}\n(source: ${att.url})\n\`\`\`\n${clipped}\n\`\`\`\n`;
+
+      const block =
+        `\n--- Attachment: ${att.name}\n` +
+        `(source: ${att.url})\n` +
+        '```\n' +
+        clipped +
+        '\n```\n';
 
       if (total + block.length > MAX_TOTAL) {
-        parts.push(`\n--- [Skipping remaining attachments: token cap reached]`);
+        parts.push('\n--- [Skipping remaining attachments: token cap reached]');
         break;
       }
 
@@ -85,46 +82,9 @@ export async function buildAttachmentSection(attachments: Attachment[]): Promise
     }
   }
 
-  const header =
+  return (
     `\n\nATTACHMENT DIGEST\n` +
-    `The user provided ${attachments.length} attachment(s). Use the content below in your analysis.\n`;
-
-  return header + parts.join('');
-}
-
-/**
- * Orchestrator-facing helper.
- *
- * - Reads attachments from body.attachments (if any)
- * - Builds the ATTACHMENT DIGEST
- * - Appends it as a synthetic user message
- *
- * Used by lib/chat/orchestrator.ts.
- */
-export async function processAttachments(
-  body: any,
-  rolled: ChatMessage[]
-): Promise<{
-  rolledWithAttachments: ChatMessage[];
-  attachmentSection: string;
-}> {
-  const atts = (Array.isArray(body?.attachments) ? body.attachments : []) as Attachment[];
-
-  if (!atts.length) {
-    return {
-      rolledWithAttachments: rolled,
-      attachmentSection: '',
-    };
-  }
-
-  const attachmentSection = await buildAttachmentSection(atts);
-
-  const rolledWithAttachments = attachmentSection
-    ? [...rolled, { role: 'user', content: attachmentSection }]
-    : rolled;
-
-  return {
-    rolledWithAttachments,
-    attachmentSection,
-  };
+    `The user provided ${attachments.length} attachment(s). Use the content below in your analysis.\n` +
+    parts.join('')
+  );
 }
