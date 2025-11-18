@@ -167,8 +167,19 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+function todayIso(): string {
+  // YYYY-MM-DD
+  return new Date().toISOString().slice(0, 10);
+}
+
 /* ========= TRUTH_FACTS ROW BUILDER ========= */
 
+/**
+ * Build a row that matches your current truth_facts schema.
+ * We deliberately populate:
+ *   story_id, story_title, story_url, outlet, day_iso, story_date
+ * plus the newer MCAI fields (workspace_id, user_key, scientific_domain, etc.).
+ */
 function buildTruthFactRow(opts: {
   workspaceId: string;
   userKey: string;
@@ -193,11 +204,27 @@ function buildTruthFactRow(opts: {
   ];
 
   const now = nowIso();
+  const dayIso = todayIso();
+
+  const outlet = extractDomainFromUrl(url);
 
   return {
+    // --- "classic" truth_facts columns ---
+    story_id: url, // stable id for this story (string)
+    story_title: title,
+    story_url: url,
+    outlet,
+    day_iso: dayIso,
+    story_date: dayIso, // Postgres will cast 'YYYY-MM-DD'::text → date
+
+    // neutral_summary & friends are intentionally left null here;
+    // score-worker fills them in when it writes to news_neutrality_ledger.
+
+    // --- MCAI / workspace metadata ---
     workspace_id: workspaceId,
     user_key: userKey,
     user_id: null,
+
     query,
     summary,
 
@@ -209,7 +236,7 @@ function buildTruthFactRow(opts: {
     category: 'news_story',
     status: 'snapshot',
 
-    sources: JSON.stringify(sourcesPayload),
+    sources: JSON.stringify(sourcesPayload), // jsonb column
     raw_url: url,
     raw_snapshot: clampLong(fullText || tavilyContent || '', 4000),
 
@@ -372,9 +399,7 @@ export async function runNewsFetchRefresh(opts?: {
     }
   } catch (err: any) {
     console.error('[news/fetcher] global top webSearch failed', err);
-    errors.push(
-      `global webSearch failed: ${err?.message || String(err)}`
-    );
+    errors.push(`global webSearch failed: ${err?.message || String(err)}`);
   }
 
   // 4) Deduplicate by URL and enforce per-domain caps
@@ -435,13 +460,15 @@ export async function runNewsFetchRefresh(opts?: {
       }
 
       const fullText = extracted.clean_text;
+      const effectiveTitle = extracted.title || title;
+      const effectiveUrl = extracted.url || url;
 
       const factRow = buildTruthFactRow({
         workspaceId,
         userKey,
         query,
-        title: extracted.title || title,
-        url: extracted.url || url,
+        title: effectiveTitle,
+        url: effectiveUrl,
         fullText,
         tavilyContent: content,
       });
@@ -452,10 +479,15 @@ export async function runNewsFetchRefresh(opts?: {
 
       if (insertErr) {
         console.error('[news/fetcher] truth_facts insert error', {
-          url,
+          url: effectiveUrl,
           message: (insertErr as PostgrestError).message,
           code: (insertErr as PostgrestError).code,
         });
+        errors.push(
+          `truth_facts insert error for ${effectiveUrl}: ${
+            (insertErr as PostgrestError).code || ''
+          } ${(insertErr as PostgrestError).message}`
+        );
         totalFailed++;
         stat.failed++;
         continue;
@@ -465,6 +497,9 @@ export async function runNewsFetchRefresh(opts?: {
       stat.inserted++;
     } catch (err: any) {
       console.error('[news/fetcher] unexpected error inserting', url, err);
+      errors.push(
+        `unexpected insert error for ${url}: ${err?.message || String(err)}`
+      );
       totalFailed++;
       stat.failed++;
     }
