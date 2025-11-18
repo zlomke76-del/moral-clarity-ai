@@ -4,6 +4,7 @@ import { webSearch } from '@/lib/search';
 
 export type ResearchPack = {
   bullets: string[];
+  url?: string | null;
   urlTextSnippet?: string | null;
   raw?: any;
 };
@@ -20,7 +21,12 @@ export type ResearchPack = {
  */
 export async function runDeepResearch(query: string): Promise<ResearchPack> {
   if (!query?.trim()) {
-    return { bullets: [], urlTextSnippet: null, raw: null };
+    return {
+      bullets: [],
+      url: null,
+      urlTextSnippet: null,
+      raw: null,
+    };
   }
 
   const results = await webSearch(query, { max: 5 });
@@ -33,8 +39,14 @@ export async function runDeepResearch(query: string): Promise<ResearchPack> {
       return `[R${i + 1}] ${title}${src}`;
     }) ?? [];
 
+  // Pick a primary URL (if any) so downstream ledgers
+  // can log "what site was primarily inspected".
+  const primaryWithUrl = (results || []).find((r) => r.url) || null;
+  const primaryUrl = primaryWithUrl?.url || null;
+
   return {
     bullets,
+    url: primaryUrl,
     urlTextSnippet: null,
     raw: results,
   };
