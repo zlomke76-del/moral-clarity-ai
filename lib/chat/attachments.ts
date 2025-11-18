@@ -37,9 +37,9 @@ function clampText(s: string, n: number) {
 }
 
 /**
- * Build a single ATTACHMENT DIGEST section for Solace/system prompts.
+ * Core implementation used by the orchestrator.
  *
- * Called from the chat orchestrator as:
+ * Called as:
  *   const attachmentSection = attachments?.length
  *     ? await processAttachments(attachments)
  *     : "";
@@ -87,4 +87,14 @@ export async function processAttachments(
     `The user provided ${attachments.length} attachment(s). Use the content below in your analysis.\n` +
     parts.join('')
   );
+}
+
+/**
+ * Backwards-compatible alias for the old API used in app/api/chat/route.ts.
+ * Keeps legacy imports working while everything migrates to processAttachments.
+ */
+export async function buildAttachmentSection(
+  attachments: Attachment[]
+): Promise<string> {
+  return processAttachments(attachments);
 }
