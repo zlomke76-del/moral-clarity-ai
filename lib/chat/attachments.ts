@@ -1,9 +1,6 @@
 // lib/chat/attachments.ts
 
-export type ChatMessage = {
-  role: string;
-  content: string;
-};
+import pdfParse from 'pdf-parse';
 
 export type Attachment = {
   name: string;
@@ -11,19 +8,98 @@ export type Attachment = {
   type?: string;
 };
 
+export type ChatMessage = {
+  role: string;
+  content: string;
+};
+
+/* ========= Low-level helpers ========= */
+
+async function fetchAttachmentAsText(att: Attachment): Promise<string> {
+  const res = await fetch(att.url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+  const ct = (res.headers.get('content-type') || att.type || '').toLowerCase();
+
+  // PDF → text via pdf-parse
+  if (ct.includes('pdf') || /\.pdf(?:$|\?)/i.test(att.url)) {
+    const buf = Buffer.from(await res.arrayBuffer());
+    const out = await pdfParse(buf);
+    return out.text || '';
+  }
+
+  // Text-ish types
+  if (
+    ct.includes('text/') ||
+    ct.includes('json') ||
+    ct.includes('csv') ||
+    /\.(?:txt|md|csv|json)$/i.test(att.name)
+  ) {
+    return await res.text();
+  }
+
+  return `[Unsupported file type: ${att.name} (${ct || 'unknown'})]`;
+}
+
+function clampText(s: string, n: number) {
+  if (s.length <= n) return s;
+  return s.slice(0, n) + '\n[...truncated...]';
+}
+
+/* ========= Main builders ========= */
+
 /**
- * Stub attachment processor for the chat orchestrator.
+ * Build the ATTACHMENT DIGEST section as a single string.
  *
- * Right now, the real attachment handling (PDF/text extraction, etc.)
- * still lives inside app/api/chat/route.ts.
+ * This mirrors the behavior we previously had inline in app/api/chat/route.ts:
+ * - Truncates each file to MAX_PER_FILE chars
+ * - Caps the total across all attachments at MAX_TOTAL
+ * - Emits a nicely labeled markdown block Solace can read.
+ */
+export async function buildAttachmentSection(attachments: Attachment[]): Promise<string> {
+  if (!attachments || !attachments.length) return '';
+
+  const MAX_PER_FILE = 200_000;
+  const MAX_TOTAL = 350_000;
+
+  const parts: string[] = [];
+  let total = 0;
+
+  for (const att of attachments) {
+    try {
+      const raw = await fetchAttachmentAsText(att);
+      const clipped = clampText(raw, MAX_PER_FILE);
+      const block = `\n--- Attachment: ${att.name}\n(source: ${att.url})\n\`\`\`\n${clipped}\n\`\`\`\n`;
+
+      if (total + block.length > MAX_TOTAL) {
+        parts.push(`\n--- [Skipping remaining attachments: token cap reached]`);
+        break;
+      }
+
+      parts.push(block);
+      total += block.length;
+    } catch (e: any) {
+      parts.push(
+        `\n--- Attachment: ${att.name}\n[Error reading file: ${e?.message || String(e)}]`
+      );
+    }
+  }
+
+  const header =
+    `\n\nATTACHMENT DIGEST\n` +
+    `The user provided ${attachments.length} attachment(s). Use the content below in your analysis.\n`;
+
+  return header + parts.join('');
+}
+
+/**
+ * Orchestrator-facing helper.
  *
- * This helper simply:
- * - keeps the existing message list unchanged
- * - returns an empty attachmentSection
+ * - Reads attachments from body.attachments (if any)
+ * - Builds the ATTACHMENT DIGEST
+ * - Appends it as a synthetic user message
  *
- * It exists so that lib/chat/orchestrator.ts can compile cleanly.
- * When we’re ready to centralize attachment handling, we can move the
- * parsing logic here and have the route call into it.
+ * Used by lib/chat/orchestrator.ts.
  */
 export async function processAttachments(
   body: any,
@@ -32,12 +108,23 @@ export async function processAttachments(
   rolledWithAttachments: ChatMessage[];
   attachmentSection: string;
 }> {
-  // In the future we can read attachments from body.attachments here
-  // and append a digest message like in app/api/chat/route.ts.
-  void body; // avoid unused param lint
+  const atts = (Array.isArray(body?.attachments) ? body.attachments : []) as Attachment[];
+
+  if (!atts.length) {
+    return {
+      rolledWithAttachments: rolled,
+      attachmentSection: '',
+    };
+  }
+
+  const attachmentSection = await buildAttachmentSection(atts);
+
+  const rolledWithAttachments = attachmentSection
+    ? [...rolled, { role: 'user', content: attachmentSection }]
+    : rolled;
 
   return {
-    rolledWithAttachments: rolled,
-    attachmentSection: '',
+    rolledWithAttachments,
+    attachmentSection,
   };
 }
