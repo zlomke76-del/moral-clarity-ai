@@ -4,7 +4,6 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import type OpenAI from 'openai';
-import pdfParse from 'pdf-parse';
 
 import { getOpenAI } from '@/lib/openai';
 import { webSearch } from '@/lib/search';
@@ -26,6 +25,9 @@ import { getNewsForDate } from '@/lib/news-cache';
 
 /* ========= NEWS → LEDGERS ========= */
 import { logNewsBatchToLedgers } from '@/lib/news-ledger';
+
+/* ========= ATTACHMENTS HELPER ========= */
+import { buildAttachmentSection, type Attachment } from '@/lib/chat/attachments';
 
 /* ========= MODEL / TIMEOUT ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
@@ -302,37 +304,6 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
       reject(e);
     });
   });
-}
-
-/* ========= Attachments ========= */
-type Attachment = { name: string; url: string; type?: string };
-
-async function fetchAttachmentAsText(att: Attachment): Promise<string> {
-  const res = await fetch(att.url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const ct = (res.headers.get('content-type') || att.type || '').toLowerCase();
-
-  if (ct.includes('pdf') || /\.pdf(?:$|\?)/i.test(att.url)) {
-    const buf = Buffer.from(await res.arrayBuffer());
-    const out = await pdfParse(buf);
-    return out.text || '';
-  }
-
-  if (
-    ct.includes('text/') ||
-    ct.includes('json') ||
-    ct.includes('csv') ||
-    /\.(?:txt|md|csv|json)$/i.test(att.name)
-  ) {
-    return await res.text();
-  }
-
-  return `[Unsupported file type: ${att.name} (${ct || 'unknown'})]`;
-}
-
-function clampText(s: string, n: number) {
-  if (s.length <= n) return s;
-  return s.slice(0, n) + '\n[...truncated...]';
 }
 
 /* ========= URL & Deep Research helpers ========= */
@@ -734,37 +705,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    /* ===== Attachments digest ===== */
+    /* ===== Attachments digest (delegated) ===== */
     let attachmentSection = '';
     try {
       const atts = (Array.isArray(body?.attachments) ? body.attachments : []) as Attachment[];
       if (atts.length) {
-        const MAX_PER_FILE = 200_000;
-        const MAX_TOTAL = 350_000;
-        const parts: string[] = [];
-        let total = 0;
-
-        for (const att of atts) {
-          try {
-            const raw = await fetchAttachmentAsText(att);
-            const clipped = clampText(raw, MAX_PER_FILE);
-            const block = `\n--- Attachment: ${att.name}\n(source: ${att.url})\n\`\`\`\n${clipped}\n\`\`\`\n`;
-            if (total + block.length > MAX_TOTAL) {
-              parts.push(`\n--- [Skipping remaining attachments: token cap reached]`);
-              break;
-            }
-            parts.push(block);
-            total += block.length;
-          } catch (e: any) {
-            parts.push(
-              `\n--- Attachment: ${att.name}\n[Error reading file: ${e?.message || e}]`
-            );
-          }
-        }
-
-        attachmentSection =
-          `\n\nATTACHMENT DIGEST\nThe user provided ${atts.length} attachment(s). Use the content below in your analysis.\n` +
-          parts.join('');
+        attachmentSection = await buildAttachmentSection(atts);
       }
     } catch {
       attachmentSection = '';
