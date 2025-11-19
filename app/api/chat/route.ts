@@ -398,18 +398,15 @@ function createAdminClient() {
 }
 
 type SolaceDigestRow = {
-  bucket: number;
   id: string;
-  workspace_id: string | null;
-  user_key: string | null;
-  user_id: string | null;
-  truth_fact_id: string | null;
   story_id: string | null;
   story_title: string | null;
   story_url: string | null;
   outlet: string | null;
   category: string | null;
-  raw_story: string | null;
+  day_iso: string | null;
+  story_date: string | null;
+
   neutral_summary: string | null;
   key_facts: string[] | null;
   context_background: string | null;
@@ -417,13 +414,14 @@ type SolaceDigestRow = {
   timeline: string | null;
   disputed_claims: string | null;
   omissions_detected: string | null;
+
   bias_language_score: number | null;
   bias_source_score: number | null;
   bias_framing_score: number | null;
   bias_context_score: number | null;
   bias_intent_score: number | null;
   pi_score: number | null;
-  notes: string | null;
+
   created_at: string | null;
   updated_at: string | null;
   outlet_group: string | null;
@@ -431,7 +429,7 @@ type SolaceDigestRow = {
 
 type SolaceDigestStory = {
   id: string;
-  truth_fact_id: string | null;
+  truth_fact_id: string | null; // not in view, we'll keep as null
   story_id: string | null;
   title: string;
   url: string | null;
@@ -454,7 +452,7 @@ type SolaceDigestStory = {
   bias_intent_score: number | null;
   pi_score: number | null;
 
-  notes: string | null;
+  notes: string | null; // not in view, keep null for compatibility
   created_at: string | null;
 };
 
@@ -484,7 +482,7 @@ function coerceNumber(value: unknown): number | null {
 function mapRowToStory(row: SolaceDigestRow): SolaceDigestStory {
   return {
     id: row.id,
-    truth_fact_id: row.truth_fact_id,
+    truth_fact_id: null,
     story_id: row.story_id,
     title: (row.story_title || '').trim() || '(untitled story)',
     url: row.story_url,
@@ -507,7 +505,7 @@ function mapRowToStory(row: SolaceDigestRow): SolaceDigestStory {
     bias_intent_score: coerceNumber(row.bias_intent_score),
     pi_score: coerceNumber(row.pi_score),
 
-    notes: row.notes,
+    notes: null,
     created_at: row.created_at,
   };
 }
@@ -523,7 +521,6 @@ async function getSolaceNewsDigest(): Promise<SolaceDigestStory[]> {
     const { data, error } = await supabase
       .from('vw_solace_news_digest')
       .select('*')
-      .order('bucket', { ascending: true })
       .order('bias_intent_score', { ascending: true })
       .order('pi_score', { ascending: false });
 
@@ -715,8 +712,6 @@ export async function POST(req: NextRequest) {
 
     /* ===== WEB / RESEARCH FLAGS ===== */
 
-    // Tightened: ONLY treat as "wants fresh news" when the last
-    // user message genuinely looks like a "headlines" type request.
     const wantsFresh =
       /\b(what('?s)?\s+the\s+news(\s+today)?|news\s+today|today('?s)?\s+news|latest\s+news|top\s+news|top\s+stories(\s+today)?|breaking\s+news|news\s+headlines|headlines\s+today)\b/i.test(
         lastUser.toLowerCase()
@@ -815,7 +810,6 @@ export async function POST(req: NextRequest) {
             `- Always include direct links (URLs) in your answer when you reference a specific story.\n` +
             `- If bias scores (bias_intent_score, pi_score) are mentioned, treat them as authoritative and DO NOT rescore.`;
         } else {
-          // No digest stories available
           newsSection =
             `\n\nNEWS CONTEXT (Neutral News Digest)\n` +
             `• (no pre-scored neutral news stories are currently available in the digest)\n\nGuidance:\n` +
