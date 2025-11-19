@@ -40,6 +40,14 @@ const DEFAULT_NEWS_WINDOW_DAYS = 1;
 // Rough cap of how many Tavily "global" items we allow
 const GLOBAL_TOP_MAX = 15;
 
+/* ========= STRICTNESS CONFIG ========= */
+/**
+ * This should mirror MIN_ARTICLE_CHARS in lib/news/extract.ts.
+ * We enforce it here as a second guard so only real articles
+ * flow into truth_facts.
+ */
+const MIN_ARTICLE_CHARS = 400;
+
 /* ========= TYPES ========= */
 
 export type NewsSource = {
@@ -167,47 +175,6 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-/**
- * Treat obvious navigation / index URLs as non-stories.
- * This is what was poisoning NYT (and a few others) with fake "neutral" scores.
- */
-function isNavigationalUrl(url: string): boolean {
-  if (!url) return true;
-  try {
-    const u = new URL(url);
-    const path = (u.pathname || '/').toLowerCase();
-
-    // Root home page
-    if (path === '/' || path === '') return true;
-
-    // Typical index / nav / "latest" pages
-    if (
-      path.includes('/latest') ||
-      path.includes('/breaking') ||
-      path.includes('/live') ||
-      path.includes('/section/') ||
-      path.includes('/sections/') ||
-      path.includes('/category/') ||
-      path.includes('/topics/') ||
-      path.includes('/topic/') ||
-      path.includes('/issue/')
-    ) {
-      return true;
-    }
-
-    // Date-index pages that have no slug after YYYY/MM/DD/
-    // e.g. /2025/11/18/ vs /2025/11/18/epstein-files-trump-congress-live-updates/
-    const dateIndexMatch = path.match(/\/\d{4}\/\d{2}\/\d{2}\/?$/);
-    if (dateIndexMatch && !path.replace(dateIndexMatch[0], '').trim()) {
-      return true;
-    }
-
-    return false;
-  } catch {
-    return false;
-  }
-}
-
 /* ========= TRUTH_FACTS ROW BUILDER ========= */
 
 function buildTruthFactRow(opts: {
@@ -289,7 +256,7 @@ function pickSourcesForRefresh(
  * - Uses Tavily (webSearch) per-domain with simple domain-focused queries
  * - Applies per-domain caps and dedupe
  * - Extracts article text via the shared extractArticle() helper
- * - Inserts into truth_facts
+ * - Inserts into truth_facts (STRICT: only real articles)
  */
 export async function runNewsFetchRefresh(opts?: {
   workspaceId?: string;
@@ -446,7 +413,7 @@ export async function runNewsFetchRefresh(opts?: {
   // Truncate total to storiesTarget if we overshot
   const finalCandidates = deduped.slice(0, storiesTarget);
 
-  // 5) Extract article text via extractArticle + insert into truth_facts
+  // 5) Extract article text via extractArticle + insert into truth_facts (STRICT)
   let totalInserted = 0;
   let totalFailed = 0;
 
@@ -462,13 +429,6 @@ export async function runNewsFetchRefresh(opts?: {
     };
     domainStats[domain] = stat;
 
-    // (A) Hard-block navigational / index URLs before we even try to extract
-    if (isNavigationalUrl(url)) {
-      totalFailed++;
-      stat.failed++;
-      continue;
-    }
-
     try {
       const extracted = await extractArticle({
         url,
@@ -476,20 +436,16 @@ export async function runNewsFetchRefresh(opts?: {
         tavilyTitle: title,
       });
 
-      if (!extracted.success || !extracted.clean_text?.trim()) {
+      const clean = (extracted.clean_text || '').trim();
+
+      // STRICT MODE: only accept real articles
+      if (!extracted.success || clean.length < MIN_ARTICLE_CHARS) {
         totalFailed++;
         stat.failed++;
         continue;
       }
 
-      // (B) Block ultra-thin content (homepage shells, nav pages, etc.)
-      if (extracted.clean_text.trim().length < 500) {
-        totalFailed++;
-        stat.failed++;
-        continue;
-      }
-
-      const fullText = extracted.clean_text;
+      const fullText = clean;
 
       const factRow = buildTruthFactRow({
         workspaceId,
@@ -541,3 +497,4 @@ export async function runNewsFetchRefresh(opts?: {
     errors,
   };
 }
+
