@@ -29,6 +29,9 @@ import { logNewsBatchToLedgers } from '@/lib/news-ledger';
 /* ========= ATTACHMENTS HELPER ========= */
 import { buildAttachmentSection, type Attachment } from '@/lib/chat/attachments';
 
+/* ========= SOLACE PERSONA ========= */
+import { buildSolaceSystemPrompt } from '@/lib/solace/persona';
+
 /* ========= MODEL / TIMEOUT ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -249,6 +252,9 @@ function hasEmotionalOrMoralCue(text: string) {
   return hit(emo) || hit(moral);
 }
 
+/**
+ * Unified system prompt builder, now delegating to the personality pack.
+ */
 function buildSystemPrompt(
   filters: string[],
   userWantsSecular: boolean,
@@ -273,11 +279,10 @@ function buildSystemPrompt(
 - When a WEB CONTEXT, RESEARCH CONTEXT, or NEWS CONTEXT section is present, rely on it for post-cutoff events.
 - Never state that the current year is earlier than ${year}; that would be drift.`;
 
-  const parts: string[] = [];
-  parts.push(
-    `IDENTITY
-You are ${SOLACE_NAME} — a steady, principled presence. Listen first, then offer concise counsel with moral clarity.`,
-    HOUSE_RULES,
+  const extrasParts: string[] = [];
+
+  extrasParts.push(
+    `IDENTITY / HOUSE RULES\n${HOUSE_RULES}`,
     TIME_ANCHOR,
     GUIDELINE_NEUTRAL,
     RESPONSE_FORMAT,
@@ -287,10 +292,23 @@ You are ${SOLACE_NAME} — a steady, principled presence. Listen first, then off
       userAskedForSecular: userWantsSecular,
     })
   );
-  if (wantsAbrahamic && !userWantsSecular) parts.push(GUIDELINE_ABRAHAMIC);
-  if (wantsGuidance) parts.push(GUIDELINE_GUIDANCE);
 
-  return { prompt: parts.join('\n\n'), wantsAbrahamic, forceFirstTurnSeeding };
+  if (wantsAbrahamic && !userWantsSecular) extrasParts.push(GUIDELINE_ABRAHAMIC);
+  if (wantsGuidance) extrasParts.push(GUIDELINE_GUIDANCE);
+
+  const extras = extrasParts.join('\n\n');
+
+  // Choose the Solace domain lens
+  const domain =
+    wantsAbrahamic && !userWantsSecular
+      ? 'ministry'
+      : wantsGuidance
+      ? 'guidance'
+      : 'core';
+
+  const prompt = buildSolaceSystemPrompt(domain, extras);
+
+  return { prompt, wantsAbrahamic, forceFirstTurnSeeding };
 }
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
@@ -931,3 +949,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
