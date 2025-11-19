@@ -167,19 +167,49 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-function todayIso(): string {
-  // YYYY-MM-DD
-  return new Date().toISOString().slice(0, 10);
+/**
+ * Treat obvious navigation / index URLs as non-stories.
+ * This is what was poisoning NYT (and a few others) with fake "neutral" scores.
+ */
+function isNavigationalUrl(url: string): boolean {
+  if (!url) return true;
+  try {
+    const u = new URL(url);
+    const path = (u.pathname || '/').toLowerCase();
+
+    // Root home page
+    if (path === '/' || path === '') return true;
+
+    // Typical index / nav / "latest" pages
+    if (
+      path.includes('/latest') ||
+      path.includes('/breaking') ||
+      path.includes('/live') ||
+      path.includes('/section/') ||
+      path.includes('/sections/') ||
+      path.includes('/category/') ||
+      path.includes('/topics/') ||
+      path.includes('/topic/') ||
+      path.includes('/issue/')
+    ) {
+      return true;
+    }
+
+    // Date-index pages that have no slug after YYYY/MM/DD/
+    // e.g. /2025/11/18/ vs /2025/11/18/epstein-files-trump-congress-live-updates/
+    const dateIndexMatch = path.match(/\/\d{4}\/\d{2}\/\d{2}\/?$/);
+    if (dateIndexMatch && !path.replace(dateIndexMatch[0], '').trim()) {
+      return true;
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 /* ========= TRUTH_FACTS ROW BUILDER ========= */
 
-/**
- * Build a row that matches your current truth_facts schema.
- * We deliberately populate:
- *   story_id, story_title, story_url, outlet, day_iso, story_date
- * plus the newer MCAI fields (workspace_id, user_key, scientific_domain, etc.).
- */
 function buildTruthFactRow(opts: {
   workspaceId: string;
   userKey: string;
@@ -204,27 +234,11 @@ function buildTruthFactRow(opts: {
   ];
 
   const now = nowIso();
-  const dayIso = todayIso();
-
-  const outlet = extractDomainFromUrl(url);
 
   return {
-    // --- "classic" truth_facts columns ---
-    story_id: url, // stable id for this story (string)
-    story_title: title,
-    story_url: url,
-    outlet,
-    day_iso: dayIso,
-    story_date: dayIso, // Postgres will cast 'YYYY-MM-DD'::text → date
-
-    // neutral_summary & friends are intentionally left null here;
-    // score-worker fills them in when it writes to news_neutrality_ledger.
-
-    // --- MCAI / workspace metadata ---
     workspace_id: workspaceId,
     user_key: userKey,
     user_id: null,
-
     query,
     summary,
 
@@ -236,7 +250,7 @@ function buildTruthFactRow(opts: {
     category: 'news_story',
     status: 'snapshot',
 
-    sources: JSON.stringify(sourcesPayload), // jsonb column
+    sources: JSON.stringify(sourcesPayload),
     raw_url: url,
     raw_snapshot: clampLong(fullText || tavilyContent || '', 4000),
 
@@ -399,7 +413,9 @@ export async function runNewsFetchRefresh(opts?: {
     }
   } catch (err: any) {
     console.error('[news/fetcher] global top webSearch failed', err);
-    errors.push(`global webSearch failed: ${err?.message || String(err)}`);
+    errors.push(
+      `global webSearch failed: ${err?.message || String(err)}`
+    );
   }
 
   // 4) Deduplicate by URL and enforce per-domain caps
@@ -446,6 +462,13 @@ export async function runNewsFetchRefresh(opts?: {
     };
     domainStats[domain] = stat;
 
+    // (A) Hard-block navigational / index URLs before we even try to extract
+    if (isNavigationalUrl(url)) {
+      totalFailed++;
+      stat.failed++;
+      continue;
+    }
+
     try {
       const extracted = await extractArticle({
         url,
@@ -459,16 +482,21 @@ export async function runNewsFetchRefresh(opts?: {
         continue;
       }
 
+      // (B) Block ultra-thin content (homepage shells, nav pages, etc.)
+      if (extracted.clean_text.trim().length < 500) {
+        totalFailed++;
+        stat.failed++;
+        continue;
+      }
+
       const fullText = extracted.clean_text;
-      const effectiveTitle = extracted.title || title;
-      const effectiveUrl = extracted.url || url;
 
       const factRow = buildTruthFactRow({
         workspaceId,
         userKey,
         query,
-        title: effectiveTitle,
-        url: effectiveUrl,
+        title: extracted.title || title,
+        url: extracted.url || url,
         fullText,
         tavilyContent: content,
       });
@@ -479,15 +507,10 @@ export async function runNewsFetchRefresh(opts?: {
 
       if (insertErr) {
         console.error('[news/fetcher] truth_facts insert error', {
-          url: effectiveUrl,
+          url,
           message: (insertErr as PostgrestError).message,
           code: (insertErr as PostgrestError).code,
         });
-        errors.push(
-          `truth_facts insert error for ${effectiveUrl}: ${
-            (insertErr as PostgrestError).code || ''
-          } ${(insertErr as PostgrestError).message}`
-        );
         totalFailed++;
         stat.failed++;
         continue;
@@ -497,9 +520,6 @@ export async function runNewsFetchRefresh(opts?: {
       stat.inserted++;
     } catch (err: any) {
       console.error('[news/fetcher] unexpected error inserting', url, err);
-      errors.push(
-        `unexpected insert error for ${url}: ${err?.message || String(err)}`
-      );
       totalFailed++;
       stat.failed++;
     }
