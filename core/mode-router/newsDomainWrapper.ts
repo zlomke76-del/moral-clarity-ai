@@ -22,7 +22,6 @@ import {
   type RouteResult,
 } from ".";
 
-
 /* ========= DOMAIN TYPE ========= */
 
 export type Domain = "general" | "solace-news";
@@ -71,14 +70,6 @@ const GLOBAL_NEWS_WORKSPACE_ID = "global_news";
 
 /* ========= CORE HELPERS ========= */
 
-/**
- * Decide domain from explicit override.
- *
- * Priority:
- *  - "solace-news-anchor" or "news" → "solace-news"
- *  - "general" or "solace-general"  → "general"
- *  - "neutral"|"guidance"|"ministry" → still "general" (inner mode hint)
- */
 function domainFromExplicitMode(
   explicitMode?: string | null,
 ): Domain | null {
@@ -88,7 +79,6 @@ function domainFromExplicitMode(
   if (m === "solace-news-anchor" || m === "news") return "solace-news";
   if (m === "general" || m === "solace-general") return "general";
 
-  // Neutral/Guidance/Ministry hints are still "general" domain
   if (m === "neutral" || m === "guidance" || m === "ministry") {
     return "general";
   }
@@ -96,20 +86,12 @@ function domainFromExplicitMode(
   return null;
 }
 
-/**
- * Decide domain from workspace ID.
- * Any chat occurring in the global_news workspace is treated as Solace News.
- */
 function domainFromWorkspace(workspaceId?: string | null): Domain | null {
   if (!workspaceId) return null;
   if (workspaceId === GLOBAL_NEWS_WORKSPACE_ID) return "solace-news";
   return null;
 }
 
-/**
- * Decide domain from request path.
- * Adjust the prefixes to match your app routing (examples below).
- */
 function domainFromPath(path?: string | null): Domain | null {
   if (!path) return null;
   const p = path.toLowerCase();
@@ -127,21 +109,6 @@ function domainFromPath(path?: string | null): Domain | null {
 
 /* ========= PUBLIC API ========= */
 
-/**
- * Decide the domain + inner mode for a given request, using a clear priority:
- *
- *  1) explicitMode (if provided)
- *  2) workspaceId
- *  3) path
- *  4) fallback to "general"
- *
- * For "general":
- *    - Uses routeMode(text, context) to choose Neutral/Guidance/Ministry.
- *
- * For "solace-news":
- *    - Bypasses routeMode() and locks inner mode to "Neutral".
- *    - Sets requiresNeutralNewsDigest = true.
- */
 export function decideNewsDomain(
   input: NewsRoutingInput,
 ): NewsDomainDecision {
@@ -196,7 +163,7 @@ export function decideNewsDomain(
     };
   }
 
-  // 4) Fallback: general Solace (use existing heuristic router)
+  // 4) Fallback: general Solace
   const routeResult = routeMode(text, context);
   return {
     domain: "general",
