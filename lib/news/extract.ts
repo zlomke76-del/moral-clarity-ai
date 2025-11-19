@@ -1,6 +1,8 @@
-/* lib/news/extract.ts */
+/* ========= lib/news/extract.ts (STRICT MODE) ========= */
 
-const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN || '';
+const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN || "";
+
+/* ========= TYPES ========= */
 
 export type ExtractedArticle = {
   success: boolean;
@@ -12,98 +14,150 @@ export type ExtractedArticle = {
   full_text: string;
   clean_text: string;
   raw_html?: string;
-  source: 'browserless' | 'tavily' | 'fetch' | 'none';
+  source: "browserless" | "tavily" | "fetch" | "none";
   error?: string;
 };
 
-function deriveOutlet(url: string): string {
-  if (!url) return 'unknown';
+/* ========= CONSTANTS ========= */
+
+const MIN_ARTICLE_CHARS = 400; // strict-mode threshold (Option C)
+
+/* ========= DOMAIN NORMALIZATION ========= */
+
+const CANONICAL_DOMAIN_MAP: Record<string, string> = {
+  // Groups of variants unified to base domains
+  "www.nbcnews.com": "nbcnews.com",
+  "nbcnews.com": "nbcnews.com",
+  "nbc.com": "nbcnews.com",
+
+  "www.nytimes.com": "nytimes.com",
+  "nytimes.com": "nytimes.com",
+
+  "www.motherjones.com": "motherjones.com",
+  "motherjones.com": "motherjones.com",
+
+  "www.foxnews.com": "foxnews.com",
+  "foxnews.com": "foxnews.com",
+
+  "www.apnews.com": "apnews.com",
+  "apnews.com": "apnews.com",
+
+  "www.bloomberg.com": "bloomberg.com",
+  "bloomberg.com": "bloomberg.com",
+
+  // Add more as needed…
+};
+
+function normalizeDomain(url: string): string {
   try {
     const u = new URL(url);
     const host = u.hostname.toLowerCase();
-    return host.startsWith('www.') ? host.slice(4) : host;
+    const noWww = host.replace(/^www\./, "");
+    return CANONICAL_DOMAIN_MAP[host] || CANONICAL_DOMAIN_MAP[noWww] || noWww;
   } catch {
-    return 'unknown';
+    return "unknown";
   }
 }
 
+/* ========= HTML UTILITIES ========= */
+
 function stripHtml(html: string): string {
-  if (!html) return '';
-  // Remove scripts/styles
-  let text = html.replace(/<script[\s\S]*?<\/script>/gi, '');
-  text = text.replace(/<style[\s\S]*?<\/style>/gi, '');
-  // Strip tags
-  text = text.replace(/<\/?[^>]+>/g, ' ');
-  // Decode a few common entities
+  if (!html) return "";
+  let text = html.replace(/<script[\s\S]*?<\/script>/gi, "");
+  text = text.replace(/<style[\s\S]*?<\/style>/gi, "");
+  text = text.replace(/<\/?[^>]+>/g, " ");
   text = text
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, "'")
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>');
-  // Collapse whitespace
-  return text.replace(/\s+/g, ' ').trim();
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
+
+  return text.replace(/\s+/g, " ").trim();
 }
 
-function clamp(text: string, max = 20_000): string {
-  if (!text) return '';
-  if (text.length <= max) return text;
-  return text.slice(0, max) + '\n[...truncated...]';
+function clamp(text: string, max = 20000): string {
+  if (!text) return "";
+  return text.length <= max ? text : text.slice(0, max) + "\n[...truncated...]";
 }
 
-/**
- * Try Browserless (Balanced Extraction – JS enabled, no heavy assets),
- * then fall back to:
- *  - Tavily content (if provided)
- *  - Direct fetch + HTML strip
- */
+/* ========= ARTICLE DETECTION ========= */
+
+function looksLikeArticle(text: string): boolean {
+  if (!text) return false;
+  if (text.length < MIN_ARTICLE_CHARS) return false; // strict threshold
+  if (text.split(" ").length < 80) return false; // sanity: avoid short blurbs
+  return true;
+}
+
+/* ========= JSON-LD EXTRACTION ========= */
+
+function extractJsonLd(html: string) {
+  try {
+    const match = html.match(
+      /<script type=["']application\/ld\+json["']>([\s\S]*?)<\/script>/i
+    );
+    if (!match) return null;
+
+    const data = JSON.parse(match[1].trim());
+    if (!data) return null;
+
+    if (Array.isArray(data)) {
+      return data.find((obj) => obj["@type"]?.includes("Article")) || null;
+    }
+
+    return data["@type"]?.includes("Article") ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+/* ========= MAIN EXTRACTOR ========= */
+
 export async function extractArticle(opts: {
   url: string;
   tavilyContent?: string;
   tavilyTitle?: string;
 }): Promise<ExtractedArticle> {
   const { url, tavilyContent, tavilyTitle } = opts;
-  const outlet = deriveOutlet(url);
+  const outlet = normalizeDomain(url);
 
-  // If URL missing, just fall back to Tavily or "none".
   if (!url) {
-    const text = (tavilyContent || '').trim();
+    const text = (tavilyContent || "").trim();
     return {
-      success: !!text,
+      success: looksLikeArticle(text),
       url,
       outlet,
-      title: tavilyTitle || '',
+      title: tavilyTitle || "",
       authors: [],
       published_at: null,
       full_text: clamp(text),
       clean_text: text,
-      source: text ? 'tavily' : 'none',
-      error: text ? undefined : 'No URL or content provided.',
+      source: text ? "tavily" : "none",
+      error: text ? undefined : "No URL and no content provided",
     };
   }
 
-  // 1) Browserless (preferred)
+  /* ========= 1) Browserless Attempt ========= */
+
   if (BROWSERLESS_TOKEN) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000); // 8s
+      const timeout = setTimeout(() => controller.abort(), 8000);
 
       const resp = await fetch(
         `https://chrome.browserless.io/content?token=${encodeURIComponent(
           BROWSERLESS_TOKEN
         )}`,
         {
-          method: 'POST',
+          method: "POST",
           signal: controller.signal,
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             url,
             options: {
-              // Balanced mode: JS enabled, but we avoid extras
-              addHeaders: { 'User-Agent': 'MoralClarity-NewsBot/1.0' },
+              addHeaders: { "User-Agent": "MoralClarity-NewsBot/1.0" },
             },
           }),
         }
@@ -112,67 +166,70 @@ export async function extractArticle(opts: {
       clearTimeout(timeout);
 
       if (resp.ok) {
-        const raw = await resp.text();
-
-        // Browserless may return JSON or HTML depending on config.
-        let html = raw;
+        let raw = await resp.text();
         try {
-          const maybeJson = JSON.parse(raw);
-          if (typeof maybeJson?.data === 'string') {
-            html = maybeJson.data;
-          }
-        } catch {
-          // not JSON: assume HTML string
-        }
+          const tryJson = JSON.parse(raw);
+          if (typeof tryJson?.data === "string") raw = tryJson.data;
+        } catch {}
 
-        const text = stripHtml(html);
-        if (text && text.length > 200) {
+        const clean = stripHtml(raw);
+        const jsonLd = extractJsonLd(raw);
+
+        if (looksLikeArticle(clean)) {
           return {
             success: true,
             url,
             outlet,
-            title: tavilyTitle || '',
-            authors: [],
-            published_at: null,
-            full_text: clamp(text),
-            clean_text: text,
-            raw_html: clamp(html, 30_000),
-            source: 'browserless',
+            title: jsonLd?.headline || tavilyTitle || "",
+            authors: jsonLd?.author?.name
+              ? [jsonLd.author.name]
+              : Array.isArray(jsonLd?.author)
+              ? jsonLd.author.map((a: any) => a.name).filter(Boolean)
+              : [],
+            published_at: jsonLd?.datePublished || null,
+            full_text: clamp(clean),
+            clean_text: clean,
+            raw_html: clamp(raw, 30000),
+            source: "browserless",
           };
         }
       }
     } catch (err) {
-      console.error('[news/extract] Browserless extraction failed', { url, err });
+      console.error("[extract] Browserless failure", { url, err });
     }
   }
 
-  // 2) Tavily content fallback
-  if (tavilyContent && tavilyContent.trim().length > 0) {
+  /* ========= 2) Tavily Fallback ========= */
+
+  if (tavilyContent && tavilyContent.trim()) {
     const clean = tavilyContent.trim();
-    return {
-      success: true,
-      url,
-      outlet,
-      title: tavilyTitle || '',
-      authors: [],
-      published_at: null,
-      full_text: clamp(clean),
-      clean_text: clean,
-      source: 'tavily',
-    };
+    if (looksLikeArticle(clean)) {
+      return {
+        success: true,
+        url,
+        outlet,
+        title: tavilyTitle || "",
+        authors: [],
+        published_at: null,
+        full_text: clamp(clean),
+        clean_text: clean,
+        source: "tavily",
+      };
+    }
   }
 
-  // 3) Direct fetch + HTML strip fallback
+  /* ========= 3) Direct Fetch Fallback ========= */
+
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000); // 8s
+    const timeout = setTimeout(() => controller.abort(), 8000);
 
     const resp = await fetch(url, {
-      method: 'GET',
+      method: "GET",
       signal: controller.signal,
       headers: {
-        'User-Agent': 'MoralClarity-NewsBot/1.0',
-        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        "User-Agent": "MoralClarity-NewsBot/1.0",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       },
     });
 
@@ -180,36 +237,46 @@ export async function extractArticle(opts: {
 
     if (resp.ok) {
       const html = await resp.text();
-      const text = stripHtml(html);
-      return {
-        success: !!text,
-        url,
-        outlet,
-        title: tavilyTitle || '',
-        authors: [],
-        published_at: null,
-        full_text: clamp(text),
-        clean_text: text,
-        raw_html: clamp(html, 30_000),
-        source: 'fetch',
-      };
+      const clean = stripHtml(html);
+      const jsonLd = extractJsonLd(html);
+
+      if (looksLikeArticle(clean)) {
+        return {
+          success: true,
+          url,
+          outlet,
+          title: jsonLd?.headline || tavilyTitle || "",
+          authors: jsonLd?.author?.name
+            ? [jsonLd.author.name]
+            : Array.isArray(jsonLd?.author)
+            ? jsonLd.author.map((a: any) => a.name).filter(Boolean)
+            : [],
+          published_at: jsonLd?.datePublished || null,
+          full_text: clamp(clean),
+          clean_text: clean,
+          raw_html: clamp(html, 30000),
+          source: "fetch",
+        };
+      }
     }
   } catch (err) {
-    console.error('[news/extract] fetch fallback failed', { url, err });
+    console.error("[extract] fetch fallback failed", { url, err });
   }
 
-  // 4) Final fallback: nothing
+  /* ========= 4) Hard Fail ========= */
+
   return {
     success: false,
     url,
     outlet,
-    title: tavilyTitle || '',
+    title: tavilyTitle || "",
     authors: [],
     published_at: null,
-    full_text: '',
-    clean_text: '',
-    source: 'none',
-    error: 'All extraction methods failed.',
+    full_text: "",
+    clean_text: "",
+    source: "none",
+    error: "Strict mode: No valid article text found",
   };
 }
+
 
