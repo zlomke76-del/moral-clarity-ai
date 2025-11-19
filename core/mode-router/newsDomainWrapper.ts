@@ -20,7 +20,8 @@ import {
   type Mode,
   type RouteContext,
   type RouteResult,
-} from "./routeMode";
+} from ".";
+
 
 /* ========= DOMAIN TYPE ========= */
 
