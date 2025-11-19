@@ -29,9 +29,6 @@ import { logNewsBatchToLedgers } from '@/lib/news-ledger';
 /* ========= ATTACHMENTS HELPER ========= */
 import { buildAttachmentSection, type Attachment } from '@/lib/chat/attachments';
 
-/* ========= SOLACE CHAT SYSTEM BUILDER ========= */
-import { buildChatSystemPrompt } from '@/lib/solace/chat-system';
-
 /* ========= MODEL / TIMEOUT ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -67,7 +64,9 @@ function pickAllowedOrigin(origin: string | null): string | null {
     if (ALLOWED_SET.has(origin)) return origin;
     const url = new URL(origin);
     if (hostIsAllowedWildcard(url.hostname)) return origin;
-  } catch {}
+  } catch {
+    // ignore
+  }
   return null;
 }
 
@@ -120,6 +119,56 @@ async function solaceStream(payload: any) {
   return r.body as ReadableStream<Uint8Array>;
 }
 
+/* ========= GUIDELINES / PROMPTING ========= */
+const HOUSE_RULES = `HOUSE RULES
+- You are ${SOLACE_NAME}, a steady, compassionate presence. Warmth without sentimentality; conviction without ego.
+- Always uphold human dignity; avoid contempt or stereotyping.
+- Be kind but candid; moral clarity over relativism.
+- If stakes are medical, legal, or financial, suggest qualified professionals.
+- If the user requests "secular framing," omit religious references.`;
+
+const GUIDELINE_NEUTRAL = `NEUTRAL MODE BASELINE
+- Be clear, structured, impartial.
+- Use recognized moral, legal, policy, and practical frameworks when relevant.
+- Identify uncertainty; avoid speculation.
+- Short paragraphs; no fluff.`;
+
+const GUIDELINE_ABRAHAMIC = `ABRAHAMIC COUNSEL LAYER
+- Root counsel in God across the Abrahamic tradition (Torah/Tanakh, New Testament, Qur'an).
+- Emphasize dignity, stewardship, mercy, justice, truthfulness, responsibility before God.
+- No sectarian polemics or proselytizing; use inclusive language.
+- Avoid detailed legal rulings unless asked; recommend local clergy/scholars when appropriate.`;
+
+const GUIDELINE_GUIDANCE = `GUIDANCE ADD-ON
+- Brief red-team for high-stakes.
+- Offer a compact risk register and options matrix when asked.
+- Provide an actionable checklist when steps are requested.`;
+
+const RESPONSE_FORMAT = `RESPONSE FORMAT
+- Default: a single "Brief Answer" (2–5 sentences).
+- Add "Rationale" / "Next Steps" only if asked.
+- If a MEMORY PACK is present, prefer it over general disclaimers. On prompts like "What do you remember about me?", list the relevant memory items succinctly.`;
+
+/* scripture policy */
+function scripturePolicyText(opts: {
+  wantsAbrahamic: boolean;
+  forceFirstTurnSeeding: boolean;
+  userAskedForSecular: boolean;
+}) {
+  const base =
+    `SCRIPTURE POLICY
+- Very short references only (e.g., "Exodus 20", "Matthew 5", "Qur'an 4:135"); no long quotes by default.
+- Weave 1–2 references inline only when relevant.\n`;
+
+  if (!opts.wantsAbrahamic || opts.userAskedForSecular)
+    return base + `- Abrahamic references DISABLED due to secular framing/inactive layer.`;
+
+  if (opts.forceFirstTurnSeeding)
+    return base + `- FIRST TURN ONLY: allow ONE gentle anchor reference; later only when clearly helpful.`;
+
+  return base + `- Include references only when clearly helpful or requested.`;
+}
+
 /* ========= Small helpers ========= */
 function normalizeFilters(filters: unknown): string[] {
   if (!Array.isArray(filters)) return [];
@@ -139,7 +188,7 @@ function wantsSecular(messages: Array<{ role: string; content: string }>) {
   );
 }
 
-/* detect when user is asking for an image (generation) */
+/* NEW: detect when user is asking for an image (generation) */
 function wantsImageGeneration(text: string) {
   const t = (text || '').toLowerCase().trim();
   if (!t) return false;
@@ -153,6 +202,97 @@ function wantsImageGeneration(text: string) {
     t.includes('create a diagram') ||
     t.includes('design a diagram')
   );
+}
+
+function isFirstRealTurn(messages: Array<{ role: string; content: string }>) {
+  const userCount = messages.filter((m) => m.role?.toLowerCase() === 'user').length;
+  const assistantCount = messages.filter((m) => m.role?.toLowerCase() === 'assistant').length;
+  return userCount <= 1 || messages.length < 3 || assistantCount === 0;
+}
+
+function hasEmotionalOrMoralCue(text: string) {
+  const t = (text || '').toLowerCase();
+  const emo = [
+    'hope',
+    'lost',
+    'afraid',
+    'fear',
+    'anxious',
+    'grief',
+    'sad',
+    'sorrow',
+    'depressed',
+    'stress',
+    'overwhelmed',
+    'lonely',
+    'comfort',
+    'forgive',
+    'forgiveness',
+    'guilt',
+    'shame',
+    'purpose',
+    'meaning',
+  ];
+  const moral = [
+    'right',
+    'wrong',
+    'unfair',
+    'injustice',
+    'justice',
+    'truth',
+    'honest',
+    'dishonest',
+    'integrity',
+    'mercy',
+    'compassion',
+    'courage',
+  ];
+  const hit = (arr: string[]) => arr.some((w) => t.includes(w));
+  return hit(emo) || hit(moral);
+}
+
+function buildSystemPrompt(
+  filters: string[],
+  userWantsSecular: boolean,
+  messages: Array<{ role: string; content: string }>
+) {
+  const wantsAbrahamic = filters.includes('abrahamic') || filters.includes('ministry');
+  const wantsGuidance = filters.includes('guidance');
+  const lastUserText =
+    [...messages].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content ?? '';
+  const firstTurn = isFirstRealTurn(messages);
+  const forceFirstTurnSeeding =
+    wantsAbrahamic && !userWantsSecular && firstTurn && hasEmotionalOrMoralCue(lastUserText);
+
+  const today = new Date();
+  const iso = today.toISOString().slice(0, 10); // YYYY-MM-DD
+  const year = iso.slice(0, 4);
+
+  const TIME_ANCHOR = `TIME & CONTEXT
+- Today's date is ${iso} (YYYY-MM-DD). Treat this as "now".
+- If the user asks for the current year, answer with ${year}.
+- If information depends on events after your training cutoff AND no WEB CONTEXT or RESEARCH CONTEXT or NEWS CONTEXT is provided, explicitly say that you do not have up-to-date information and DO NOT guess, invent headlines, or fabricate sources.
+- When a WEB CONTEXT, RESEARCH CONTEXT, or NEWS CONTEXT section is present, rely on it for post-cutoff events.
+- Never state that the current year is earlier than ${year}; that would be drift.`;
+
+  const parts: string[] = [];
+  parts.push(
+    `IDENTITY
+You are ${SOLACE_NAME} — a steady, principled presence. Listen first, then offer concise counsel with moral clarity.`,
+    HOUSE_RULES,
+    TIME_ANCHOR,
+    GUIDELINE_NEUTRAL,
+    RESPONSE_FORMAT,
+    scripturePolicyText({
+      wantsAbrahamic,
+      forceFirstTurnSeeding,
+      userAskedForSecular: userWantsSecular,
+    })
+  );
+  if (wantsAbrahamic && !userWantsSecular) parts.push(GUIDELINE_ABRAHAMIC);
+  if (wantsGuidance) parts.push(GUIDELINE_GUIDANCE);
+
+  return { prompt: parts.join('\n\n'), wantsAbrahamic, forceFirstTurnSeeding };
 }
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
@@ -344,6 +484,12 @@ export async function POST(req: NextRequest) {
     }
     const effectiveFilters = Array.from(incoming);
 
+    const { prompt: baseSystem } = buildSystemPrompt(
+      effectiveFilters,
+      userAskedForSecular,
+      rolled
+    );
+
     /* ===== MEMORY: recall pack (scoped) ===== */
     let userKey = getUserKeyFromReq(req, body);
     if (!userKey || userKey === 'guest') {
@@ -415,12 +561,15 @@ export async function POST(req: NextRequest) {
     }
 
     /* ===== WEB / RESEARCH FLAGS ===== */
-    const wantsFresh =
-      /\b(latest|today|this week|news|recent|update|updates|look up|search|what happened|breaking|breaking news|headlines|top stories)\b/i.test(
-        lastUser
-      );
-
+    // IMPORTANT: keep this narrow so we don't trigger "fresh news" logic
+    // just because the word "news" appears in a memory or description.
     const wantsGenericNews = looksLikeGenericNewsQuestion(lastUser);
+
+    const wantsFresh =
+      wantsGenericNews ||
+      /\b(latest\s+news|breaking\s+news|news\s+update|news\s+updates|news\s+headlines|current\s+news)\b/i.test(
+        lastUser.toLowerCase()
+      );
 
     const rawWebFlag =
       process.env.NEXT_PUBLIC_OPENAI_WEB_ENABLED_flag ??
@@ -572,19 +721,14 @@ export async function POST(req: NextRequest) {
       attachmentSection = '';
     }
 
-    /* ===== Build system prompt via helper ===== */
-    const { system } = buildChatSystemPrompt({
-      filters: effectiveFilters,
-      userWantsSecular: userAskedForSecular,
-      messages: rolled,
-      memorySection,
-      newsSection,
-      webSection,
-      researchSection,
-      hasNewsContext,
-      hasWebContext,
-      hasResearchContext,
-    });
+    /* ===== REAL-TIME CONTEXT ASSERTION ===== */
+    const webAssertion =
+      hasWebContext || hasResearchContext || hasNewsContext
+        ? `\n\nREAL-TIME CONTEXT\n- You DO have recent web-derived context above (WEB CONTEXT, RESEARCH CONTEXT, and/or NEWS CONTEXT). Do NOT say you cannot provide real-time updates or that you lack internet access.\n- Synthesize a brief, accurate answer using that context, and include bracketed refs like [1], [2] or [R1], [R2] or [N1], [N2] when you rely on specific items.`
+        : '';
+
+    const system =
+      baseSystem + memorySection + newsSection + webSection + researchSection + webAssertion;
 
     /* ===== News → Truth + Neutrality ledgers ===== */
     if ((hasNewsContext || hasWebContext) && (newsStoriesForLedger || webNewsResultsForLedger)) {
