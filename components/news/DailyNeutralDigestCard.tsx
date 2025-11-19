@@ -1,9 +1,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 
 /* ========= TYPES ========= */
 
@@ -117,20 +114,18 @@ export function DailyNeutralDigestCard({ item }: DailyNeutralDigestCardProps) {
     (omissions_detected && omissions_detected.length > 0);
 
   return (
-    <Card className="w-full border border-slate-200/70 bg-slate-950/95 text-slate-50 shadow-lg shadow-slate-900/50">
-      <CardHeader className="space-y-2 border-b border-slate-800 pb-3">
+    <div className="w-full rounded-xl border border-slate-800 bg-slate-950/95 text-slate-50 shadow-lg shadow-slate-900/50">
+      {/* Header */}
+      <div className="space-y-2 border-b border-slate-800 px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-300">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge className="bg-slate-800 text-slate-100 hover:bg-slate-800/90">
+            <span className="inline-flex items-center rounded-full bg-slate-800 px-2.5 py-1 text-[11px] font-semibold text-slate-100">
               {outlet}
-            </Badge>
+            </span>
             {category && (
-              <Badge
-                variant="outline"
-                className="border-slate-700 bg-slate-900/60 text-slate-200"
-              >
+              <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/60 px-2.5 py-1 text-[11px] text-slate-200">
                 {category}
-              </Badge>
+              </span>
             )}
           </div>
           <div className="flex flex-col items-end gap-0.5 text-right">
@@ -140,14 +135,12 @@ export function DailyNeutralDigestCard({ item }: DailyNeutralDigestCardProps) {
               </span>
             )}
             {outlet_domain && (
-              <span className="text-[11px] text-slate-500">
-                {outlet_domain}
-              </span>
+              <span className="text-[11px] text-slate-500">{outlet_domain}</span>
             )}
           </div>
         </div>
 
-        <CardTitle className="text-base font-semibold leading-snug text-slate-50">
+        <h2 className="text-base font-semibold leading-snug text-slate-50">
           <a
             href={story_url}
             target="_blank"
@@ -156,10 +149,11 @@ export function DailyNeutralDigestCard({ item }: DailyNeutralDigestCardProps) {
           >
             {story_title}
           </a>
-        </CardTitle>
-      </CardHeader>
+        </h2>
+      </div>
 
-      <CardContent className="space-y-4 pt-4">
+      {/* Body */}
+      <div className="space-y-4 px-4 py-4">
         {/* Neutral Summary */}
         <section className="space-y-1">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -197,16 +191,13 @@ export function DailyNeutralDigestCard({ item }: DailyNeutralDigestCardProps) {
           </h3>
 
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <Badge className="bg-emerald-800/90 text-emerald-50 hover:bg-emerald-800/90">
+            <span className="inline-flex items-center rounded-full bg-emerald-800/90 px-2.5 py-1 text-[11px] font-semibold text-emerald-50">
               Intent: {bias_intent_score.toFixed(2)} ·{" "}
               {scoreLabel(bias_intent_score)}
-            </Badge>
-            <Badge
-              variant="outline"
-              className="border-slate-700 bg-slate-900/60 text-slate-100"
-            >
+            </span>
+            <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/60 px-2.5 py-1 text-[11px] text-slate-100">
               Predictability Index: {pi_score.toFixed(2)}
-            </Badge>
+            </span>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -238,10 +229,9 @@ export function DailyNeutralDigestCard({ item }: DailyNeutralDigestCardProps) {
                   : "View analysis details from Solace"}
               </span>
               <span
-                className={cn(
-                  "transition-transform",
-                  expanded ? "rotate-90" : "rotate-0"
-                )}
+                className={
+                  "transition-transform " + (expanded ? "rotate-90" : "rotate-0")
+                }
               >
                 ▸
               </span>
@@ -279,11 +269,11 @@ export function DailyNeutralDigestCard({ item }: DailyNeutralDigestCardProps) {
                     <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                       Timeline
                     </h4>
-                      <ul className="list-disc space-y-1 pl-4">
-                        {timeline.map((t, i) => (
-                          <li key={i}>{t}</li>
-                        ))}
-                      </ul>
+                    <ul className="list-disc space-y-1 pl-4">
+                      {timeline.map((t, i) => (
+                        <li key={i}>{t}</li>
+                      ))}
+                    </ul>
                   </div>
                 )}
 
@@ -292,11 +282,11 @@ export function DailyNeutralDigestCard({ item }: DailyNeutralDigestCardProps) {
                     <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                       Disputed Claims
                     </h4>
-                      <ul className="list-disc space-y-1 pl-4">
-                        {disputed_claims.map((c, i) => (
-                          <li key={i}>{c}</li>
-                        ))}
-                      </ul>
+                    <ul className="list-disc space-y-1 pl-4">
+                      {disputed_claims.map((c, i) => (
+                        <li key={i}>{c}</li>
+                      ))}
+                    </ul>
                   </div>
                 )}
 
@@ -305,18 +295,19 @@ export function DailyNeutralDigestCard({ item }: DailyNeutralDigestCardProps) {
                     <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                       Omissions Detected
                     </h4>
-                      <ul className="list-disc space-y-1 pl-4">
-                        {omissions_detected.map((o, i) => (
-                          <li key={i}>{o}</li>
-                        ))}
-                      </ul>
+                    <ul className="list-disc space-y-1 pl-4">
+                      {omissions_detected.map((o, i) => (
+                        <li key={i}>{o}</li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </div>
             )}
           </section>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
+
