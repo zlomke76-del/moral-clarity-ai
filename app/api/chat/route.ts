@@ -4,9 +4,9 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import type OpenAI from 'openai';
+import { createClient } from '@supabase/supabase-js';
 
 import { getOpenAI } from '@/lib/openai';
-import { webSearch } from '@/lib/search';
 import { runDeepResearch } from '@/lib/research';
 import { logResearchSnapshot } from '@/lib/truth-ledger';
 import { routeMode } from '@/core/mode-router';
@@ -19,9 +19,6 @@ import { MCA_WORKSPACE_ID, MCA_USER_KEY } from '@/lib/mca-config';
 
 /* ========= IMAGE GENERATION ========= */
 import { generateImage } from '@/lib/chat/image-gen';
-
-/* ========= NEWS CACHE ========= */
-import { getNewsForDate } from '@/lib/news-cache';
 
 /* ========= NEWS → LEDGERS ========= */
 import { logNewsBatchToLedgers } from '@/lib/news-ledger';
@@ -321,7 +318,6 @@ function wantsDeepResearch(text: string): boolean {
   const t = (text || '').toLowerCase();
   if (!t.trim()) return false;
 
-  // Explicit trigger phrases
   const keywords = [
     'deep research',
     'full research',
@@ -342,7 +338,6 @@ function wantsDeepResearch(text: string): boolean {
   ];
   if (keywords.some((k) => t.includes(k))) return true;
 
-  // If there's a URL, we *may* want deep research.
   if (URL_REGEX.test(text)) return true;
 
   return false;
@@ -385,6 +380,164 @@ function detectExplicitRemember(text: string) {
     if (m?.[1]) return m[1].trim();
   }
   return null;
+}
+
+/* ========= SUPABASE for Neutral News Digest ========= */
+
+const SUPABASE_URL = process.env.SUPABASE_URL as string | undefined;
+const SUPABASE_SERVICE_ROLE_KEY = process.env
+  .SUPABASE_SERVICE_ROLE_KEY as string | undefined;
+
+function createAdminClient() {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('[chat] Supabase admin credentials not configured');
+  }
+  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false },
+  });
+}
+
+type SolaceDigestRow = {
+  bucket: number;
+  id: string;
+  workspace_id: string | null;
+  user_key: string | null;
+  user_id: string | null;
+  truth_fact_id: string | null;
+  story_id: string | null;
+  story_title: string | null;
+  story_url: string | null;
+  outlet: string | null;
+  category: string | null;
+  raw_story: string | null;
+  neutral_summary: string | null;
+  key_facts: string[] | null;
+  context_background: string | null;
+  stakeholder_positions: string | null;
+  timeline: string | null;
+  disputed_claims: string | null;
+  omissions_detected: string | null;
+  bias_language_score: number | null;
+  bias_source_score: number | null;
+  bias_framing_score: number | null;
+  bias_context_score: number | null;
+  bias_intent_score: number | null;
+  pi_score: number | null;
+  notes: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  outlet_group: string | null;
+};
+
+type SolaceDigestStory = {
+  id: string;
+  truth_fact_id: string | null;
+  story_id: string | null;
+  title: string;
+  url: string | null;
+  outlet: string | null;
+  outlet_group: string | null;
+  category: string | null;
+
+  neutral_summary: string;
+  key_facts: string[];
+  context_background: string;
+  stakeholder_positions: string;
+  timeline: string;
+  disputed_claims: string;
+  omissions_detected: string;
+
+  bias_language_score: number | null;
+  bias_source_score: number | null;
+  bias_framing_score: number | null;
+  bias_context_score: number | null;
+  bias_intent_score: number | null;
+  pi_score: number | null;
+
+  notes: string | null;
+  created_at: string | null;
+};
+
+function coerceArray(value: unknown): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.map((v) => String(v ?? '')).filter((v) => v.length > 0);
+  }
+  try {
+    const parsed = JSON.parse(String(value));
+    if (Array.isArray(parsed)) {
+      return parsed.map((v) => String(v ?? '')).filter((v) => v.length > 0);
+    }
+  } catch {
+    // ignore
+  }
+  return [String(value)];
+}
+
+function coerceNumber(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n)) return null;
+  return n;
+}
+
+function mapRowToStory(row: SolaceDigestRow): SolaceDigestStory {
+  return {
+    id: row.id,
+    truth_fact_id: row.truth_fact_id,
+    story_id: row.story_id,
+    title: (row.story_title || '').trim() || '(untitled story)',
+    url: row.story_url,
+    outlet: row.outlet,
+    outlet_group: row.outlet_group,
+    category: row.category,
+
+    neutral_summary: (row.neutral_summary || '').trim(),
+    key_facts: coerceArray(row.key_facts),
+    context_background: (row.context_background || '').trim(),
+    stakeholder_positions: (row.stakeholder_positions || '').trim(),
+    timeline: (row.timeline || '').trim(),
+    disputed_claims: (row.disputed_claims || '').trim(),
+    omissions_detected: (row.omissions_detected || '').trim(),
+
+    bias_language_score: coerceNumber(row.bias_language_score),
+    bias_source_score: coerceNumber(row.bias_source_score),
+    bias_framing_score: coerceNumber(row.bias_framing_score),
+    bias_context_score: coerceNumber(row.bias_context_score),
+    bias_intent_score: coerceNumber(row.bias_intent_score),
+    pi_score: coerceNumber(row.pi_score),
+
+    notes: row.notes,
+    created_at: row.created_at,
+  };
+}
+
+async function getSolaceNewsDigest(): Promise<SolaceDigestStory[]> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    console.warn('[chat] Neutral News Digest requested but Supabase admin env is missing.');
+    return [];
+  }
+
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase
+      .from('vw_solace_news_digest')
+      .select('*')
+      .order('bucket', { ascending: true })
+      .order('bias_intent_score', { ascending: true })
+      .order('pi_score', { ascending: false });
+
+    if (error) {
+      console.error('[chat] vw_solace_news_digest error', error);
+      return [];
+    }
+
+    const rows = (data || []) as SolaceDigestRow[];
+    return rows.map(mapRowToStory);
+  } catch (err) {
+    console.error('[chat] getSolaceNewsDigest fatal', err);
+    return [];
+  }
 }
 
 /* ========= HEALTHCHECK ========= */
@@ -561,15 +714,15 @@ export async function POST(req: NextRequest) {
     }
 
     /* ===== WEB / RESEARCH FLAGS ===== */
-    // IMPORTANT: keep this narrow so we don't trigger "fresh news" logic
-    // just because the word "news" appears in a memory or description.
-    const wantsGenericNews = looksLikeGenericNewsQuestion(lastUser);
 
+    // Tightened: ONLY treat as "wants fresh news" when the last
+    // user message genuinely looks like a "headlines" type request.
     const wantsFresh =
-      wantsGenericNews ||
-      /\b(latest\s+news|breaking\s+news|news\s+update|news\s+updates|news\s+headlines|current\s+news)\b/i.test(
+      /\b(what('?s)?\s+the\s+news(\s+today)?|news\s+today|today('?s)?\s+news|latest\s+news|top\s+news|top\s+stories(\s+today)?|breaking\s+news|news\s+headlines|headlines\s+today)\b/i.test(
         lastUser.toLowerCase()
       );
+
+    const wantsGenericNews = looksLikeGenericNewsQuestion(lastUser);
 
     const rawWebFlag =
       process.env.NEXT_PUBLIC_OPENAI_WEB_ENABLED_flag ??
@@ -581,7 +734,7 @@ export async function POST(req: NextRequest) {
         ? rawWebFlag.length > 0 && !/^0|false$/i.test(rawWebFlag)
         : !!rawWebFlag;
 
-    /* ===== DEEP RESEARCH ===== */
+    /* ===== DEEP RESEARCH (Tavily lives only here now) ===== */
     let researchSection = '';
     let hasResearchContext = false;
 
@@ -626,88 +779,53 @@ export async function POST(req: NextRequest) {
       console.error('runDeepResearch failed:', err);
     }
 
-    /* ===== NEWS CACHE (generic "today's news" questions) ===== */
+    /* ===== NEWS CONTEXT: Neutral News Digest ONLY ===== */
     let newsSection = '';
     let hasNewsContext = false;
     let newsStoriesForLedger: any[] | null = null;
 
-    if (wantsGenericNews) {
+    if (wantsGenericNews || wantsFresh) {
       try {
-        const todayIso = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-        const stories = await getNewsForDate(todayIso, 5);
+        const stories = await getSolaceNewsDigest();
         newsStoriesForLedger = stories;
 
         if (stories.length) {
           hasNewsContext = true;
 
           const lines = stories
+            .slice(0, 8)
             .map((s, i) => {
-              const label = `N${i + 1}`;
-              const src = s.source ? ` — ${s.source}` : '';
+              const label = `D${i + 1}`;
+              const srcParts = [];
+              if (s.outlet) srcParts.push(s.outlet);
+              if (s.outlet_group) srcParts.push(`group: ${s.outlet_group}`);
+              const src = srcParts.length ? ` — ${srcParts.join(' / ')}` : '';
               const url = s.url ? ` — ${s.url}` : '';
-              const summary = s.summary || '';
+              const summary = s.neutral_summary || '';
               return `• [${label}] ${s.title}${src}${url}\n${summary}`;
             })
             .join('\n\n');
 
           newsSection =
-            `\n\nNEWS CONTEXT (daily cached pull)\n${lines}\n\nGuidance:\n` +
+            `\n\nNEWS CONTEXT (Neutral News Digest)\n` +
+            `${lines}\n\nGuidance:\n` +
             `- Use ONLY this NEWS CONTEXT when answering generic questions like "what is the news today" or "top news today".\n` +
             `- Do NOT invent additional headlines or stories beyond what appears here.\n` +
-            `- By default, return 2–4 stories. For each story, write a neutral, fact-focused summary of about 200–300 words, unless the user explicitly asks for a shorter or longer format.\n` +
-            `- Always include direct links (URLs) in your answer when you reference a specific story.`;
+            `- By default, return 2–4 stories. For each story, write a neutral, fact-focused summary, unless the user explicitly asks for a different length.\n` +
+            `- Always include direct links (URLs) in your answer when you reference a specific story.\n` +
+            `- If bias scores (bias_intent_score, pi_score) are mentioned, treat them as authoritative and DO NOT rescore.`;
+        } else {
+          // No digest stories available
+          newsSection =
+            `\n\nNEWS CONTEXT (Neutral News Digest)\n` +
+            `• (no pre-scored neutral news stories are currently available in the digest)\n\nGuidance:\n` +
+            `- Clearly tell the user that the Neutral News Digest is empty for now.\n` +
+            `- Do NOT fetch or invent external headlines.\n` +
+            `- Invite the user to try again later when new stories are processed.`;
         }
       } catch (err) {
-        console.error('[news-cache] getNewsForDate failed', err);
+        console.error('[chat] Neutral News Digest block failed', err);
       }
-    }
-
-    /* ===== WEB SEARCH (fresh news context) ===== */
-    let webSection = '';
-    let hasWebContext = false;
-    let webAttempted = false;
-    let webNewsResultsForLedger: any[] | null = null;
-
-    try {
-      if (wantsFresh && webFlag && !hasNewsContext) {
-        webAttempted = true;
-        const results = await webSearch(lastUser, { news: true, max: 5 });
-        webNewsResultsForLedger = results;
-
-        if (Array.isArray(results) && results.length) {
-          const lines = results
-            .map((r: any, i: number) => `• [${i + 1}] ${r.title} — ${r.url}`)
-            .join('\n');
-          webSection =
-            `\n\nWEB CONTEXT (recent news search)\n${lines}\n\nGuidance:\n` +
-            `- Use these results to answer directly.\n` +
-            `- Prefer the most recent and reputable sources.\n` +
-            `- If uncertain, say what is unknown.\n` +
-            `- When referencing items, use bracket numbers like [1], [2].\n` +
-            `- Unless the user explicitly asks only for brief headlines, for each main story you choose to describe, write a neutral, fact-focused summary of about 200–300 words.`;
-          hasWebContext = true;
-        }
-      }
-    } catch (err) {
-      console.error('webSearch failed:', err);
-    }
-
-    /* ===== No news context + failed web ===== */
-    if (wantsFresh && webFlag && webAttempted && !hasWebContext && !hasNewsContext) {
-      const text =
-        'I tried to look up fresh news for you, but I do not currently have reliable real-time access to news data. ' +
-        'Please check a trusted news source (for example, AP, Reuters, or your preferred outlet) for today’s latest headlines.';
-      return NextResponse.json(
-        {
-          text,
-          model: 'no-web-fallback',
-          identity: SOLACE_NAME,
-          mode: route.mode,
-          confidence: route.confidence,
-          filters: effectiveFilters,
-        },
-        { headers: corsHeaders(echoOrigin) }
-      );
     }
 
     /* ===== Attachments digest (delegated) ===== */
@@ -723,23 +841,22 @@ export async function POST(req: NextRequest) {
 
     /* ===== REAL-TIME CONTEXT ASSERTION ===== */
     const webAssertion =
-      hasWebContext || hasResearchContext || hasNewsContext
-        ? `\n\nREAL-TIME CONTEXT\n- You DO have recent web-derived context above (WEB CONTEXT, RESEARCH CONTEXT, and/or NEWS CONTEXT). Do NOT say you cannot provide real-time updates or that you lack internet access.\n- Synthesize a brief, accurate answer using that context, and include bracketed refs like [1], [2] or [R1], [R2] or [N1], [N2] when you rely on specific items.`
+      hasResearchContext || hasNewsContext
+        ? `\n\nREAL-TIME CONTEXT\n- You DO have recent or web-derived context above (NEWS CONTEXT and/or RESEARCH CONTEXT). Do NOT say you cannot provide real-time updates or that you lack internet access.\n- Synthesize a brief, accurate answer using that context, and include bracketed refs like [D1], [D2] or [R1], [R2] when you rely on specific items.`
         : '';
 
     const system =
-      baseSystem + memorySection + newsSection + webSection + researchSection + webAssertion;
+      baseSystem + memorySection + newsSection + researchSection + webAssertion;
 
-    /* ===== News → Truth + Neutrality ledgers ===== */
-    if ((hasNewsContext || hasWebContext) && (newsStoriesForLedger || webNewsResultsForLedger)) {
+    /* ===== News → Truth + Neutrality ledgers (digest-based) ===== */
+    if (hasNewsContext && newsStoriesForLedger && newsStoriesForLedger.length) {
       try {
         await logNewsBatchToLedgers({
           workspaceId,
           userKey,
           userId,
           query: lastUser,
-          cacheStories: newsStoriesForLedger || undefined,
-          webStories: webNewsResultsForLedger || undefined,
+          cacheStories: newsStoriesForLedger,
         });
       } catch (err) {
         console.error('[news-ledger] batch logging failed (non-fatal)', err);
