@@ -80,19 +80,14 @@ export async function getNewsForDate(
     const supabase = createAdminClient();
 
     // story_date is a DATE column; isoDate is expected as YYYY-MM-DD
-    let query = supabase
+    const { data, error } = await supabase
       .from('news_cache')
-      .select<
-        '*',
-        NewsCacheRow
-      >(
+      .select(
         'id, source, outlet, story_title, story_url, story_text, story_date, published_at, fetched_at, title, url'
       )
       .eq('story_date', isoDate)
       .order('published_at', { ascending: false })
       .limit(limit);
-
-    const { data, error } = await query;
 
     if (error) {
       const e = error as PostgrestError;
