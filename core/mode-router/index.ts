@@ -136,9 +136,9 @@ export function routeMode(text: string, context: RouteContext = {}): RouteResult
   if (["spiritual"].includes(sentiment))                scores.Ministry += 1.0 * w.Ministry.sentiment;
 
   // depth (0..2)
-  scores.Neutral  += (2 - depth)/2 * w.Neutral.depth;        // shallow favors Neutral
+  scores.Neutral  += (2 - depth)/2 * w.Neutral.depth;             // shallow favors Neutral
   scores.Guidance += (1 - Math.abs(depth - 1)) * w.Guidance.depth; // mid favors Guidance
-  scores.Ministry += (depth/2) * w.Ministry.depth;            // deep favors Ministry
+  scores.Ministry += (depth/2) * w.Ministry.depth;                 // deep favors Ministry
 
   // lexical boosts
   if (markers.some(m => LEX_FAITH.has(m)))    scores.Ministry += 0.8;
