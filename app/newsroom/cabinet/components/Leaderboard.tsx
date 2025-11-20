@@ -90,3 +90,43 @@ export default function Leaderboard({
               <OutletCard
                 key={o.canonical_outlet}
                 outlet={o}
+                rank={golden.length + idx + 1}
+                selected={selectedCanonical === o.canonical_outlet}
+                badge="neutral"
+                onSelect={() => onSelect(o.canonical_outlet)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* High Bias Watchlist */}
+      {watchlist.length > 0 && (
+        <section className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-300">
+              High Bias Watchlist
+            </h3>
+            <p className="text-[10px] text-neutral-500">
+              Outlets where language, framing, or context show stronger bias
+              patterns.
+            </p>
+          </div>
+          <div className="space-y-2">
+            {watchlist.map((o, idx) => (
+              <OutletCard
+                key={o.canonical_outlet}
+                outlet={o}
+                rank={outlets.length - watchlist.length + idx + 1}
+                selected={selectedCanonical === o.canonical_outlet}
+                badge="watchlist"
+                onSelect={() => onSelect(o.canonical_outlet)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
