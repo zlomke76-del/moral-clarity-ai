@@ -5,7 +5,7 @@ import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
 import type { OutletOverview, OutletTrendPoint } from "../types";
 import TrendChart from "./TrendChart";
-import { OutletLogo } from "./OutletLogo";
+import OutletLogo from "./OutletLogo";
 
 type Props = {
   open: boolean;
