@@ -1,97 +1,56 @@
-// app/newsroom/cabinet/components/OutletLogo.tsx
 "use client";
 
 type Props = {
-  name?: string;           // <- make optional so callers can pass only domain
   domain: string;
-  size?: "sm" | "md" | "lg";
+  name?: string;
+  className?: string;
 };
 
-export function OutletLogo({ name, domain, size = "lg" }: Props) {
-  const label = name && name.trim().length > 0 ? name : domain;
-  const initials = getInitials(label);
-  const palette = pickColor(domain || label);
-  const { wrapper, text } = sizeClasses(size);
+/**
+ * Lightweight outlet logo renderer.
+ *
+ * - Attempts to load `https://logo.clearbit.com/<domain>`
+ * - Falls back to an initial in a neutral pill if the logo fails.
+ */
+export default function OutletLogo({ domain, name, className }: Props) {
+  const initial =
+    (name || domain || "?")
+      .trim()
+      .replace(/^https?:\/\//, "")
+      .replace(/^www\./, "")
+      .charAt(0)
+      .toUpperCase() || "?";
+
+  const src = `https://logo.clearbit.com/${domain}`;
 
   return (
     <div
       className={[
-        "flex items-center justify-center rounded-md",
-        "bg-gradient-to-br",
-        palette.bg,
-        wrapper,
+        "flex items-center justify-center overflow-hidden rounded-md bg-neutral-900",
+        className ?? "h-8 w-8",
       ].join(" ")}
     >
-      <span className={["font-semibold tracking-tight", text].join(" ")}>
-        {initials}
-      </span>
+      {/* Using plain img here keeps it simple and avoids Next/Image config in app dir */}
+      <img
+        src={src}
+        alt={name || domain}
+        className="h-full w-full object-contain"
+        onError={(e) => {
+          // If logo fails, show initial instead
+          const target = e.currentTarget;
+          target.style.display = "none";
+          const parent = target.parentElement;
+          if (parent) {
+            parent.textContent = initial;
+            parent.classList.add(
+              "text-xs",
+              "font-semibold",
+              "text-neutral-100"
+            );
+          }
+        }}
+      />
     </div>
   );
 }
 
-function getInitials(label: string): string {
-  if (!label) return "?";
-
-  // If it looks like a domain, try to pull the main segment (e.g., "npr", "bbc", "nytimes")
-  const domainMatch = label.match(/([a-z0-9-]+)\./i);
-  if (domainMatch && domainMatch[1]) {
-    const part = domainMatch[1];
-    if (part.length <= 3) return part.toUpperCase();
-    return part
-      .split(/[^a-z0-9]+/i)
-      .filter(Boolean)
-      .map((p) => p[0])
-      .join("")
-      .slice(0, 3)
-      .toUpperCase();
-  }
-
-  // Otherwise, take initials from words
-  const words = label
-    .replace(/https?:\/\//, "")
-    .split(/[^a-z0-9]+/i)
-    .filter(Boolean);
-  if (!words.length) return label.slice(0, 3).toUpperCase();
-
-  return words
-    .slice(0, 3)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
-}
-
-function pickColor(seed: string) {
-  const hash = simpleHash(seed);
-  const paletteIndex = hash % COLOR_PALETTES.length;
-  return COLOR_PALETTES[paletteIndex];
-}
-
-function simpleHash(str: string): number {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) {
-    h = (h << 5) - h + str.charCodeAt(i);
-    h |= 0;
-  }
-  return Math.abs(h);
-}
-
-const COLOR_PALETTES = [
-  { bg: "from-emerald-700/80 via-emerald-500/80 to-emerald-400/80" },
-  { bg: "from-sky-700/80 via-sky-500/80 to-sky-400/80" },
-  { bg: "from-indigo-700/80 via-indigo-500/80 to-indigo-400/80" },
-  { bg: "from-amber-700/80 via-amber-500/80 to-amber-400/80" },
-  { bg: "from-rose-700/80 via-rose-500/80 to-rose-400/80" },
-  { bg: "from-slate-700/80 via-slate-500/80 to-slate-400/80" },
-];
-
-function sizeClasses(size: "sm" | "md" | "lg") {
-  switch (size) {
-    case "sm":
-      return { wrapper: "h-8 w-8", text: "text-xs" };
-    case "md":
-      return { wrapper: "h-10 w-10", text: "text-sm" };
-    case "lg":
-    default:
-      return { wrapper: "h-14 w-14", text: "text-base" };
-  }
-}
