@@ -1,14 +1,11 @@
-// app/newsroom/cabinet/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import type {
-  OutletOverview,
-  OutletTrendPoint,
-  OutletDetailData,
-} from "./types";
+import type { OutletOverview, OutletTrendPoint } from "./types";
 import Leaderboard from "./components/Leaderboard";
-import OutletDetailModal from "./components/OutletDetailModal";
+import OutletDetailDialog, {
+  type OutletDetailData,
+} from "./components/OutletDetailDialog";
 
 type OverviewResponse = {
   ok: boolean;
@@ -25,15 +22,16 @@ type TrendsResponse = {
 
 export default function NewsroomCabinetPage() {
   const [outlets, setOutlets] = useState<OutletOverview[]>([]);
-  const [selected, setSelected] = useState<OutletOverview | null>(null);
+  const [selectedCanonical, setSelectedCanonical] = useState<string | null>(
+    null
+  );
+  const [detailOpen, setDetailOpen] = useState(false);
   const [trends, setTrends] = useState<OutletTrendPoint[] | null>(null);
-
-  const [loading, setLoading] = useState(true);
   const [trendLoading, setTrendLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
 
-  /* ===== Load lifetime outlet overview ===== */
+  /* ========= Load overview once ========= */
   useEffect(() => {
     let alive = true;
 
@@ -49,12 +47,15 @@ export default function NewsroomCabinetPage() {
         if (!alive) return;
         if (!data.ok) throw new Error("Overview API returned not ok");
 
-        // Sort by bias intent (lower first)
+        // Lower bias intent = better (more neutral)
         const sorted = [...data.outlets].sort(
           (a, b) => a.avg_bias_intent - b.avg_bias_intent
         );
 
         setOutlets(sorted);
+        if (sorted[0]) {
+          setSelectedCanonical(sorted[0].canonical_outlet);
+        }
       } catch (err: any) {
         if (!alive) return;
         setError(err?.message || "Failed to load outlet overview.");
@@ -68,11 +69,16 @@ export default function NewsroomCabinetPage() {
     };
   }, []);
 
-  /* ===== Load daily trend when selection changes ===== */
+  const selected =
+    selectedCanonical &&
+    outlets.find((o) => o.canonical_outlet === selectedCanonical)
+      ?.?;
+
+  /* ========= Load trend whenever selected outlet changes ========= */
   useEffect(() => {
     let alive = true;
 
-    if (!selected) {
+    if (!selectedCanonical) {
       setTrends(null);
       return;
     }
@@ -83,7 +89,7 @@ export default function NewsroomCabinetPage() {
 
         const res = await fetch(
           `/api/news/outlets/trends?outlet=${encodeURIComponent(
-            selected.canonical_outlet
+            selectedCanonical
           )}`
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -95,6 +101,7 @@ export default function NewsroomCabinetPage() {
         setTrends(data.points);
       } catch {
         if (!alive) return;
+        // Soft-fail: hide trend if it can’t load
         setTrends(null);
       } finally {
         if (alive) setTrendLoading(false);
@@ -104,49 +111,22 @@ export default function NewsroomCabinetPage() {
     return () => {
       alive = false;
     };
-  }, [selected?.canonical_outlet]);
+  }, [selectedCanonical]);
 
-  /* ===== Map list data → modal detail data ===== */
-  function classifyTier(
-    outlet: OutletOverview,
-    all: OutletOverview[]
-  ): "golden" | "neutral" | "watchlist" {
-    const maxGolden = 3;
-    const maxWatchlist = 3;
-    const sorted = all;
-    const idx = sorted.findIndex(
-      (o) => o.canonical_outlet === outlet.canonical_outlet
-    );
-    if (idx === -1) return "neutral";
-
-    const goldenCut = Math.min(maxGolden, sorted.length);
-    const watchlistStart = Math.max(sorted.length - maxWatchlist, 0);
-
-    if (idx < goldenCut) return "golden";
-    if (idx >= watchlistStart) return "watchlist";
-    return "neutral";
+  function handleSelect(canonical: string) {
+    setSelectedCanonical(canonical);
+    setDetailOpen(true);
   }
 
-  function tierLabelFor(
-    tier: "golden" | "neutral" | "watchlist"
-  ): string {
-    if (tier === "golden") return "Golden Anchor";
-    if (tier === "watchlist") return "High Bias Watchlist";
-    return "Neutral Band";
-  }
-
-  function mapToDetail(
-    outlet: OutletOverview | null,
-    all: OutletOverview[]
-  ): OutletDetailData | null {
+  function mapToDetail(outlet: OutletOverview | null): OutletDetailData | null {
     if (!outlet) return null;
 
-    const tier = classifyTier(outlet, all);
+    const tierLabel = outlet.tier_label ?? ""; // optional from API
 
     return {
       canonical_outlet: outlet.canonical_outlet,
-      display_name: outlet.canonical_outlet,
-      tierLabel: tierLabelFor(tier),
+      display_name: outlet.display_name ?? outlet.canonical_outlet,
+      tierLabel: tierLabel,
       storiesAnalyzed: outlet.total_stories,
       lifetimePi: outlet.avg_pi,
       lifetimeBiasIntent: outlet.avg_bias_intent,
@@ -155,52 +135,42 @@ export default function NewsroomCabinetPage() {
       lifetimeFraming: outlet.bias_framing,
       lifetimeContext: outlet.bias_context,
       lastScoredAt: outlet.last_story_day ?? null,
-      // 90-day metrics can be wired later from a dedicated view
-      ninetyDayPi: null,
-      ninetyDayBiasIntent: null,
-      trendDirection: undefined,
     };
   }
 
-  function handleCardSelect(canon: string) {
-    const next = outlets.find((o) => o.canonical_outlet === canon) || null;
-    if (!next) return;
-    setSelected(next);
-    setModalOpen(true);
-  }
-
-  function handleCloseModal() {
-    setModalOpen(false);
-    setSelected(null);
-  }
-
-  /* ===== Render ===== */
   return (
     <>
       <div className="flex flex-col gap-8">
-        {/* Cabinet hero */}
+        {/* ===== Hero ===== */}
         <section className="space-y-3">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
-              Neutrality Cabinet
+              Moral Clarity Newsroom
             </h1>
             <p className="mt-1 text-xs uppercase tracking-[0.16em] text-neutral-400">
-              Story-level bias predictability index
+              Powered by Solace — neutral, transparent, ethical journalism
+              tools.
             </p>
           </div>
-          <p className="max-w-3xl text-sm text-neutral-300">
-            This cabinet tracks how predictable and neutral an outlet&apos;s{" "}
-            <span className="font-medium">story-level bias</span> is over
-            time. We don&apos;t score left vs right. We measure{" "}
-            <span className="font-medium">how the story is told</span> and
-            compress that into a{" "}
-            <span className="font-medium">Predictability Index (PI)</span>{" "}
-            from 0.0 to 1.0. Everyone is reaching toward{" "}
-            <span className="font-semibold text-emerald-300">1.00</span>.
-          </p>
+
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold tracking-tight">
+              Neutrality Cabinet
+            </h2>
+            <p className="text-sm text-neutral-300 max-w-3xl">
+              This cabinet tracks how predictable and neutral an outlet&apos;s{" "}
+              <span className="font-medium">story-level bias</span> is over
+              time. We don&apos;t score left vs right. We measure{" "}
+              <span className="font-medium">how the story is told</span> and
+              compress that into a{" "}
+              <span className="font-medium">Predictability Index (PI)</span>{" "}
+              from 0.0 to 1.0. Everyone is reaching toward{" "}
+              <span className="font-semibold text-emerald-300">1.00</span>.
+            </p>
+          </div>
         </section>
 
-        {/* Leaderboard + states */}
+        {/* ===== Data region ===== */}
         {loading ? (
           <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 text-sm text-neutral-400">
             Loading cabinet…
@@ -212,14 +182,14 @@ export default function NewsroomCabinetPage() {
         ) : !outlets.length ? (
           <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 text-sm text-neutral-400">
             No scored outlets yet. Once the Neutrality Ledger has graded
-            stories, the leaderboard will appear here.
+            stories, the leaderboard and trends will appear here.
           </div>
         ) : (
-          <section className="space-y-4">
+          <section className="space-y-2">
             <Leaderboard
               outlets={outlets}
-              selectedCanonical={selected?.canonical_outlet ?? null}
-              onSelect={handleCardSelect}
+              selectedCanonical={selectedCanonical}
+              onSelect={handleSelect}
             />
             <p className="text-[11px] text-neutral-500">
               Click any outlet card to open a detailed Predictability Index and
@@ -228,22 +198,22 @@ export default function NewsroomCabinetPage() {
           </section>
         )}
 
-        {/* Methodology section */}
-        <section className="space-y-4">
+        {/* ===== Methodology ===== */}
+        <section className="space-y-4 pt-4">
           <h2 className="text-sm font-semibold text-neutral-100">
             How the Neutrality Cabinet works
           </h2>
-          <div className="grid gap-4 text-xs text-neutral-300 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-3 text-xs text-neutral-300">
             {/* What we measure */}
             <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
-              <h3 className="mb-1 text-sm font-semibold">
+              <h3 className="text-sm font-semibold mb-1">
                 What we measure (bias)
               </h3>
               <p>
                 Each scored story gets four component scores (0–3). Lower is
                 more neutral:
               </p>
-              <ul className="mt-2 list-inside list-disc space-y-1">
+              <ul className="mt-2 space-y-1 list-disc list-inside">
                 <li>Language — emotional vs neutral wording</li>
                 <li>Source — diverse, credible vs narrow, shaky</li>
                 <li>Framing — balanced perspectives vs one-sided</li>
@@ -256,7 +226,7 @@ export default function NewsroomCabinetPage() {
 
             {/* Bias intent → PI */}
             <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
-              <h3 className="mb-1 text-sm font-semibold">
+              <h3 className="text-sm font-semibold mb-1">
                 Bias intent → Predictability Index
               </h3>
               <p>
@@ -264,9 +234,7 @@ export default function NewsroomCabinetPage() {
                 <span className="font-medium">bias intent score</span> (0–3),
                 then convert it into a PI:
               </p>
-              <p className="mt-2 font-mono text-xs">
-                PI = 1 − (bias_intent / 3)
-              </p>
+              <p className="mt-2 font-mono text-xs">PI = 1 − (bias_intent / 3)</p>
               <p className="mt-2 text-[11px] text-neutral-300">
                 Closer to 1.0 → more predictable, neutral storytelling. Closer
                 to 0.0 → strong, consistent bias in how stories are told.
@@ -275,18 +243,17 @@ export default function NewsroomCabinetPage() {
 
             {/* How to read the board */}
             <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
-              <h3 className="mb-1 text-sm font-semibold">
+              <h3 className="text-sm font-semibold mb-1">
                 How to read this board
               </h3>
-              <ul className="list-inside list-disc space-y-1">
+              <ul className="space-y-1 list-disc list-inside">
                 <li>
                   <span className="font-medium">Golden Anchors</span> are the
                   highest-scoring outlets by PI with solid story volume.
                 </li>
                 <li>
-                  The <span className="font-medium">Neutral Band</span>{" "}
-                  contains outlets with mixed bias patterns but reliable
-                  coverage.
+                  The <span className="font-medium">Neutral Band</span> contains
+                  outlets with mixed bias patterns but reliable coverage.
                 </li>
                 <li>
                   The{" "}
@@ -307,14 +274,19 @@ export default function NewsroomCabinetPage() {
         </section>
       </div>
 
-      {/* Full-screen detail modal */}
-      {modalOpen && (
-        <OutletDetailModal
-          outlet={mapToDetail(selected, outlets)}
-          trends={trendLoading ? null : trends}
-          onClose={handleCloseModal}
-        />
-      )}
+      {/* ===== Modal detail dialog ===== */}
+      <OutletDetailDialog
+        open={detailOpen && !!selected}
+        onOpenChange={(open) => {
+          setDetailOpen(open);
+          if (!open) {
+            // keep selection for highlight, just close modal
+            return;
+          }
+        }}
+        outlet={mapToDetail(selected ?? null)}
+        trends={trendLoading ? null : trends}
+      />
     </>
   );
 }
