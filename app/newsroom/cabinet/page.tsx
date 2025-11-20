@@ -104,19 +104,18 @@ export default function NewsroomCabinetPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      {/* ===== Compact hero ===== */}
+      {/* ===== Cabinet hero (no duplicate newsroom title) ===== */}
       <section className="space-y-3">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Moral Clarity Newsroom
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Neutrality Cabinet
           </h1>
           <p className="mt-1 text-xs uppercase tracking-[0.16em] text-neutral-400">
-            Neutrality Cabinet
+            Story-level bias predictability index
           </p>
         </div>
         <p className="text-sm text-neutral-300 max-w-3xl">
-          Powered by Solace — anchored, transparent journalism tools. This
-          cabinet tracks how predictable and neutral an outlet&apos;s{" "}
+          This cabinet tracks how predictable and neutral an outlet&apos;s{" "}
           <span className="font-medium">story-level bias</span> is over time.
           We don&apos;t score left vs right. We measure{" "}
           <span className="font-medium">how the story is told</span> and
