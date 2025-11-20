@@ -42,19 +42,7 @@ export default function OutletDetailModal({ open, onClose, outlet, trends }: Pro
     lifetimeFraming,
     lifetimeContext,
     lastScoredAt,
-    biasProfileLabel,
-    trend90Label,
-    trendDirection,
   } = outlet;
-
-  const trendIndicator =
-    trendDirection === "up"
-      ? "↑"
-      : trendDirection === "down"
-      ? "↓"
-      : trendDirection === "flat"
-      ? "→"
-      : null;
 
   return (
     <div
@@ -65,6 +53,7 @@ export default function OutletDetailModal({ open, onClose, outlet, trends }: Pro
         className="relative w-full max-w-3xl rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5 shadow-2xl shadow-black/80"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Close chip */}
         <button
           type="button"
           onClick={onClose}
@@ -107,22 +96,9 @@ export default function OutletDetailModal({ open, onClose, outlet, trends }: Pro
             Bias intent:{" "}
             <span className="font-mono text-neutral-100">
               {lifetimeBiasIntent.toFixed(2)} / 3.0
-            </span>{" "}
-            ({biasProfileLabel})
+            </span>
           </div>
           <div className="text-neutral-500">Last scored: {lastScoredAt}</div>
-
-          {trend90Label && (
-            <div className="text-[11px] text-neutral-500">
-              90-day trend:{" "}
-              {trendIndicator && (
-                <span className="mr-1 font-mono text-neutral-300">
-                  {trendIndicator}
-                </span>
-              )}
-              {trend90Label}
-            </div>
-          )}
         </div>
 
         {/* COMPONENT SCORES */}
