@@ -163,7 +163,7 @@ export default function NewsroomCabinetPage() {
         </section>
       )}
 
-      {/* ===== Methodology & explainer (moved below leaderboard) ===== */}
+      {/* ===== Methodology & explainer (below leaderboard) ===== */}
       <section className="space-y-4">
         <h2 className="text-sm font-semibold text-neutral-100">
           How the Neutrality Cabinet works
