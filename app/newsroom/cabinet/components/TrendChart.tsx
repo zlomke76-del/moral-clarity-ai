@@ -11,7 +11,7 @@ type Props = {
 export default function TrendChart({ points, loading }: Props) {
   if (loading) {
     return (
-      <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 text-xs text-neutral-400">
+      <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4 text-sm text-neutral-400">
         Loading trend…
       </div>
     );
@@ -19,63 +19,52 @@ export default function TrendChart({ points, loading }: Props) {
 
   if (!points || points.length === 0) {
     return (
-      <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 text-xs text-neutral-400">
-        No daily trend data yet for this outlet. Once we have multiple days of
-        scored stories, you&apos;ll see a PI timeline here.
+      <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4 text-sm text-neutral-400">
+        No daily trend data yet for this outlet.
       </div>
     );
   }
 
-  const piValues = points.map((p) => p.avg_pi_score);
-  const minPi = Math.min(...piValues);
-  const maxPi = Math.max(...piValues);
-  const range = Math.max(0.05, maxPi - minPi); // avoid flat zero
+  const maxPi = 1;
+  const minPi = 0;
 
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 space-y-3">
-      <header className="flex items-baseline justify-between">
+    <div className="rounded-xl border border-neutral-800 bg-neutral-950/80 p-4 space-y-3">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold">PI over time</h2>
-          <p className="text-[11px] text-neutral-400">
+          <h3 className="text-sm font-semibold text-neutral-100">
+            Predictability over time
+          </h3>
+          <p className="mt-1 text-xs text-neutral-400">
             Each bar is a day. Higher bars mean higher Predictability Index
-            (more neutral storytelling).
+            (closer to 1.0) for that day&apos;s scored stories.
           </p>
         </div>
-        <div className="text-[11px] text-neutral-400">
-          span:{" "}
-          <span className="font-mono">
-            {points[0].story_day} → {points[points.length - 1].story_day}
-          </span>
+        <div className="text-[11px] text-neutral-500">
+          {points.length} day{points.length === 1 ? "" : "s"}
         </div>
-      </header>
-
-      {/* Minimal sparkline-style bar chart */}
-      <div className="flex items-end gap-1 h-24 rounded-lg bg-neutral-900/60 px-2 py-2 overflow-x-auto">
-        {points.map((p) => {
-          const normalized = (p.avg_pi_score - minPi) / range;
-          const height = 20 + normalized * 70; // between 20% and 90% of container
-
-          return (
-            <div key={p.story_day} className="flex flex-col items-center gap-1">
-              <div
-                className="w-2 rounded-full bg-gradient-to-t from-emerald-500 to-blue-400"
-                style={{ height: `${height}%` }}
-                title={`${p.story_day}: PI ${p.avg_pi_score.toFixed(3)}`}
-              />
-            </div>
-          );
-        })}
       </div>
 
-      <div className="flex justify-between text-[10px] text-neutral-500">
-        <span>
-          Min PI:{" "}
-          <span className="font-mono">{Math.min(...piValues).toFixed(3)}</span>
-        </span>
-        <span>
-          Max PI:{" "}
-          <span className="font-mono">{Math.max(...piValues).toFixed(3)}</span>
-        </span>
+      <div className="mt-2 h-40 w-full overflow-x-auto">
+        <div className="flex h-full items-end gap-1">
+          {points.map((p) => {
+            const norm =
+              (p.avg_pi_score - minPi) / (maxPi - minPi || 1); // 0..1
+            const height = 20 + norm * 100; // px
+            return (
+              <div key={p.story_day} className="flex flex-col items-center">
+                <div
+                  className="w-3 rounded-t-md bg-emerald-400/80"
+                  style={{ height: `${height}px` }}
+                  title={`${p.story_day}: PI ${p.avg_pi_score.toFixed(3)}`}
+                />
+                <div className="mt-1 w-6 rotate-90 whitespace-nowrap text-[9px] text-neutral-500">
+                  {p.story_day.slice(5)}{/* show MM-DD */}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
