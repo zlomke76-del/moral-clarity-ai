@@ -1,3 +1,4 @@
+// app/newsroom/cabinet/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -91,17 +92,27 @@ export default function NewsroomCabinetPage() {
       selectedOutlet.outlet ||
       "Unknown outlet";
 
+    const lifetimePiPercent = selectedOutlet.avg_pi * 100;
+
+    const summary = `Lifetime PI ${lifetimePiPercent.toFixed(
+      1
+    )} based on ${selectedOutlet.total_stories} scored stor${
+      selectedOutlet.total_stories === 1 ? "y" : "ies"
+    }. 90-day trend view coming soon.`;
+
     return {
       canonical_outlet: selectedOutlet.canonical_outlet,
       display_name: displayName,
       storiesAnalyzed: selectedOutlet.total_stories,
-      lifetimePi: selectedOutlet.avg_pi * 100, // e.g. 0.827 → 82.7
+      lifetimePi: lifetimePiPercent, // e.g. 0.827 → 82.7
       lifetimeBiasIntent: selectedOutlet.avg_bias_intent,
       lifetimeLanguage: selectedOutlet.bias_language,
       lifetimeSource: selectedOutlet.bias_source,
       lifetimeFraming: selectedOutlet.bias_framing,
       lifetimeContext: selectedOutlet.bias_context,
       lastScoredAt: selectedOutlet.last_story_day ?? "Unknown",
+      // required by OutletDetailData; we’ll refine copy later when 90-day logic is wired
+      ninetyDaySummary: summary,
     };
   }, [selectedOutlet]);
 
