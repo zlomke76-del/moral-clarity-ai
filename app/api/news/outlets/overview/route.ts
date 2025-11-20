@@ -20,37 +20,34 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 
 /* ========= TYPES ========= */
 
-export type OutletOverview = {
+type OutletOverviewRow = {
   outlet: string;
-  canonical_outlet: string;
+  total_stories: number | null;
+  days_active: number | null;
+  avg_bias_intent_weighted: number | null;
+  avg_pi_weighted: number | null;
+  avg_bias_language_weighted: number | null;
+  avg_bias_source_weighted: number | null;
+  avg_bias_framing_weighted: number | null;
+  avg_bias_context_weighted: number | null;
+  last_story_day: string | null;
+};
+
+export type OutletOverview = {
+  outlet: string;            // canonical outlet (domain-ish label)
+  canonical_outlet: string;  // same as outlet, explicit for UI clarity
   total_stories: number;
-  avg_bias_intent: number;
-  latest_story_date: string | null;
-  first_seen: string | null;
-  last_seen: string | null;
+  days_active: number;
+  avg_bias_intent: number;   // 0–3   lower = less bias
+  avg_pi: number;            // 0–1   higher = more neutral
+  bias_language: number;
+  bias_source: number;
+  bias_framing: number;
+  bias_context: number;
+  last_story_day: string | null;
 };
 
 /* ========= HELPERS ========= */
-
-/** Normalize domains so edition.cnn.com → cnn.com, m.bbc.com → bbc.com */
-function canonicalize(outlet: string | null | undefined): string {
-  if (!outlet) return "unknown";
-
-  let o = outlet.trim().toLowerCase();
-
-  o = o.replace(/^www\./, "");
-  o = o.replace(/^m\./, "");
-  o = o.replace(/^edition\./, "");
-  o = o.replace(/^amp\./, "");
-
-  // Reduce multi-level domains to root domain (cnn.com)
-  const parts = o.split(".");
-  if (parts.length > 2) {
-    o = parts.slice(parts.length - 2).join(".");
-  }
-
-  return o;
-}
 
 function jsonError(message: string, status = 500, extra: any = {}) {
   return NextResponse.json({ ok: false, error: message, ...extra }, { status });
@@ -62,12 +59,15 @@ export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
 
-    // optional query params
-    const limit = Number(url.searchParams.get("limit")) || null;
-    const sort = url.searchParams.get("sort") || "avg_bias_intent"; 
+    const limitParam = url.searchParams.get("limit");
+    const sort = url.searchParams.get("sort") || "avg_bias_intent";
     const order = url.searchParams.get("order") === "desc" ? "desc" : "asc";
 
-    // Fetch raw rows from the materialized view or normal view
+    const limit =
+      limitParam && !Number.isNaN(Number(limitParam))
+        ? Math.max(1, Math.min(Number(limitParam), 100))
+        : null;
+
     const { data, error } = await supabase
       .from("outlet_bias_pi_overview")
       .select("*");
@@ -79,71 +79,34 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const rows = (data || []) as OutletOverview[];
+    const rows = (data || []) as OutletOverviewRow[];
 
-    /* === Consolidate variants of same outlet === */
+    const normalized: OutletOverview[] = rows.map((r) => {
+      const biasIntent = r.avg_bias_intent_weighted ?? 0;
+      const pi = r.avg_pi_weighted ?? (1 - biasIntent / 3);
 
-    const map = new Map<
-      string,
-      {
-        outlet: string;
-        canonical_outlet: string;
-        total_stories: number;
-        avg_bias_intent_accum: number;
-        count: number;
-        first_seen: string | null;
-        last_seen: string | null;
-      }
-    >();
+      return {
+        outlet: r.outlet,
+        canonical_outlet: r.outlet,
+        total_stories: r.total_stories ?? 0,
+        days_active: r.days_active ?? 0,
+        avg_bias_intent: Number(biasIntent.toFixed(3)),
+        avg_pi: Number(pi.toFixed(3)),
+        bias_language: Number((r.avg_bias_language_weighted ?? 0).toFixed(3)),
+        bias_source: Number((r.avg_bias_source_weighted ?? 0).toFixed(3)),
+        bias_framing: Number((r.avg_bias_framing_weighted ?? 0).toFixed(3)),
+        bias_context: Number((r.avg_bias_context_weighted ?? 0).toFixed(3)),
+        last_story_day: r.last_story_day,
+      };
+    });
 
-    for (const r of rows) {
-      const canonical = canonicalize(r.outlet);
-
-      if (!map.has(canonical)) {
-        map.set(canonical, {
-          outlet: r.outlet,
-          canonical_outlet: canonical,
-          total_stories: r.total_stories ?? 0,
-          avg_bias_intent_accum: r.avg_bias_intent ?? 0,
-          count: 1,
-          first_seen: r.first_seen ?? null,
-          last_seen: r.last_seen ?? null,
-        });
-      } else {
-        const e = map.get(canonical)!;
-        e.total_stories += r.total_stories ?? 0;
-        e.avg_bias_intent_accum += r.avg_bias_intent ?? 0;
-        e.count++;
-        // Update first_seen and last_seen
-        if (r.first_seen && (!e.first_seen || r.first_seen < e.first_seen)) {
-          e.first_seen = r.first_seen;
-        }
-        if (r.last_seen && (!e.last_seen || r.last_seen > e.last_seen)) {
-          e.last_seen = r.last_seen;
-        }
-      }
-    }
-
-    const consolidated = Array.from(map.values()).map((e) => ({
-      outlet: e.outlet,
-      canonical_outlet: e.canonical_outlet,
-      total_stories: e.total_stories,
-      avg_bias_intent: Number((e.avg_bias_intent_accum / e.count).toFixed(3)),
-      first_seen: e.first_seen,
-      last_seen: e.last_seen,
-      latest_story_date: e.last_seen,
-    }));
-
-    /* === Sorting === */
-
-    consolidated.sort((a, b) => {
+    normalized.sort((a, b) => {
       const A = (a as any)[sort] ?? 0;
       const B = (b as any)[sort] ?? 0;
       return order === "asc" ? A - B : B - A;
     });
 
-    /* === Limit (optional) === */
-    const final = limit ? consolidated.slice(0, limit) : consolidated;
+    const final = limit ? normalized.slice(0, limit) : normalized;
 
     return NextResponse.json({
       ok: true,
