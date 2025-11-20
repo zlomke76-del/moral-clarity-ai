@@ -1,7 +1,7 @@
+// app/newsroom/cabinet/components/OutletCard.tsx
 "use client";
 
 import type { OutletOverview } from "../types";
-import OutletLogo from "./OutletLogo";
 
 type Props = {
   outlet: OutletOverview;
@@ -18,18 +18,29 @@ export default function OutletCard({
   badge,
   onSelect,
 }: Props) {
-  const piPercent = (outlet.avg_pi * 100).toFixed(1); // e.g. 0.827 → "82.7"
+  const piDisplay = outlet.avg_pi.toFixed(3);
+  const biasDisplay = outlet.avg_bias_intent.toFixed(2);
 
-  const tierLabel =
+  // FIXED — no display_name on OutletOverview
+  const displayName = outlet.canonical_outlet;
+
+  const badgeLabel =
     badge === "golden"
       ? "Golden Anchor"
       : badge === "watchlist"
       ? "High Bias Watchlist"
       : badge === "neutral"
       ? "Neutral Band"
-      : "";
+      : null;
 
-  const displayName = outlet.display_name ?? outlet.canonical_outlet;
+  const badgeClass =
+    badge === "golden"
+      ? "bg-emerald-500/15 text-emerald-300 border-emerald-400/40"
+      : badge === "watchlist"
+      ? "bg-amber-500/10 text-amber-300 border-amber-400/40"
+      : badge === "neutral"
+      ? "bg-sky-500/10 text-sky-300 border-sky-400/40"
+      : "bg-neutral-800/60 text-neutral-300 border-neutral-700/60";
 
   return (
     <button
@@ -43,43 +54,65 @@ export default function OutletCard({
           : "border-neutral-800",
       ].join(" ")}
     >
-      <div className="flex items-center justify-between gap-4">
-        {/* Rank + logo + name */}
+      <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-900 text-xs font-semibold text-neutral-200">
             #{rank}
           </div>
-          <div className="flex items-center gap-2">
-            <OutletLogo
-              domain={outlet.canonical_outlet}
-              name={displayName}
-              className="h-7 w-7"
-            />
+          <div>
             <div className="text-sm font-semibold text-neutral-100">
               {displayName}
+            </div>
+            <div className="mt-0.5 text-[11px] text-neutral-400">
+              {outlet.total_stories} scored stories · {outlet.days_active} day
+              {outlet.days_active === 1 ? "" : "s"} active
             </div>
           </div>
         </div>
 
-        {/* Metrics summary */}
         <div className="flex flex-col items-end gap-1">
-          <div className="flex items-baseline gap-2">
-            <span className="text-xs text-neutral-400">PI</span>
-            <span className="font-mono text-sm text-neutral-50">
-              {piPercent}
-            </span>
-          </div>
-          <div className="text-[11px] text-neutral-400">
-            {outlet.total_stories} stories analyzed · PI based on lifetime
-          </div>
-          {tierLabel && (
-            <span className="mt-1 inline-flex items-center rounded-full bg-neutral-900 px-2 py-[2px] text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-200">
-              {tierLabel}
+          {badgeLabel && (
+            <span
+              className={[
+                "inline-flex items-center rounded-full border px-2 py-[2px]",
+                "text-[10px] font-medium uppercase tracking-[0.14em]",
+                badgeClass,
+              ].join(" ")}
+            >
+              {badgeLabel}
             </span>
           )}
+          <div className="flex items-baseline gap-2">
+            <div className="text-xs text-neutral-400">PI</div>
+            <div className="font-mono text-sm text-neutral-50">
+              {piDisplay}
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2 text-[11px] text-neutral-400">
+            <span>Bias intent</span>
+            <span className="font-mono">{biasDisplay}</span>
+          </div>
         </div>
       </div>
+
+      <div className="mt-2 flex gap-2">
+        <MetricPill label="Language" value={outlet.bias_language} />
+        <MetricPill label="Source" value={outlet.bias_source} />
+        <MetricPill label="Framing" value={outlet.bias_framing} />
+        <MetricPill label="Context" value={outlet.bias_context} />
+      </div>
     </button>
+  );
+}
+
+function MetricPill({ label, value }: { label: string; value: number }) {
+  return (
+    <span className="inline-flex items-center rounded-full bg-neutral-900 px-2 py-0.5 text-[10px] text-neutral-300">
+      <span className="mr-1 text-[10px] text-neutral-500">{label}</span>
+      <span className="font-mono text-[10px] text-neutral-100">
+        {value.toFixed(2)}
+      </span>
+    </span>
   );
 }
 
