@@ -1,8 +1,12 @@
-// app/newsroom/cabinet/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
-import type { OutletOverview, OutletTrendPoint } from "./types";
+import { useEffect, useMemo, useState } from "react";
+import type {
+  OutletOverview,
+  OutletTrendPoint,
+  OutletDetailData,
+} from "./types";
+
 import Leaderboard from "./components/Leaderboard";
 import OutletDetailModal from "./components/OutletDetailModal";
 
@@ -21,22 +25,17 @@ type TrendsResponse = {
 
 export default function NewsroomCabinetPage() {
   const [outlets, setOutlets] = useState<OutletOverview[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   const [selectedCanonical, setSelectedCanonical] = useState<string | null>(
     null
   );
-  const [selectedOutlet, setSelectedOutlet] = useState<OutletOverview | null>(
-    null
-  );
-
   const [trends, setTrends] = useState<OutletTrendPoint[] | null>(null);
+  const [loading, setLoading] = useState(true);
   const [trendLoading, setTrendLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  /* ========= Load overview ========= */
+  /* ========= Load outlet overview once ========= */
   useEffect(() => {
-    let cancelled = false;
+    let alive = true;
 
     (async () => {
       try {
@@ -47,7 +46,7 @@ export default function NewsroomCabinetPage() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
         const data: OverviewResponse = await res.json();
-        if (cancelled) return;
+        if (!alive) return;
         if (!data.ok) throw new Error("Overview API returned not ok");
 
         const sorted = [...data.outlets].sort(
@@ -56,43 +55,62 @@ export default function NewsroomCabinetPage() {
 
         setOutlets(sorted);
 
-        // Default selection: top-ranked outlet
+        // If nothing selected yet, default to rank #1
         if (!selectedCanonical && sorted.length > 0) {
           setSelectedCanonical(sorted[0].canonical_outlet);
         }
       } catch (err: any) {
-        if (cancelled) return;
+        if (!alive) return;
         setError(err?.message || "Failed to load outlet overview.");
       } finally {
-        if (cancelled) return;
-        setLoading(false);
+        if (alive) setLoading(false);
       }
     })();
 
     return () => {
-      cancelled = true;
+      alive = false;
     };
-  }, [selectedCanonical]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  /* ========= Sync selected outlet + load trend ========= */
+  /* ========= Find currently selected outlet overview ========= */
+  const selectedOutlet: OutletOverview | null = useMemo(() => {
+    if (!selectedCanonical) return null;
+    return (
+      outlets.find((o) => o.canonical_outlet === selectedCanonical) ?? null
+    );
+  }, [outlets, selectedCanonical]);
+
+  /* ========= Map overview → detail data for the modal ========= */
+  const detailOutlet: OutletDetailData | null = useMemo(() => {
+    if (!selectedOutlet) return null;
+
+    // Display name: for now just normalize the canonical domain
+    const displayName =
+      selectedOutlet.canonical_outlet ||
+      selectedOutlet.outlet ||
+      "Unknown outlet";
+
+    return {
+      canonical_outlet: selectedOutlet.canonical_outlet,
+      display_name: displayName,
+      storiesAnalyzed: selectedOutlet.total_stories,
+      lifetimePi: selectedOutlet.avg_pi * 100, // e.g. 0.827 → 82.7
+      lifetimeBiasIntent: selectedOutlet.avg_bias_intent,
+      lifetimeLanguage: selectedOutlet.bias_language,
+      lifetimeSource: selectedOutlet.bias_source,
+      lifetimeFraming: selectedOutlet.bias_framing,
+      lifetimeContext: selectedOutlet.bias_context,
+      lastScoredAt: selectedOutlet.last_story_day ?? "Unknown",
+    };
+  }, [selectedOutlet]);
+
+  /* ========= Load trend whenever selected outlet changes ========= */
   useEffect(() => {
-    let cancelled = false;
+    let alive = true;
 
-    if (!selectedCanonical || outlets.length === 0) {
-      setSelectedOutlet(null);
+    if (!selectedCanonical) {
       setTrends(null);
-      setTrendLoading(false);
-      return;
-    }
-
-    const outlet =
-      outlets.find((o) => o.canonical_outlet === selectedCanonical) ?? null;
-
-    setSelectedOutlet(outlet);
-    setTrends(null);
-
-    if (!outlet) {
-      setTrendLoading(false);
       return;
     }
 
@@ -102,40 +120,40 @@ export default function NewsroomCabinetPage() {
 
         const res = await fetch(
           `/api/news/outlets/trends?outlet=${encodeURIComponent(
-            outlet.canonical_outlet
+            selectedCanonical
           )}`
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
         const data: TrendsResponse = await res.json();
-        if (cancelled) return;
+        if (!alive) return;
         if (!data.ok) throw new Error("Trends API returned not ok");
 
         setTrends(data.points);
       } catch {
-        if (cancelled) return;
+        if (!alive) return;
+        // Soft-fail: hide chart if trend fails
         setTrends(null);
       } finally {
-        if (cancelled) return;
-        setTrendLoading(false);
+        if (alive) setTrendLoading(false);
       }
     })();
 
     return () => {
-      cancelled = true;
+      alive = false;
     };
-  }, [selectedCanonical, outlets]);
+  }, [selectedCanonical]);
 
   return (
     <div className="flex flex-col gap-8">
-      {/* ===== Page hero (no duplicate newsroom title) ===== */}
+      {/* ===== Cabinet hero (single title; shell owns “Moral Clarity Newsroom”) ===== */}
       <section className="space-y-3">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight">
+          <h1 className="text-2xl font-semibold tracking-tight">
             Neutrality Cabinet
-          </h2>
+          </h1>
           <p className="mt-1 text-xs uppercase tracking-[0.16em] text-neutral-400">
-            Story-level bias predictability index
+            Story-level bias Predictability Index
           </p>
         </div>
         <p className="text-sm text-neutral-300 max-w-3xl">
@@ -150,7 +168,7 @@ export default function NewsroomCabinetPage() {
         </p>
       </section>
 
-      {/* ===== Data region: leaderboard ===== */}
+      {/* ===== Data region: leaderboard + helper panel ===== */}
       {loading ? (
         <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 text-sm text-neutral-400">
           Loading cabinet…
@@ -162,25 +180,58 @@ export default function NewsroomCabinetPage() {
       ) : !outlets.length ? (
         <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 text-sm text-neutral-400">
           No scored outlets yet. Once the Neutrality Ledger has graded stories,
-          the leaderboard will appear here.
+          the leaderboard and trends will appear here.
         </div>
       ) : (
-        <>
-          <section className="space-y-4">
-            <Leaderboard
-              outlets={outlets}
-              selectedCanonical={selectedCanonical}
-              onSelect={(canon) => setSelectedCanonical(canon)}
-            />
-            <p className="text-xs text-neutral-400">
-              Click any outlet card to open a detailed Predictability Index and
-              bias breakdown.
-            </p>
-          </section>
-        </>
+        <section className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1.25fr)]">
+          {/* Left: leaderboard */}
+          <Leaderboard
+            outlets={outlets}
+            selectedCanonical={selectedCanonical}
+            onSelect={(canon) => setSelectedCanonical(canon)}
+          />
+
+          {/* Right: simple explainer instead of an inline detail card */}
+          <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4 flex flex-col justify-between">
+            <div className="space-y-2 text-sm text-neutral-200">
+              <h2 className="text-sm font-semibold text-neutral-100">
+                Outlet details
+              </h2>
+              {selectedOutlet ? (
+                <>
+                  <p className="text-neutral-300">
+                    You&apos;re looking at{" "}
+                    <span className="font-medium">
+                      {detailOutlet?.display_name ??
+                        selectedOutlet.canonical_outlet}
+                    </span>
+                    .
+                  </p>
+                  <p className="text-xs text-neutral-400">
+                    Click the outlet card again to open a full-window breakdown:
+                    lifetime Predictability Index, bias intent, component scores
+                    (language, source, framing, context), and daily trend.
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-neutral-400">
+                  Select an outlet from the leaderboard to open its detail
+                  window. The cabinet shows lifetime PI, component bias scores,
+                  and how stable the outlet&apos;s storytelling has been over
+                  time.
+                </p>
+              )}
+            </div>
+            <div className="mt-4 text-[11px] text-neutral-500">
+              PI is computed from a 0–3 bias intent score using{" "}
+              <span className="font-mono">PI = 1 − (bias_intent / 3)</span>.
+              Higher PI means more predictable, neutral storytelling patterns.
+            </div>
+          </div>
+        </section>
       )}
 
-      {/* ===== Methodology & explainer ===== */}
+      {/* ===== Methodology & explainer (below leaderboard) ===== */}
       <section className="space-y-4">
         <h2 className="text-sm font-semibold text-neutral-100">
           How the Neutrality Cabinet works
@@ -202,7 +253,8 @@ export default function NewsroomCabinetPage() {
               <li>Context — key facts included vs missing</li>
             </ul>
             <p className="mt-2 text-[11px] text-neutral-400">
-              We only score full articles, not headlines or social posts.
+              We only score full articles (400+ characters), not headlines or
+              social posts.
             </p>
           </div>
 
@@ -240,8 +292,7 @@ export default function NewsroomCabinetPage() {
                 outlets with mixed bias patterns but reliable coverage.
               </li>
               <li>
-                The{" "}
-                <span className="font-medium">High Bias Watchlist</span>{" "}
+                The <span className="font-medium">High Bias Watchlist</span>{" "}
                 surfaces outlets whose language, framing, or context are
                 consistently slanted.
               </li>
@@ -255,12 +306,11 @@ export default function NewsroomCabinetPage() {
         </div>
       </section>
 
-      {/* ===== Detail modal overlay (centered, on top of everything) ===== */}
+      {/* ===== Detail modal (overlay) ===== */}
       <OutletDetailModal
-        open={!!selectedCanonical && !!selectedOutlet}
-        outlet={selectedOutlet}
-        trends={trends}
-        trendLoading={trendLoading}
+        open={!!detailOutlet && !!selectedCanonical}
+        outlet={detailOutlet}
+        trends={trendLoading ? null : trends}
         onClose={() => setSelectedCanonical(null)}
       />
     </div>
