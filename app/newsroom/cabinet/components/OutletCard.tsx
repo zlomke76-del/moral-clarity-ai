@@ -1,4 +1,3 @@
-// app/newsroom/cabinet/components/OutletCard.tsx
 "use client";
 
 import type { OutletOverview } from "../types";
@@ -18,7 +17,7 @@ export default function OutletCard({
   badge,
   onSelect,
 }: Props) {
-  const piPercent = outlet.avg_pi * 100;
+  const piDisplay = outlet.avg_pi.toFixed(3);
   const biasDisplay = outlet.avg_bias_intent.toFixed(2);
 
   const badgeLabel =
@@ -52,7 +51,7 @@ export default function OutletCard({
       ].join(" ")}
     >
       <div className="flex items-center justify-between gap-3">
-        {/* Left: rank + outlet + credibility line */}
+        {/* Rank + outlet name */}
         <div className="flex items-center gap-3">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-900 text-xs font-semibold text-neutral-200">
             #{rank}
@@ -62,12 +61,14 @@ export default function OutletCard({
               {outlet.canonical_outlet}
             </div>
             <div className="mt-0.5 text-[11px] text-neutral-400">
-              {outlet.total_stories} stories analyzed · PI based on lifetime.
+              {outlet.total_stories} scored stories ·{" "}
+              {outlet.days_active} day
+              {outlet.days_active === 1 ? "" : "s"} active
             </div>
           </div>
         </div>
 
-        {/* Right: PI + badge + bias intent */}
+        {/* Tier + PI / bias summary */}
         <div className="flex flex-col items-end gap-1">
           {badgeLabel && (
             <span
@@ -83,7 +84,7 @@ export default function OutletCard({
           <div className="flex items-baseline gap-2">
             <div className="text-xs text-neutral-400">PI</div>
             <div className="font-mono text-sm text-neutral-50">
-              {piPercent.toFixed(1)}
+              {piDisplay}
             </div>
           </div>
           <div className="flex items-baseline gap-2 text-[11px] text-neutral-400">
@@ -93,7 +94,7 @@ export default function OutletCard({
         </div>
       </div>
 
-      {/* Component pills */}
+      {/* Mini bias profile pills */}
       <div className="mt-2 flex flex-wrap gap-2">
         <MetricPill label="Language" value={outlet.bias_language} />
         <MetricPill label="Source" value={outlet.bias_source} />
