@@ -138,9 +138,10 @@ export default function NewsroomCabinetPage() {
   useEffect(() => {
     let alive = true;
 
-    const outlet =
-      selectedCanonical &&
-      outlets.find((o) => o.canonical_outlet === selectedCanonical);
+const outlet =
+  selectedCanonical
+    ? outlets.find((o) => o.canonical_outlet === selectedCanonical) ?? null
+    : null;
 
     // Always keep base detail in sync with overview.
     setDetail(mapToDetail(outlet ?? null, null));
