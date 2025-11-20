@@ -6,6 +6,7 @@ import { useState } from "react";
 type Props = {
   domain: string;
   name: string;
+  className?: string;
 };
 
 function normalizeDomain(domain: string): string {
@@ -21,9 +22,13 @@ function normalizeDomain(domain: string): string {
   }
 }
 
-export default function OutletLogo({ domain, name }: Props) {
+export default function OutletLogo({ domain, name, className }: Props) {
   const [failed, setFailed] = useState(false);
   const host = normalizeDomain(domain);
+
+  const baseClasses =
+    "rounded-md border border-neutral-800 bg-neutral-900 object-contain";
+  const combined = [baseClasses, className || "h-9 w-9"].join(" ");
 
   if (failed || !host) {
     // simple initials fallback
@@ -37,7 +42,7 @@ export default function OutletLogo({ domain, name }: Props) {
         : "MC";
 
     return (
-      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-neutral-900 text-[11px] font-semibold text-neutral-100">
+      <div className={combined + " flex items-center justify-center text-[11px] font-semibold text-neutral-100"}>
         {initials}
       </div>
     );
@@ -49,7 +54,7 @@ export default function OutletLogo({ domain, name }: Props) {
     <img
       src={logoUrl}
       alt={`${name} logo`}
-      className="h-9 w-9 rounded-md border border-neutral-800 bg-neutral-900 object-contain"
+      className={combined}
       onError={() => setFailed(true)}
     />
   );
