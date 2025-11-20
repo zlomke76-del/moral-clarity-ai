@@ -5,8 +5,8 @@ export type OutletOverview = {
   canonical_outlet: string;
   total_stories: number;
   days_active: number;
-  avg_bias_intent: number; // 0–3  (lower = less bias)
-  avg_pi: number;          // 0–1  (higher = more neutral)
+  avg_bias_intent: number;
+  avg_pi: number;
   bias_language: number;
   bias_source: number;
   bias_framing: number;
