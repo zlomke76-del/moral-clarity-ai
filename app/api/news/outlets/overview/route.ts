@@ -49,47 +49,6 @@ function jsonError(
   return NextResponse.json({ ok: false, error: message, ...extra }, { status });
 }
 
-/**
- * Consolidate domain variants to a canonical outlet ID.
- * Extend as needed.
- */
-function canonicalize(outlet: string | null): string {
-  if (!outlet) return "unknown";
-  const o = outlet.toLowerCase();
-
-  const map: Record<string, string> = {
-    "bbc.co.uk": "bbc.com",
-    "bbc.com": "bbc.com",
-    "www.bbc.com": "bbc.com",
-
-    "france24.com": "france24.com",
-    "www.france24.com": "france24.com",
-
-    "reuters.com": "reuters.com",
-    "www.reuters.com": "reuters.com",
-
-    "apnews.com": "apnews.com",
-    "www.apnews.com": "apnews.com",
-
-    "foxnews.com": "foxnews.com",
-    "www.foxnews.com": "foxnews.com",
-
-    "nytimes.com": "nytimes.com",
-    "www.nytimes.com": "nytimes.com",
-
-    "politico.com": "politico.com",
-    "www.politico.com": "politico.com",
-
-    "dw.com": "dw.com",
-    "www.dw.com": "dw.com",
-
-    "rferl.org": "rferl.org",
-    "www.rferl.org": "rferl.org",
-  };
-
-  return map[o] ?? o;
-}
-
 /* ========= MAIN HANDLER ========= */
 
 export async function GET(req: NextRequest) {
@@ -100,7 +59,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Optional: allow ?minStories=3 for debugging; default 5
+    // Allow ?minStories=1 for debugging; default 5 for production
     const url = new URL(req.url);
     const minStoriesParam = url.searchParams.get("minStories");
     const parsedMin = Number(minStoriesParam ?? "5");
@@ -108,29 +67,32 @@ export async function GET(req: NextRequest) {
       Number.isFinite(parsedMin) && parsedMin > 0 ? parsedMin : 5;
 
     /**
-     * Read directly from the ledger table.
-     * Expected columns:
+     * Source of truth: outlet_bias_pi_daily_trends
+     *
+     * Columns (confirmed from CSV):
      *   outlet
      *   story_day
-     *   bias_language_score
-     *   bias_source_score
-     *   bias_framing_score
-     *   bias_context_score
-     *   bias_intent_score
-     *   pi_score
+     *   outlet_story_count
+     *   avg_pi_score
+     *   avg_bias_intent
+     *   avg_bias_language
+     *   avg_bias_source
+     *   avg_bias_framing
+     *   avg_bias_context
      */
     const { data, error } = await supabaseAdmin
-      .from("news_neutrality_ledger")
+      .from("outlet_bias_pi_daily_trends")
       .select(
         `
         outlet,
         story_day,
-        bias_language_score,
-        bias_source_score,
-        bias_framing_score,
-        bias_context_score,
-        bias_intent_score,
-        pi_score
+        outlet_story_count,
+        avg_pi_score,
+        avg_bias_intent,
+        avg_bias_language,
+        avg_bias_source,
+        avg_bias_framing,
+        avg_bias_context
       `
       );
 
@@ -144,86 +106,89 @@ export async function GET(req: NextRequest) {
 
     const rows = (data || []) as any[];
 
-    // Aggregate in memory by canonical outlet
+    // Aggregate by outlet using weighted averages by outlet_story_count
     const grouped: Record<
       string,
       {
         outlet: string;
-        canonical_outlet: string;
-        total_stories: number;
-        days_set: Set<string>;
-        sum_language: number;
-        sum_source: number;
-        sum_framing: number;
-        sum_context: number;
-        sum_bias_intent: number;
-        sum_pi: number;
-        last_story_day: string | null;
+        totalStories: number;
+        days: Set<string>;
+        sumBiasIntent: number;
+        sumPi: number;
+        sumLanguage: number;
+        sumSource: number;
+        sumFraming: number;
+        sumContext: number;
+        lastDay: string | null;
       }
     > = {};
 
     for (const r of rows) {
-      const canon = canonicalize(r.outlet);
+      const outlet: string = r.outlet ?? "unknown";
+      const storyDay: string | null = r.story_day ?? null;
+      const count: number = Number(r.outlet_story_count ?? 0);
 
-      if (!grouped[canon]) {
-        grouped[canon] = {
-          outlet: canon,
-          canonical_outlet: canon,
-          total_stories: 0,
-          days_set: new Set<string>(),
-          sum_language: 0,
-          sum_source: 0,
-          sum_framing: 0,
-          sum_context: 0,
-          sum_bias_intent: 0,
-          sum_pi: 0,
-          last_story_day: null,
+      if (!grouped[outlet]) {
+        grouped[outlet] = {
+          outlet,
+          totalStories: 0,
+          days: new Set<string>(),
+          sumBiasIntent: 0,
+          sumPi: 0,
+          sumLanguage: 0,
+          sumSource: 0,
+          sumFraming: 0,
+          sumContext: 0,
+          lastDay: null,
         };
       }
 
-      const g = grouped[canon];
+      const g = grouped[outlet];
 
-      g.total_stories += 1;
+      if (count > 0) {
+        g.totalStories += count;
 
-      if (r.story_day) {
-        g.days_set.add(r.story_day);
-        if (!g.last_story_day || r.story_day > g.last_story_day) {
-          g.last_story_day = r.story_day;
-        }
+        g.sumBiasIntent += Number(r.avg_bias_intent ?? 0) * count;
+        g.sumPi += Number(r.avg_pi_score ?? 0) * count;
+        g.sumLanguage += Number(r.avg_bias_language ?? 0) * count;
+        g.sumSource += Number(r.avg_bias_source ?? 0) * count;
+        g.sumFraming += Number(r.avg_bias_framing ?? 0) * count;
+        g.sumContext += Number(r.avg_bias_context ?? 0) * count;
       }
 
-      g.sum_language += r.bias_language_score ?? 0;
-      g.sum_source += r.bias_source_score ?? 0;
-      g.sum_framing += r.bias_framing_score ?? 0;
-      g.sum_context += r.bias_context_score ?? 0;
-      g.sum_bias_intent += r.bias_intent_score ?? 0;
-      g.sum_pi += r.pi_score ?? 0;
+      if (storyDay) {
+        g.days.add(storyDay);
+        if (!g.lastDay || storyDay > g.lastDay) {
+          g.lastDay = storyDay;
+        }
+      }
     }
 
     const outlets: OutletOverview[] = [];
 
-    for (const canon of Object.keys(grouped)) {
-      const g = grouped[canon];
+    for (const outlet of Object.keys(grouped)) {
+      const g = grouped[outlet];
 
-      if (g.total_stories < MIN_STORIES) continue;
+      if (g.totalStories < MIN_STORIES) continue;
 
-      const daysActive = g.days_set.size || 0;
+      const total = g.totalStories || 1;
 
       outlets.push({
-        outlet: g.outlet,
-        canonical_outlet: g.canonical_outlet,
-        total_stories: g.total_stories,
-        days_active: daysActive,
-        avg_bias_intent: g.sum_bias_intent / g.total_stories,
-        avg_pi: g.sum_pi / g.total_stories,
-        bias_language: g.sum_language / g.total_stories,
-        bias_source: g.sum_source / g.total_stories,
-        bias_framing: g.sum_framing / g.total_stories,
-        bias_context: g.sum_context / g.total_stories,
-        last_story_day: g.last_story_day,
+        outlet,
+        canonical_outlet: outlet, // canonical == outlet for now
+        total_stories: g.totalStories,
+        days_active: g.days.size,
+        avg_bias_intent: g.sumBiasIntent / total,
+        avg_pi: g.sumPi / total,
+        bias_language: g.sumLanguage / total,
+        bias_source: g.sumSource / total,
+        bias_framing: g.sumFraming / total,
+        bias_context: g.sumContext / total,
+        last_story_day: g.lastDay,
       });
     }
 
+    // Sort by avg_bias_intent ascending (best → worst)
     outlets.sort((a, b) => a.avg_bias_intent - b.avg_bias_intent);
 
     return NextResponse.json({
