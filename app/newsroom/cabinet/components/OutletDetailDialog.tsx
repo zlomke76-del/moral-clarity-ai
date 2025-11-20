@@ -1,3 +1,4 @@
+// app/newsroom/cabinet/components/OutletDetailDialog.tsx
 "use client";
 
 import { useEffect } from "react";
@@ -8,7 +9,6 @@ import type { OutletTrendPoint } from "../types";
 export type OutletDetailData = {
   canonical_outlet: string;
   display_name: string;
-  tierLabel: string;
   storiesAnalyzed: number;
   lifetimePi: number; // 0..1
   lifetimeBiasIntent: number; // 0..3
@@ -17,6 +17,7 @@ export type OutletDetailData = {
   lifetimeFraming: number;
   lifetimeContext: number;
   lastScoredAt: string | null;
+  tierLabel?: string; // optional, derived in UI later if needed
 };
 
 type Props = {
@@ -51,7 +52,6 @@ export default function OutletDetailDialog({
 
   const piPercent = (outlet.lifetimePi * 100).toFixed(1);
   const biasIntent = outlet.lifetimeBiasIntent.toFixed(2);
-
   const canComputeTrend = trends && trends.length >= 3;
 
   return createPortal(
