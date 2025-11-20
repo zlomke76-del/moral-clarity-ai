@@ -1,45 +1,37 @@
-/* app/api/news/outlets/overview/route.ts */
+// app/api/news/outlets/overview/route.ts
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-/* ========= ENV ========= */
+/* ========= ENV / ADMIN CLIENT ========= */
 
-const SUPABASE_URL = process.env.SUPABASE_URL!;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.warn("[outlets/overview] Missing Supabase admin credentials.");
+  console.warn(
+    "[news/outlets/overview] Missing Supabase admin credentials — API will 500."
+  );
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { persistSession: false },
-});
+const supabaseAdmin =
+  SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+        auth: { persistSession: false },
+      })
+    : null;
 
 /* ========= TYPES ========= */
 
-type OutletOverviewRow = {
+type OutletOverview = {
   outlet: string;
-  total_stories: number | null;
-  days_active: number | null;
-  avg_bias_intent_weighted: number | null;
-  avg_pi_weighted: number | null;
-  avg_bias_language_weighted: number | null;
-  avg_bias_source_weighted: number | null;
-  avg_bias_framing_weighted: number | null;
-  avg_bias_context_weighted: number | null;
-  last_story_day: string | null;
-};
-
-export type OutletOverview = {
-  outlet: string;            // canonical outlet (domain-ish label)
-  canonical_outlet: string;  // same as outlet, explicit for UI clarity
+  canonical_outlet: string;
   total_stories: number;
   days_active: number;
-  avg_bias_intent: number;   // 0–3   lower = less bias
-  avg_pi: number;            // 0–1   higher = more neutral
+  avg_bias_intent: number;
+  avg_pi: number;
   bias_language: number;
   bias_source: number;
   bias_framing: number;
@@ -49,72 +41,189 @@ export type OutletOverview = {
 
 /* ========= HELPERS ========= */
 
-function jsonError(message: string, status = 500, extra: any = {}) {
+function jsonError(
+  message: string,
+  status = 500,
+  extra: Record<string, unknown> = {}
+) {
   return NextResponse.json({ ok: false, error: message, ...extra }, { status });
 }
 
-/* ========= HANDLER ========= */
+/* ========= CANONICAL CONSOLIDATION ========= */
+/**
+ * This consolidates multiple variants of the same outlet domain.
+ * Add to this list as needed.
+ */
+function canonicalize(outlet: string | null): string {
+  if (!outlet) return "unknown";
 
-export async function GET(req: NextRequest) {
+  const o = outlet.toLowerCase();
+
+  const map: Record<string, string> = {
+    "bbc.co.uk": "bbc.com",
+    "bbc.com": "bbc.com",
+    "www.bbc.com": "bbc.com",
+
+    "france24.com": "france24.com",
+    "www.france24.com": "france24.com",
+
+    "reuters.com": "reuters.com",
+    "www.reuters.com": "reuters.com",
+
+    "apnews.com": "apnews.com",
+    "www.apnews.com": "apnews.com",
+
+    "foxnews.com": "foxnews.com",
+    "www.foxnews.com": "foxnews.com",
+
+    "nytimes.com": "nytimes.com",
+    "www.nytimes.com": "nytimes.com",
+
+    "politico.com": "politico.com",
+    "www.politico.com": "politico.com",
+
+    "dw.com": "dw.com",
+    "www.dw.com": "dw.com",
+
+    "rferl.org": "rferl.org",
+    "www.rferl.org": "rferl.org",
+  };
+
+  return map[o] ?? o; // default to itself
+}
+
+/* ========= MAIN HANDLER ========= */
+
+export async function GET(_req: NextRequest) {
   try {
-    const url = new URL(req.url);
+    if (!supabaseAdmin) {
+      return jsonError(
+        "Supabase admin client not configured.",
+        500,
+        { code: "NO_SUPABASE_ADMIN" }
+      );
+    }
 
-    const limitParam = url.searchParams.get("limit");
-    const sort = url.searchParams.get("sort") || "avg_bias_intent";
-    const order = url.searchParams.get("order") === "desc" ? "desc" : "asc";
-
-    const limit =
-      limitParam && !Number.isNaN(Number(limitParam))
-        ? Math.max(1, Math.min(Number(limitParam), 100))
-        : null;
-
-    const { data, error } = await supabase
-      .from("outlet_bias_pi_overview")
-      .select("*");
+    /* ========= Query: lifetime scores grouped per outlet ========= */
+    const { data, error } = await supabaseAdmin
+      .from("news_neutrality_ledger")
+      .select(
+        `
+        outlet,
+        story_day,
+        bias_language_score,
+        bias_source_score,
+        bias_framing_score,
+        bias_context_score,
+        bias_intent_score,
+        pi_score
+      `
+      );
 
     if (error) {
-      console.error("[outlets/overview] Supabase error:", error);
-      return jsonError("Failed to load outlet bias overview.", 500, {
-        details: error.message,
+      console.error("[news/outlets/overview] query error", error);
+      return jsonError("Failed to load outlet neutrality data.", 500, {
+        code: error.code,
+        details: error.details,
       });
     }
 
-    const rows = (data || []) as OutletOverviewRow[];
+    const rows = (data || []) as any[];
 
-    const normalized: OutletOverview[] = rows.map((r) => {
-      const biasIntent = r.avg_bias_intent_weighted ?? 0;
-      const pi = r.avg_pi_weighted ?? (1 - biasIntent / 3);
+    /* ========= Aggregate by canonical outlet ========= */
 
-      return {
-        outlet: r.outlet,
-        canonical_outlet: r.outlet,
-        total_stories: r.total_stories ?? 0,
-        days_active: r.days_active ?? 0,
-        avg_bias_intent: Number(biasIntent.toFixed(3)),
-        avg_pi: Number(pi.toFixed(3)),
-        bias_language: Number((r.avg_bias_language_weighted ?? 0).toFixed(3)),
-        bias_source: Number((r.avg_bias_source_weighted ?? 0).toFixed(3)),
-        bias_framing: Number((r.avg_bias_framing_weighted ?? 0).toFixed(3)),
-        bias_context: Number((r.avg_bias_context_weighted ?? 0).toFixed(3)),
-        last_story_day: r.last_story_day,
+    const grouped: Record<string, any> = {};
+
+    for (const r of rows) {
+      const canon = canonicalize(r.outlet);
+
+      if (!grouped[canon]) {
+        grouped[canon] = {
+          outlet: canon,
+          canonical_outlet: canon,
+          total_stories: 0,
+          days_set: new Set<string>(),
+          sum_language: 0,
+          sum_source: 0,
+          sum_framing: 0,
+          sum_context: 0,
+          sum_bias_intent: 0,
+          sum_pi: 0,
+          last_story_day: null as string | null,
+        };
+      }
+
+      const g = grouped[canon];
+
+      g.total_stories++;
+      if (r.story_day) g.days_set.add(r.story_day);
+
+      g.sum_language += r.bias_language_score ?? 0;
+      g.sum_source += r.bias_source_score ?? 0;
+      g.sum_framing += r.bias_framing_score ?? 0;
+      g.sum_context += r.bias_context_score ?? 0;
+      g.sum_bias_intent += r.bias_intent_score ?? 0;
+      g.sum_pi += r.pi_score ?? 0;
+
+      if (r.story_day) {
+        if (!g.last_story_day || r.story_day > g.last_story_day) {
+          g.last_story_day = r.story_day;
+        }
+      }
+    }
+
+    /* ========= Convert aggregates → OutletOverview objects ========= */
+
+    const outlets: OutletOverview[] = [];
+
+    for (const canon of Object.keys(grouped)) {
+      const g = grouped[canon];
+
+      // REQUIREMENT: ≥5 lifetime scored stories to appear
+      if (g.total_stories < 5) continue;
+
+      const daysActive = g.days_set.size;
+
+      const ov: OutletOverview = {
+        outlet: canon,
+        canonical_outlet: canon,
+        total_stories: g.total_stories,
+        days_active: daysActive,
+        avg_bias_intent: g.sum_bias_intent / g.total_stories,
+        avg_pi: g.sum_pi / g.total_stories,
+        bias_language: g.sum_language / g.total_stories,
+        bias_source: g.sum_source / g.total_stories,
+        bias_framing: g.sum_framing / g.total_stories,
+        bias_context: g.sum_context / g.total_stories,
+        last_story_day: g.last_story_day,
       };
-    });
 
-    normalized.sort((a, b) => {
-      const A = (a as any)[sort] ?? 0;
-      const B = (b as any)[sort] ?? 0;
-      return order === "asc" ? A - B : B - A;
-    });
+      outlets.push(ov);
+    }
 
-    const final = limit ? normalized.slice(0, limit) : normalized;
+    /* ========= Sort by bias_intent ascending (best → worst) ========= */
+
+    outlets.sort(
+      (a, b) => a.avg_bias_intent - b.avg_bias_intent
+    );
 
     return NextResponse.json({
       ok: true,
-      count: final.length,
-      outlets: final,
+      count: outlets.length,
+      outlets,
     });
   } catch (err: any) {
-    console.error("[outlets/overview] fatal error:", err);
-    return jsonError(err?.message || "Unexpected server error.");
+    console.error("[news/outlets/overview] fatal error", err);
+    return jsonError(
+      err?.message || "Unexpected error in outlets overview.",
+      500,
+      { code: "NEWS_OUTLETS_OVERVIEW_FATAL" }
+    );
   }
+}
+
+/* ========= Allow POST to behave as GET ========= */
+
+export async function POST(req: NextRequest) {
+  return GET(req);
 }
