@@ -18,7 +18,7 @@ export default function OutletCard({
   badge,
   onSelect,
 }: Props) {
-  const piDisplay = outlet.avg_pi.toFixed(3);
+  const piPercent = outlet.avg_pi * 100;
   const biasDisplay = outlet.avg_bias_intent.toFixed(2);
 
   const badgeLabel =
@@ -46,10 +46,13 @@ export default function OutletCard({
       className={[
         "w-full text-left rounded-xl border px-4 py-3 transition",
         "bg-neutral-950/70 hover:bg-neutral-900/80",
-        selected ? "border-emerald-400/70 shadow-[0_0_0_1px_rgba(16,185,129,.6)]" : "border-neutral-800",
+        selected
+          ? "border-emerald-400/70 shadow-[0_0_0_1px_rgba(16,185,129,.6)]"
+          : "border-neutral-800",
       ].join(" ")}
     >
       <div className="flex items-center justify-between gap-3">
+        {/* Left: rank + outlet + credibility line */}
         <div className="flex items-center gap-3">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-900 text-xs font-semibold text-neutral-200">
             #{rank}
@@ -59,12 +62,12 @@ export default function OutletCard({
               {outlet.canonical_outlet}
             </div>
             <div className="mt-0.5 text-[11px] text-neutral-400">
-              {outlet.total_stories} scored stories · {outlet.days_active} day
-              {outlet.days_active === 1 ? "" : "s"} active
+              {outlet.total_stories} stories analyzed · PI based on lifetime.
             </div>
           </div>
         </div>
 
+        {/* Right: PI + badge + bias intent */}
         <div className="flex flex-col items-end gap-1">
           {badgeLabel && (
             <span
@@ -79,7 +82,9 @@ export default function OutletCard({
           )}
           <div className="flex items-baseline gap-2">
             <div className="text-xs text-neutral-400">PI</div>
-            <div className="font-mono text-sm text-neutral-50">{piDisplay}</div>
+            <div className="font-mono text-sm text-neutral-50">
+              {piPercent.toFixed(1)}
+            </div>
           </div>
           <div className="flex items-baseline gap-2 text-[11px] text-neutral-400">
             <span>Bias intent</span>
@@ -87,7 +92,9 @@ export default function OutletCard({
           </div>
         </div>
       </div>
-      <div className="mt-2 flex gap-2">
+
+      {/* Component pills */}
+      <div className="mt-2 flex flex-wrap gap-2">
         <MetricPill label="Language" value={outlet.bias_language} />
         <MetricPill label="Source" value={outlet.bias_source} />
         <MetricPill label="Framing" value={outlet.bias_framing} />
