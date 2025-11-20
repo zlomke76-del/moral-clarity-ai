@@ -37,7 +37,7 @@ const DEFAULT_PER_DOMAIN_MAX = 5;
 // How far back we allow the news pull to look (in days)
 const DEFAULT_NEWS_WINDOW_DAYS = 1;
 
-// Rough cap of how many Tavily "global" items we allow
+// Rough cap of how many Tavily "global" items we allow *if we hit fallback*
 const GLOBAL_TOP_MAX = 15;
 
 /* ========= STRICTNESS CONFIG ========= */
@@ -144,6 +144,8 @@ export const SOURCE_REGISTRY: NewsSource[] = [
   { id: 'france24', label: 'France 24', domain: 'france24.com', country: 'FR' },
   { id: 'dw', label: 'Deutsche Welle', domain: 'dw.com', country: 'DE' },
   { id: 'nikkei', label: 'Nikkei Asia', domain: 'nikkei.com', country: 'JP' },
+  // Radio Free Europe / Radio Liberty
+  { id: 'rfe', label: 'Radio Free Europe/Radio Liberty', domain: 'rferl.org' },
 ];
 
 /* ========= SMALL HELPERS ========= */
@@ -257,6 +259,10 @@ function pickSourcesForRefresh(
  * - Applies per-domain caps and dedupe
  * - Extracts article text via the shared extractArticle() helper
  * - Inserts into truth_facts (STRICT: only real articles)
+ *
+ * Global "top news" is now **fallback only**:
+ * - If outlet-specific queries yield ZERO candidates,
+ *   we run one global search to avoid an empty day.
  */
 export async function runNewsFetchRefresh(opts?: {
   workspaceId?: string;
@@ -289,7 +295,7 @@ export async function runNewsFetchRefresh(opts?: {
     /* minDistinct */ 15
   );
 
-  // 2) Fetch candidates per source via Tavily
+  // 2) Fetch candidates per source via Tavily (outlet-focused)
   const allCandidates: FetcherArticleCandidate[] = [];
 
   for (const source of selectedSources) {
@@ -345,44 +351,46 @@ export async function runNewsFetchRefresh(opts?: {
     }
   }
 
-  // 3) Optionally add a "global top news" layer (capped)
-  try {
-    const globalItems = await webSearch('top news headlines today', {
-      news: true,
-      max: GLOBAL_TOP_MAX,
-      days: newsWindowDays,
-    });
-
-    for (const item of globalItems) {
-      const title: string = item.title || '(untitled)';
-      const url: string = item.url || '';
-      if (!url) continue;
-
-      const domain = extractDomainFromUrl(url);
-      if (!domainStats[domain]) {
-        domainStats[domain] = {
-          domain,
-          attempted: 0,
-          deduped: 0,
-          inserted: 0,
-          failed: 0,
-        };
-      }
-
-      allCandidates.push({
-        title,
-        url,
-        content: item.content,
-        sourceDomain: domain,
-        query: 'top news headlines today',
+  // 3) Fallback: if NO outlet-specific candidates, run a single global "top news" search
+  if (allCandidates.length === 0) {
+    try {
+      const globalItems = await webSearch('top news headlines today', {
+        news: true,
+        max: GLOBAL_TOP_MAX,
+        days: newsWindowDays,
       });
-      domainStats[domain].attempted++;
+
+      for (const item of globalItems) {
+        const title: string = item.title || '(untitled)';
+        const url: string = item.url || '';
+        if (!url) continue;
+
+        const domain = extractDomainFromUrl(url);
+        if (!domainStats[domain]) {
+          domainStats[domain] = {
+            domain,
+            attempted: 0,
+            deduped: 0,
+            inserted: 0,
+            failed: 0,
+          };
+        }
+
+        allCandidates.push({
+          title,
+          url,
+          content: item.content,
+          sourceDomain: domain,
+          query: 'top news headlines today',
+        });
+        domainStats[domain].attempted++;
+      }
+    } catch (err: any) {
+      console.error('[news/fetcher] global top webSearch failed (fallback)', err);
+      errors.push(
+        `global webSearch failed (fallback): ${err?.message || String(err)}`
+      );
     }
-  } catch (err: any) {
-    console.error('[news/fetcher] global top webSearch failed', err);
-    errors.push(
-      `global webSearch failed: ${err?.message || String(err)}`
-    );
   }
 
   // 4) Deduplicate by URL and enforce per-domain caps
@@ -497,4 +505,3 @@ export async function runNewsFetchRefresh(opts?: {
     errors,
   };
 }
-
