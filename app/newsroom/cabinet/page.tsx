@@ -4,9 +4,7 @@
 import { useEffect, useState } from "react";
 import type { OutletOverview, OutletTrendPoint } from "./types";
 import Leaderboard from "./components/Leaderboard";
-import OutletDetailDialog, {
-  type OutletDetailData,
-} from "./components/OutletDetailDialog";
+import OutletDetailModal from "./components/OutletDetailModal";
 
 type OverviewResponse = {
   ok: boolean;
@@ -23,14 +21,12 @@ type TrendsResponse = {
 
 export default function NewsroomCabinetPage() {
   const [outlets, setOutlets] = useState<OutletOverview[]>([]);
-  const [selectedCanonical, setSelectedCanonical] = useState<string | null>(
-    null
-  );
-  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedCanonical, setSelectedCanonical] = useState<string | null>(null);
   const [trends, setTrends] = useState<OutletTrendPoint[] | null>(null);
-  const [trendLoading, setTrendLoading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [trendLoading, setTrendLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   /* ========= Load overview once ========= */
   useEffect(() => {
@@ -48,13 +44,12 @@ export default function NewsroomCabinetPage() {
         if (!alive) return;
         if (!data.ok) throw new Error("Overview API returned not ok");
 
-        // Lower bias intent = better (more neutral)
         const sorted = [...data.outlets].sort(
           (a, b) => a.avg_bias_intent - b.avg_bias_intent
         );
 
         setOutlets(sorted);
-        if (sorted[0]) {
+        if (!selectedCanonical && sorted[0]) {
           setSelectedCanonical(sorted[0].canonical_outlet);
         }
       } catch (err: any) {
@@ -70,16 +65,18 @@ export default function NewsroomCabinetPage() {
     };
   }, []);
 
-  const selected: OutletOverview | null =
-    selectedCanonical
-      ? outlets.find((o) => o.canonical_outlet === selectedCanonical) ?? null
+  /* ========= Resolve selected outlet ========= */
+  const selected =
+    selectedCanonical &&
+    outlets.find((o) => o.canonical_outlet === selectedCanonical)
+      ? outlets.find((o) => o.canonical_outlet === selectedCanonical)!
       : null;
 
   /* ========= Load trend whenever selected outlet changes ========= */
   useEffect(() => {
     let alive = true;
 
-    if (!selectedCanonical) {
+    if (!selected) {
       setTrends(null);
       return;
     }
@@ -90,7 +87,7 @@ export default function NewsroomCabinetPage() {
 
         const res = await fetch(
           `/api/news/outlets/trends?outlet=${encodeURIComponent(
-            selectedCanonical
+            selected.canonical_outlet
           )}`
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -102,7 +99,7 @@ export default function NewsroomCabinetPage() {
         setTrends(data.points);
       } catch {
         if (!alive) return;
-        // Soft-fail: hide trend if it can’t load
+        // Soft-fail: hide chart if trend fails
         setTrends(null);
       } finally {
         if (alive) setTrendLoading(false);
@@ -112,178 +109,158 @@ export default function NewsroomCabinetPage() {
     return () => {
       alive = false;
     };
-  }, [selectedCanonical]);
-
-  function handleSelect(canonical: string) {
-    setSelectedCanonical(canonical);
-    setDetailOpen(true);
-  }
-
-  function mapToDetail(outlet: OutletOverview | null): OutletDetailData | null {
-    if (!outlet) return null;
-
-    return {
-      canonical_outlet: outlet.canonical_outlet,
-      display_name: outlet.canonical_outlet, // no display_name field in type
-      storiesAnalyzed: outlet.total_stories,
-      lifetimePi: outlet.avg_pi,
-      lifetimeBiasIntent: outlet.avg_bias_intent,
-      lifetimeLanguage: outlet.bias_language,
-      lifetimeSource: outlet.bias_source,
-      lifetimeFraming: outlet.bias_framing,
-      lifetimeContext: outlet.bias_context,
-      lastScoredAt: outlet.last_story_day ?? null,
-      // tierLabel is optional and derived in UI if we want later
-    };
-  }
+  }, [selected?.canonical_outlet]);
 
   return (
-    <>
-      <div className="flex flex-col gap-8">
-        {/* ===== Hero ===== */}
-        <section className="space-y-3">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              Moral Clarity Newsroom
-            </h1>
-            <p className="mt-1 text-xs uppercase tracking-[0.16em] text-neutral-400">
-              Powered by Solace — neutral, transparent, ethical journalism
-              tools.
-            </p>
-          </div>
+    <div className="flex flex-col gap-8">
+      {/* ===== Cabinet hero ===== */}
+      <section className="space-y-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Moral Clarity Newsroom
+          </h1>
+          <p className="mt-1 text-xs text-neutral-400">
+            Powered by Solace — neutral, transparent, ethical journalism tools.
+          </p>
+        </div>
 
-          <div className="space-y-2">
-            <h2 className="text-lg font-semibold tracking-tight">
-              Neutrality Cabinet
-            </h2>
-            <p className="text-sm text-neutral-300 max-w-3xl">
-              This cabinet tracks how predictable and neutral an outlet&apos;s{" "}
-              <span className="font-medium">story-level bias</span> is over
-              time. We don&apos;t score left vs right. We measure{" "}
-              <span className="font-medium">how the story is told</span> and
-              compress that into a{" "}
-              <span className="font-medium">Predictability Index (PI)</span>{" "}
-              from 0.0 to 1.0. Everyone is reaching toward{" "}
-              <span className="font-semibold text-emerald-300">1.00</span>.
-            </p>
-          </div>
-        </section>
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">
+            Neutrality Cabinet
+          </h2>
+          <p className="mt-1 text-xs uppercase tracking-[0.16em] text-neutral-400">
+            Story-level bias predictability index
+          </p>
+        </div>
 
-        {/* ===== Data region ===== */}
-        {loading ? (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 text-sm text-neutral-400">
-            Loading cabinet…
-          </div>
-        ) : error ? (
-          <div className="rounded-xl border border-red-900/40 bg-red-950/40 p-4 text-sm text-red-300">
-            Error loading cabinet: {error}
-          </div>
-        ) : !outlets.length ? (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 text-sm text-neutral-400">
-            No scored outlets yet. Once the Neutrality Ledger has graded
-            stories, the leaderboard and trends will appear here.
-          </div>
-        ) : (
-          <section className="space-y-2">
+        <p className="text-sm text-neutral-300 max-w-3xl">
+          This cabinet tracks how predictable and neutral an outlet&apos;s{" "}
+          <span className="font-medium">story-level bias</span> is over time.
+          We don&apos;t score left vs right. We measure{" "}
+          <span className="font-medium">how the story is told</span> and
+          compress that into a{" "}
+          <span className="font-medium">Predictability Index (PI)</span> from
+          0.0 to 1.0. Everyone is reaching toward{" "}
+          <span className="font-semibold text-emerald-300">1.00</span>.
+        </p>
+      </section>
+
+      {/* ===== Data region: leaderboard only ===== */}
+      {loading ? (
+        <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 text-sm text-neutral-400">
+          Loading cabinet…
+        </div>
+      ) : error ? (
+        <div className="rounded-xl border border-red-900/40 bg-red-950/40 p-4 text-sm text-red-300">
+          Error loading cabinet: {error}
+        </div>
+      ) : !outlets.length ? (
+        <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 text-sm text-neutral-400">
+          No scored outlets yet. Once the Neutrality Ledger has graded stories,
+          the leaderboard and trends will appear here.
+        </div>
+      ) : (
+        <>
+          <section className="space-y-4">
             <Leaderboard
               outlets={outlets}
               selectedCanonical={selectedCanonical}
-              onSelect={handleSelect}
+              onSelect={(canon) => {
+                setSelectedCanonical(canon);
+                setModalOpen(true);
+              }}
             />
             <p className="text-[11px] text-neutral-500">
               Click any outlet card to open a detailed Predictability Index and
               bias breakdown.
             </p>
           </section>
-        )}
 
-        {/* ===== Methodology ===== */}
-        <section className="space-y-4 pt-4">
-          <h2 className="text-sm font-semibold text-neutral-100">
-            How the Neutrality Cabinet works
-          </h2>
-          <div className="grid gap-4 md:grid-cols-3 text-xs text-neutral-300">
-            {/* What we measure */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
-              <h3 className="text-sm font-semibold mb-1">
-                What we measure (bias)
-              </h3>
-              <p>
-                Each scored story gets four component scores (0–3). Lower is
-                more neutral:
-              </p>
-              <ul className="mt-2 space-y-1 list-disc list-inside">
-                <li>Language — emotional vs neutral wording</li>
-                <li>Source — diverse, credible vs narrow, shaky</li>
-                <li>Framing — balanced perspectives vs one-sided</li>
-                <li>Context — key facts included vs missing</li>
-              </ul>
-              <p className="mt-2 text-[11px] text-neutral-400">
-                We only score full articles, not headlines or social posts.
-              </p>
+          {/* Methodology & explainer */}
+          <section className="space-y-4">
+            <h2 className="text-sm font-semibold text-neutral-100">
+              How the Neutrality Cabinet works
+            </h2>
+            <div className="grid gap-4 md:grid-cols-3 text-xs text-neutral-300">
+              {/* What we measure */}
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
+                <h3 className="text-sm font-semibold mb-1">
+                  What we measure (bias)
+                </h3>
+                <p>
+                  Each scored story gets four component scores (0–3). Lower is
+                  more neutral:
+                </p>
+                <ul className="mt-2 space-y-1 list-disc list-inside">
+                  <li>Language — emotional vs neutral wording</li>
+                  <li>Source — diverse, credible vs narrow, shaky</li>
+                  <li>Framing — balanced perspectives vs one-sided</li>
+                  <li>Context — key facts included vs missing</li>
+                </ul>
+                <p className="mt-2 text-[11px] text-neutral-400">
+                  We only score full articles, not headlines or social posts.
+                </p>
+              </div>
+
+              {/* Bias intent → PI */}
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
+                <h3 className="text-sm font-semibold mb-1">
+                  Bias intent → Predictability Index
+                </h3>
+                <p>
+                  We combine those four components into a{" "}
+                  <span className="font-medium">bias intent score</span> (0–3),
+                  then convert it into a PI:
+                </p>
+                <p className="mt-2 font-mono text-xs">PI = 1 − (bias_intent / 3)</p>
+                <p className="mt-2 text-[11px] text-neutral-300">
+                  Closer to 1.0 → more predictable, neutral storytelling. Closer
+                  to 0.0 → strong, consistent bias in how stories are told.
+                </p>
+              </div>
+
+              {/* How to read the board */}
+              <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
+                <h3 className="text-sm font-semibold mb-1">
+                  How to read this board
+                </h3>
+                <ul className="space-y-1 list-disc list-inside">
+                  <li>
+                    <span className="font-medium">Golden Anchors</span> are the
+                    highest-scoring outlets by PI with solid story volume.
+                  </li>
+                  <li>
+                    The <span className="font-medium">Neutral Band</span>{" "}
+                    contains outlets with mixed bias patterns but reliable
+                    coverage.
+                  </li>
+                  <li>
+                    The{" "}
+                    <span className="font-medium">High Bias Watchlist</span>{" "}
+                    surfaces outlets whose language, framing, or context are
+                    consistently slanted.
+                  </li>
+                </ul>
+                <p className="mt-2 text-[11px] text-neutral-400">
+                  This doesn&apos;t tell you what to think. It shows{" "}
+                  <span className="font-medium">how predictable the bias is</span>{" "}
+                  in how stories are delivered.
+                </p>
+              </div>
             </div>
+          </section>
+        </>
+      )}
 
-            {/* Bias intent → PI */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
-              <h3 className="text-sm font-semibold mb-1">
-                Bias intent → Predictability Index
-              </h3>
-              <p>
-                We combine those four components into a{" "}
-                <span className="font-medium">bias intent score</span> (0–3),
-                then convert it into a PI:
-              </p>
-              <p className="mt-2 font-mono text-xs">PI = 1 − (bias_intent / 3)</p>
-              <p className="mt-2 text-[11px] text-neutral-300">
-                Closer to 1.0 → more predictable, neutral storytelling. Closer
-                to 0.0 → strong, consistent bias in how stories are told.
-              </p>
-            </div>
-
-            {/* How to read the board */}
-            <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
-              <h3 className="text-sm font-semibold mb-1">
-                How to read this board
-              </h3>
-              <ul className="space-y-1 list-disc list-inside">
-                <li>
-                  <span className="font-medium">Golden Anchors</span> are the
-                  highest-scoring outlets by PI with solid story volume.
-                </li>
-                <li>
-                  The <span className="font-medium">Neutral Band</span> contains
-                  outlets with mixed bias patterns but reliable coverage.
-                </li>
-                <li>
-                  The{" "}
-                  <span className="font-medium">High Bias Watchlist</span>{" "}
-                  surfaces outlets whose language, framing, or context are
-                  consistently slanted.
-                </li>
-              </ul>
-              <p className="mt-2 text-[11px] text-neutral-400">
-                This doesn&apos;t tell you what to think. It shows{" "}
-                <span className="font-medium">
-                  how predictable the bias is
-                </span>{" "}
-                in how stories are delivered.
-              </p>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      {/* ===== Modal detail dialog ===== */}
-      <OutletDetailDialog
-        open={detailOpen && !!selected}
-        onOpenChange={(open) => {
-          setDetailOpen(open);
-          // we keep selectedCanonical for row highlight; just close the modal
-        }}
-        outlet={mapToDetail(selected)}
-        trends={trendLoading ? null : trends}
-      />
-    </>
+      {/* ===== Modal overlay (true pop-out) ===== */}
+      {modalOpen && selected && (
+        <OutletDetailModal
+          outlet={selected}
+          trends={trendLoading ? null : trends}
+          loading={trendLoading}
+          onClose={() => setModalOpen(false)}
+        />
+      )}
+    </div>
   );
 }
-
