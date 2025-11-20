@@ -58,11 +58,9 @@ function jsonError(
 export async function GET(req: NextRequest) {
   try {
     if (!supabaseAdmin) {
-      return jsonError(
-        "Supabase admin client not configured.",
-        500,
-        { code: "NO_SUPABASE_ADMIN" }
-      );
+      return jsonError("Supabase admin client not configured.", 500, {
+        code: "NO_SUPABASE_ADMIN",
+      });
     }
 
     const url = new URL(req.url);
@@ -82,35 +80,35 @@ export async function GET(req: NextRequest) {
         : 60;
 
     /**
-     * Assumes a view/table with daily aggregates per canonical outlet, e.g.:
-     *   outlet_bias_pi_daily_trends
-     * with columns:
-     *   story_day (date/text)
-     *   canonical_outlet (text)
-     *   outlet_story_count (int)
-     *   avg_bias_intent (float)
-     *   avg_pi_score (float)
-     *   avg_bias_language (float)
-     *   avg_bias_source (float)
-     *   avg_bias_framing (float)
-     *   avg_bias_context (float)
+     * Source of truth: outlet_bias_pi_daily_trends
+     *
+     * Columns (confirmed from CSV):
+     *   outlet
+     *   story_day
+     *   outlet_story_count
+     *   avg_pi_score
+     *   avg_bias_intent
+     *   avg_bias_language
+     *   avg_bias_source
+     *   avg_bias_framing
+     *   avg_bias_context
      */
     const { data, error } = await supabaseAdmin
       .from("outlet_bias_pi_daily_trends")
       .select(
         `
+        outlet,
         story_day,
-        canonical_outlet,
         outlet_story_count,
-        avg_bias_intent,
         avg_pi_score,
+        avg_bias_intent,
         avg_bias_language,
         avg_bias_source,
         avg_bias_framing,
         avg_bias_context
       `
       )
-      .eq("canonical_outlet", outlet)
+      .eq("outlet", outlet)
       .order("story_day", { ascending: true })
       .limit(limit);
 
@@ -126,13 +124,13 @@ export async function GET(req: NextRequest) {
 
     const points: OutletTrendPoint[] = rows.map((r) => ({
       story_day: r.story_day,
-      outlet_story_count: r.outlet_story_count ?? 0,
-      avg_bias_intent: r.avg_bias_intent ?? 0,
-      avg_pi_score: r.avg_pi_score ?? 0,
-      avg_bias_language: r.avg_bias_language ?? 0,
-      avg_bias_source: r.avg_bias_source ?? 0,
-      avg_bias_framing: r.avg_bias_framing ?? 0,
-      avg_bias_context: r.avg_bias_context ?? 0,
+      outlet_story_count: Number(r.outlet_story_count ?? 0),
+      avg_bias_intent: Number(r.avg_bias_intent ?? 0),
+      avg_pi_score: Number(r.avg_pi_score ?? 0),
+      avg_bias_language: Number(r.avg_bias_language ?? 0),
+      avg_bias_source: Number(r.avg_bias_source ?? 0),
+      avg_bias_framing: Number(r.avg_bias_framing ?? 0),
+      avg_bias_context: Number(r.avg_bias_context ?? 0),
     }));
 
     const resp: TrendsResponse = {
