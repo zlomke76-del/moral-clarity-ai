@@ -2,14 +2,15 @@
 "use client";
 
 type Props = {
-  name: string;
+  name?: string;           // <- make optional so callers can pass only domain
   domain: string;
   size?: "sm" | "md" | "lg";
 };
 
 export function OutletLogo({ name, domain, size = "lg" }: Props) {
-  const initials = getInitials(name || domain);
-  const palette = pickColor(domain || name);
+  const label = name && name.trim().length > 0 ? name : domain;
+  const initials = getInitials(label);
+  const palette = pickColor(domain || label);
   const { wrapper, text } = sizeClasses(size);
 
   return (
@@ -30,7 +31,8 @@ export function OutletLogo({ name, domain, size = "lg" }: Props) {
 
 function getInitials(label: string): string {
   if (!label) return "?";
-  // If it looks like a domain, take main segments (e.g., "npr", "bbc", "nytimes")
+
+  // If it looks like a domain, try to pull the main segment (e.g., "npr", "bbc", "nytimes")
   const domainMatch = label.match(/([a-z0-9-]+)\./i);
   if (domainMatch && domainMatch[1]) {
     const part = domainMatch[1];
@@ -50,6 +52,7 @@ function getInitials(label: string): string {
     .split(/[^a-z0-9]+/i)
     .filter(Boolean);
   if (!words.length) return label.slice(0, 3).toUpperCase();
+
   return words
     .slice(0, 3)
     .map((w) => w[0])
