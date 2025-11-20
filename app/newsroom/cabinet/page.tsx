@@ -44,6 +44,7 @@ export default function NewsroomCabinetPage() {
         if (!alive) return;
         if (!data.ok) throw new Error("Overview API returned not ok");
 
+        // Sort by avg_bias_intent ascending (lower bias → higher on board)
         const sorted = [...data.outlets].sort(
           (a, b) => a.avg_bias_intent - b.avg_bias_intent
         );
@@ -84,7 +85,7 @@ export default function NewsroomCabinetPage() {
         if (!alive) return;
         if (!data.ok) throw new Error("Trends API returned not ok");
         setTrends(data.points);
-      } catch (err) {
+      } catch {
         if (!alive) return;
         // soft-fail: just hide trends if they error
         setTrends(null);
@@ -100,76 +101,96 @@ export default function NewsroomCabinetPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      {/* Hero / explainer */}
+      {/* HERO / EXPLAINER */}
       <section className="space-y-4">
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Neutrality Cabinet
-        </h1>
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Neutrality Cabinet
+          </h1>
+          <p className="text-xs uppercase tracking-[0.18em] text-neutral-400">
+            Story-level bias • Predictability Index • Outlet leaderboard
+          </p>
+        </div>
+
         <p className="text-sm text-neutral-300 max-w-3xl">
           This is where we track how predictable and neutral an outlet&apos;s{" "}
           <span className="font-medium">story-level bias</span> is over time.
-          We don&apos;t measure left vs right. We measure{" "}
+          We don&apos;t score left vs right. We measure{" "}
           <span className="font-medium">how the story is told</span> – language,
           sourcing, framing, and missing context – and compress that into a{" "}
           <span className="font-medium">Predictability Index (PI)</span> from
-          0.0 to 1.0. Everyone is aiming toward{" "}
+          0.0 to 1.0. Everyone is reaching toward{" "}
           <span className="font-semibold text-emerald-300">1.00</span>.
         </p>
 
         <div className="grid gap-4 md:grid-cols-3 text-xs text-neutral-300">
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+          {/* Card 1 — What we measure */}
+          <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-4 shadow-sm shadow-black/40">
             <h2 className="text-sm font-semibold mb-1">
               What we measure (bias)
             </h2>
-            <p>
-              Each article is scored 0–3 on four dimensions:
-            </p>
+            <p>Each scored story gets four component scores (0–3):</p>
             <ul className="mt-2 space-y-1 list-disc list-inside">
-              <li>Language – emotional vs neutral words</li>
-              <li>Source – diverse, credible vs narrow, shaky</li>
-              <li>Framing – balanced perspectives vs one-sided</li>
-              <li>Context – key facts included vs missing</li>
+              <li>Language — emotional vs neutral wording</li>
+              <li>Source — diverse, credible vs narrow, shaky</li>
+              <li>Framing — balanced perspectives vs one-sided</li>
+              <li>Context — key facts included vs missing</li>
             </ul>
-          </div>
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
-            <h2 className="text-sm font-semibold mb-1">Bias Intent → PI</h2>
-            <p>
-              We combine those four scores into a{" "}
-              <span className="font-medium">bias intent score</span> (0–3).
-              Then we convert it to a{" "}
-              <span className="font-medium">Predictability Index</span>:
+            <p className="mt-2 text-[11px] text-neutral-400">
+              We only score full articles, not headlines or social posts.
             </p>
-            <p className="mt-2 font-mono text-xs">
+          </div>
+
+          {/* Card 2 — Bias intent → PI */}
+          <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-4 shadow-sm shadow-black/40">
+            <h2 className="text-sm font-semibold mb-1">
+              Bias intent → Predictability Index
+            </h2>
+            <p>
+              We combine those four components into a{" "}
+              <span className="font-medium">bias intent score</span> (0–3),
+              then convert it into a{" "}
+              <span className="font-medium">Predictability Index (PI)</span>:
+            </p>
+            <p className="mt-2 font-mono text-xs bg-black/40 inline-block px-2 py-1 rounded-md border border-neutral-800">
               PI = 1 − (bias_intent / 3)
             </p>
             <p className="mt-2">
-              Closer to 1.0 → more predictable, neutral storytelling. Closer to
-              0.0 → strong, consistent bias in how stories are told.
+              Closer to <span className="font-semibold">1.0</span> → more
+              predictable, neutral storytelling. Closer to{" "}
+              <span className="font-semibold">0.0</span> → strong, consistent
+              bias in how stories are told.
             </p>
           </div>
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+
+          {/* Card 3 — How to read this board */}
+          <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-4 shadow-sm shadow-black/40">
             <h2 className="text-sm font-semibold mb-1">
               How to read this board
             </h2>
             <ul className="space-y-1 list-disc list-inside">
               <li>
-                <span className="font-medium">Top outlets</span> (Golden Anchor)
-                sit closest to 1.0 PI with solid story volume.
+                <span className="font-medium">Top outlets</span> (Golden
+                Anchor) sit closest to 1.0 PI with solid story volume.
               </li>
               <li>
-                <span className="font-medium">Low-volume outlets</span> are
-                visible but carry less weight.
+                <span className="font-medium">Low-volume outlets</span> appear,
+                but their scores are treated as early signals.
               </li>
               <li>
                 <span className="font-medium">Bottom outlets</span> show where
                 language/framing/context are consistently slanted.
               </li>
             </ul>
+            <p className="mt-2 text-[11px] text-neutral-400">
+              Outlets generally need a minimum lifetime story count before they
+              appear in the main leaderboard.
+            </p>
           </div>
         </div>
       </section>
 
-      {/* Data region */}
+      {/* DATA REGION */}
       {loading ? (
         <div className="text-sm text-neutral-400">Loading cabinet…</div>
       ) : error ? (
@@ -178,8 +199,8 @@ export default function NewsroomCabinetPage() {
         </div>
       ) : !outlets.length ? (
         <div className="text-sm text-neutral-400">
-          No scored outlets yet. Once we have graded news stories in the
-          Neutrality Ledger, this page will come alive.
+          No scored outlets yet. Once we have enough graded news stories in the
+          Neutrality Ledger, this board will come alive.
         </div>
       ) : (
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)]">
@@ -203,3 +224,4 @@ export default function NewsroomCabinetPage() {
     </div>
   );
 }
+
