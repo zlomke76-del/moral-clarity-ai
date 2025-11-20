@@ -7,7 +7,7 @@ import OutletCard from "./OutletCard";
 type Props = {
   outlets: OutletOverview[];
   selectedCanonical: string | null;
-  onSelect: (canonicalOutlet: string) => void;
+  onSelect: (canonical: string) => void;
 };
 
 export default function Leaderboard({
@@ -15,109 +15,78 @@ export default function Leaderboard({
   selectedCanonical,
   onSelect,
 }: Props) {
-  if (!outlets.length) return null;
+  if (!outlets.length) {
+    return (
+      <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4 text-sm text-neutral-400">
+        No scored outlets yet.
+      </div>
+    );
+  }
 
-  const sorted = [...outlets].sort(
-    (a, b) => a.avg_bias_intent - b.avg_bias_intent
+  // outlets are already sorted by avg_bias_intent from the API/page
+  const maxGolden = 3;
+  const maxWatchlist = 3;
+
+  const golden = outlets.slice(0, Math.min(maxGolden, outlets.length));
+  const watchlist = outlets.slice(-maxWatchlist);
+  const neutral = outlets.slice(
+    golden.length,
+    Math.max(outlets.length - watchlist.length, golden.length)
   );
-
-  const topCount = Math.min(3, sorted.length);
-  const bottomCount = Math.min(3, sorted.length - topCount);
-
-  const top = sorted.slice(0, topCount);
-  const middle = sorted.slice(topCount, sorted.length - bottomCount);
-  const bottom = sorted.slice(sorted.length - bottomCount);
 
   return (
     <div className="space-y-4">
-      <header className="flex items-baseline justify-between">
-        <h2 className="text-lg font-semibold tracking-tight">
+      <div>
+        <h2 className="text-sm font-semibold text-neutral-100">
           Outlet Neutrality Leaderboard
         </h2>
-        <p className="text-xs text-neutral-400">
-          Ranked by{" "}
-          <span className="font-medium">lowest bias intent (0–3)</span> and{" "}
-          <span className="font-medium">highest PI (0–1)</span>.
+        <p className="mt-1 text-xs text-neutral-400">
+          Outlets are ranked by their{" "}
+          <span className="font-medium">bias intent</span>. Lower is better.
+          Everyone is chasing a Predictability Index (PI) close to{" "}
+          <span className="font-mono text-emerald-300">1.000</span>.
         </p>
-      </header>
+      </div>
 
-      <div className="space-y-3">
-        {/* Top outlets */}
-        <section>
-          <div className="mb-1 flex items-center gap-2">
-            <span className="text-xs uppercase tracking-wide text-emerald-300">
+      {/* Golden Anchors */}
+      {golden.length > 0 && (
+        <section className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-300">
               Golden Anchors
-            </span>
-            <span className="text-[10px] rounded-full border border-emerald-500/40 bg-emerald-500/5 px-2 py-0.5 text-emerald-200">
-              Target: PI → 1.00
-            </span>
+            </h3>
+            <p className="text-[10px] text-neutral-500">
+              Most predictable, neutral story-level bias so far.
+            </p>
           </div>
           <div className="space-y-2">
-            {top.map((o, idx) => (
+            {golden.map((o, idx) => (
               <OutletCard
                 key={o.canonical_outlet}
                 outlet={o}
                 rank={idx + 1}
-                highlight="gold"
-                selected={o.canonical_outlet === selectedCanonical}
-                onClick={() => onSelect(o.canonical_outlet)}
+                selected={selectedCanonical === o.canonical_outlet}
+                badge="golden"
+                onSelect={() => onSelect(o.canonical_outlet)}
               />
             ))}
           </div>
         </section>
+      )}
 
-        {/* Middle outlets */}
-        {middle.length > 0 && (
-          <section>
-            <div className="mb-1 flex items-center gap-2">
-              <span className="text-xs uppercase tracking-wide text-neutral-300">
-                Neutral Band
-              </span>
-              <span className="text-[10px] rounded-full border border-neutral-600/60 bg-neutral-900/80 px-2 py-0.5 text-neutral-300">
-                Solid coverage, mixed bias patterns
-              </span>
-            </div>
-            <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
-              {middle.map((o, idx) => (
-                <OutletCard
-                  key={o.canonical_outlet}
-                  outlet={o}
-                  rank={topCount + idx + 1}
-                  highlight="none"
-                  selected={o.canonical_outlet === selectedCanonical}
-                  onClick={() => onSelect(o.canonical_outlet)}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Bottom outlets */}
-        {bottom.length > 0 && (
-          <section>
-            <div className="mb-1 flex items-center gap-2">
-              <span className="text-xs uppercase tracking-wide text-amber-300">
-                High Bias Watchlist
-              </span>
-              <span className="text-[10px] rounded-full border border-amber-500/40 bg-amber-500/5 px-2 py-0.5 text-amber-200">
-                Strong language / framing / context tilt
-              </span>
-            </div>
-            <div className="space-y-2">
-              {bottom.map((o, idx) => (
-                <OutletCard
-                  key={o.canonical_outlet}
-                  outlet={o}
-                  rank={sorted.length - bottom.length + idx + 1}
-                  highlight="warning"
-                  selected={o.canonical_outlet === selectedCanonical}
-                  onClick={() => onSelect(o.canonical_outlet)}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-      </div>
-    </div>
-  );
-}
+      {/* Neutral Band */}
+      {neutral.length > 0 && (
+        <section className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-300">
+              Neutral Band
+            </h3>
+            <p className="text-[10px] text-neutral-500">
+              Mixed signals, but generally stable coverage.
+            </p>
+          </div>
+          <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+            {neutral.map((o, idx) => (
+              <OutletCard
+                key={o.canonical_outlet}
+                outlet={o}
