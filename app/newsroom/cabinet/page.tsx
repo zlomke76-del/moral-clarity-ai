@@ -1,58 +1,204 @@
+// app/newsroom/cabinet/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchBiasDashboard } from "@/lib/newsroom/bias-api";
+import type { OutletOverview, OutletTrendPoint } from "./types";
 import Leaderboard from "./components/Leaderboard";
-import TrendChart from "./components/TrendChart";
 import ScoreBreakdown from "./components/ScoreBreakdown";
+import TrendChart from "./components/TrendChart";
 
-export default function CabinetPage() {
-  const [data, setData] = useState<any>(null);
-  const [selectedOutlet, setSelectedOutlet] = useState<string | null>(null);
+type OverviewResponse = {
+  ok: boolean;
+  count: number;
+  outlets: OutletOverview[];
+};
 
+type TrendsResponse = {
+  ok: boolean;
+  outlet: string;
+  count: number;
+  points: OutletTrendPoint[];
+};
+
+export default function NewsroomCabinetPage() {
+  const [outlets, setOutlets] = useState<OutletOverview[]>([]);
+  const [selected, setSelected] = useState<OutletOverview | null>(null);
+  const [trends, setTrends] = useState<OutletTrendPoint[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [trendLoading, setTrendLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch overview once
   useEffect(() => {
+    let alive = true;
+
     (async () => {
-      const d = await fetchBiasDashboard();
-      setData(d);
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await fetch("/api/news/outlets/overview");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data: OverviewResponse = await res.json();
+
+        if (!alive) return;
+        if (!data.ok) throw new Error("Overview API returned not ok");
+
+        const sorted = [...data.outlets].sort(
+          (a, b) => a.avg_bias_intent - b.avg_bias_intent
+        );
+
+        setOutlets(sorted);
+        setSelected(sorted[0] ?? null);
+      } catch (err: any) {
+        if (!alive) return;
+        setError(err?.message || "Failed to load outlet overview.");
+      } finally {
+        if (alive) setLoading(false);
+      }
     })();
+
+    return () => {
+      alive = false;
+    };
   }, []);
 
-  if (!data) {
-    return <div className="text-neutral-400">Loading dashboard…</div>;
-  }
+  // Fetch trends whenever selected outlet changes
+  useEffect(() => {
+    let alive = true;
+    if (!selected) {
+      setTrends(null);
+      return;
+    }
 
-  const selected = selectedOutlet
-    ? data.outlets.find((o: any) => o.outlet === selectedOutlet)
-    : null;
+    (async () => {
+      try {
+        setTrendLoading(true);
+        const res = await fetch(
+          `/api/news/outlets/trends?outlet=${encodeURIComponent(
+            selected.canonical_outlet
+          )}`
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data: TrendsResponse = await res.json();
+        if (!alive) return;
+        if (!data.ok) throw new Error("Trends API returned not ok");
+        setTrends(data.points);
+      } catch (err) {
+        if (!alive) return;
+        // soft-fail: just hide trends if they error
+        setTrends(null);
+      } finally {
+        if (alive) setTrendLoading(false);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [selected?.canonical_outlet]);
 
   return (
-    <div className="flex flex-col gap-12">
-      <header>
+    <div className="flex flex-col gap-8">
+      {/* Hero / explainer */}
+      <section className="space-y-4">
         <h1 className="text-3xl font-semibold tracking-tight">
-          Moral Clarity AI — Bias Cabinet
+          Neutrality Cabinet
         </h1>
-        <p className="text-neutral-400 mt-2 max-w-2xl">
-          A real-time, outlet-level view of bias intent, predictability index, 
-          and methodological transparency — designed to help elevate journalism 
-          toward a PI of 1.0.
+        <p className="text-sm text-neutral-300 max-w-3xl">
+          This is where we track how predictable and neutral an outlet&apos;s{" "}
+          <span className="font-medium">story-level bias</span> is over time.
+          We don&apos;t measure left vs right. We measure{" "}
+          <span className="font-medium">how the story is told</span> – language,
+          sourcing, framing, and missing context – and compress that into a{" "}
+          <span className="font-medium">Predictability Index (PI)</span> from
+          0.0 to 1.0. Everyone is aiming toward{" "}
+          <span className="font-semibold text-emerald-300">1.00</span>.
         </p>
-      </header>
 
-      <Leaderboard
-        outlets={data.outlets}
-        onSelect={setSelectedOutlet}
-        selectedOutlet={selectedOutlet}
-      />
+        <div className="grid gap-4 md:grid-cols-3 text-xs text-neutral-300">
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+            <h2 className="text-sm font-semibold mb-1">
+              What we measure (bias)
+            </h2>
+            <p>
+              Each article is scored 0–3 on four dimensions:
+            </p>
+            <ul className="mt-2 space-y-1 list-disc list-inside">
+              <li>Language – emotional vs neutral words</li>
+              <li>Source – diverse, credible vs narrow, shaky</li>
+              <li>Framing – balanced perspectives vs one-sided</li>
+              <li>Context – key facts included vs missing</li>
+            </ul>
+          </div>
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+            <h2 className="text-sm font-semibold mb-1">Bias Intent → PI</h2>
+            <p>
+              We combine those four scores into a{" "}
+              <span className="font-medium">bias intent score</span> (0–3).
+              Then we convert it to a{" "}
+              <span className="font-medium">Predictability Index</span>:
+            </p>
+            <p className="mt-2 font-mono text-xs">
+              PI = 1 − (bias_intent / 3)
+            </p>
+            <p className="mt-2">
+              Closer to 1.0 → more predictable, neutral storytelling. Closer to
+              0.0 → strong, consistent bias in how stories are told.
+            </p>
+          </div>
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+            <h2 className="text-sm font-semibold mb-1">
+              How to read this board
+            </h2>
+            <ul className="space-y-1 list-disc list-inside">
+              <li>
+                <span className="font-medium">Top outlets</span> (Golden Anchor)
+                sit closest to 1.0 PI with solid story volume.
+              </li>
+              <li>
+                <span className="font-medium">Low-volume outlets</span> are
+                visible but carry less weight.
+              </li>
+              <li>
+                <span className="font-medium">Bottom outlets</span> show where
+                language/framing/context are consistently slanted.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
 
-      {selected ? (
-        <div className="flex flex-col gap-10">
-          <TrendChart outlet={selected} />
-          <ScoreBreakdown outlet={selected} />
+      {/* Data region */}
+      {loading ? (
+        <div className="text-sm text-neutral-400">Loading cabinet…</div>
+      ) : error ? (
+        <div className="text-sm text-red-400">
+          Error loading cabinet: {error}
+        </div>
+      ) : !outlets.length ? (
+        <div className="text-sm text-neutral-400">
+          No scored outlets yet. Once we have graded news stories in the
+          Neutrality Ledger, this page will come alive.
         </div>
       ) : (
-        <div className="text-neutral-400">
-          Select an outlet from the leaderboard to view detailed scoring.
-        </div>
+        <section className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)]">
+          <Leaderboard
+            outlets={outlets}
+            selectedCanonical={selected?.canonical_outlet ?? null}
+            onSelect={(canon) => {
+              const next = outlets.find(
+                (o) => o.canonical_outlet === canon
+              );
+              if (next) setSelected(next);
+            }}
+          />
+
+          <div className="space-y-4">
+            <ScoreBreakdown outlet={selected} />
+            <TrendChart points={trends} loading={trendLoading} />
+          </div>
+        </section>
       )}
     </div>
   );
