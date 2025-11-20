@@ -122,12 +122,9 @@ export default function NewsroomCabinetPage() {
   function mapToDetail(outlet: OutletOverview | null): OutletDetailData | null {
     if (!outlet) return null;
 
-    const tierLabel = outlet.tier_label ?? ""; // optional from API
-
     return {
       canonical_outlet: outlet.canonical_outlet,
-      display_name: outlet.display_name ?? outlet.canonical_outlet,
-      tierLabel: tierLabel,
+      display_name: outlet.canonical_outlet, // no display_name field in type
       storiesAnalyzed: outlet.total_stories,
       lifetimePi: outlet.avg_pi,
       lifetimeBiasIntent: outlet.avg_bias_intent,
@@ -136,6 +133,7 @@ export default function NewsroomCabinetPage() {
       lifetimeFraming: outlet.bias_framing,
       lifetimeContext: outlet.bias_context,
       lastScoredAt: outlet.last_story_day ?? null,
+      // tierLabel is optional and derived in UI if we want later
     };
   }
 
@@ -280,10 +278,7 @@ export default function NewsroomCabinetPage() {
         open={detailOpen && !!selected}
         onOpenChange={(open) => {
           setDetailOpen(open);
-          if (!open) {
-            // keep selection for highlight, just close modal
-            return;
-          }
+          // we keep selectedCanonical for row highlight; just close the modal
         }}
         outlet={mapToDetail(selected)}
         trends={trendLoading ? null : trends}
