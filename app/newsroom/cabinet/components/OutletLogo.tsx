@@ -1,56 +1,58 @@
+// app/newsroom/cabinet/components/OutletLogo.tsx
 "use client";
+
+import { useState } from "react";
 
 type Props = {
   domain: string;
-  name?: string;
-  className?: string;
+  name: string;
 };
 
-/**
- * Lightweight outlet logo renderer.
- *
- * - Attempts to load `https://logo.clearbit.com/<domain>`
- * - Falls back to an initial in a neutral pill if the logo fails.
- */
-export default function OutletLogo({ domain, name, className }: Props) {
-  const initial =
-    (name || domain || "?")
-      .trim()
-      .replace(/^https?:\/\//, "")
-      .replace(/^www\./, "")
-      .charAt(0)
-      .toUpperCase() || "?";
+function normalizeDomain(domain: string): string {
+  // crude normalizer: strip protocol & path, keep host
+  try {
+    if (domain.startsWith("http://") || domain.startsWith("https://")) {
+      const url = new URL(domain);
+      return url.hostname;
+    }
+    return domain.split("/")[0];
+  } catch {
+    return domain;
+  }
+}
 
-  const src = `https://logo.clearbit.com/${domain}`;
+export default function OutletLogo({ domain, name }: Props) {
+  const [failed, setFailed] = useState(false);
+  const host = normalizeDomain(domain);
+
+  if (failed || !host) {
+    // simple initials fallback
+    const initials =
+      name && name.length > 0
+        ? name
+            .replace(/^https?:\/\//, "")
+            .replace(/\..+$/, "")
+            .slice(0, 3)
+            .toUpperCase()
+        : "MC";
+
+    return (
+      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-neutral-900 text-[11px] font-semibold text-neutral-100">
+        {initials}
+      </div>
+    );
+  }
+
+  const logoUrl = `https://logo.clearbit.com/${host}`;
 
   return (
-    <div
-      className={[
-        "flex items-center justify-center overflow-hidden rounded-md bg-neutral-900",
-        className ?? "h-8 w-8",
-      ].join(" ")}
-    >
-      {/* Using plain img here keeps it simple and avoids Next/Image config in app dir */}
-      <img
-        src={src}
-        alt={name || domain}
-        className="h-full w-full object-contain"
-        onError={(e) => {
-          // If logo fails, show initial instead
-          const target = e.currentTarget;
-          target.style.display = "none";
-          const parent = target.parentElement;
-          if (parent) {
-            parent.textContent = initial;
-            parent.classList.add(
-              "text-xs",
-              "font-semibold",
-              "text-neutral-100"
-            );
-          }
-        }}
-      />
-    </div>
+    <img
+      src={logoUrl}
+      alt={`${name} logo`}
+      className="h-9 w-9 rounded-md border border-neutral-800 bg-neutral-900 object-contain"
+      onError={() => setFailed(true)}
+    />
   );
 }
+
 
