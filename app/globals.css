@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* =========================================================
-   Minimal global styles for Moral Clarity AI (with Tailwind)
+   Moral Clarity AI – Global Styles (Tailwind-friendly)
    ========================================================= */
 
 /* ---------- Design tokens ---------- */
@@ -23,9 +23,9 @@
 
   /* Radii / effects */
   --mc-radius: 12px;
-  --mc-shadow: 0 18px 60px rgba(0,0,0,.55);
+  --mc-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
 
-  /* --- Solace Dock token map --- */
+  /* Solace Dock visual tokens */
   --sd-bg:      color-mix(in oklab, var(--mc-panel) 88%, transparent);
   --sd-border:  var(--mc-border);
   --sd-fg:      var(--mc-text);
@@ -37,12 +37,15 @@
   --sd-shadow:  var(--mc-shadow);
 }
 
-/* ---------- Base ---------- */
+/* ---------- Base reset / body ---------- */
 html,
 body {
   height: 100%;
+}
+
+body {
   margin: 0;
-  background: var(--mc-bg);
+  background: radial-gradient(circle at top, #111827 0, #020617 55%, #02030a 100%);
   color: var(--mc-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -58,10 +61,13 @@ body {
     sans-serif;
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
+/* Selection */
 ::selection {
   background: color-mix(in oklab, var(--mc-accent) 25%, transparent);
   color: var(--mc-text);
@@ -75,9 +81,12 @@ body {
 
 /* Motion safety */
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
     animation: none !important;
     transition: none !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -90,30 +99,21 @@ a:hover {
   text-decoration: underline;
 }
 
+/* Optional prose helper (does NOT override Tailwind utilities) */
 .prose {
   max-width: 65ch;
 }
-.prose h1 {
-  font-size: 2rem;
-  margin: 1.5rem 0 0.75rem;
-}
-.prose h2 {
-  font-size: 1.5rem;
-  margin: 1.25rem 0 0.5rem;
-}
-.prose p {
-  line-height: 1.7;
-  margin: 1rem 0;
-}
-.prose ul {
-  margin: 0.75rem 0;
-  padding-left: 1.25rem;
-}
-.prose li {
-  margin: 0.25rem 0;
+
+.prose :where(h1, h2, h3, h4) {
+  font-weight: 600;
 }
 
-/* Kill any mask/gradient logo overrides that were applied elsewhere */
+.prose :where(p, ul, ol) {
+  line-height: 1.7;
+}
+
+/* ---------- Logo / brand resets ---------- */
+/* Prevent any old gradient/mask tricks from affecting new logos */
 .brand,
 .brand::before,
 .brand::after {
@@ -123,133 +123,119 @@ a:hover {
   -webkit-mask-image: none !important;
 }
 
-/* ---------- Layout helpers (override Tailwind with brand tokens) ---------- */
-.mx-auto {
-  margin-left: auto;
-  margin-right: auto;
-}
-.max-w-3xl {
-  max-width: 48rem;
-}
-.max-w-6xl {
-  max-width: 72rem;
-}
-.px-6 {
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
-}
-.py-10 {
-  padding-top: 2.5rem;
-  padding-bottom: 2.5rem;
-}
-.py-12 {
-  padding-top: 3rem;
-  padding-bottom: 3rem;
-}
-.border {
-  border: 1px solid var(--mc-border);
-}
-.rounded {
-  border-radius: 0.5rem;
+/* ---------- Site chrome (nav + footer) ---------- */
+nav.mc-nav {
+  background: linear-gradient(to right, #020617, #02071a);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow:
+    0 24px 80px rgba(15, 23, 42, 0.9),
+    inset 0 -1px 0 rgba(148, 163, 184, 0.2);
 }
 
-/* ---------- Site chrome ---------- */
-nav {
-  background: var(--mc-panel);
-  border-bottom: 1px solid var(--mc-border);
-  padding: 0.75rem 1.5rem;
-}
-footer {
-  background: var(--mc-panel);
-  border-top: 1px solid var(--mc-border);
-  padding: 1.25rem 1.5rem;
+footer.mc-footer {
+  background: radial-gradient(circle at top, #020617, #02040c 55%, #000 100%);
+  border-top: 1px solid rgba(148, 163, 184, 0.25);
   color: var(--mc-muted);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
-/* ---------- Inputs & buttons ---------- */
+/* ---------- Form controls & buttons (generic) ---------- */
+
 input,
 select,
 textarea {
   width: 100%;
-  border: 1px solid var(--mc-border);
   border-radius: 0.5rem;
+  border: 1px solid var(--mc-border);
   background: var(--mc-surface);
   color: var(--mc-text);
   padding: 0.55rem 0.8rem;
   font-size: 0.95rem;
 }
+
 input::placeholder,
 textarea::placeholder {
   color: color-mix(in oklab, var(--mc-muted) 80%, transparent);
 }
 
 button {
-  border: 1px solid var(--mc-border);
   border-radius: 0.5rem;
-  background: #121a28;
+  border: 1px solid var(--mc-border);
+  background: #111827;
   color: var(--mc-text);
   padding: 0.55rem 0.95rem;
   cursor: pointer;
   transition:
     background 0.15s ease,
     color 0.15s ease,
-    opacity 0.15s ease;
+    opacity 0.15s ease,
+    transform 0.05s ease;
 }
+
 button:hover {
   background: var(--mc-accent);
-  color: #000;
+  color: #020617;
 }
+
+button:active {
+  transform: translateY(1px);
+}
+
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-/* Button variants */
+/* Variants */
 .btn-primary {
   background: var(--mc-accent);
-  color: #000;
+  color: #020617;
   border-color: color-mix(in oklab, var(--mc-accent) 60%, var(--mc-border));
 }
+
 .btn-ghost {
   background: transparent;
   color: var(--mc-text);
+  border-color: rgba(148, 163, 184, 0.5);
 }
+
 .btn-ghost:hover {
-  background: color-mix(in oklab, var(--mc-accent) 18%, transparent);
+  background: rgba(148, 163, 184, 0.12);
   color: var(--mc-text);
 }
 
-/* Cards */
+/* Generic card helper */
 .card {
   background: var(--mc-panel);
-  border: 1px solid var(--mc-border);
   border-radius: var(--mc-radius);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow:
+    0 18px 60px rgba(15, 23, 42, 0.9),
+    0 0 0 1px rgba(15, 23, 42, 0.9);
   padding: 1rem;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 
 /* =========================================================
-   Solace Dock (no Tailwind required)
+   Solace Dock – visual only (no positioning overrides)
    ========================================================= */
 
 .solace-dock {
-  position: relative;
+  /* DO NOT set position here – the component controls that */
   background: color-mix(in oklab, rgba(12, 18, 28, 0.86) 92%, transparent);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: var(--sd-fg);
   border-radius: var(--sd-radius);
+  border: 1px solid rgba(148, 163, 184, 0.45);
   box-shadow:
-    0 22px 70px rgba(0, 0, 0, 0.55),
+    0 22px 70px rgba(0, 0, 0, 0.65),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(10px);
+  color: var(--sd-fg);
+  backdrop-filter: blur(16px);
 }
 
-/* faint ambient glow (very subtle) */
+/* Subtle ambient glow */
 .solace-dock::before {
   content: "";
   position: absolute;
-  inset: 6px;
+  inset: 4px;
   z-index: -1;
   filter: blur(18px);
   opacity: 0.22;
@@ -263,69 +249,76 @@ button:disabled {
   pointer-events: none;
 }
 
-/* clearer header separation */
+/* Header line inside dock */
 .solace-dock header {
-  border-bottom: 1px solid color-mix(in oklab, var(--sd-border) 85%, transparent);
+  border-bottom: 1px solid color-mix(in oklab, var(--sd-border) 80%, transparent);
 }
 
-/* textarea slight inset + focus ring */
+/* Dock textarea */
 .solace-dock textarea {
   background: color-mix(in oklab, var(--sd-bg) 80%, black);
   color: var(--sd-fg) !important;
-  border: 1px solid var(--sd-border) !important;
   border-radius: 12px;
+  border: 1px solid var(--sd-border) !important;
   width: 100%;
   resize: none;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease,
     background 0.15s ease;
 }
+
 .solace-dock textarea:focus {
   border-color: color-mix(in oklab, var(--sd-accent) 60%, var(--sd-border));
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--sd-accent) 22%, transparent);
 }
 
-/* Primary action inside dock */
+/* Primary action in dock */
 .solace-dock button.primary {
   background: var(--sd-accent) !important;
   color: #fff !important;
   border: none !important;
+  border-radius: 999px;
+  padding-inline: 1.1rem;
   transition:
     background 0.15s ease,
     transform 0.05s ease,
     opacity 0.15s ease;
 }
+
 .solace-dock button.primary:hover {
   background: color-mix(in oklab, var(--sd-accent) 90%, white);
 }
+
 .solace-dock button.primary:active {
   transform: translateY(1px);
 }
+
 .solace-dock button.primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  opacity: 0.55;
 }
 
-/* Text & chips */
+/* Text + chips */
 .solace-dock .muted {
   color: var(--sd-muted) !important;
 }
+
 .solace-dock .chip {
   background: var(--sd-chip-bg) !important;
   color: var(--sd-chip-fg) !important;
   border-radius: 999px;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
 }
 
-/* Layout helpers for the dock */
+/* Simple flex row helper inside dock */
 .solace-dock .row {
   display: flex;
-  gap: 0.5rem;
   align-items: center;
+  gap: 0.5rem;
 }
+
 @media (max-width: 640px) {
   .solace-dock .row {
     flex-direction: column;
