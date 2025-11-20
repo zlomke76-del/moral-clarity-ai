@@ -6,6 +6,10 @@
     {
       "path": "/api/news/fetcher",
       "schedule": "0 6,18 * * *"
+    },
+    {
+      "path": "/api/news/backfill-90d",
+      "schedule": "15 6,18 * * *"
     }
   ]
 }
