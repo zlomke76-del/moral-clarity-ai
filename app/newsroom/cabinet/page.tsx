@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import type { OutletOverview, OutletTrendPoint } from "./types";
 import Leaderboard from "./components/Leaderboard";
 import { OutletDetailDialog } from "./components/OutletDetailDialog";
+import type { OutletDetailData } from "./components/OutletDetailDialog";
 
 type OverviewResponse = {
   ok: boolean;
@@ -110,14 +111,13 @@ export default function NewsroomCabinetPage() {
   /* ============================
      Convert OutletOverview → OutletDetailData
      ============================ */
-  function mapToDetail(outlet: OutletOverview | null) {
+  function mapToDetail(outlet: OutletOverview | null): OutletDetailData | null {
     if (!outlet) return null;
 
     return {
       canonical_outlet: outlet.canonical_outlet,
       display_name: outlet.canonical_outlet,
-      tierLabel:
-        outlet ? getTierLabel(outlet.avg_bias_intent, outlets) : "—",
+      tierLabel: getTierLabel(outlet.avg_bias_intent, outlets),
 
       storiesAnalyzed: outlet.total_stories,
 
@@ -128,7 +128,7 @@ export default function NewsroomCabinetPage() {
       lifetimeFraming: outlet.bias_framing,
       lifetimeContext: outlet.bias_context,
 
-      lastScoredAt: outlet.last_story_day || null,
+      lastScoredAt: outlet.last_story_day ?? null,
 
       // Placeholder — can be replaced when you compute 90d PI + trend
       ninetyDayPi: null,
@@ -155,7 +155,6 @@ export default function NewsroomCabinetPage() {
      ============================ */
   return (
     <div className="flex flex-col gap-8">
-
       {/* ===== Cabinet Header ===== */}
       <section className="space-y-3">
         <div>
@@ -209,7 +208,7 @@ export default function NewsroomCabinetPage() {
             }}
           />
 
-          {/* ===== (Right column left empty — modal replaces details) ===== */}
+          {/* Right column unused; modal covers details */}
           <div />
         </section>
       )}
@@ -232,14 +231,14 @@ export default function NewsroomCabinetPage() {
         </h2>
         <div className="grid gap-4 md:grid-cols-3 text-xs text-neutral-300">
           <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
-            <h3 className="text-sm font-semibold mb-1">
+            <h3 className="mb-1 text-sm font-semibold">
               What we measure (bias)
             </h3>
             <p>
-              Each scored story gets four component scores (0–3). Lower is
-              more neutral:
+              Each scored story gets four component scores (0–3). Lower is more
+              neutral:
             </p>
-            <ul className="mt-2 space-y-1 list-disc list-inside">
+            <ul className="mt-2 list-inside list-disc space-y-1">
               <li>Language — emotional vs neutral wording</li>
               <li>Source — diverse, credible vs narrow, shaky</li>
               <li>Framing — balanced perspectives vs one-sided</li>
@@ -251,44 +250,51 @@ export default function NewsroomCabinetPage() {
           </div>
 
           <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
-            <h3 className="text-sm font-semibold mb-1">
+            <h3 className="mb-1 text-sm font-semibold">
               Bias intent → Predictability Index
             </h3>
             <p>
               We combine those four components into a{" "}
-              <span className="font-medium">bias intent score</span> (0–3),
-              then convert it into a PI:
+              <span className="font-medium">bias intent score</span> (0–3), then
+              convert it into a PI:
             </p>
             <p className="mt-2 font-mono text-xs">
               PI = 1 − (bias_intent / 3)
             </p>
             <p className="mt-2 text-[11px] text-neutral-300">
-              Closer to 1.0 → more predictable, neutral storytelling.
+              Closer to 1.0 → more predictable, neutral storytelling. Closer to
+              0.0 → strong, consistent bias in how stories are told.
             </p>
           </div>
 
           <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4">
-            <h3 className="text-sm font-semibold mb-1">
+            <h3 className="mb-1 text-sm font-semibold">
               How to read this board
             </h3>
-            <ul className="space-y-1 list-disc list-inside">
+            <ul className="list-inside list-disc space-y-1">
               <li>
                 <span className="font-medium">Golden Anchors</span> are the
-                highest-scoring outlets by PI.
+                highest-scoring outlets by PI with solid story volume.
               </li>
               <li>
-                <span className="font-medium">Neutral Band</span> contains
-                outlets with mixed patterns.
+                The <span className="font-medium">Neutral Band</span> contains
+                outlets with mixed bias patterns but reliable coverage.
               </li>
               <li>
+                The{" "}
                 <span className="font-medium">High Bias Watchlist</span>{" "}
-                highlights outlets with stronger bias signals.
+                surfaces outlets whose language, framing, or context show
+                stronger bias patterns.
               </li>
             </ul>
+            <p className="mt-2 text-[11px] text-neutral-400">
+              This doesn&apos;t tell you what to think. It shows{" "}
+              <span className="font-medium">how predictable the bias is</span>{" "}
+              in how stories are delivered.
+            </p>
           </div>
         </div>
       </section>
     </div>
   );
 }
-
