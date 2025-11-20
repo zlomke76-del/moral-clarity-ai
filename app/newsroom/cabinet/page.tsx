@@ -1,3 +1,4 @@
+// app/newsroom/cabinet/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -69,10 +70,10 @@ export default function NewsroomCabinetPage() {
     };
   }, []);
 
-  const selected =
-    selectedCanonical &&
-    outlets.find((o) => o.canonical_outlet === selectedCanonical)
-      ?.?;
+  const selected: OutletOverview | null =
+    selectedCanonical
+      ? outlets.find((o) => o.canonical_outlet === selectedCanonical) ?? null
+      : null;
 
   /* ========= Load trend whenever selected outlet changes ========= */
   useEffect(() => {
@@ -284,7 +285,7 @@ export default function NewsroomCabinetPage() {
             return;
           }
         }}
-        outlet={mapToDetail(selected ?? null)}
+        outlet={mapToDetail(selected)}
         trends={trendLoading ? null : trends}
       />
     </>
