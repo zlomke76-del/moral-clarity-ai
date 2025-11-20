@@ -1,4 +1,3 @@
-// app/newsroom/cabinet/components/OutletDetailModal.tsx
 "use client";
 
 import { useEffect } from "react";
@@ -14,22 +13,21 @@ type Props = {
 };
 
 export default function OutletDetailModal({ open, onClose, outlet, trends }: Props) {
-  // If closed or no outlet selected, render nothing
   if (!open || !outlet) return null;
 
-  // Close on Escape + lock body scroll while modal is open
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
 
     window.addEventListener("keydown", onKey);
-    const prevOverflow = document.body.style.overflow;
+
+    const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prevOverflow;
+      document.body.style.overflow = prev;
     };
   }, [onClose]);
 
@@ -44,7 +42,6 @@ export default function OutletDetailModal({ open, onClose, outlet, trends }: Pro
     lifetimeFraming,
     lifetimeContext,
     lastScoredAt,
-    daysActive,
     biasProfileLabel,
     trend90Label,
     trendDirection,
@@ -68,16 +65,15 @@ export default function OutletDetailModal({ open, onClose, outlet, trends }: Pro
         className="relative w-full max-w-3xl rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5 shadow-2xl shadow-black/80"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close button */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-3 top-3 rounded-full border border-neutral-700 bg-neutral-900 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
+          className="absolute right-3 top-3 rounded-full border border-neutral-700 bg-neutral-900 px-2 py-[1px] text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
         >
           Esc
         </button>
 
-        {/* Header: logo + basic identity + PI block */}
+        {/* HEADER */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <OutletLogo domain={canonical_outlet} name={display_name} />
@@ -105,19 +101,17 @@ export default function OutletDetailModal({ open, onClose, outlet, trends }: Pro
           </div>
         </div>
 
-        {/* Meta copy */}
+        {/* META */}
         <div className="mt-3 space-y-1 text-xs text-neutral-400">
           <div>
             Bias intent:{" "}
             <span className="font-mono text-neutral-100">
-              {lifetimeBiasIntent.toFixed(2)} / 3.00
+              {lifetimeBiasIntent.toFixed(2)} / 3.0
             </span>{" "}
             ({biasProfileLabel})
           </div>
-          <div className="text-neutral-500">
-            Last scored: {lastScoredAt} · {daysActive} day
-            {daysActive === 1 ? "" : "s"} active
-          </div>
+          <div className="text-neutral-500">Last scored: {lastScoredAt}</div>
+
           {trend90Label && (
             <div className="text-[11px] text-neutral-500">
               90-day trend:{" "}
@@ -131,7 +125,7 @@ export default function OutletDetailModal({ open, onClose, outlet, trends }: Pro
           )}
         </div>
 
-        {/* Bias component bars */}
+        {/* COMPONENT SCORES */}
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <BiasBar label="Language" value={lifetimeLanguage} />
           <BiasBar label="Source" value={lifetimeSource} />
@@ -139,14 +133,13 @@ export default function OutletDetailModal({ open, onClose, outlet, trends }: Pro
           <BiasBar label="Context" value={lifetimeContext} />
         </div>
 
-        {/* Trend chart (daily PI snapshots) */}
+        {/* TREND CHART */}
         <div className="mt-6">
           <TrendChart points={trends} loading={!trends && !!outlet} />
         </div>
 
-        {/* Footnote */}
-        <p className="mt-4 text-[11px] text-neutral-500">
-          This cabinet doesn&apos;t decide who is right or wrong. It measures how
+        <p className="mt-4 text-[11px] text-neutral-500 leading-relaxed">
+          This cabinet doesn’t decide who is right or wrong. It measures how
           stories are told — language, sourcing, framing, and missing context —
           and turns that into a predictable, auditable signal. Higher PI means
           more stable, neutral storytelling.
@@ -176,4 +169,3 @@ function BiasBar({ label, value }: { label: string; value: number }) {
     </div>
   );
 }
-
