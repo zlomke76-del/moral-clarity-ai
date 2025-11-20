@@ -9,55 +9,37 @@ type Props = {
   className?: string;
 };
 
-function normalizeDomain(domain: string): string {
-  // crude normalizer: strip protocol & path, keep host
-  try {
-    if (domain.startsWith("http://") || domain.startsWith("https://")) {
-      const url = new URL(domain);
-      return url.hostname;
-    }
-    return domain.split("/")[0];
-  } catch {
-    return domain;
-  }
-}
-
 export default function OutletLogo({ domain, name, className }: Props) {
-  const [failed, setFailed] = useState(false);
-  const host = normalizeDomain(domain);
+  const [broken, setBroken] = useState(false);
 
-  const baseClasses =
-    "rounded-md border border-neutral-800 bg-neutral-900 object-contain";
-  const combined = [baseClasses, className || "h-9 w-9"].join(" ");
+  const baseClass =
+    "flex items-center justify-center overflow-hidden rounded-lg bg-neutral-900 text-sm font-semibold text-neutral-50";
+  const sizeClass = className ?? "h-10 w-10";
 
-  if (failed || !host) {
-    // simple initials fallback
-    const initials =
-      name && name.length > 0
-        ? name
-            .replace(/^https?:\/\//, "")
-            .replace(/\..+$/, "")
-            .slice(0, 3)
-            .toUpperCase()
-        : "MC";
+  const labelSource = name || domain || "?";
+  const initial =
+    labelSource.trim().length > 0
+      ? labelSource.trim()[0]!.toUpperCase()
+      : "?";
 
+  if (broken || !domain) {
     return (
-      <div className={combined + " flex items-center justify-center text-[11px] font-semibold text-neutral-100"}>
-        {initials}
+      <div className={`${baseClass} ${sizeClass}`}>
+        {initial}
       </div>
     );
   }
 
-  const logoUrl = `https://logo.clearbit.com/${host}`;
+  const url = `https://logo.clearbit.com/${domain}`;
 
   return (
-    <img
-      src={logoUrl}
-      alt={`${name} logo`}
-      className={combined}
-      onError={() => setFailed(true)}
-    />
+    <div className={`${baseClass} ${sizeClass}`}>
+      <img
+        src={url}
+        alt={name || domain}
+        className="h-full w-full object-contain"
+        onError={() => setBroken(true)}
+      />
+    </div>
   );
 }
-
-
