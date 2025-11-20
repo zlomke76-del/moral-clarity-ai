@@ -1,4 +1,4 @@
-// app/components/SolaceDock.tsx
+// app/components/SolaceDock.tsx — Final Stable Version (Orb + Mobile Pill, No Scroll Lock)
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -21,12 +21,13 @@ type Message = { role: "user" | "assistant"; content: string };
 type ModeHint = "Create" | "Next Steps" | "Red Team" | "Neutral";
 
 const POS_KEY = "solace:pos:v3";
+const ORB_POS_KEY = "solace:orb-pos";
 const MINISTRY_KEY = "solace:ministry";
 const PAD = 12;
 
 const ui = {
   panelBg:
-    "radial-gradient(140% 160% at 50% -60%, rgba(26,35,53,0.85) 0%, rgba(14,21,34,0.88) 60%)",
+    "radial-gradient(140% 160% at 50% -60%, rgba(26,35,53,.85) 0%, rgba(14,21,34,.88) 60%)",
   border: "1px solid var(--mc-border)",
   edge: "1px solid rgba(255,255,255,.06)",
   text: "var(--mc-text)",
@@ -38,7 +39,7 @@ const ui = {
 };
 
 export default function SolaceDock() {
-  // ensure single mount
+  // mount guard
   const [canRender, setCanRender] = useState(false);
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -52,53 +53,48 @@ export default function SolaceDock() {
 
   const { visible, x, y, setPos, filters, setFilters } = useSolaceStore();
 
-  // --- state ----------------------------------------------------
-  const [dragging, setDragging] = useState(false);
-  const [offset, setOffset] = useState({ dx: 0, dy: 0 });
-  const [posReady, setPosReady] = useState(false);
-  const [panelH, setPanelH] = useState(0);
-  const [panelW, setPanelW] = useState(0);
-
-  const [modeHint, setModeHint] = useState<ModeHint>("Neutral");
-  const [messages, setMessages] = useState<Message[]>([]);
+  // state
+  const [messages, setMessages] = useState<Message[]>([
+    { role: "assistant", content: "Ready when you are." },
+  ]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
-
-  // image generation
+  const [modeHint, setModeHint] = useState<ModeHint>("Neutral");
   const [imgLoading, setImgLoading] = useState(false);
-
-  // speech
   const [listening, setListening] = useState(false);
-  const recogRef = useRef<any>(null);
 
-  // mobile responsiveness
+  const [dragging, setDragging] = useState(false);
+  const [offset, setOffset] = useState({ dx: 0, dy: 0 });
+  const [panelW, setPanelW] = useState(0);
+  const [panelH, setPanelH] = useState(0);
+  const [posReady, setPosReady] = useState(false);
+
+  // orb minimize
+  const [minimized, setMinimized] = useState(false);
+  const [orbPos, setOrbPos] = useState({ ox: 40, oy: 40 });
+  const [dragOrb, setDragOrb] = useState(false);
+  const orbOffset = useRef({ dx: 0, dy: 0 });
+
   const [isMobile, setIsMobile] = useState(false);
-  const [collapsed, setCollapsed] = useState(false); // mobile-only pill mode
+  const [collapsed, setCollapsed] = useState(false);
 
-  // transcript auto-scroll
+  const recogRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const transcriptRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    const el = transcriptRef.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
-  }, [messages]);
+  const taRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // MEMORY hook: userKey + memory cache
+  // memory
   const { userKey, memReady, memoryCacheRef } = useSolaceMemory();
 
-  // helper: append assistant-side info/system messages
-  const appendInfo = (content: string) => {
-    setMessages((m) => [...m, { role: "assistant", content }]);
-  };
-
-  // ATTACHMENTS hook
+  // attachments
   const {
     pendingFiles,
     handleFiles,
     handlePaste,
     clearPending,
   } = useSolaceAttachments({
-    onInfoMessage: appendInfo,
+    onInfoMessage: (c) =>
+      setMessages((m) => [...m, { role: "assistant", content: c }]),
   });
 
   const ministryOn = useMemo(
@@ -106,23 +102,20 @@ export default function SolaceDock() {
     [filters]
   );
 
-  // seed welcome once
+  // scroll transcript
   useEffect(() => {
-    if (messages.length === 0) {
-      setMessages([{ role: "assistant", content: "Ready when you are." }]);
-    }
-  }, [messages.length]);
+    const el = transcriptRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages]);
 
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
-  // measure/clamp container
+  // measure
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const measure = () => {
       const r = el.getBoundingClientRect();
-      setPanelH(r.height || 0);
-      setPanelW(r.width || 0);
+      setPanelW(r.width);
+      setPanelH(r.height);
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -134,32 +127,27 @@ export default function SolaceDock() {
     };
   }, []);
 
-  // basic viewport breakpoint
+  // mobile detection
   useEffect(() => {
     if (!canRender) return;
-    const check = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
+    const check = () => setIsMobile(window.innerWidth <= 768);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, [canRender]);
 
-  // when we flip into mobile, default to collapsed pill so it doesn’t block UI
   useEffect(() => {
-    if (isMobile) setCollapsed(true);
-    else setCollapsed(false);
+    setCollapsed(isMobile);
   }, [isMobile]);
 
-  // restore position or center (desktop only)
+  // restore panel position
   useEffect(() => {
     if (!canRender || !visible) return;
 
     const vw = window.innerWidth;
     const vh = window.innerHeight;
 
-    // On mobile we ignore custom positioning and use a bottom sheet
-    if (vw <= 768) {
+    if (isMobile) {
       setPosReady(true);
       return;
     }
@@ -167,37 +155,64 @@ export default function SolaceDock() {
     try {
       const raw = localStorage.getItem(POS_KEY);
       if (raw) {
-        const saved = JSON.parse(raw) as { x: number; y: number } | null;
-        if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
-          const sx = Math.max(PAD, Math.min(vw - PAD, saved.x));
-          const sy = Math.max(PAD, Math.min(vh - PAD, saved.y));
-          setPos(sx, sy);
-          setPosReady(true);
-          return;
-        }
+        const s = JSON.parse(raw);
+        setPos(
+          Math.max(PAD, Math.min(vw - PAD - 400, s.x)),
+          Math.max(PAD, Math.min(vh - PAD - 300, s.y))
+        );
+        setPosReady(true);
+        return;
       }
     } catch {}
 
-    requestAnimationFrame(() => {
-      const w = panelW || Math.min(980, Math.max(560, Math.round(vw * 0.56)));
-      const h = panelH || Math.min(820, Math.max(460, Math.round(vh * 0.62)));
-      const startX = Math.max(PAD, Math.round((vw - w) / 2));
-      const startY = Math.max(PAD, Math.round((vh - h) / 2));
-      setPos(startX, startY);
-      setPosReady(true);
-    });
-  }, [canRender, visible, panelW, panelH, setPos]);
+    setPos(
+      Math.round((vw - 720) / 2),
+      Math.round((vh - 520) / 2)
+    );
+    setPosReady(true);
+  }, [canRender, visible, isMobile, setPos]);
 
-  // persist position (desktop only)
+  // persist panel pos
   useEffect(() => {
-    if (!posReady || isMobile) return;
-    try {
-      localStorage.setItem(POS_KEY, JSON.stringify({ x, y }));
-    } catch {}
+    if (isMobile || !posReady) return;
+    localStorage.setItem(POS_KEY, JSON.stringify({ x, y }));
   }, [x, y, posReady, isMobile]);
 
-  // dragging (desktop only)
-  function onHeaderMouseDown(e: React.MouseEvent) {
+  // restore orb pos
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(ORB_POS_KEY);
+      if (raw) setOrbPos(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  // persist orb pos
+  useEffect(() => {
+    localStorage.setItem(ORB_POS_KEY, JSON.stringify(orbPos));
+  }, [orbPos]);
+
+  // autoresize input
+  useEffect(() => {
+    const ta = taRef.current;
+    if (!ta) return;
+    ta.style.height = "0px";
+    ta.style.height = Math.min(220, ta.scrollHeight) + "px";
+  }, [input]);
+
+  // default ministry
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(MINISTRY_KEY) === "0") return;
+    } catch {}
+    const next = new Set(filters);
+    next.add("abrahamic");
+    next.add("ministry");
+    setFilters(next);
+    localStorage.setItem(MINISTRY_KEY, "1");
+  }, []);
+
+  // dragging panel
+  const onHeaderMouseDown = (e: React.MouseEvent) => {
     if (isMobile) return;
     const rect = containerRef.current?.getBoundingClientRect();
     setOffset({
@@ -205,7 +220,7 @@ export default function SolaceDock() {
       dy: e.clientY - (rect?.top ?? 0),
     });
     setDragging(true);
-  }
+  };
   useEffect(() => {
     if (!dragging) return;
     const onMove = (e: MouseEvent) =>
@@ -219,49 +234,45 @@ export default function SolaceDock() {
     };
   }, [dragging, offset, setPos]);
 
-  // autoresize textarea
-  const taRef = useRef<HTMLTextAreaElement | null>(null);
+  // dragging orb
+  const startDragOrb = (e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    orbOffset.current = {
+      dx: e.clientX - rect.left,
+      dy: e.clientY - rect.top,
+    };
+    setDragOrb(true);
+  };
   useEffect(() => {
-    const ta = taRef.current;
-    if (!ta) return;
-    ta.style.height = "0px";
-    ta.style.height = Math.min(220, ta.scrollHeight) + "px";
-  }, [input]);
+    if (!dragOrb) return;
+    const onMove = (e: MouseEvent) =>
+      setOrbPos({
+        ox: e.clientX - orbOffset.current.dx,
+        oy: e.clientY - orbOffset.current.dy,
+      });
+    const onUp = () => setDragOrb(false);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [dragOrb]);
 
-  // default ministry ON (with persist), unless explicitly turned off before
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(MINISTRY_KEY);
-      if (saved === "0") return;
-    } catch {}
-
-    const hasAbrahamic = filters.has("abrahamic");
-    const hasMinistry = filters.has("ministry");
-    if (!hasAbrahamic || !hasMinistry) {
-      const next = new Set(filters);
-      next.add("abrahamic");
-      next.add("ministry");
-      setFilters(next);
-      try {
-        localStorage.setItem(MINISTRY_KEY, "1");
-      } catch {}
-    }
-  }, []); // run once
-
-  // ---------- actions -------------------------------------------------
+  // send msg
   async function send() {
     const text = input.trim();
     if (!text && pendingFiles.length === 0) return;
     if (streaming) return;
 
     setInput("");
-    const userMsg = text || (pendingFiles.length ? "Attachments:" : "");
-    const nextUser: Message = { role: "user", content: userMsg };
-    const nextMsgs: Message[] = [...messages, nextUser];
+    const nextUser: Message = {
+      role: "user",
+      content: text || "Attachments:",
+    };
+    const nextMsgs = [...messages, nextUser];
     setMessages(nextMsgs);
     setStreaming(true);
-
-    const activeFilters: string[] = Array.from(filters);
 
     try {
       const res = await fetch("/api/chat", {
@@ -273,10 +284,10 @@ export default function SolaceDock() {
         },
         body: JSON.stringify({
           messages: nextMsgs,
-          filters: activeFilters,
+          filters: Array.from(filters),
           stream: false,
           attachments: pendingFiles,
-          ministry: activeFilters.includes("ministry"),
+          ministry: filters.has("ministry"),
           workspace_id: MCA_WORKSPACE_ID,
           user_key: userKey,
           memory_preview: memReady ? memoryCacheRef.current.slice(0, 50) : [],
@@ -285,105 +296,88 @@ export default function SolaceDock() {
 
       clearPending();
 
-      if (!res.ok) {
-        const t = await res.text().catch(() => "");
-        throw new Error(`HTTP ${res.status}: ${t}`);
-      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
       const data = await res.json();
-      const reply = String(data.text ?? "[No reply]");
-      setMessages((m) => [...m, { role: "assistant", content: reply }]);
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: data.text || "[No reply]" },
+      ]);
     } catch (e: any) {
       setMessages((m) => [
         ...m,
-        { role: "assistant", content: `⚠️ ${e?.message ?? "Error"}` },
+        { role: "assistant", content: `⚠️ ${e.message ?? "Error"}` },
       ]);
     } finally {
       setStreaming(false);
     }
   }
 
-  // === IMAGE GENERATION ===============================================
+  // generate image
   async function generateImageFromInput() {
     const text = input.trim();
     if (!text || imgLoading) return;
 
     setImgLoading(true);
     setInput("");
-
-    // Show the user's prompt in the transcript
     setMessages((m) => [...m, { role: "user", content: text }]);
 
     try {
       const url = await generateImage(text);
-
       setMessages((m) => [
         ...m,
-        {
-          role: "assistant",
-          content: `🎨 Generated image for you:\n${url}`,
-        },
+        { role: "assistant", content: `🎨 Generated image:\n${url}` },
       ]);
     } catch (e: any) {
       setMessages((m) => [
         ...m,
-        {
-          role: "assistant",
-          content: `⚠️ Image error: ${
-            e?.message ?? "Image generation failed."
-          }`,
-        },
+        { role: "assistant", content: `⚠️ ${e.message}` },
       ]);
     } finally {
       setImgLoading(false);
     }
   }
 
-  // ===================================================================
-
+  // toggle ministry
   function toggleMinistry() {
     if (ministryOn) {
       const next = Array.from(filters).filter(
         (f) => f !== "abrahamic" && f !== "ministry"
       );
       setFilters(next);
-      try {
-        localStorage.setItem(MINISTRY_KEY, "0");
-      } catch {}
+      localStorage.setItem(MINISTRY_KEY, "0");
     } else {
       const next = new Set(filters);
       next.add("abrahamic");
       next.add("ministry");
       setFilters(next);
-      try {
-        localStorage.setItem(MINISTRY_KEY, "1");
-      } catch {}
+      localStorage.setItem(MINISTRY_KEY, "1");
     }
   }
 
+  // mic
   function toggleMic() {
     const SR =
       (window as any).SpeechRecognition ||
       (window as any).webkitSpeechRecognition;
     if (!SR) {
-      appendInfo("🎤 Microphone is not supported in this browser.");
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: "🎤 Mic unsupported." },
+      ]);
       return;
     }
     if (listening) {
-      try {
-        recogRef.current?.stop();
-      } catch {}
+      recogRef.current?.stop();
       setListening(false);
       return;
     }
     const sr = new SR();
     sr.lang = "en-US";
     sr.interimResults = false;
-    sr.maxAlternatives = 1;
     sr.onresult = (e: any) => {
-      const t = Array.from(e.results)
-        .map((r: any) => r[0].transcript)
-        .join(" ");
-      setInput((prev) => (prev ? prev + " " : "") + t);
+      const t = Array.from(e.results).map((r: any) => r[0].transcript).join(" ");
+      setInput((p) => (p ? p + " " + t : t));
     };
     sr.onend = () => setListening(false);
     sr.onerror = () => setListening(false);
@@ -394,499 +388,397 @@ export default function SolaceDock() {
 
   if (!canRender || !visible) return null;
 
-  // clamp within viewport (desktop)
+  // clamp panel inside screen
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  const maxX = Math.max(0, vw - panelW - PAD);
-  const maxY = Math.max(0, vh - panelH - PAD);
-  const tx = Math.min(Math.max(0, x - PAD), maxX);
-  const ty = Math.min(Math.max(0, y - PAD), maxY);
+  const tx = Math.max(0, Math.min(x, vw - panelW - PAD));
+  const ty = Math.max(0, Math.min(y, vh - panelH - PAD));
   const invisible = !posReady;
 
-  // ---------- styles --------------------------------------------------
+  // PANEL STYLE
   const panelStyle: React.CSSProperties = isMobile
     ? {
         position: "fixed",
         left: 0,
         right: 0,
         bottom: 0,
-        top: "auto",
-        width: "100%",
-        maxWidth: "100%",
         height: "70vh",
-        maxHeight: "80vh",
         background: ui.panelBg,
         borderRadius: "20px 20px 0 0",
         border: ui.border,
-        boxShadow: ministryOn ? ui.glowOn : ui.shadow,
-        backdropFilter: "blur(8px)",
-        display: "flex",
+        display: minimized ? "none" : "flex",
         flexDirection: "column",
         overflow: "hidden",
-        pointerEvents: invisible ? "none" : "auto",
-        opacity: invisible ? 0 : 1,
-        transition: "opacity 120ms ease",
-        zIndex: 60,
+        zIndex: 80,
       }
     : {
         position: "fixed",
-        left: PAD,
-        top: PAD,
+        transform: `translate3d(${tx}px, ${ty}px, 0)`,
         width: "clamp(560px, 56vw, 980px)",
         height: "clamp(460px, 62vh, 820px)",
-        maxHeight: "90vh",
         background: ui.panelBg,
         borderRadius: 20,
         border: ui.border,
-        boxShadow: ministryOn ? ui.glowOn : ui.shadow,
-        backdropFilter: "blur(8px)",
-        display: "flex",
-        flexDirection: "column",
         overflow: "hidden",
-        pointerEvents: invisible ? "none" : "auto",
-        transform: `translate3d(${tx}px, ${ty}px, 0)`,
-        opacity: invisible ? 0 : 1,
-        transition: "opacity 120ms ease",
-        resize: "both",
-        zIndex: 60,
+        display: minimized ? "none" : "flex",
+        flexDirection: "column",
+        zIndex: 80,
       };
 
-  const headerStyle: React.CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    padding: "10px 14px",
-    borderBottom: ui.edge,
-    cursor: isMobile ? "default" : "move",
-    userSelect: "none",
-    background:
-      "linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.00))",
-    color: ui.text,
-  };
-
-  const transcriptStyle: React.CSSProperties = {
-    flex: "1 1 auto",
-    overflow: "auto",
-    padding: "14px 16px 10px 16px",
-    color: ui.text,
-    background:
-      "linear-gradient(180deg, rgba(12,19,30,.9), rgba(10,17,28,.92))",
-  };
-
-  const composerWrapStyle: React.CSSProperties = {
-    borderTop: ui.edge,
-    background: ui.surface2,
-    padding: 10,
-  };
-
-  const borderColor =
-    typeof document !== "undefined"
-      ? getComputedStyle(document.documentElement).getPropertyValue(
-          "--mc-border"
-        ) || "rgba(34,48,71,.9)"
-      : "rgba(34,48,71,.9)";
-
-  const fieldStyle: React.CSSProperties = {
-    flex: "1 1 auto",
-    minHeight: 60,
-    maxHeight: 240,
-    overflow: "auto",
-    border: `1px solid ${borderColor}`,
-    background: "#0e1726",
-    color: ui.text,
-    borderRadius: 12,
-    padding: "10px 12px",
-    font:
-      "14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
-    resize: "none",
-    outline: "none",
-  };
-
-  const askBtnStyle: React.CSSProperties = {
-    minWidth: 80,
-    height: 40,
-    borderRadius: 12,
-    border: "0",
-    background: "#6e8aff",
-    color: "#fff",
-    font:
-      "600 13px/1 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
-    cursor:
-      streaming || (!input.trim() && pendingFiles.length === 0)
-        ? "not-allowed"
-        : "pointer",
-    opacity:
-      streaming || (!input.trim() && pendingFiles.length === 0) ? 0.55 : 1,
-  };
-
-  const imageBtnStyle: React.CSSProperties = {
-    minWidth: 80,
-    height: 40,
-    borderRadius: 12,
-    border: "0",
-    background: "#374151",
-    color: "#e5e7eb",
-    font:
-      "600 13px/1 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
-    cursor: imgLoading || !input.trim() ? "not-allowed" : "pointer",
-    opacity: imgLoading || !input.trim() ? 0.55 : 1,
-  };
-
-  const orbStyle: React.CSSProperties = {
-    width: 22,
-    height: 22,
-    borderRadius: "50%",
-    background:
-      "radial-gradient(62% 62% at 50% 42%, rgba(251,191,36,1) 0%, rgba(251,191,36,.65) 38%, rgba(251,191,36,.22) 72%, rgba(251,191,36,.12) 100%)",
-    boxShadow: "0 0 38px rgba(251,191,36,.55)",
-    flex: "0 0 22px",
-  };
-
-  const chip = (label: string, active: boolean, onClick: () => void) => (
-    <button
-      onClick={onClick}
-      style={{
-        borderRadius: 8,
-        padding: "7px 10px",
-        font:
-          "600 12px/1 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
-        color: active ? "#0b0f16" : "var(--mc-text)",
-        background: active ? "var(--mc-text)" : "#0e1726",
-        border: `1px solid var(--mc-border)`,
-        cursor: "pointer",
-      }}
-      title={`${label} mode`}
-      type="button"
-    >
-      {label}
-    </button>
-  );
-
-  const ministryTab = (
-    <button
-      onClick={toggleMinistry}
-      title="Ministry mode"
-      type="button"
-      style={{
-        borderRadius: 8,
-        padding: "7px 10px",
-        font:
-          "700 12px/1 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
-        color: ministryOn ? "#000" : "var(--mc-text)",
-        background: ministryOn ? "#f6c453" : "#0e1726",
-        border: `1px solid ${ministryOn ? "#f4cf72" : "var(--mc-border)"}`,
-        boxShadow: ministryOn ? "0 0 22px rgba(251,191,36,.65)" : "none",
-        cursor: "pointer",
-      }}
-    >
-      Ministry
-    </button>
-  );
-
-  // ---------- MOBILE PILL (collapsed) ---------------------------------
-  if (isMobile && collapsed) {
-    const pillStyle: React.CSSProperties = {
-      position: "fixed",
-      left: 16,
-      right: 16,
-      bottom: 20,
-      padding: "10px 14px",
-      borderRadius: 9999,
-      border: ui.border,
-      background: "rgba(6,12,20,0.96)",
-      color: ui.text,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: 12,
-      boxShadow: ui.shadow,
-      backdropFilter: "blur(10px)",
-      zIndex: 60,
-    };
-
-    return createPortal(
-      <button
-        type="button"
-        style={pillStyle}
-        onClick={() => setCollapsed(false)}
-        aria-label="Open Solace"
+  // ORB
+  if (minimized && !isMobile) {
+    const orb = (
+      <div
+        style={{
+          position: "fixed",
+          left: orbPos.ox,
+          top: orbPos.oy,
+          width: 52,
+          height: 52,
+          borderRadius: "50%",
+          background:
+            "radial-gradient(circle at 30% 30%, #fbbf24, #b45309)",
+          boxShadow: "0 0 18px rgba(251,191,36,.7)",
+          cursor: dragOrb ? "grabbing" : "grab",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 999,
+        }}
+        onMouseDown={startDragOrb}
+        onDoubleClick={() => setMinimized(false)}
+        title="Double-click to open Solace"
       >
-        <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span aria-hidden style={orbStyle} />
-          <span style={{ font: "600 13px system-ui" }}>Solace</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "#111" }}>
+          SOLACE
         </span>
-        <span style={{ font: "12px system-ui", color: ui.sub }}>
-          Tap to open
-        </span>
-      </button>,
-      document.body
+      </div>
     );
+    return createPortal(orb, document.body);
   }
 
-  // ---------- FULL PANEL UI -------------------------------------------
-  const panel = (
-    <section
-      ref={containerRef}
-      role="dialog"
-      aria-label="Solace"
-      style={panelStyle}
-      onClick={(e) => {
-        // Alt+Click header area (desktop) to re-center
-        if (!containerRef.current || isMobile) return;
-        if ((e as any).altKey) {
-          const vw2 = window.innerWidth;
-          const vh2 = window.innerHeight;
-          const w = panelW || 760;
-          const h = panelH || 560;
-          const startX = Math.max(PAD, Math.round((vw2 - w) / 2));
-          const startY = Math.max(PAD, Math.round((vh2 - h) / 2));
-          setPos(startX, startY);
-          try {
-            localStorage.removeItem(POS_KEY);
-          } catch {}
-        }
-      }}
-    >
-      {/* HEADER */}
-      <header style={headerStyle} onMouseDown={onHeaderMouseDown}>
-        {/* left: orb + title */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+  // MOBILE PILL
+  if (isMobile && collapsed) {
+    const pill = (
+      <button
+        onClick={() => setCollapsed(false)}
+        style={{
+          position: "fixed",
+          left: 16,
+          right: 16,
+          bottom: 20,
+          background: "#0b111aee",
+          borderRadius: 999,
+          border: ui.border,
+          padding: "10px 14px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          zIndex: 60,
+        }}
+      >
+        <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span
-            aria-hidden
-            style={orbStyle}
-            title="Alt+Click header to center/reset"
-          />
-          <span style={{ font: "600 13px system-ui", color: ui.text }}>
-            Solace
-          </span>
-          <span style={{ font: "12px system-ui", color: ui.sub }}>
-            Create with moral clarity
-          </span>
-          {/* tiny status dot for memory load */}
-          <span
-            title={memReady ? "Memory ready" : "Loading memory…"}
             style={{
-              marginLeft: 8,
-              width: 8,
-              height: 8,
+              width: 14,
+              height: 14,
               borderRadius: "50%",
-              background: memReady ? "#34d399" : "#f59e0b",
-              boxShadow: memReady ? "0 0 8px #34d399aa" : "none",
+              background:
+                "radial-gradient(circle, #fbbf24, #b45309)",
             }}
           />
-        </div>
+          <span style={{ color: ui.text, fontWeight: 600 }}>Solace</span>
+        </span>
+        <span style={{ color: ui.sub, fontSize: 12 }}>Tap to open</span>
+      </button>
+    );
+    return createPortal(pill, document.body);
+  }
 
-        {/* middle: lenses */}
-        <div style={{ display: "flex", gap: 8, marginLeft: 12 }}>
-          {chip("Create", modeHint === "Create", () => setModeHint("Create"))}
-          {chip("Next", modeHint === "Next Steps", () =>
-            setModeHint("Next Steps")
-          )}
-          {chip("Red", modeHint === "Red Team", () => setModeHint("Red Team"))}
-        </div>
+  // HEADER
+  const header = (
+    <header
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "10px 14px",
+        borderBottom: ui.edge,
+        cursor: isMobile ? "default" : "move",
+        userSelect: "none",
+      }}
+      onMouseDown={onHeaderMouseDown}
+    >
+      <span
+        style={{
+          width: 16,
+          height: 16,
+          borderRadius: "50%",
+          background:
+            "radial-gradient(circle, #fbbf24, #b45309)",
+          flexShrink: 0,
+        }}
+        title="Drag Solace window"
+      />
 
-        {/* right: ministry + collapse (mobile) */}
-        <div
-          style={{
-            marginLeft: "auto",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
-          {ministryTab}
-          {isMobile && (
-            <button
-              type="button"
-              onClick={(ev) => {
-                ev.stopPropagation();
-                setCollapsed(true);
-              }}
-              title="Collapse Solace"
-              style={{
-                borderRadius: 999,
-                padding: "4px 8px",
-                font: "600 11px system-ui",
-                border: ui.edge,
-                background: "rgba(8,15,26,0.9)",
-                color: ui.sub,
-              }}
-            >
-              Hide
-            </button>
-          )}
-        </div>
-      </header>
+      <span style={{ fontWeight: 600, color: ui.text }}>Solace</span>
+      <span style={{ fontSize: 12, color: ui.sub }}>
+        Create with moral clarity
+      </span>
 
-      {/* TRANSCRIPT */}
-      <div ref={transcriptRef} style={transcriptStyle} aria-live="polite">
-        {messages.map((m, i) => (
-          <div
-            key={i}
+      <span
+        title={memReady ? "Memory ready" : "Loading memory…"}
+        style={{
+          marginLeft: 8,
+          width: 8,
+          height: 8,
+          borderRadius: "50%",
+          background: memReady ? "#10b981" : "#f59e0b",
+        }}
+      />
+
+      <div style={{ display: "flex", gap: 6, marginLeft: 12 }}>
+        {["Create", "Next Steps", "Red Team"].map((k) => (
+          <button
+            key={k}
+            onClick={() => setModeHint(k as ModeHint)}
             style={{
-              borderRadius: 12,
-              padding: "10px 12px",
-              margin: "6px 0",
+              padding: "6px 10px",
+              borderRadius: 8,
               background:
-                m.role === "user"
-                  ? "rgba(39,52,74,.6)"
-                  : "rgba(28,38,54,.6)",
-              color:
-                m.role === "user"
-                  ? "var(--mc-text)"
-                  : "rgba(233,240,250,.94)",
-              whiteSpace: "pre-wrap",
+                modeHint === k ? "var(--mc-text)" : "rgba(14,23,38,.9)",
+              color: modeHint === k ? "#0b0f16" : ui.text,
+              fontSize: 12,
+              fontWeight: 600,
+              border: ui.edge,
             }}
           >
-            {m.content}
-          </div>
+            {k}
+          </button>
         ))}
       </div>
 
-      {/* COMPOSER */}
-      <div
-        style={composerWrapStyle}
-        onPaste={(e) => handlePaste(e, { prefix: "solace" })}
+      <button
+        onClick={toggleMinistry}
+        style={{
+          marginLeft: "auto",
+          padding: "6px 10px",
+          borderRadius: 8,
+          background: ministryOn ? "#f6c453" : "#0e1726",
+          border: ministryOn ? "1px solid #f4cf72" : ui.edge,
+          color: ministryOn ? "#000" : ui.text,
+          boxShadow: ministryOn ? "0 0 12px #fbbf2499" : "none",
+          fontSize: 12,
+          fontWeight: 700,
+        }}
       >
-        {/* pending attachments preview */}
-        {pendingFiles.length > 0 && (
-          <div
+        Ministry
+      </button>
+
+      <button
+        onClick={() => setMinimized(true)}
+        title="Minimize"
+        style={{
+          marginLeft: 8,
+          padding: "4px 8px",
+          borderRadius: 8,
+          background: "#0e1726",
+          color: ui.sub,
+          border: ui.edge,
+          fontSize: 11,
+          fontWeight: 600,
+        }}
+      >
+        —
+      </button>
+    </header>
+  );
+
+  // TRANSCRIPT
+  const transcript = (
+    <div
+      ref={transcriptRef}
+      style={{
+        flex: 1,
+        overflow: "auto",
+        padding: "12px 14px",
+        background:
+          "linear-gradient(180deg, rgba(12,19,30,.9), rgba(10,17,28,.92))",
+      }}
+    >
+      {messages.map((m, i) => (
+        <div
+          key={i}
+          style={{
+            marginBottom: 8,
+            padding: "10px 12px",
+            borderRadius: 12,
+            background:
+              m.role === "user"
+                ? "rgba(39,52,74,.6)"
+                : "rgba(28,38,54,.6)",
+            color: ui.text,
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {m.content}
+        </div>
+      ))}
+    </div>
+  );
+
+  // COMPOSER
+  const composer = (
+    <div
+      style={{
+        borderTop: ui.edge,
+        background: ui.surface2,
+        padding: 10,
+      }}
+      onPaste={(e) => handlePaste(e, { prefix: "solace" })}
+    >
+      {pendingFiles.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 6,
+            marginBottom: 8,
+            fontSize: 12,
+            color: ui.text,
+          }}
+        >
+          {pendingFiles.map((f, i) => (
+            <a
+              key={i}
+              href={f.url}
+              target="_blank"
+              style={{
+                padding: "4px 8px",
+                borderRadius: 8,
+                border: ui.edge,
+                background: "#0e1726",
+                textDecoration: "none",
+              }}
+            >
+              📎 {f.name}
+            </a>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button
+            onClick={() =>
+              document.getElementById("solace-file-input")?.click()
+            }
             style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 6,
-              marginBottom: 8,
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              border: ui.edge,
+              background: "#0e1726",
               color: ui.text,
-              font: "12px system-ui",
             }}
           >
-            {pendingFiles.map((f, idx) => (
-              <a
-                key={idx}
-                href={f.url}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  padding: "4px 8px",
-                  borderRadius: 8,
-                  border: "1px solid var(--mc-border)",
-                  background: "#0e1726",
-                  textDecoration: "none",
-                }}
-                title={f.name}
-              >
-                📎 {f.name}
-              </a>
-            ))}
-          </div>
-        )}
-
-        <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
-          <div style={{ display: "flex", gap: 6 }}>
-            <button
-              type="button"
-              onClick={() =>
-                (document.querySelector<HTMLInputElement>(
-                  "#solace-file-input"
-                )?.click())
-              }
-              title="Attach files"
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 12,
-                border: "1px solid var(--mc-border)",
-                background: "#0e1726",
-                color: ui.text,
-                cursor: "pointer",
-              }}
-            >
-              📎
-            </button>
-            <input
-              id="solace-file-input"
-              type="file"
-              className="hidden"
-              multiple
-              onChange={(e) => handleFiles(e.target.files, { prefix: "solace" })}
-            />
-
-            <button
-              type="button"
-              onClick={toggleMic}
-              title={listening ? "Stop mic" : "Speak"}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 12,
-                border: "1px solid var(--mc-border)",
-                background: listening ? "#244a1f" : "#0e1726",
-                color: ui.text,
-                cursor: "pointer",
-              }}
-            >
-              {listening ? "■" : "🎤"}
-            </button>
-          </div>
-
-          <textarea
-            ref={taRef}
-            value={input}
-            placeholder="Speak or type…"
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                send();
-              }
-            }}
-            style={fieldStyle}
+            📎
+          </button>
+          <input
+            id="solace-file-input"
+            type="file"
+            multiple
+            onChange={(e) =>
+              handleFiles(e.target.files, { prefix: "solace" })
+            }
+            style={{ display: "none" }}
           />
 
           <button
-            type="button"
-            onClick={generateImageFromInput}
-            disabled={imgLoading || !input.trim()}
-            style={imageBtnStyle}
+            onClick={toggleMic}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              border: ui.edge,
+              background: listening ? "#244a1f" : "#0e1726",
+              color: ui.text,
+            }}
           >
-            {imgLoading ? "…" : "Image"}
-          </button>
-
-          <button
-            onClick={send}
-            disabled={streaming || (!input.trim() && pendingFiles.length === 0)}
-            style={askBtnStyle}
-          >
-            {streaming ? "…" : "Ask"}
+            {listening ? "■" : "🎤"}
           </button>
         </div>
 
-        <div
+        <textarea
+          ref={taRef}
+          value={input}
+          placeholder="Speak or type…"
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              send();
+            }
+          }}
           style={{
-            marginTop: 6,
-            display: "flex",
-            justifyContent: "space-between",
-            font: "12px system-ui",
-            color: "var(--mc-muted)",
+            flex: 1,
+            minHeight: 60,
+            maxHeight: 200,
+            borderRadius: 12,
+            border: "1px solid var(--mc-border)",
+            background: "#0e1726",
+            color: ui.text,
+            padding: "10px 12px",
+            resize: "none",
+            outline: "none",
+          }}
+        />
+
+        <button
+          onClick={generateImageFromInput}
+          disabled={imgLoading || !input.trim()}
+          style={{
+            minWidth: 70,
+            height: 40,
+            borderRadius: 12,
+            background: "#374151",
+            color: "#e5e7eb",
+            opacity: imgLoading || !input.trim() ? 0.5 : 1,
+            border: 0,
           }}
         >
-          <span>
-            {ministryOn ? "Create • Ministry overlay" : modeHint || "Neutral"}
-          </span>
-          {filters.size > 0 && (
-            <span
-              style={{
-                maxWidth: "60%",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              Filters: {Array.from(filters).join(", ")}
-            </span>
-          )}
-        </div>
+          {imgLoading ? "…" : "Image"}
+        </button>
+
+        <button
+          onClick={send}
+          disabled={streaming || (!input.trim() && pendingFiles.length === 0)}
+          style={{
+            minWidth: 70,
+            height: 40,
+            borderRadius: 12,
+            background: "#6e8aff",
+            color: "#fff",
+            opacity:
+              streaming ||
+              (!input.trim() && pendingFiles.length === 0)
+                ? 0.5
+                : 1,
+            border: 0,
+          }}
+        >
+          {streaming ? "…" : "Ask"}
+        </button>
       </div>
+    </div>
+  );
+
+  // FULL PANEL
+  const panel = (
+    <section ref={containerRef} style={panelStyle}>
+      {header}
+      {transcript}
+      {composer}
     </section>
   );
 
@@ -894,3 +786,4 @@ export default function SolaceDock() {
 }
 
 /* ========= end component ========= */
+
