@@ -87,10 +87,8 @@ export default function NewsroomCabinetPage() {
     if (!selectedOutlet) return null;
 
     // Display name: for now just normalize the canonical domain
-    const displayName =
-      selectedOutlet.canonical_outlet ||
-      selectedOutlet.outlet ||
-      "Unknown outlet";
+const displayName =
+  selectedOutlet.canonical_outlet || "Unknown outlet";
 
     const lifetimePiPercent = selectedOutlet.avg_pi * 100;
 
