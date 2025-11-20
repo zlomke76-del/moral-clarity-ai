@@ -21,7 +21,8 @@ export type OutletDetailData = {
   lifetimeFraming: number;
   lifetimeContext: number;
 
-  lastScoredAt: string; // ISO or YYYY-MM-DD
+  // allow null here to match mapping from page.tsx
+  lastScoredAt: string | null;
 
   // optional 90-day trend
   ninetyDayPi?: number | null;
@@ -111,16 +112,14 @@ export function OutletDetailDialog({
             </div>
           </div>
 
-          <div className="flex flex-col items-start sm:items-end gap-1">
+          <div className="flex flex-col items-start gap-1 sm:items-end">
             <div className="text-xs uppercase tracking-[0.16em] text-neutral-500">
               Lifetime PI
             </div>
             <div className="text-2xl font-semibold text-emerald-300">
               {lifetimePiPct.toFixed(1)}
             </div>
-            <div className="text-[11px] text-neutral-400">
-              {tierLabel}
-            </div>
+            <div className="text-[11px] text-neutral-400">{tierLabel}</div>
           </div>
         </div>
 
@@ -201,10 +200,9 @@ export function OutletDetailDialog({
               </div>
             )}
 
-            {/* Optional hook for future: small inline sparkline */}
             {trends && trends.length > 0 && (
               <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-900/40 p-3">
-                <div className="text-[11px] text-neutral-400 mb-2">
+                <div className="mb-2 text-[11px] text-neutral-400">
                   Daily PI snapshots (recent days)
                 </div>
                 <div className="flex h-16 items-end gap-[2px]">
