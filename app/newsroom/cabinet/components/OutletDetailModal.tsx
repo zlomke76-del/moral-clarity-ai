@@ -1,25 +1,9 @@
+// app/newsroom/cabinet/components/OutletDetailModal.tsx
 "use client";
 
-import type { OutletTrendPoint } from "../types";
-
-export type TrendDirection = "up" | "down" | "flat";
-
-export type OutletDetailData = {
-  canonical_outlet: string;
-  display_name: string;
-  tierLabel: string;
-  storiesAnalyzed: number;
-  lifetimePi: number;
-  lifetimeBiasIntent: number;
-  lifetimeLanguage: number;
-  lifetimeSource: number;
-  lifetimeFraming: number;
-  lifetimeContext: number;
-  lastScoredAt: string | null;
-  ninetyDayPi?: number | null;
-  ninetyDayBiasIntent?: number | null;
-  trendDirection?: TrendDirection;
-};
+import { useEffect } from "react";
+import type { OutletDetailData, OutletTrendPoint } from "../types";
+import { OutletLogo } from "./OutletLogo";
 
 type Props = {
   outlet: OutletDetailData | null;
@@ -32,7 +16,19 @@ export default function OutletDetailModal({
   trends,
   onClose,
 }: Props) {
+  // No outlet selected → no modal
   if (!outlet) return null;
+
+  // ESC key to close
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onClose]);
 
   const {
     canonical_outlet,
@@ -51,168 +47,249 @@ export default function OutletDetailModal({
     trendDirection,
   } = outlet;
 
-  // Very simple copy for 90-day trend until we wire the real metric
+  const lifetimePiPct = lifetimePi * 100;
+  const ninetyPiPct =
+    typeof ninetyDayPi === "number" ? ninetyDayPi * 100 : null;
+
+  const trendGlyph =
+    trendDirection === "up"
+      ? "▲"
+      : trendDirection === "down"
+      ? "▼"
+      : "⟷";
+
+  const trendText =
+    trendDirection === "up"
+      ? "Trending toward more neutral coverage (last 90 days)."
+      : trendDirection === "down"
+      ? "Trending toward stronger bias (last 90 days)."
+      : "Relatively stable bias pattern over the last 90 days.";
+
   const hasNinetyDay = typeof ninetyDayPi === "number";
-  const trendLabel = (() => {
-    if (!hasNinetyDay) {
-      return "Not enough recent stories to compute a 90-day trend yet.";
-    }
-    if (!trendDirection || trendDirection === "flat") {
-      return "Predictability has been relatively stable over the last 90 days.";
-    }
-    if (trendDirection === "up") {
-      return "Predictability has improved over the last 90 days.";
-    }
-    return "Predictability has weakened over the last 90 days.";
-  })();
+
+  const formattedLastScored = lastScoredAt || "—";
+
+  // Backdrop click to close
+  function handleBackdropClick() {
+    onClose();
+  }
+
+  function handleCardClick(e: React.MouseEvent) {
+    e.stopPropagation();
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="relative w-full max-w-xl rounded-2xl border border-neutral-800 bg-neutral-950 p-5 shadow-2xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-b from-black/40 to-black/80 backdrop-blur-sm px-4 py-6"
+      onClick={handleBackdropClick}
+    >
+      <div
+        className="relative w-full max-w-3xl rounded-2xl border border-neutral-800 bg-neutral-950/95 p-6 shadow-2xl"
+        onClick={handleCardClick}
+      >
         {/* Close button */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-3 top-3 rounded-full border border-neutral-700 bg-neutral-900 px-2 py-0.5 text-xs text-neutral-300 hover:bg-neutral-800"
+          className="absolute right-4 top-4 rounded-full border border-neutral-700/70 bg-neutral-900/80 px-2 py-1 text-xs text-neutral-300 hover:bg-neutral-800"
         >
           Esc
         </button>
 
-        {/* Header: logo + outlet name */}
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-md bg-neutral-900">
-            <img
-              src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(
-                canonical_outlet
-              )}&sz=64`}
-              alt={display_name}
-              className="h-10 w-10"
-            />
-          </div>
-          <div>
-            <div className="text-sm font-semibold text-neutral-100">
-              {display_name}
+        {/* Header: logo + name + tier + lifetime PI */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <OutletLogo name={display_name} domain={canonical_outlet} />
+            <div>
+              <div className="text-xs uppercase tracking-[0.16em] text-neutral-500">
+                Outlet
+              </div>
+              <div className="text-lg font-semibold text-neutral-50">
+                {display_name}
+              </div>
+              <div className="mt-0.5 text-[11px] text-neutral-400">
+                {canonical_outlet}
+              </div>
+              <div className="mt-1 text-[11px] text-neutral-400">
+                {storiesAnalyzed} stories analyzed · PI based on lifetime.
+              </div>
             </div>
-            <div className="mt-0.5 text-[11px] text-neutral-400">
-              {canonical_outlet}
+          </div>
+
+          <div className="flex flex-col items-end gap-2">
+            {tierLabel && (
+              <span
+                className={[
+                  "inline-flex items-center rounded-full border px-3 py-[3px]",
+                  "text-[10px] font-medium uppercase tracking-[0.16em]",
+                  tierClass(tierLabel),
+                ].join(" ")}
+              >
+                {tierLabel}
+              </span>
+            )}
+            <div className="text-xs uppercase tracking-[0.16em] text-neutral-500">
+              Lifetime PI
+            </div>
+            <div className="text-2xl font-semibold text-emerald-300">
+              {lifetimePiPct.toFixed(1)}
+            </div>
+            <div className="text-[11px] text-neutral-400">
+              Bias intent{" "}
+              <span className="font-mono text-neutral-100">
+                {lifetimeBiasIntent.toFixed(2)}
+              </span>{" "}
+              (0 = neutral, 3 = strong bias)
             </div>
           </div>
         </div>
 
-        {/* Body copy */}
-        <div className="mt-4 space-y-3 text-xs text-neutral-200">
-          <div>
-            <div className="font-semibold text-neutral-100">Outlet</div>
-            <div className="mt-0.5 text-neutral-300">
-              {canonical_outlet}
+        {/* Body: bias profile + 90-day trend */}
+        <div className="mt-6 grid gap-6 md:grid-cols-2">
+          {/* Bias profile */}
+          <div className="space-y-3 text-sm text-neutral-200">
+            <div className="text-xs uppercase tracking-[0.18em] text-neutral-500">
+              Bias profile (0–3, lower is more neutral)
             </div>
-            <div className="mt-1 text-[11px] text-neutral-400">
-              {storiesAnalyzed} stories analyzed · PI based on lifetime.
+            <div className="space-y-1.5">
+              <MetricRow
+                label="Bias intent"
+                value={lifetimeBiasIntent}
+                max={3}
+                emphasize
+              />
+              <MetricRow label="Language" value={lifetimeLanguage} max={3} />
+              <MetricRow label="Source" value={lifetimeSource} max={3} />
+              <MetricRow label="Framing" value={lifetimeFraming} max={3} />
+              <MetricRow label="Context" value={lifetimeContext} max={3} />
             </div>
-          </div>
-
-          <div className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1">
-            <div className="font-semibold text-neutral-100">
-              Lifetime PI
-            </div>
-            <div className="font-mono text-neutral-100">
-              {(lifetimePi * 100).toFixed(1)}
-            </div>
-
-            <div className="font-semibold text-neutral-100">Tier</div>
-            <div className="text-neutral-200">{tierLabel}</div>
-
-            <div className="font-semibold text-neutral-100">
-              Bias profile
-            </div>
-            <div className="text-neutral-300">
-              (0–3, lower is more neutral)
+            <div className="mt-2 text-[11px] text-neutral-400">
+              Last scored: {formattedLastScored}
             </div>
           </div>
 
-          <div className="space-y-0.5 font-mono text-[11px] text-neutral-300">
-            <div>
-              Bias intent {lifetimeBiasIntent.toFixed(2)}
-            </div>
-            <div>
-              Language {lifetimeLanguage.toFixed(2)} / 3.00
-            </div>
-            <div>
-              Source {lifetimeSource.toFixed(2)} / 3.00
-            </div>
-            <div>
-              Framing {lifetimeFraming.toFixed(2)} / 3.00
-            </div>
-            <div>
-              Context {lifetimeContext.toFixed(2)} / 3.00
-            </div>
-          </div>
-
-          <div className="text-[11px] text-neutral-400">
-            Last scored: {lastScoredAt ?? "—"}
-          </div>
-
-          <div className="space-y-0.5 text-[11px] text-neutral-300">
-            <div className="font-semibold text-neutral-100">
+          {/* 90-day trend + mini chart */}
+          <div className="space-y-3 text-sm text-neutral-200">
+            <div className="text-xs uppercase tracking-[0.18em] text-neutral-500">
               90-day trend
             </div>
-            {hasNinetyDay && (
-              <div className="font-mono">
-                PI {ninetyDayPi?.toFixed(3)} · Bias intent{" "}
-                {ninetyDayBiasIntent?.toFixed(2)}
-              </div>
-            )}
-            <div>{trendLabel}</div>
-          </div>
 
-          {/* Daily PI snapshots */}
-          <div className="space-y-1">
-            <div className="text-[11px] font-semibold text-neutral-100">
-              Daily PI snapshots (recent days)
-            </div>
-            {trends && trends.length > 0 ? (
-              <div className="mt-1 flex max-h-24 items-end gap-1 overflow-x-auto">
-                {trends.map((p) => {
-                  const norm = Math.min(
-                    1,
-                    Math.max(0, p.avg_pi_score)
-                  );
-                  const height = 12 + norm * 60;
-                  return (
-                    <div
-                      key={p.story_day}
-                      className="flex flex-col items-center"
-                    >
-                      <div
-                        className="w-3 rounded-t-md bg-emerald-400/80"
-                        style={{ height: `${height}px` }}
-                        title={`${p.story_day}: PI ${p.avg_pi_score.toFixed(
-                          3
-                        )}`}
-                      />
-                      <div className="mt-1 w-6 rotate-90 whitespace-nowrap text-[9px] text-neutral-500">
-                        {p.story_day.slice(5)}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+            {hasNinetyDay ? (
+              <>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xl font-semibold text-neutral-50">
+                    {ninetyPiPct?.toFixed(1)}
+                  </span>
+                  <span className="text-xs text-neutral-400">
+                    PI (last 90 days)
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-neutral-300">
+                  <span
+                    className={
+                      trendDirection === "up"
+                        ? "text-emerald-300"
+                        : trendDirection === "down"
+                        ? "text-rose-300"
+                        : "text-neutral-300"
+                    }
+                  >
+                    {trendGlyph}
+                  </span>
+                  <span>{trendText}</span>
+                </div>
+                {typeof ninetyDayBiasIntent === "number" && (
+                  <div className="text-[11px] text-neutral-400">
+                    90-day bias intent{" "}
+                    <span className="font-mono text-neutral-100">
+                      {ninetyDayBiasIntent.toFixed(2)}
+                    </span>
+                    .
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="text-[11px] text-neutral-400">
-                No recent daily snapshots yet.
+              <div className="text-xs text-neutral-400">
+                Not enough recent stories to compute a 90-day trend yet.
               </div>
             )}
-          </div>
 
-          <p className="pt-1 text-[11px] text-neutral-500">
-            This cabinet doesn&apos;t decide who is right or wrong. It
-            measures how stories are told — language, sourcing, framing,
-            and missing context — and turns that into a predictable,
-            auditable signal. Higher PI means more stable, neutral
-            storytelling.
-          </p>
+            {/* Daily PI mini chart */}
+            <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-900/40 p-3">
+              <div className="mb-2 text-[11px] text-neutral-400">
+                Daily PI snapshots (recent days)
+              </div>
+              {trends && trends.length > 0 ? (
+                <div className="flex h-16 items-end gap-[2px]">
+                  {trends.map((p) => {
+                    const pi = p.avg_pi_score ?? 0;
+                    const clamped = Math.max(0, Math.min(pi, 1));
+                    const height = 12 + clamped * 60;
+                    return (
+                      <div
+                        key={p.story_day}
+                        className="flex-1 rounded-sm bg-emerald-400/80"
+                        style={{ height: `${height}px` }}
+                        title={`${p.story_day}: PI ${pi.toFixed(3)}`}
+                      />
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-[11px] text-neutral-400">
+                  No recent daily snapshots yet.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer explainer */}
+        <div className="mt-6 border-t border-neutral-800 pt-4 text-[11px] text-neutral-400">
+          This cabinet doesn&apos;t decide who is right or wrong. It measures{" "}
+          <span className="font-medium">how stories are told</span> — language,
+          sourcing, framing, and missing context — and turns that into a
+          predictable, auditable signal. Higher PI means more stable, neutral
+          storytelling.
         </div>
       </div>
     </div>
   );
+}
+
+type MetricRowProps = {
+  label: string;
+  value: number;
+  max: number;
+  emphasize?: boolean;
+};
+
+function MetricRow({ label, value, max, emphasize }: MetricRowProps) {
+  const clamped = Math.max(0, Math.min(value ?? 0, max));
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span
+        className={
+          emphasize
+            ? "text-xs font-semibold text-neutral-100"
+            : "text-xs text-neutral-300"
+        }
+      >
+        {label}
+      </span>
+      <span className="font-mono text-xs text-neutral-100">
+        {clamped.toFixed(2)} / {max.toFixed(2)}
+      </span>
+    </div>
+  );
+}
+
+function tierClass(tierLabel: string): string {
+  if (tierLabel === "Golden Anchor") {
+    return "bg-emerald-500/10 text-emerald-300 border-emerald-400/50";
+  }
+  if (tierLabel === "High Bias Watchlist") {
+    return "bg-amber-500/10 text-amber-300 border-amber-400/50";
+  }
+  return "bg-sky-500/10 text-sky-300 border-sky-400/50";
 }
