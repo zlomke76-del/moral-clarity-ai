@@ -1,153 +1,82 @@
 // app/newsroom/cabinet/components/TrendChart.tsx
 "use client";
 
-import React from "react";
+import type { OutletTrendPoint } from "../types";
 
-type DailyPoint = {
-  day_iso: string;
-  pi_score: number | null;
+type Props = {
+  points: OutletTrendPoint[] | null;
+  loading: boolean;
 };
 
-type OutletTrend = {
-  outlet: string;
-  daily?: DailyPoint[];
-};
-
-interface TrendChartProps {
-  outlet: OutletTrend;
-}
-
-export default function TrendChart({ outlet }: TrendChartProps) {
-  const daily = Array.isArray(outlet.daily) ? outlet.daily : [];
-
-  if (!daily.length) {
+export default function TrendChart({ points, loading }: Props) {
+  if (loading) {
     return (
-      <div className="bg-neutral-900 p-6 rounded-xl border border-neutral-800">
-        <h3 className="text-lg font-semibold mb-2">
-          Predictability Index Trend — {outlet.outlet}
-        </h3>
-        <p className="text-neutral-400 text-sm">
-          No daily trend data available yet for this outlet.
-        </p>
+      <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 text-xs text-neutral-400">
+        Loading trend…
       </div>
     );
   }
 
-  // Normalize data to [0,1] for PI values
-  const piValues = daily.map((d) =>
-    typeof d.pi_score === "number" && Number.isFinite(d.pi_score)
-      ? Math.max(0, Math.min(1, d.pi_score))
-      : 0
-  );
-
-  const width = 100;
-  const height = 40;
-  const paddingX = 4;
-  const paddingY = 6;
-
-  const innerWidth = width - paddingX * 2;
-  const innerHeight = height - paddingY * 2;
-
-  const n = piValues.length;
-  const stepX = n > 1 ? innerWidth / (n - 1) : 0;
-
-  const points = piValues.map((v, i) => {
-    const x = paddingX + i * stepX;
-    // Higher PI should be closer to the top (smaller y)
-    const y = paddingY + (1 - v) * innerHeight;
-    return { x, y };
-  });
-
-  const pathD =
-    points.length === 1
-      ? `M ${points[0].x} ${points[0].y}`
-      : points
-          .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
-          .join(" ");
-
-  const lastPi = piValues[piValues.length - 1] ?? 0;
-  const firstPi = piValues[0] ?? 0;
-  const delta = lastPi - firstPi;
-
-  let trendLabel = "Stable";
-  let trendColor = "text-neutral-300";
-  if (delta > 0.02) {
-    trendLabel = "Improving";
-    trendColor = "text-emerald-400";
-  } else if (delta < -0.02) {
-    trendLabel = "Drifting";
-    trendColor = "text-red-400";
+  if (!points || points.length === 0) {
+    return (
+      <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 text-xs text-neutral-400">
+        No daily trend data yet for this outlet. Once we have multiple days of
+        scored stories, you&apos;ll see a PI timeline here.
+      </div>
+    );
   }
 
+  const piValues = points.map((p) => p.avg_pi_score);
+  const minPi = Math.min(...piValues);
+  const maxPi = Math.max(...piValues);
+  const range = Math.max(0.05, maxPi - minPi); // avoid flat zero
+
   return (
-    <div className="bg-neutral-900 p-6 rounded-xl border border-neutral-800">
-      <div className="flex items-baseline justify-between mb-3">
-        <h3 className="text-lg font-semibold">
-          Predictability Index Trend — {outlet.outlet}
-        </h3>
-        <div className="flex items-center gap-3 text-sm">
-          <span className="text-neutral-400">
-            Latest PI:{" "}
-            <span className="text-neutral-100 font-semibold">
-              {lastPi.toFixed(3)}
-            </span>
-          </span>
-          <span className={trendColor}>{trendLabel}</span>
+    <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 space-y-3">
+      <header className="flex items-baseline justify-between">
+        <div>
+          <h2 className="text-sm font-semibold">PI over time</h2>
+          <p className="text-[11px] text-neutral-400">
+            Each bar is a day. Higher bars mean higher Predictability Index
+            (more neutral storytelling).
+          </p>
         </div>
+        <div className="text-[11px] text-neutral-400">
+          span:{" "}
+          <span className="font-mono">
+            {points[0].story_day} → {points[points.length - 1].story_day}
+          </span>
+        </div>
+      </header>
+
+      {/* Minimal sparkline-style bar chart */}
+      <div className="flex items-end gap-1 h-24 rounded-lg bg-neutral-900/60 px-2 py-2 overflow-x-auto">
+        {points.map((p) => {
+          const normalized = (p.avg_pi_score - minPi) / range;
+          const height = 20 + normalized * 70; // between 20% and 90% of container
+
+          return (
+            <div key={p.story_day} className="flex flex-col items-center gap-1">
+              <div
+                className="w-2 rounded-full bg-gradient-to-t from-emerald-500 to-blue-400"
+                style={{ height: `${height}%` }}
+                title={`${p.story_day}: PI ${p.avg_pi_score.toFixed(3)}`}
+              />
+            </div>
+          );
+        })}
       </div>
 
-      <div className="h-40 flex items-center justify-center">
-        <svg
-          viewBox={`0 0 ${width} ${height}`}
-          className="w-full h-full overflow-visible"
-        >
-          {/* Baseline at PI = 1.0 (top) and 0.0 (bottom) */}
-          <line
-            x1={paddingX}
-            y1={paddingY}
-            x2={width - paddingX}
-            y2={paddingY}
-            stroke="#4ade80"
-            strokeWidth={0.4}
-            strokeDasharray="2 2"
-          />
-          <line
-            x1={paddingX}
-            y1={height - paddingY}
-            x2={width - paddingX}
-            y2={height - paddingY}
-            stroke="#f97373"
-            strokeWidth={0.4}
-            strokeDasharray="2 2"
-          />
-
-          {/* Trend path */}
-          <path
-            d={pathD}
-            fill="none"
-            stroke="#22c55e"
-            strokeWidth={1.5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-
-          {/* Last point highlight */}
-          {points.length > 0 && (
-            <circle
-              cx={points[points.length - 1].x}
-              cy={points[points.length - 1].y}
-              r={1.4}
-              fill="#22c55e"
-            />
-          )}
-        </svg>
+      <div className="flex justify-between text-[10px] text-neutral-500">
+        <span>
+          Min PI:{" "}
+          <span className="font-mono">{Math.min(...piValues).toFixed(3)}</span>
+        </span>
+        <span>
+          Max PI:{" "}
+          <span className="font-mono">{Math.max(...piValues).toFixed(3)}</span>
+        </span>
       </div>
-
-      <p className="mt-2 text-xs text-neutral-500">
-        Top dashed line = PI 1.0 (max neutrality). Bottom dashed line = PI 0.0
-        (high bias/predictability). The line shows how this outlet&apos;s
-        Predictability Index has changed over time.
-      </p>
     </div>
   );
 }
