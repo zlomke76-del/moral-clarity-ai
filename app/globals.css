@@ -325,3 +325,19 @@ button:disabled {
     align-items: stretch;
   }
 }
+/* --- Restore Solace Dock fixed global positioning --- */
+.solace-dock {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  z-index: 999999 !important;
+  max-height: calc(100vh - 48px);
+  max-width: min(700px, 90vw);
+  overflow: hidden;
+}
+
+/* Make inner content scroll independently */
+.solace-dock .dock-body {
+  overflow-y: auto !important;
+  max-height: calc(100vh - 140px);
+}
