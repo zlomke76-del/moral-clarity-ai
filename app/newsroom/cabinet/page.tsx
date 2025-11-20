@@ -28,7 +28,7 @@ export default function NewsroomCabinetPage() {
   const [trendLoading, setTrendLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch outlet overview once on mount
+  // Fetch overview once
   useEffect(() => {
     let alive = true;
 
@@ -44,7 +44,6 @@ export default function NewsroomCabinetPage() {
         if (!alive) return;
         if (!data.ok) throw new Error("Overview API returned not ok");
 
-        // Rank by *lowest* bias intent (0–3) / *highest* PI (0–1)
         const sorted = [...data.outlets].sort(
           (a, b) => a.avg_bias_intent - b.avg_bias_intent
         );
@@ -64,7 +63,7 @@ export default function NewsroomCabinetPage() {
     };
   }, []);
 
-  // Fetch daily trend whenever the selected outlet changes
+  // Fetch trends whenever selected outlet changes
   useEffect(() => {
     let alive = true;
     if (!selected) {
@@ -75,22 +74,19 @@ export default function NewsroomCabinetPage() {
     (async () => {
       try {
         setTrendLoading(true);
-
         const res = await fetch(
           `/api/news/outlets/trends?outlet=${encodeURIComponent(
             selected.canonical_outlet
           )}`
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
         const data: TrendsResponse = await res.json();
         if (!alive) return;
         if (!data.ok) throw new Error("Trends API returned not ok");
-
         setTrends(data.points);
       } catch {
         if (!alive) return;
-        // Soft-fail: hide chart if trend lookup fails
+        // soft-fail: just hide trends if they error
         setTrends(null);
       } finally {
         if (alive) setTrendLoading(false);
@@ -103,28 +99,28 @@ export default function NewsroomCabinetPage() {
   }, [selected?.canonical_outlet]);
 
   return (
-    <div className="flex flex-col gap-8 pb-10">
+    <div className="flex flex-col gap-8">
       {/* Hero / explainer */}
       <section className="space-y-4">
-        <div className="space-y-1">
-          <div className="text-xs uppercase tracking-[0.16em] text-neutral-400">
-            Moral Clarity Newsroom
-          </div>
+        <div>
           <h1 className="text-3xl font-semibold tracking-tight">
             Neutrality Cabinet
           </h1>
-          <p className="text-sm text-neutral-300 max-w-3xl">
-            Powered by Solace — neutral, transparent journalism tools. This is
-            where we track how predictable and neutral an outlet&apos;s{" "}
-            <span className="font-medium">story-level bias</span> is over time.
-            We don&apos;t score left vs right. We measure{" "}
-            <span className="font-medium">how the story is told</span> —
-            language, sourcing, framing, and missing context — and compress that
-            into a <span className="font-medium">Predictability Index (PI)</span>{" "}
-            from 0.0 to 1.0. Everyone is reaching toward{" "}
-            <span className="font-semibold text-emerald-300">1.00</span>.
+          <p className="mt-1 text-sm text-neutral-300">
+            Powered by Solace — anchored, transparent journalism tools.
           </p>
         </div>
+
+        <p className="text-sm text-neutral-300 max-w-3xl">
+          This is where we track how predictable and neutral an outlet&apos;s{" "}
+          <span className="font-medium">story-level bias</span> is over time.
+          We don&apos;t score left vs right. We measure{" "}
+          <span className="font-medium">how the story is told</span> —
+          language, sourcing, framing, and missing context — and compress that
+          into a <span className="font-medium">Predictability Index (PI)</span>{" "}
+          from 0.0 to 1.0. Everyone is reaching toward{" "}
+          <span className="font-semibold text-emerald-300">1.00</span>.
+        </p>
 
         <div className="grid gap-4 md:grid-cols-3 text-xs text-neutral-300">
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
@@ -138,9 +134,6 @@ export default function NewsroomCabinetPage() {
               <li>Framing — balanced perspectives vs one-sided</li>
               <li>Context — key facts included vs missing</li>
             </ul>
-            <p className="mt-2 text-[11px] text-neutral-400">
-              We only score full articles, not headlines or social posts.
-            </p>
           </div>
 
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
@@ -149,10 +142,12 @@ export default function NewsroomCabinetPage() {
             </h2>
             <p>
               We combine those four components into a{" "}
-              <span className="font-medium">bias intent score</span> (0–3), then
-              convert it into a <span className="font-medium">PI</span>:
+              <span className="font-medium">bias intent score</span> (0–3),
+              then convert it into a Predictability Index:
             </p>
-            <p className="mt-2 font-mono text-xs">PI = 1 − (bias_intent / 3)</p>
+            <p className="mt-2 font-mono text-xs">
+              PI = 1 − (bias_intent / 3)
+            </p>
             <p className="mt-2">
               Closer to 1.0 → more predictable, neutral storytelling. Closer to
               0.0 → strong, consistent bias in how stories are told.
@@ -165,20 +160,17 @@ export default function NewsroomCabinetPage() {
             </h2>
             <ul className="space-y-1 list-disc list-inside">
               <li>
-                <span className="font-medium">Golden Anchors</span> sit closest
-                to 1.0 PI with solid story volume.
+                <span className="font-medium">Top outlets</span> (Golden
+                Anchors) sit closest to 1.0 PI with solid story volume.
               </li>
               <li>
-                <span className="font-medium">Neutral Band</span> shows outlets
-                with mixed but moderate bias patterns.
+                <span className="font-medium">Middle band</span> shows outlets
+                with mixed patterns but workable neutrality.
               </li>
               <li>
-                <span className="font-medium">High Bias Watchlist</span> flags
-                where language, framing, or context are consistently tilted.
-              </li>
-              <li>
-                The cabinet updates as new stories are scored; trends show how
-                outlets move over time.
+                <span className="font-medium">Watchlist</span> highlights
+                outlets where language / framing / context are consistently
+                slanted.
               </li>
             </ul>
           </div>
@@ -198,7 +190,7 @@ export default function NewsroomCabinetPage() {
           Neutrality Ledger, this page will come alive.
         </div>
       ) : (
-        <section className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1.2fr)]">
+        <section className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)]">
           <Leaderboard
             outlets={outlets}
             selectedCanonical={selected?.canonical_outlet ?? null}
@@ -219,4 +211,3 @@ export default function NewsroomCabinetPage() {
     </div>
   );
 }
-
