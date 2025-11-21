@@ -408,12 +408,12 @@ type SolaceDigestRow = {
   story_title: string | null;
   story_url: string | null;
   outlet: string | null;
+  outlet_group: string | null;
   category: string | null;
   day_iso: string | null;
-  story_date: string | null;
 
   neutral_summary: string | null;
-  key_facts: string[] | null;
+  key_facts: unknown; // Supabase may send this as text / array
   context_background: string | null;
   stakeholder_positions: string | null;
   timeline: string | null;
@@ -429,12 +429,11 @@ type SolaceDigestRow = {
 
   created_at: string | null;
   updated_at: string | null;
-  outlet_group: string | null;
 };
 
 type SolaceDigestStory = {
   id: string;
-  truth_fact_id: string | null; // not in view, we'll keep as null
+  truth_fact_id: string | null; // not in view, kept for downstream compatibility
   story_id: string | null;
   title: string;
   url: string | null;
@@ -457,9 +456,63 @@ type SolaceDigestStory = {
   bias_intent_score: number | null;
   pi_score: number | null;
 
-  notes: string | null; // not in view, keep null for compatibility
+  notes: string | null; // not in view, kept as null
   created_at: string | null;
 };
+
+function coerceArray(value: unknown): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.map((v) => String(v ?? '')).filter((v) => v.length > 0);
+  }
+  try {
+    const parsed = JSON.parse(String(value));
+    if (Array.isArray(parsed)) {
+      return parsed.map((v) => String(v ?? '')).filter((v) => v.length > 0);
+    }
+  } catch {
+    // ignore parse errors; fall through
+  }
+  return [String(value)];
+}
+
+function coerceNumber(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n)) return null;
+  return n;
+}
+
+function mapRowToStory(row: SolaceDigestRow): SolaceDigestStory {
+  return {
+    id: row.id,
+    truth_fact_id: null, // view doesn’t expose this; kept for compatibility
+    story_id: row.story_id,
+    title: (row.story_title || '').trim() || '(untitled story)',
+    url: row.story_url,
+    outlet: row.outlet,
+    outlet_group: row.outlet_group,
+    category: row.category,
+
+    neutral_summary: (row.neutral_summary || '').trim(),
+    key_facts: coerceArray(row.key_facts),
+    context_background: (row.context_background || '').trim(),
+    stakeholder_positions: (row.stakeholder_positions || '').trim(),
+    timeline: (row.timeline || '').trim(),
+    disputed_claims: (row.disputed_claims || '').trim(),
+    omissions_detected: (row.omissions_detected || '').trim(),
+
+    bias_language_score: coerceNumber(row.bias_language_score),
+    bias_source_score: coerceNumber(row.bias_source_score),
+    bias_framing_score: coerceNumber(row.bias_framing_score),
+    bias_context_score: coerceNumber(row.bias_context_score),
+    bias_intent_score: coerceNumber(row.bias_intent_score),
+    pi_score: coerceNumber(row.pi_score),
+
+    notes: null,
+    created_at: row.created_at,
+  };
+}
 
 function coerceArray(value: unknown): string[] {
   if (!value) return [];
