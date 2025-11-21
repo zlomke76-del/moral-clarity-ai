@@ -394,12 +394,19 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env
   .SUPABASE_SERVICE_ROLE_KEY as string | undefined;
 
 function createAdminClient() {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('[chat] Supabase admin credentials not configured');
-  }
-  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false },
-  });
+  // ...
+}
+
+// ⬇️ REPLACE the existing type + mapper block with the one above
+type SolaceDigestRow = { ... }
+type SolaceDigestStory = { ... }
+function coerceArray(...) { ... }
+function coerceNumber(...) { ... }
+function mapRowToStory(...) { ... }
+
+// then:
+async function getSolaceNewsDigest(): Promise<SolaceDigestStory[]> {
+  // ...
 }
 
 type SolaceDigestRow = {
