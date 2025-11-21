@@ -15,20 +15,13 @@ type Props = {
 export default function OutletDetailModal({ open, onClose, outlet, trends }: Props) {
   if (!open || !outlet) return null;
 
+  // Escape key closes modal — SAFE, no scroll locking.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
-
     window.addEventListener("keydown", onKey);
-
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
   const {
@@ -46,7 +39,7 @@ export default function OutletDetailModal({ open, onClose, outlet, trends }: Pro
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 px-4 py-8"
+      className="fixed inset-0 z-40 bg-black/60 flex items-center justify-center p-4 overflow-y-auto"
       onClick={onClose}
     >
       <div
