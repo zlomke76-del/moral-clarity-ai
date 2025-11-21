@@ -786,9 +786,9 @@ export default function SolaceDock() {
             <button
               type="button"
               onClick={() =>
-                (document.querySelector<HTMLInputElement>(
-                  "#solace-file-input"
-                )?.click())
+                document
+                  .querySelector<HTMLInputElement>("#solace-file-input")
+                  ?.click()
               }
               title="Attach files"
               style={{
@@ -806,8 +806,9 @@ export default function SolaceDock() {
             <input
               id="solace-file-input"
               type="file"
-              className="hidden"
               multiple
+              // hide native "Choose file" UI – use the paperclip instead
+              style={{ display: "none" }}
               onChange={(e) => handleFiles(e.target.files, { prefix: "solace" })}
             />
 
