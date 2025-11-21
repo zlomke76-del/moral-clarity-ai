@@ -524,13 +524,14 @@ async function getSolaceNewsDigest(): Promise<SolaceDigestStory[]> {
   try {
     const supabase = createAdminClient();
     const { data, error } = await supabase
-      .from('vw_solace_news_digest')
+      // KEY WIRE-UP: use the scored digest view
+      .from('solace_news_digest_view')
       .select('*')
-      .order('bias_intent_score', { ascending: true })
+      .order('story_date', { ascending: false })
       .order('pi_score', { ascending: false });
 
     if (error) {
-      console.error('[chat] vw_solace_news_digest error', error);
+      console.error('[chat] solace_news_digest_view error', error);
       return [];
     }
 
