@@ -1,22 +1,31 @@
 // lib/memory-classifier.ts
-import 'server-only';
-import type OpenAI from 'openai';
-import { getOpenAI } from '@/lib/openai';
+import "server-only";
+import OpenAI from "openai";
 
 export type MemoryClassificationLabel =
-  | 'Identity'
-  | 'Relationship'
-  | 'Origin'
-  | 'Preference'
-  | 'Profile'
-  | 'Habit'
-  | 'Emotional'
-  | 'Goal'
-  | 'Task'
-  | 'Note'
-  | 'Health'
-  | 'Interests'
-  | 'Other';
+  | "Identity"
+  | "Relationship"
+  | "Origin"
+  | "Preference"
+  | "Profile"
+  | "Habit"
+  | "Emotional"
+  | "Goal"
+  | "Task"
+  | "Note"
+  | "Health"
+  | "Interests"
+  | "Boundary"
+  | "Trigger"
+  | "Episodic"
+  | "DecisionContext"
+  | "MoralValue"
+  | "ProjectDetail"
+  | "BusinessPartner"
+  | "WorkspaceProfile"
+  | "Financial"
+  | "LocationContext"
+  | "Other";
 
 export type ClassificationResult = {
   provider: string;
@@ -25,171 +34,70 @@ export type ClassificationResult = {
   raw?: any;
 };
 
-export interface MemoryClassifierProvider {
-  name: string;
-  classify(text: string): Promise<ClassificationResult>;
+/* ========= Solace Micro-Classifier (Rules + heuristics) ========= */
+
+function microClassify(text: string): ClassificationResult {
+  const t = text.toLowerCase();
+
+  if (t.includes("goal") || t.includes("plan") || t.includes("objective"))
+    return { provider: "micro", label: "Goal", confidence: 0.65 };
+
+  if (t.includes("address") || t.includes("location"))
+    return { provider: "micro", label: "LocationContext", confidence: 0.6 };
+
+  if (t.includes("investor") || t.includes("partnership"))
+    return { provider: "micro", label: "BusinessPartner", confidence: 0.65 };
+
+  if (t.includes("money") || t.includes("salary") || t.includes("finance"))
+    return { provider: "micro", label: "Financial", confidence: 0.6 };
+
+  return { provider: "micro", label: "Other", confidence: 0.3 };
 }
 
-/* =================== OpenAI Provider =================== */
+/* ========= OpenAI Classifier ========= */
 
-const CLASSIFIER_MODEL = process.env.OPENAI_CLASSIFIER_MODEL || 'gpt-4.1-mini';
-
-async function getOpenAIClient(): Promise<OpenAI> {
-  const client = await getOpenAI();
-  return client;
-}
-
-const CLASSIFIER_SYSTEM_PROMPT = `
-You are a memory classification engine for Moral Clarity AI.
-
-You receive a single memory string (a short sentence or paragraph about a person, relationship, preference, fact, goal, or note).
-
-Classify it into ONE of the following labels:
-
-- Identity      (who the person is: name, roles, core identity details)
-- Relationship  (family, friends, spouse, children, relational roles)
-- Origin        (place of birth, hometown, cultural background, heritage)
-- Preference    (likes/dislikes: foods, music, routines, styles, choices)
-- Profile       (professional bio, resume, roles, career history)
-- Habit         (repeated behaviors or routines)
-- Emotional     (emotional state, values, deep feelings, hopes, fears)
-- Goal          (explicit goals, dreams, objectives, plans)
-- Task          (action items, reminders, to-do items)
-- Note          (miscellaneous information, contextual notes)
-- Health        (health-related info, conditions, medications, sensitivities)
-- Interests     (hobbies, interests, recurring themes of fascination)
-- Other         (if nothing else fits clearly)
-
-Return ONLY a strict JSON object in this shape:
-
-{
-  "label": "Preference",
-  "confidence": 0.87
-}
-
-- "label" MUST be exactly one of the labels above.
-- "confidence" MUST be between 0 and 1.
-- Do not include any other text before or after the JSON.
-`.trim();
+const CLASSIFIER_MODEL = process.env.OPENAI_CLASSIFIER_MODEL || "gpt-4.1-mini";
 
 async function classifyWithOpenAI(text: string): Promise<ClassificationResult> {
-  const client = await getOpenAIClient();
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-  const input = `${CLASSIFIER_SYSTEM_PROMPT}\n\nMEMORY:\n${text}`;
+  const systemPrompt = `
+You classify memory text into a single label.
+Use the expanded label set.
+Return ONLY JSON:
+{ "label": "...", "confidence": 0.0 }
+`;
 
-  const resp: any = await client.responses.create({
+  const resp = await client.responses.create({
     model: CLASSIFIER_MODEL,
-    input,
-    max_output_tokens: 200,
+    input: `${systemPrompt}\nTEXT:\n${text}`,
+    max_output_tokens: 150,
     temperature: 0.0,
   });
 
-  const rawText = (resp as any).output_text ?? String(resp?.output?.[0]?.content?.[0]?.text ?? '').trim();
+  const raw = (resp as any).output_text ?? "";
 
-  let parsed: { label?: string; confidence?: number } = {};
+  let parsed;
   try {
-    parsed = JSON.parse(rawText);
+    parsed = JSON.parse(raw);
   } catch {
-    // Best-effort salvage if model wrapped JSON in something weird
-    const match = rawText.match(/\{[\s\S]*\}/);
-    if (match) {
-      try {
-        parsed = JSON.parse(match[0]);
-      } catch {
-        parsed = {};
-      }
-    }
+    return { provider: "openai", label: "Other", confidence: 0.0, raw };
   }
 
-  const label = (parsed.label as MemoryClassificationLabel) || 'Other';
-  const confidence =
-    typeof parsed.confidence === 'number' && parsed.confidence >= 0 && parsed.confidence <= 1
-      ? parsed.confidence
-      : 0;
-
   return {
-    provider: 'openai',
-    label,
-    confidence,
-    raw: {
-      rawText,
-      parsed,
-      model: CLASSIFIER_MODEL,
-    },
+    provider: "openai",
+    label: parsed.label ?? "Other",
+    confidence: parsed.confidence ?? 0,
+    raw: parsed,
   };
 }
 
-export const OpenAIMemoryClassifier: MemoryClassifierProvider = {
-  name: 'openai',
-  classify: classifyWithOpenAI,
-};
+/* ========= Fusion ========= */
 
-/* =================== Provider Registry & Router =================== */
-
-/**
- * Provider registry. In the future you can add:
- * - SolaceMemoryClassifier
- * - DeepSeekMemoryClassifier
- * - AnthropicMemoryClassifier
- * etc.
- */
-const PROVIDERS: MemoryClassifierProvider[] = [
-  OpenAIMemoryClassifier,
-  // Future:
-  // SolaceMemoryClassifier,
-  // DeepSeekMemoryClassifier,
-];
-
-const CONFIDENCE_THRESHOLD = 0.6;
-
-/**
- * Classify a memory text using the provider registry.
- * - Tries providers in order.
- * - Returns the FIRST result with confidence >= threshold.
- * - If none reach threshold, returns the best available.
- * - On total failure, returns a safe "Other" label.
- */
 export async function classifyMemoryText(text: string): Promise<ClassificationResult> {
-  const trimmed = (text || '').trim();
-  if (!trimmed) {
-    return {
-      provider: 'none',
-      label: 'Other',
-      confidence: 0,
-      raw: { reason: 'empty text' },
-    };
-  }
+  const micro = microClassify(text);
+  const openai = await classifyWithOpenAI(text);
 
-  const results: ClassificationResult[] = [];
-
-  for (const provider of PROVIDERS) {
-    try {
-      const res = await provider.classify(trimmed);
-      results.push(res);
-
-      if (res.confidence >= CONFIDENCE_THRESHOLD) {
-        return res;
-      }
-    } catch (err: any) {
-      results.push({
-        provider: provider.name,
-        label: 'Other',
-        confidence: 0,
-        raw: { error: String(err) },
-      });
-    }
-  }
-
-  if (results.length === 0) {
-    return {
-      provider: 'none',
-      label: 'Other',
-      confidence: 0,
-      raw: { reason: 'no providers succeeded' },
-    };
-  }
-
-  // Fallback: highest-confidence result, even if under threshold
-  results.sort((a, b) => b.confidence - a.confidence);
-  return results[0];
+  // Fusion: prefer the more confident one
+  return openai.confidence >= micro.confidence ? openai : micro;
 }
