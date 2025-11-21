@@ -1,3 +1,4 @@
+// app/api/chat/route.ts
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -11,7 +12,12 @@ import { logResearchSnapshot } from '@/lib/truth-ledger';
 import { routeMode } from '@/core/mode-router';
 
 /* ========= MEMORY ========= */
-import { remember, searchUserFacts, getMemoryPack, maybeStoreEpisode } from '@/lib/memory';
+import {
+  searchMemories,
+  remember,
+  getMemoryPack,
+  maybeStoreEpisode,
+} from '@/lib/memory';
 
 /* ========= MCA CONFIG (defaults for user/workspace) ========= */
 import { MCA_WORKSPACE_ID, MCA_USER_KEY } from '@/lib/mca-config';
@@ -639,7 +645,7 @@ export async function POST(req: NextRequest) {
       rolled
     );
 
-    /* ===== MEMORY: recall pack (scoped) ===== */
+    /* ===== MEMORY: recall pack (scoped, episodic + factual) ===== */
     let userKey = getUserKeyFromReq(req, body);
     if (!userKey || userKey === 'guest') {
       userKey = `u_${crypto.randomUUID()}`;
@@ -650,7 +656,7 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    let factHits: Array<any> = [];
+    let hits: Array<any> = [];
     let memorySection = '';
 
     if (memoryEnabled) {
@@ -671,18 +677,22 @@ export async function POST(req: NextRequest) {
         const baseQuery = lastUser || fallbackQuery;
         const query = [baseQuery, explicitInTurns].filter(Boolean).join(' | ');
 
-        // For memory echo (facts only)
-        factHits = await searchUserFacts(userKey, query, 10);
-
-        // For Solace’s system prompt: episodic + factual memory
-        const pack = await getMemoryPack(userKey, query);
+        // 1) Episodic + factual memory pack for Solace system prompt
+        const pack = await getMemoryPack(userKey, query, {
+          factsLimit: 8,
+          episodesLimit: 6,
+        });
 
         memorySection =
-          `\n\nMEMORY PACK (private, user-scoped)\n` +
-          `Use these episodic and factual memories **only if relevant**:\n` +
+          `\n\nMEMORY PACK (private, user-scoped)\nUse these stable facts/preferences and key episodes **only if relevant**:\n` +
           (pack || '• (none)');
-      } catch {
+
+        // 2) Raw factual hits kept only for "what do you remember" echo
+        hits = await searchMemories(userKey, query, 8);
+      } catch (err) {
+        console.error('[chat] memory recall failed', err);
         memorySection = '';
+        hits = [];
       }
     }
 
@@ -690,8 +700,8 @@ export async function POST(req: NextRequest) {
     const askedWhatYouRemember = /what\s+do\s+you\s+remember\b|remember\s+about\s+me\b/i.test(
       lastUser
     );
-    if (askedWhatYouRemember && factHits && factHits.length) {
-      const top = factHits
+    if (askedWhatYouRemember && hits && hits.length) {
+      const top = hits
         .slice(0, 10)
         .map((m: any, i: number) => `${i + 1}. ${m.content}`)
         .join('\n');
@@ -904,13 +914,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    /* ===== EPISODIC MEMORY WRITE (>=3 user turns) ===== */
+    /* ===== Episodic write-back (optional, best-effort) ===== */
     if (memoryEnabled) {
       try {
         await maybeStoreEpisode(userKey, workspaceId, rolled);
-      } catch (e) {
-        // non-fatal
-        console.error('[chat] maybeStoreEpisode failed', e);
+      } catch (err) {
+        console.error('[chat] maybeStoreEpisode failed (non-fatal)', err);
       }
     }
 
