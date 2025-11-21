@@ -1,94 +1,81 @@
-/* app/api/news/refresh/route.ts */
+// app/api/news/refresh/route.ts
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { runNewsFetchRefresh } from '@/lib/news/fetcher';
 
-/* ========= HELPERS ========= */
+const NEWS_REFRESH_SECRET = process.env.NEWS_REFRESH_SECRET || '';
 
-function jsonError(
-  message: string,
-  status = 500,
-  extra: Record<string, unknown> = {}
-) {
-  return NextResponse.json({ ok: false, error: message, ...extra }, { status });
+function corsHeaders(origin: string | null): Headers {
+  const h = new Headers();
+  h.set('Vary', 'Origin');
+  h.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  h.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  h.set('Access-Control-Max-Age', '86400');
+  if (origin) h.set('Access-Control-Allow-Origin', origin);
+  return h;
 }
 
-/* ========= HANDLERS ========= */
-
-/**
- * GET /api/news/refresh
- *
- * Responsibilities (Phase 1):
- * - Trigger a single fetch cycle using the Neutral News Fetcher Engine
- * - Insert raw snapshots into `truth_facts`
- * - Return per-domain stats and errors for observability
- *
- * It does NOT:
- * - Call OpenAI
- * - Score bias
- * - Write to news_neutrality_ledger
- *
- * Scoring and Neutral Brief generation are handled separately
- * by the score worker route.
- */
-export async function GET(req: NextRequest) {
+function pickOrigin(req: NextRequest): string | null {
+  const origin = req.headers.get('origin');
+  if (!origin) return null;
   try {
+    // Loosened a bit; this is an internal maintenance endpoint.
+    const u = new URL(origin);
+    if (
+      u.hostname.endsWith('moralclarity.ai') ||
+      u.hostname.endsWith('moralclarityai.com') ||
+      u.hostname === 'localhost'
+    ) {
+      return origin;
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+async function handleRefresh(req: NextRequest) {
+  const origin = pickOrigin(req);
+
+  // Optional: simple shared-secret gate
+  if (NEWS_REFRESH_SECRET) {
     const url = new URL(req.url);
+    const token = url.searchParams.get('secret') || req.headers.get('x-news-secret');
+    if (token !== NEWS_REFRESH_SECRET) {
+      return NextResponse.json(
+        { ok: false, error: 'Unauthorized' },
+        { status: 401, headers: corsHeaders(origin) }
+      );
+    }
+  }
 
-    const workspaceIdParam = url.searchParams.get('workspace_id') || undefined;
-    const userKeyParam = url.searchParams.get('user_key') || undefined;
-
-    const storiesTargetParam = url.searchParams.get('stories_target');
-    const perDomainMaxParam = url.searchParams.get('per_domain_max');
-    const newsWindowDaysParam = url.searchParams.get('days');
-
-    const storiesTarget = storiesTargetParam
-      ? Math.max(1, Math.min(Number(storiesTargetParam) || 0, 200))
-      : undefined;
-
-    const perDomainMax = perDomainMaxParam
-      ? Math.max(1, Math.min(Number(perDomainMaxParam) || 0, 20))
-      : undefined;
-
-    const newsWindowDays = newsWindowDaysParam
-      ? Math.max(1, Math.min(Number(newsWindowDaysParam) || 0, 7))
-      : undefined;
-
-    const startedAt = new Date().toISOString();
-
-    const result = await runNewsFetchRefresh({
-      workspaceId: workspaceIdParam,
-      userKey: userKeyParam,
-      storiesTarget,
-      perDomainMax,
-      newsWindowDays,
-    });
-
-    const finishedAt = new Date().toISOString();
-
-    // Pass through engine stats, plus top-level timing for this route.
-    // NOTE: result.ok is preserved; we don't redefine `ok` here to avoid TS duplicate-key error.
-    return NextResponse.json({
-      ...result,
-      route_started_at: startedAt,
-      route_finished_at: finishedAt,
-    });
+  try {
+    const result = await runNewsFetchRefresh();
+    return NextResponse.json(result, { status: 200, headers: corsHeaders(origin) });
   } catch (err: any) {
     console.error('[news/refresh] fatal error', err);
-    return jsonError(
-      err?.message || 'Unexpected error in news refresh.',
-      500,
-      { code: 'NEWS_REFRESH_FATAL' }
+    return NextResponse.json(
+      {
+        ok: false,
+        error: err?.message || String(err),
+      },
+      { status: 500, headers: corsHeaders(origin) }
     );
   }
 }
 
-/**
- * Optional: allow POST to trigger the same behavior
- * (e.g., from a dashboard button or admin tool).
- */
 export async function POST(req: NextRequest) {
-  return GET(req);
+  return handleRefresh(req);
+}
+
+// Convenience so you can hit it from the browser
+export async function GET(req: NextRequest) {
+  return handleRefresh(req);
+}
+
+export async function OPTIONS(req: NextRequest) {
+  const origin = pickOrigin(req);
+  return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
 }
