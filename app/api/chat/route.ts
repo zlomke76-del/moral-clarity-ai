@@ -1,4 +1,3 @@
-// app/api/chat/route.ts
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +11,7 @@ import { logResearchSnapshot } from '@/lib/truth-ledger';
 import { routeMode } from '@/core/mode-router';
 
 /* ========= MEMORY ========= */
-import { searchMemories, remember } from '@/lib/memory';
+import { remember, searchUserFacts, getMemoryPack, maybeStoreEpisode } from '@/lib/memory';
 
 /* ========= MCA CONFIG (defaults for user/workspace) ========= */
 import { MCA_WORKSPACE_ID, MCA_USER_KEY } from '@/lib/mca-config';
@@ -651,7 +650,7 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    let hits: Array<any> = [];
+    let factHits: Array<any> = [];
     let memorySection = '';
 
     if (memoryEnabled) {
@@ -672,15 +671,15 @@ export async function POST(req: NextRequest) {
         const baseQuery = lastUser || fallbackQuery;
         const query = [baseQuery, explicitInTurns].filter(Boolean).join(' | ');
 
-        hits = await searchMemories(userKey, query, 8);
+        // For memory echo (facts only)
+        factHits = await searchUserFacts(userKey, query, 10);
 
-        const pack = (hits ?? [])
-          .map((m: any) => `• (${m.purpose ?? 'fact'}) ${m.content}`)
-          .slice(0, 12)
-          .join('\n');
+        // For Solace’s system prompt: episodic + factual memory
+        const pack = await getMemoryPack(userKey, query);
 
         memorySection =
-          `\n\nMEMORY PACK (private, user-scoped)\nUse these stable facts/preferences **only if relevant**:\n` +
+          `\n\nMEMORY PACK (private, user-scoped)\n` +
+          `Use these episodic and factual memories **only if relevant**:\n` +
           (pack || '• (none)');
       } catch {
         memorySection = '';
@@ -691,8 +690,8 @@ export async function POST(req: NextRequest) {
     const askedWhatYouRemember = /what\s+do\s+you\s+remember\b|remember\s+about\s+me\b/i.test(
       lastUser
     );
-    if (askedWhatYouRemember && hits && hits.length) {
-      const top = hits
+    if (askedWhatYouRemember && factHits && factHits.length) {
+      const top = factHits
         .slice(0, 10)
         .map((m: any, i: number) => `${i + 1}. ${m.content}`)
         .join('\n');
@@ -902,6 +901,16 @@ export async function POST(req: NextRequest) {
         } catch {
           /* fall through */
         }
+      }
+    }
+
+    /* ===== EPISODIC MEMORY WRITE (>=3 user turns) ===== */
+    if (memoryEnabled) {
+      try {
+        await maybeStoreEpisode(userKey, workspaceId, rolled);
+      } catch (e) {
+        // non-fatal
+        console.error('[chat] maybeStoreEpisode failed', e);
       }
     }
 
