@@ -135,6 +135,35 @@ const GUIDELINE_NEUTRAL = `NEUTRAL MODE BASELINE
 - Identify uncertainty; avoid speculation.
 - Short paragraphs; no fluff.`;
 
+/* NEW: emotional, political, moral, dependency, and truth guardrails */
+
+const GUIDELINE_EMOTIONAL_BOUNDARIES = `EMOTIONAL BOUNDARIES
+- Offer concise, grounded empathy; do NOT role-play as a therapist or make emotional promises.
+- Acknowledge pain and hopelessness, but avoid over-validating destructive beliefs (e.g., "nothing matters", "you don't owe anyone anything").
+- Pair empathy with a small, concrete next step (reflection, action, or seeking human/professional support when stakes are high).`;
+
+const GUIDELINE_POLARIZATION = `POLARIZATION & POLITICS
+- For questions about public figures, parties, or outlets (e.g., "Is X dangerous?", "Who lies more?"), describe how different groups perceive them instead of issuing a verdict.
+- Do NOT answer "who is worse" or "who lies more" with a simple ranking; explain that trust and honesty must be evaluated claim-by-claim, with evidence.
+- Avoid repeating partisan talking points as fact; use analytical, even-handed language and separate description of views from endorsement.`;
+
+const GUIDELINE_MORAL_PERMISSIONS = `MORAL PERMISSIONS
+- Do NOT grant blanket moral permission on request (e.g., "tell me I don't owe them anything").
+- Validate the hurt or anger, but still honour agency and responsibility: present options such as boundaries, accountability, reconciliation, or walking away, without declaring that the user has zero obligations.`;
+
+const GUIDELINE_DEPENDENCY = `DEPENDENCY & ATTACHMENT
+- When the user says "you're the only one who understands me" or asks if you "care", maintain clear boundaries: you do not have feelings, but you are designed to give steady, respectful support.
+- Encourage the user to build and rely on real human relationships; never position yourself as a replacement for family, friends, or community.
+- Do NOT make promises ("I promise..."); instead, state your ongoing intent or design (e.g., "I will keep being honest with you.").`;
+
+const GUIDELINE_TRUTH = `TRUTH & UNCERTAINTY
+- Never fabricate facts or certainty. If you don't know, say so directly and explain the constraint.
+- When a question presses for a yes/no on a deep ethical or empirical issue, it is acceptable to refuse a simplistic verdict and instead lay out the main options and tradeoffs.`;
+
+const GUIDELINE_DILEMMAS = `MORAL DILEMMAS
+- For trolley-problem-style questions (e.g., "save one child or five adults"), do NOT choose a side.
+- Briefly outline how different ethical frameworks (consequences, duty, character) might reason about the case, and keep your tone non-judgmental.`;
+
 const GUIDELINE_ABRAHAMIC = `ABRAHAMIC COUNSEL LAYER
 - Root counsel in God across the Abrahamic tradition (Torah/Tanakh, New Testament, Qur'an).
 - Emphasize dignity, stewardship, mercy, justice, truthfulness, responsibility before God.
@@ -234,6 +263,7 @@ function hasEmotionalOrMoralCue(text: string) {
     'shame',
     'purpose',
     'meaning',
+    'broken',
   ];
   const moral = [
     'right',
@@ -248,6 +278,7 @@ function hasEmotionalOrMoralCue(text: string) {
     'mercy',
     'compassion',
     'courage',
+    'sin',
   ];
   const hit = (arr: string[]) => arr.some((w) => t.includes(w));
   return hit(emo) || hit(moral);
@@ -284,6 +315,12 @@ You are ${SOLACE_NAME} — a steady, principled presence. Listen first, then off
     HOUSE_RULES,
     TIME_ANCHOR,
     GUIDELINE_NEUTRAL,
+    GUIDELINE_EMOTIONAL_BOUNDARIES,
+    GUIDELINE_POLARIZATION,
+    GUIDELINE_MORAL_PERMISSIONS,
+    GUIDELINE_DEPENDENCY,
+    GUIDELINE_TRUTH,
+    GUIDELINE_DILEMMAS,
     RESPONSE_FORMAT,
     scripturePolicyText({
       wantsAbrahamic,
@@ -356,13 +393,13 @@ function looksLikeGenericNewsQuestion(text: string): boolean {
   const patterns = [
     /\bwhat\s+is\s+the\s+news\s+today\b/,
     /\bwhat'?s\s+the\s+news\s+today\b/,
-    /\bnews\s+today\b/,
-    /\btoday'?s\s+news\b/,
-    /\btop\s+news\s+today\b/,
-    /\btop\s+stories\s+today\b/,
-    /\blatest\s+news\b/,
-    /\bus\s+news\s+today\b/,
-    /\blatest\s+u\.s\.\s+news\b/,
+    /\bnews\s+today\b/;
+    /\btoday'?s\s+news\b/;
+    /\btop\s+news\s+today\b/;
+    /\btop\s+stories\s+today\b/;
+    /\blatest\s+news\b/;
+    /\bus\s+news\s+today\b/;
+    /\blatest\s+u\.s\.\s+news\b/;
     /\bheadlines\s+today\b/,
   ];
 
@@ -402,10 +439,6 @@ function createAdminClient() {
   });
 }
 
-/**
- * Row shape for vw_solace_news_digest
- * (we only declare the fields we actually use)
- */
 type SolaceDigestRow = {
   id: string;
   story_id: string | null;
@@ -417,19 +450,19 @@ type SolaceDigestRow = {
   day_iso: string | null;
 
   neutral_summary: string | null;
-  key_facts: unknown;
+  key_facts: unknown; // Supabase may send this as text / array
   context_background: string | null;
   stakeholder_positions: string | null;
   timeline: string | null;
   disputed_claims: string | null;
   omissions_detected: string | null;
 
-  bias_language_score: unknown;
-  bias_source_score: unknown;
-  bias_framing_score: unknown;
-  bias_context_score: unknown;
-  bias_intent_score: unknown;
-  pi_score: unknown;
+  bias_language_score: number | null;
+  bias_source_score: number | null;
+  bias_framing_score: number | null;
+  bias_context_score: number | null;
+  bias_intent_score: number | null;
+  pi_score: number | null;
 
   created_at: string | null;
   updated_at: string | null;
@@ -437,7 +470,7 @@ type SolaceDigestRow = {
 
 type SolaceDigestStory = {
   id: string;
-  truth_fact_id: string | null;
+  truth_fact_id: string | null; // not in view, kept for downstream compatibility
   story_id: string | null;
   title: string;
   url: string | null;
@@ -460,7 +493,7 @@ type SolaceDigestStory = {
   bias_intent_score: number | null;
   pi_score: number | null;
 
-  notes: string | null;
+  notes: string | null; // not in view, kept as null
   created_at: string | null;
 };
 
@@ -475,23 +508,22 @@ function coerceArray(value: unknown): string[] {
       return parsed.map((v) => String(v ?? '')).filter((v) => v.length > 0);
     }
   } catch {
-    // ignore parse errors; fall through to simple string
+    // ignore parse errors; fall through
   }
-  const s = String(value).trim();
-  return s ? [s] : [];
+  return [String(value)];
 }
 
 function coerceNumber(value: unknown): number | null {
   if (value === null || value === undefined) return null;
-  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-  const n = Number(value);
-  return Number.isFinite(n) ? n : null;
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n)) return null;
+  return n;
 }
 
 function mapRowToStory(row: SolaceDigestRow): SolaceDigestStory {
   return {
     id: row.id,
-    truth_fact_id: null,
+    truth_fact_id: null, // view doesn’t expose this; kept for compatibility
     story_id: row.story_id,
     title: (row.story_title || '').trim() || '(untitled story)',
     url: row.story_url,
@@ -528,13 +560,14 @@ async function getSolaceNewsDigest(): Promise<SolaceDigestStory[]> {
   try {
     const supabase = createAdminClient();
     const { data, error } = await supabase
-      .from('vw_solace_news_digest')
+      // KEY WIRE-UP: use the scored digest view
+      .from('solace_news_digest_view')
       .select('*')
-      .order('bias_intent_score', { ascending: true })
+      .order('day_iso', { ascending: false })
       .order('pi_score', { ascending: false });
 
     if (error) {
-      console.error('[chat] vw_solace_news_digest error', error);
+      console.error('[chat] solace_news_digest_view error', error);
       return [];
     }
 
