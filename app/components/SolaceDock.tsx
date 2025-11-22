@@ -5,7 +5,6 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSolaceStore } from "@/app/providers/solace-store";
 import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
-import { generateImage } from "@/lib/sendImage";
 import { useSolaceMemory } from "./useSolaceMemory";
 import { useSolaceAttachments } from "./useSolaceAttachments";
 
@@ -37,6 +36,23 @@ const ui = {
   shadow: "0 14px 44px rgba(0,0,0,.45)",
 };
 
+function isImageAttachment(f: any): boolean {
+  if (!f) return false;
+  const mime = (f.mime || f.type || "") as string;
+  if (mime && typeof mime === "string" && mime.startsWith("image/")) return true;
+  const name = (f.name || "") as string;
+  if (!name) return false;
+  return /\.(png|jpe?g|gif|webp|bmp|heic)$/i.test(name);
+}
+
+function getAttachmentUrl(f: any): string | null {
+  if (!f) return null;
+  if (typeof f.url === "string") return f.url;
+  if (typeof f.publicUrl === "string") return f.publicUrl;
+  if (typeof f.path === "string") return f.path;
+  return null;
+}
+
 export default function SolaceDock() {
   // ensure single mount
   const [canRender, setCanRender] = useState(false);
@@ -63,9 +79,6 @@ export default function SolaceDock() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
-
-  // image generation
-  const [imgLoading, setImgLoading] = useState(false);
 
   // speech
   const [listening, setListening] = useState(false);
@@ -249,138 +262,120 @@ export default function SolaceDock() {
   }, []); // run once
 
   // ---------- actions -------------------------------------------------
+
+  async function sendToChat(userMsg: string, nextMsgs: Message[]) {
+    const activeFilters: string[] = Array.from(filters);
+
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Last-Mode": modeHint,
+        "X-User-Key": userKey,
+      },
+      body: JSON.stringify({
+        messages: nextMsgs,
+        filters: activeFilters,
+        stream: false,
+        attachments: pendingFiles,
+        ministry: activeFilters.includes("ministry"),
+        workspace_id: MCA_WORKSPACE_ID,
+        user_key: userKey,
+        memory_preview: memReady ? memoryCacheRef.current.slice(0, 50) : [],
+      }),
+    });
+
+    clearPending();
+
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      throw new Error(`HTTP ${res.status}: ${t}`);
+    }
+    const data = await res.json();
+    const reply = String(data.text ?? "[No reply]");
+    setMessages((m) => [...m, { role: "assistant", content: reply }]);
+  }
+
+  async function sendToVision(userMsg: string, nextMsgs: Message[]) {
+    const imageAttachment = pendingFiles.find(isImageAttachment);
+    const imageUrl = getAttachmentUrl(imageAttachment);
+
+    if (!imageUrl) {
+      // Fallback: if we somehow can't get a URL, just tell the user.
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content:
+            "I see an image attachment, but I don’t have a usable link for it. Try re-attaching or uploading again.",
+        },
+      ]);
+      clearPending();
+      return;
+    }
+
+    // Show the user's message in the transcript if it wasn't already
+    // (we already appended nextMsgs to state before calling this).
+    const prompt =
+      userMsg.trim() ||
+      "Look at this image and describe what you see, then offer practical, nonjudgmental help.";
+
+    const res = await fetch("/api/solace/vision", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-User-Key": userKey,
+      },
+      body: JSON.stringify({
+        prompt,
+        imageUrl,
+      }),
+    });
+
+    clearPending();
+
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      throw new Error(`Vision HTTP ${res.status}: ${t}`);
+    }
+
+    const data = await res.json();
+    const reply = String(data.answer ?? "[No reply]");
+    setMessages((m) => [...m, { role: "assistant", content: reply }]);
+  }
+
   async function send() {
     const text = input.trim();
-    if (!text && pendingFiles.length === 0) return;
+    const hasAnyAttachments = pendingFiles.length > 0;
+    const hasImage = pendingFiles.some(isImageAttachment);
+
+    if (!text && !hasAnyAttachments) return;
     if (streaming) return;
 
     setInput("");
-    const userMsg = text || (pendingFiles.length ? "Attachments:" : "");
+
+    const userMsg = text || (hasAnyAttachments ? "Attachments:" : "");
     const nextUser: Message = { role: "user", content: userMsg };
     const nextMsgs: Message[] = [...messages, nextUser];
     setMessages(nextMsgs);
     setStreaming(true);
 
-    const activeFilters: string[] = Array.from(filters);
-
-    // Detect simple "internet mode" case:
-    // - user typed a URL in the message
-    // - no file attachments (so this isn't a PDF/code upload flow)
-    const urlMatch = text.match(
-      /\bhttps?:\/\/[^\s]+|\bwww\.[^\s]+/i
-    );
-    const shouldUseWeb = !!urlMatch && pendingFiles.length === 0;
-
     try {
-      if (shouldUseWeb) {
-        let url = urlMatch![0];
-        if (url.startsWith("www.")) {
-          url = `https://${url}`;
-        }
-
-        const res = await fetch("/api/solace/web", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            question: text,
-            url,
-            maxResults: 6,
-          }),
-        });
-
-        clearPending();
-
-        if (!res.ok) {
-          const t = await res.text().catch(() => "");
-          throw new Error(`HTTP ${res.status}: ${t}`);
-        }
-
-        const data = await res.json();
-        const reply = String((data as any).answer ?? "[No reply]");
-        setMessages((m) => [
-          ...m,
-          { role: "assistant", content: reply },
-        ]);
+      if (hasImage) {
+        await sendToVision(userMsg, nextMsgs);
       } else {
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Last-Mode": modeHint,
-            "X-User-Key": userKey,
-          },
-          body: JSON.stringify({
-            messages: nextMsgs,
-            filters: activeFilters,
-            stream: false,
-            attachments: pendingFiles,
-            ministry: activeFilters.includes("ministry"),
-            workspace_id: MCA_WORKSPACE_ID,
-            user_key: userKey,
-            memory_preview: memReady
-              ? memoryCacheRef.current.slice(0, 50)
-              : [],
-          }),
-        });
-
-        clearPending();
-
-        if (!res.ok) {
-          const t = await res.text().catch(() => "");
-          throw new Error(`HTTP ${res.status}: ${t}`);
-        }
-        const data = await res.json();
-        const reply = String(data.text ?? "[No reply]");
-        setMessages((m) => [
-          ...m,
-          { role: "assistant", content: reply },
-        ]);
+        await sendToChat(userMsg, nextMsgs);
       }
     } catch (e: any) {
       setMessages((m) => [
         ...m,
-        { role: "assistant", content: `⚠️ ${e?.message ?? "Error"}` },
+        {
+          role: "assistant",
+          content: `⚠️ ${e?.message ?? "Error"}`,
+        },
       ]);
     } finally {
       setStreaming(false);
-    }
-  }
-
-  // === IMAGE GENERATION ===============================================
-  async function generateImageFromInput() {
-    const text = input.trim();
-    if (!text || imgLoading) return;
-
-    setImgLoading(true);
-    setInput("");
-
-    // Show the user's prompt in the transcript
-    setMessages((m) => [...m, { role: "user", content: text }]);
-
-    try {
-      const url = await generateImage(text);
-
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          content: `🎨 Generated image for you:\n${url}`,
-        },
-      ]);
-    } catch (e: any) {
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          content: `⚠️ Image error: ${
-            e?.message ?? "Image generation failed."
-          }`,
-        },
-      ]);
-    } finally {
-      setImgLoading(false);
     }
   }
 
@@ -563,19 +558,6 @@ export default function SolaceDock() {
         : "pointer",
     opacity:
       streaming || (!input.trim() && pendingFiles.length === 0) ? 0.55 : 1,
-  };
-
-  const imageBtnStyle: React.CSSProperties = {
-    minWidth: 80,
-    height: 40,
-    borderRadius: 12,
-    border: "0",
-    background: "#374151",
-    color: "#e5e7eb",
-    font:
-      "600 13px/1 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
-    cursor: imgLoading || !input.trim() ? "not-allowed" : "pointer",
-    opacity: imgLoading || !input.trim() ? 0.55 : 1,
   };
 
   const orbStyle: React.CSSProperties = {
@@ -806,18 +788,20 @@ export default function SolaceDock() {
               font: "12px system-ui",
             }}
           >
-            {pendingFiles.map((f, idx) => (
+            {pendingFiles.map((f: any, idx: number) => (
               <a
                 key={idx}
-                href={f.url}
-                target="_blank"
-                rel="noreferrer"
+                href={getAttachmentUrl(f) || "#"}
+                target={getAttachmentUrl(f) ? "_blank" : undefined}
+                rel={getAttachmentUrl(f) ? "noreferrer" : undefined}
                 style={{
                   padding: "4px 8px",
                   borderRadius: 8,
                   border: "1px solid var(--mc-border)",
                   background: "#0e1726",
                   textDecoration: "none",
+                  opacity: getAttachmentUrl(f) ? 1 : 0.7,
+                  cursor: getAttachmentUrl(f) ? "pointer" : "default",
                 }}
                 title={f.name}
               >
@@ -853,9 +837,10 @@ export default function SolaceDock() {
               id="solace-file-input"
               type="file"
               multiple
-              // hide native "Choose file" UI – use the paperclip instead
               style={{ display: "none" }}
-              onChange={(e) => handleFiles(e.target.files, { prefix: "solace" })}
+              onChange={(e) =>
+                handleFiles(e.target.files, { prefix: "solace" })
+              }
             />
 
             <button
@@ -891,16 +876,8 @@ export default function SolaceDock() {
           />
 
           <button
-            type="button"
-            onClick={generateImageFromInput}
-            disabled={imgLoading || !input.trim()}
-            style={imageBtnStyle}
-          >
-            {imgLoading ? "…" : "Image"}
-          </button>
-
-          <button
             onClick={send}
+            type="button"
             disabled={streaming || (!input.trim() && pendingFiles.length === 0)}
             style={askBtnStyle}
           >
@@ -941,4 +918,3 @@ export default function SolaceDock() {
 }
 
 /* ========= end component ========= */
-
