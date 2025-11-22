@@ -4,9 +4,15 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { getOpenAI } from "@/lib/openai";
-import { MODEL, REQUEST_TIMEOUT_MS } from "@/lib/mcai/config";
 import { buildVisionSystemPrompt } from "@/lib/solace/vision-mode";
 import { getSolaceFeatureFlags } from "@/lib/solace/settings";
+
+// Local defaults so we don't depend on lib/mcai/config
+const SOLACE_VISION_MODEL =
+  process.env.OPENAI_RESPONSE_MODEL ||
+  process.env.OPENAI_MODEL ||
+  "gpt-4.1";
+const SOLACE_VISION_TIMEOUT_MS = 60_000;
 
 function jsonError(
   message: string,
@@ -91,10 +97,10 @@ Otherwise, describe what is visible in IMAGE_CONTEXT and give 2–3 concrete, no
     ];
 
     const resp = await openai.responses.create({
-      model: MODEL,
+      model: SOLACE_VISION_MODEL,
       input,
       max_output_tokens: 900,
-      timeout_ms: REQUEST_TIMEOUT_MS,
+      timeout_ms: SOLACE_VISION_TIMEOUT_MS,
     });
 
     const answer = (resp as any).output_text as string | undefined;
@@ -102,7 +108,7 @@ Otherwise, describe what is visible in IMAGE_CONTEXT and give 2–3 concrete, no
     return NextResponse.json({
       ok: true,
       answer: answer ?? "",
-      model: MODEL,
+      model: SOLACE_VISION_MODEL,
     });
   } catch (err: any) {
     console.error("[solace/vision] fatal error", err);
