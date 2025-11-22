@@ -21,14 +21,69 @@ function jsonError(
   return NextResponse.json({ ok: false, error: message, ...extra }, { status });
 }
 
+type JsonBody = {
+  prompt?: string;
+  imageUrl?: string;
+};
+
+async function loadImageFromJson(req: NextRequest) {
+  const DEFAULT_PROMPT =
+    "Describe what you can safely see and offer practical, nonjudgmental help.";
+
+  const body = (await req.json().catch(() => null)) as JsonBody | null;
+  if (!body || !body.imageUrl) {
+    return jsonError("Missing 'imageUrl' in JSON body.", 400, {
+      code: "NO_IMAGE_URL",
+    });
+  }
+
+  const prompt = (body.prompt || DEFAULT_PROMPT).trim();
+  let mimeType = "image/png";
+
+  const imgResp = await fetch(body.imageUrl);
+  if (!imgResp.ok) {
+    return jsonError(
+      `Failed to fetch image from URL (HTTP ${imgResp.status}).`,
+      400,
+      { code: "IMAGE_FETCH_FAILED" }
+    );
+  }
+
+  const ct = imgResp.headers.get("content-type");
+  if (ct) mimeType = ct;
+
+  const arrayBuffer = await imgResp.arrayBuffer();
+  const base64 = Buffer.from(arrayBuffer).toString("base64");
+
+  return { prompt, mimeType, base64 };
+}
+
+async function loadImageFromForm(req: NextRequest) {
+  const DEFAULT_PROMPT =
+    "Describe what you can safely see and offer practical, nonjudgmental help.";
+
+  const form = await req.formData();
+  const file = form.get("image");
+  const prompt =
+    ((form.get("prompt") as string | null) ?? DEFAULT_PROMPT).trim();
+
+  if (!(file instanceof File)) {
+    return jsonError("Missing 'image' file in form-data.", 400, {
+      code: "NO_IMAGE",
+    });
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const base64 = Buffer.from(arrayBuffer).toString("base64");
+  const mimeType = file.type || "image/png";
+
+  return { prompt, mimeType, base64 };
+}
+
 /**
- * This route assumes you send:
- * - multipart/form-data with field "image" (File)
- * - optional "prompt" (string) for user intent
- *
- * It uses the model to:
- * 1) Apply Solace's visual safety and interpretation rules.
- * 2) Return a text answer only (no images).
+ * This route now supports:
+ * - JSON: { imageUrl, prompt? }
+ * - multipart/form-data: image (File), prompt?
  */
 export async function POST(req: NextRequest) {
   try {
@@ -39,21 +94,31 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const form = await req.formData();
-    const file = form.get("image");
-    const userPrompt =
-      (form.get("prompt") as string | null) ??
-      "Describe what you can safely see and offer practical, nonjudgmental help.";
+    const contentType = req.headers.get("content-type") || "";
+    let prompt: string;
+    let mimeType: string;
+    let base64: string;
 
-    if (!(file instanceof File)) {
-      return jsonError("Missing 'image' file in form-data.", 400, {
-        code: "NO_IMAGE",
-      });
+    if (contentType.includes("application/json")) {
+      const loaded = await loadImageFromJson(req);
+      if (loaded instanceof NextResponse) return loaded;
+      ({ prompt, mimeType, base64 } = loaded);
+    } else if (contentType.includes("multipart/form-data")) {
+      const loaded = await loadImageFromForm(req);
+      if (loaded instanceof NextResponse) return loaded;
+      ({ prompt, mimeType, base64 } = loaded);
+    } else {
+      // Try JSON first; if that fails, fall back to formData for robustness
+      const tryJson = await loadImageFromJson(req).catch(() => null);
+      if (tryJson && tryJson instanceof NextResponse) return tryJson as any;
+      if (tryJson && !(tryJson instanceof NextResponse)) {
+        ({ prompt, mimeType, base64 } = tryJson);
+      } else {
+        const loaded = await loadImageFromForm(req);
+        if (loaded instanceof NextResponse) return loaded;
+        ({ prompt, mimeType, base64 } = loaded);
+      }
     }
-
-    const arrayBuffer = await file.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString("base64");
-    const mimeType = file.type || "image/png";
 
     const openai: any = await getOpenAI();
 
@@ -72,8 +137,6 @@ Otherwise:
 - Stay practical, kind, and non-shaming.
     `.trim());
 
-    // Use the official multimodal "input_text" + "input_image" shape.
-    // Typed as `any` to stay compatible with the SDK types.
     const input: any = [
       {
         role: "system",
@@ -89,7 +152,7 @@ Otherwise:
         content: [
           {
             type: "input_text",
-            text: userPrompt,
+            text: prompt,
           },
           {
             type: "input_image",
@@ -125,7 +188,7 @@ Otherwise:
 }
 
 export async function GET() {
-  return jsonError("Use POST with multipart/form-data.", 405, {
+  return jsonError("Use POST with JSON or multipart/form-data.", 405, {
     code: "METHOD_NOT_ALLOWED",
   });
 }
