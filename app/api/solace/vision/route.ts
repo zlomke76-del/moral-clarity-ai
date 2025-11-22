@@ -12,7 +12,6 @@ const SOLACE_VISION_MODEL =
   process.env.OPENAI_RESPONSE_MODEL ||
   process.env.OPENAI_MODEL ||
   "gpt-4.1";
-const SOLACE_VISION_TIMEOUT_MS = 60_000;
 
 function jsonError(
   message: string,
@@ -74,7 +73,7 @@ Otherwise:
     `.trim());
 
     // Use the official multimodal "input_text" + "input_image" shape.
-    // Annotated as `any` to avoid TS fighting the SDK types.
+    // Typed as `any` to stay compatible with the SDK types.
     const input: any = [
       {
         role: "system",
@@ -106,7 +105,6 @@ Otherwise:
       model: SOLACE_VISION_MODEL,
       input,
       max_output_tokens: 900,
-      timeout_ms: SOLACE_VISION_TIMEOUT_MS,
     });
 
     const answer = (resp as any).output_text as string | undefined;
