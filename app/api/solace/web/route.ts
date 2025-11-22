@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       news: false,
     })) as SearchResult[];
 
-    const openai = await getOpenAI();
+    const openai: any = await getOpenAI();
 
     const system = buildInternetSystemPrompt(`
 You are helping the user evaluate or understand information retrieved from the web.
@@ -85,32 +85,24 @@ You are given:
 Rules:
 - Base your reasoning ONLY on SEARCH_RESULTS.
 - Be explicit when something is unknown or underspecified.
-- Prefer synthesis ("here's the pattern") over link-dumps.
+- Prefer synthesis ("here's the pattern") over link dumps.
+- If results are thin or noisy, say so clearly.
     `.trim());
 
-    const input = [
-      {
-        role: "system",
-        content: system,
-      },
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: `USER_QUESTION:\n${question}\n\nSEARCH_RESULTS JSON:\n${JSON.stringify(
-              searchResults,
-              null,
-              2
-            )}`,
-          },
-        ],
-      },
-    ];
+    const prompt = `
+SYSTEM_INSTRUCTIONS:
+${system}
+
+USER_QUESTION:
+${question}
+
+SEARCH_RESULTS (JSON):
+${JSON.stringify(searchResults, null, 2)}
+    `.trim();
 
     const resp = await openai.responses.create({
       model: SOLACE_WEB_MODEL,
-      input,
+      input: prompt,
       max_output_tokens: 1200,
       timeout_ms: SOLACE_WEB_TIMEOUT_MS,
     });
@@ -138,7 +130,7 @@ Rules:
 }
 
 export async function GET(req: NextRequest) {
-  // Convenience: allow GET with query params (?q=...&url=...)
+  // Convenience: allow GET with query params (?q=...&url=...&max=...)
   const url = new URL(req.url);
   const question = url.searchParams.get("q") || url.searchParams.get("question");
   const targetUrl = url.searchParams.get("url") || undefined;
