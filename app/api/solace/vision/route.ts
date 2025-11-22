@@ -30,10 +30,6 @@ function jsonError(
  * It uses the model to:
  * 1) Apply Solace's visual safety and interpretation rules.
  * 2) Return a text answer only (no images).
- *
- * NOTE: Real-world deployments may want a separate low-level
- * safety classifier before this step. This route encodes the
- * safer, high-level pattern.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -48,7 +44,7 @@ export async function POST(req: NextRequest) {
     const file = form.get("image");
     const userPrompt =
       (form.get("prompt") as string | null) ??
-      "Describe what you can safely see and offer practical help.";
+      "Describe what you can safely see and offer practical, nonjudgmental help.";
 
     if (!(file instanceof File)) {
       return jsonError("Missing 'image' file in form-data.", 400, {
@@ -60,10 +56,10 @@ export async function POST(req: NextRequest) {
     const base64 = Buffer.from(arrayBuffer).toString("base64");
     const mimeType = file.type || "image/png";
 
-    const openai = await getOpenAI();
+    const openai: any = await getOpenAI();
 
     const system = buildVisionSystemPrompt(`
-You must abide by the VISION SAFETY & INTERPRETATION PROTOCOL defined in your persona.
+You must follow Solace's VISION SAFETY & INTERPRETATION PROTOCOL.
 
 If the image appears to contain restricted content (nudity, explicit sexual content,
 graphic violence, criminal activity, weapons, drugs, extremist symbolism, or minors
@@ -71,13 +67,23 @@ in unsafe situations), you must respond ONLY with:
 
 "I can’t assist with this image because it contains restricted visual content. If you’d like to describe the situation in words, I can help that way."
 
-Otherwise, describe what is visible in IMAGE_CONTEXT and give 2–3 concrete, nonjudgmental suggestions if appropriate.
+Otherwise:
+- Briefly describe what is visible.
+- Offer 2–3 concrete, nonjudgmental suggestions if appropriate (e.g., for a messy room or sparse fridge).
+- Stay practical, kind, and non-shaming.
     `.trim());
 
-    const input = [
+    // Use the official multimodal "input_text" + "input_image" shape.
+    // Annotated as `any` to avoid TS fighting the SDK types.
+    const input: any = [
       {
         role: "system",
-        content: system,
+        content: [
+          {
+            type: "input_text",
+            text: system,
+          },
+        ],
       },
       {
         role: "user",
@@ -125,3 +131,4 @@ export async function GET() {
     code: "METHOD_NOT_ALLOWED",
   });
 }
+
