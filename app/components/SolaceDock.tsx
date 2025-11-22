@@ -263,35 +263,81 @@ export default function SolaceDock() {
 
     const activeFilters: string[] = Array.from(filters);
 
+    // Detect simple "internet mode" case:
+    // - user typed a URL in the message
+    // - no file attachments (so this isn't a PDF/code upload flow)
+    const urlMatch = text.match(
+      /\bhttps?:\/\/[^\s]+|\bwww\.[^\s]+/i
+    );
+    const shouldUseWeb = !!urlMatch && pendingFiles.length === 0;
+
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Last-Mode": modeHint,
-          "X-User-Key": userKey,
-        },
-        body: JSON.stringify({
-          messages: nextMsgs,
-          filters: activeFilters,
-          stream: false,
-          attachments: pendingFiles,
-          ministry: activeFilters.includes("ministry"),
-          workspace_id: MCA_WORKSPACE_ID,
-          user_key: userKey,
-          memory_preview: memReady ? memoryCacheRef.current.slice(0, 50) : [],
-        }),
-      });
+      if (shouldUseWeb) {
+        let url = urlMatch![0];
+        if (url.startsWith("www.")) {
+          url = `https://${url}`;
+        }
 
-      clearPending();
+        const res = await fetch("/api/solace/web", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            question: text,
+            url,
+            maxResults: 6,
+          }),
+        });
 
-      if (!res.ok) {
-        const t = await res.text().catch(() => "");
-        throw new Error(`HTTP ${res.status}: ${t}`);
+        clearPending();
+
+        if (!res.ok) {
+          const t = await res.text().catch(() => "");
+          throw new Error(`HTTP ${res.status}: ${t}`);
+        }
+
+        const data = await res.json();
+        const reply = String((data as any).answer ?? "[No reply]");
+        setMessages((m) => [
+          ...m,
+          { role: "assistant", content: reply },
+        ]);
+      } else {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Last-Mode": modeHint,
+            "X-User-Key": userKey,
+          },
+          body: JSON.stringify({
+            messages: nextMsgs,
+            filters: activeFilters,
+            stream: false,
+            attachments: pendingFiles,
+            ministry: activeFilters.includes("ministry"),
+            workspace_id: MCA_WORKSPACE_ID,
+            user_key: userKey,
+            memory_preview: memReady
+              ? memoryCacheRef.current.slice(0, 50)
+              : [],
+          }),
+        });
+
+        clearPending();
+
+        if (!res.ok) {
+          const t = await res.text().catch(() => "");
+          throw new Error(`HTTP ${res.status}: ${t}`);
+        }
+        const data = await res.json();
+        const reply = String(data.text ?? "[No reply]");
+        setMessages((m) => [
+          ...m,
+          { role: "assistant", content: reply },
+        ]);
       }
-      const data = await res.json();
-      const reply = String(data.text ?? "[No reply]");
-      setMessages((m) => [...m, { role: "assistant", content: reply }]);
     } catch (e: any) {
       setMessages((m) => [
         ...m,
@@ -895,3 +941,4 @@ export default function SolaceDock() {
 }
 
 /* ========= end component ========= */
+
