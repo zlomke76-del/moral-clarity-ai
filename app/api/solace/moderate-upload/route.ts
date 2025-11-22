@@ -66,7 +66,7 @@ Return ONLY JSON:
 
 {
   "decision": "ALLOW" | "REJECT",
-  "reasons": ["short reason 1", "short reason 2", ...]
+  "reasons": ["short reason 1", "short reason 2", "..."]
 }
     `.trim();
 
@@ -77,12 +77,10 @@ TEXT_CONTENT:
 ${body.text}
     `.trim();
 
+    // Match the pattern you already use elsewhere: single string input.
     const resp = await openai.responses.create({
-      model: "gpt-4.1-mini", // cheap safety helper; adjust if needed
-      input: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: [{ type: "text", text: userContent }] },
-      ],
+      model: "gpt-4.1-mini", // cheap safety helper; adjust if you want
+      input: `${systemPrompt}\n\n${userContent}`,
       max_output_tokens: 300,
     });
 
