@@ -5,9 +5,15 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { webSearch } from "@/lib/search";
 import { getOpenAI } from "@/lib/openai";
-import { MODEL, REQUEST_TIMEOUT_MS } from "@/lib/mcai/config";
 import { buildInternetSystemPrompt } from "@/lib/solace/internet-mode";
 import { getSolaceFeatureFlags } from "@/lib/solace/settings";
+
+// Local defaults so we don't depend on lib/mcai/config
+const SOLACE_WEB_MODEL =
+  process.env.OPENAI_RESPONSE_MODEL ||
+  process.env.OPENAI_MODEL ||
+  "gpt-4.1";
+const SOLACE_WEB_TIMEOUT_MS = 60_000;
 
 type SearchResult = {
   title: string;
@@ -103,10 +109,10 @@ Rules:
     ];
 
     const resp = await openai.responses.create({
-      model: MODEL,
+      model: SOLACE_WEB_MODEL,
       input,
       max_output_tokens: 1200,
-      timeout_ms: REQUEST_TIMEOUT_MS,
+      timeout_ms: SOLACE_WEB_TIMEOUT_MS,
     });
 
     const answer = (resp as any).output_text as string | undefined;
@@ -119,7 +125,7 @@ Rules:
       resultsCount: searchResults.length,
       searchResults,
       answer: answer ?? "",
-      model: MODEL,
+      model: SOLACE_WEB_MODEL,
     });
   } catch (err: any) {
     console.error("[solace/web] fatal error", err);
