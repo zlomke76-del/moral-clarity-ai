@@ -13,7 +13,6 @@ const SOLACE_WEB_MODEL =
   process.env.OPENAI_RESPONSE_MODEL ||
   process.env.OPENAI_MODEL ||
   "gpt-4.1";
-const SOLACE_WEB_TIMEOUT_MS = 60_000;
 
 type SearchResult = {
   title: string;
@@ -100,11 +99,11 @@ SEARCH_RESULTS (JSON):
 ${JSON.stringify(searchResults, null, 2)}
     `.trim();
 
+    // Use simple string input to keep the SDK typing happy.
     const resp = await openai.responses.create({
       model: SOLACE_WEB_MODEL,
       input: prompt,
       max_output_tokens: 1200,
-      timeout_ms: SOLACE_WEB_TIMEOUT_MS,
     });
 
     const answer = (resp as any).output_text as string | undefined;
