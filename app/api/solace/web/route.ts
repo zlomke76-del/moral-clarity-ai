@@ -74,7 +74,8 @@ export async function POST(req: NextRequest) {
 
     const openai: any = await getOpenAI();
 
-    const system = buildInternetSystemPrompt(`
+    const system = buildInternetSystemPrompt(
+      `
 You are helping the user evaluate or understand information retrieved from the web.
 
 You are given:
@@ -86,7 +87,8 @@ Rules:
 - Be explicit when something is unknown or underspecified.
 - Prefer synthesis ("here's the pattern") over link dumps.
 - If results are thin or noisy, say so clearly.
-    `.trim());
+      `.trim()
+    );
 
     const prompt = `
 SYSTEM_INSTRUCTIONS:
@@ -100,10 +102,11 @@ ${JSON.stringify(searchResults, null, 2)}
     `.trim();
 
     // Use simple string input to keep the SDK typing happy.
+    // Higher max_output_tokens so Solace can deliver full, high-context analyses.
     const resp = await openai.responses.create({
       model: SOLACE_WEB_MODEL,
       input: prompt,
-      max_output_tokens: 1200,
+      max_output_tokens: 2800,
     });
 
     const answer = (resp as any).output_text as string | undefined;
@@ -131,7 +134,8 @@ ${JSON.stringify(searchResults, null, 2)}
 export async function GET(req: NextRequest) {
   // Convenience: allow GET with query params (?q=...&url=...&max=...)
   const url = new URL(req.url);
-  const question = url.searchParams.get("q") || url.searchParams.get("question");
+  const question =
+    url.searchParams.get("q") || url.searchParams.get("question");
   const targetUrl = url.searchParams.get("url") || undefined;
   const maxParam = url.searchParams.get("max");
   const maxResults = maxParam ? Number(maxParam) || undefined : undefined;
