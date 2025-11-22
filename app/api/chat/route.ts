@@ -390,18 +390,18 @@ function looksLikeGenericNewsQuestion(text: string): boolean {
   const t = (text || '').toLowerCase();
   if (!t.trim()) return false;
 
-  const patterns = [
-    /\bwhat\s+is\s+the\s+news\s+today\b/,
-    /\bwhat'?s\s+the\s+news\s+today\b/,
-    /\bnews\s+today\b/;
-    /\btoday'?s\s+news\b/;
-    /\btop\s+news\s+today\b/;
-    /\btop\s+stories\s+today\b/;
-    /\blatest\s+news\b/;
-    /\bus\s+news\s+today\b/;
-    /\blatest\s+u\.s\.\s+news\b/;
-    /\bheadlines\s+today\b/,
-  ];
+const patterns = [
+  /\bwhat\s+is\s+the\s+news\s+today\b/,
+  /\bwhat'?s\s+the\s+news\s+today\b/,
+  /\bnews\s+today\b/,
+  /\btoday'?s\s+news\b/,
+  /\btop\s+news\s+today\b/,
+  /\btop\s+stories\s+today\b/,
+  /\blatest\s+news\b/,
+  /\bus\s+news\s+today\b/,
+  /\blatest\s+u\.s\.\s+news\b/,
+  /\bheadlines\s+today\b/,
+];
 
   return patterns.some((rx) => rx.test(t));
 }
