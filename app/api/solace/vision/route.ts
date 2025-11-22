@@ -22,13 +22,14 @@ function jsonError(
 }
 
 /**
- * This route assumes you send:
- * - multipart/form-data with field "image" (File)
- * - optional "prompt" (string) for user intent
+ * Expected JSON body (what useSolaceAttachments sends):
  *
- * It uses the model to:
- * 1) Apply Solace's visual safety and interpretation rules.
- * 2) Return a text answer only (no images).
+ * {
+ *   "url": "https://.../image.png" | "data:image/png;base64,...",
+ *   "prompt": "optional user instruction"
+ * }
+ *
+ * We pass that URL directly to the OpenAI responses API as an input_image.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -39,21 +40,20 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const form = await req.formData();
-    const file = form.get("image");
+    const body = (await req.json().catch(() => null)) as
+      | { url?: string; imageUrl?: string; prompt?: string }
+      | null;
+
+    const imageUrl = (body?.imageUrl || body?.url || "").trim();
     const userPrompt =
-      (form.get("prompt") as string | null) ??
+      body?.prompt?.trim() ||
       "Describe what you can safely see and offer practical, nonjudgmental help.";
 
-    if (!(file instanceof File)) {
-      return jsonError("Missing 'image' file in form-data.", 400, {
-        code: "NO_IMAGE",
+    if (!imageUrl) {
+      return jsonError("Missing image URL in body (url or imageUrl).", 400, {
+        code: "NO_IMAGE_URL",
       });
     }
-
-    const arrayBuffer = await file.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString("base64");
-    const mimeType = file.type || "image/png";
 
     const openai: any = await getOpenAI();
 
@@ -72,8 +72,8 @@ Otherwise:
 - Stay practical, kind, and non-shaming.
     `.trim());
 
-    // Use the official multimodal "input_text" + "input_image" shape.
-    // image_url must be a STRING, not an object.
+    // OpenAI responses multimodal input:
+    // NOTE: image_url must be a STRING (URL or data URL), not an object.
     const input: any = [
       {
         role: "system",
@@ -93,7 +93,7 @@ Otherwise:
           },
           {
             type: "input_image",
-            image_url: `data:${mimeType};base64,${base64}`,
+            image_url: imageUrl,
           },
         ],
       },
@@ -123,7 +123,7 @@ Otherwise:
 }
 
 export async function GET() {
-  return jsonError("Use POST with multipart/form-data.", 405, {
+  return jsonError("Use POST with JSON body.", 405, {
     code: "METHOD_NOT_ALLOWED",
   });
 }
