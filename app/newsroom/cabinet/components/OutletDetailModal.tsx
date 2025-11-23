@@ -8,14 +8,14 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   trends: OutletTrendPoint[] | null;
-  outlet: OutletDetailData | null; // Add this line
+  outlet: OutletDetailData | null; // Ensure this is included
 };
 
 export default function OutletDetailModal({
   open,
   onOpenChange,
   trends,
-  outlet, // Add this line
+  outlet, // Ensure this is included
 }: Props) {
   // Close on ESC
   useEffect(() => {
