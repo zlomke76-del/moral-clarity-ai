@@ -1,4 +1,3 @@
-// app/newsroom/cabinet/components/TrendChart.tsx
 "use client";
 
 import type { OutletTrendPoint } from "../types";
@@ -25,8 +24,8 @@ export default function TrendChart({ points, loading }: Props) {
     );
   }
 
-  const maxPi = 1;
-  const minPi = 0;
+  const maxPi = Math.max(...points.map(p => p.avg_pi_score));
+  const minPi = Math.min(...points.map(p => p.avg_pi_score));
 
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-950/80 p-4 space-y-3">
@@ -36,8 +35,7 @@ export default function TrendChart({ points, loading }: Props) {
             Predictability over time
           </h3>
           <p className="mt-1 text-xs text-neutral-400">
-            Each bar is a day. Higher bars mean higher Predictability Index
-            (closer to 1.0) for that day&apos;s scored stories.
+            Each bar represents a day. Higher bars indicate a higher Predictability Index (closer to 1.0) for that day's scored stories.
           </p>
         </div>
         <div className="text-[11px] text-neutral-500">
@@ -48,8 +46,7 @@ export default function TrendChart({ points, loading }: Props) {
       <div className="mt-2 h-40 w-full overflow-x-auto">
         <div className="flex h-full items-end gap-1">
           {points.map((p) => {
-            const norm =
-              (p.avg_pi_score - minPi) / (maxPi - minPi || 1); // 0..1
+            const norm = (p.avg_pi_score - minPi) / (maxPi - minPi || 1); // Normalize to 0..1
             const height = 20 + norm * 100; // px
             return (
               <div key={p.story_day} className="flex flex-col items-center">
@@ -57,9 +54,10 @@ export default function TrendChart({ points, loading }: Props) {
                   className="w-3 rounded-t-md bg-emerald-400/80"
                   style={{ height: `${height}px` }}
                   title={`${p.story_day}: PI ${p.avg_pi_score.toFixed(3)}`}
+                  aria-label={`Predictability Index for ${p.story_day}: ${p.avg_pi_score.toFixed(3)}`}
                 />
                 <div className="mt-1 w-6 rotate-90 whitespace-nowrap text-[9px] text-neutral-500">
-                  {p.story_day.slice(5)}{/* show MM-DD */}
+                  {p.story_day.slice(5)} {/* show MM-DD */}
                 </div>
               </div>
             );
