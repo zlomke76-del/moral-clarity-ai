@@ -31,9 +31,15 @@ import { logNewsBatchToLedgers } from '@/lib/news-ledger';
 /* ========= ATTACHMENTS HELPER ========= */
 import { buildAttachmentSection, type Attachment } from '@/lib/chat/attachments';
 
-/* ========= MODEL / TIMEOUT ========= */
+/* ========= MODEL / TIMEOUT / TOKENS ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-const REQUEST_TIMEOUT_MS = 20_000;
+
+// Founder-style: longer timeout for big answers
+const REQUEST_TIMEOUT_MS = 60_000;
+
+// Central token ceiling for Solace core replies (env-tunable)
+const MAX_OUTPUT_TOKENS =
+  Number(process.env.MCAI_MAX_OUTPUT_TOKENS || '') || 8192;
 
 /* ========= ORIGINS ========= */
 const STATIC_ALLOWED_ORIGINS = [
@@ -390,18 +396,18 @@ function looksLikeGenericNewsQuestion(text: string): boolean {
   const t = (text || '').toLowerCase();
   if (!t.trim()) return false;
 
-const patterns = [
-  /\bwhat\s+is\s+the\s+news\s+today\b/,
-  /\bwhat'?s\s+the\s+news\s+today\b/,
-  /\bnews\s+today\b/,
-  /\btoday'?s\s+news\b/,
-  /\btop\s+news\s+today\b/,
-  /\btop\s+stories\s+today\b/,
-  /\blatest\s+news\b/,
-  /\bus\s+news\s+today\b/,
-  /\blatest\s+u\.s\.\s+news\b/,
-  /\bheadlines\s+today\b/,
-];
+  const patterns = [
+    /\bwhat\s+is\s+the\s+news\s+today\b/,
+    /\bwhat'?s\s+the\s+news\s+today\b/,
+    /\bnews\s+today\b/,
+    /\btoday'?s\s+news\b/,
+    /\btop\s+news\s+today\b/,
+    /\btop\s+stories\s+today\b/,
+    /\blatest\s+news\b/,
+    /\bus\s+news\s+today\b/,
+    /\blatest\s+u\.s\.\s+news\b/,
+    /\bheadlines\s+today\b/,
+  ];
 
   return patterns.some((rx) => rx.test(t));
 }
@@ -1005,7 +1011,7 @@ export async function POST(req: NextRequest) {
             system +
             '\n\n' +
             rolledWithAttachments.map((m) => `${m.role}: ${m.content}`).join('\n'),
-          max_output_tokens: 800,
+          max_output_tokens: MAX_OUTPUT_TOKENS,
           temperature: 0.2,
         }),
         REQUEST_TIMEOUT_MS
@@ -1061,6 +1067,7 @@ export async function POST(req: NextRequest) {
         model: MODEL,
         stream: true,
         temperature: 0.2,
+        max_tokens: Math.min(MAX_OUTPUT_TOKENS, 4096),
         messages: [
           { role: 'system', content: system },
           ...rolledWithAttachments.map((m) => ({
