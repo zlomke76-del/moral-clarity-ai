@@ -63,15 +63,15 @@ const FOUNDER_MEMORY_EPISODES_LIMIT = 12;
 const NORMAL_MEMORY_FACTS_LIMIT = 8;
 const NORMAL_MEMORY_EPISODES_LIMIT = 6;
 
-function isFounderUserKey(userKey: string | null | undefined): boolean {
-  if (!userKey) return false;
-  const key = String(userKey).toLowerCase().trim();
-  if (!key) return false;
+function isFounderUserKey(_userKey: string | null | undefined): boolean {
+  // Hard-wire founder mode for Tim only.
+  // Any request from your personal email instantly gets the founder lane.
+  const founderEmail = (process.env.FOUNDER_USER_EMAIL || '').toLowerCase();
 
-  if (FOUNDER_USER_EMAIL && key === FOUNDER_USER_EMAIL) return true;
-  if (FOUNDER_USER_KEYS.length && FOUNDER_USER_KEYS.includes(key)) return true;
+  // If the environment variable is missing, fallback to your real email directly.
+  const email = founderEmail || 'zlomke76@gmail.com';
 
-  return false;
+  return _userKey?.toLowerCase().trim() === email;
 }
 
 /* ========= ORIGINS ========= */
