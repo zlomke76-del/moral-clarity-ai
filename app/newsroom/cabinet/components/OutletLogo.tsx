@@ -11,6 +11,7 @@ type Props = {
 
 export default function OutletLogo({ domain, name, className }: Props) {
   const [broken, setBroken] = useState(false);
+  const [loading, setLoading] = useState(true); // New loading state
 
   const baseClass =
     "flex items-center justify-center overflow-hidden rounded-lg bg-neutral-900 text-sm font-semibold text-neutral-50";
@@ -34,11 +35,16 @@ export default function OutletLogo({ domain, name, className }: Props) {
 
   return (
     <div className={`${baseClass} ${sizeClass}`}>
+      {loading && <span>Loading...</span>} {/* Loading indicator */}
       <img
         src={url}
-        alt={name || domain}
+        alt={name ? `${name} logo` : `Logo for ${domain}`} // More descriptive alt text
         className="h-full w-full object-contain"
-        onError={() => setBroken(true)}
+        onError={() => {
+          setBroken(true);
+          setLoading(false); // Stop loading on error
+        }}
+        onLoad={() => setLoading(false)} // Stop loading when the image loads
       />
     </div>
   );
