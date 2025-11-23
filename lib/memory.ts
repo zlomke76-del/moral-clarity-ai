@@ -184,7 +184,7 @@ export async function searchUserFacts(
 /* =========================================================
  * 2) EPISODIC MEMORY LAYER (memory_episodes + chunks)
  *
- * Schema assumption (aligned with your table):
+ * Supabase schema (from your DDL / CSV):
  *
  * table: memory_episodes
  *  - id uuid primary key
@@ -200,12 +200,12 @@ export async function searchUserFacts(
  * table: memory_episode_chunks
  *  - id uuid primary key
  *  - episode_id uuid references memory_episodes(id)
- *  - seq int NOT NULL            <-- required, ordered sequence
- *  - role text NOT NULL
- *  - content text NOT NULL
- *  - token_count int NOT NULL default 0
- *  - created_at timestamptz default now()
- *  - position int NULL           <-- legacy / UI index
+ *  - seq int not null                <-- canonical order, NOT NULL
+ *  - role text not null
+ *  - content text not null
+ *  - token_count int not null default 0
+ *  - created_at timestamptz not null default now()
+ *  - position int null               <-- extra column you added
  * =======================================================*/
 
 export type Episode = {
@@ -278,6 +278,10 @@ function summarizeEpisodeHeuristic(
  * - Otherwise, writes:
  *   - 1 row to memory_episodes
  *   - up to the last 20 messages to memory_episode_chunks
+ *
+ * IMPORTANT: Supabase schema has seq NOT NULL,
+ * so we must populate seq (and we also set position = seq
+ * so your existing column is kept in sync).
  */
 export async function maybeStoreEpisode(
   userKey: string,
@@ -303,7 +307,7 @@ export async function maybeStoreEpisode(
         workspace_id: workspaceId ?? null,
         title,
         summary,
-        started_at: nowIso, // you can refine later if you want real start/end from timestamps
+        started_at: nowIso, // can be refined later if you track real start/end timestamps
         ended_at: nowIso,
         importance: 1,
       },
@@ -324,18 +328,27 @@ export async function maybeStoreEpisode(
   const MAX_CHUNKS = 20;
   const slice = messages.slice(-MAX_CHUNKS);
 
+  /**
+   * Supabase table:
+   *  - seq int NOT NULL
+   *  - position int NULL (your extra column)
+   *
+   * We populate BOTH so existing queries on either column behave.
+   */
   const chunksPayload = slice.map((m, idx) => ({
     episode_id: episodeId,
-    seq: idx, // REQUIRED: non-null, matches NOT NULL constraint
-    position: idx, // legacy/UI index (nullable in DB, but we keep it populated)
+    seq: idx,          // canonical order (NOT NULL)
+    position: idx,     // keep this in sync for you
     role: m.role,
     content: m.content,
-    token_count: m.content ? m.content.length : 0, // aligns with schema default 0
+    // token_count is NOT NULL with default 0, so we can omit and let default handle it.
   }));
 
   if (!chunksPayload.length) return;
 
-  const { error: chunkErr } = await client.from('memory_episode_chunks').insert(chunksPayload);
+  const { error: chunkErr } = await client
+    .from('memory_episode_chunks')
+    .insert(chunksPayload);
 
   if (chunkErr) {
     // eslint-disable-next-line no-console
@@ -347,6 +360,7 @@ export async function maybeStoreEpisode(
  * 3) MEMORY PACK FOR SOLACE SYSTEM PROMPT
  *
  * Combined factual + episodic view, rendered as bullets.
+ * This version uses BOTH episodes and (a compact view of) their chunks.
  * =======================================================*/
 
 export type MemoryPackOptions = {
@@ -363,6 +377,9 @@ export type MemoryPackOptions = {
  * Strategy:
  * - Facts: vector search via match_user_memories (searchUserFacts)
  * - Episodes: latest episodes for this user_key (no vector yet)
+ * - Episode chunks: for those episodes, pull a few ordered chunks
+ *   and fold them into the bullets so Solace sees real context
+ *   (e.g., MCAI details), not just a vague summary line.
  */
 export async function getMemoryPack(
   userKey: string,
@@ -410,10 +427,85 @@ export async function getMemoryPack(
     console.error('[memory] getMemoryPack → episodes fetch failed', err);
   }
 
+  // 3) Episode chunks for those episodes (compact reconstruction)
+  type ChunkRow = {
+    episode_id: string;
+    seq: number;
+    role: string;
+    content: string;
+  };
+
+  let chunkLinesByEpisode: Record<string, string> = {};
+
+  try {
+    if (episodes.length) {
+      const episodeIds = episodes.map((e) => e.id);
+
+      const { data: chunks, error: chunksErr } = await client
+        .from('memory_episode_chunks')
+        .select('episode_id, seq, role, content')
+        .in('episode_id', episodeIds as any)
+        .order('episode_id', { ascending: true })
+        .order('seq', { ascending: true });
+
+      if (chunksErr) {
+        // eslint-disable-next-line no-console
+        console.error('[memory] getMemoryPack → chunks error', chunksErr);
+      } else if (Array.isArray(chunks) && chunks.length) {
+        const byEpisode: Record<string, ChunkRow[]> = {};
+        for (const c of chunks as any[]) {
+          if (!c.episode_id) continue;
+          if (!byEpisode[c.episode_id]) byEpisode[c.episode_id] = [];
+          byEpisode[c.episode_id].push({
+            episode_id: c.episode_id,
+            seq: c.seq ?? 0,
+            role: c.role ?? 'assistant',
+            content: c.content ?? '',
+          });
+        }
+
+        // Turn a handful of chunks into a short descriptive tail
+        for (const e of episodes) {
+          const rows = (byEpisode[e.id] || []).sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
+          if (!rows.length) continue;
+
+          const MAX_CHUNKS_PER_EPISODE = 4; // keep it tight
+          const used = rows.slice(0, MAX_CHUNKS_PER_EPISODE);
+
+          const clean = (s: string) => s.replace(/\s+/g, ' ').trim();
+          const snippets = used.map((r) => {
+            const prefix = r.role.toLowerCase() === 'user' ? 'user:' : 'Solace:';
+            const text = clean((r.content || '').slice(0, 160));
+            return text ? `${prefix} ${text}` : '';
+          }).filter(Boolean);
+
+          if (snippets.length) {
+            chunkLinesByEpisode[e.id] = snippets.join(' | ');
+          }
+        }
+      }
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[memory] getMemoryPack → chunks fetch failed', err);
+  }
+
+  // Build episode bullet lines: summary + a couple of chunk snippets
   const episodeLines = episodes.map((e) => {
     const label = (e.title || 'Conversation episode').replace(/\s+/g, ' ').trim();
     const summary = (e.summary || '').replace(/\s+/g, ' ').trim();
-    return summary ? `• (episode) ${label} — ${summary}` : `• (episode) ${label}`;
+    const tail = chunkLinesByEpisode[e.id];
+
+    if (summary && tail) {
+      return `• (episode) ${label} — ${summary} | ${tail}`;
+    }
+    if (summary) {
+      return `• (episode) ${label} — ${summary}`;
+    }
+    if (tail) {
+      return `• (episode) ${label} — ${tail}`;
+    }
+    return `• (episode) ${label}`;
   });
 
   const factLines = facts.map((m) => {
