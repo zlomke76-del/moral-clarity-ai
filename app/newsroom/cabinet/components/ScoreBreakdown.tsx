@@ -1,4 +1,3 @@
-// app/newsroom/cabinet/components/ScoreBreakdown.tsx
 "use client";
 
 import type { OutletOverview } from "../types";
@@ -11,8 +10,7 @@ export default function ScoreBreakdown({ outlet }: Props) {
   if (!outlet) {
     return (
       <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4 text-sm text-neutral-400">
-        Select an outlet from the leaderboard to see how its Predictability
-        Index and bias components break down.
+        Select an outlet from the leaderboard to see how its Predictability Index and bias components break down.
       </div>
     );
   }
@@ -69,11 +67,9 @@ export default function ScoreBreakdown({ outlet }: Props) {
           <div
             className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-amber-300 to-red-400"
             style={{
-              width: `${Math.max(
-                4,
-                Math.min((biasIntent / 3) * 100, 100)
-              ).toFixed(1)}%`,
+              width: `${Math.max(4, Math.min((biasIntent / 3) * 100, 100)).toFixed(1)}%`,
             }}
+            aria-label={`Bias intent: ${biasIntent.toFixed(2)} / 3.00`}
           />
         </div>
       </div>
@@ -111,6 +107,7 @@ function BiasBar({ label, value }: { label: string; value: number }) {
         <div
           className="h-full rounded-full bg-neutral-200"
           style={{ width: `${width.toFixed(1)}%` }}
+          aria-label={`${label}: ${value.toFixed(2)} / 3.00`}
         />
       </div>
     </div>
