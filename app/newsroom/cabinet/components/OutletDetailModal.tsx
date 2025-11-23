@@ -46,7 +46,7 @@ export default function OutletDetailModal({ open, onClose, outlet, trends }: Pro
         className="relative w-full max-w-3xl rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5 shadow-2xl shadow-black/80"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close chip */}
+        {/* Close button */}
         <button
           type="button"
           onClick={onClose}
@@ -54,8 +54,7 @@ export default function OutletDetailModal({ open, onClose, outlet, trends }: Pro
         >
           Esc
         </button>
-
-        {/* HEADER */}
+         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <OutletLogo domain={canonical_outlet} name={display_name} />
@@ -83,7 +82,7 @@ export default function OutletDetailModal({ open, onClose, outlet, trends }: Pro
           </div>
         </div>
 
-        {/* META */}
+        {/* Meta Information */}
         <div className="mt-3 space-y-1 text-xs text-neutral-400">
           <div>
             Bias intent:{" "}
@@ -93,8 +92,7 @@ export default function OutletDetailModal({ open, onClose, outlet, trends }: Pro
           </div>
           <div className="text-neutral-500">Last scored: {lastScoredAt}</div>
         </div>
-
-        {/* COMPONENT SCORES */}
+         {/* COMPONENT SCORES */}
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <BiasBar label="Language" value={lifetimeLanguage} />
           <BiasBar label="Source" value={lifetimeSource} />
@@ -117,7 +115,6 @@ export default function OutletDetailModal({ open, onClose, outlet, trends }: Pro
     </div>
   );
 }
-
 function BiasBar({ label, value }: { label: string; value: number }) {
   const width = Math.max(4, Math.min((value / 3) * 100, 100));
 
