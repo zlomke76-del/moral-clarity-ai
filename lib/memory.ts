@@ -371,7 +371,7 @@ export async function maybeStoreEpisode(
 const chunksPayload = slice.map((m, idx) => ({
     episode_id: episodeId,
     seq: idx,
-    position: idx,  // optional, kept only if you want both
+    position: idx,
     role: m.role,
     content: m.content,
 }));
