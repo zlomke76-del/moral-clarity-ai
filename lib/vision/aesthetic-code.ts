@@ -1,258 +1,291 @@
 /**
- * Aesthetic Engine 2.1
+ * Aesthetic Engine 3.0
+ * -------------------------------------------------------
+ * Translates Solace's <aesthetic> blocks into:
+ * - High-level design summary
+ * - UI component recommendations
+ * - Tailwind + shadcn code
+ * - Responsive tokens
+ * - Aesthetic diffs (before → after)
  *
- * Converts Solace's <aesthetic> metadata into production-ready UI:
- *  - Tailwind improvement hints
- *  - React layout blueprints
- *  - Design tokens (colors, typography, spacing)
- *  - Visual deltas (contrast, spacing, hierarchy)
- *
- * Does NOT analyze images. Only interprets structured JSON.
+ * This engine does NOT analyze images. It only converts
+ * structured aesthetic JSON into usable React/Tailwind code.
  */
 
 export type AestheticHint = {
-  layout?: string;
-  components?: string[];
-  issues?: string[];
-  suggestions?: string[];
-  notes?: string;
-  colors?: {
-    primary?: string;
-    secondary?: string;
-    background?: string;
-    text?: string;
-  };
-  typography?: {
-    heading?: string;
-    body?: string;
-    scale?: string;
-  };
-  spacing?: {
-    padding?: string;
-    gap?: string;
-    density?: "tight" | "normal" | "loose";
-  };
+  layout?: string;                // "hero", "dashboard", "feed", "two-column"
+  components?: string[];          // ["card", "stat", "modal"]
+  issues?: string[];              // ["poor contrast", "too dense"]
+  suggestions?: string[];         // ["Increase spacing", "Use grid of 3"]
+  notes?: string;                 // optional long-form
+  styleTokens?: Record<string, string>; // optional token map
 };
 
 export type AestheticCodeResult = {
   summary: string;
+  component: string;
   reactCode: string;
+  wireframe: string;
   tailwindNotes: string[];
   variables: string[];
   breakpoints: string[];
-  visualDeltas: string[];
-  tokens: {
-    colors: string[];
-    typography: string[];
-    spacing: string[];
-  };
+  beforeAfter: string[];
+  tokens: Record<string, string>;
 };
 
-/* -------------------------------------------------------------------------- */
-/*                               MAIN ENGINE                                   */
-/* -------------------------------------------------------------------------- */
+/* ---------------------------------------------------------
+ * Utility helpers
+ * -------------------------------------------------------- */
 
-export function generateUIFromAesthetics(hint: AestheticHint): AestheticCodeResult {
-  const layout = hint.layout?.toLowerCase() || "generic";
-  const issues = hint.issues ?? [];
-  const suggestions = hint.suggestions ?? [];
+function clean(str: string | undefined): string {
+  return (str || "").trim().toLowerCase();
+}
 
-  /* ---------------------------------------------------------------------- */
-  /* SUMMARY */
-  /* ---------------------------------------------------------------------- */
-
-  const summaryParts = [
-    `Layout detected: ${layout}`,
-    issues.length ? `Issues: ${issues.join(", ")}` : "",
-    suggestions.length ? `Suggestions applied: ${suggestions.join("; ")}` : "",
-  ].filter(Boolean);
-
-  const summary = summaryParts.join("\n");
-
-  /* ---------------------------------------------------------------------- */
-  /* VISUAL DELTAS — Direct UI corrections */
-  /* ---------------------------------------------------------------------- */
-
-  const visualDeltas: string[] = [];
-  for (const issue of issues) {
-    const low = issue.toLowerCase();
-
-    if (low.includes("contrast"))
-      visualDeltas.push("Increase contrast: use text-white, text-neutral-200, or bg-neutral-950.");
-
-    if (low.includes("spacing"))
-      visualDeltas.push("Increase spacing: apply space-y-6, py-12, gap-8.");
-
-    if (low.includes("alignment"))
-      visualDeltas.push("Fix alignment: add items-center or justify-between.");
-
-    if (low.includes("hierarchy"))
-      visualDeltas.push("Improve hierarchy: use text-4xl font-bold for primary headers.");
-  }
-
-  /* ---------------------------------------------------------------------- */
-  /* DESIGN TOKENS - Derived from Solace metadata */
-  /* ---------------------------------------------------------------------- */
-
-  const tokens = {
-    colors: [] as string[],
-    typography: [] as string[],
-    spacing: [] as string[],
+function mkTokenMap(h: AestheticHint): Record<string, string> {
+  return {
+    spacing: h.styleTokens?.spacing || "space-y-4 md:space-y-6",
+    radius: h.styleTokens?.radius || "rounded-xl",
+    shadow: h.styleTokens?.shadow || "shadow-lg",
+    bg: h.styleTokens?.bg || "bg-neutral-900/60",
+    border: h.styleTokens?.border || "border border-neutral-800",
+    textPrimary: h.styleTokens?.textPrimary || "text-white",
+    textSecondary: h.styleTokens?.textSecondary || "text-neutral-300",
   };
+}
 
-  if (hint.colors) {
-    const c = hint.colors;
-    if (c.primary) tokens.colors.push(`--primary: ${c.primary};`);
-    if (c.secondary) tokens.colors.push(`--secondary: ${c.secondary};`);
-    if (c.background) tokens.colors.push(`--background: ${c.background};`);
-    if (c.text) tokens.colors.push(`--text: ${c.text};`);
-  }
+/* ---------------------------------------------------------
+ * Layout templates
+ * -------------------------------------------------------- */
 
-  if (hint.typography) {
-    const t = hint.typography;
-    if (t.heading) tokens.typography.push(`Heading font: ${t.heading}`);
-    if (t.body) tokens.typography.push(`Body font: ${t.body}`);
-    if (t.scale) tokens.typography.push(`Type scale: ${t.scale}`);
-  }
-
-  if (hint.spacing) {
-    const s = hint.spacing;
-    if (s.padding) tokens.spacing.push(`Padding scale: ${s.padding}`);
-    if (s.gap) tokens.spacing.push(`Grid gap: ${s.gap}`);
-    if (s.density) tokens.spacing.push(`Density: ${s.density}`);
-  }
-
-  /* ---------------------------------------------------------------------- */
-  /* REACT CODE TEMPLATES */
-  /* ---------------------------------------------------------------------- */
-
-  let reactCode = "";
-  let variables: string[] = [];
-  const breakpoints = ["sm", "md", "lg", "xl"];
-
-  /* HERO --------------------------------------------------------------- */
-  if (layout.includes("hero")) {
-    reactCode = `
-export default function HeroSection() {
+function heroTemplate(tokens: Record<string, string>) {
+  return `
+export default function HeroBlock() {
   return (
-    <section className="bg-neutral-950 text-white px-6 md:px-12 py-20">
-      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-        <div className="space-y-6">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-            {/* title */}
+    <section className="px-6 md:px-12 py-16 ${tokens.bg} ${tokens.radius}">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12">
+        <div className="${tokens.spacing}">
+          <h1 className="text-3xl md:text-5xl font-bold ${tokens.textPrimary}">
+            {/* headline */}
           </h1>
-          <p className="text-neutral-300 text-lg">
-            {/* description */}
+          <p className="${tokens.textSecondary}">
+            {/* subheadline */}
           </p>
-          <div className="flex gap-4">
-            {/* buttons */}
-          </div>
         </div>
-        <div className="flex justify-center">
-          {/* image / visual */}
+
+        <div className="flex items-center justify-center">
+          {/* image/illustration */}
         </div>
       </div>
     </section>
   );
 }
-    `.trim();
+  `.trim();
+}
 
-    variables = ["title", "description", "ctaButtons"];
-  }
-
-  /* TWO COLUMN --------------------------------------------------------- */
-  else if (layout.includes("two") || layout.includes("2")) {
-    reactCode = `
-export default function TwoColumn() {
+function dashboardTemplate(tokens: Record<string, string>) {
+  return `
+export default function DashboardGrid() {
   return (
-    <section className="px-6 md:px-12 py-16">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-        <div className="space-y-4">
-          {/* left column */}
+    <section className="px-6 md:px-12 py-12">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="${tokens.bg} ${tokens.radius} ${tokens.border} p-6 ${tokens.shadow}">
+          {/* metric card */}
         </div>
-        <div className="space-y-4">
-          {/* right column */}
+        <div className="${tokens.bg} ${tokens.radius} ${tokens.border} p-6 ${tokens.shadow}">
+          {/* metric card */}
+        </div>
+        <div className="${tokens.bg} ${tokens.radius} ${tokens.border} p-6 ${tokens.shadow}">
+          {/* metric card */}
+        </div>
+        <div className="${tokens.bg} ${tokens.radius} ${tokens.border} p-6 ${tokens.shadow}">
+          {/* metric card */}
         </div>
       </div>
     </section>
   );
 }
-    `.trim();
+  `.trim();
+}
 
-    variables = ["left", "right"];
-  }
-
-  /* CARD GRID ---------------------------------------------------------- */
-  else if (layout.includes("card") || layout.includes("grid")) {
-    reactCode = `
-export default function CardGrid() {
+function feedTemplate(tokens: Record<string, string>) {
+  return `
+export default function FeedList() {
   return (
-    <section className="px-6 md:px-12 py-16">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-        {[1, 2, 3].map(i => (
+    <section className="px-6 md:px-12 py-12">
+      <div className="space-y-4">
+        {[1,2,3].map((i) => (
           <div
             key={i}
-            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 space-y-4"
+            className="${tokens.bg} ${tokens.radius} ${tokens.border} p-6 ${tokens.shadow}"
           >
-            <h3 className="text-lg font-semibold text-white">
-              {/* card title */}
-            </h3>
-            <p className="text-neutral-400 text-sm">
-              {/* card description */}
-            </p>
+            {/* feed item */}
           </div>
         ))}
       </div>
     </section>
   );
 }
-    `.trim();
+  `.trim();
+}
 
-    variables = ["cards[]"];
-  }
-
-  /* GENERIC BLOCK ------------------------------------------------------ */
-  else {
-    reactCode = `
-export default function Block() {
+function twoColumnTemplate(tokens: Record<string, string>) {
+  return `
+export default function TwoColumn() {
   return (
-    <section className="px-6 md:px-12 py-14">
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-10">
+    <section className="px-6 md:px-12 py-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+        <div className="${tokens.spacing}">
+          {/* left */}
+        </div>
+        <div className="${tokens.spacing}">
+          {/* right */}
+        </div>
+      </div>
+    </section>
+  );
+}
+  `.trim();
+}
+
+function genericTemplate(tokens: Record<string, string>) {
+  return `
+export default function GenericBlock() {
+  return (
+    <section className="px-6 md:px-12 py-12">
+      <div className="${tokens.bg} ${tokens.radius} ${tokens.border} p-8 ${tokens.shadow}">
         {/* content */}
       </div>
     </section>
   );
 }
-    `.trim();
+  `.trim();
+}
 
-    variables = ["content"];
-  }
+/* ---------------------------------------------------------
+ * Wireframe generator (ASCII)
+ * -------------------------------------------------------- */
 
-  /* ---------------------------------------------------------------------- */
-  /* TAILWIND NOTES (from suggestions) */
-  /* ---------------------------------------------------------------------- */
+function wireframe(layout: string): string {
+  if (layout.includes("hero"))
+    return `
+[ HERO BLOCK ]
+ -------------------------------
+| Headline + Subheadline | IMG |
+ -------------------------------`;
 
-  const tailwindNotes: string[] = [];
+  if (layout.includes("dash"))
+    return `
+[ DASHBOARD GRID ]
+ -------------------------------
+| Card | Card | Card | Card     |
+ -------------------------------`;
+
+  if (layout.includes("feed"))
+    return `
+[ FEED LIST ]
+ ----------------
+|  Item         |
+|  Item         |
+|  Item         |
+ ----------------`;
+
+  if (layout.includes("two"))
+    return `
+[ TWO COLUMN ]
+ ------------------------
+|   Left   |   Right    |
+ ------------------------`;
+
+  return `
+[ GENERIC BLOCK ]
+ ------------------------
+|      Content          |
+ ------------------------`;
+}
+
+/* ---------------------------------------------------------
+ * Tailwind Delta Inference
+ * -------------------------------------------------------- */
+
+function tailwindDelta(suggestions: string[]): string[] {
+  const out: string[] = [];
+
   for (const s of suggestions) {
     const low = s.toLowerCase();
-    if (low.includes("padding")) tailwindNotes.push("Adjust padding → px-6 md:px-12 py-16.");
-    if (low.includes("contrast")) tailwindNotes.push("Increase contrast → bg-neutral-950 text-white.");
-    if (low.includes("spacing")) tailwindNotes.push("Increase spacing → gap-8 space-y-6.");
-    if (low.includes("grid")) tailwindNotes.push("Use responsive grids → sm:grid-cols-2 lg:grid-cols-3.");
-    if (low.includes("alignment")) tailwindNotes.push("Align items → items-center justify-center.");
+
+    if (low.includes("contrast")) out.push("Increase contrast: text-white / bg-neutral-900");
+    if (low.includes("spacing")) out.push("Increase spacing: gap-6, space-y-6");
+    if (low.includes("padding")) out.push("Try px-6 md:px-12 or p-8");
+    if (low.includes("grid")) out.push("Use grid-cols-2/3/4 with responsive md: and lg:");
+    if (low.includes("background")) out.push("Use bg-neutral-900/60 or bg-[#0f172a]");
+    if (low.includes("alignment")) out.push("Use flex-center or items-center justify-between");
+    if (low.includes("hierarchy")) out.push("Increase heading size (text-4xl+) and reduce noise");
   }
 
-  /* ---------------------------------------------------------------------- */
-  /* RETURN */
-  /* ---------------------------------------------------------------------- */
+  return out;
+}
+
+/* ---------------------------------------------------------
+ * Before / After diff
+ * -------------------------------------------------------- */
+
+function makeDiff(issues: string[], suggestions: string[]): string[] {
+  const diff: string[] = [];
+
+  for (const i of issues) diff.push(`Before: ${i}`);
+  for (const s of suggestions) diff.push(`After: ${s}`);
+
+  return diff;
+}
+
+/* ---------------------------------------------------------
+ * MAIN ENTRY: generateUIFromAesthetics
+ * -------------------------------------------------------- */
+
+export function generateUIFromAesthetics(hint: AestheticHint): AestheticCodeResult {
+  const layout = clean(hint.layout);
+  const issues = hint.issues || [];
+  const suggestions = hint.suggestions || [];
+  const tokens = mkTokenMap(hint);
+
+  let reactCode = "";
+  let component = "";
+
+  if (layout.includes("hero")) {
+    reactCode = heroTemplate(tokens);
+    component = "HeroBlock";
+  } else if (layout.includes("dash")) {
+    reactCode = dashboardTemplate(tokens);
+    component = "DashboardGrid";
+  } else if (layout.includes("feed")) {
+    reactCode = feedTemplate(tokens);
+    component = "FeedList";
+  } else if (layout.includes("two") || layout.includes("2")) {
+    reactCode = twoColumnTemplate(tokens);
+    component = "TwoColumn";
+  } else {
+    reactCode = genericTemplate(tokens);
+    component = "GenericBlock";
+  }
 
   return {
-    summary,
+    summary: [
+      `Layout: ${hint.layout || "unspecified"}`,
+      issues.length ? `Issues: ${issues.join(", ")}` : "",
+      suggestions.length ? `Suggestions: ${suggestions.join("; ")}` : "",
+      hint.notes ? `Notes: ${hint.notes}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+
+    component,
     reactCode,
-    tailwindNotes,
-    variables,
-    breakpoints,
-    visualDeltas,
+    wireframe: wireframe(layout),
+    tailwindNotes: tailwindDelta(suggestions),
+    variables: ["title", "subtitle", "leftContent", "rightContent"],
+    breakpoints: ["sm", "md", "lg", "xl"],
+    beforeAfter: makeDiff(issues, suggestions),
     tokens,
   };
 }
+
