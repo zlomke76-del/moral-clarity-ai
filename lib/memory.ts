@@ -368,13 +368,13 @@ export async function maybeStoreEpisode(
   const MAX_CHUNKS = 20;
   const slice = messages.slice(-MAX_CHUNKS);
 
-  const chunksPayload = slice.map((m, idx) => ({
+const chunksPayload = slice.map((m, idx) => ({
     episode_id: episodeId,
     seq: idx,
+    position: idx,  // optional, kept only if you want both
     role: m.role,
     content: m.content,
-    token_count: 0,
-  }));
+}));
 
   if (!chunksPayload.length) return;
 
