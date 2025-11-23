@@ -184,7 +184,7 @@ export async function searchUserFacts(
 /* =========================================================
  * 2) EPISODIC MEMORY LAYER (memory_episodes + chunks)
  *
- * Supabase schema (from your DDL / CSV):
+ * Schema assumption (you can adapt names/types if needed):
  *
  * table: memory_episodes
  *  - id uuid primary key
@@ -200,12 +200,12 @@ export async function searchUserFacts(
  * table: memory_episode_chunks
  *  - id uuid primary key
  *  - episode_id uuid references memory_episodes(id)
- *  - seq int not null                <-- canonical order, NOT NULL
- *  - role text not null
- *  - content text not null
- *  - token_count int not null default 0
- *  - created_at timestamptz not null default now()
- *  - position int null               <-- extra column you added
+ *  - seq int not null
+ *  - role text
+ *  - content text
+ *  - token_count int default 0
+ *  - created_at timestamptz default now()
+ *  - position int null (legacy)
  * =======================================================*/
 
 export type Episode = {
@@ -278,10 +278,6 @@ function summarizeEpisodeHeuristic(
  * - Otherwise, writes:
  *   - 1 row to memory_episodes
  *   - up to the last 20 messages to memory_episode_chunks
- *
- * IMPORTANT: Supabase schema has seq NOT NULL,
- * so we must populate seq (and we also set position = seq
- * so your existing column is kept in sync).
  */
 export async function maybeStoreEpisode(
   userKey: string,
@@ -307,7 +303,7 @@ export async function maybeStoreEpisode(
         workspace_id: workspaceId ?? null,
         title,
         summary,
-        started_at: nowIso, // can be refined later if you track real start/end timestamps
+        started_at: nowIso, // you can refine later if you want real start/end from timestamps
         ended_at: nowIso,
         importance: 1,
       },
@@ -328,27 +324,18 @@ export async function maybeStoreEpisode(
   const MAX_CHUNKS = 20;
   const slice = messages.slice(-MAX_CHUNKS);
 
-  /**
-   * Supabase table:
-   *  - seq int NOT NULL
-   *  - position int NULL (your extra column)
-   *
-   * We populate BOTH so existing queries on either column behave.
-   */
+  // IMPORTANT: write seq (for strict NOT NULL) and keep position for legacy
   const chunksPayload = slice.map((m, idx) => ({
     episode_id: episodeId,
-    seq: idx,          // canonical order (NOT NULL)
-    position: idx,     // keep this in sync for you
+    seq: idx,
+    position: idx,
     role: m.role,
     content: m.content,
-    // token_count is NOT NULL with default 0, so we can omit and let default handle it.
   }));
 
   if (!chunksPayload.length) return;
 
-  const { error: chunkErr } = await client
-    .from('memory_episode_chunks')
-    .insert(chunksPayload);
+  const { error: chunkErr } = await client.from('memory_episode_chunks').insert(chunksPayload);
 
   if (chunkErr) {
     // eslint-disable-next-line no-console
@@ -360,7 +347,6 @@ export async function maybeStoreEpisode(
  * 3) MEMORY PACK FOR SOLACE SYSTEM PROMPT
  *
  * Combined factual + episodic view, rendered as bullets.
- * This version uses BOTH episodes and (a compact view of) their chunks.
  * =======================================================*/
 
 export type MemoryPackOptions = {
@@ -376,10 +362,7 @@ export type MemoryPackOptions = {
  *
  * Strategy:
  * - Facts: vector search via match_user_memories (searchUserFacts)
- * - Episodes: latest episodes for this user_key (no vector yet)
- * - Episode chunks: for those episodes, pull a few ordered chunks
- *   and fold them into the bullets so Solace sees real context
- *   (e.g., MCAI details), not just a vague summary line.
+ * - Episodes: **query-aware episodes**, enriched with key chunks
  */
 export async function getMemoryPack(
   userKey: string,
@@ -396,116 +379,142 @@ export async function getMemoryPack(
   let facts: MemoryHit[] = [];
   let episodes: Episode[] = [];
 
+  // Normalize query once so facts + episodes see the same text
+  const q = (query || 'general').trim() || 'general';
+
   // 1) Facts (vector search)
   try {
-    const q = (query || 'general').trim() || 'general';
     facts = await searchUserFacts(userKey, q, factsLimit);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[memory] getMemoryPack → searchUserFacts failed', err);
   }
 
-  // 2) Episodes (latest for this user)
+  // 2) Episodes (query-aware via Supabase, then fallback to latest)
   try {
-    const { data, error } = await client
+    const escaped = q.replace(/[%_]/g, (c) => '\\' + c);
+    const pattern = `%${escaped}%`;
+
+    let eps: Episode[] = [];
+
+    // First try: title/summary ILIKE the query for this user
+    const { data: byText, error: byTextErr } = await client
       .from('memory_episodes')
       .select(
         'id, user_key, workspace_id, title, summary, started_at, ended_at, importance, created_at'
       )
       .eq('user_key', userKey)
+      .or(`title.ilike.${pattern},summary.ilike.${pattern}`)
       .order('created_at', { ascending: false })
       .limit(episodesLimit);
 
-    if (error) {
-      // eslint-disable-next-line no-console
-      console.error('[memory] getMemoryPack → memory_episodes error', error);
+    if (!byTextErr && Array.isArray(byText) && byText.length) {
+      eps = byText as Episode[];
     } else {
-      episodes = (data ?? []) as Episode[];
+      // Fallback: latest episodes for this user
+      const { data: latest, error: latestErr } = await client
+        .from('memory_episodes')
+        .select(
+          'id, user_key, workspace_id, title, summary, started_at, ended_at, importance, created_at'
+        )
+        .eq('user_key', userKey)
+        .order('created_at', { ascending: false })
+        .limit(episodesLimit);
+
+      if (!latestErr && Array.isArray(latest)) {
+        eps = latest as Episode[];
+      } else if (latestErr) {
+        // eslint-disable-next-line no-console
+        console.error('[memory] getMemoryPack → memory_episodes fallback error', latestErr);
+      }
     }
+
+    episodes = eps;
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[memory] getMemoryPack → episodes fetch failed', err);
   }
 
-  // 3) Episode chunks for those episodes (compact reconstruction)
-  type ChunkRow = {
-    episode_id: string;
-    seq: number;
-    role: string;
-    content: string;
-  };
+  // 2b) Enrich episodes with a short "Key turns" snippet from chunks
+  let chunksByEpisode: Record<string, { role: string; content: string }[]> = {};
 
-  let chunkLinesByEpisode: Record<string, string> = {};
+  if (episodes.length) {
+    try {
+      const ids = episodes.map((e) => e.id).filter(Boolean);
+      if (ids.length) {
+        const { data: allChunks, error: chunksErr } = await client
+          .from('memory_episode_chunks')
+          .select('episode_id, role, content, seq, position')
+          .in('episode_id', ids);
 
-  try {
-    if (episodes.length) {
-      const episodeIds = episodes.map((e) => e.id);
+        if (!chunksErr && Array.isArray(allChunks)) {
+          const tmp: Record<
+            string,
+            { role: string; content: string; order: number }[]
+          > = {};
 
-      const { data: chunks, error: chunksErr } = await client
-        .from('memory_episode_chunks')
-        .select('episode_id, seq, role, content')
-        .in('episode_id', episodeIds as any)
-        .order('episode_id', { ascending: true })
-        .order('seq', { ascending: true });
-
-      if (chunksErr) {
-        // eslint-disable-next-line no-console
-        console.error('[memory] getMemoryPack → chunks error', chunksErr);
-      } else if (Array.isArray(chunks) && chunks.length) {
-        const byEpisode: Record<string, ChunkRow[]> = {};
-        for (const c of chunks as any[]) {
-          if (!c.episode_id) continue;
-          if (!byEpisode[c.episode_id]) byEpisode[c.episode_id] = [];
-          byEpisode[c.episode_id].push({
-            episode_id: c.episode_id,
-            seq: c.seq ?? 0,
-            role: c.role ?? 'assistant',
-            content: c.content ?? '',
-          });
-        }
-
-        // Turn a handful of chunks into a short descriptive tail
-        for (const e of episodes) {
-          const rows = (byEpisode[e.id] || []).sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
-          if (!rows.length) continue;
-
-          const MAX_CHUNKS_PER_EPISODE = 4; // keep it tight
-          const used = rows.slice(0, MAX_CHUNKS_PER_EPISODE);
-
-          const clean = (s: string) => s.replace(/\s+/g, ' ').trim();
-          const snippets = used.map((r) => {
-            const prefix = r.role.toLowerCase() === 'user' ? 'user:' : 'Solace:';
-            const text = clean((r.content || '').slice(0, 160));
-            return text ? `${prefix} ${text}` : '';
-          }).filter(Boolean);
-
-          if (snippets.length) {
-            chunkLinesByEpisode[e.id] = snippets.join(' | ');
+          for (const c of allChunks as any[]) {
+            const eid = c.episode_id as string;
+            if (!eid) continue;
+            const order =
+              typeof c.seq === 'number' && Number.isFinite(c.seq)
+                ? c.seq
+                : typeof c.position === 'number' && Number.isFinite(c.position)
+                ? c.position
+                : 0;
+            if (!tmp[eid]) tmp[eid] = [];
+            tmp[eid].push({
+              role: String(c.role ?? ''),
+              content: String(c.content ?? ''),
+              order,
+            });
           }
+
+          chunksByEpisode = Object.fromEntries(
+            Object.entries(tmp).map(([eid, list]) => [
+              eid,
+              list
+                .sort((a, b) => a.order - b.order)
+                .map(({ role, content }) => ({ role, content })),
+            ])
+          );
+        } else if (chunksErr) {
+          // eslint-disable-next-line no-console
+          console.error('[memory] getMemoryPack → chunks query error', chunksErr);
         }
       }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[memory] getMemoryPack → chunks fetch failed', err);
     }
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('[memory] getMemoryPack → chunks fetch failed', err);
   }
 
-  // Build episode bullet lines: summary + a couple of chunk snippets
-  const episodeLines = episodes.map((e) => {
-    const label = (e.title || 'Conversation episode').replace(/\s+/g, ' ').trim();
-    const summary = (e.summary || '').replace(/\s+/g, ' ').trim();
-    const tail = chunkLinesByEpisode[e.id];
+  const cleanOneLine = (s: string) => s.replace(/\s+/g, ' ').trim();
 
-    if (summary && tail) {
-      return `• (episode) ${label} — ${summary} | ${tail}`;
+  const episodeLines = episodes.map((e) => {
+    const label = cleanOneLine(e.title || 'Conversation episode');
+    const summary = cleanOneLine(e.summary || '');
+
+    const chunksForEpisode = chunksByEpisode[e.id] || [];
+    let snippet = '';
+
+    if (chunksForEpisode.length) {
+      const topSnippets = chunksForEpisode
+        .slice(0, 2)
+        .map((c) => {
+          const r = (c.role || 'turn').toLowerCase();
+          const txt = cleanOneLine(c.content).slice(0, 140);
+          return `${r}: ${txt}`;
+        });
+      if (topSnippets.length) {
+        snippet = ` Key turns: ${topSnippets.join(' | ')}`;
+      }
     }
+
     if (summary) {
-      return `• (episode) ${label} — ${summary}`;
+      return `• (episode) ${label} — ${summary}${snippet}`;
     }
-    if (tail) {
-      return `• (episode) ${label} — ${tail}`;
-    }
-    return `• (episode) ${label}`;
+    return `• (episode) ${label}${snippet}`;
   });
 
   const factLines = facts.map((m) => {
@@ -520,4 +529,3 @@ export async function getMemoryPack(
   const MAX_LINES = Math.max(factsLimit + episodesLimit, 4);
   return combined.slice(0, MAX_LINES).join('\n');
 }
-
