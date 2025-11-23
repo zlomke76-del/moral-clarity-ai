@@ -23,22 +23,6 @@ const supabaseAdmin =
       })
     : null;
 
-/* ========= TYPES ========= */
-
-type OutletOverview = {
-  outlet: string;
-  canonical_outlet: string;
-  total_stories: number;
-  days_active: number;
-  avg_bias_intent: number;
-  avg_pi: number;
-  bias_language: number;
-  bias_source: number;
-  bias_framing: number;
-  bias_context: number;
-  last_story_day: string | null;
-};
-
 /* ========= HELPERS ========= */
 
 function jsonError(
@@ -49,26 +33,16 @@ function jsonError(
   return NextResponse.json({ ok: false, error: message, ...extra }, { status });
 }
 
-/** Auto-canonicalize via root-domain:
- * - abc.news.time.com → time.com
- * - newsfeed.xyz.washingtonpost.com → washingtonpost.com
- * - radio.foxnews.com → foxnews.com
- * - For ".co.uk": keep last 3 parts
+/**
+ * Normalize outlet → canonical outlet
+ * using the news_outlet_aliases table.
  */
-function canonicalizeAuto(domain: string): string {
-  if (!domain) return "unknown";
-
-  const parts = domain.toLowerCase().split(".");
-  if (parts.length <= 2) return domain.toLowerCase();
-
-  const last = parts[parts.length - 1];
-  const secondLast = parts[parts.length - 2];
-
-  if (secondLast === "co" && last === "uk") {
-    return parts.slice(-3).join(".");
-  }
-
-  return `${secondLast}.${last}`;
+function applyCanonical(
+  outlet: string,
+  aliasMap: Record<string, string>
+): string {
+  const lower = outlet.toLowerCase().trim();
+  return aliasMap[lower] ?? lower;
 }
 
 /* ========= MAIN HANDLER ========= */
@@ -81,25 +55,30 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const url = new URL(req.url);
-    const minStoriesParam = url.searchParams.get("minStories");
-    const parsedMin = Number(minStoriesParam ?? "5");
-    const MIN_STORIES =
-      Number.isFinite(parsedMin) && parsedMin > 0 ? parsedMin : 5;
-
-    /* === 1. LOAD OUTLET ALIAS TABLE (manual merges) === */
-
-    const { data: aliasRows } = await supabaseAdmin
+    /* ==========================================================
+     * 1) Load canonical mapping table
+     * ========================================================== */
+    const { data: aliasRows, error: aliasErr } = await supabaseAdmin
       .from("news_outlet_aliases")
       .select("alias, canonical");
 
-    const aliasMap: Record<string, string> = {};
-    for (const r of aliasRows ?? []) {
-      aliasMap[r.alias.toLowerCase()] = r.canonical.toLowerCase();
+    if (aliasErr) {
+      console.error("[overview] alias table error", aliasErr);
+      return jsonError("Failed to load outlet alias table.", 500, {
+        code: aliasErr.code,
+      });
     }
 
-    /* === 2. LOAD RAW DAILY TRENDS === */
+    const aliasMap: Record<string, string> = {};
+    for (const row of aliasRows || []) {
+      if (row.alias && row.canonical) {
+        aliasMap[row.alias.toLowerCase()] = row.canonical.toLowerCase();
+      }
+    }
 
+    /* ==========================================================
+     * 2) Pull ALL outlet daily trend rows
+     * ========================================================== */
     const { data, error } = await supabaseAdmin
       .from("outlet_bias_pi_daily_trends")
       .select(
@@ -117,104 +96,105 @@ export async function GET(req: NextRequest) {
       );
 
     if (error) {
-      console.error("[news/outlets/overview] query error", error);
+      console.error("[overview] query error", error);
       return jsonError("Failed to load outlet neutrality data.", 500, {
         code: error.code,
-        details: error.details,
       });
     }
 
     const rows = (data || []) as any[];
 
-    /* === 3. GROUP BY CANONICAL OUTLET (alias → else auto-root) === */
+    /* ==========================================================
+     * 3) Group by canonical outlet
+     * ========================================================== */
 
-    type Acc = {
-      outlet: string;
-      canonical: string;
-      totalStories: number;
-      days: Set<string>;
-      sumBiasIntent: number;
-      sumPi: number;
-      sumLanguage: number;
-      sumSource: number;
-      sumFraming: number;
-      sumContext: number;
-      lastDay: string | null;
-    };
-
-    const grouped: Record<string, Acc> = {};
+    const grouped: Record<
+      string,
+      {
+        canonical: string;
+        totalStories: number;
+        days: Set<string>;
+        sumBiasIntent: number;
+        sumPi: number;
+        sumLang: number;
+        sumSource: number;
+        sumFrame: number;
+        sumCtx: number;
+        lastDay: string | null;
+      }
+    > = {};
 
     for (const r of rows) {
-      const rawOutlet: string = (r.outlet ?? "unknown").toLowerCase();
+      const rawOutlet = String(r.outlet ?? "").trim().toLowerCase();
+      const canonical = applyCanonical(rawOutlet, aliasMap);
 
-      // 1) Alias table wins first
-      const canonical =
-        aliasMap[rawOutlet] ?? canonicalizeAuto(rawOutlet);
+      const storyDay: string | null = r.story_day ?? null;
+      const count: number = Number(r.outlet_story_count ?? 0);
 
-      // 2) Group by canonical outlet
       if (!grouped[canonical]) {
         grouped[canonical] = {
-          outlet: rawOutlet,
           canonical,
           totalStories: 0,
           days: new Set(),
           sumBiasIntent: 0,
           sumPi: 0,
-          sumLanguage: 0,
+          sumLang: 0,
           sumSource: 0,
-          sumFraming: 0,
-          sumContext: 0,
+          sumFrame: 0,
+          sumCtx: 0,
           lastDay: null,
         };
       }
 
       const g = grouped[canonical];
-      const count = Number(r.outlet_story_count ?? 0);
 
       if (count > 0) {
         g.totalStories += count;
-
-        g.sumBiasIntent += Number(r.avg_bias_intent ?? 0) * count;
-        g.sumPi += Number(r.avg_pi_score ?? 0) * count;
-        g.sumLanguage += Number(r.avg_bias_language ?? 0) * count;
-        g.sumSource += Number(r.avg_bias_source ?? 0) * count;
-        g.sumFraming += Number(r.avg_bias_framing ?? 0) * count;
-        g.sumContext += Number(r.avg_bias_context ?? 0) * count;
+        g.sumBiasIntent += Number(r.avg_bias_intent || 0) * count;
+        g.sumPi += Number(r.avg_pi_score || 0) * count;
+        g.sumLang += Number(r.avg_bias_language || 0) * count;
+        g.sumSource += Number(r.avg_bias_source || 0) * count;
+        g.sumFrame += Number(r.avg_bias_framing || 0) * count;
+        g.sumCtx += Number(r.avg_bias_context || 0) * count;
       }
 
-      const storyDay: string | null = r.story_day ?? null;
       if (storyDay) {
         g.days.add(storyDay);
-        if (!g.lastDay || storyDay > g.lastDay) g.lastDay = storyDay;
+        if (!g.lastDay || storyDay > g.lastDay) {
+          g.lastDay = storyDay;
+        }
       }
     }
 
-    /* === 4. BUILD FINAL OVERVIEW ARRAY === */
+    /* ==========================================================
+     * 4) Apply MIN_STORIES requirement
+     * ========================================================== */
 
-    const outlets: OutletOverview[] = [];
+    const url = new URL(req.url);
+    const minParam = url.searchParams.get("minStories");
+    const min = Math.max(1, Number(minParam ?? "5") || 5);
 
-    for (const canonical of Object.keys(grouped)) {
-      const g = grouped[canonical];
+    const outlets = Object.values(grouped)
+      .filter((g) => g.totalStories >= min)
+      .map((g) => {
+        const total = g.totalStories || 1;
 
-      if (g.totalStories < MIN_STORIES) continue;
-
-      const total = g.totalStories || 1;
-
-      outlets.push({
-        outlet: g.outlet,
-        canonical_outlet: g.canonical,
-        total_stories: g.totalStories,
-        days_active: g.days.size,
-        avg_bias_intent: g.sumBiasIntent / total,
-        avg_pi: g.sumPi / total,
-        bias_language: g.sumLanguage / total,
-        bias_source: g.sumSource / total,
-        bias_framing: g.sumFraming / total,
-        bias_context: g.sumContext / total,
-        last_story_day: g.lastDay,
+        return {
+          outlet: g.canonical,
+          canonical_outlet: g.canonical,
+          total_stories: g.totalStories,
+          days_active: g.days.size,
+          avg_bias_intent: g.sumBiasIntent / total,
+          avg_pi: g.sumPi / total,
+          bias_language: g.sumLang / total,
+          bias_source: g.sumSource / total,
+          bias_framing: g.sumFrame / total,
+          bias_context: g.sumCtx / total,
+          last_story_day: g.lastDay,
+        };
       });
-    }
 
+    // Sort best → worst by bias intent
     outlets.sort((a, b) => a.avg_bias_intent - b.avg_bias_intent);
 
     return NextResponse.json({
@@ -223,16 +203,16 @@ export async function GET(req: NextRequest) {
       outlets,
     });
   } catch (err: any) {
-    console.error("[news/outlets/overview] fatal error", err);
+    console.error("[overview] fatal error", err);
     return jsonError(
       err?.message || "Unexpected error in outlets overview.",
       500,
-      { code: "NEWS_OUTLETS_OVERVIEW_FATAL" }
+      {
+        code: "NEWS_OUTLETS_OVERVIEW_FATAL",
+      }
     );
   }
 }
-
-/* ========= POST = GET ========= */
 
 export async function POST(req: NextRequest) {
   return GET(req);
