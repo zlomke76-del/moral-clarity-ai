@@ -53,28 +53,15 @@ function jsonError(
   return NextResponse.json({ ok: false, error: message, ...extra }, { status });
 }
 
-/** AUTO-CANONICALIZATION (root domain collapse)
- *  - newsfeed.time.com → time.com
- *  - radio.foxnews.com → foxnews.com
- *  - newsletters.washingtonexaminer.com → washingtonexaminer.com
- *  - about.rferl.org → rferl.org
- *  - support.anything.co.uk → anything.co.uk
+/**
+ * Normalize outlet → canonical outlet using alias table lookup.
  */
-function canonicalizeAuto(domain: string): string {
-  if (!domain) return "unknown";
-
-  const parts = domain.toLowerCase().split(".");
-  if (parts.length <= 2) return domain.toLowerCase();
-
-  const last = parts.at(-1)!;
-  const secondLast = parts.at(-2)!;
-
-  // Handle .co.uk pattern
-  if (secondLast === "co" && last === "uk") {
-    return parts.slice(-3).join(".");
-  }
-
-  return `${secondLast}.${last}`;
+function applyCanonical(
+  outlet: string,
+  aliasMap: Record<string, string>
+): string {
+  const lower = outlet.toLowerCase().trim();
+  return aliasMap[lower] ?? lower;
 }
 
 /* ========= MAIN HANDLER ========= */
@@ -88,54 +75,96 @@ export async function GET(req: NextRequest) {
     }
 
     const url = new URL(req.url);
-    const inputOutlet = url.searchParams.get("outlet");
+    const requestedOutlet = url.searchParams.get("outlet");
 
-    if (!inputOutlet) {
+    if (!requestedOutlet) {
       return jsonError("Missing ?outlet query parameter.", 400, {
         code: "MISSING_OUTLET",
       });
     }
 
-    // Load alias map for manual overrides
-    const { data: aliasRows } = await supabaseAdmin
+    // Convert “foxnews.com”, “mobile.foxnews.com”, etc → canonical
+    const requestedLower = requestedOutlet.toLowerCase().trim();
+
+    /* ==========================================================
+     * 1) Load alias → canonical mapping table
+     * ========================================================== */
+    const { data: aliasRows, error: aliasErr } = await supabaseAdmin
       .from("news_outlet_aliases")
       .select("alias, canonical");
 
-    const aliasMap: Record<string, string> = {};
-    for (const r of aliasRows ?? []) {
-      aliasMap[r.alias.toLowerCase()] = r.canonical.toLowerCase();
+    if (aliasErr) {
+      console.error("[trends] alias table error", aliasErr);
+      return jsonError("Failed to load alias table.", 500, {
+        code: aliasErr.code,
+      });
     }
 
-    // Normalize incoming outlet using alias → else auto-root
-    const normalizedOutlet =
-      aliasMap[inputOutlet.toLowerCase()] ??
-      canonicalizeAuto(inputOutlet.toLowerCase());
+    const aliasMap: Record<string, string> = {};
+    for (const row of aliasRows || []) {
+      if (row.alias && row.canonical) {
+        aliasMap[row.alias.toLowerCase()] = row.canonical.toLowerCase();
+      }
+    }
 
-    // Optional: limit days returned (default 60)
+    // Resolve canonical
+    const canonical = applyCanonical(requestedLower, aliasMap);
+
+    /* ==========================================================
+     * 2) Fetch all daily rows whose outlet *canonicalizes* to this outlet
+     *    (NOT just exact match).
+     *
+     *    We fetch ALL rows, then filter in-memory after canonical mapping.
+     * ========================================================== */
+    const { data, error } = await supabaseAdmin
+      .from("outlet_bias_pi_daily_trends")
+      .select(
+        `
+        outlet,
+        story_day,
+        outlet_story_count,
+        avg_pi_score,
+        avg_bias_intent,
+        avg_bias_language,
+        avg_bias_source,
+        avg_bias_framing,
+        avg_bias_context
+      `
+      )
+      .order("story_day", { ascending: true });
+
+    if (error) {
+      console.error("[trends] query error", error);
+      return jsonError("Failed to load outlet trend data.", 500, {
+        code: error.code,
+      });
+    }
+
+    const rows = (data || []) as any[];
+
+    /* ==========================================================
+     * 3) Filter rows that canonicalize to this outlet
+     * ========================================================== */
+    const filtered = rows.filter((r) => {
+      const raw = (r.outlet ?? "").toLowerCase().trim();
+      return applyCanonical(raw, aliasMap) === canonical;
+    });
+
+    /* ==========================================================
+     * 4) Optional: limit results (default: 60)
+     * ========================================================== */
     const limitParam = url.searchParams.get("limit");
     const limit =
       limitParam && !Number.isNaN(Number(limitParam))
         ? Math.max(1, Math.min(Number(limitParam), 120))
         : 60;
 
-    // Query ANY row whose canonical form matches the normalized target
-    const { data, error } = await supabaseAdmin
-      .rpc("match_outlet_trends_canonical", {
-        p_canonical: normalizedOutlet,
-        p_limit: limit,
-      });
+    const limited = filtered.slice(-limit);
 
-    if (error) {
-      console.error("[news/outlets/trends] RPC error", error);
-      return jsonError("Failed to load outlet trend data.", 500, {
-        code: error.code,
-        details: error.details,
-      });
-    }
-
-    const rows = (data || []) as any[];
-
-    const points: OutletTrendPoint[] = rows.map((r) => ({
+    /* ==========================================================
+     * 5) Map to TrendPoint format
+     * ========================================================== */
+    const points: OutletTrendPoint[] = limited.map((r) => ({
       story_day: r.story_day,
       outlet_story_count: Number(r.outlet_story_count ?? 0),
       avg_bias_intent: Number(r.avg_bias_intent ?? 0),
@@ -148,7 +177,7 @@ export async function GET(req: NextRequest) {
 
     const resp: TrendsResponse = {
       ok: true,
-      outlet: normalizedOutlet,
+      outlet: canonical,
       count: points.length,
       points,
     };
@@ -164,7 +193,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/* ========= POST = GET ========= */
+/* ========= Allow POST to behave like GET ========= */
 
 export async function POST(req: NextRequest) {
   return GET(req);
