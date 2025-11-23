@@ -31,15 +31,48 @@ import { logNewsBatchToLedgers } from '@/lib/news-ledger';
 /* ========= ATTACHMENTS HELPER ========= */
 import { buildAttachmentSection, type Attachment } from '@/lib/chat/attachments';
 
-/* ========= MODEL / TIMEOUT / TOKENS ========= */
+/* ========= MODEL / TIMEOUT (BASELINE) ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+const BASE_REQUEST_TIMEOUT_MS = 20_000;
 
-// Founder-style: longer timeout for big answers
-const REQUEST_TIMEOUT_MS = 60_000;
+/* ========= FOUNDER MODE (userKey/email based) ========= */
+/**
+ * Founder-only lane is keyed off userKey/email.
+ *
+ * Configure in env:
+ * - FOUNDER_USER_EMAIL  = your-email@example.com
+ * - FOUNDER_USER_KEYS   = optional, comma-separated list of additional keys
+ *
+ * Any request whose effective userKey matches one of these
+ * gets higher token limits + longer timeout + larger memory pack.
+ */
+const FOUNDER_USER_EMAIL = (process.env.FOUNDER_USER_EMAIL || '').toLowerCase();
+const FOUNDER_USER_KEYS = (process.env.FOUNDER_USER_KEYS || '')
+  .split(',')
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
 
-// Central token ceiling for Solace core replies (env-tunable)
-const MAX_OUTPUT_TOKENS =
-  Number(process.env.MCAI_MAX_OUTPUT_TOKENS || '') || 8192;
+const FOUNDER_MAX_OUTPUT_TOKENS = 3000; // normal path uses 800
+const NORMAL_MAX_OUTPUT_TOKENS = 800;
+
+const FOUNDER_REQUEST_TIMEOUT_MS = 60_000; // 60s for founder
+const NORMAL_REQUEST_TIMEOUT_MS = BASE_REQUEST_TIMEOUT_MS; // 20s
+
+const FOUNDER_MEMORY_FACTS_LIMIT = 16;
+const FOUNDER_MEMORY_EPISODES_LIMIT = 12;
+const NORMAL_MEMORY_FACTS_LIMIT = 8;
+const NORMAL_MEMORY_EPISODES_LIMIT = 6;
+
+function isFounderUserKey(userKey: string | null | undefined): boolean {
+  if (!userKey) return false;
+  const key = String(userKey).toLowerCase().trim();
+  if (!key) return false;
+
+  if (FOUNDER_USER_EMAIL && key === FOUNDER_USER_EMAIL) return true;
+  if (FOUNDER_USER_KEYS.length && FOUNDER_USER_KEYS.includes(key)) return true;
+
+  return false;
+}
 
 /* ========= ORIGINS ========= */
 const STATIC_ALLOWED_ORIGINS = [
@@ -628,6 +661,13 @@ export async function POST(req: NextRequest) {
     const lastUser =
       [...rolled].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content || '';
 
+    /* ===== USER KEY & FOUNDER FLAG ===== */
+    let userKey = getUserKeyFromReq(req, body);
+    if (!userKey || userKey === 'guest') {
+      userKey = `u_${crypto.randomUUID()}`;
+    }
+    const isFounder = isFounderUserKey(userKey);
+
     /* ===== IMAGE GENERATION FAST-PATH ===== */
     if (wantsImageGeneration(lastUser)) {
       const rawPrompt = lastUser.replace(/^img:\s*/i, '').trim() || lastUser;
@@ -688,11 +728,6 @@ export async function POST(req: NextRequest) {
       rolled
     );
 
-    /* ===== MEMORY: recall pack (scoped, episodic + factual) ===== */
-    let userKey = getUserKeyFromReq(req, body);
-    if (!userKey || userKey === 'guest') {
-      userKey = `u_${crypto.randomUUID()}`;
-    }
     const workspaceId: string = body?.workspace_id || MCA_WORKSPACE_ID;
 
     const memoryEnabled = Boolean(
@@ -702,6 +737,7 @@ export async function POST(req: NextRequest) {
     let hits: Array<any> = [];
     let memorySection = '';
 
+    /* ===== MEMORY: recall pack (scoped, episodic + factual) ===== */
     if (memoryEnabled) {
       try {
         const fallbackQuery =
@@ -720,10 +756,17 @@ export async function POST(req: NextRequest) {
         const baseQuery = lastUser || fallbackQuery;
         const query = [baseQuery, explicitInTurns].filter(Boolean).join(' | ');
 
+        const factsLimit = isFounder
+          ? FOUNDER_MEMORY_FACTS_LIMIT
+          : NORMAL_MEMORY_FACTS_LIMIT;
+        const episodesLimit = isFounder
+          ? FOUNDER_MEMORY_EPISODES_LIMIT
+          : NORMAL_MEMORY_EPISODES_LIMIT;
+
         // 1) Episodic + factual memory pack for Solace system prompt
         const pack = await getMemoryPack(userKey, query, {
-          factsLimit: 8,
-          episodesLimit: 6,
+          factsLimit,
+          episodesLimit,
         });
 
         memorySection =
@@ -809,7 +852,7 @@ export async function POST(req: NextRequest) {
           : '• (no external sources were found for this query)';
 
         const websiteSnippet = pack.urlTextSnippet
-          ? `\n\nWEBSITE TEXT SNAPSHOT (truncated)\n"""${pack.urlTextSnippet}"""`
+          ? `\n\nWEBSITE TEXT SNAPSHOT (truncated)\n"""${pack.urlTextSnippet}""""`
           : '';
 
         const clarificationHint =
@@ -971,6 +1014,14 @@ export async function POST(req: NextRequest) {
       ? [...rolled, { role: 'user', content: attachmentSection }]
       : rolled;
 
+    /* ===== Dynamic caps: founder vs normal ===== */
+    const maxOutputTokens = isFounder
+      ? FOUNDER_MAX_OUTPUT_TOKENS
+      : NORMAL_MAX_OUTPUT_TOKENS;
+    const requestTimeoutMs = isFounder
+      ? FOUNDER_REQUEST_TIMEOUT_MS
+      : NORMAL_REQUEST_TIMEOUT_MS;
+
     /* ===== Non-stream ===== */
     const useSolace = Boolean(SOLACE_URL && SOLACE_KEY);
     if (!wantStream) {
@@ -984,8 +1035,10 @@ export async function POST(req: NextRequest) {
               system,
               messages: rolledWithAttachments,
               temperature: 0.2,
+              // Solace backend may ignore this, but it is safe to send.
+              max_output_tokens: maxOutputTokens,
             }),
-            REQUEST_TIMEOUT_MS
+            requestTimeoutMs
           );
           return NextResponse.json(
             {
@@ -1011,10 +1064,10 @@ export async function POST(req: NextRequest) {
             system +
             '\n\n' +
             rolledWithAttachments.map((m) => `${m.role}: ${m.content}`).join('\n'),
-          max_output_tokens: MAX_OUTPUT_TOKENS,
+          max_output_tokens: maxOutputTokens,
           temperature: 0.2,
         }),
-        REQUEST_TIMEOUT_MS
+        requestTimeoutMs
       );
 
       const text = (resp as any).output_text?.trim() || '[No reply from model]';
@@ -1041,6 +1094,8 @@ export async function POST(req: NextRequest) {
           system,
           messages: rolledWithAttachments,
           temperature: 0.2,
+          // founder gets benefit here via Solace if backend uses it
+          max_output_tokens: maxOutputTokens,
         });
         return new NextResponse(stream as any, {
           headers: {
@@ -1067,7 +1122,6 @@ export async function POST(req: NextRequest) {
         model: MODEL,
         stream: true,
         temperature: 0.2,
-        max_tokens: Math.min(MAX_OUTPUT_TOKENS, 4096),
         messages: [
           { role: 'system', content: system },
           ...rolledWithAttachments.map((m) => ({
@@ -1105,7 +1159,7 @@ export async function POST(req: NextRequest) {
       {
         status: err?.message === 'Request timed out' ? 504 : 500,
         headers: corsHeaders(echoOrigin),
-      }
+      },
     );
   }
 }
