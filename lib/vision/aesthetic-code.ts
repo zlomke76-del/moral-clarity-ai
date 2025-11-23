@@ -1,22 +1,21 @@
 /**
- * Aesthetic Engine 2.0
+ * Aesthetic Engine 2.1
  *
- * Converts Solace's <aesthetic> JSON blocks into:
- *  - Tailwind/UI change recommendations
- *  - Component blueprints
- *  - Real React/Tailwind code
- *  - Visual deltas (spacing, contrast, hierarchy)
- *  - Suggested color and typography tokens
+ * Converts Solace's <aesthetic> metadata into production-ready UI:
+ *  - Tailwind improvement hints
+ *  - React layout blueprints
+ *  - Design tokens (colors, typography, spacing)
+ *  - Visual deltas (contrast, spacing, hierarchy)
  *
- * This engine never analyzes images. It only receives structured hints.
+ * Does NOT analyze images. Only interprets structured JSON.
  */
 
 export type AestheticHint = {
-  layout?: string;                // "two-column", "hero", "card grid", etc.
-  components?: string[];          // Elements found: ["card", "button", "hero"]
-  issues?: string[];              // "poor contrast", "misaligned grid", etc.
-  suggestions?: string[];         // Raw recommendations from Solace
-  notes?: string;                 // Extended reasoning
+  layout?: string;
+  components?: string[];
+  issues?: string[];
+  suggestions?: string[];
+  notes?: string;
   colors?: {
     primary?: string;
     secondary?: string;
@@ -50,7 +49,7 @@ export type AestheticCodeResult = {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                               MAIN FUNCTION                                */
+/*                               MAIN ENGINE                                   */
 /* -------------------------------------------------------------------------- */
 
 export function generateUIFromAesthetics(hint: AestheticHint): AestheticCodeResult {
@@ -59,39 +58,40 @@ export function generateUIFromAesthetics(hint: AestheticHint): AestheticCodeResu
   const suggestions = hint.suggestions ?? [];
 
   /* ---------------------------------------------------------------------- */
-  /* HIGH-LEVEL SUMMARY */
+  /* SUMMARY */
   /* ---------------------------------------------------------------------- */
 
-  const summaryLines = [
-    `Detected layout: ${layout}`,
-    issues.length ? `Issues found: ${issues.join(", ")}` : "",
-    suggestions.length ? `Applied suggestions: ${suggestions.join("; ")}` : "",
+  const summaryParts = [
+    `Layout detected: ${layout}`,
+    issues.length ? `Issues: ${issues.join(", ")}` : "",
+    suggestions.length ? `Suggestions applied: ${suggestions.join("; ")}` : "",
   ].filter(Boolean);
 
+  const summary = summaryParts.join("\n");
+
   /* ---------------------------------------------------------------------- */
-  /* VISUAL DELTAS — TURN PROBLEMS INTO ACTIONABLE FIXES */
+  /* VISUAL DELTAS — Direct UI corrections */
   /* ---------------------------------------------------------------------- */
 
   const visualDeltas: string[] = [];
-
   for (const issue of issues) {
     const low = issue.toLowerCase();
 
     if (low.includes("contrast"))
-      visualDeltas.push("Increase text/background contrast → use text-white, text-neutral-200, bg-neutral-900, or bg-black/90.");
+      visualDeltas.push("Increase contrast: use text-white, text-neutral-200, or bg-neutral-950.");
 
     if (low.includes("spacing"))
-      visualDeltas.push("Increase vertical rhythm → apply space-y-4/6 or py-8.");
+      visualDeltas.push("Increase spacing: apply space-y-6, py-12, gap-8.");
 
     if (low.includes("alignment"))
-      visualDeltas.push("Use grid or flex alignment utilities → items-center justify-between.");
+      visualDeltas.push("Fix alignment: add items-center or justify-between.");
 
     if (low.includes("hierarchy"))
-      visualDeltas.push("Increase heading size or font weight → text-3xl font-bold.");
+      visualDeltas.push("Improve hierarchy: use text-4xl font-bold for primary headers.");
   }
 
   /* ---------------------------------------------------------------------- */
-  /* UI TOKENS (colors, spacing, typography) */
+  /* DESIGN TOKENS - Derived from Solace metadata */
   /* ---------------------------------------------------------------------- */
 
   const tokens = {
@@ -118,19 +118,19 @@ export function generateUIFromAesthetics(hint: AestheticHint): AestheticCodeResu
   if (hint.spacing) {
     const s = hint.spacing;
     if (s.padding) tokens.spacing.push(`Padding scale: ${s.padding}`);
-    if (s.gap) tokens.spacing.push(`Grid gap scale: ${s.gap}`);
+    if (s.gap) tokens.spacing.push(`Grid gap: ${s.gap}`);
     if (s.density) tokens.spacing.push(`Density: ${s.density}`);
   }
 
   /* ---------------------------------------------------------------------- */
-  /* REACT CODE TEMPLATES (layout-specific) */
+  /* REACT CODE TEMPLATES */
   /* ---------------------------------------------------------------------- */
 
   let reactCode = "";
   let variables: string[] = [];
   const breakpoints = ["sm", "md", "lg", "xl"];
 
-  // HERO LAYOUT
+  /* HERO --------------------------------------------------------------- */
   if (layout.includes("hero")) {
     reactCode = `
 export default function HeroSection() {
@@ -149,18 +149,18 @@ export default function HeroSection() {
           </div>
         </div>
         <div className="flex justify-center">
-          {/* image or illustration */}
+          {/* image / visual */}
         </div>
       </div>
     </section>
   );
 }
-`.trim();
+    `.trim();
 
-    variables = ["title", "description", "primaryButton", "secondaryButton"];
+    variables = ["title", "description", "ctaButtons"];
   }
 
-  // TWO COLUMN
+  /* TWO COLUMN --------------------------------------------------------- */
   else if (layout.includes("two") || layout.includes("2")) {
     reactCode = `
 export default function TwoColumn() {
@@ -177,34 +177,41 @@ export default function TwoColumn() {
     </section>
   );
 }
-`.trim();
+    `.trim();
 
-    variables = ["leftColumn", "rightColumn"];
+    variables = ["left", "right"];
   }
 
-  // CARD GRID
-  else if (layout.includes("card")) {
+  /* CARD GRID ---------------------------------------------------------- */
+  else if (layout.includes("card") || layout.includes("grid")) {
     reactCode = `
 export default function CardGrid() {
   return (
     <section className="px-6 md:px-12 py-16">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-        {[1,2,3].map(i => (
-          <div key={i} className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-white">{/* card title */}</h3>
-            <p className="text-neutral-400 text-sm">{/* card description */}</p>
+        {[1, 2, 3].map(i => (
+          <div
+            key={i}
+            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 space-y-4"
+          >
+            <h3 className="text-lg font-semibold text-white">
+              {/* card title */}
+            </h3>
+            <p className="text-neutral-400 text-sm">
+              {/* card description */}
+            </p>
           </div>
         ))}
       </div>
     </section>
   );
 }
-`.trim();
+    `.trim();
 
     variables = ["cards[]"];
   }
 
-  // GENERIC BLOCK
+  /* GENERIC BLOCK ------------------------------------------------------ */
   else {
     reactCode = `
 export default function Block() {
@@ -216,32 +223,31 @@ export default function Block() {
     </section>
   );
 }
-`.trim();
+    `.trim();
 
     variables = ["content"];
   }
 
   /* ---------------------------------------------------------------------- */
-  /* TAILWIND NOTES FROM SUGGESTIONS */
+  /* TAILWIND NOTES (from suggestions) */
   /* ---------------------------------------------------------------------- */
 
   const tailwindNotes: string[] = [];
-
   for (const s of suggestions) {
     const low = s.toLowerCase();
     if (low.includes("padding")) tailwindNotes.push("Adjust padding → px-6 md:px-12 py-16.");
-    if (low.includes("contrast")) tailwindNotes.push("Increase contrast → text-white or bg-neutral-950.");
-    if (low.includes("spacing")) tailwindNotes.push("Increase spacing → gap-8 or space-y-6.");
+    if (low.includes("contrast")) tailwindNotes.push("Increase contrast → bg-neutral-950 text-white.");
+    if (low.includes("spacing")) tailwindNotes.push("Increase spacing → gap-8 space-y-6.");
     if (low.includes("grid")) tailwindNotes.push("Use responsive grids → sm:grid-cols-2 lg:grid-cols-3.");
-    if (low.includes("alignment")) tailwindNotes.push("Align items → items-center justify-between.");
+    if (low.includes("alignment")) tailwindNotes.push("Align items → items-center justify-center.");
   }
 
   /* ---------------------------------------------------------------------- */
-  /* FINAL RETURN */
+  /* RETURN */
   /* ---------------------------------------------------------------------- */
 
   return {
-    summary: summaryLines.join("\n"),
+    summary,
     reactCode,
     tailwindNotes,
     variables,
