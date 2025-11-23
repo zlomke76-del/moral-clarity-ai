@@ -45,6 +45,7 @@ export default function OutletCard({
         borderClass,
       ].join(" ")}
       aria-label={`Select outlet ${outlet.canonical_outlet}`} // Accessibility improvement
+      role="button" // Added role for accessibility
     >
       <div className="flex items-center justify-between gap-3">
         {/* Left: rank + logo + outlet */}
