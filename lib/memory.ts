@@ -195,18 +195,16 @@ export async function searchUserFacts(
  *  - started_at timestamptz
  *  - ended_at timestamptz
  *  - importance int default 1
- *  - embedding vector(1536) null
  *  - created_at timestamptz default now()
+ *  - embedding vector(1536)   <-- NEW, see SQL migration
  *
  * table: memory_episode_chunks
  *  - id uuid primary key
  *  - episode_id uuid references memory_episodes(id)
  *  - seq int not null
- *  - position int null
  *  - role text
  *  - content text
  *  - token_count int default 0
- *  - created_at timestamptz default now()
  * =======================================================*/
 
 export type Episode = {
@@ -219,6 +217,7 @@ export type Episode = {
   ended_at: string | null;
   importance: number | null;
   created_at: string | null;
+  // embedding lives in DB; we don’t need it in the TS type for now
 };
 
 /**
@@ -271,6 +270,46 @@ function summarizeEpisodeHeuristic(
 }
 
 /**
+ * Vector search over episodic memory via RPC:
+ * match_user_episodes(p_user_key text, p_query_embedding vector, p_match_count int)
+ */
+export async function searchUserEpisodes(
+  user_key: string,
+  query: string,
+  k = 6
+): Promise<Episode[]> {
+  const client = sb();
+  const q = (query || 'general').trim() || 'general';
+  const qvec = await embed(q);
+
+  if (!qvec.length) return [];
+
+  const { data, error } = await client.rpc('match_user_episodes', {
+    p_user_key: user_key,
+    p_query_embedding: qvec,
+    p_match_count: k,
+  });
+
+  if (error) {
+    // eslint-disable-next-line no-console
+    console.error('[memory] match_user_episodes error', error);
+    throw error;
+  }
+
+  return (data ?? []).map((e: any) => ({
+    id: e.id,
+    user_key: e.user_key,
+    workspace_id: e.workspace_id ?? null,
+    title: e.title ?? null,
+    summary: e.summary ?? null,
+    started_at: e.started_at ?? null,
+    ended_at: e.ended_at ?? null,
+    importance: e.importance ?? null,
+    created_at: e.created_at ?? null,
+  }));
+}
+
+/**
  * maybeStoreEpisode
  *
  * Called from /api/chat AFTER we’ve seen the rolled conversation.
@@ -295,27 +334,10 @@ export async function maybeStoreEpisode(
   const { title, summary } = summarizeEpisodeHeuristic(messages);
   const nowIso = new Date().toISOString();
 
-  // Use last N messages for the episodic text
-  const MAX_CHUNKS = 20;
-  const slice = messages.slice(-MAX_CHUNKS);
+  // Embed episode (title + summary) so we can do semantic recall later
+  const episodeEmbedding = await embed(`${title}\n\n${summary}`);
 
-  const episodicText = [
-    summary,
-    ...slice.map((m) => `${m.role || 'user'}: ${m.content || ''}`),
-  ]
-    .join('\n')
-    .slice(0, 8000);
-
-  let episodeEmbedding: number[] = [];
-  try {
-    episodeEmbedding = await embed(episodicText);
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('[memory] failed to embed episode text', err);
-    episodeEmbedding = [];
-  }
-
-  // Insert episode row (with embedding if available)
+  // Insert episode row
   const { data: episode, error } = await client
     .from('memory_episodes')
     .insert([
@@ -324,10 +346,10 @@ export async function maybeStoreEpisode(
         workspace_id: workspaceId ?? null,
         title,
         summary,
-        started_at: nowIso, // can refine later with real timestamps
+        started_at: nowIso, // you can refine later if you want real start/end from timestamps
         ended_at: nowIso,
         importance: 1,
-        embedding: episodeEmbedding.length ? episodeEmbedding : null,
+        embedding: episodeEmbedding,
       },
     ])
     .select()
@@ -342,12 +364,16 @@ export async function maybeStoreEpisode(
   const episodeId = episode.id;
   if (!episodeId) return;
 
+  // Store only the last N messages as chunks to keep things bounded
+  const MAX_CHUNKS = 20;
+  const slice = messages.slice(-MAX_CHUNKS);
+
   const chunksPayload = slice.map((m, idx) => ({
     episode_id: episodeId,
-    seq: idx,         // keep seq populated for NOT NULL constraint
-    position: idx,    // optional, for ordered playback in UI
+    seq: idx,
     role: m.role,
     content: m.content,
+    token_count: 0,
   }));
 
   if (!chunksPayload.length) return;
@@ -381,7 +407,8 @@ export type MemoryPackOptions = {
  *
  * Strategy:
  * - Facts: vector search via match_user_memories (searchUserFacts)
- * - Episodes: latest episodes for this user_key (no episodic search yet)
+ * - Episodes: vector search via match_user_episodes;
+ *             if RPC missing / fails, fallback to latest episodes.
  */
 export async function getMemoryPack(
   userKey: string,
@@ -398,35 +425,43 @@ export async function getMemoryPack(
   let facts: MemoryHit[] = [];
   let episodes: Episode[] = [];
 
+  const q = (query || 'general').trim() || 'general';
+
   // 1) Facts (vector search)
   try {
-    const q = (query || 'general').trim() || 'general';
     facts = await searchUserFacts(userKey, q, factsLimit);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[memory] getMemoryPack → searchUserFacts failed', err);
   }
 
-  // 2) Episodes (latest for this user — uses stored summary/embedding upstream)
+  // 2) Episodes (vector search via RPC; fallback to latest)
   try {
-    const { data, error } = await client
-      .from('memory_episodes')
-      .select(
-        'id, user_key, workspace_id, title, summary, started_at, ended_at, importance, created_at'
-      )
-      .eq('user_key', userKey)
-      .order('created_at', { ascending: false })
-      .limit(episodesLimit);
-
-    if (error) {
-      // eslint-disable-next-line no-console
-      console.error('[memory] getMemoryPack → memory_episodes error', error);
-    } else {
-      episodes = (data ?? []) as Episode[];
-    }
+    const eps = await searchUserEpisodes(userKey, q, episodesLimit);
+    episodes = eps;
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('[memory] getMemoryPack → episodes fetch failed', err);
+    console.error('[memory] getMemoryPack → searchUserEpisodes failed, falling back', err);
+    try {
+      const { data, error } = await client
+        .from('memory_episodes')
+        .select(
+          'id, user_key, workspace_id, title, summary, started_at, ended_at, importance, created_at'
+        )
+        .eq('user_key', userKey)
+        .order('created_at', { ascending: false })
+        .limit(episodesLimit);
+
+      if (error) {
+        // eslint-disable-next-line no-console
+        console.error('[memory] getMemoryPack → memory_episodes fallback error', error);
+      } else {
+        episodes = (data ?? []) as Episode[];
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('[memory] getMemoryPack → episodes fetch failed', e);
+    }
   }
 
   const episodeLines = episodes.map((e) => {
@@ -449,3 +484,4 @@ export async function getMemoryPack(
   const MAX_LINES = Math.max(factsLimit + episodesLimit, 4);
   return combined.slice(0, MAX_LINES).join('\n');
 }
+
