@@ -67,6 +67,15 @@ export type MemoryHit = {
   similarity?: number;
 };
 
+/* Episodic hits returned from match_memory_episodes */
+export type EpisodicHit = {
+  id: string;
+  title: string | null;
+  summary: string | null;
+  created_at: string | null;
+  similarity?: number;
+};
+
 /* =========================================================
  * 1) ATOMIC FACTUAL MEMORY (user_memories)
  * =======================================================*/
@@ -185,26 +194,8 @@ export async function searchUserFacts(
  * 2) EPISODIC MEMORY LAYER (memory_episodes + chunks)
  *
  * Schema assumption:
- *
- * table: memory_episodes
- *  - id uuid primary key
- *  - user_key text not null
- *  - workspace_id text null
- *  - title text
- *  - summary text
- *  - started_at timestamptz
- *  - ended_at timestamptz
- *  - importance int default 1
- *  - created_at timestamptz default now()
- *  - embedding vector(1536)   <-- NEW, see SQL migration
- *
- * table: memory_episode_chunks
- *  - id uuid primary key
- *  - episode_id uuid references memory_episodes(id)
- *  - seq int not null
- *  - role text
- *  - content text
- *  - token_count int default 0
+ *  - memory_episodes       (episode headers, with embedding column)
+ *  - memory_episode_chunks (episode turns)
  * =======================================================*/
 
 export type Episode = {
@@ -217,7 +208,6 @@ export type Episode = {
   ended_at: string | null;
   importance: number | null;
   created_at: string | null;
-  // embedding lives in DB; we don’t need it in the TS type for now
 };
 
 /**
@@ -270,53 +260,13 @@ function summarizeEpisodeHeuristic(
 }
 
 /**
- * Vector search over episodic memory via RPC:
- * match_user_episodes(p_user_key text, p_query_embedding vector, p_match_count int)
- */
-export async function searchUserEpisodes(
-  user_key: string,
-  query: string,
-  k = 6
-): Promise<Episode[]> {
-  const client = sb();
-  const q = (query || 'general').trim() || 'general';
-  const qvec = await embed(q);
-
-  if (!qvec.length) return [];
-
-  const { data, error } = await client.rpc('match_user_episodes', {
-    p_user_key: user_key,
-    p_query_embedding: qvec,
-    p_match_count: k,
-  });
-
-  if (error) {
-    // eslint-disable-next-line no-console
-    console.error('[memory] match_user_episodes error', error);
-    throw error;
-  }
-
-  return (data ?? []).map((e: any) => ({
-    id: e.id,
-    user_key: e.user_key,
-    workspace_id: e.workspace_id ?? null,
-    title: e.title ?? null,
-    summary: e.summary ?? null,
-    started_at: e.started_at ?? null,
-    ended_at: e.ended_at ?? null,
-    importance: e.importance ?? null,
-    created_at: e.created_at ?? null,
-  }));
-}
-
-/**
  * maybeStoreEpisode
  *
  * Called from /api/chat AFTER we’ve seen the rolled conversation.
  * - No effect if memory is not configured.
  * - No effect if heuristics say "too small / trivial".
  * - Otherwise, writes:
- *   - 1 row to memory_episodes (with embedding)
+ *   - 1 row to memory_episodes
  *   - up to the last 20 messages to memory_episode_chunks
  */
 export async function maybeStoreEpisode(
@@ -334,9 +284,6 @@ export async function maybeStoreEpisode(
   const { title, summary } = summarizeEpisodeHeuristic(messages);
   const nowIso = new Date().toISOString();
 
-  // Embed episode (title + summary) so we can do semantic recall later
-  const episodeEmbedding = await embed(`${title}\n\n${summary}`);
-
   // Insert episode row
   const { data: episode, error } = await client
     .from('memory_episodes')
@@ -346,10 +293,9 @@ export async function maybeStoreEpisode(
         workspace_id: workspaceId ?? null,
         title,
         summary,
-        started_at: nowIso, // you can refine later if you want real start/end from timestamps
+        started_at: nowIso, // can refine later with real timestamps
         ended_at: nowIso,
         importance: 1,
-        embedding: episodeEmbedding,
       },
     ])
     .select()
@@ -368,24 +314,56 @@ export async function maybeStoreEpisode(
   const MAX_CHUNKS = 20;
   const slice = messages.slice(-MAX_CHUNKS);
 
-const chunksPayload = slice.map((m, idx) => ({
+  const chunksPayload = slice.map((m, idx) => ({
     episode_id: episodeId,
-    seq: idx,
     position: idx,
     role: m.role,
     content: m.content,
-}));
+  }));
 
   if (!chunksPayload.length) return;
 
-  const { error: chunkErr } = await client
-    .from('memory_episode_chunks')
-    .insert(chunksPayload);
+  const { error: chunkErr } = await client.from('memory_episode_chunks').insert(chunksPayload);
 
   if (chunkErr) {
     // eslint-disable-next-line no-console
     console.error('[memory] failed to insert memory_episode_chunks', chunkErr);
   }
+}
+
+/**
+ * Episodic semantic search via match_memory_episodes RPC.
+ * This is the new, correct way to recall conversation episodes.
+ */
+async function searchEpisodes(
+  userKey: string,
+  query: string,
+  k = 6
+): Promise<EpisodicHit[]> {
+  const client = sb();
+  const q = (query || 'general').trim() || 'general';
+  const qvec = await embed(q);
+  if (!qvec.length) return [];
+
+  const { data, error } = await client.rpc('match_memory_episodes', {
+    p_user_key: userKey,
+    p_query_embedding: qvec,
+    p_match_count: k,
+  });
+
+  if (error) {
+    // eslint-disable-next-line no-console
+    console.error('[memory] match_memory_episodes error', error);
+    return [];
+  }
+
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    title: row.title ?? null,
+    summary: row.summary ?? null,
+    created_at: row.created_at ?? null,
+    similarity: row.similarity ?? undefined,
+  }));
 }
 
 /* =========================================================
@@ -407,8 +385,7 @@ export type MemoryPackOptions = {
  *
  * Strategy:
  * - Facts: vector search via match_user_memories (searchUserFacts)
- * - Episodes: vector search via match_user_episodes;
- *             if RPC missing / fails, fallback to latest episodes.
+ * - Episodes: **semantic episodic search** via match_memory_episodes
  */
 export async function getMemoryPack(
   userKey: string,
@@ -423,53 +400,30 @@ export async function getMemoryPack(
   const episodesLimit = opts.episodesLimit ?? 6;
 
   let facts: MemoryHit[] = [];
-  let episodes: Episode[] = [];
-
-  const q = (query || 'general').trim() || 'general';
+  let episodes: EpisodicHit[] = [];
 
   // 1) Facts (vector search)
   try {
+    const q = (query || 'general').trim() || 'general';
     facts = await searchUserFacts(userKey, q, factsLimit);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[memory] getMemoryPack → searchUserFacts failed', err);
   }
 
-  // 2) Episodes (vector search via RPC; fallback to latest)
+  // 2) Episodes (semantic search via RPC)
   try {
-    const eps = await searchUserEpisodes(userKey, q, episodesLimit);
-    episodes = eps;
+    const q = (query || 'general').trim() || 'general';
+    episodes = await searchEpisodes(userKey, q, episodesLimit);
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('[memory] getMemoryPack → searchUserEpisodes failed, falling back', err);
-    try {
-      const { data, error } = await client
-        .from('memory_episodes')
-        .select(
-          'id, user_key, workspace_id, title, summary, started_at, ended_at, importance, created_at'
-        )
-        .eq('user_key', userKey)
-        .order('created_at', { ascending: false })
-        .limit(episodesLimit);
-
-      if (error) {
-        // eslint-disable-next-line no-console
-        console.error('[memory] getMemoryPack → memory_episodes fallback error', error);
-      } else {
-        episodes = (data ?? []) as Episode[];
-      }
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error('[memory] getMemoryPack → episodes fetch failed', e);
-    }
+    console.error('[memory] getMemoryPack → searchEpisodes failed', err);
   }
 
   const episodeLines = episodes.map((e) => {
     const label = (e.title || 'Conversation episode').replace(/\s+/g, ' ').trim();
     const summary = (e.summary || '').replace(/\s+/g, ' ').trim();
-    return summary
-      ? `• (episode) ${label} — ${summary}`
-      : `• (episode) ${label}`;
+    return summary ? `• (episode) ${label} — ${summary}` : `• (episode) ${label}`;
   });
 
   const factLines = facts.map((m) => {
