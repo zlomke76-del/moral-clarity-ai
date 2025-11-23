@@ -38,8 +38,7 @@ export async function POST(req: NextRequest) {
             },
           ],
         },
-      ],
-      reasoning: { effort: "medium" },
+      ]
     });
 
     // --- SAFE TEXT EXTRACTION (OpenAI v2 compliant) ---------------------
@@ -63,7 +62,7 @@ export async function POST(req: NextRequest) {
       const match = rawText.match(/<aesthetic>([\s\S]*?)<\/aesthetic>/);
       if (match) aestheticsBlock = JSON.parse(match[1]);
     } catch {
-      // ignore
+      // ignore errors
     }
 
     // --- If aesthetics found → generate UI code -------------------------
@@ -86,3 +85,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
