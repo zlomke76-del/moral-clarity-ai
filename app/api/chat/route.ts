@@ -265,17 +265,28 @@ function wantsSecular(messages: Array<{ role: string; content: string }>) {
 function wantsImageGeneration(text: string) {
   const t = (text || '').toLowerCase().trim();
   if (!t) return false;
-  return (
-    t.startsWith('img:') ||
-    t.includes('generate an image') ||
-    t.includes('create an image') ||
-    t.includes('make an image') ||
-    t.includes('draw a diagram') ||
-    t.includes('make a visual') ||
-    t.includes('create a diagram') ||
-    t.includes('design a diagram')
-  );
+
+  // If it looks like a big code / log block, only allow explicit img: prefix
+  const lineCount = t.split('\n').length;
+  if (lineCount > 20) {
+    return t.startsWith('img:');
+  }
+
+  if (t.startsWith('img:')) return true;
+
+  const intentPatterns = [
+    /^generate (an )?image\b/,
+    /^create (an )?image\b/,
+    /^make (an )?image\b/,
+    /^draw (a )?diagram\b/,
+    /^make (a )?visual\b/,
+    /^create (a )?diagram\b/,
+    /^design (a )?diagram\b/,
+  ];
+
+  return intentPatterns.some((rx) => rx.test(t));
 }
+
 
 function isFirstRealTurn(messages: Array<{ role: string; content: string }>) {
   const userCount = messages.filter((m) => m.role?.toLowerCase() === 'user').length;
