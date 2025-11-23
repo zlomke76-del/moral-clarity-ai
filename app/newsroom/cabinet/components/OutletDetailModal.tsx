@@ -1,131 +1,115 @@
 "use client";
 
 import { useEffect } from "react";
-import type { OutletDetailData, OutletTrendPoint } from "../types";
-import TrendChart from "./TrendChart";
-import OutletLogo from "./OutletLogo";
+import TrendChart from "./TrendChart"; // Ensure this import is correct
+import type { OutletTrendPoint } from "../types";
 
 type Props = {
   open: boolean;
-  onClose: () => void;
-  outlet: OutletDetailData | null;
+  onOpenChange: (open: boolean) => void;
   trends: OutletTrendPoint[] | null;
 };
 
-export default function OutletDetailModal({ open, onClose, outlet, trends }: Props) {
-  if (!open || !outlet) return null;
-
-  // Escape key closes modal
+export default function OutletDetailModal({
+  open,
+  onOpenChange,
+  trends,
+}: Props) {
+  // Close on ESC
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
+    if (!open) return;
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        onOpenChange(false);
+      }
+    }
+
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [open, onOpenChange]);
 
-  const {
-    canonical_outlet,
-    display_name,
-    storiesAnalyzed,
-    lifetimePi,
-    lifetimeBiasIntent,
-    lifetimeLanguage,
-    lifetimeSource,
-    lifetimeFraming,
-    lifetimeContext,
-    lastScoredAt,
-  } = outlet;
+  if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-40 bg-black/60 flex items-center justify-center p-4 overflow-y-auto"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
-      aria-describedby="modal-description"
-    >
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 px-3 py-6">
       <div
-        className="relative w-full max-w-3xl rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5 shadow-2xl shadow-black/80"
+        className="relative z-10 max-h-full w-full max-w-3xl overflow-hidden rounded-2xl border border-neutral-700 bg-neutral-950/95 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close button */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-3 top-3 rounded-full border border-neutral-700 bg-neutral-900 px-2 py-[1px] text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
-          aria-label="Close modal"
-        >
-          Esc
-        </button>
-
-        {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <OutletLogo domain={canonical_outlet} name={display_name} />
-            <div className="space-y-0.5">
-              <div className="text-xs uppercase tracking-[0.16em] text-neutral-500">Outlet</div>
-              <div className="text-sm font-semibold text-neutral-50">{display_name}</div>
-              <div className="text-xs text-neutral-400">{canonical_outlet}</div>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-end gap-1 text-right">
-            <div className="text-[11px] uppercase tracking-[0.16em] text-neutral-400">Predictability Index</div>
-            <div className="font-mono text-2xl text-emerald-300">{lifetimePi.toFixed(1)}</div>
-            <div className="text-[11px] text-neutral-400">{storiesAnalyzed} stories analyzed · PI based on lifetime.</div>
+        {/* Content */}
+        <div className="px-5 py-4">
+          <h2 className="text-lg font-semibold text-neutral-100">Outlet Trends</h2>
+          <div className="mt-6">
+            {trends ? (
+              <TrendChart points={trends} loading={false} />
+            ) : (
+              <TrendChart points={null} loading={true} />
+            )}
           </div>
         </div>
-
-        {/* Meta Information */}
-        <div className="mt-3 space-y-1 text-xs text-neutral-400">
-          <div>
-            Bias intent:{" "}
-            <span className="font-mono text-neutral-100">{lifetimeBiasIntent.toFixed(2)} / 3.0</span>
-          </div>
-          <div className="text-neutral-500">Last scored: {lastScoredAt}</div>
-        </div>
-
-        {/* COMPONENT SCORES */}
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <BiasBar label="Language" value={lifetimeLanguage} />
-          <BiasBar label="Source" value={lifetimeSource} />
-          <BiasBar label="Framing" value={lifetimeFraming} />
-          <BiasBar label="Context" value={lifetimeContext} />
-        </div>
-
-        {/* TREND CHART */}
-        <div className="mt-6">
-          {trends ? (
-            <TrendChart points={trends} />
-          ) : (
-            <div className="text-neutral-400">Loading trends...</div>
-          )}
-        </div>
-
-        <p className="mt-4 text-[11px] text-neutral-500 leading-relaxed">
-          This cabinet doesn’t decide who is right or wrong. It measures how stories are told — language, sourcing, framing, and missing context — and turns that into a predictable, auditable signal. Higher PI means more stable, neutral storytelling.
-        </p>
       </div>
     </div>
   );
 }
+```
 
-function BiasBar({ label, value }: { label: string; value: number }) {
-  const width = Math.max(4, Math.min((value / 3) * 100, 100));
+### TrendChart.tsx
+
+Ensure your `TrendChart` component is set up to accept the `loading` prop as follows:
+
+```tsx
+"use client";
+
+import type { OutletTrendPoint } from "../types";
+
+type Props = {
+  points: OutletTrendPoint[] | null;
+  loading: boolean;
+};
+
+export default function TrendChart({ points, loading }: Props) {
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4 text-sm text-neutral-400">
+        Loading trends...
+      </div>
+    );
+  }
+
+  if (!points || points.length === 0) {
+    return (
+      <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4 text-sm text-neutral-400">
+        No trend data available.
+      </div>
+    );
+  }
+
+  const maxPi = 1;
+  const minPi = 0;
 
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-[11px] text-neutral-400">
-        <span>{label}</span>
-        <span className="font-mono text-neutral-200">{value.toFixed(2)} / 3.00</span>
-      </div>
-      <div className="h-1.5 w-full rounded-full bg-neutral-900">
-        <div
-          className="h-full rounded-full bg-neutral-200"
-          style={{ width: `${width.toFixed(1)}%` }}
-        />
+    <div className="rounded-xl border border-neutral-800 bg-neutral-950/80 p-4 space-y-3">
+      <div className="flex h-32 w-full overflow-x-auto">
+        <div className="flex h-full items-end gap-1">
+          {points.map((p) => {
+            const norm = (p.avg_pi_score - minPi) / (maxPi - minPi || 1); // Normalize to 0..1
+            const height = 20 + norm * 80; // px
+
+            return (
+              <div key={p.story_day} className="flex flex-col items-center">
+                <div
+                  className="w-3 rounded-t-md bg-emerald-400/80"
+                  style={{ height: `${height}px` }}
+                  title={`${p.story_day}: PI ${p.avg_pi_score.toFixed(3)}`}
+                />
+                <div className="mt-1 w-6 rotate-90 whitespace-nowrap text-[9px] text-neutral-500">
+                  {p.story_day.slice(5)} {/* MM-DD */}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
