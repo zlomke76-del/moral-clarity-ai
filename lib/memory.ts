@@ -43,7 +43,7 @@ async function embed(text: string): Promise<number[]> {
 /* =========================================================
  * Types
  * =======================================================*/
-export type MemoryPurpose = 'profile' | 'preference' | 'fact' | 'task' | 'note';
+export type MemoryPurpose = 'profile' | 'preference' | 'fact' | 'task' | 'note' | 'episode';
 
 export type Memory = {
   id?: string;
@@ -67,7 +67,7 @@ export type MemoryHit = {
   similarity?: number;
 };
 
-/* Episodic hits returned from match_memory_episodes */
+/* Episodic hits returned from match_episodic_memories */
 export type EpisodicHit = {
   id: string;
   title: string | null;
@@ -77,7 +77,7 @@ export type EpisodicHit = {
 };
 
 /* =========================================================
- * 1) ATOMIC FACTUAL MEMORY (user_memories)
+ * 1) ATOMIC FACTUAL / UNIFIED MEMORY (user_memories)
  * =======================================================*/
 
 /**
@@ -112,6 +112,12 @@ export async function remember(m: Memory): Promise<RememberResult> {
         expires_at: null,
         embedding: vec,
         workspace_id: m.workspace_id ?? null,
+        // episodic-related columns remain null for standard memories
+        episodic_type: null,
+        episode_summary: null,
+        importance: null,
+        source: 'solace',
+        origin: 'atomic_memory',
       },
     ])
     .select()
@@ -191,11 +197,21 @@ export async function searchUserFacts(
 }
 
 /* =========================================================
- * 2) EPISODIC MEMORY LAYER (memory_episodes + chunks)
+ * 2) EPISODIC MEMORY LAYER (UNIFIED INTO user_memories)
  *
- * Schema assumption:
- *  - memory_episodes       (episode headers, with embedding column)
- *  - memory_episode_chunks (episode turns)
+ * Schema assumption (user_memories):
+ *  - id uuid
+ *  - user_key text
+ *  - title text
+ *  - content text
+ *  - kind text
+ *  - workspace_id uuid null
+ *  - embedding vector(1536)
+ *  - episodic_type text
+ *  - episode_summary text
+ *  - importance smallint
+ *  - source text
+ *  - origin text
  * =======================================================*/
 
 export type Episode = {
@@ -265,9 +281,7 @@ function summarizeEpisodeHeuristic(
  * Called from /api/chat AFTER we’ve seen the rolled conversation.
  * - No effect if memory is not configured.
  * - No effect if heuristics say "too small / trivial".
- * - Otherwise, writes:
- *   - 1 row to memory_episodes
- *   - up to the last 20 messages to memory_episode_chunks
+ * - Otherwise, writes a single episodic row into user_memories.
  */
 export async function maybeStoreEpisode(
   userKey: string,
@@ -280,60 +294,54 @@ export async function maybeStoreEpisode(
   if (!shouldStoreEpisode(messages)) return;
 
   const client = sb();
-
   const { title, summary } = summarizeEpisodeHeuristic(messages);
-  const nowIso = new Date().toISOString();
 
-  // Insert episode row
-  const { data: episode, error } = await client
-    .from('memory_episodes')
-    .insert([
-      {
-        user_key: userKey,
-        workspace_id: workspaceId ?? null,
-        title,
-        summary,
-        started_at: nowIso, // can refine later with real timestamps
-        ended_at: nowIso,
-        importance: 1,
-      },
-    ])
-    .select()
-    .single();
+  // Use the summary as the primary embedding input
+  const vec = await embed(summary);
 
-  if (error || !episode) {
+  try {
+    await client
+      .from('user_memories')
+      .insert([
+        {
+          user_key: userKey,
+          workspace_id: workspaceId ?? null,
+          title,
+          content: summary,
+          kind: 'episode',
+          weight: 1,
+          expires_at: null,
+          embedding: vec,
+          episodic_type: 'conversation_episode',
+          episode_summary: summary,
+          importance: 1,
+          source: 'solace',
+          origin: 'conversation_episode',
+        },
+      ])
+      .single();
+  } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('[memory] failed to insert memory_episodes', error);
-    return;
-  }
-
-  const episodeId = episode.id;
-  if (!episodeId) return;
-
-  // Store only the last N messages as chunks to keep things bounded
-  const MAX_CHUNKS = 20;
-  const slice = messages.slice(-MAX_CHUNKS);
-
-  const chunksPayload = slice.map((m, idx) => ({
-    episode_id: episodeId,
-    position: idx,
-    role: m.role,
-    content: m.content,
-  }));
-
-  if (!chunksPayload.length) return;
-
-  const { error: chunkErr } = await client.from('memory_episode_chunks').insert(chunksPayload);
-
-  if (chunkErr) {
-    // eslint-disable-next-line no-console
-    console.error('[memory] failed to insert memory_episode_chunks', chunkErr);
+    console.error('[memory] failed to insert episodic user_memories row', error);
   }
 }
 
 /**
- * Episodic semantic search via match_memory_episodes RPC.
- * This is the new, correct way to recall conversation episodes.
+ * Episodic semantic search via match_episodic_memories RPC.
+ * This function assumes the SQL function:
+ *
+ * create or replace function public.match_episodic_memories(
+ *   p_user_key text,
+ *   p_query_embedding vector,
+ *   p_match_count integer
+ * )
+ * returns table(
+ *   id uuid,
+ *   episode_summary text,
+ *   episodic_type text,
+ *   similarity double precision
+ * )
+ * ...
  */
 async function searchEpisodes(
   userKey: string,
@@ -345,7 +353,7 @@ async function searchEpisodes(
   const qvec = await embed(q);
   if (!qvec.length) return [];
 
-  const { data, error } = await client.rpc('match_memory_episodes', {
+  const { data, error } = await client.rpc('match_episodic_memories', {
     p_user_key: userKey,
     p_query_embedding: qvec,
     p_match_count: k,
@@ -353,14 +361,16 @@ async function searchEpisodes(
 
   if (error) {
     // eslint-disable-next-line no-console
-    console.error('[memory] match_memory_episodes error', error);
+    console.error('[memory] match_episodic_memories error', error);
     return [];
   }
 
   return (data ?? []).map((row: any) => ({
     id: row.id,
-    title: row.title ?? null,
-    summary: row.summary ?? null,
+    // We don't have a dedicated title column in the RPC result; use episodic_type as a label.
+    title: row.episodic_type ?? 'Conversation episode',
+    summary: row.episode_summary ?? null,
+    // created_at is not returned by the RPC; keep the field for backwards compatibility.
     created_at: row.created_at ?? null,
     similarity: row.similarity ?? undefined,
   }));
@@ -385,7 +395,7 @@ export type MemoryPackOptions = {
  *
  * Strategy:
  * - Facts: vector search via match_user_memories (searchUserFacts)
- * - Episodes: **semantic episodic search** via match_memory_episodes
+ * - Episodes: semantic episodic search via match_episodic_memories
  */
 export async function getMemoryPack(
   userKey: string,
@@ -393,8 +403,6 @@ export async function getMemoryPack(
   opts: MemoryPackOptions = {}
 ): Promise<string> {
   if (!userKey) return '';
-
-  const client = sb();
 
   const factsLimit = opts.factsLimit ?? 8;
   const episodesLimit = opts.episodesLimit ?? 6;
