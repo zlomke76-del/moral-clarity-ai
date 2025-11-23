@@ -2,18 +2,20 @@
 
 import { useEffect } from "react";
 import TrendChart from "./TrendChart"; // Ensure this import is correct
-import type { OutletTrendPoint } from "../types";
+import type { OutletTrendPoint, OutletDetailData } from "../types";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   trends: OutletTrendPoint[] | null;
+  outlet: OutletDetailData | null; // Add this line
 };
 
 export default function OutletDetailModal({
   open,
   onOpenChange,
   trends,
+  outlet, // Add this line
 }: Props) {
   // Close on ESC
   useEffect(() => {
@@ -40,6 +42,12 @@ export default function OutletDetailModal({
         {/* Content */}
         <div className="px-5 py-4">
           <h2 className="text-lg font-semibold text-neutral-100">Outlet Trends</h2>
+          {outlet && (
+            <div className="mt-4">
+              <h3 className="text-md font-semibold text-neutral-200">{outlet.display_name}</h3>
+              <p className="text-sm text-neutral-400">{outlet.canonical_outlet}</p>
+            </div>
+          )}
           <div className="mt-6">
             {trends ? (
               <TrendChart points={trends} loading={false} />
