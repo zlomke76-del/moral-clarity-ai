@@ -1124,7 +1124,6 @@ const r = await fetch('https://api.openai.com/v1/chat/completions', {
     model: MODEL,
     stream: true,
     temperature: 0.2,
-    max_tokens: maxOutputTokens, // add this line
     messages: [
       { role: 'system', content: system },
       ...rolledWithAttachments.map((m) => ({
@@ -1132,7 +1131,8 @@ const r = await fetch('https://api.openai.com/v1/chat/completions', {
         content: m.content,
       })),
     ],
-  }),
+  })
+});
 
 
     if (!r.ok || !r.body) {
