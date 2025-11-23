@@ -184,7 +184,7 @@ export async function searchUserFacts(
 /* =========================================================
  * 2) EPISODIC MEMORY LAYER (memory_episodes + chunks)
  *
- * Schema assumption (you can adapt names/types if needed):
+ * Schema assumption (aligned with your table):
  *
  * table: memory_episodes
  *  - id uuid primary key
@@ -200,9 +200,12 @@ export async function searchUserFacts(
  * table: memory_episode_chunks
  *  - id uuid primary key
  *  - episode_id uuid references memory_episodes(id)
- *  - position int
- *  - role text
- *  - content text
+ *  - seq int NOT NULL            <-- required, ordered sequence
+ *  - role text NOT NULL
+ *  - content text NOT NULL
+ *  - token_count int NOT NULL default 0
+ *  - created_at timestamptz default now()
+ *  - position int NULL           <-- legacy / UI index
  * =======================================================*/
 
 export type Episode = {
@@ -254,10 +257,7 @@ function summarizeEpisodeHeuristic(
   const lastSnippet = clean((lastUser?.content || '').slice(0, 120));
   const firstSnippet = clean((firstUser?.content || '').slice(0, 160));
 
-  const title =
-    lastSnippet ||
-    firstSnippet ||
-    'Conversation episode';
+  const title = lastSnippet || firstSnippet || 'Conversation episode';
 
   const summaryParts: string[] = [];
   summaryParts.push('Conversation episode between the user and Solace.');
@@ -326,16 +326,16 @@ export async function maybeStoreEpisode(
 
   const chunksPayload = slice.map((m, idx) => ({
     episode_id: episodeId,
-    position: idx,
+    seq: idx, // REQUIRED: non-null, matches NOT NULL constraint
+    position: idx, // legacy/UI index (nullable in DB, but we keep it populated)
     role: m.role,
     content: m.content,
+    token_count: m.content ? m.content.length : 0, // aligns with schema default 0
   }));
 
   if (!chunksPayload.length) return;
 
-  const { error: chunkErr } = await client
-    .from('memory_episode_chunks')
-    .insert(chunksPayload);
+  const { error: chunkErr } = await client.from('memory_episode_chunks').insert(chunksPayload);
 
   if (chunkErr) {
     // eslint-disable-next-line no-console
@@ -413,9 +413,7 @@ export async function getMemoryPack(
   const episodeLines = episodes.map((e) => {
     const label = (e.title || 'Conversation episode').replace(/\s+/g, ' ').trim();
     const summary = (e.summary || '').replace(/\s+/g, ' ').trim();
-    return summary
-      ? `• (episode) ${label} — ${summary}`
-      : `• (episode) ${label}`;
+    return summary ? `• (episode) ${label} — ${summary}` : `• (episode) ${label}`;
   });
 
   const factLines = facts.map((m) => {
