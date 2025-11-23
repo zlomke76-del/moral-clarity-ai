@@ -6,9 +6,10 @@ import type { OutletTrendPoint, OutletDetailData } from "../types";
 
 type Props = {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChange: (open: boolean) => void; // This prop is for opening/closing the modal
   trends: OutletTrendPoint[] | null;
   outlet: OutletDetailData | null; // Ensure this is included
+  onClose: () => void; // Add this line
 };
 
 export default function OutletDetailModal({
@@ -16,6 +17,7 @@ export default function OutletDetailModal({
   onOpenChange,
   trends,
   outlet, // Ensure this is included
+  onClose, // Add this line
 }: Props) {
   // Close on ESC
   useEffect(() => {
@@ -23,13 +25,13 @@ export default function OutletDetailModal({
 
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        onOpenChange(false);
+        onClose(); // Use onClose instead of onOpenChange
       }
     }
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onOpenChange]);
+  }, [open, onClose]);
 
   if (!open) return null;
 
