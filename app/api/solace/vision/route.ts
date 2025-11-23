@@ -10,18 +10,6 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-/**
- * Vision endpoint for Solace.
- *
- * Accepts:
- *  - prompt: string
- *  - imageUrl: string (public URL)
- *
- * Returns:
- *  - the model's response
- *  - if the model suggests aesthetic hints, passes them to aesthetic-code helper
- */
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -35,48 +23,50 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // --- Vision call ---------------------------------------------------
+    // --- Vision API call ------------------------------------------------
     const response = await client.responses.create({
       model: "gpt-4o-mini",
       input: [
         {
           role: "user",
           content: [
-            {
-              type: "input_text",
-              text: prompt,
-            },
+            { type: "input_text", text: prompt },
             {
               type: "input_image",
               image_url: imageUrl,
-              detail: "high", // REQUIRED in v2 responses API
+              detail: "high", // REQUIRED
             },
           ],
         },
       ],
-      reasoning: {
-        effort: "medium",
-      },
+      reasoning: { effort: "medium" },
     });
 
-    // Extract the text answer
-    const rawText =
-      response.output_text ??
-      response.output?.[0]?.content?.[0]?.text ??
-      "[No response]";
+    // --- SAFE TEXT EXTRACTION (OpenAI v2 compliant) ---------------------
+    let rawText: string = response.output_text ?? "";
 
-    // Try to detect if model returned structured aesthetic hints
-    let aestheticsBlock = null;
-    try {
-      const jsonMatch = rawText.match(/<aesthetic>([\s\S]*?)<\/aesthetic>/);
-      if (jsonMatch) {
-        aestheticsBlock = JSON.parse(jsonMatch[1]);
-      }
-    } catch {
-      // ignore parsing errors silently
+    if (!rawText && Array.isArray(response.output)) {
+      const msgs = response.output
+        .filter((o: any) => o.type === "message")
+        .flatMap((o: any) => o.content || [])
+        .map((c: any) => c.text || "");
+
+      rawText = msgs.join(" ").trim();
     }
 
-    // If structured aesthetics found → return translated Tailwind/React code too
+    if (!rawText) rawText = "[No response]";
+
+    // --- parse <aesthetic> JSON blocks ----------------------------------
+    let aestheticsBlock = null;
+
+    try {
+      const match = rawText.match(/<aesthetic>([\s\S]*?)<\/aesthetic>/);
+      if (match) aestheticsBlock = JSON.parse(match[1]);
+    } catch {
+      // ignore
+    }
+
+    // --- If aesthetics found → generate UI code -------------------------
     if (aestheticsBlock) {
       const uiCode = generateUIFromAesthetics(aestheticsBlock);
       return NextResponse.json({
@@ -86,10 +76,8 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Default: return raw text response
-    return NextResponse.json({
-      answer: rawText,
-    });
+    // --- Default: return plain text -------------------------------------
+    return NextResponse.json({ answer: rawText });
   } catch (err: any) {
     console.error("Vision route error:", err);
     return NextResponse.json(
