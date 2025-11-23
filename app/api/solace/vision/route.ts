@@ -1,51 +1,42 @@
 // app/api/solace/vision/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import OpenAI from "openai";
+import { generateUIFromAesthetics } from "@/lib/vision/aesthetic-code";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-import { NextRequest, NextResponse } from "next/server";
-import { getOpenAI } from "@/lib/openai";
-import { generateUIFromAesthetics } from "@/lib/vision/aesthetic-code";
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
+});
 
 /**
- * Vision API: two modes
- * 1. Text-analysis from images (existing)
- * 2. Aesthetic-only analysis → with optional code generation
+ * Vision endpoint for Solace.
+ *
+ * Accepts:
+ *  - prompt: string
+ *  - imageUrl: string (public URL)
+ *
+ * Returns:
+ *  - the model's response
+ *  - if the model suggests aesthetic hints, passes them to aesthetic-code helper
  */
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt, imageUrl, mode } = await req.json();
+    const body = await req.json();
+    const prompt = String(body.prompt || "Analyze this image.");
+    const imageUrl = String(body.imageUrl || "");
 
     if (!imageUrl) {
       return NextResponse.json(
-        { ok: false, error: "Missing imageUrl" },
+        { error: "Missing imageUrl" },
         { status: 400 }
       );
     }
 
-    const openai = await getOpenAI();
-
-    // MODE 1: Default vision → structured text
-    if (mode !== "aesthetic") {
-      const r = await openai.responses.create({
-        model: "gpt-4o-mini",
-        input: [
-          {
-            role: "user",
-            content: [
-              { type: "input_text", text: prompt || "Analyze the image." },
-              { type: "input_image", image_url: imageUrl },
-            ],
-          },
-        ],
-      });
-
-      const answer = (r as any).output_text || "(no output)";
-      return NextResponse.json({ ok: true, answer });
-    }
-
-    // MODE 2: aesthetic-only → structured JSON → code generator
-    const vision = await openai.responses.create({
+    // --- Vision call ---------------------------------------------------
+    const response = await client.responses.create({
       model: "gpt-4o-mini",
       input: [
         {
@@ -53,49 +44,57 @@ export async function POST(req: NextRequest) {
           content: [
             {
               type: "input_text",
-              text:
-                "Aesthetic-only analysis. Ignore text. Output STRICT JSON with:\n" +
-                "layout, issues[], suggestions[]",
+              text: prompt,
             },
-            { type: "input_image", image_url: imageUrl },
+            {
+              type: "input_image",
+              image_url: imageUrl,
+              detail: "high", // REQUIRED in v2 responses API
+            },
           ],
         },
       ],
+      reasoning: {
+        effort: "medium",
+      },
     });
 
-    let parsed: any = null;
+    // Extract the text answer
+    const rawText =
+      response.output_text ??
+      response.output?.[0]?.content?.[0]?.text ??
+      "[No response]";
+
+    // Try to detect if model returned structured aesthetic hints
+    let aestheticsBlock = null;
     try {
-      parsed = JSON.parse((vision as any).output_text || "{}");
+      const jsonMatch = rawText.match(/<aesthetic>([\s\S]*?)<\/aesthetic>/);
+      if (jsonMatch) {
+        aestheticsBlock = JSON.parse(jsonMatch[1]);
+      }
     } catch {
-      parsed = { layout: "generic" };
+      // ignore parsing errors silently
     }
 
-    // If the user wants code → run translator
-    const wantsCode =
-      prompt &&
-      /generate code|give me code|build this|implement this/i.test(prompt);
-
-    if (wantsCode) {
-      const result = generateUIFromAesthetics(parsed);
+    // If structured aesthetics found → return translated Tailwind/React code too
+    if (aestheticsBlock) {
+      const uiCode = generateUIFromAesthetics(aestheticsBlock);
       return NextResponse.json({
-        ok: true,
-        mode: "aesthetic+code",
-        aesthetic: parsed,
-        code: result,
+        answer: rawText,
+        aesthetics: aestheticsBlock,
+        generatedUI: uiCode,
       });
     }
 
-    // Otherwise return just the aesthetic JSON
+    // Default: return raw text response
     return NextResponse.json({
-      ok: true,
-      mode: "aesthetic",
-      aesthetic: parsed,
+      answer: rawText,
     });
   } catch (err: any) {
+    console.error("Vision route error:", err);
     return NextResponse.json(
-      { ok: false, error: err?.message || "Vision error" },
+      { error: err?.message || "Vision analysis failed" },
       { status: 500 }
     );
   }
 }
-
