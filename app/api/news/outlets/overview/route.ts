@@ -49,6 +49,28 @@ function jsonError(
   return NextResponse.json({ ok: false, error: message, ...extra }, { status });
 }
 
+/** Auto-canonicalize via root-domain:
+ * - abc.news.time.com → time.com
+ * - newsfeed.xyz.washingtonpost.com → washingtonpost.com
+ * - radio.foxnews.com → foxnews.com
+ * - For ".co.uk": keep last 3 parts
+ */
+function canonicalizeAuto(domain: string): string {
+  if (!domain) return "unknown";
+
+  const parts = domain.toLowerCase().split(".");
+  if (parts.length <= 2) return domain.toLowerCase();
+
+  const last = parts[parts.length - 1];
+  const secondLast = parts[parts.length - 2];
+
+  if (secondLast === "co" && last === "uk") {
+    return parts.slice(-3).join(".");
+  }
+
+  return `${secondLast}.${last}`;
+}
+
 /* ========= MAIN HANDLER ========= */
 
 export async function GET(req: NextRequest) {
@@ -59,27 +81,25 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Allow ?minStories=1 for debugging; default 5 for production
     const url = new URL(req.url);
     const minStoriesParam = url.searchParams.get("minStories");
     const parsedMin = Number(minStoriesParam ?? "5");
     const MIN_STORIES =
       Number.isFinite(parsedMin) && parsedMin > 0 ? parsedMin : 5;
 
-    /**
-     * Source of truth: outlet_bias_pi_daily_trends
-     *
-     * Columns (confirmed from CSV):
-     *   outlet
-     *   story_day
-     *   outlet_story_count
-     *   avg_pi_score
-     *   avg_bias_intent
-     *   avg_bias_language
-     *   avg_bias_source
-     *   avg_bias_framing
-     *   avg_bias_context
-     */
+    /* === 1. LOAD OUTLET ALIAS TABLE (manual merges) === */
+
+    const { data: aliasRows } = await supabaseAdmin
+      .from("news_outlet_aliases")
+      .select("alias, canonical");
+
+    const aliasMap: Record<string, string> = {};
+    for (const r of aliasRows ?? []) {
+      aliasMap[r.alias.toLowerCase()] = r.canonical.toLowerCase();
+    }
+
+    /* === 2. LOAD RAW DAILY TRENDS === */
+
     const { data, error } = await supabaseAdmin
       .from("outlet_bias_pi_daily_trends")
       .select(
@@ -106,33 +126,38 @@ export async function GET(req: NextRequest) {
 
     const rows = (data || []) as any[];
 
-    // Aggregate by outlet using weighted averages by outlet_story_count
-    const grouped: Record<
-      string,
-      {
-        outlet: string;
-        totalStories: number;
-        days: Set<string>;
-        sumBiasIntent: number;
-        sumPi: number;
-        sumLanguage: number;
-        sumSource: number;
-        sumFraming: number;
-        sumContext: number;
-        lastDay: string | null;
-      }
-    > = {};
+    /* === 3. GROUP BY CANONICAL OUTLET (alias → else auto-root) === */
+
+    type Acc = {
+      outlet: string;
+      canonical: string;
+      totalStories: number;
+      days: Set<string>;
+      sumBiasIntent: number;
+      sumPi: number;
+      sumLanguage: number;
+      sumSource: number;
+      sumFraming: number;
+      sumContext: number;
+      lastDay: string | null;
+    };
+
+    const grouped: Record<string, Acc> = {};
 
     for (const r of rows) {
-      const outlet: string = r.outlet ?? "unknown";
-      const storyDay: string | null = r.story_day ?? null;
-      const count: number = Number(r.outlet_story_count ?? 0);
+      const rawOutlet: string = (r.outlet ?? "unknown").toLowerCase();
 
-      if (!grouped[outlet]) {
-        grouped[outlet] = {
-          outlet,
+      // 1) Alias table wins first
+      const canonical =
+        aliasMap[rawOutlet] ?? canonicalizeAuto(rawOutlet);
+
+      // 2) Group by canonical outlet
+      if (!grouped[canonical]) {
+        grouped[canonical] = {
+          outlet: rawOutlet,
+          canonical,
           totalStories: 0,
-          days: new Set<string>(),
+          days: new Set(),
           sumBiasIntent: 0,
           sumPi: 0,
           sumLanguage: 0,
@@ -143,7 +168,8 @@ export async function GET(req: NextRequest) {
         };
       }
 
-      const g = grouped[outlet];
+      const g = grouped[canonical];
+      const count = Number(r.outlet_story_count ?? 0);
 
       if (count > 0) {
         g.totalStories += count;
@@ -156,26 +182,27 @@ export async function GET(req: NextRequest) {
         g.sumContext += Number(r.avg_bias_context ?? 0) * count;
       }
 
+      const storyDay: string | null = r.story_day ?? null;
       if (storyDay) {
         g.days.add(storyDay);
-        if (!g.lastDay || storyDay > g.lastDay) {
-          g.lastDay = storyDay;
-        }
+        if (!g.lastDay || storyDay > g.lastDay) g.lastDay = storyDay;
       }
     }
 
+    /* === 4. BUILD FINAL OVERVIEW ARRAY === */
+
     const outlets: OutletOverview[] = [];
 
-    for (const outlet of Object.keys(grouped)) {
-      const g = grouped[outlet];
+    for (const canonical of Object.keys(grouped)) {
+      const g = grouped[canonical];
 
       if (g.totalStories < MIN_STORIES) continue;
 
       const total = g.totalStories || 1;
 
       outlets.push({
-        outlet,
-        canonical_outlet: outlet, // canonical == outlet for now
+        outlet: g.outlet,
+        canonical_outlet: g.canonical,
         total_stories: g.totalStories,
         days_active: g.days.size,
         avg_bias_intent: g.sumBiasIntent / total,
@@ -188,7 +215,6 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Sort by avg_bias_intent ascending (best → worst)
     outlets.sort((a, b) => a.avg_bias_intent - b.avg_bias_intent);
 
     return NextResponse.json({
@@ -206,8 +232,9 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/* ========= Allow POST to behave as GET ========= */
+/* ========= POST = GET ========= */
 
 export async function POST(req: NextRequest) {
   return GET(req);
 }
+
