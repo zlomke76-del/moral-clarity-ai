@@ -1098,11 +1098,19 @@ if (useSolace) {
       // founder gets benefit here via Solace if backend uses it
       max_output_tokens: maxOutputTokens,
     });
-    ...
+    return new NextResponse(stream as any, {
+      headers: {
+        ...headersToRecord(corsHeaders(echoOrigin)),
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'X-Accel-Buffering': 'no',
+      },
+    });
   } catch {
     /* fallback to OpenAI */
   }
 }
+
 
 // OpenAI SSE fallback
 const apiKey = process.env.OPENAI_API_KEY || '';
