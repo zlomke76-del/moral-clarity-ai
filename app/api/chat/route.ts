@@ -783,9 +783,17 @@ export async function POST(req: NextRequest) {
           episodesLimit,
         });
 
-        memorySection =
-          `\n\nMEMORY PACK (private, user-scoped)\nUse these stable facts/preferences and key episodes **only if relevant**:\n` +
-          (pack || '• (none)');
+memorySection =
+  `\n\nMEMORY PACK (private, user-scoped)\n` +
+  `These are authoritative facts, preferences, and key conversation episodes for THIS user.\n` +
+  `- Treat them as a coherent profile and history, not isolated trivia.\n` +
+  `- When answering, explicitly connect your guidance to these items when relevant\n` +
+  `  (e.g., "You told me X before, so I’ll build on that here").\n` +
+  `- If multiple memories relate to the same project, person, or concern, tie them together\n` +
+  `  and reason across them instead of handling each in isolation.\n` +
+  `- When the user seems stuck, zoom out and reflect patterns you see across these memories.\n` +
+  (pack || '• (none)');
+
 
         // 2) Raw factual hits kept only for "what do you remember" echo
         hits = await searchMemories(userKey, query, 8);
