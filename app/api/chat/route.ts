@@ -63,15 +63,15 @@ const FOUNDER_MEMORY_EPISODES_LIMIT = 12;
 const NORMAL_MEMORY_FACTS_LIMIT = 8;
 const NORMAL_MEMORY_EPISODES_LIMIT = 6;
 
-function isFounderUserKey(_userKey: string | null | undefined): boolean {
-  // Hard-wire founder mode for Tim only.
-  // Any request from your personal email instantly gets the founder lane.
-  const founderEmail = (process.env.FOUNDER_USER_EMAIL || '').toLowerCase();
+function isFounderUserKey(userKey: string | null | undefined): boolean {
+  if (!userKey) return false;
+  const key = String(userKey).toLowerCase().trim();
+  if (!key) return false;
 
-  // If the environment variable is missing, fallback to your real email directly.
-  const email = founderEmail || 'zlomke76@gmail.com';
+  const founderEmail =
+    (process.env.FOUNDER_USER_EMAIL || 'zlomke76@gmail.com').toLowerCase();
 
-  return _userKey?.toLowerCase().trim() === email;
+  return key === founderEmail;
 }
 
 /* ========= ORIGINS ========= */
@@ -1022,8 +1022,9 @@ export async function POST(req: NextRequest) {
       ? FOUNDER_REQUEST_TIMEOUT_MS
       : NORMAL_REQUEST_TIMEOUT_MS;
 
-    /* ===== Non-stream ===== */
-    const useSolace = Boolean(SOLACE_URL && SOLACE_KEY);
+ /* ===== Non-stream ===== */
+const useSolace = Boolean(SOLACE_URL && SOLACE_KEY) && !isFounder;
+
     if (!wantStream) {
       if (useSolace) {
         try {
@@ -1084,53 +1085,47 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    /* ===== Stream ===== */
-    if (useSolace) {
-      try {
-        const stream = await solaceStream({
-          mode: route.mode,
-          userId,
-          userName,
-          system,
-          messages: rolledWithAttachments,
-          temperature: 0.2,
-          // founder gets benefit here via Solace if backend uses it
-          max_output_tokens: maxOutputTokens,
-        });
-        return new NextResponse(stream as any, {
-          headers: {
-            ...headersToRecord(corsHeaders(echoOrigin)),
-            'Content-Type': 'text/plain; charset=utf-8',
-            'Cache-Control': 'no-cache, no-transform',
-            'X-Accel-Buffering': 'no',
-          },
-        });
-      } catch {
-        /* fallback to OpenAI */
-      }
-    }
-
-    // OpenAI SSE fallback
-    const apiKey = process.env.OPENAI_API_KEY || '';
-    const r = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        stream: true,
-        temperature: 0.2,
-        messages: [
-          { role: 'system', content: system },
-          ...rolledWithAttachments.map((m) => ({
-            role: m.role === 'assistant' ? 'assistant' : 'user',
-            content: m.content,
-          })),
-        ],
-      }),
+/* ===== Stream ===== */
+if (useSolace) {
+  try {
+    const stream = await solaceStream({
+      mode: route.mode,
+      userId,
+      userName,
+      system,
+      messages: rolledWithAttachments,
+      temperature: 0.2,
+      // founder gets benefit here via Solace if backend uses it
+      max_output_tokens: maxOutputTokens,
     });
+    ...
+  } catch {
+    /* fallback to OpenAI */
+  }
+}
+
+// OpenAI SSE fallback
+const apiKey = process.env.OPENAI_API_KEY || '';
+const r = await fetch('https://api.openai.com/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${apiKey}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    model: MODEL,
+    stream: true,
+    temperature: 0.2,
+    max_tokens: maxOutputTokens, // add this line
+    messages: [
+      { role: 'system', content: system },
+      ...rolledWithAttachments.map((m) => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: m.content,
+      })),
+    ],
+  }),
+
 
     if (!r.ok || !r.body) {
       const t = await r.text().catch(() => '');
