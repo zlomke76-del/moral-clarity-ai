@@ -52,11 +52,11 @@ const FOUNDER_USER_KEYS = (process.env.FOUNDER_USER_KEYS || '')
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
 
-const FOUNDER_MAX_OUTPUT_TOKENS = 3000; // normal path uses 800
-const NORMAL_MAX_OUTPUT_TOKENS = 800;
+const FOUNDER_MAX_OUTPUT_TOKENS = 12000;   // was 3000
+const NORMAL_MAX_OUTPUT_TOKENS = 1200;    // was 800 (optional bump)
 
-const FOUNDER_REQUEST_TIMEOUT_MS = 60_000; // 60s for founder
-const NORMAL_REQUEST_TIMEOUT_MS = BASE_REQUEST_TIMEOUT_MS; // 20s
+const FOUNDER_REQUEST_TIMEOUT_MS = 180_000; // 120s instead of 60s
+const NORMAL_REQUEST_TIMEOUT_MS = BASE_REQUEST_TIMEOUT_MS; // 20s is fine for others
 
 const FOUNDER_MEMORY_FACTS_LIMIT = 16;
 const FOUNDER_MEMORY_EPISODES_LIMIT = 12;
@@ -68,10 +68,13 @@ function isFounderUserKey(userKey: string | null | undefined): boolean {
   const key = String(userKey).toLowerCase().trim();
   if (!key) return false;
 
-  const founderEmail =
-    (process.env.FOUNDER_USER_EMAIL || 'zlomke76@gmail.com').toLowerCase();
+  // Hard-wire Tim as founder
+  if (key === 'zlomke76@gmail.com') return true;
 
-  return key === founderEmail;
+  if (FOUNDER_USER_EMAIL && key === FOUNDER_USER_EMAIL) return true;
+  if (FOUNDER_USER_KEYS.length && FOUNDER_USER_KEYS.includes(key)) return true;
+
+  return false;
 }
 
 /* ========= ORIGINS ========= */
