@@ -1,291 +1,267 @@
 /**
- * Aesthetic Engine 3.0
- * -------------------------------------------------------
- * Translates Solace's <aesthetic> blocks into:
- * - High-level design summary
- * - UI component recommendations
- * - Tailwind + shadcn code
- * - Responsive tokens
- * - Aesthetic diffs (before → after)
+ * Aesthetic Engine 4.0 — Hybrid (Screenshot Repair + UI Compiler)
  *
- * This engine does NOT analyze images. It only converts
- * structured aesthetic JSON into usable React/Tailwind code.
+ * INPUTS:
+ *  1) <aesthetic> JSON blocks produced by Solace Vision
+ *  2) Raw "issues" extracted from screenshots or Vision messages
+ *
+ * OUTPUTS:
+ *  - Full React (Next.js + shadcn) components
+ *  - Responsive Tailwind code
+ *  - Multi-section templates
+ *  - Visual rhythm, spacing, contrast, motion suggestions
+ *  - Layout repair recommendations
  */
 
 export type AestheticHint = {
-  layout?: string;                // "hero", "dashboard", "feed", "two-column"
-  components?: string[];          // ["card", "stat", "modal"]
-  issues?: string[];              // ["poor contrast", "too dense"]
-  suggestions?: string[];         // ["Increase spacing", "Use grid of 3"]
-  notes?: string;                 // optional long-form
-  styleTokens?: Record<string, string>; // optional token map
+  mode?: "auto-repair" | "compiler" | "hybrid";
+
+  // High-level structural inference
+  layout?: string;                         // "hero", "card-grid", "dashboard-2col"
+  sections?: Array<{
+    id: string;
+    layout: string;
+    summary?: string;
+  }>;
+
+  // Visual findings
+  issues?: string[];                       // from screenshot analysis
+  strengths?: string[];
+  suggestions?: string[];
+
+  // Extracted design tokens
+  palette?: Record<string, string>;        // bg, fg, accent, surface, card, border
+  spacing?: Record<string, string>;        // sm/md/lg vertical or horizontal rhythm
+  typography?: Record<string, string>;     // heading/body/mono rules
+
+  // Additional metadata
+  notes?: string;
 };
 
 export type AestheticCodeResult = {
   summary: string;
-  component: string;
-  reactCode: string;
-  wireframe: string;
+  components: string[];                    // list of compiled React components
+  files: Record<string, string>;           // filename → full code
+  designTokens: Record<string, any>;
   tailwindNotes: string[];
-  variables: string[];
-  breakpoints: string[];
-  beforeAfter: string[];
-  tokens: Record<string, string>;
+  layoutWarnings: string[];
 };
 
-/* ---------------------------------------------------------
- * Utility helpers
- * -------------------------------------------------------- */
+/* ============================================================
+   Core Engine
+   ============================================================ */
+export function generateUIFromAesthetics(hint: AestheticHint): AestheticCodeResult {
+  const mode = hint.mode || "hybrid";
 
-function clean(str: string | undefined): string {
-  return (str || "").trim().toLowerCase();
-}
+  const issues = hint.issues || [];
+  const suggestions = hint.suggestions || [];
+  const sections = hint.sections || [];
 
-function mkTokenMap(h: AestheticHint): Record<string, string> {
+  const components: string[] = [];
+  const files: Record<string, string> = {};
+  const tailwindNotes: string[] = [];
+  const layoutWarnings: string[] = [];
+
+  /* ============================================================
+        1.  Layout Repair Engine (Screenshot → Repair)
+     ============================================================ */
+
+  if (mode === "auto-repair" || mode === "hybrid") {
+    for (const issue of issues) {
+      const low = issue.toLowerCase();
+
+      if (low.includes("spacing"))
+        tailwindNotes.push("Adjust vertical rhythm → space-y-6, gap-8");
+
+      if (low.includes("contrast"))
+        tailwindNotes.push("Use text-neutral-100 on bg-neutral-900 or #0f0f0f");
+
+      if (low.includes("alignment"))
+        tailwindNotes.push("Use mx-auto, grid-cols-12, and col-span patterns");
+
+      if (low.includes("density"))
+        tailwindNotes.push("Increase padding: px-8 py-10 on surface blocks");
+
+      if (low.includes("card"))
+        tailwindNotes.push("Use rounded-2xl shadow-sm bg-neutral-900/50");
+    }
+  }
+
+  /* ============================================================
+        2.  Compiler Mode (JSON → React Components)
+     ============================================================ */
+
+  if ((mode === "compiler" || mode === "hybrid") && sections.length) {
+    for (const sec of sections) {
+      const code = compileSection(sec);
+      components.push(sec.id);
+      files[`Section_${sec.id}.tsx`] = code;
+    }
+  }
+
+  /* ============================================================
+        3.  Fallback Generator (simple block)
+     ============================================================ */
+
+  if (!sections.length) {
+    const fallback = defaultGenericBlock();
+    components.push("GenericBlock");
+    files["GenericBlock.tsx"] = fallback;
+  }
+
+  /* ============================================================
+        4.  Summary
+     ============================================================ */
+
+  const summary =
+    [
+      `Mode: ${mode}`,
+      hint.layout ? `Detected layout: ${hint.layout}` : "",
+      issues.length ? `Issues: ${issues.join(", ")}` : "",
+      suggestions.length ? `Suggestions: ${suggestions.join("; ")}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
   return {
-    spacing: h.styleTokens?.spacing || "space-y-4 md:space-y-6",
-    radius: h.styleTokens?.radius || "rounded-xl",
-    shadow: h.styleTokens?.shadow || "shadow-lg",
-    bg: h.styleTokens?.bg || "bg-neutral-900/60",
-    border: h.styleTokens?.border || "border border-neutral-800",
-    textPrimary: h.styleTokens?.textPrimary || "text-white",
-    textSecondary: h.styleTokens?.textSecondary || "text-neutral-300",
+    summary,
+    components,
+    files,
+    designTokens: {
+      palette: hint.palette || {},
+      spacing: hint.spacing || {},
+      typography: hint.typography || {},
+    },
+    tailwindNotes,
+    layoutWarnings,
   };
 }
 
-/* ---------------------------------------------------------
- * Layout templates
- * -------------------------------------------------------- */
+/* ============================================================
+   Section Compiler
+   ============================================================ */
 
-function heroTemplate(tokens: Record<string, string>) {
+function compileSection(sec: {
+  id: string;
+  layout: string;
+  summary?: string;
+}): string {
+  const layout = sec.layout.toLowerCase();
+
+  if (layout.includes("hero")) return heroTemplate(sec);
+  if (layout.includes("grid")) return gridTemplate(sec);
+  if (layout.includes("two") || layout.includes("2col")) return twoColTemplate(sec);
+
+  return genericTemplate(sec);
+}
+
+/* ============================================================
+   Templates
+   ============================================================ */
+
+function heroTemplate(sec: any): string {
   return `
-export default function HeroBlock() {
+"use client";
+import { Button } from "@/components/ui/button";
+
+export default function ${sec.id}() {
   return (
-    <section className="px-6 md:px-12 py-16 ${tokens.bg} ${tokens.radius}">
-      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12">
-        <div className="${tokens.spacing}">
-          <h1 className="text-3xl md:text-5xl font-bold ${tokens.textPrimary}">
-            {/* headline */}
+    <section className="bg-[#0f172a] text-white py-20 px-6 md:px-12">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16">
+        <div className="space-y-6">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+            {/* Headline */}
           </h1>
-          <p className="${tokens.textSecondary}">
-            {/* subheadline */}
+          <p className="text-neutral-300 text-lg leading-relaxed">
+            {/* Subtitle */}
           </p>
+          <Button className="mt-4">Get Started</Button>
         </div>
 
-        <div className="flex items-center justify-center">
-          {/* image/illustration */}
+        <div className="flex justify-center items-center">
+          <div className="w-full h-64 bg-neutral-800 rounded-xl" />
         </div>
       </div>
     </section>
   );
 }
-  `.trim();
+`;
 }
 
-function dashboardTemplate(tokens: Record<string, string>) {
+function gridTemplate(sec: any): string {
   return `
-export default function DashboardGrid() {
-  return (
-    <section className="px-6 md:px-12 py-12">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="${tokens.bg} ${tokens.radius} ${tokens.border} p-6 ${tokens.shadow}">
-          {/* metric card */}
-        </div>
-        <div className="${tokens.bg} ${tokens.radius} ${tokens.border} p-6 ${tokens.shadow}">
-          {/* metric card */}
-        </div>
-        <div className="${tokens.bg} ${tokens.radius} ${tokens.border} p-6 ${tokens.shadow}">
-          {/* metric card */}
-        </div>
-        <div className="${tokens.bg} ${tokens.radius} ${tokens.border} p-6 ${tokens.shadow}">
-          {/* metric card */}
-        </div>
-      </div>
-    </section>
-  );
-}
-  `.trim();
-}
+"use client";
 
-function feedTemplate(tokens: Record<string, string>) {
-  return `
-export default function FeedList() {
+export default function ${sec.id}() {
   return (
-    <section className="px-6 md:px-12 py-12">
-      <div className="space-y-4">
-        {[1,2,3].map((i) => (
+    <section className="py-16 px-6 md:px-12">
+      <h2 className="text-xl font-semibold mb-8">{/* Title */}</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        {[1,2,3].map(i => (
           <div
             key={i}
-            className="${tokens.bg} ${tokens.radius} ${tokens.border} p-6 ${tokens.shadow}"
+            className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-6"
           >
-            {/* feed item */}
+            <h3 className="font-medium mb-2">{/* Card Title */}</h3>
+            <p className="text-neutral-400">{/* Body */}</p>
           </div>
         ))}
       </div>
     </section>
   );
 }
-  `.trim();
+`;
 }
 
-function twoColumnTemplate(tokens: Record<string, string>) {
+function twoColTemplate(sec: any): string {
   return `
-export default function TwoColumn() {
+"use client";
+
+export default function ${sec.id}() {
   return (
-    <section className="px-6 md:px-12 py-12">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-        <div className="${tokens.spacing}">
-          {/* left */}
-        </div>
-        <div className="${tokens.spacing}">
-          {/* right */}
-        </div>
+    <section className="py-20 px-6 md:px-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
+        <div>{/* Left Content */}</div>
+        <div>{/* Right Content */}</div>
       </div>
     </section>
   );
 }
-  `.trim();
+`;
 }
 
-function genericTemplate(tokens: Record<string, string>) {
+function genericTemplate(sec: any): string {
   return `
+"use client";
+
+export default function ${sec.id}() {
+  return (
+    <section className="py-16 px-6 md:px-12">
+      <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-10">
+        {/* Content */}
+      </div>
+    </section>
+  );
+}
+`;
+}
+
+/* ============================================================
+   Fallback simple block
+   ============================================================ */
+
+function defaultGenericBlock(): string {
+  return `
+"use client";
+
 export default function GenericBlock() {
   return (
-    <section className="px-6 md:px-12 py-12">
-      <div className="${tokens.bg} ${tokens.radius} ${tokens.border} p-8 ${tokens.shadow}">
-        {/* content */}
+    <section className="py-16 px-6 md:px-12">
+      <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-10">
+        {/* Fallback content */}
       </div>
     </section>
   );
 }
-  `.trim();
+`;
 }
-
-/* ---------------------------------------------------------
- * Wireframe generator (ASCII)
- * -------------------------------------------------------- */
-
-function wireframe(layout: string): string {
-  if (layout.includes("hero"))
-    return `
-[ HERO BLOCK ]
- -------------------------------
-| Headline + Subheadline | IMG |
- -------------------------------`;
-
-  if (layout.includes("dash"))
-    return `
-[ DASHBOARD GRID ]
- -------------------------------
-| Card | Card | Card | Card     |
- -------------------------------`;
-
-  if (layout.includes("feed"))
-    return `
-[ FEED LIST ]
- ----------------
-|  Item         |
-|  Item         |
-|  Item         |
- ----------------`;
-
-  if (layout.includes("two"))
-    return `
-[ TWO COLUMN ]
- ------------------------
-|   Left   |   Right    |
- ------------------------`;
-
-  return `
-[ GENERIC BLOCK ]
- ------------------------
-|      Content          |
- ------------------------`;
-}
-
-/* ---------------------------------------------------------
- * Tailwind Delta Inference
- * -------------------------------------------------------- */
-
-function tailwindDelta(suggestions: string[]): string[] {
-  const out: string[] = [];
-
-  for (const s of suggestions) {
-    const low = s.toLowerCase();
-
-    if (low.includes("contrast")) out.push("Increase contrast: text-white / bg-neutral-900");
-    if (low.includes("spacing")) out.push("Increase spacing: gap-6, space-y-6");
-    if (low.includes("padding")) out.push("Try px-6 md:px-12 or p-8");
-    if (low.includes("grid")) out.push("Use grid-cols-2/3/4 with responsive md: and lg:");
-    if (low.includes("background")) out.push("Use bg-neutral-900/60 or bg-[#0f172a]");
-    if (low.includes("alignment")) out.push("Use flex-center or items-center justify-between");
-    if (low.includes("hierarchy")) out.push("Increase heading size (text-4xl+) and reduce noise");
-  }
-
-  return out;
-}
-
-/* ---------------------------------------------------------
- * Before / After diff
- * -------------------------------------------------------- */
-
-function makeDiff(issues: string[], suggestions: string[]): string[] {
-  const diff: string[] = [];
-
-  for (const i of issues) diff.push(`Before: ${i}`);
-  for (const s of suggestions) diff.push(`After: ${s}`);
-
-  return diff;
-}
-
-/* ---------------------------------------------------------
- * MAIN ENTRY: generateUIFromAesthetics
- * -------------------------------------------------------- */
-
-export function generateUIFromAesthetics(hint: AestheticHint): AestheticCodeResult {
-  const layout = clean(hint.layout);
-  const issues = hint.issues || [];
-  const suggestions = hint.suggestions || [];
-  const tokens = mkTokenMap(hint);
-
-  let reactCode = "";
-  let component = "";
-
-  if (layout.includes("hero")) {
-    reactCode = heroTemplate(tokens);
-    component = "HeroBlock";
-  } else if (layout.includes("dash")) {
-    reactCode = dashboardTemplate(tokens);
-    component = "DashboardGrid";
-  } else if (layout.includes("feed")) {
-    reactCode = feedTemplate(tokens);
-    component = "FeedList";
-  } else if (layout.includes("two") || layout.includes("2")) {
-    reactCode = twoColumnTemplate(tokens);
-    component = "TwoColumn";
-  } else {
-    reactCode = genericTemplate(tokens);
-    component = "GenericBlock";
-  }
-
-  return {
-    summary: [
-      `Layout: ${hint.layout || "unspecified"}`,
-      issues.length ? `Issues: ${issues.join(", ")}` : "",
-      suggestions.length ? `Suggestions: ${suggestions.join("; ")}` : "",
-      hint.notes ? `Notes: ${hint.notes}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n"),
-
-    component,
-    reactCode,
-    wireframe: wireframe(layout),
-    tailwindNotes: tailwindDelta(suggestions),
-    variables: ["title", "subtitle", "leftContent", "rightContent"],
-    breakpoints: ["sm", "md", "lg", "xl"],
-    beforeAfter: makeDiff(issues, suggestions),
-    tokens,
-  };
-}
-
