@@ -53,6 +53,30 @@ function jsonError(
   return NextResponse.json({ ok: false, error: message, ...extra }, { status });
 }
 
+/** AUTO-CANONICALIZATION (root domain collapse)
+ *  - newsfeed.time.com → time.com
+ *  - radio.foxnews.com → foxnews.com
+ *  - newsletters.washingtonexaminer.com → washingtonexaminer.com
+ *  - about.rferl.org → rferl.org
+ *  - support.anything.co.uk → anything.co.uk
+ */
+function canonicalizeAuto(domain: string): string {
+  if (!domain) return "unknown";
+
+  const parts = domain.toLowerCase().split(".");
+  if (parts.length <= 2) return domain.toLowerCase();
+
+  const last = parts.at(-1)!;
+  const secondLast = parts.at(-2)!;
+
+  // Handle .co.uk pattern
+  if (secondLast === "co" && last === "uk") {
+    return parts.slice(-3).join(".");
+  }
+
+  return `${secondLast}.${last}`;
+}
+
 /* ========= MAIN HANDLER ========= */
 
 export async function GET(req: NextRequest) {
@@ -64,56 +88,45 @@ export async function GET(req: NextRequest) {
     }
 
     const url = new URL(req.url);
-    const outlet = url.searchParams.get("outlet");
+    const inputOutlet = url.searchParams.get("outlet");
 
-    if (!outlet) {
+    if (!inputOutlet) {
       return jsonError("Missing ?outlet query parameter.", 400, {
         code: "MISSING_OUTLET",
       });
     }
 
-    // Optional: cap days returned (default 60)
+    // Load alias map for manual overrides
+    const { data: aliasRows } = await supabaseAdmin
+      .from("news_outlet_aliases")
+      .select("alias, canonical");
+
+    const aliasMap: Record<string, string> = {};
+    for (const r of aliasRows ?? []) {
+      aliasMap[r.alias.toLowerCase()] = r.canonical.toLowerCase();
+    }
+
+    // Normalize incoming outlet using alias → else auto-root
+    const normalizedOutlet =
+      aliasMap[inputOutlet.toLowerCase()] ??
+      canonicalizeAuto(inputOutlet.toLowerCase());
+
+    // Optional: limit days returned (default 60)
     const limitParam = url.searchParams.get("limit");
     const limit =
       limitParam && !Number.isNaN(Number(limitParam))
         ? Math.max(1, Math.min(Number(limitParam), 120))
         : 60;
 
-    /**
-     * Source of truth: outlet_bias_pi_daily_trends
-     *
-     * Columns (confirmed from CSV):
-     *   outlet
-     *   story_day
-     *   outlet_story_count
-     *   avg_pi_score
-     *   avg_bias_intent
-     *   avg_bias_language
-     *   avg_bias_source
-     *   avg_bias_framing
-     *   avg_bias_context
-     */
+    // Query ANY row whose canonical form matches the normalized target
     const { data, error } = await supabaseAdmin
-      .from("outlet_bias_pi_daily_trends")
-      .select(
-        `
-        outlet,
-        story_day,
-        outlet_story_count,
-        avg_pi_score,
-        avg_bias_intent,
-        avg_bias_language,
-        avg_bias_source,
-        avg_bias_framing,
-        avg_bias_context
-      `
-      )
-      .eq("outlet", outlet)
-      .order("story_day", { ascending: true })
-      .limit(limit);
+      .rpc("match_outlet_trends_canonical", {
+        p_canonical: normalizedOutlet,
+        p_limit: limit,
+      });
 
     if (error) {
-      console.error("[news/outlets/trends] query error", error);
+      console.error("[news/outlets/trends] RPC error", error);
       return jsonError("Failed to load outlet trend data.", 500, {
         code: error.code,
         details: error.details,
@@ -135,7 +148,7 @@ export async function GET(req: NextRequest) {
 
     const resp: TrendsResponse = {
       ok: true,
-      outlet,
+      outlet: normalizedOutlet,
       count: points.length,
       points,
     };
@@ -151,7 +164,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/* ========= Allow POST to behave as GET ========= */
+/* ========= POST = GET ========= */
 
 export async function POST(req: NextRequest) {
   return GET(req);
