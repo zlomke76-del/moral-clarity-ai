@@ -227,7 +227,11 @@ export default function NewsroomCabinetPage() {
         open={!!detailOutlet && !!selectedCanonical}
         outlet={detailOutlet}
         trends={trendLoading ? null : trends}
-        onClose={() => setSelectedCanonical(null)}
+        onClose={() => setSelectedCanonical(null)} // This is fine
+        onOpenChange={(open) => {
+          // Define how you want to handle opening/closing here
+          if (!open) setSelectedCanonical(null);
+        }} // Add this line
       />
     </div>
   );
