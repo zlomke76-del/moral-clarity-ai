@@ -1,4 +1,3 @@
-// app/newsroom/cabinet/components/OutletCard.tsx
 "use client";
 
 import type { OutletOverview } from "../types";
@@ -45,6 +44,7 @@ export default function OutletCard({
         "bg-neutral-950/70 hover:bg-neutral-900/80",
         borderClass,
       ].join(" ")}
+      aria-label={`Select outlet ${outlet.canonical_outlet}`} // Accessibility improvement
     >
       <div className="flex items-center justify-between gap-3">
         {/* Left: rank + logo + outlet */}
@@ -84,4 +84,3 @@ export default function OutletCard({
     </button>
   );
 }
-
