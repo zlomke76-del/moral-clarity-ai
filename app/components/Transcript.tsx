@@ -10,3 +10,5 @@ const Transcript = ({ messages }) => (
     ))}
   </div>
 );
+
+export default Transcript;
