@@ -17,7 +17,9 @@ export type OutletDetailData = {
   lifetimeFraming: number;
   lifetimeContext: number;
   lastScoredAt: string | null;
-  tierLabel?: string; // optional, derived in UI later if needed
+  firstScoredDate?: string; // Optional
+  mostRecentDate?: string; // Optional
+  tierLabel?: string; // Optional
 };
 
 type Props = {
@@ -151,9 +153,13 @@ export default function OutletDetailDialog({
 
             <div className="pt-1 text-[11px] text-neutral-500">
               {outlet.lastScoredAt && (
-                <div className="mb-1">
-                  Last scored: {outlet.lastScoredAt}
-                </div>
+                <div className="mb-1">Last scored: {outlet.lastScoredAt}</div>
+              )}
+              {outlet.firstScoredDate && (
+                <div className="mb-1">First scored: {outlet.firstScoredDate}</div>
+              )}
+              {outlet.mostRecentDate && (
+                <div className="mb-1">Most recent: {outlet.mostRecentDate}</div>
               )}
               <p>
                 This cabinet doesn&apos;t decide who is right or wrong. It
