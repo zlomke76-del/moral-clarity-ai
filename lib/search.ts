@@ -1,4 +1,5 @@
 // lib/search.ts
+
 export type TavilyOpts = {
   max?: number;
   news?: boolean;
@@ -17,25 +18,32 @@ const TAVILY_URL = 'https://api.tavily.com/search';
 const TVLY_KEY =
   process.env.TAVILY_API_KEY || process.env.NEXT_PUBLIC_TAVILY_API_KEY || '';
 
+/**
+ * Thin wrapper around Tavily's search API.
+ *
+ * Responsibilities:
+ * - Guardrails around missing key / bad input.
+ * - Normalize the result shape into TavilyItem.
+ * - NEVER throw: on any error, log and return [] so the caller can degrade gracefully.
+ */
 export async function webSearch(
   query: string,
   opts: TavilyOpts = {}
 ): Promise<TavilyItem[]> {
   try {
-    if (!query?.trim()) {
-      // No query, nothing to do
+    const q = query?.trim();
+    if (!q) {
       return [];
     }
 
     if (!TVLY_KEY) {
-      // This is the big one: logs when the key isn't present at runtime
       console.error('[webSearch] No Tavily API key configured');
       return [];
     }
 
     const body: any = {
       api_key: TVLY_KEY,
-      query,
+      query: q,
       // "advanced" gives deeper, multi-step search on Tavily's side
       search_depth: 'advanced',
       max_results: Math.max(1, Math.min(opts.max ?? 5, 10)),
@@ -84,18 +92,22 @@ export async function webSearch(
       return [];
     }
 
-    return items.map((x) => ({
-      title: x.title || x.url || 'result',
-      url: x.url,
-      content:
+    return items.map((x) => {
+      const content =
         x.content ||
         x.raw_content ||
         x.answer ||
         x.snippet ||
-        '',
-      score: x.score,
-      published_date: x.published_date,
-    }));
+        '';
+
+      return {
+        title: x.title || x.url || 'result',
+        url: x.url,
+        content,
+        score: x.score,
+        published_date: x.published_date,
+      } as TavilyItem;
+    });
   } catch (err) {
     // Last-resort catch so Solace never blows up the whole route
     console.error('[webSearch] Unexpected error', err);
