@@ -1,217 +1,219 @@
-// app/api/news/outlets/overview/route.ts
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+"use client";
 
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import type { OutletDetailData, OutletTrendPoint } from "../types";
+import OutletLogo from "./OutletLogo";
 
-/* ========= ENV / ADMIN CLIENT ========= */
+type Props = {
+  open: boolean;
+  outlet: OutletDetailData | null;
+  trends: OutletTrendPoint[] | null;
+  onClose: () => void;
+  onOpenChange?: (open: boolean) => void;
+};
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+export default function OutletDetailModal({
+  open,
+  outlet,
+  trends,
+  onClose,
+  onOpenChange,
+}: Props) {
+  if (!open || !outlet) return null;
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.warn(
-    "[news/outlets/overview] Missing Supabase admin credentials — API will 500."
+  const handleClose = () => {
+    onClose();
+    onOpenChange?.(false);
+  };
+
+  const {
+    canonical_outlet,
+    display_name,
+    storiesAnalyzed,
+    lifetimePi,
+    lifetimeBiasIntent,
+    lifetimeLanguage,
+    lifetimeSource,
+    lifetimeFraming,
+    lifetimeContext,
+    firstScoredAt,
+    lastScoredAt,
+    ninetyDaySummary,
+  } = outlet;
+
+  const lifetimePiDisplay = lifetimePi.toFixed(1);
+  const lifetimeLine = `${storiesAnalyzed} stories analyzed · PI based on lifetime.`;
+
+  const firstLastLine =
+    firstScoredAt || lastScoredAt
+      ? [
+          firstScoredAt ? `First scored: ${firstScoredAt}` : "",
+          lastScoredAt ? `Most recent: ${lastScoredAt}` : "",
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : "";
+
+  const lifetimeComponents: {
+    label: string;
+    value: number;
+    key: "language" | "source" | "framing" | "context";
+  }[] = [
+    { label: "Language", value: lifetimeLanguage, key: "language" },
+    { label: "Source", value: lifetimeSource, key: "source" },
+    { label: "Framing", value: lifetimeFraming, key: "framing" },
+    { label: "Context", value: lifetimeContext, key: "context" },
+  ];
+
+  let trendSummary: string | null = null;
+  if (trends && trends.length > 0) {
+    const sorted = [...trends].sort((a, b) =>
+      a.story_day.localeCompare(b.story_day)
+    );
+    const start = sorted[0];
+    const end = sorted[sorted.length - 1];
+
+    trendSummary = `Scored on ${trends.length} day${
+      trends.length === 1 ? "" : "s"
+    } from ${start.story_day} to ${end.story_day}.`;
+  }
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60">
+      <div className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950/95 shadow-2xl">
+        {/* Header */}
+        <div className="flex items-start justify-between border-b border-neutral-800 px-5 py-4">
+          <div className="flex items-center gap-3">
+            <OutletLogo domain={canonical_outlet} name={display_name} />
+            <div>
+              <div className="text-sm font-semibold text-neutral-100">
+                {display_name}
+              </div>
+              <div className="mt-0.5 text-[11px] text-neutral-400">
+                {lifetimeLine}
+              </div>
+              {firstLastLine && (
+                <div className="mt-0.5 text-[11px] text-neutral-500">
+                  {firstLastLine}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col items-end gap-1">
+            <div className="text-[11px] uppercase tracking-[0.12em] text-neutral-500">
+              Lifetime PI
+            </div>
+            <div className="font-mono text-2xl text-neutral-50">
+              {lifetimePiDisplay}
+            </div>
+            <div className="text-[11px] text-neutral-400">
+              Bias intent: {lifetimeBiasIntent.toFixed(2)} / 3.00
+            </div>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="grid gap-4 px-5 py-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+          {/* Left: lifetime breakdown */}
+          <div className="space-y-3">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400">
+              Lifetime component scores
+            </h2>
+
+            <div className="grid grid-cols-2 gap-3">
+              {lifetimeComponents.map((comp) => (
+                <div
+                  key={comp.key}
+                  className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-3"
+                >
+                  <div className="flex items-center justify-between text-[11px] text-neutral-400">
+                    <span>{comp.label}</span>
+                    <span className="font-mono text-xs text-neutral-200">
+                      {comp.value.toFixed(2)} / 3.00
+                    </span>
+                  </div>
+                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-neutral-800">
+                    <div
+                      className="h-full rounded-full bg-emerald-400/80"
+                      style={{
+                        width: `${Math.max(
+                          0,
+                          Math.min(100, (comp.value / 3) * 100)
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="mt-1 text-[11px] text-neutral-500">
+                    Lower is more neutral. 0.00 = highly neutral, 3.00 = strong,
+                    consistent bias.
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-[11px] text-neutral-500">
+              Each story is scored 0–3 on language, source, framing, and
+              context. Those roll up into a single bias intent score, which we
+              convert into a Predictability Index: PI = 1 − (bias_intent / 3).
+            </p>
+          </div>
+
+          {/* Right: trend + summary */}
+          <div className="space-y-3">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral-400">
+              Stability & trend
+            </h2>
+
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-3 text-[11px] text-neutral-300">
+              <p>{ninetyDaySummary}</p>
+              {trendSummary && (
+                <p className="mt-2 text-neutral-400">{trendSummary}</p>
+              )}
+              {!trendSummary && (
+                <p className="mt-2 text-neutral-500">
+                  Trend data isn&apos;t available yet for this outlet. As more
+                  days are scored, you&apos;ll see stability over time here.
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900/70 p-3 text-[11px] text-neutral-400">
+              <p className="font-semibold text-neutral-200">
+                How to read these numbers
+              </p>
+              <ul className="mt-1 space-y-1 list-disc list-inside">
+                <li>
+                  Component scores (0–3) show *how* stories are told: wording,
+                  sourcing, framing, and context.
+                </li>
+                <li>
+                  Bias intent compresses those into one number per story,
+                  representing overall slant.
+                </li>
+                <li>
+                  PI turns that into a 0–1 scale of predictability and
+                  neutrality: closer to 1.00 is steadier and more neutral.
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between border-t border-neutral-800 px-5 py-3 text-[11px] text-neutral-500">
+          <span>
+            Neutrality Cabinet · Story-level Predictability Index (PI) ·{" "}
+            {canonical_outlet}
+          </span>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="rounded-lg border border-neutral-700 px-3 py-1 text-xs font-medium text-neutral-100 hover:bg-neutral-800"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
-
-const supabaseAdmin =
-  SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
-    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-        auth: { persistSession: false },
-      })
-    : null;
-
-/* ========= HELPERS ========= */
-
-function jsonError(
-  message: string,
-  status = 500,
-  extra: Record<string, unknown> = {}
-) {
-  return NextResponse.json({ ok: false, error: message, ...extra }, { status });
-}
-
-function applyCanonical(
-  outlet: string,
-  aliasMap: Record<string, string>
-): string {
-  const lower = outlet.toLowerCase().trim();
-  return aliasMap[lower] ?? lower;
-}
-
-/* ========= MAIN HANDLER ========= */
-
-export async function GET(req: NextRequest) {
-  try {
-    if (!supabaseAdmin) {
-      return jsonError("Supabase admin client not configured.", 500);
-    }
-
-    /* ==========================================================
-     * 1) Load canonical alias mapping
-     * ========================================================== */
-    const { data: aliasRows, error: aliasErr } = await supabaseAdmin
-      .from("news_outlet_aliases")
-      .select("alias, canonical");
-
-    if (aliasErr) {
-      console.error("[overview] alias table error", aliasErr);
-      return jsonError("Failed to load outlet alias table.", 500);
-    }
-
-    const aliasMap: Record<string, string> = {};
-    for (const row of aliasRows || []) {
-      if (row.alias && row.canonical) {
-        aliasMap[row.alias.toLowerCase()] = row.canonical.toLowerCase();
-      }
-    }
-
-    /* ==========================================================
-     * 2) Load all trend rows
-     * ========================================================== */
-    const { data, error } = await supabaseAdmin
-      .from("outlet_bias_pi_daily_trends")
-      .select(`
-        outlet,
-        story_day,
-        outlet_story_count,
-        avg_pi_score,
-        avg_bias_intent,
-        avg_bias_language,
-        avg_bias_source,
-        avg_bias_framing,
-        avg_bias_context
-      `);
-
-    if (error) {
-      console.error("[overview] query error", error);
-      return jsonError("Failed to load outlet neutrality data.", 500);
-    }
-
-    const rows = (data || []) as any[];
-
-    /* ==========================================================
-     * 3) Group by canonical outlet
-     * ========================================================== */
-
-    const grouped: Record<
-      string,
-      {
-        canonical: string;
-        totalStories: number;
-        days: Set<string>;
-        firstDay: string | null;
-        lastDay: string | null;
-
-        sumBiasIntent: number;
-        sumPi: number;
-        sumLang: number;
-        sumSource: number;
-        sumFrame: number;
-        sumCtx: number;
-      }
-    > = {};
-
-    for (const r of rows) {
-      const rawOutlet = String(r.outlet ?? "").trim().toLowerCase();
-      const canonical = applyCanonical(rawOutlet, aliasMap);
-
-      const storyDay: string | null = r.story_day ?? null;
-      const count: number = Number(r.outlet_story_count ?? 0);
-
-      if (!grouped[canonical]) {
-        grouped[canonical] = {
-          canonical,
-          totalStories: 0,
-          days: new Set(),
-          firstDay: null,
-          lastDay: null,
-
-          sumBiasIntent: 0,
-          sumPi: 0,
-          sumLang: 0,
-          sumSource: 0,
-          sumFrame: 0,
-          sumCtx: 0,
-        };
-      }
-
-      const g = grouped[canonical];
-
-      if (count > 0) {
-        g.totalStories += count;
-        g.sumBiasIntent += Number(r.avg_bias_intent || 0) * count;
-        g.sumPi += Number(r.avg_pi_score || 0) * count;
-        g.sumLang += Number(r.avg_bias_language || 0) * count;
-        g.sumSource += Number(r.avg_bias_source || 0) * count;
-        g.sumFrame += Number(r.avg_bias_framing || 0) * count;
-        g.sumCtx += Number(r.avg_bias_context || 0) * count;
-      }
-
-      if (storyDay) {
-        g.days.add(storyDay);
-
-        if (!g.firstDay || storyDay < g.firstDay) {
-          g.firstDay = storyDay;
-        }
-        if (!g.lastDay || storyDay > g.lastDay) {
-          g.lastDay = storyDay;
-        }
-      }
-    }
-
-    /* ==========================================================
-     * 4) Filter by minimum story count
-     * ========================================================== */
-    const url = new URL(req.url);
-    const minParam = url.searchParams.get("minStories");
-    const min = Math.max(1, Number(minParam ?? "5") || 5);
-
-    const outlets = Object.values(grouped)
-      .filter((g) => g.totalStories >= min)
-      .map((g) => {
-        const total = g.totalStories || 1;
-
-        return {
-          outlet: g.canonical,
-          canonical_outlet: g.canonical,
-          total_stories: g.totalStories,
-          days_active: g.days.size,
-
-          avg_bias_intent: g.sumBiasIntent / total,
-          avg_pi: g.sumPi / total,
-
-          bias_language: g.sumLang / total,
-          bias_source: g.sumSource / total,
-          bias_framing: g.sumFrame / total,
-          bias_context: g.sumCtx / total,
-
-          first_scored_date: g.firstDay,
-          most_recent_date: g.lastDay,
-        };
-      });
-
-    // Sort best → worst by bias intent
-    outlets.sort((a, b) => a.avg_bias_intent - b.avg_bias_intent);
-
-    return NextResponse.json({
-      ok: true,
-      count: outlets.length,
-      outlets,
-    });
-  } catch (err: any) {
-    console.error("[overview] fatal error", err);
-    return jsonError(
-      err?.message || "Unexpected error in outlets overview.",
-      500
-    );
-  }
-}
-
-export async function POST(req: NextRequest) {
-  return GET(req);
-}
-
-
