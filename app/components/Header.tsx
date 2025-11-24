@@ -1,20 +1,32 @@
 // app/components/Header.tsx
 import React from "react";
 
-const Header = ({ onMinistryToggle, ministryOn }) => (
-  <header style={headerStyle}>
-    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <span aria-hidden style={orbStyle} title="Alt+Click header to center/reset" />
-      <span style={{ font: "600 13px system-ui", color: ui.text }}>Solace</span>
-      <span style={{ font: "12px system-ui", color: ui.sub }}>Create with moral clarity</span>
-      <span title={memReady ? "Memory ready" : "Loading memory…"} style={memoryStatusStyle(memReady)} />
-    </div>
-    <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-      <button onClick={onMinistryToggle} title="Ministry mode" style={ministryTabStyle(ministryOn)}>
-        Ministry
-      </button>
-    </div>
-  </header>
-);
+// Define the props interface
+interface HeaderProps {
+  onMinistryToggle: () => void; // Adjust the type as necessary
+  ministryOn: boolean; // Assuming this is a boolean
+}
+
+const Header: React.FC<HeaderProps> = ({ onMinistryToggle, ministryOn }) => {
+  const headerStyle: React.CSSProperties = {
+    // Define your styles here
+  };
+
+  const orbStyle: React.CSSProperties = {
+    // Define your styles here
+  };
+
+  return (
+    <header style={headerStyle}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span aria-hidden style={orbStyle} title="Alt+Click header to center/reset" />
+        {/* Add other header elements here */}
+        <button onClick={onMinistryToggle}>
+          {ministryOn ? "Ministry On" : "Ministry Off"}
+        </button>
+      </div>
+    </header>
+  );
+};
 
 export default Header;
