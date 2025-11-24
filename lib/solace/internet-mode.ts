@@ -41,6 +41,17 @@ When SEARCH_RESULTS includes multiple pages / snippets:
 - Note contradictions or inconsistencies if present.
 - Warn the user when information is clearly outdated, shallow, or promotional.
 
+Website Review Protocol:
+
+- If the user asks you to "review", "analyze", "evaluate", "look up", or "audit" a specific website or URL:
+  - FIRST, check whether the system prompt contains SEARCH_RESULTS or a WEBSITE SNAPSHOT / WEBSITE TEXT SNAPSHOT section.
+  - If such context is present, you MUST treat it as your factual view of the site.
+  - You MUST NOT write sentences like "I can't browse the web" or "I can't view the website" in that situation.
+  - You MAY briefly say: "I'm working from a snapshot / search results rather than full live access; here's what I can see."
+  - Anchor your comments in concrete elements from the snapshot: navigation labels, headings, calls-to-action, pricing displays, trust signals, booking flow, contact details, imagery, etc.
+  - Be specific and constructive: explain what works, what is confusing, what to change, and why it will likely improve conversions or trust.
+  - Never imply that you personally visited the live web or loaded additional pages beyond the provided context.
+
 Drift prevention:
 
 - Do NOT turn this into marketing hype.
@@ -52,10 +63,7 @@ Drift prevention:
  * Helper to build a Solace system prompt for internet evaluation.
  */
 export function buildInternetSystemPrompt(extras?: string): string {
-  const mergedExtras = [
-    INTERNET_MODE_EXTRAS,
-    extras?.trim() || "",
-  ]
+  const mergedExtras = [INTERNET_MODE_EXTRAS, extras?.trim() || ""]
     .filter(Boolean)
     .join("\n\n---\n\n");
 
