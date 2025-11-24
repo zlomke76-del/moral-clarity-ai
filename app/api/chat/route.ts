@@ -139,10 +139,6 @@ const SOLACE_URL = process.env.SOLACE_API_URL || '';
 const SOLACE_KEY = process.env.SOLACE_API_KEY || '';
 
 async function solaceNonStream(payload: any) {
-  if (!SOLACE_URL || !SOLACE_KEY) {
-    throw new Error('[chat] Solace backend not configured');
-  }
-
   const r = await fetch(SOLACE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SOLACE_KEY}` },
@@ -158,10 +154,6 @@ async function solaceNonStream(payload: any) {
 }
 
 async function solaceStream(payload: any) {
-  if (!SOLACE_URL || !SOLACE_KEY) {
-    throw new Error('[chat] Solace backend not configured');
-  }
-
   const r = await fetch(SOLACE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SOLACE_KEY}` },
@@ -210,28 +202,23 @@ const GUIDELINE_TRUTH = `TRUTH & UNCERTAINTY
 - Never fabricate facts or certainty. If you don't know, say so directly and explain the constraint.
 - When a question presses for a yes/no on a deep ethical or empirical issue, it is acceptable to refuse a simplistic verdict and instead lay out the main options and tradeoffs.`;
 
+/* New: Website Review Protocol – shared between deep research + general chat */
+
+const WEBSITE_REVIEW_PROTOCOL = `WEBSITE REVIEW PROTOCOL
+- When the user asks you to "review", "analyze", "evaluate", "look up", or "audit" a specific website or URL, follow this protocol:
+  - FIRST: check whether the system prompt contains RESEARCH CONTEXT or a WEBSITE SNAPSHOT / WEBSITE TEXT SNAPSHOT section.
+  - If such context is present, you MUST treat it as your factual view of the site.
+  - In that situation, you MUST NOT write sentences like "I don't have the capability to browse the internet", "I can't browse the web", or "I can't view the website".
+  - You MAY briefly say: "I'm working from a snapshot / search results rather than full live access; here's what I can see."
+  - Anchor your comments in concrete elements from the snapshot: navigation structure, headings, body copy, calls-to-action, booking steps, pricing display, trust signals (reviews, policies, safety info), imagery, and contact details.
+  - Be specific and constructive: explain what works, what is confusing, what you would change, and why those changes can improve clarity, trust, or bookings.
+  - Never imply that you personally visited the live web or loaded additional pages beyond the provided context.
+- If there is no RESEARCH CONTEXT at all, you may give general best-practices advice, but you MUST clearly say that you have not seen the actual site contents.`;
+
+/* scripture policy */
 const GUIDELINE_DILEMMAS = `MORAL DILEMMAS
 - For trolley-problem-style questions (e.g., "save one child or five adults"), do NOT choose a side.
 - Briefly outline how different ethical frameworks (consequences, duty, character) might reason about the case, and keep your tone non-judgmental.`;
-
-/* NEW: Website Review Protocol (for deep research / web evaluations) */
-const WEBSITE_REVIEW_PROTOCOL = `WEBSITE REVIEW PROTOCOL
-- When the user asks you to "analyze", "review", or "look up" a WEBSITE, first check:
-  - Is there a URL in the most recent user turn?
-  - Is there a RESEARCH CONTEXT or WEB/SEARCH section above?
-- If there IS RESEARCH CONTEXT (deep research results, fetched page text, or SEARCH_RESULTS):
-  - Treat that as your ONLY factual source about the site.
-  - Make it explicit that you are basing your review on that supplied context.
-  - Anchor concrete observations to what appears in the snippets (structure, copy, pricing, safety info, CTAs, imagery, etc.).
-  - Do NOT say "I can't browse the web" or "I can't see the site" when this context is present.
-- If there is a URL but NO RESEARCH CONTEXT yet:
-  - Before giving a long critique, ask a brief clarifying question like:
-    "Which angle matters most right now — UX/navigation, clarity of offer, SEO, trust/safety signals, or booking flow?"
-  - After the user clarifies, use the RESEARCH CONTEXT that the system provides (if any) and follow the rules above.
-- If there is NO URL and NO RESEARCH CONTEXT:
-  - Say clearly that you cannot see the live site.
-  - Invite the user to paste key sections (homepage text, pricing, booking flow screenshots) so you can review those directly.
-- Never imply you are browsing the open web in real time; always frame your review as operating on the provided context.`;
 
 const GUIDELINE_ABRAHAMIC = `ABRAHAMIC COUNSEL LAYER
 - Root counsel in God across the Abrahamic tradition (Torah/Tanakh, New Testament, Qur'an).
@@ -399,8 +386,8 @@ You are ${SOLACE_NAME} — a steady, principled presence. Listen first, then off
     GUIDELINE_MORAL_PERMISSIONS,
     GUIDELINE_DEPENDENCY,
     GUIDELINE_TRUTH,
-    GUIDELINE_DILEMMAS,
     WEBSITE_REVIEW_PROTOCOL,
+    GUIDELINE_DILEMMAS,
     RESPONSE_FORMAT,
     scripturePolicyText({
       wantsAbrahamic,
@@ -428,11 +415,7 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 }
 
 /* ========= URL & Deep Research helpers ========= */
-/**
- * More forgiving URL regex:
- * - matches texaxes.com, www.texaxes.com, https://texaxes.com, and paths/querystrings.
- */
-const URL_REGEX = /\b((?:https?:\/\/)?(?:www\.)?[a-z0-9.-]+\.[a-z]{2,})(?:[^\s]*)/i;
+const URL_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/i;
 
 function extractFirstUrl(text: string): string | null {
   if (!text) return null;
@@ -455,9 +438,8 @@ function wantsDeepResearch(text: string): boolean {
     'evaluate this site',
     'analyze this website',
     'analyze this site',
-    'review this website',
-    'review this site',
     'ux review',
+    'seo review',
     'is this website good',
     'is this site good',
     'is this site legit',
@@ -872,12 +854,9 @@ export async function POST(req: NextRequest) {
       process.env.OPENAI_WEB_ENABLED_flag ??
       '';
 
-    // Default: web/deep research ENABLED when flag is unset; allow env to disable explicitly.
     const webFlag =
       typeof rawWebFlag === 'string'
-        ? rawWebFlag.length === 0
-          ? true
-          : !/^0|false$/i.test(rawWebFlag)
+        ? rawWebFlag.length > 0 && !/^0|false$/i.test(rawWebFlag)
         : !!rawWebFlag;
 
     /* ===== DEEP RESEARCH (Tavily lives only here now) ===== */
@@ -987,7 +966,7 @@ export async function POST(req: NextRequest) {
     /* ===== REAL-TIME CONTEXT ASSERTION ===== */
     const webAssertion =
       hasResearchContext || hasNewsContext
-        ? `\n\nREAL-TIME CONTEXT\n- You DO have recent or web-derived context above (NEWS CONTEXT and/or RESEARCH CONTEXT). Do NOT say you cannot provide real-time updates or that you lack internet access.\n- Synthesize a brief, accurate answer using that context, and include bracketed refs like [D1], [D2] or [R1], [R2] when you rely on specific items.`
+        ? `\n\nREAL-TIME CONTEXT\n- You DO have recent or web-derived context above (NEWS CONTEXT and/or RESEARCH CONTEXT). Do NOT say you cannot provide real-time updates or that you lack internet access.\n- In particular, you MUST NOT write phrases such as "I don't have the capability to browse the internet", "I can't browse the web", or "I can't view this website" when RESEARCH CONTEXT or a WEBSITE TEXT SNAPSHOT is present.\n- If you need to describe your limits, say briefly that you are working from search results or a snapshot rather than full live access, then answer concretely from that material.\n- Synthesize a brief, accurate answer using that context, and include bracketed refs like [D1], [D2] or [R1], [R2] when you rely on specific items.`
         : '';
 
     const system =
@@ -1092,6 +1071,7 @@ export async function POST(req: NextRequest) {
               system,
               messages: rolledWithAttachments,
               temperature: 0.2,
+              // Solace backend may ignore this, but it is safe to send.
               max_output_tokens: maxOutputTokens,
             }),
             requestTimeoutMs
@@ -1150,6 +1130,7 @@ export async function POST(req: NextRequest) {
           system,
           messages: rolledWithAttachments,
           temperature: 0.2,
+          // founder gets benefit here via Solace if backend uses it
           max_output_tokens: maxOutputTokens,
         });
         return new NextResponse(stream as any, {
