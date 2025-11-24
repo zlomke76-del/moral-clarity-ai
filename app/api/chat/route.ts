@@ -370,36 +370,31 @@ export async function POST(req: NextRequest) {
           `- When the user seems stuck, zoom out and reflect patterns you see across these memories.\n` +
           (pack || '• (none)');
 
-        // 2) Raw factual hits kept only for "what do you remember" echo
+        // 2) Raw factual hits kept for autobiographical reflection mode
         hits = await searchMemories(userKey, query, 8);
+
+        if (hits && hits.length) {
+          const memoryRowsText = hits
+            .slice(0, 12)
+            .map((m: any, i: number) => {
+              const idx = i + 1;
+              const title = (m.title || '').toString().trim();
+              const safeContent = (m.content || '').toString().trim();
+              const titleLine = title ? `title: ${title}\n` : '';
+              return `[M${idx}]\n${titleLine}content: ${safeContent}`;
+            })
+            .join('\n\n');
+
+          memorySection +=
+            `\n\nMEMORY_ROWS\n` +
+            `${memoryRowsText}\n` +
+            `[END_MEMORY_ROWS]`;
+        }
       } catch (err) {
         console.error('[chat] memory recall failed', err);
         memorySection = '';
         hits = [];
       }
-    }
-
-    /* ===== Memory Echo fast path ===== */
-    const askedWhatYouRemember = /what\s+do\s+you\s+remember\b|remember\s+about\s+me\b/i.test(
-      lastUser
-    );
-    if (askedWhatYouRemember && hits && hits.length) {
-      const top = hits
-        .slice(0, 10)
-        .map((m: any, i: number) => `${i + 1}. ${m.content}`)
-        .join('\n');
-      const text = `Here’s what I have noted:\n${top}`;
-      return NextResponse.json(
-        {
-          text,
-          model: 'memory-echo',
-          identity: SOLACE_NAME,
-          mode: route.mode,
-          confidence: route.confidence,
-          filters: effectiveFilters,
-        },
-        { headers: corsHeaders(echoOrigin) }
-      );
     }
 
     /* ===== WEB / RESEARCH FLAGS ===== */
@@ -786,3 +781,4 @@ CONTEXT OVERRIDE SEAL
     );
   }
 }
+
