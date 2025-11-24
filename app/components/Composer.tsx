@@ -51,12 +51,19 @@ const Composer: React.FC<ComposerProps> = ({ input, setInput, send, streaming, p
     padding: "8px 12px",
   };
 
+  const handleAttachClick = () => {
+    const fileInput = document.querySelector("#solace-file-input") as HTMLInputElement | null;
+    if (fileInput) {
+      fileInput.click();
+    }
+  };
+
   return (
     <div style={composerWrapStyle}>
       {pendingFiles.length > 0 && <PendingFiles pendingFiles={pendingFiles} />}
       <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
         <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={() => document.querySelector("#solace-file-input").click()} title="Attach files" style={attachButtonStyle}>
+          <button onClick={handleAttachClick} title="Attach files" style={attachButtonStyle}>
             📎
           </button>
           <input id="solace-file-input" type="file" multiple style={{ display: "none" }} onChange={handleFiles} />
