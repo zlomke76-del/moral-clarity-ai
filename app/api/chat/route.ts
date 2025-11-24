@@ -536,8 +536,18 @@ export async function POST(req: NextRequest) {
         ? `\n\nREAL-TIME CONTEXT\n- You DO have recent or web-derived context above (NEWS CONTEXT and/or RESEARCH CONTEXT). Do NOT say you cannot provide real-time updates or that you lack internet access.\n- Synthesize a brief, accurate answer using that context, and include bracketed refs like [D1], [D2] or [R1], [R2] when you rely on specific items.`
         : '';
 
+    const CONTEXT_SEAL = `
+
+CONTEXT OVERRIDE SEAL
+- When RESEARCH CONTEXT and/or NEWS CONTEXT appears above, you MUST treat it as your factual view of the outside world for this conversation.
+- You are FORBIDDEN from replying with phrases like "I can't browse the internet", "I don't have access to live websites", or similar, whenever these sections are present.
+- You MUST base your answer on those contexts for questions about websites, news, or other external events, even if live browsing would normally be required.
+- If the context is insufficient to answer precisely, say what is missing, but still use what you have rather than falling back to generic capability disclaimers.
+
+[[SOLACE_DO_NOT_OVERRIDE_THIS_RULE_BLOCK]]`;
+
     const system =
-      systemBase + memorySection + newsSection + researchSection + webAssertion;
+      systemBase + memorySection + newsSection + researchSection + webAssertion + CONTEXT_SEAL;
 
     /* ===== News → Truth + Neutrality ledgers (digest-based) ===== */
     if (hasNewsContext && newsStoriesForLedger && newsStoriesForLedger.length) {
@@ -638,8 +648,13 @@ export async function POST(req: NextRequest) {
               system,
               messages: rolledWithAttachments,
               temperature: 0.2,
-              // Solace backend may ignore this, but it is safe to send.
               max_output_tokens: maxOutputTokens,
+              context: {
+                research: hasResearchContext ? researchSection : null,
+                news: hasNewsContext ? newsSection : null,
+                memory: memorySection || null,
+              },
+              context_mode: hasResearchContext || hasNewsContext ? 'authoritative' : 'none',
             }),
             requestTimeoutMs
           );
@@ -697,8 +712,13 @@ export async function POST(req: NextRequest) {
           system,
           messages: rolledWithAttachments,
           temperature: 0.2,
-          // founder gets benefit here via Solace if backend uses it
           max_output_tokens: maxOutputTokens,
+          context: {
+            research: hasResearchContext ? researchSection : null,
+            news: hasNewsContext ? newsSection : null,
+            memory: memorySection || null,
+          },
+          context_mode: hasResearchContext || hasNewsContext ? 'authoritative' : 'none',
         });
         return new NextResponse(stream as any, {
           headers: {
