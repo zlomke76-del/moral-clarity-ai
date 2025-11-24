@@ -10,9 +10,10 @@ type ComposerProps = {
   pendingFiles: File[]; // Adjust type as necessary
   handleFiles: (event: React.ChangeEvent<HTMLInputElement>) => void; // Change type here
   toggleMic: () => void;
+  listening: boolean; // Add listening to props
 };
 
-const Composer: React.FC<ComposerProps> = ({ input, setInput, send, streaming, pendingFiles, handleFiles, toggleMic }) => {
+const Composer: React.FC<ComposerProps> = ({ input, setInput, send, streaming, pendingFiles, handleFiles, toggleMic, listening }) => {
   const composerWrapStyle: React.CSSProperties = {
     borderTop: "1px solid var(--mc-border)",
     background: "rgba(12,19,30,.85)",
