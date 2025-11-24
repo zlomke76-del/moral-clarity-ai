@@ -27,14 +27,28 @@ export function wantsImageGeneration(text: string) {
   const t = (text || '').toLowerCase().trim();
   if (!t) return false;
 
-  // If it looks like a big code / log block, only allow explicit img: prefix
+  // If it looks like a big code / log block, only allow explicit img:/image: prefix
   const lineCount = t.split('\n').length;
   if (lineCount > 20) {
-    return t.startsWith('img:');
+    return t.startsWith('img:') || t.startsWith('image:');
   }
 
-  if (t.startsWith('img:')) return true;
+  // Explicit prefixes
+  if (t.startsWith('img:') || t.startsWith('image:')) return true;
 
+  // Natural-language image requests
+  const naturalImagePatterns = [
+    // "generate/create/make/draw/design (me) a picture/image/logo/icon/graphic/illustration"
+    /\b(generate|create|make|draw|design)\s+(me\s+)?(a|an)?\s*(picture|image|photo|logo|icon|graphic|illustration)\b/,
+    // "show me a picture/image/graphic"
+    /\bshow\s+me\s+(a|an)?\s*(picture|image|photo|graphic|illustration|logo|icon)\b/,
+    // "I need an image/logo/graphic"
+    /\bi\s+need\s+(a|an)?\s*(picture|image|photo|logo|icon|graphic|illustration)\b/,
+  ];
+
+  if (naturalImagePatterns.some((rx) => rx.test(t))) return true;
+
+  // Legacy intent patterns (keep for backward compatibility)
   const intentPatterns = [
     /^generate (an )?image\b/,
     /^create (an )?image\b/,
