@@ -52,8 +52,8 @@ const FOUNDER_USER_KEYS = (process.env.FOUNDER_USER_KEYS || '')
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
 
-const FOUNDER_MAX_OUTPUT_TOKENS = 12000;   // was 3000
-const NORMAL_MAX_OUTPUT_TOKENS = 1200;    // was 800 (optional bump)
+const FOUNDER_MAX_OUTPUT_TOKENS = 12000; // was 3000
+const NORMAL_MAX_OUTPUT_TOKENS = 1200; // was 800 (optional bump)
 
 const FOUNDER_REQUEST_TIMEOUT_MS = 180_000; // 120s instead of 60s
 const NORMAL_REQUEST_TIMEOUT_MS = BASE_REQUEST_TIMEOUT_MS; // 20s is fine for others
@@ -148,7 +148,7 @@ async function solaceNonStream(payload: any) {
   const ct = r.headers.get('content-type') || '';
   if (ct.includes('application/json')) {
     const j = await r.json().catch(() => ({}));
-    return String(j.text ?? j.output ?? j.data ?? '');
+    return String((j as any).text ?? (j as any).output ?? (j as any).data ?? '');
   }
   return await r.text();
 }
@@ -286,7 +286,6 @@ function wantsImageGeneration(text: string) {
 
   return intentPatterns.some((rx) => rx.test(t));
 }
-
 
 function isFirstRealTurn(messages: Array<{ role: string; content: string }>) {
   const userCount = messages.filter((m) => m.role?.toLowerCase() === 'user').length;
@@ -783,17 +782,16 @@ export async function POST(req: NextRequest) {
           episodesLimit,
         });
 
-memorySection =
-  `\n\nMEMORY PACK (private, user-scoped)\n` +
-  `These are authoritative facts, preferences, and key conversation episodes for THIS user.\n` +
-  `- Treat them as a coherent profile and history, not isolated trivia.\n` +
-  `- When answering, explicitly connect your guidance to these items when relevant\n` +
-  `  (e.g., "You told me X before, so I’ll build on that here").\n` +
-  `- If multiple memories relate to the same project, person, or concern, tie them together\n` +
-  `  and reason across them instead of handling each in isolation.\n` +
-  `- When the user seems stuck, zoom out and reflect patterns you see across these memories.\n` +
-  (pack || '• (none)');
-
+        memorySection =
+          `\n\nMEMORY PACK (private, user-scoped)\n` +
+          `These are authoritative facts, preferences, and key conversation episodes for THIS user.\n` +
+          `- Treat them as a coherent profile and history, not isolated trivia.\n` +
+          `- When answering, explicitly connect your guidance to these items when relevant\n` +
+          `  (e.g., "You told me X before, so I’ll build on that here").\n` +
+          `- If multiple memories relate to the same project, person, or concern, tie them together\n` +
+          `  and reason across them instead of handling each in isolation.\n` +
+          `- When the user seems stuck, zoom out and reflect patterns you see across these memories.\n` +
+          (pack || '• (none)');
 
         // 2) Raw factual hits kept only for "what do you remember" echo
         hits = await searchMemories(userKey, query, 8);
@@ -841,10 +839,12 @@ memorySection =
       process.env.OPENAI_WEB_ENABLED_flag ??
       '';
 
-    const webFlag =
-      typeof rawWebFlag === 'string'
-        ? rawWebFlag.length > 0 && !/^0|false$/i.test(rawWebFlag)
-        : !!rawWebFlag;
+    // IMPORTANT: default web/deep-research ON when no env flag is set.
+    // Only disable when explicitly set to "0" or "false".
+    let webFlag = true;
+    if (typeof rawWebFlag === 'string' && rawWebFlag.length > 0) {
+      webFlag = !/^0|false$/i.test(rawWebFlag);
+    }
 
     /* ===== DEEP RESEARCH (Tavily lives only here now) ===== */
     let researchSection = '';
@@ -1027,7 +1027,7 @@ memorySection =
       try {
         await maybeStoreEpisode(userKey, workspaceId, rolled);
       } catch (err) {
-        console.error('[chat] maybeStoreEpisode failed (non-fatal)', err);
+        console.error('[chat] maybeStoreEpisode failed', err);
       }
     }
 
@@ -1044,8 +1044,8 @@ memorySection =
       ? FOUNDER_REQUEST_TIMEOUT_MS
       : NORMAL_REQUEST_TIMEOUT_MS;
 
- /* ===== Non-stream ===== */
-const useSolace = Boolean(SOLACE_URL && SOLACE_KEY) && !isFounder;
+    /* ===== Non-stream ===== */
+    const useSolace = Boolean(SOLACE_URL && SOLACE_KEY) && !isFounder;
 
     if (!wantStream) {
       if (useSolace) {
@@ -1107,55 +1107,53 @@ const useSolace = Boolean(SOLACE_URL && SOLACE_KEY) && !isFounder;
       );
     }
 
-/* ===== Stream ===== */
-if (useSolace) {
-  try {
-    const stream = await solaceStream({
-      mode: route.mode,
-      userId,
-      userName,
-      system,
-      messages: rolledWithAttachments,
-      temperature: 0.2,
-      // founder gets benefit here via Solace if backend uses it
-      max_output_tokens: maxOutputTokens,
-    });
-    return new NextResponse(stream as any, {
+    /* ===== Stream ===== */
+    if (useSolace) {
+      try {
+        const stream = await solaceStream({
+          mode: route.mode,
+          userId,
+          userName,
+          system,
+          messages: rolledWithAttachments,
+          temperature: 0.2,
+          // founder gets benefit here via Solace if backend uses it
+          max_output_tokens: maxOutputTokens,
+        });
+        return new NextResponse(stream as any, {
+          headers: {
+            ...headersToRecord(corsHeaders(echoOrigin)),
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Cache-Control': 'no-cache, no-transform',
+            'X-Accel-Buffering': 'no',
+          },
+        });
+      } catch {
+        /* fallback to OpenAI */
+      }
+    }
+
+    // OpenAI SSE fallback
+    const apiKey = process.env.OPENAI_API_KEY || '';
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
       headers: {
-        ...headersToRecord(corsHeaders(echoOrigin)),
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-cache, no-transform',
-        'X-Accel-Buffering': 'no',
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        model: MODEL,
+        stream: true,
+        temperature: 0.2,
+        messages: [
+          { role: 'system', content: system },
+          ...rolledWithAttachments.map((m) => ({
+            role: m.role === 'assistant' ? 'assistant' : 'user',
+            content: m.content,
+          })),
+        ],
+      }),
     });
-  } catch {
-    /* fallback to OpenAI */
-  }
-}
-
-
-// OpenAI SSE fallback
-const apiKey = process.env.OPENAI_API_KEY || '';
-const r = await fetch('https://api.openai.com/v1/chat/completions', {
-  method: 'POST',
-  headers: {
-    Authorization: `Bearer ${apiKey}`,
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    model: MODEL,
-    stream: true,
-    temperature: 0.2,
-    messages: [
-      { role: 'system', content: system },
-      ...rolledWithAttachments.map((m) => ({
-        role: m.role === 'assistant' ? 'assistant' : 'user',
-        content: m.content,
-      })),
-    ],
-  })
-});
-
 
     if (!r.ok || !r.body) {
       const t = await r.text().catch(() => '');
@@ -1184,7 +1182,7 @@ const r = await fetch('https://api.openai.com/v1/chat/completions', {
       {
         status: err?.message === 'Request timed out' ? 504 : 500,
         headers: corsHeaders(echoOrigin),
-      },
+      }
     );
   }
 }
