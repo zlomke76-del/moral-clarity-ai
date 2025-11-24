@@ -1,7 +1,17 @@
 // app/components/Composer.tsx
 import React from "react";
 
-const Composer = ({ input, setInput, send, streaming, pendingFiles, handleFiles, toggleMic }) => (
+type ComposerProps = {
+  input: string;
+  setInput: (value: string) => void;
+  send: () => void;
+  streaming: boolean;
+  pendingFiles: any[]; // Adjust type as necessary
+  handleFiles: (files: FileList) => void;
+  toggleMic: () => void;
+};
+
+const Composer: React.FC<ComposerProps> = ({ input, setInput, send, streaming, pendingFiles, handleFiles, toggleMic }) => (
   <div style={composerWrapStyle}>
     {pendingFiles.length > 0 && <PendingFiles pendingFiles={pendingFiles} />}
     <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
@@ -21,3 +31,5 @@ const Composer = ({ input, setInput, send, streaming, pendingFiles, handleFiles,
     </div>
   </div>
 );
+
+export default Composer;
