@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(Math.max(Number(limitParam) || 20, 1), 50);
 
   const { data, error } = await supabase
-    .from<SolaceDigestRow>('solace_news_digest_view')
+    .from('solace_news_digest_view')
     .select('*')
     .order('captured_at', { ascending: false })
     .limit(limit);
@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const stories = data ?? [];
+  const stories = (data ?? []) as SolaceDigestRow[];
 
   return NextResponse.json(
     {
