@@ -82,11 +82,13 @@ export async function processAttachments(
     }
   }
 
-  return (
-    `\n\nATTACHMENT DIGEST\n` +
-    `The user provided ${attachments.length} attachment(s). Use the content below in your analysis.\n` +
-    parts.join('')
-  );
+return (
+  `\n\nATTACHMENT DIGEST\n` +
+  `The user uploaded ${attachments.length} file(s).\n` +
+  `IMPORTANT: Do NOT act on this attachment unless the user explicitly asks.\n` +
+  `If the user request does not reference the attachment, ignore it.\n` +
+  parts.join('')
+);
 }
 
 /**
