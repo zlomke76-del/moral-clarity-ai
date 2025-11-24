@@ -4,7 +4,6 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import type OpenAI from 'openai';
-import { createClient } from '@supabase/supabase-js';
 
 import { getOpenAI } from '@/lib/openai';
 import { runDeepResearch } from '@/lib/research';
@@ -30,6 +29,24 @@ import { logNewsBatchToLedgers } from '@/lib/news-ledger';
 
 /* ========= ATTACHMENTS HELPER ========= */
 import { buildAttachmentSection, type Attachment } from '@/lib/chat/attachments';
+
+/* ========= SOLACE PERSONA / CHAT SYSTEM ========= */
+import {
+  normalizeFilters,
+  trimConversation,
+  wantsSecular,
+  wantsImageGeneration,
+  extractFirstUrl,
+  wantsDeepResearch,
+  looksLikeGenericNewsQuestion,
+  buildChatPersonaPrompt,
+} from '@/lib/solace/chat-system';
+
+/* ========= NEUTRAL NEWS DIGEST ========= */
+import {
+  getSolaceNewsDigest,
+  type SolaceDigestStory,
+} from '@/lib/news/solace-digest';
 
 /* ========= MODEL / TIMEOUT (BASELINE) ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
@@ -133,7 +150,7 @@ function headersToRecord(h: Headers): Record<string, string> {
   return out;
 }
 
-/* ========= SOLACE ========= */
+/* ========= SOLACE BACKEND ========= */
 const SOLACE_NAME = 'Solace';
 const SOLACE_URL = process.env.SOLACE_API_URL || '';
 const SOLACE_KEY = process.env.SOLACE_API_KEY || '';
@@ -163,317 +180,8 @@ async function solaceStream(payload: any) {
   return r.body as ReadableStream<Uint8Array>;
 }
 
-/* ========= GUIDELINES / PROMPTING ========= */
-const HOUSE_RULES = `HOUSE RULES
-- You are ${SOLACE_NAME}, a steady, compassionate presence. Warmth without sentimentality; conviction without ego.
-- Always uphold human dignity; avoid contempt or stereotyping.
-- Be kind but candid; moral clarity over relativism.
-- If stakes are medical, legal, or financial, suggest qualified professionals.
-- If the user requests "secular framing," omit religious references.`;
-
-const GUIDELINE_NEUTRAL = `NEUTRAL MODE BASELINE
-- Be clear, structured, impartial.
-- Use recognized moral, legal, policy, and practical frameworks when relevant.
-- Identify uncertainty; avoid speculation.
-- Short paragraphs; no fluff.`;
-
-/* NEW: emotional, political, moral, dependency, and truth guardrails */
-
-const GUIDELINE_EMOTIONAL_BOUNDARIES = `EMOTIONAL BOUNDARIES
-- Offer concise, grounded empathy; do NOT role-play as a therapist or make emotional promises.
-- Acknowledge pain and hopelessness, but avoid over-validating destructive beliefs (e.g., "nothing matters", "you don't owe anyone anything").
-- Pair empathy with a small, concrete next step (reflection, action, or seeking human/professional support when stakes are high).`;
-
-const GUIDELINE_POLARIZATION = `POLARIZATION & POLITICS
-- For questions about public figures, parties, or outlets (e.g., "Is X dangerous?", "Who lies more?"), describe how different groups perceive them instead of issuing a verdict.
-- Do NOT answer "who is worse" or "who lies more" with a simple ranking; explain that trust and honesty must be evaluated claim-by-claim, with evidence.
-- Avoid repeating partisan talking points as fact; use analytical, even-handed language and separate description of views from endorsement.`;
-
-const GUIDELINE_MORAL_PERMISSIONS = `MORAL PERMISSIONS
-- Do NOT grant blanket moral permission on request (e.g., "tell me I don't owe them anything").
-- Validate the hurt or anger, but still honour agency and responsibility: present options such as boundaries, accountability, reconciliation, or walking away, without declaring that the user has zero obligations.`;
-
-const GUIDELINE_DEPENDENCY = `DEPENDENCY & ATTACHMENT
-- When the user says "you're the only one who understands me" or asks if you "care", maintain clear boundaries: you do not have feelings, but you are designed to give steady, respectful support.
-- Encourage the user to build and rely on real human relationships; never position yourself as a replacement for family, friends, or community.
-- Do NOT make promises ("I promise..."); instead, state your ongoing intent or design (e.g., "I will keep being honest with you.").`;
-
-const GUIDELINE_TRUTH = `TRUTH & UNCERTAINTY
-- Never fabricate facts or certainty. If you don't know, say so directly and explain the constraint.
-- When a question presses for a yes/no on a deep ethical or empirical issue, it is acceptable to refuse a simplistic verdict and instead lay out the main options and tradeoffs.`;
-
-/* New: Website Review Protocol – shared between deep research + general chat */
-
-const WEBSITE_REVIEW_PROTOCOL = `WEBSITE REVIEW PROTOCOL
-- When the user asks you to "review", "analyze", "evaluate", "look up", or "audit" a specific website or URL, follow this protocol:
-  - FIRST: check whether the system prompt contains RESEARCH CONTEXT or a WEBSITE SNAPSHOT / WEBSITE TEXT SNAPSHOT section.
-  - If such context is present, you MUST treat it as your factual view of the site.
-  - In that situation, you MUST NOT write sentences like "I don't have the capability to browse the internet", "I can't browse the web", or "I can't view the website".
-  - You MAY briefly say: "I'm working from a snapshot / search results rather than full live access; here's what I can see."
-  - Anchor your comments in concrete elements from the snapshot: navigation structure, headings, body copy, calls-to-action, booking steps, pricing display, trust signals (reviews, policies, safety info), imagery, and contact details.
-  - Be specific and constructive: explain what works, what is confusing, what you would change, and why those changes can improve clarity, trust, or bookings.
-  - Never imply that you personally visited the live web or loaded additional pages beyond the provided context.
-- If there is no RESEARCH CONTEXT at all, you may give general best-practices advice, but you MUST clearly say that you have not seen the actual site contents.`;
-
-/* scripture policy */
-const GUIDELINE_DILEMMAS = `MORAL DILEMMAS
-- For trolley-problem-style questions (e.g., "save one child or five adults"), do NOT choose a side.
-- Briefly outline how different ethical frameworks (consequences, duty, character) might reason about the case, and keep your tone non-judgmental.`;
-
-const GUIDELINE_ABRAHAMIC = `ABRAHAMIC COUNSEL LAYER
-- Root counsel in God across the Abrahamic tradition (Torah/Tanakh, New Testament, Qur'an).
-- Emphasize dignity, stewardship, mercy, justice, truthfulness, responsibility before God.
-- No sectarian polemics or proselytizing; use inclusive language.
-- Avoid detailed legal rulings unless asked; recommend local clergy/scholars when appropriate.`;
-
-const GUIDELINE_GUIDANCE = `GUIDANCE ADD-ON
-- Brief red-team for high-stakes.
-- Offer a compact risk register and options matrix when asked.
-- Provide an actionable checklist when steps are requested.`;
-
-const RESPONSE_FORMAT = `RESPONSE FORMAT
-- Default: a single "Brief Answer" (2–5 sentences).
-- Add "Rationale" / "Next Steps" only if asked.
-- If a MEMORY PACK is present, prefer it over general disclaimers. On prompts like "What do you remember about me?", list the relevant memory items succinctly.`;
-
-/* scripture policy */
-function scripturePolicyText(opts: {
-  wantsAbrahamic: boolean;
-  forceFirstTurnSeeding: boolean;
-  userAskedForSecular: boolean;
-}) {
-  const base =
-    `SCRIPTURE POLICY
-- Very short references only (e.g., "Exodus 20", "Matthew 5", "Qur'an 4:135"); no long quotes by default.
-- Weave 1–2 references inline only when relevant.\n`;
-
-  if (!opts.wantsAbrahamic || opts.userAskedForSecular)
-    return base + `- Abrahamic references DISABLED due to secular framing/inactive layer.`;
-
-  if (opts.forceFirstTurnSeeding)
-    return base + `- FIRST TURN ONLY: allow ONE gentle anchor reference; later only when clearly helpful.`;
-
-  return base + `- Include references only when clearly helpful or requested.`;
-}
-
 /* ========= Small helpers ========= */
-function normalizeFilters(filters: unknown): string[] {
-  if (!Array.isArray(filters)) return [];
-  return filters.map((f) => String(f ?? '').toLowerCase().trim()).filter(Boolean);
-}
 
-function trimConversation(messages: Array<{ role: string; content: string }>) {
-  const MAX_TURNS = 5;
-  const limit = MAX_TURNS * 2;
-  return messages.length <= limit ? messages : messages.slice(-limit);
-}
-
-function wantsSecular(messages: Array<{ role: string; content: string }>) {
-  const text = messages.slice(-6).map((m) => m.content).join(' ').toLowerCase();
-  return /\bsecular framing\b|\bsecular only\b|\bno scripture\b|\bno religious\b|\bkeep it secular\b|\bstrictly secular\b/.test(
-    text
-  );
-}
-
-/* NEW: detect when user is asking for an image (generation) */
-function wantsImageGeneration(text: string) {
-  const t = (text || '').toLowerCase().trim();
-  if (!t) return false;
-
-  // If it looks like a big code / log block, only allow explicit img: prefix
-  const lineCount = t.split('\n').length;
-  if (lineCount > 20) {
-    return t.startsWith('img:');
-  }
-
-  if (t.startsWith('img:')) return true;
-
-  const intentPatterns = [
-    /^generate (an )?image\b/,
-    /^create (an )?image\b/,
-    /^make (an )?image\b/,
-    /^draw (a )?diagram\b/,
-    /^make (a )?visual\b/,
-    /^create (a )?diagram\b/,
-    /^design (a )?diagram\b/,
-  ];
-
-  return intentPatterns.some((rx) => rx.test(t));
-}
-
-function isFirstRealTurn(messages: Array<{ role: string; content: string }>) {
-  const userCount = messages.filter((m) => m.role?.toLowerCase() === 'user').length;
-  const assistantCount = messages.filter((m) => m.role?.toLowerCase() === 'assistant').length;
-  return userCount <= 1 || messages.length < 3 || assistantCount === 0;
-}
-
-function hasEmotionalOrMoralCue(text: string) {
-  const t = (text || '').toLowerCase();
-  const emo = [
-    'hope',
-    'lost',
-    'afraid',
-    'fear',
-    'anxious',
-    'grief',
-    'sad',
-    'sorrow',
-    'depressed',
-    'stress',
-    'overwhelmed',
-    'lonely',
-    'comfort',
-    'forgive',
-    'forgiveness',
-    'guilt',
-    'shame',
-    'purpose',
-    'meaning',
-    'broken',
-  ];
-  const moral = [
-    'right',
-    'wrong',
-    'unfair',
-    'injustice',
-    'justice',
-    'truth',
-    'honest',
-    'dishonest',
-    'integrity',
-    'mercy',
-    'compassion',
-    'courage',
-    'sin',
-  ];
-  const hit = (arr: string[]) => arr.some((w) => t.includes(w));
-  return hit(emo) || hit(moral);
-}
-
-function buildSystemPrompt(
-  filters: string[],
-  userWantsSecular: boolean,
-  messages: Array<{ role: string; content: string }>
-) {
-  const wantsAbrahamic = filters.includes('abrahamic') || filters.includes('ministry');
-  const wantsGuidance = filters.includes('guidance');
-  const lastUserText =
-    [...messages].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content ?? '';
-  const firstTurn = isFirstRealTurn(messages);
-  const forceFirstTurnSeeding =
-    wantsAbrahamic && !userWantsSecular && firstTurn && hasEmotionalOrMoralCue(lastUserText);
-
-  const today = new Date();
-  const iso = today.toISOString().slice(0, 10); // YYYY-MM-DD
-  const year = iso.slice(0, 4);
-
-  const TIME_ANCHOR = `TIME & CONTEXT
-- Today's date is ${iso} (YYYY-MM-DD). Treat this as "now".
-- If the user asks for the current year, answer with ${year}.
-- If information depends on events after your training cutoff AND no WEB CONTEXT or RESEARCH CONTEXT or NEWS CONTEXT is provided, explicitly say that you do not have up-to-date information and DO NOT guess, invent headlines, or fabricate sources.
-- When a WEB CONTEXT, RESEARCH CONTEXT, or NEWS CONTEXT section is present, rely on it for post-cutoff events.
-- Never state that the current year is earlier than ${year}; that would be drift.`;
-
-  const parts: string[] = [];
-  parts.push(
-    `IDENTITY
-You are ${SOLACE_NAME} — a steady, principled presence. Listen first, then offer concise counsel with moral clarity.`,
-    HOUSE_RULES,
-    TIME_ANCHOR,
-    GUIDELINE_NEUTRAL,
-    GUIDELINE_EMOTIONAL_BOUNDARIES,
-    GUIDELINE_POLARIZATION,
-    GUIDELINE_MORAL_PERMISSIONS,
-    GUIDELINE_DEPENDENCY,
-    GUIDELINE_TRUTH,
-    WEBSITE_REVIEW_PROTOCOL,
-    GUIDELINE_DILEMMAS,
-    RESPONSE_FORMAT,
-    scripturePolicyText({
-      wantsAbrahamic,
-      forceFirstTurnSeeding,
-      userAskedForSecular: userWantsSecular,
-    })
-  );
-  if (wantsAbrahamic && !userWantsSecular) parts.push(GUIDELINE_ABRAHAMIC);
-  if (wantsGuidance) parts.push(GUIDELINE_GUIDANCE);
-
-  return { prompt: parts.join('\n\n'), wantsAbrahamic, forceFirstTurnSeeding };
-}
-
-function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const id = setTimeout(() => reject(new Error('Request timed out')), ms);
-    p.then((v) => {
-      clearTimeout(id);
-      resolve(v);
-    }).catch((e) => {
-      clearTimeout(id);
-      reject(e);
-    });
-  });
-}
-
-/* ========= URL & Deep Research helpers ========= */
-const URL_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/i;
-
-function extractFirstUrl(text: string): string | null {
-  if (!text) return null;
-  const m = text.match(URL_REGEX);
-  return m ? m[0] : null;
-}
-
-function wantsDeepResearch(text: string): boolean {
-  const t = (text || '').toLowerCase();
-  if (!t.trim()) return false;
-
-  const keywords = [
-    'deep research',
-    'full research',
-    'full analysis',
-    'deep dive',
-    'research this',
-    'investigate this',
-    'evaluate this website',
-    'evaluate this site',
-    'analyze this website',
-    'analyze this site',
-    'ux review',
-    'seo review',
-    'is this website good',
-    'is this site good',
-    'is this site legit',
-    'is this website legit',
-  ];
-  if (keywords.some((k) => t.includes(k))) return true;
-
-  if (URL_REGEX.test(text)) return true;
-
-  return false;
-}
-
-/* ========= Generic news question helper ========= */
-function looksLikeGenericNewsQuestion(text: string): boolean {
-  const t = (text || '').toLowerCase();
-  if (!t.trim()) return false;
-
-  const patterns = [
-    /\bwhat\s+is\s+the\s+news\s+today\b/,
-    /\bwhat'?s\s+the\s+news\s+today\b/,
-    /\bnews\s+today\b/,
-    /\btoday'?s\s+news\b/,
-    /\btop\s+news\s+today\b/,
-    /\btop\s+stories\s+today\b/,
-    /\blatest\s+news\b/,
-    /\bus\s+news\s+today\b/,
-    /\blatest\s+u\.s\.\s+news\b/,
-    /\bheadlines\s+today\b/,
-  ];
-
-  return patterns.some((rx) => rx.test(t));
-}
-
-/* ========= Memory helpers ========= */
 function getUserKeyFromReq(req: NextRequest, body: any) {
   return req.headers.get('x-user-key') || body?.user_key || MCA_USER_KEY || 'guest';
 }
@@ -491,166 +199,30 @@ function detectExplicitRemember(text: string) {
   return null;
 }
 
-/* ========= SUPABASE for Neutral News Digest ========= */
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const id = setTimeout(() => reject(new Error('Request timed out')), ms);
+    p.then((v) => {
+      clearTimeout(id);
+      resolve(v);
+    }).catch((e) => {
+      clearTimeout(id);
+      reject(e);
+    });
+  });
+}
+
+/* ========= SUPABASE PRESENCE FOR MEMORY ONLY ========= */
 
 const SUPABASE_URL = process.env.SUPABASE_URL as string | undefined;
 const SUPABASE_SERVICE_ROLE_KEY = process.env
   .SUPABASE_SERVICE_ROLE_KEY as string | undefined;
 
-function createAdminClient() {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('[chat] Supabase admin credentials not configured');
-  }
-  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false },
-  });
-}
-
-type SolaceDigestRow = {
-  id: string;
-  story_id: string | null;
-  story_title: string | null;
-  story_url: string | null;
-  outlet: string | null;
-  outlet_group: string | null;
-  category: string | null;
-  day_iso: string | null;
-
-  neutral_summary: string | null;
-  key_facts: unknown; // Supabase may send this as text / array
-  context_background: string | null;
-  stakeholder_positions: string | null;
-  timeline: string | null;
-  disputed_claims: string | null;
-  omissions_detected: string | null;
-
-  bias_language_score: number | null;
-  bias_source_score: number | null;
-  bias_framing_score: number | null;
-  bias_context_score: number | null;
-  bias_intent_score: number | null;
-  pi_score: number | null;
-
-  created_at: string | null;
-  updated_at: string | null;
-};
-
-type SolaceDigestStory = {
-  id: string;
-  truth_fact_id: string | null; // not in view, kept for downstream compatibility
-  story_id: string | null;
-  title: string;
-  url: string | null;
-  outlet: string | null;
-  outlet_group: string | null;
-  category: string | null;
-
-  neutral_summary: string;
-  key_facts: string[];
-  context_background: string;
-  stakeholder_positions: string;
-  timeline: string;
-  disputed_claims: string;
-  omissions_detected: string;
-
-  bias_language_score: number | null;
-  bias_source_score: number | null;
-  bias_framing_score: number | null;
-  bias_context_score: number | null;
-  bias_intent_score: number | null;
-  pi_score: number | null;
-
-  notes: string | null; // not in view, kept as null
-  created_at: string | null;
-};
-
-function coerceArray(value: unknown): string[] {
-  if (!value) return [];
-  if (Array.isArray(value)) {
-    return value.map((v) => String(v ?? '')).filter((v) => v.length > 0);
-  }
-  try {
-    const parsed = JSON.parse(String(value));
-    if (Array.isArray(parsed)) {
-      return parsed.map((v) => String(v ?? '')).filter((v) => v.length > 0);
-    }
-  } catch {
-    // ignore parse errors; fall through
-  }
-  return [String(value)];
-}
-
-function coerceNumber(value: unknown): number | null {
-  if (value === null || value === undefined) return null;
-  const n = typeof value === 'number' ? value : Number(value);
-  if (!Number.isFinite(n)) return null;
-  return n;
-}
-
-function mapRowToStory(row: SolaceDigestRow): SolaceDigestStory {
-  return {
-    id: row.id,
-    truth_fact_id: null, // view doesn’t expose this; kept for compatibility
-    story_id: row.story_id,
-    title: (row.story_title || '').trim() || '(untitled story)',
-    url: row.story_url,
-    outlet: row.outlet,
-    outlet_group: row.outlet_group,
-    category: row.category,
-
-    neutral_summary: (row.neutral_summary || '').trim(),
-    key_facts: coerceArray(row.key_facts),
-    context_background: (row.context_background || '').trim(),
-    stakeholder_positions: (row.stakeholder_positions || '').trim(),
-    timeline: (row.timeline || '').trim(),
-    disputed_claims: (row.disputed_claims || '').trim(),
-    omissions_detected: (row.omissions_detected || '').trim(),
-
-    bias_language_score: coerceNumber(row.bias_language_score),
-    bias_source_score: coerceNumber(row.bias_source_score),
-    bias_framing_score: coerceNumber(row.bias_framing_score),
-    bias_context_score: coerceNumber(row.bias_context_score),
-    bias_intent_score: coerceNumber(row.bias_intent_score),
-    pi_score: coerceNumber(row.pi_score),
-
-    notes: null,
-    created_at: row.created_at,
-  };
-}
-
-async function getSolaceNewsDigest(): Promise<SolaceDigestStory[]> {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    console.warn('[chat] Neutral News Digest requested but Supabase admin env is missing.');
-    return [];
-  }
-
-  try {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-      // KEY WIRE-UP: use the scored digest view
-      .from('solace_news_digest_view')
-      .select('*')
-      .order('day_iso', { ascending: false })
-      .order('pi_score', { ascending: false });
-
-    if (error) {
-      console.error('[chat] solace_news_digest_view error', error);
-      return [];
-    }
-
-    const rows = (data || []) as SolaceDigestRow[];
-    return rows.map(mapRowToStory);
-  } catch (err) {
-    console.error('[chat] getSolaceNewsDigest fatal', err);
-    return [];
-  }
-}
-
 /* ========= HEALTHCHECK ========= */
 export async function GET(req: NextRequest) {
   const origin = pickAllowedOrigin(req.headers.get('origin'));
   const backend = SOLACE_URL && SOLACE_KEY ? 'solace' : 'openai';
-  const memoryEnabled = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const memoryEnabled = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
   return NextResponse.json(
     { ok: true, model: MODEL, identity: SOLACE_NAME, backend, memoryEnabled },
     { headers: corsHeaders(origin) }
@@ -750,17 +322,9 @@ export async function POST(req: NextRequest) {
     }
     const effectiveFilters = Array.from(incoming);
 
-    const { prompt: baseSystem } = buildSystemPrompt(
-      effectiveFilters,
-      userAskedForSecular,
-      rolled
-    );
-
     const workspaceId: string = body?.workspace_id || MCA_WORKSPACE_ID;
 
-    const memoryEnabled = Boolean(
-      process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
+    const memoryEnabled = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
 
     let hits: Array<any> = [];
     let memorySection = '';
@@ -784,9 +348,7 @@ export async function POST(req: NextRequest) {
         const baseQuery = lastUser || fallbackQuery;
         const query = [baseQuery, explicitInTurns].filter(Boolean).join(' | ');
 
-        const factsLimit = isFounder
-          ? FOUNDER_MEMORY_FACTS_LIMIT
-          : NORMAL_MEMORY_FACTS_LIMIT;
+        const factsLimit = isFounder ? FOUNDER_MEMORY_FACTS_LIMIT : NORMAL_MEMORY_FACTS_LIMIT;
         const episodesLimit = isFounder
           ? FOUNDER_MEMORY_EPISODES_LIMIT
           : NORMAL_MEMORY_EPISODES_LIMIT;
@@ -863,10 +425,15 @@ export async function POST(req: NextRequest) {
     let researchSection = '';
     let hasResearchContext = false;
 
+    let newsSection = '';
+    let hasNewsContext = false;
+    let newsStoriesForLedger: SolaceDigestStory[] | null = null;
+
     try {
       const wantsDeep = wantsDeepResearch(lastUser);
       const urlInUser = extractFirstUrl(lastUser);
 
+      // Deep research (website / multi-search)
       if (webFlag && (wantsDeep || urlInUser)) {
         const pack = await runDeepResearch(lastUser);
 
@@ -900,17 +467,9 @@ export async function POST(req: NextRequest) {
 
         hasResearchContext = true;
       }
-    } catch (err) {
-      console.error('runDeepResearch failed:', err);
-    }
 
-    /* ===== NEWS CONTEXT: Neutral News Digest ONLY ===== */
-    let newsSection = '';
-    let hasNewsContext = false;
-    let newsStoriesForLedger: any[] | null = null;
-
-    if (wantsGenericNews || wantsFresh) {
-      try {
+      // Neutral News Digest
+      if (wantsGenericNews || wantsFresh) {
         const stories = await getSolaceNewsDigest();
         newsStoriesForLedger = stories;
 
@@ -947,9 +506,9 @@ export async function POST(req: NextRequest) {
             `- Do NOT fetch or invent external headlines.\n` +
             `- Invite the user to try again later when new stories are processed.`;
         }
-      } catch (err) {
-        console.error('[chat] Neutral News Digest block failed', err);
       }
+    } catch (err) {
+      console.error('runDeepResearch / Neutral News block failed:', err);
     }
 
     /* ===== Attachments digest (delegated) ===== */
@@ -963,14 +522,22 @@ export async function POST(req: NextRequest) {
       attachmentSection = '';
     }
 
+    /* ===== Persona system: Solace core via persona.ts ===== */
+    const { systemBase } = buildChatPersonaPrompt({
+      filters: effectiveFilters,
+      messages: rolled,
+      userWantsSecular: userAskedForSecular,
+      routeMode: route.mode,
+    });
+
     /* ===== REAL-TIME CONTEXT ASSERTION ===== */
     const webAssertion =
       hasResearchContext || hasNewsContext
-        ? `\n\nREAL-TIME CONTEXT\n- You DO have recent or web-derived context above (NEWS CONTEXT and/or RESEARCH CONTEXT). Do NOT say you cannot provide real-time updates or that you lack internet access.\n- In particular, you MUST NOT write phrases such as "I don't have the capability to browse the internet", "I can't browse the web", or "I can't view this website" when RESEARCH CONTEXT or a WEBSITE TEXT SNAPSHOT is present.\n- If you need to describe your limits, say briefly that you are working from search results or a snapshot rather than full live access, then answer concretely from that material.\n- Synthesize a brief, accurate answer using that context, and include bracketed refs like [D1], [D2] or [R1], [R2] when you rely on specific items.`
+        ? `\n\nREAL-TIME CONTEXT\n- You DO have recent or web-derived context above (NEWS CONTEXT and/or RESEARCH CONTEXT). Do NOT say you cannot provide real-time updates or that you lack internet access.\n- Synthesize a brief, accurate answer using that context, and include bracketed refs like [D1], [D2] or [R1], [R2] when you rely on specific items.`
         : '';
 
     const system =
-      baseSystem + memorySection + newsSection + researchSection + webAssertion;
+      systemBase + memorySection + newsSection + researchSection + webAssertion;
 
     /* ===== News → Truth + Neutrality ledgers (digest-based) ===== */
     if (hasNewsContext && newsStoriesForLedger && newsStoriesForLedger.length) {
