@@ -1,155 +1,160 @@
 // lib/news/solace-digest.ts
+// Neutral News Digest loader (view-based)
+// Source: solace_news_digest_view
+
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL as string | undefined;
-const SUPABASE_SERVICE_ROLE_KEY = process.env
-  .SUPABASE_SERVICE_ROLE_KEY as string | undefined;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-function createAdminClient() {
+// Core shape used everywhere else (chat route, ledgers, etc.)
+export type SolaceDigestStory = {
+  ledger_id: string;
+  truth_fact_id: string | null;
+
+  // Canonical fields Solace uses
+  title: string;
+  url: string;
+  outlet: string | null;
+  outlet_group?: string | null; // not present in the view today, kept for forward compatibility
+  neutral_summary: string | null;
+  key_facts: string[];
+
+  // Bias / neutrality metrics
+  bias_language_score: number | null;
+  bias_source_score: number | null;
+  bias_framing_score: number | null;
+  bias_context_score: number | null;
+  bias_intent_score: number | null;
+  pi_score: number | null;
+
+  // Timestamps / day bucketing
+  created_at: string | null;
+  day: string | null;
+  day_iso: string | null;
+};
+
+function createSupabaseAdmin() {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('[solace-digest] Supabase admin credentials not configured');
+    return null;
   }
+
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
   });
 }
 
-type SolaceDigestRow = {
-  id: string;
-  story_id: string | null;
-  story_title: string | null;
-  story_url: string | null;
-  outlet: string | null;
-  outlet_group: string | null;
-  category: string | null;
-  day_iso: string | null;
-
-  neutral_summary: string | null;
-  key_facts: unknown; // Supabase may send this as text / array
-  context_background: string | null;
-  stakeholder_positions: string | null;
-  timeline: string | null;
-  disputed_claims: string | null;
-  omissions_detected: string | null;
-
-  bias_language_score: number | null;
-  bias_source_score: number | null;
-  bias_framing_score: number | null;
-  bias_context_score: number | null;
-  bias_intent_score: number | null;
-  pi_score: number | null;
-
-  created_at: string | null;
-  updated_at: string | null;
-};
-
-export type SolaceDigestStory = {
-  id: string;
-  truth_fact_id: string | null; // not in view, kept for downstream compatibility
-  story_id: string | null;
-  title: string;
-  url: string | null;
-  outlet: string | null;
-  outlet_group: string | null;
-  category: string | null;
-
-  neutral_summary: string;
-  key_facts: string[];
-  context_background: string;
-  stakeholder_positions: string;
-  timeline: string;
-  disputed_claims: string;
-  omissions_detected: string;
-
-  bias_language_score: number | null;
-  bias_source_score: number | null;
-  bias_framing_score: number | null;
-  bias_context_score: number | null;
-  bias_intent_score: number | null;
-  pi_score: number | null;
-
-  notes: string | null; // not in view, kept as null
-  created_at: string | null;
-};
-
-function coerceArray(value: unknown): string[] {
-  if (!value) return [];
-  if (Array.isArray(value)) {
-    return value.map((v) => String(v ?? '')).filter((v) => v.length > 0);
-  }
-  try {
-    const parsed = JSON.parse(String(value));
-    if (Array.isArray(parsed)) {
-      return parsed.map((v) => String(v ?? '')).filter((v) => v.length > 0);
+function normalizeKeyFacts(raw: any): string[] {
+  if (!raw) return [];
+  // Most likely JSON-encoded array string from the view
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.map((x) => String(x));
+      }
+    } catch {
+      // Not JSON? Fall through and try a simple split.
+      const parts = raw.split(/[;\n]+/).map((s) => s.trim());
+      return parts.filter(Boolean);
     }
-  } catch {
-    // ignore parse errors; fall through
   }
-  return [String(value)];
+  if (Array.isArray(raw)) {
+    return raw.map((x) => String(x));
+  }
+  return [];
 }
 
-function coerceNumber(value: unknown): number | null {
-  if (value === null || value === undefined) return null;
-  const n = typeof value === 'number' ? value : Number(value);
-  if (!Number.isFinite(n)) return null;
-  return n;
-}
-
-function mapRowToStory(row: SolaceDigestRow): SolaceDigestStory {
+function mapRowToStory(row: any): SolaceDigestStory {
   return {
-    id: row.id,
-    truth_fact_id: null, // view doesn’t expose this; kept for compatibility
-    story_id: row.story_id,
-    title: (row.story_title || '').trim() || '(untitled story)',
-    url: row.story_url,
-    outlet: row.outlet,
-    outlet_group: row.outlet_group,
-    category: row.category,
+    ledger_id: String(row.ledger_id),
+    truth_fact_id: row.truth_fact_id ? String(row.truth_fact_id) : null,
 
-    neutral_summary: (row.neutral_summary || '').trim(),
-    key_facts: coerceArray(row.key_facts),
-    context_background: (row.context_background || '').trim(),
-    stakeholder_positions: (row.stakeholder_positions || '').trim(),
-    timeline: (row.timeline || '').trim(),
-    disputed_claims: (row.disputed_claims || '').trim(),
-    omissions_detected: (row.omissions_detected || '').trim(),
+    title: row.story_title ?? '',
+    url: row.story_url ?? '',
+    outlet: row.outlet ?? null,
+    // The current view doesn’t expose outlet_group; keep the field nullable
+    outlet_group: row.outlet_group ?? null,
 
-    bias_language_score: coerceNumber(row.bias_language_score),
-    bias_source_score: coerceNumber(row.bias_source_score),
-    bias_framing_score: coerceNumber(row.bias_framing_score),
-    bias_context_score: coerceNumber(row.bias_context_score),
-    bias_intent_score: coerceNumber(row.bias_intent_score),
-    pi_score: coerceNumber(row.pi_score),
+    neutral_summary: row.neutral_summary ?? null,
+    key_facts: normalizeKeyFacts(row.key_facts),
 
-    notes: null,
-    created_at: row.created_at,
+    bias_language_score:
+      typeof row.bias_language_score === 'number' ? row.bias_language_score : null,
+    bias_source_score:
+      typeof row.bias_source_score === 'number' ? row.bias_source_score : null,
+    bias_framing_score:
+      typeof row.bias_framing_score === 'number' ? row.bias_framing_score : null,
+    bias_context_score:
+      typeof row.bias_context_score === 'number' ? row.bias_context_score : null,
+    bias_intent_score:
+      typeof row.bias_intent_score === 'number' ? row.bias_intent_score : null,
+    pi_score: typeof row.pi_score === 'number' ? row.pi_score : null,
+
+    created_at: row.created_at ?? null,
+    day: row.day ?? null,
+    day_iso: row.day_iso ?? null,
   };
 }
 
-export async function getSolaceNewsDigest(): Promise<SolaceDigestStory[]> {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    console.warn('[solace-digest] Neutral News Digest requested but Supabase admin env is missing.');
+/**
+ * Fetch the current Neutral News Digest from the consolidated view.
+ *
+ * This function is intentionally defensive:
+ * - Returns [] if Supabase is not configured.
+ * - Returns [] on any query error, logging to console but not throwing.
+ *
+ * The chat route and ledgers treat this as the single source of truth
+ * for neutral news stories.
+ */
+export async function getSolaceNewsDigest(
+  limit: number = 50
+): Promise<SolaceDigestStory[]> {
+  const supabase = createSupabaseAdmin();
+  if (!supabase) {
+    console.error(
+      '[solace-digest] Supabase not configured (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY missing)'
+    );
     return [];
   }
 
   try {
-    const supabase = createAdminClient();
     const { data, error } = await supabase
-      // KEY WIRE-UP: use the scored digest view
       .from('solace_news_digest_view')
-      .select('*')
-      .order('day_iso', { ascending: false })
-      .order('pi_score', { ascending: false });
+      .select(
+        `
+        ledger_id,
+        truth_fact_id,
+        story_title,
+        story_url,
+        outlet,
+        neutral_summary,
+        key_facts,
+        bias_language_score,
+        bias_source_score,
+        bias_framing_score,
+        bias_context_score,
+        bias_intent_score,
+        pi_score,
+        created_at,
+        day,
+        day_iso
+      `
+      )
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
     if (error) {
-      console.error('[solace-digest] solace_news_digest_view error', error);
+      console.error('[solace-digest] select from solace_news_digest_view failed', error);
       return [];
     }
 
-    const rows = (data || []) as SolaceDigestRow[];
-    return rows.map(mapRowToStory);
+    if (!data || !data.length) return [];
+
+    return data.map(mapRowToStory);
   } catch (err) {
-    console.error('[solace-digest] getSolaceNewsDigest fatal', err);
+    console.error('[solace-digest] unexpected error', err);
     return [];
   }
 }
+
