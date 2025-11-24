@@ -2,7 +2,7 @@
 
 // ---- Versioning ----
 
-export const SOLACE_PERSONA_VERSION = "2025-11-21-core-v3";
+export const SOLACE_PERSONA_VERSION = "2025-11-23-core-v4";
 
 // Domains Solace can operate in.
 // Extend this union if you add more specialized modes later.
