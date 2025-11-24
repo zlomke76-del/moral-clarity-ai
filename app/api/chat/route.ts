@@ -1,6 +1,8 @@
 // app/api/chat/route.ts
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const preferredRegion = 'iad1';
+export const fetchCache = 'force-no-store';
 
 import { NextRequest, NextResponse } from 'next/server';
 import type OpenAI from 'openai';
