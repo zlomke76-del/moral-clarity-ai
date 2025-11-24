@@ -139,6 +139,10 @@ const SOLACE_URL = process.env.SOLACE_API_URL || '';
 const SOLACE_KEY = process.env.SOLACE_API_KEY || '';
 
 async function solaceNonStream(payload: any) {
+  if (!SOLACE_URL || !SOLACE_KEY) {
+    throw new Error('[chat] Solace backend not configured');
+  }
+
   const r = await fetch(SOLACE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SOLACE_KEY}` },
@@ -154,6 +158,10 @@ async function solaceNonStream(payload: any) {
 }
 
 async function solaceStream(payload: any) {
+  if (!SOLACE_URL || !SOLACE_KEY) {
+    throw new Error('[chat] Solace backend not configured');
+  }
+
   const r = await fetch(SOLACE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SOLACE_KEY}` },
@@ -205,6 +213,25 @@ const GUIDELINE_TRUTH = `TRUTH & UNCERTAINTY
 const GUIDELINE_DILEMMAS = `MORAL DILEMMAS
 - For trolley-problem-style questions (e.g., "save one child or five adults"), do NOT choose a side.
 - Briefly outline how different ethical frameworks (consequences, duty, character) might reason about the case, and keep your tone non-judgmental.`;
+
+/* NEW: Website Review Protocol (for deep research / web evaluations) */
+const WEBSITE_REVIEW_PROTOCOL = `WEBSITE REVIEW PROTOCOL
+- When the user asks you to "analyze", "review", or "look up" a WEBSITE, first check:
+  - Is there a URL in the most recent user turn?
+  - Is there a RESEARCH CONTEXT or WEB/SEARCH section above?
+- If there IS RESEARCH CONTEXT (deep research results, fetched page text, or SEARCH_RESULTS):
+  - Treat that as your ONLY factual source about the site.
+  - Make it explicit that you are basing your review on that supplied context.
+  - Anchor concrete observations to what appears in the snippets (structure, copy, pricing, safety info, CTAs, imagery, etc.).
+  - Do NOT say "I can't browse the web" or "I can't see the site" when this context is present.
+- If there is a URL but NO RESEARCH CONTEXT yet:
+  - Before giving a long critique, ask a brief clarifying question like:
+    "Which angle matters most right now — UX/navigation, clarity of offer, SEO, trust/safety signals, or booking flow?"
+  - After the user clarifies, use the RESEARCH CONTEXT that the system provides (if any) and follow the rules above.
+- If there is NO URL and NO RESEARCH CONTEXT:
+  - Say clearly that you cannot see the live site.
+  - Invite the user to paste key sections (homepage text, pricing, booking flow screenshots) so you can review those directly.
+- Never imply you are browsing the open web in real time; always frame your review as operating on the provided context.`;
 
 const GUIDELINE_ABRAHAMIC = `ABRAHAMIC COUNSEL LAYER
 - Root counsel in God across the Abrahamic tradition (Torah/Tanakh, New Testament, Qur'an).
@@ -373,6 +400,7 @@ You are ${SOLACE_NAME} — a steady, principled presence. Listen first, then off
     GUIDELINE_DEPENDENCY,
     GUIDELINE_TRUTH,
     GUIDELINE_DILEMMAS,
+    WEBSITE_REVIEW_PROTOCOL,
     RESPONSE_FORMAT,
     scripturePolicyText({
       wantsAbrahamic,
@@ -400,7 +428,11 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 }
 
 /* ========= URL & Deep Research helpers ========= */
-const URL_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/i;
+/**
+ * More forgiving URL regex:
+ * - matches texaxes.com, www.texaxes.com, https://texaxes.com, and paths/querystrings.
+ */
+const URL_REGEX = /\b((?:https?:\/\/)?(?:www\.)?[a-z0-9.-]+\.[a-z]{2,})(?:[^\s]*)/i;
 
 function extractFirstUrl(text: string): string | null {
   if (!text) return null;
@@ -423,8 +455,9 @@ function wantsDeepResearch(text: string): boolean {
     'evaluate this site',
     'analyze this website',
     'analyze this site',
+    'review this website',
+    'review this site',
     'ux review',
-    'seo review',
     'is this website good',
     'is this site good',
     'is this site legit',
@@ -839,12 +872,13 @@ export async function POST(req: NextRequest) {
       process.env.OPENAI_WEB_ENABLED_flag ??
       '';
 
-    // IMPORTANT: default web/deep-research ON when no env flag is set.
-    // Only disable when explicitly set to "0" or "false".
-    let webFlag = true;
-    if (typeof rawWebFlag === 'string' && rawWebFlag.length > 0) {
-      webFlag = !/^0|false$/i.test(rawWebFlag);
-    }
+    // Default: web/deep research ENABLED when flag is unset; allow env to disable explicitly.
+    const webFlag =
+      typeof rawWebFlag === 'string'
+        ? rawWebFlag.length === 0
+          ? true
+          : !/^0|false$/i.test(rawWebFlag)
+        : !!rawWebFlag;
 
     /* ===== DEEP RESEARCH (Tavily lives only here now) ===== */
     let researchSection = '';
@@ -1027,7 +1061,7 @@ export async function POST(req: NextRequest) {
       try {
         await maybeStoreEpisode(userKey, workspaceId, rolled);
       } catch (err) {
-        console.error('[chat] maybeStoreEpisode failed', err);
+        console.error('[chat] maybeStoreEpisode failed (non-fatal)', err);
       }
     }
 
@@ -1058,7 +1092,6 @@ export async function POST(req: NextRequest) {
               system,
               messages: rolledWithAttachments,
               temperature: 0.2,
-              // Solace backend may ignore this, but it is safe to send.
               max_output_tokens: maxOutputTokens,
             }),
             requestTimeoutMs
@@ -1117,7 +1150,6 @@ export async function POST(req: NextRequest) {
           system,
           messages: rolledWithAttachments,
           temperature: 0.2,
-          // founder gets benefit here via Solace if backend uses it
           max_output_tokens: maxOutputTokens,
         });
         return new NextResponse(stream as any, {
@@ -1186,4 +1218,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
