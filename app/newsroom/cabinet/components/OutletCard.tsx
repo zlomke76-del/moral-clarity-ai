@@ -18,11 +18,9 @@ export default function OutletCard({
   badge,
   onSelect,
 }: Props) {
-  // PI displayed on a 0–100 scale, one decimal place (e.g. 82.7)
   const piDisplay = (outlet.avg_pi * 100).toFixed(1);
   const stories = outlet.total_stories;
 
-  // Extract first scored and most recent date
   const firstScoredDate = outlet.first_scored_date; // Ensure this field exists in your data
   const mostRecentDate = outlet.most_recent_date; // Ensure this field exists in your data
 
@@ -48,11 +46,10 @@ export default function OutletCard({
         "bg-neutral-950/70 hover:bg-neutral-900/80",
         borderClass,
       ].join(" ")}
-      aria-label={`Select outlet ${outlet.canonical_outlet}`} // Accessibility improvement
-      role="button" // Added role for accessibility
+      aria-label={`Select outlet ${outlet.canonical_outlet}`}
+      role="button"
     >
       <div className="flex items-center justify-between gap-3">
-        {/* Left: rank + logo + outlet */}
         <div className="flex items-center gap-3">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-900 text-xs font-semibold text-neutral-200">
             #{rank}
@@ -71,7 +68,6 @@ export default function OutletCard({
           </div>
         </div>
 
-        {/* Right: PI + tier label */}
         <div className="flex flex-col items-end gap-1">
           <div className="flex items-baseline gap-2">
             <div className="text-xs text-neutral-400">PI</div>
