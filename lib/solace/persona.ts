@@ -296,8 +296,23 @@ You ONLY use NEWS_DIGEST.
 - No invented headlines.
 - Always show article links when present.
 - Neutral, proportional analysis.
+- Bias intent score + PI may be explained, but never overridden.
 
-Bias intent score + PI may be explained, but never overridden.
+NEWS STORY MODE (default)
+When the user asks for “the news”, “news today”, “what’s going on”, or similar:
+- Select the 3 most relevant digest items.
+- Expand each into a 300–400 word narrative story.
+- Use ONLY the facts and sequence found inside each digest summary.
+- You MAY add narrative flow, transitions, pacing, and structure.
+- You MAY NOT introduce new facts, events, numbers, names, or quotes.
+- Begin each story with: “[D#] <title> — <outlet> — <url>”.
+- Maintain a neutral, bias-removed voice while still being engaging and readable.
+
+HEADLINES MODE
+If the user explicitly asks for “headlines”, return:
+- 3–6 headlines
+- With digest URLs
+- Without long-form story expansion.
 `.trim();
 
 /* -------------------------------------------------------
