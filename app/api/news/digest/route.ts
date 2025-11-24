@@ -5,64 +5,86 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL!;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+/**
+ * Shape of a row from solace_news_digest_view.
+ * Keep this in sync with the view definition, but it's intentionally loose
+ * so minor column additions won't break the build.
+ */
+type SolaceDigestRow = {
+  id: string;
+  outlet: string | null;
+  outlet_group: string | null;
+  title: string;
+  neutral_summary: string | null;
+  url: string | null;
+  bias_intent_score: number | null;
+  pi_score: number | null;
+  captured_at: string | null;
+};
 
-const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { persistSession: false },
-});
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-function jsonError(message: string, status = 500, extra: Record<string, unknown> = {}) {
-  return NextResponse.json({ ok: false, error: message, ...extra }, { status });
-}
-
+/**
+ * GET /api/news/digest
+ *
+ * Returns the latest neutral-news stories from the solace_news_digest_view.
+ * This is consumed by getSolaceNewsDigest() and then fed into Solace as NEWS CONTEXT.
+ */
 export async function GET(req: NextRequest) {
-  try {
-    const url = new URL(req.url);
-    const limitParam = url.searchParams.get('limit');
-    const daysParam = url.searchParams.get('days');
-    const outletParam = url.searchParams.get('outlet');
+  // 🔒 Build-safe + env-safe guard
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    console.warn(
+      '[news/digest] SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not configured.'
+    );
 
-    const limit = limitParam ? Math.max(1, Math.min(Number(limitParam) || 0, 100)) : 50;
-    const days = daysParam ? Math.max(1, Math.min(Number(daysParam) || 0, 30)) : null;
-
-    let query = supabaseAdmin
-      .from('solace_news_digest_view')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(limit);
-
-    if (days) {
-      query = query.gte('created_at', new Date(Date.now() - days * 86400000).toISOString());
-    }
-
-    if (outletParam) {
-      query = query.eq('outlet', outletParam);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('[news/digest] query error', error);
-      return jsonError('Failed to load news digest.', 500, {
-        code: error.code,
-        details: error.details,
-      });
-    }
-
-    return NextResponse.json({
-      ok: true,
-      count: data?.length || 0,
-      stories: data ?? [],
-    });
-  } catch (err: any) {
-    console.error('[news/digest] fatal error', err);
-    return jsonError(err?.message || 'Unexpected error in news digest.', 500, {
-      code: 'NEWS_DIGEST_FATAL',
-    });
+    // Return a harmless empty payload so the build and runtime don't explode
+    return NextResponse.json(
+      {
+        ok: false,
+        error: 'Supabase not configured for news digest',
+        count: 0,
+        stories: [] as SolaceDigestRow[],
+      },
+      { status: 200 }
+    );
   }
-}
 
-export async function POST(req: NextRequest) {
-  return GET(req);
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false },
+  });
+
+  const { searchParams } = new URL(req.url);
+  const limitParam = searchParams.get('limit');
+  const limit = Math.min(Math.max(Number(limitParam) || 20, 1), 50);
+
+  const { data, error } = await supabase
+    .from<SolaceDigestRow>('solace_news_digest_view')
+    .select('*')
+    .order('captured_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('[news/digest] Supabase error:', error.message);
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error.message,
+        count: 0,
+        stories: [] as SolaceDigestRow[],
+      },
+      { status: 500 }
+    );
+  }
+
+  const stories = data ?? [];
+
+  return NextResponse.json(
+    {
+      ok: true,
+      count: stories.length,
+      stories,
+    },
+    { status: 200 }
+  );
 }
