@@ -33,10 +33,6 @@ function jsonError(
   return NextResponse.json({ ok: false, error: message, ...extra }, { status });
 }
 
-/**
- * Normalize outlet → canonical outlet
- * using the news_outlet_aliases table.
- */
 function applyCanonical(
   outlet: string,
   aliasMap: Record<string, string>
@@ -50,13 +46,11 @@ function applyCanonical(
 export async function GET(req: NextRequest) {
   try {
     if (!supabaseAdmin) {
-      return jsonError("Supabase admin client not configured.", 500, {
-        code: "NO_SUPABASE_ADMIN",
-      });
+      return jsonError("Supabase admin client not configured.", 500);
     }
 
     /* ==========================================================
-     * 1) Load canonical mapping table
+     * 1) Load canonical alias mapping
      * ========================================================== */
     const { data: aliasRows, error: aliasErr } = await supabaseAdmin
       .from("news_outlet_aliases")
@@ -64,9 +58,7 @@ export async function GET(req: NextRequest) {
 
     if (aliasErr) {
       console.error("[overview] alias table error", aliasErr);
-      return jsonError("Failed to load outlet alias table.", 500, {
-        code: aliasErr.code,
-      });
+      return jsonError("Failed to load outlet alias table.", 500);
     }
 
     const aliasMap: Record<string, string> = {};
@@ -77,12 +69,11 @@ export async function GET(req: NextRequest) {
     }
 
     /* ==========================================================
-     * 2) Pull ALL outlet daily trend rows
+     * 2) Load all trend rows
      * ========================================================== */
     const { data, error } = await supabaseAdmin
       .from("outlet_bias_pi_daily_trends")
-      .select(
-        `
+      .select(`
         outlet,
         story_day,
         outlet_story_count,
@@ -92,14 +83,11 @@ export async function GET(req: NextRequest) {
         avg_bias_source,
         avg_bias_framing,
         avg_bias_context
-      `
-      );
+      `);
 
     if (error) {
       console.error("[overview] query error", error);
-      return jsonError("Failed to load outlet neutrality data.", 500, {
-        code: error.code,
-      });
+      return jsonError("Failed to load outlet neutrality data.", 500);
     }
 
     const rows = (data || []) as any[];
@@ -114,13 +102,15 @@ export async function GET(req: NextRequest) {
         canonical: string;
         totalStories: number;
         days: Set<string>;
+        firstDay: string | null;
+        lastDay: string | null;
+
         sumBiasIntent: number;
         sumPi: number;
         sumLang: number;
         sumSource: number;
         sumFrame: number;
         sumCtx: number;
-        lastDay: string | null;
       }
     > = {};
 
@@ -136,13 +126,15 @@ export async function GET(req: NextRequest) {
           canonical,
           totalStories: 0,
           days: new Set(),
+          firstDay: null,
+          lastDay: null,
+
           sumBiasIntent: 0,
           sumPi: 0,
           sumLang: 0,
           sumSource: 0,
           sumFrame: 0,
           sumCtx: 0,
-          lastDay: null,
         };
       }
 
@@ -160,6 +152,10 @@ export async function GET(req: NextRequest) {
 
       if (storyDay) {
         g.days.add(storyDay);
+
+        if (!g.firstDay || storyDay < g.firstDay) {
+          g.firstDay = storyDay;
+        }
         if (!g.lastDay || storyDay > g.lastDay) {
           g.lastDay = storyDay;
         }
@@ -167,9 +163,8 @@ export async function GET(req: NextRequest) {
     }
 
     /* ==========================================================
-     * 4) Apply MIN_STORIES requirement
+     * 4) Filter by minimum story count
      * ========================================================== */
-
     const url = new URL(req.url);
     const minParam = url.searchParams.get("minStories");
     const min = Math.max(1, Number(minParam ?? "5") || 5);
@@ -184,13 +179,17 @@ export async function GET(req: NextRequest) {
           canonical_outlet: g.canonical,
           total_stories: g.totalStories,
           days_active: g.days.size,
+
           avg_bias_intent: g.sumBiasIntent / total,
           avg_pi: g.sumPi / total,
+
           bias_language: g.sumLang / total,
           bias_source: g.sumSource / total,
           bias_framing: g.sumFrame / total,
           bias_context: g.sumCtx / total,
-          last_story_day: g.lastDay,
+
+          first_scored_date: g.firstDay,
+          most_recent_date: g.lastDay,
         };
       });
 
@@ -206,10 +205,7 @@ export async function GET(req: NextRequest) {
     console.error("[overview] fatal error", err);
     return jsonError(
       err?.message || "Unexpected error in outlets overview.",
-      500,
-      {
-        code: "NEWS_OUTLETS_OVERVIEW_FATAL",
-      }
+      500
     );
   }
 }
@@ -217,4 +213,5 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   return GET(req);
 }
+
 
