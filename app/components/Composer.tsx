@@ -1,18 +1,18 @@
 // app/components/Composer.tsx
 import React from "react";
+import PendingFiles from "./PendingFiles"; // Import PendingFiles
 
 type ComposerProps = {
   input: string;
   setInput: (value: string) => void;
   send: () => void;
   streaming: boolean;
-  pendingFiles: any[]; // Adjust type as necessary
+  pendingFiles: File[]; // Adjust type as necessary
   handleFiles: (files: FileList) => void;
   toggleMic: () => void;
 };
 
 const Composer: React.FC<ComposerProps> = ({ input, setInput, send, streaming, pendingFiles, handleFiles, toggleMic }) => {
-  // Define styles
   const composerWrapStyle: React.CSSProperties = {
     borderTop: "1px solid var(--mc-border)",
     background: "rgba(12,19,30,.85)",
