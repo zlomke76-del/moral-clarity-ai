@@ -465,9 +465,15 @@ export async function POST(req: NextRequest) {
           newsSection =
             `\n\nNEWS CONTEXT (Neutral News Digest)\n` +
             `${lines}\n\nGuidance:\n` +
-            `- Use ONLY this NEWS CONTEXT when answering generic questions like "what is the news today" or "top news today".\n` +
+            `- Use ONLY this NEWS CONTEXT when answering generic questions like "what is the news today", "news today", or "what's going on in the world?".\n` +
+            `- When the user asks for "news" (and does NOT specifically ask for "headlines"), you MUST:\n` +
+            `   • Select the 3 most relevant digest items.\n` +
+            `   • Expand each into a 300–400 word narrative story.\n` +
+            `   • Use ONLY the facts and sequence from that digest item's neutral summary.\n` +
+            `   • Maintain a neutral, bias-removed tone while still being engaging and readable.\n` +
+            `   • Begin each story with: "[D#] <title> — <outlet> — <url>".\n` +
+            `- If the user explicitly asks for "headlines", return 3–6 short headline-style entries with links instead of full stories.\n` +
             `- Do NOT invent additional headlines or stories beyond what appears here.\n` +
-            `- By default, return 2–4 stories. For each story, write a neutral, fact-focused summary, unless the user explicitly asks for a different length.\n` +
             `- Always include direct links (URLs) in your answer when you reference a specific story.\n` +
             `- If bias scores (bias_intent_score, pi_score) are mentioned, treat them as authoritative and DO NOT rescore.`;
         } else {
