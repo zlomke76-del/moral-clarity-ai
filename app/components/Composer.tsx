@@ -8,7 +8,7 @@ type ComposerProps = {
   send: () => void;
   streaming: boolean;
   pendingFiles: File[]; // Adjust type as necessary
-  handleFiles: (files: FileList) => void;
+  handleFiles: (event: React.ChangeEvent<HTMLInputElement>) => void; // Change type here
   toggleMic: () => void;
 };
 
@@ -66,7 +66,13 @@ const Composer: React.FC<ComposerProps> = ({ input, setInput, send, streaming, p
           <button onClick={handleAttachClick} title="Attach files" style={attachButtonStyle}>
             📎
           </button>
-          <input id="solace-file-input" type="file" multiple style={{ display: "none" }} onChange={handleFiles} />
+          <input
+            id="solace-file-input"
+            type="file"
+            multiple
+            style={{ display: "none" }}
+            onChange={handleFiles} // This will now work correctly
+          />
           <button onClick={toggleMic} title={listening ? "Stop mic" : "Speak"} style={micButtonStyle(listening)}>
             {listening ? "■" : "🎤"}
           </button>
