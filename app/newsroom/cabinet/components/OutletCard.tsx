@@ -22,6 +22,10 @@ export default function OutletCard({
   const piDisplay = (outlet.avg_pi * 100).toFixed(1);
   const stories = outlet.total_stories;
 
+  // Extract first scored and most recent date
+  const firstScoredDate = outlet.first_scored_date; // Ensure this field exists in your data
+  const mostRecentDate = outlet.most_recent_date; // Ensure this field exists in your data
+
   const tierLabel =
     badge === "golden"
       ? "Golden Anchor"
@@ -62,7 +66,7 @@ export default function OutletCard({
               {outlet.canonical_outlet}
             </div>
             <div className="mt-0.5 text-[11px] text-neutral-400">
-              {stories} stories analyzed · PI based on lifetime
+              {stories} stories analyzed · First Scored: {firstScoredDate} · Most Recent: {mostRecentDate}
             </div>
           </div>
         </div>
