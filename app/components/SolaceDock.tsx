@@ -1,4 +1,6 @@
 // app/components/SolaceDock.tsx
+"use client"; // Mark this component as a Client Component
+
 import React, { useRef, useEffect } from "react";
 import { useSolaceMemory } from "./path/to/useSolaceMemory"; // Adjust the import path
 import { useSolaceAttachments } from "./path/to/useSolaceAttachments"; // Adjust the import path
