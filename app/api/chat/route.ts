@@ -326,7 +326,6 @@ export async function POST(req: NextRequest) {
 
     const memoryEnabled = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
 
-    let hits: Array<any> = [];
     let memorySection = '';
 
     /* ===== MEMORY: recall pack (scoped, episodic + factual) ===== */
@@ -353,7 +352,7 @@ export async function POST(req: NextRequest) {
           ? FOUNDER_MEMORY_EPISODES_LIMIT
           : NORMAL_MEMORY_EPISODES_LIMIT;
 
-        // 1) Episodic + factual memory pack for Solace system prompt
+        // Episodic + factual memory pack for Solace system prompt
         const pack = await getMemoryPack(userKey, query, {
           factsLimit,
           episodesLimit,
@@ -369,31 +368,9 @@ export async function POST(req: NextRequest) {
           `  and reason across them instead of handling each in isolation.\n` +
           `- When the user seems stuck, zoom out and reflect patterns you see across these memories.\n` +
           (pack || '• (none)');
-
-        // 2) Raw factual hits kept for autobiographical reflection mode
-        hits = await searchMemories(userKey, query, 8);
-
-        if (hits && hits.length) {
-          const memoryRowsText = hits
-            .slice(0, 12)
-            .map((m: any, i: number) => {
-              const idx = i + 1;
-              const title = (m.title || '').toString().trim();
-              const safeContent = (m.content || '').toString().trim();
-              const titleLine = title ? `title: ${title}\n` : '';
-              return `[M${idx}]\n${titleLine}content: ${safeContent}`;
-            })
-            .join('\n\n');
-
-          memorySection +=
-            `\n\nMEMORY_ROWS\n` +
-            `${memoryRowsText}\n` +
-            `[END_MEMORY_ROWS]`;
-        }
       } catch (err) {
         console.error('[chat] memory recall failed', err);
         memorySection = '';
-        hits = [];
       }
     }
 
@@ -485,18 +462,14 @@ export async function POST(req: NextRequest) {
             })
             .join('\n\n');
 
-`\n\nGuidance:\n` +
-`- Use ONLY this NEWS CONTEXT when answering generic questions like "what is the news today" or "the news".\n` +
-`- When the user asks for “news” (not “headlines”), return FULL STORIES:\n` +
-`   • Three stories\n` +
-`   • 300–400 words each\n` +
-`   • Neutral, bias-removed\n` +
-`   • Use only digest facts; do NOT introduce new facts, events, or names\n` +
-`   • Begin each story with: "[D#] <title> — <outlet> — <url>"\n` +
-`   • Narrative expansion, structure, transitions, and clarity are allowed.\n` +
-`- If the user asks for “headlines”, provide 3–6 headline summaries with links.\n` +
-`- Never fabricate or imply live browsing.\n`
-
+          newsSection =
+            `\n\nNEWS CONTEXT (Neutral News Digest)\n` +
+            `${lines}\n\nGuidance:\n` +
+            `- Use ONLY this NEWS CONTEXT when answering generic questions like "what is the news today" or "top news today".\n` +
+            `- Do NOT invent additional headlines or stories beyond what appears here.\n` +
+            `- By default, return 2–4 stories. For each story, write a neutral, fact-focused summary, unless the user explicitly asks for a different length.\n` +
+            `- Always include direct links (URLs) in your answer when you reference a specific story.\n` +
+            `- If bias scores (bias_intent_score, pi_score) are mentioned, treat them as authoritative and DO NOT rescore.`;
         } else {
           newsSection =
             `\n\nNEWS CONTEXT (Neutral News Digest)\n` +
