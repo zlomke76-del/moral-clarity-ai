@@ -4,22 +4,23 @@
 export interface OutletOverview {
   outlet: string;
   canonical_outlet: string;
+
   total_stories: number;
   days_active: number;
 
-  // Lifetime bias aggregates
-  avg_bias_intent: number; // 0–3
-  avg_pi: number;          // 0.0–1.0
+  avg_bias_intent: number;
+  avg_pi: number;
 
-  bias_language: number;   // 0–3
-  bias_source: number;     // 0–3
-  bias_framing: number;    // 0–3
-  bias_context: number;    // 0–3
+  bias_language: number;
+  bias_source: number;
+  bias_framing: number;
+  bias_context: number;
 
-  // Lifetime window
-  first_scored_date: string | null;   // earliest story_day we’ve seen
-  most_recent_date: string | null;    // latest story_day we’ve seen
+  last_story_day: string | null; // ADD THIS
+  first_scored_date?: string | null; // Optional, if you plan to calculate it later
+  most_recent_date?: string | null; // Optional, if you plan to calculate it later
 }
+
 
 // Time-series point for the outlet trend chart
 export interface OutletTrendPoint {
