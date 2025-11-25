@@ -202,13 +202,15 @@ function detectExplicitRemember(text: string) {
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const id = setTimeout(() => reject(new Error('Request timed out')), ms);
-    p.then((v) => {
-      clearTimeout(id);
-      resolve(v);
-    }).catch((e) => {
-      clearTimeout(id);
-      reject(e);
-    });
+    p
+      .then((v) => {
+        clearTimeout(id);
+        resolve(v);
+      })
+      .catch((e) => {
+        clearTimeout(id);
+        reject(e);
+      });
   });
 }
 
@@ -272,12 +274,12 @@ export async function POST(req: NextRequest) {
     if (wantsImageGeneration(lastUser)) {
       const rawPrompt = lastUser.replace(/^img:\s*/i, '').trim() || lastUser;
       try {
-        const imageUrl = await generateImage(rawPrompt, '1024x1024');
+        // generateImage now takes a single prompt argument and normalizes URL/base64.
+        const imageUrl = await generateImage(rawPrompt);
 
         const text =
-          `Here’s your generated image based on your description:\n\n` +
-          `<img src="${imageUrl}" alt="Generated image" style="max-width:100%; border-radius:12px;" />\n\n` +
-          `(If the image doesn’t appear, you can open it directly: ${imageUrl})`;
+          `Here is your generated image based on your description:\n` +
+          `${imageUrl}`;
 
         return NextResponse.json(
           {
@@ -293,10 +295,9 @@ export async function POST(req: NextRequest) {
         );
       } catch (e: any) {
         const msg = e?.message || 'Image generation failed';
-        const text = `⚠️ Image generation error: ${msg}`;
         return NextResponse.json(
           {
-            text,
+            text: `⚠️ Image generation error: ${msg}`,
             model: 'gpt-image-1',
             identity: SOLACE_NAME,
             mode: 'Image',
@@ -608,12 +609,8 @@ CONTEXT OVERRIDE SEAL
       : rolled;
 
     /* ===== Dynamic caps: founder vs normal ===== */
-    const maxOutputTokens = isFounder
-      ? FOUNDER_MAX_OUTPUT_TOKENS
-      : NORMAL_MAX_OUTPUT_TOKENS;
-    const requestTimeoutMs = isFounder
-      ? FOUNDER_REQUEST_TIMEOUT_MS
-      : NORMAL_REQUEST_TIMEOUT_MS;
+    const maxOutputTokens = isFounder ? FOUNDER_MAX_OUTPUT_TOKENS : NORMAL_MAX_OUTPUT_TOKENS;
+    const requestTimeoutMs = isFounder ? FOUNDER_REQUEST_TIMEOUT_MS : NORMAL_REQUEST_TIMEOUT_MS;
 
     /* ===== Non-stream ===== */
     const useSolace = Boolean(SOLACE_URL && SOLACE_KEY) && !isFounder;
