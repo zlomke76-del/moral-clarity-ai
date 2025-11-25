@@ -1,46 +1,36 @@
-// app/api/files/csv/route.ts
-export const runtime = "nodejs";
+export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
+import { slugFromText } from "@/lib/files/slug";
+import { put } from "@vercel/blob";
 
 export async function POST(req: NextRequest) {
   try {
-    const { headers = [], rows = [], filename = "export.csv" } =
-      await req.json().catch(() => ({}));
+    const body = await req.json();
+    const title = body?.title || "Solace CSV";
+    const rows = body?.rows || [];
 
-    if (!Array.isArray(headers) || !Array.isArray(rows)) {
-      return NextResponse.json(
-        { error: "Invalid CSV structure" },
-        { status: 400 }
-      );
-    }
+    const filename = slugFromText(title, "csv");
 
-    const escape = (v: any) => {
-      if (v == null) return "";
-      const s = String(v);
-      if (s.includes('"') || s.includes(",") || s.includes("\n")) {
-        return `"${s.replace(/"/g, '""')}"`;
-      }
-      return s;
-    };
+    const csv = rows.map((r: any[]) =>
+      r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")
+    ).join("\n");
 
-    const csv =
-      "\uFEFF" +
-      [headers.map(escape).join(","), ...rows.map((r) => r.map(escape).join(","))].join("\n");
-
-    const b64 = Buffer.from(csv, "utf8").toString("base64");
+    const blob = await put(`exports/${filename}`, csv, {
+      access: "public",
+      contentType: "text/csv",
+    });
 
     return NextResponse.json({
       ok: true,
+      url: blob.url,
       filename,
-      mime: "text/csv",
-      base64: b64,
-      download_url: `data:text/csv;base64,${b64}`,
+      type: "csv",
     });
   } catch (err: any) {
     return NextResponse.json(
-      { error: err?.message || "CSV generation failed." },
+      { ok: false, error: err?.message || String(err) },
       { status: 500 }
     );
   }
