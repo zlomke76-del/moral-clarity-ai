@@ -358,6 +358,3 @@ export function buildSolaceSystemPrompt(
 
   return blocks.join("\n\n---\n\n");
 }
-
-  return blocks.join("\n\n---\n\n");
-}
