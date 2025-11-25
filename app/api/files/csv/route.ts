@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     const csv = text
       .replace(/\r\n/g, "\n")
       .split("\n")
-      .map((line) => `"${line.replace(/"/g, '""')}"`)
+      .map((line: string) => `"${line.replace(/"/g, '""')}"`)
       .join("\n");
 
     const buf = Buffer.from(csv, "utf-8");
