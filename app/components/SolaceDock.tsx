@@ -678,9 +678,23 @@ export default function SolaceDock() {
         }}
       >
         {messages.map((m, i) => {
-          // Transform text → HTML (handle <img> and line breaks)
-          const html = m.content
-            // Style any <img> tags that come from the backend
+          // Transform text → HTML (handle naked URLs, <img>, and line breaks)
+          let html = m.content;
+
+          // Auto-wrap naked base64 data URLs as <img>
+          html = html.replace(
+            /(data:image\/[a-zA-Z0-9+]+;base64,[0-9a-zA-Z+/=]+)(?=\s|$)/g,
+            `<img src="$1" />`
+          );
+
+          // Auto-wrap plain http(s) image URLs as <img>
+          html = html.replace(
+            /\bhttps?:\/\/[^\s"'<>]+?\.(?:png|jpe?g|gif|webp|bmp)(?=\s|$)/gi,
+            `<img src="$&" />`
+          );
+
+          // Style any <img> tags that come from the backend
+          html = html
             .replace(
               /<img([^>]+)>/g,
               `<img $1 style="max-width:100%;height:auto;border-radius:12px;display:block;margin:8px auto;box-shadow:0 0 18px rgba(0,0,0,.35);" />`
