@@ -14,7 +14,6 @@ export async function POST(req: NextRequest) {
 
     const filename = slugFromText(title, "docx");
 
-    // Send to Python worker to generate DOCX buffer
     const py = await fetch(process.env.PY_WORKER_URL!, {
       method: "POST",
       headers: {
@@ -29,19 +28,16 @@ export async function POST(req: NextRequest) {
     });
 
     if (!py.ok) {
-      return NextResponse.json(
-        { error: "DOCX worker error" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "DOCX worker error" }, { status: 500 });
     }
 
     const buf = Buffer.from(await py.arrayBuffer());
 
-    // Upload to Vercel Blob (NodeJS only)
     const blob = await put(`exports/${filename}`, buf, {
       access: "public",
       contentType:
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      allowOverwrite: true,
     });
 
     return NextResponse.json({
