@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { generateImage, type ImageSize, IMAGE_MODEL } from '@/lib/chat/image-gen';
 
 const STATIC_ALLOWED_ORIGINS = [
   'https://moralclarity.ai',
@@ -29,7 +30,9 @@ function pickAllowedOrigin(origin: string | null): string | null {
     const host = url.hostname.toLowerCase();
     if (host.endsWith('.moralclarity.ai') || host === 'moralclarity.ai') return origin;
     if (host.endsWith('.moralclarityai.com') || host === 'moralclarityai.com') return origin;
-  } catch {}
+  } catch {
+    // ignore
+  }
   return null;
 }
 
@@ -53,9 +56,15 @@ export async function POST(req: NextRequest) {
   const headers = corsHeaders(origin);
 
   try {
-    const body = await req.json().catch(() => ({}));
+    const body = await req.json().catch(() => ({} as any));
     const prompt = String(body?.prompt ?? '').trim();
-    const size = (body?.size as string | undefined) || '1024x1024';
+    const sizeRaw = (body?.size as string | undefined) || '1024x1024';
+
+    // Coerce size into one of the allowed sizes; default if unknown
+    const allowedSizes: ImageSize[] = ['256x256', '512x512', '1024x1024'];
+    const size: ImageSize = (allowedSizes.includes(sizeRaw as ImageSize)
+      ? sizeRaw
+      : '1024x1024') as ImageSize;
 
     if (!prompt) {
       return NextResponse.json(
@@ -72,40 +81,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const r = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-image-1',
-        prompt,
-        size,
-        n: 1,
-      }),
-    });
-
-    if (!r.ok) {
-      const t = await r.text().catch(() => '');
-      return NextResponse.json(
-        { error: `Image API error: ${r.status} ${t}` },
-        { status: 500, headers }
-      );
-    }
-
-    const j = await r.json().catch(() => ({}));
-    const url = j?.data?.[0]?.url || null;
-
-    if (!url) {
-      return NextResponse.json(
-        { error: 'No image URL returned' },
-        { status: 500, headers }
-      );
-    }
+    const url = await generateImage(prompt, size);
 
     return NextResponse.json(
-      { url, model: 'gpt-image-1' },
+      {
+        url,
+        model: IMAGE_MODEL,
+        size,
+      },
       { headers }
     );
   } catch (e: any) {
