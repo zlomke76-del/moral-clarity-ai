@@ -3,7 +3,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { generateImage, type ImageSize, IMAGE_MODEL } from '@/lib/chat/image-gen';
+import { generateImage, IMAGE_MODEL_NAME } from '@/lib/chat/image-gen';
 
 const STATIC_ALLOWED_ORIGINS = [
   'https://moralclarity.ai',
@@ -20,7 +20,10 @@ const ENV_ALLOWED_ORIGINS = (process.env.MCAI_ALLOWED_ORIGINS || '')
   .map((s) => s.trim())
   .filter(Boolean);
 
-const ALLOWED_SET = new Set<string>([...STATIC_ALLOWED_ORIGINS, ...ENV_ALLOWED_ORIGINS]);
+const ALLOWED_SET = new Set<string>([
+  ...STATIC_ALLOWED_ORIGINS,
+  ...ENV_ALLOWED_ORIGINS,
+]);
 
 function pickAllowedOrigin(origin: string | null): string | null {
   if (!origin) return null;
@@ -28,10 +31,12 @@ function pickAllowedOrigin(origin: string | null): string | null {
     if (ALLOWED_SET.has(origin)) return origin;
     const url = new URL(origin);
     const host = url.hostname.toLowerCase();
-    if (host.endsWith('.moralclarity.ai') || host === 'moralclarity.ai') return origin;
-    if (host.endsWith('.moralclarityai.com') || host === 'moralclarityai.com') return origin;
+    if (host.endsWith('.moralclarity.ai') || host === 'moralclarity.ai')
+      return origin;
+    if (host.endsWith('.moralclarityai.com') || host === 'moralclarityai.com')
+      return origin;
   } catch {
-    // ignore
+    // ignore malformed origin
   }
   return null;
 }
@@ -56,15 +61,9 @@ export async function POST(req: NextRequest) {
   const headers = corsHeaders(origin);
 
   try {
-    const body = await req.json().catch(() => ({} as any));
+    const body = await req.json().catch(() => ({}));
     const prompt = String(body?.prompt ?? '').trim();
-    const sizeRaw = (body?.size as string | undefined) || '1024x1024';
-
-    // Coerce size into one of the allowed sizes; default if unknown
-    const allowedSizes: ImageSize[] = ['256x256', '512x512', '1024x1024'];
-    const size: ImageSize = (allowedSizes.includes(sizeRaw as ImageSize)
-      ? sizeRaw
-      : '1024x1024') as ImageSize;
+    const size = (body?.size as string | undefined) || '1024x1024';
 
     if (!prompt) {
       return NextResponse.json(
@@ -73,21 +72,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const apiKey = process.env.OPENAI_API_KEY || '';
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'Missing OPENAI_API_KEY' },
-        { status: 500, headers }
-      );
-    }
-
-    const url = await generateImage(prompt, size);
+    // Delegate to shared generator (OpenAI + Supabase fallback)
+    const url = await generateImage(prompt, size as any);
 
     return NextResponse.json(
       {
         url,
-        model: IMAGE_MODEL,
-        size,
+        model: IMAGE_MODEL_NAME,
       },
       { headers }
     );
