@@ -276,31 +276,40 @@ export async function POST(req: NextRequest) {
       const title: string =
         body?.export_title || body?.title || 'Solace export';
 
-      const path =
-        exportFormat === 'pdf'
-          ? '/api/files/pdf'
-          : exportFormat === 'docx'
-          ? '/api/files/docx'
-          : '/api/files/csv';
+// === EXPORT THROUGH THE WORKER ===
+const WORKER_URL =
+  process.env.NEXT_PUBLIC_EXPORT_WORKER_URL ||
+  "https://mca-export-worker.vercel.app/api/generate";
 
-      const exportUrl = new URL(path, req.url);
+let fileUrl: string | null = null;
 
-      let fileUrl: string | null = null;
-      try {
-        const resp = await fetch(exportUrl.toString(), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title,
-            content: contentToExport,
-          }),
-        });
+try {
+  const resp = await fetch(WORKER_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.PY_WORKER_KEY || ""}`,
+    },
+    body: JSON.stringify({
+      type: exportFormat,          // 'pdf' | 'docx' | 'csv'
+      title: title,
+      content: contentToExport,
+    }),
+  });
 
-        const data = (await resp.json().catch(() => ({}))) as any;
-        fileUrl = data?.url || data?.fileUrl || null;
-      } catch (err) {
-        // fall through to error response below
-      }
+  if (resp.ok) {
+    const blob = await resp.blob();
+    const suffix = exportFormat === "docx" ? "docx" : exportFormat;
+    const storageFile = `solace_export_${Date.now()}.${suffix}`;
+    const upload = await put(storageFile, blob, {
+      access: "public",
+    });
+    fileUrl = upload?.url || null;
+  }
+} catch (err) {
+  console.error("EXPORT ERROR:", err);
+}
+
 
       if (!fileUrl) {
         return NextResponse.json(
