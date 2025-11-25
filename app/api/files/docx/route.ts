@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
       contentType:
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       addRandomSuffix: false,
-      allowOverwrite: true,        // 🔥 THIS FIXES YOUR ERROR
+      allowOverwrite: true,
     });
 
     return NextResponse.json({
