@@ -1,4 +1,5 @@
-export const runtime = "edge";
+// app/api/files/docx/route.ts
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
@@ -13,6 +14,7 @@ export async function POST(req: NextRequest) {
 
     const filename = slugFromText(title, "docx");
 
+    // Send to Python worker to generate DOCX buffer
     const py = await fetch(process.env.PY_WORKER_URL!, {
       method: "POST",
       headers: {
@@ -35,6 +37,7 @@ export async function POST(req: NextRequest) {
 
     const buf = Buffer.from(await py.arrayBuffer());
 
+    // Upload to Vercel Blob (NodeJS only)
     const blob = await put(`exports/${filename}`, buf, {
       access: "public",
       contentType:
