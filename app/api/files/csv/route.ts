@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     const filename = slugFromText(title, "csv");
 
-    // Convert raw content to CSV-safe format
+    // Convert raw content to CSV-safe format (one column, escaped)
     const csv = text
       .replace(/\r\n/g, "\n")
       .split("\n")
