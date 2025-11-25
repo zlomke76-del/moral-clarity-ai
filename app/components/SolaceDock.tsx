@@ -66,6 +66,33 @@ function getAttachmentUrl(f: any): string | null {
   return f.url || f.publicUrl || f.path || null;
 }
 
+/**
+ * Strip huge / unsafe content before sending to the API.
+ * - Remove any data:image;base64 blobs from messages.
+ * - Hard-cap message length so we never send absurdly long strings.
+ */
+function sanitizeMessagesForSend(msgs: Message[]): Message[] {
+  const MAX_CHARS = 8000;
+  const DATA_IMAGE_REGEX = /data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+/g;
+
+  return msgs.map((m) => {
+    let content = m.content || "";
+
+    if (content.includes("data:image/")) {
+      content = content.replace(
+        DATA_IMAGE_REGEX,
+        "[image omitted for context]"
+      );
+    }
+
+    if (content.length > MAX_CHARS) {
+      content = content.slice(0, MAX_CHARS) + "…";
+    }
+
+    return { ...m, content };
+  });
+}
+
 /* ============================================================
    COMPONENT
    ============================================================ */
@@ -243,6 +270,7 @@ export default function SolaceDock() {
     if (!ta) return;
     ta.style.height = "0px";
     ta.style.height = Math.min(220, ta.scrollHeight) + "px";
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [input]);
 
   /* ------------------ Default ministry ON ------------------ */
@@ -255,6 +283,7 @@ export default function SolaceDock() {
     next.add("ministry");
     setFilters(next);
     localStorage.setItem(MINISTRY_KEY, "1");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ============================================================
@@ -262,6 +291,7 @@ export default function SolaceDock() {
      ============================================================ */
   async function sendToChat(userMsg: string, msgs: Message[]) {
     const activeFilters = Array.from(filters);
+    const safeMessages = sanitizeMessagesForSend(msgs);
 
     const res = await fetch("/api/chat", {
       method: "POST",
@@ -271,7 +301,7 @@ export default function SolaceDock() {
         "X-User-Key": userKey,
       },
       body: JSON.stringify({
-        messages: msgs,
+        messages: safeMessages,
         filters: activeFilters,
         stream: false,
         attachments: pendingFiles,
@@ -283,7 +313,7 @@ export default function SolaceDock() {
     });
 
     clearPending();
-    const data = await res.json();
+    const data = await res.json().catch(() => ({} as any));
     const reply = String(data.text ?? "[No reply]");
     setMessages((m) => [...m, { role: "assistant", content: reply }]);
   }
@@ -311,7 +341,7 @@ export default function SolaceDock() {
       body: JSON.stringify({ prompt, imageUrl }),
     });
 
-    const data = await res.json();
+    const data = await res.json().catch(() => ({} as any));
     const reply = String(data.answer ?? "[No reply]");
     setMessages((m) => [...m, { role: "assistant", content: reply }]);
   }
@@ -623,7 +653,14 @@ export default function SolaceDock() {
         </div>
 
         {/* Right side */}
-        <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+        <div
+          style={{
+            marginLeft: "auto",
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+          }}
+        >
           <button
             type="button"
             onClick={toggleMinistry}
@@ -642,7 +679,7 @@ export default function SolaceDock() {
             Ministry
           </button>
 
-          {/* Collapse button (desktop + mobile) */}
+          {/* Collapse button */}
           <button
             type="button"
             onClick={() => setCollapsed(true)}
@@ -673,33 +710,17 @@ export default function SolaceDock() {
           flex: "1 1 auto",
           overflow: "auto",
           padding: "14px 16px",
-          background: "linear-gradient(180deg, rgba(12,19,30,.9), rgba(10,17,28,.92))",
+          background:
+            "linear-gradient(180deg, rgba(12,19,30,.9), rgba(10,17,28,.92))",
           color: ui.text,
         }}
       >
         {messages.map((m, i) => {
-          // Transform text → HTML (handle naked URLs, <img>, and line breaks)
-          let html = m.content;
-
-          // Auto-wrap naked base64 data URLs as <img>
-          html = html.replace(
-            /(data:image\/[a-zA-Z0-9+]+;base64,[0-9a-zA-Z+/=]+)(?=\s|$)/g,
-            `<img src="$1" />`
-          );
-
-          // Auto-wrap plain http(s) image URLs as <img>
-          html = html.replace(
-            /\bhttps?:\/\/[^\s"'<>]+?\.(?:png|jpe?g|gif|webp|bmp)(?=\s|$)/gi,
-            `<img src="$&" />`
-          );
-
-          // Style any <img> tags that come from the backend
-          html = html
+          const html = m.content
             .replace(
               /<img([^>]+)>/g,
               `<img $1 style="max-width:100%;height:auto;border-radius:12px;display:block;margin:8px auto;box-shadow:0 0 18px rgba(0,0,0,.35);" />`
             )
-            // Preserve line breaks
             .replace(/\n/g, "<br />");
 
           return (
@@ -717,7 +738,6 @@ export default function SolaceDock() {
                     : "rgba(28,38,54,.6)",
               }}
             >
-              {/* IMAGE / HTML-SAFE RENDERING */}
               <div style={{ width: "100%" }}>
                 <div
                   dangerouslySetInnerHTML={{
