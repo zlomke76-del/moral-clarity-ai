@@ -1,9 +1,10 @@
-export const runtime = "edge";
+// app/api/files/pdf/route.ts
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import { put } from "@vercel/blob";
 import { slugFromText } from "@/lib/files/slug";
+import { put } from "@vercel/blob";
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     const filename = slugFromText(title, "pdf");
 
-    // Python worker endpoint (your internal)
+    // Call Python worker to generate PDF binary
     const py = await fetch(process.env.PY_WORKER_URL!, {
       method: "POST",
       headers: {
@@ -29,14 +30,15 @@ export async function POST(req: NextRequest) {
 
     if (!py.ok) {
       return NextResponse.json(
-        { error: "PDF worker returned an error" },
+        { error: "PDF worker error" },
         { status: 500 }
       );
     }
 
-    const pdfBuffer = Buffer.from(await py.arrayBuffer());
+    const buf = Buffer.from(await py.arrayBuffer());
 
-    const blob = await put(`exports/${filename}`, pdfBuffer, {
+    // Upload to Blob
+    const blob = await put(`exports/${filename}`, buf, {
       access: "public",
       contentType: "application/pdf",
     });
@@ -54,4 +56,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
