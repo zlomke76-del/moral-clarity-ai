@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
 
     const filename = slugFromText(title, "pdf");
 
+    // Call Python worker to generate PDF binary
     const py = await fetch(process.env.PY_WORKER_URL!, {
       method: "POST",
       headers: {
@@ -28,11 +29,15 @@ export async function POST(req: NextRequest) {
     });
 
     if (!py.ok) {
-      return NextResponse.json({ error: "PDF worker error" }, { status: 500 });
+      return NextResponse.json(
+        { ok: false, error: "PDF worker error" },
+        { status: 500 }
+      );
     }
 
     const buf = Buffer.from(await py.arrayBuffer());
 
+    // Upload to Vercel Blob with overwrite allowed
     const blob = await put(`exports/${filename}`, buf, {
       access: "public",
       contentType: "application/pdf",
