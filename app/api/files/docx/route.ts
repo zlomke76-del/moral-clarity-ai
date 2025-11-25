@@ -1,6 +1,5 @@
 // app/api/files/docx/route.ts
 import { NextRequest } from "next/server";
-import { get } from "@vercel/blob";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,16 +11,15 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Fetch blob directly
-    const blob = await get(url);
-
-    if (!blob) {
-      return new Response(JSON.stringify({ error: "Blob not found" }), {
+    // Fetch file directly (Blob SDK not required)
+    const r = await fetch(url);
+    if (!r.ok) {
+      return new Response(JSON.stringify({ error: "Blob fetch failed" }), {
         status: 404,
       });
     }
 
-    const buf = Buffer.from(await blob.arrayBuffer());
+    const buf = Buffer.from(await r.arrayBuffer());
 
     return new Response(buf, {
       status: 200,
@@ -37,3 +35,4 @@ export async function POST(req: NextRequest) {
     });
   }
 }
+
