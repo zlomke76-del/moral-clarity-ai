@@ -1,8 +1,6 @@
 // app/api/chat/route.ts
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const preferredRegion = 'iad1';
-export const fetchCache = 'force-no-store';
 
 import { NextRequest, NextResponse } from 'next/server';
 import type OpenAI from 'openai';
@@ -274,10 +272,12 @@ export async function POST(req: NextRequest) {
     if (wantsImageGeneration(lastUser)) {
       const rawPrompt = lastUser.replace(/^img:\s*/i, '').trim() || lastUser;
       try {
-        const imageUrl = await generateImage(rawPrompt);
+        const imageUrl = await generateImage(rawPrompt, '1024x1024');
+
         const text =
-          `Here is your generated image based on your description:\n` +
-          `${imageUrl}`;
+          `Here’s your generated image based on your description:\n\n` +
+          `<img src="${imageUrl}" alt="Generated image" style="max-width:100%; border-radius:12px;" />\n\n` +
+          `(If the image doesn’t appear, you can open it directly: ${imageUrl})`;
 
         return NextResponse.json(
           {
@@ -293,9 +293,10 @@ export async function POST(req: NextRequest) {
         );
       } catch (e: any) {
         const msg = e?.message || 'Image generation failed';
+        const text = `⚠️ Image generation error: ${msg}`;
         return NextResponse.json(
           {
-            text: `⚠️ Image generation error: ${msg}`,
+            text,
             model: 'gpt-image-1',
             identity: SOLACE_NAME,
             mode: 'Image',
