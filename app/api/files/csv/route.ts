@@ -10,17 +10,23 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const title = body?.title || "Solace CSV";
-    const rows = body?.rows || [];
+    const text = body?.content || "";
 
     const filename = slugFromText(title, "csv");
 
-    // If rows are objects → convert to CSV
-    const csv = convertToCsv(rows);
-    const buf = Buffer.from(csv, "utf8");
+    // Convert raw content to CSV-safe format
+    const csv = text
+      .replace(/\r\n/g, "\n")
+      .split("\n")
+      .map((line) => `"${line.replace(/"/g, '""')}"`)
+      .join("\n");
+
+    const buf = Buffer.from(csv, "utf-8");
 
     const blob = await put(`exports/${filename}`, buf, {
       access: "public",
       contentType: "text/csv",
+      allowOverwrite: true,
     });
 
     return NextResponse.json({
@@ -35,28 +41,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-/**********************
- * CSV conversion helper
- **********************/
-function convertToCsv(rows: any[]): string {
-  if (!rows || rows.length === 0) return "";
-
-  const headers = Object.keys(rows[0]);
-  const lines = [headers.join(",")];
-
-  for (const row of rows) {
-    const line = headers
-      .map((h) => {
-        const val = row[h];
-        if (val === null || val === undefined) return "";
-        const s = String(val).replace(/"/g, '""'); // escape quotes
-        return `"${s}"`;
-      })
-      .join(",");
-    lines.push(line);
-  }
-
-  return lines.join("\n");
 }
