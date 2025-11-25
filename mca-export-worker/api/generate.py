@@ -45,7 +45,10 @@ class handler(BaseHTTPRequestHandler):
             mime = "application/pdf"
         elif export_type == "docx":
             buf = self.generate_docx(title, content)
-            mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            mime = (
+                "application/"
+                "vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
         elif export_type == "csv":
             buf = self.generate_csv(content)
             mime = "text/csv"
@@ -102,3 +105,4 @@ class handler(BaseHTTPRequestHandler):
             writer.writerow([r])
 
         return buffer.getvalue()
+
