@@ -3,7 +3,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { generateImage, IMAGE_MODEL_NAME } from '@/lib/chat/image-gen';
+import { generateImage } from '@/lib/chat/image-gen';
 
 const STATIC_ALLOWED_ORIGINS = [
   'https://moralclarity.ai',
@@ -31,12 +31,10 @@ function pickAllowedOrigin(origin: string | null): string | null {
     if (ALLOWED_SET.has(origin)) return origin;
     const url = new URL(origin);
     const host = url.hostname.toLowerCase();
-    if (host.endsWith('.moralclarity.ai') || host === 'moralclarity.ai')
-      return origin;
-    if (host.endsWith('.moralclarityai.com') || host === 'moralclarityai.com')
-      return origin;
+    if (host.endsWith('.moralclarity.ai') || host === 'moralclarity.ai') return origin;
+    if (host.endsWith('.moralclarityai.com') || host === 'moralclarityai.com') return origin;
   } catch {
-    // ignore malformed origin
+    // ignore parse errors
   }
   return null;
 }
@@ -63,7 +61,6 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const prompt = String(body?.prompt ?? '').trim();
-    const size = (body?.size as string | undefined) || '1024x1024';
 
     if (!prompt) {
       return NextResponse.json(
@@ -72,13 +69,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Delegate to shared generator (OpenAI + Supabase fallback)
-    const url = await generateImage(prompt, size as any);
+    const imageUrl = await generateImage(prompt);
 
     return NextResponse.json(
       {
-        url,
-        model: IMAGE_MODEL_NAME,
+        url: imageUrl,
+        model: process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1',
       },
       { headers }
     );
