@@ -1,24 +1,24 @@
 // app/api/files/csv/route.ts
 import { NextRequest } from "next/server";
-import { get } from "@vercel/blob";
 
 export async function POST(req: NextRequest) {
   try {
     const { url } = await req.json();
+
     if (!url) {
       return new Response(JSON.stringify({ error: "Missing blob URL" }), {
         status: 400,
       });
     }
 
-    const blob = await get(url);
-    if (!blob) {
-      return new Response(JSON.stringify({ error: "Blob not found" }), {
+    const r = await fetch(url);
+    if (!r.ok) {
+      return new Response(JSON.stringify({ error: "Blob fetch failed" }), {
         status: 404,
       });
     }
 
-    const buf = Buffer.from(await blob.arrayBuffer());
+    const buf = Buffer.from(await r.arrayBuffer());
 
     return new Response(buf, {
       status: 200,
