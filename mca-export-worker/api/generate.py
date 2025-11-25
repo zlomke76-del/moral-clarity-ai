@@ -1,108 +1,45 @@
-import os
-import json
-from http.server import BaseHTTPRequestHandler
-from io import BytesIO
-
-# PDF
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 from reportlab.platypus import SimpleDocTemplate, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import letter
+import io
+import base64
 
-# DOCX
-from docx import Document
+app = FastAPI()
 
-# CSV
-import csv
+class Payload(BaseModel):
+    type: str
+    title: str
+    content: str
 
-WORKER_KEY = os.getenv("PY_WORKER_KEY", "")
+@app.post("/api/generate")
+def generate(payload: Payload):
+    try:
+        buf = io.BytesIO()
 
+        if payload.type == "pdf":
+            styles = getSampleStyleSheet()
+            doc = SimpleDocTemplate(buf, pagesize=letter)
+            story = [Paragraph(payload.content.replace("\n", "<br/>"), styles["Normal"])]
+            doc.build(story)
 
-class handler(BaseHTTPRequestHandler):
-    def do_POST(self):
-        # ---------- AUTH CHECK ----------
-        auth = self.headers.get("Authorization", "")
-        if not auth.startswith("Bearer ") or auth.split(" ", 1)[1] != WORKER_KEY:
-            self.send_response(401)
-            self.end_headers()
-            self.wfile.write(b"Unauthorized")
-            return
+        elif payload.type == "docx":
+            from docx import Document
+            document = Document()
+            for line in payload.content.split("\n"):
+                document.add_paragraph(line)
+            document.save(buf)
 
-        # ---------- READ BODY ----------
-        length = int(self.headers.get("Content-Length", 0))
-        body_raw = self.rfile.read(length)
-        try:
-            body = json.loads(body_raw)
-        except Exception:
-            body = {}
+        elif payload.type == "csv":
+            csv_bytes = payload.content.encode("utf-8")
+            buf.write(csv_bytes)
 
-        export_type = body.get("type", "")
-        title = body.get("title", "Solace Export")
-        content = body.get("content", "")
-
-        # ---------- ROUTE ----------
-        if export_type == "pdf":
-            buf = self.generate_pdf(title, content)
-            mime = "application/pdf"
-        elif export_type == "docx":
-            buf = self.generate_docx(title, content)
-            mime = (
-                "application/"
-                "vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
-        elif export_type == "csv":
-            buf = self.generate_csv(content)
-            mime = "text/csv"
         else:
-            self.send_response(400)
-            self.end_headers()
-            self.wfile.write(b"Unsupported type")
-            return
+            raise HTTPException(status_code=400, detail="Unsupported type")
 
-        # ---------- RETURN FILE ----------
-        self.send_response(200)
-        self.send_header("Content-Type", mime)
-        self.end_headers()
-        self.wfile.write(buf)
+        buf.seek(0)
+        return base64.b64encode(buf.read()).decode()
 
-    # ---------------------------------------------------------------
-    # PDF (ReportLab)
-    # ---------------------------------------------------------------
-    def generate_pdf(self, title: str, text: str) -> bytes:
-        buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter)
-        styles = getSampleStyleSheet()
-        story = [Paragraph(f"<b>{title}</b>", styles["Heading1"])]
-
-        for para in text.split("\n"):
-            story.append(Paragraph(para, styles["BodyText"]))
-
-        doc.build(story)
-        return buffer.getvalue()
-
-    # ---------------------------------------------------------------
-    # DOCX (styled)
-    # ---------------------------------------------------------------
-    def generate_docx(self, title: str, text: str) -> bytes:
-        doc = Document()
-        doc.add_heading(title, level=1)
-
-        for para in text.split("\n"):
-            doc.add_paragraph(para)
-
-        buf = BytesIO()
-        doc.save(buf)
-        return buf.getvalue()
-
-    # ---------------------------------------------------------------
-    # CSV
-    # ---------------------------------------------------------------
-    def generate_csv(self, text: str) -> bytes:
-        buffer = BytesIO()
-        writer = csv.writer(buffer)
-
-        rows = text.replace("\r", "").split("\n")
-        for r in rows:
-            writer.writerow([r])
-
-        return buffer.getvalue()
-
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
