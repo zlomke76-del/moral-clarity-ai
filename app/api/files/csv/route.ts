@@ -1,67 +1,40 @@
 // app/api/files/csv/route.ts
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-import { NextRequest, NextResponse } from "next/server";
-import { slugFromText } from "@/lib/files/slug";
-import { put } from "@vercel/blob";
+import { NextRequest } from "next/server";
+import { createClient } from "@vercel/blob";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => ({} as any));
-    const title = (body?.title as string) || "Solace CSV";
-    const text = (body?.content as string) || "";
+    const { url } = await req.json();
 
-    const filename = slugFromText(title, "csv");
-
-    const workerUrl = process.env.PY_WORKER_URL;
-    const workerKey = process.env.PY_WORKER_KEY;
-
-    if (!workerUrl || !workerKey) {
-      return NextResponse.json(
-        { ok: false, message: "Export worker not configured." },
-        { status: 500 }
+    if (!url) {
+      return new Response(
+        JSON.stringify({ error: "Missing blob URL" }),
+        { status: 400 }
       );
     }
 
-    const pyRes = await fetch(workerUrl, {
-      method: "POST",
+    const blobClient = createClient();
+    const blob = await blobClient.get(url);
+
+    if (!blob) {
+      return new Response(
+        JSON.stringify({ error: "Blob not found" }),
+        { status: 404 }
+      );
+    }
+
+    const buf = await blob.arrayBuffer();
+
+    return new Response(Buffer.from(buf), {
+      status: 200,
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${workerKey}`,
+        "Content-Type": "text/csv",
+        "Content-Disposition": `attachment; filename="solace-export.csv"`,
       },
-      body: JSON.stringify({
-        type: "csv",
-        title,
-        content: text,
-      }),
-    });
-
-    if (!pyRes.ok) {
-      const detail = await pyRes.text().catch(() => "");
-      return NextResponse.json(
-        { ok: false, message: "CSV worker error", detail },
-        { status: 500 }
-      );
-    }
-
-    const buf = Buffer.from(await pyRes.arrayBuffer());
-
-    const blob = await put(`exports/${filename}`, buf, {
-      access: "public",
-      contentType: "text/csv; charset=utf-8",
-      allowOverwrite: true,
-    });
-
-    return NextResponse.json({
-      ok: true,
-      url: blob.url,
-      filename,
-      type: "csv",
     });
   } catch (err: any) {
-    return NextResponse.json(
-      { ok: false, message: "CSV export failed", error: String(err?.message ?? err) },
+    return new Response(
+      JSON.stringify({ error: err?.message || "Server error" }),
       { status: 500 }
     );
   }
