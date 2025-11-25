@@ -270,21 +270,35 @@ export async function POST(req: NextRequest) {
     }
     const isFounder = isFounderUserKey(userKey);
 
-    /* ===== IMAGE GENERATION FAST-PATH ===== */
+    /* ===== WORKSPACE + MEMORY ENABLED FLAG (usable everywhere) ===== */
+    const workspaceId: string = body?.workspace_id || MCA_WORKSPACE_ID;
+    const memoryEnabled = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+
+    /* ===== IMAGE GENERATION FAST-PATH (CONTEXT-PRESERVING) ===== */
     if (wantsImageGeneration(lastUser)) {
       const rawPrompt = lastUser.replace(/^img:\s*/i, '').trim() || lastUser;
       try {
-        // generateImage now takes a single prompt argument and returns URL/base64.
+        // generateImage now takes a single prompt argument and normalizes URL/base64.
         const imageUrl = await generateImage(rawPrompt);
 
-        // IMPORTANT: return an <img> tag so SolaceDock can render it.
-        const html =
+        // Return HTML with an <img> tag so the frontend can render/stylize it,
+        // while still keeping the text in the transcript for context.
+        const text =
           `Here is your generated image based on your description:\n\n` +
-          `<img src="${imageUrl}" alt="Generated image" />`;
+          `<img src="${imageUrl}" alt="Generated image based on your description" />`;
+
+        // Best-effort episodic write-back so this exchange remains part of Solace's memory.
+        if (memoryEnabled) {
+          try {
+            await maybeStoreEpisode(userKey, workspaceId, rolled);
+          } catch (err) {
+            console.error('[chat] maybeStoreEpisode (image) failed (non-fatal)', err);
+          }
+        }
 
         return NextResponse.json(
           {
-            text: html,
+            text,
             image_url: imageUrl,
             model: 'gpt-image-1',
             identity: SOLACE_NAME,
@@ -326,10 +340,6 @@ export async function POST(req: NextRequest) {
       incoming.delete('abrahamic');
     }
     const effectiveFilters = Array.from(incoming);
-
-    const workspaceId: string = body?.workspace_id || MCA_WORKSPACE_ID;
-
-    const memoryEnabled = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
 
     let memorySection = '';
 
