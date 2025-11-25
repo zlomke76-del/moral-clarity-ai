@@ -28,12 +28,7 @@ declare global {
 /* ============================================================
    TYPES
    ============================================================ */
-type Message = {
-  role: "user" | "assistant";
-  content: string;
-  imageUrl?: string | null;
-};
-
+type Message = { role: "user" | "assistant"; content: string };
 type ModeHint = "Create" | "Next Steps" | "Red Team" | "Neutral";
 
 const POS_KEY = "solace:pos:v3";
@@ -120,11 +115,15 @@ export default function SolaceDock() {
   const { userKey, memReady, memoryCacheRef } = useSolaceMemory();
 
   /* ------------------ Attachment hook ------------------ */
-  const { pendingFiles, handleFiles, handlePaste, clearPending } =
-    useSolaceAttachments({
-      onInfoMessage: (c) =>
-        setMessages((m) => [...m, { role: "assistant", content: c }]),
-    });
+  const {
+    pendingFiles,
+    handleFiles,
+    handlePaste,
+    clearPending,
+  } = useSolaceAttachments({
+    onInfoMessage: (c) =>
+      setMessages((m) => [...m, { role: "assistant", content: c }]),
+  });
 
   const ministryOn = useMemo(
     () => filters.has("abrahamic") && filters.has("ministry"),
@@ -149,6 +148,7 @@ export default function SolaceDock() {
   }, [canRender]);
 
   useEffect(() => {
+    // On mobile, start collapsed by default
     setCollapsed(isMobile);
   }, [isMobile]);
 
@@ -190,9 +190,7 @@ export default function SolaceDock() {
           return;
         }
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
 
     requestAnimationFrame(() => {
       const vw = window.innerWidth;
@@ -212,9 +210,7 @@ export default function SolaceDock() {
     if (isMobile) return;
     try {
       localStorage.setItem(POS_KEY, JSON.stringify({ x, y }));
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, [x, y, posReady, isMobile]);
 
   /* ------------------ Dragging ------------------ */
@@ -289,15 +285,7 @@ export default function SolaceDock() {
     clearPending();
     const data = await res.json();
     const reply = String(data.text ?? "[No reply]");
-    const imageUrl =
-      typeof data.image_url === "string" && data.image_url.trim().length
-        ? (data.image_url as string)
-        : undefined;
-
-    setMessages((m) => [
-      ...m,
-      { role: "assistant", content: reply, imageUrl },
-    ]);
+    setMessages((m) => [...m, { role: "assistant", content: reply }]);
   }
 
   async function sendToVision(userMsg: string, msgs: Message[]) {
@@ -308,10 +296,7 @@ export default function SolaceDock() {
     if (!imageUrl) {
       setMessages((m) => [
         ...m,
-        {
-          role: "assistant",
-          content: "Image missing — reattach and try again.",
-        },
+        { role: "assistant", content: "Image missing — reattach and try again." },
       ]);
       return;
     }
@@ -395,9 +380,7 @@ export default function SolaceDock() {
     if (listening) {
       try {
         recogRef.current?.stop();
-      } catch {
-        // ignore
-      }
+      } catch {}
       setListening(false);
       return;
     }
@@ -424,8 +407,10 @@ export default function SolaceDock() {
   if (!canRender || !visible) return null;
 
   /* ============================================================
-     MOBILE COLLAPSED PILL
+     COLLAPSED STATES
      ============================================================ */
+
+  // Mobile: collapsed = pill bar at bottom
   if (isMobile && collapsed) {
     return createPortal(
       <button
@@ -465,6 +450,46 @@ export default function SolaceDock() {
           <span style={{ font: "600 13px system-ui" }}>Solace</span>
         </span>
         <span style={{ font: "12px system-ui", color: ui.sub }}>Tap to open</span>
+      </button>,
+      document.body
+    );
+  }
+
+  // Desktop: collapsed = golden orb in bottom-right
+  if (!isMobile && collapsed) {
+    return createPortal(
+      <button
+        type="button"
+        onClick={() => setCollapsed(false)}
+        aria-label="Open Solace"
+        style={{
+          position: "fixed",
+          right: 24,
+          bottom: 24,
+          width: 60,
+          height: 60,
+          borderRadius: "50%",
+          border: "1px solid rgba(251,191,36,.8)",
+          background:
+            "radial-gradient(65% 65% at 50% 35%, #fde68a 0%, #fbbf24 40%, #92400e 100%)",
+          boxShadow:
+            "0 0 0 1px rgba(0,0,0,.35) inset, 0 0 40px rgba(251,191,36,.75), 0 16px 40px rgba(0,0,0,.6)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          zIndex: 70,
+        }}
+      >
+        <span
+          style={{
+            font: "700 18px system-ui",
+            color: "#111827",
+            textShadow: "0 1px 2px rgba(255,255,255,.6)",
+          }}
+        >
+          S
+        </span>
       </button>,
       document.body
     );
@@ -528,12 +553,7 @@ export default function SolaceDock() {
      FINAL RENDER
      ============================================================ */
   const panel = (
-    <section
-      ref={containerRef}
-      style={panelStyle}
-      role="dialog"
-      aria-label="Solace"
-    >
+    <section ref={containerRef} style={panelStyle} role="dialog" aria-label="Solace">
       {/* HEADER */}
       <header
         onMouseDown={onHeaderMouseDown}
@@ -603,7 +623,7 @@ export default function SolaceDock() {
         </div>
 
         {/* Right side */}
-        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
           <button
             type="button"
             onClick={toggleMinistry}
@@ -622,22 +642,27 @@ export default function SolaceDock() {
             Ministry
           </button>
 
-          {isMobile && (
-            <button
-              type="button"
-              onClick={() => setCollapsed(true)}
-              style={{
-                padding: "4px 8px",
-                borderRadius: 999,
-                background: "rgba(8,15,26,0.9)",
-                border: ui.edge,
-                color: ui.sub,
-                font: "600 11px system-ui",
-              }}
-            >
-              Hide
-            </button>
-          )}
+          {/* Collapse button (desktop + mobile) */}
+          <button
+            type="button"
+            onClick={() => setCollapsed(true)}
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 999,
+              border: "1px solid rgba(148,163,184,.6)",
+              background: "rgba(15,23,42,.9)",
+              color: ui.sub,
+              font: "700 14px system-ui",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            title="Minimize Solace"
+          >
+            –
+          </button>
         </div>
       </header>
 
@@ -652,39 +677,43 @@ export default function SolaceDock() {
           color: ui.text,
         }}
       >
-        {messages.map((m, i) => (
-          <div
-            key={i}
-            style={{
-              margin: "6px 0",
-              padding: "10px 12px",
-              borderRadius: 12,
-              whiteSpace: "pre-wrap",
-              color: m.role === "user" ? ui.text : "rgba(233,240,250,.95)",
-              background:
-                m.role === "user"
-                  ? "rgba(39,52,74,.6)"
-                  : "rgba(28,38,54,.6)",
-            }}
-          >
-            {m.content && <div>{m.content}</div>}
-            {m.imageUrl && (
-              <div style={{ marginTop: m.content ? 8 : 0 }}>
-                <img
-                  src={m.imageUrl}
-                  alt="Generated by Solace"
-                  style={{
-                    maxWidth: "100%",
-                    borderRadius: 12,
-                    marginTop: 2,
-                    border: "1px solid var(--mc-border)",
-                    display: "block",
+        {messages.map((m, i) => {
+          // Transform text → HTML (handle <img> and line breaks)
+          const html = m.content
+            // Style any <img> tags that come from the backend
+            .replace(
+              /<img([^>]+)>/g,
+              `<img $1 style="max-width:100%;height:auto;border-radius:12px;display:block;margin:8px auto;box-shadow:0 0 18px rgba(0,0,0,.35);" />`
+            )
+            // Preserve line breaks
+            .replace(/\n/g, "<br />");
+
+          return (
+            <div
+              key={i}
+              style={{
+                margin: "6px 0",
+                padding: "10px 12px",
+                borderRadius: 12,
+                whiteSpace: "normal",
+                color: m.role === "user" ? ui.text : "rgba(233,240,250,.95)",
+                background:
+                  m.role === "user"
+                    ? "rgba(39,52,74,.6)"
+                    : "rgba(28,38,54,.6)",
+              }}
+            >
+              {/* IMAGE / HTML-SAFE RENDERING */}
+              <div style={{ width: "100%" }}>
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: html,
                   }}
                 />
               </div>
-            )}
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
 
       {/* COMPOSER */}
@@ -748,9 +777,7 @@ export default function SolaceDock() {
               type="file"
               multiple
               style={{ display: "none" }}
-              onChange={(e) =>
-                handleFiles(e.target.files, { prefix: "solace" })
-              }
+              onChange={(e) => handleFiles(e.target.files, { prefix: "solace" })}
             />
 
             <button
