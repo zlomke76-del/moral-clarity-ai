@@ -1,57 +1,57 @@
-// app/api/files/pdf/route.ts
-export const runtime = "nodejs";
+export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import puppeteer from "puppeteer";
+import { put } from "@vercel/blob";
+import { slugFromText } from "@/lib/files/slug";
 
 export async function POST(req: NextRequest) {
   try {
-    const { html, filename } = await req.json().catch(() => ({}));
+    const body = await req.json();
+    const title = body?.title || "Solace PDF";
+    const text = body?.content || "";
 
-    if (!html || typeof html !== "string") {
+    const filename = slugFromText(title, "pdf");
+
+    // Python worker endpoint (your internal)
+    const py = await fetch(process.env.PY_WORKER_URL!, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.PY_WORKER_KEY}`,
+      },
+      body: JSON.stringify({
+        type: "pdf",
+        title,
+        content: text,
+      }),
+    });
+
+    if (!py.ok) {
       return NextResponse.json(
-        { error: "Missing or invalid HTML" },
-        { status: 400 }
+        { error: "PDF worker returned an error" },
+        { status: 500 }
       );
     }
 
-    const safeName = filename || "document.pdf";
+    const pdfBuffer = Buffer.from(await py.arrayBuffer());
 
-    const browser = await puppeteer.launch({
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      headless: "new",
+    const blob = await put(`exports/${filename}`, pdfBuffer, {
+      access: "public",
+      contentType: "application/pdf",
     });
-
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle0" });
-
-    const pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: {
-        top: "35px",
-        bottom: "45px",
-        left: "35px",
-        right: "35px",
-      },
-    });
-
-    await browser.close();
-
-    const b64 = pdfBuffer.toString("base64");
 
     return NextResponse.json({
       ok: true,
-      filename: safeName,
-      mime: "application/pdf",
-      base64: b64,
-      download_url: `data:application/pdf;base64,${b64}`,
+      url: blob.url,
+      filename,
+      type: "pdf",
     });
   } catch (err: any) {
     return NextResponse.json(
-      { error: err?.message || "PDF generation failed." },
+      { ok: false, error: err?.message || String(err) },
       { status: 500 }
     );
   }
 }
+
