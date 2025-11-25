@@ -3,9 +3,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import type OpenAI from 'openai';
 
-import { getOpenAI } from '@/lib/openai';
 import { runDeepResearch } from '@/lib/research';
 import { logResearchSnapshot } from '@/lib/truth-ledger';
 import { routeMode } from '@/core/mode-router';
@@ -47,6 +45,9 @@ import {
   getSolaceNewsDigest,
   type SolaceDigestStory,
 } from '@/lib/news/solace-digest';
+
+/* ========= SOLACE ENGINE (PRIMARY + FALLBACK) ========= */
+import { SolaceEngine, withTimeout } from '@/lib/solace-engine/engine';
 
 /* ========= MODEL / TIMEOUT (BASELINE) ========= */
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
@@ -150,35 +151,8 @@ function headersToRecord(h: Headers): Record<string, string> {
   return out;
 }
 
-/* ========= SOLACE BACKEND ========= */
+/* ========= SOLACE BACKEND LABELS ========= */
 const SOLACE_NAME = 'Solace';
-const SOLACE_URL = process.env.SOLACE_API_URL || '';
-const SOLACE_KEY = process.env.SOLACE_API_KEY || '';
-
-async function solaceNonStream(payload: any) {
-  const r = await fetch(SOLACE_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SOLACE_KEY}` },
-    body: JSON.stringify({ ...payload, stream: false }),
-  });
-  if (!r.ok) throw new Error(`Solace ${r.status}: ${await r.text().catch(() => '')}`);
-  const ct = r.headers.get('content-type') || '';
-  if (ct.includes('application/json')) {
-    const j = await r.json().catch(() => ({}));
-    return String((j as any).text ?? (j as any).output ?? (j as any).data ?? '');
-  }
-  return await r.text();
-}
-
-async function solaceStream(payload: any) {
-  const r = await fetch(SOLACE_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${SOLACE_KEY}` },
-    body: JSON.stringify({ ...payload, stream: true }),
-  });
-  if (!r.ok || !r.body) throw new Error(`Solace ${r.status}: ${await r.text().catch(() => '')}`);
-  return r.body as ReadableStream<Uint8Array>;
-}
 
 /* ========= Small helpers ========= */
 
@@ -199,21 +173,6 @@ function detectExplicitRemember(text: string) {
   return null;
 }
 
-function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const id = setTimeout(() => reject(new Error('Request timed out')), ms);
-    p
-      .then((v) => {
-        clearTimeout(id);
-        resolve(v);
-      })
-      .catch((e) => {
-        clearTimeout(id);
-        reject(e);
-      });
-  });
-}
-
 /* ========= SUPABASE PRESENCE FOR MEMORY ONLY ========= */
 
 const SUPABASE_URL = process.env.SUPABASE_URL as string | undefined;
@@ -223,7 +182,10 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env
 /* ========= HEALTHCHECK ========= */
 export async function GET(req: NextRequest) {
   const origin = pickAllowedOrigin(req.headers.get('origin'));
-  const backend = SOLACE_URL && SOLACE_KEY ? 'solace' : 'openai';
+
+  const backend =
+    process.env.SOLACE_API_URL && process.env.SOLACE_API_KEY ? 'solace' : 'openai';
+
   const memoryEnabled = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
   return NextResponse.json(
     { ok: true, model: MODEL, identity: SOLACE_NAME, backend, memoryEnabled },
@@ -623,78 +585,10 @@ CONTEXT OVERRIDE SEAL
     const maxOutputTokens = isFounder ? FOUNDER_MAX_OUTPUT_TOKENS : NORMAL_MAX_OUTPUT_TOKENS;
     const requestTimeoutMs = isFounder ? FOUNDER_REQUEST_TIMEOUT_MS : NORMAL_REQUEST_TIMEOUT_MS;
 
-    /* ===== Non-stream ===== */
-    const useSolace = Boolean(SOLACE_URL && SOLACE_KEY) && !isFounder;
-
+    /* ===== Non-stream: go through unified engine ===== */
     if (!wantStream) {
-      if (useSolace) {
-        try {
-          const text = await withTimeout(
-            solaceNonStream({
-              mode: route.mode,
-              userId,
-              userName,
-              system,
-              messages: rolledWithAttachments,
-              temperature: 0.2,
-              max_output_tokens: maxOutputTokens,
-              context: {
-                research: hasResearchContext ? researchSection : null,
-                news: hasNewsContext ? newsSection : null,
-                memory: memorySection || null,
-              },
-              context_mode: hasResearchContext || hasNewsContext ? 'authoritative' : 'none',
-            }),
-            requestTimeoutMs
-          );
-          return NextResponse.json(
-            {
-              text,
-              model: 'solace',
-              identity: SOLACE_NAME,
-              mode: route.mode,
-              confidence: route.confidence,
-              filters: effectiveFilters,
-            },
-            { headers: corsHeaders(echoOrigin) }
-          );
-        } catch {
-          /* fallback to OpenAI */
-        }
-      }
-
-      const openai: OpenAI = await getOpenAI();
-      const resp = await withTimeout(
-        openai.responses.create({
-          model: MODEL,
-          input:
-            system +
-            '\n\n' +
-            rolledWithAttachments.map((m) => `${m.role}: ${m.content}`).join('\n'),
-          max_output_tokens: maxOutputTokens,
-          temperature: 0.2,
-        }),
-        requestTimeoutMs
-      );
-
-      const text = (resp as any).output_text?.trim() || '[No reply from model]';
-      return NextResponse.json(
-        {
-          text,
-          model: MODEL,
-          identity: SOLACE_NAME,
-          mode: route.mode,
-          confidence: route.confidence,
-          filters: effectiveFilters,
-        },
-        { headers: corsHeaders(echoOrigin) }
-      );
-    }
-
-    /* ===== Stream ===== */
-    if (useSolace) {
-      try {
-        const stream = await solaceStream({
+      const text = (await SolaceEngine.generate({
+        payload: {
           mode: route.mode,
           userId,
           userName,
@@ -708,51 +602,77 @@ CONTEXT OVERRIDE SEAL
             memory: memorySection || null,
           },
           context_mode: hasResearchContext || hasNewsContext ? 'authoritative' : 'none',
-        });
-        return new NextResponse(stream as any, {
-          headers: {
-            ...headersToRecord(corsHeaders(echoOrigin)),
-            'Content-Type': 'text/plain; charset=utf-8',
-            'Cache-Control': 'no-cache, no-transform',
-            'X-Accel-Buffering': 'no',
-          },
-        });
-      } catch {
-        /* fallback to OpenAI */
-      }
+        },
+        stream: false,
+        isFounder,
+        fallback: true,
+        max_output_tokens: maxOutputTokens,
+        timeoutMs: requestTimeoutMs,
+      })) as string;
+
+      const modelLabel =
+        isFounder || !(process.env.SOLACE_API_URL && process.env.SOLACE_API_KEY)
+          ? MODEL
+          : 'solace';
+
+      return NextResponse.json(
+        {
+          text,
+          model: modelLabel,
+          identity: SOLACE_NAME,
+          mode: route.mode,
+          confidence: route.confidence,
+          filters: effectiveFilters,
+        },
+        { headers: corsHeaders(echoOrigin) }
+      );
     }
 
-    // OpenAI SSE fallback
-    const apiKey = process.env.OPENAI_API_KEY || '';
-    const r = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        stream: true,
+    /* ===== Stream: unified engine, Solace primary w/ OpenAI fallback ===== */
+    const result = await SolaceEngine.generate({
+      payload: {
+        mode: route.mode,
+        userId,
+        userName,
+        system,
+        messages: rolledWithAttachments,
         temperature: 0.2,
-        messages: [
-          { role: 'system', content: system },
-          ...rolledWithAttachments.map((m) => ({
-            role: m.role === 'assistant' ? 'assistant' : 'user',
-            content: m.content,
-          })),
-        ],
-      }),
+        max_output_tokens: maxOutputTokens,
+        context: {
+          research: hasResearchContext ? researchSection : null,
+          news: hasNewsContext ? newsSection : null,
+          memory: memorySection || null,
+        },
+        context_mode: hasResearchContext || hasNewsContext ? 'authoritative' : 'none',
+      },
+      stream: true,
+      isFounder,
+      fallback: true,
+      max_output_tokens: maxOutputTokens,
+      timeoutMs: requestTimeoutMs,
     });
 
-    if (!r.ok || !r.body) {
-      const t = await r.text().catch(() => '');
-      return new NextResponse(`Model error: ${r.status} ${t}`, {
-        status: 500,
-        headers: corsHeaders(echoOrigin),
+    // If engine returned a Response (OpenAI SSE), unwrap body; otherwise it's a ReadableStream.
+    if (result instanceof Response) {
+      if (!result.body) {
+        const t = await result.text().catch(() => '');
+        return new NextResponse(`Model error: ${t}`, {
+          status: 500,
+          headers: corsHeaders(echoOrigin),
+        });
+      }
+      return new NextResponse(result.body as any, {
+        headers: {
+          ...headersToRecord(corsHeaders(echoOrigin)),
+          'Content-Type': 'text/event-stream; charset=utf-8',
+          'Cache-Control': 'no-cache, no-transform',
+          'X-Accel-Buffering': 'no',
+        },
       });
     }
 
-    return new NextResponse(r.body as any, {
+    const stream = result as ReadableStream<Uint8Array>;
+    return new NextResponse(stream as any, {
       headers: {
         ...headersToRecord(corsHeaders(echoOrigin)),
         'Content-Type': 'text/event-stream; charset=utf-8',
@@ -775,3 +695,4 @@ CONTEXT OVERRIDE SEAL
     );
   }
 }
+
