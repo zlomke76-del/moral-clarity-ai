@@ -20,7 +20,7 @@ import {
 import { MCA_WORKSPACE_ID, MCA_USER_KEY } from '@/lib/mca-config';
 
 /* ========= IMAGE GENERATION ========= */
-import { generateImage } from '@/lib/chat/image-gen';
+import { generateImage } from '@/lib/chat/image-gen' ;
 
 /* ========= NEWS → LEDGERS ========= */
 import { logNewsBatchToLedgers } from '@/lib/news-ledger';
@@ -173,6 +173,20 @@ function detectExplicitRemember(text: string) {
   return null;
 }
 
+/* ========= EXPORT INTENT DETECTION ========= */
+function detectExportIntent(
+  text: string | null | undefined
+): 'pdf' | 'docx' | 'csv' | null {
+  if (!text) return null;
+  const t = text.toLowerCase();
+
+  if (t.includes('pdf')) return 'pdf';
+  if (t.includes('docx') || t.includes('word')) return 'docx';
+  if (t.includes('csv') || t.includes('spreadsheet') || t.includes('excel')) return 'csv';
+
+  return null;
+}
+
 /* ========= SUPABASE PRESENCE FOR MEMORY ONLY ========= */
 
 const SUPABASE_URL = process.env.SUPABASE_URL as string | undefined;
@@ -235,6 +249,86 @@ export async function POST(req: NextRequest) {
     /* ===== WORKSPACE + MEMORY ENABLED FLAG (usable everywhere) ===== */
     const workspaceId: string = body?.workspace_id || MCA_WORKSPACE_ID;
     const memoryEnabled = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+
+    /* ===== EXPORT FAST-PATH (PDF / DOCX / CSV) ===== */
+    const exportFormat = detectExportIntent(lastUser);
+    if (exportFormat) {
+      const lastAssistant =
+        [...rolled]
+          .reverse()
+          .find((m) => m.role?.toLowerCase() === 'assistant')?.content || '';
+      const contentToExport = (lastAssistant || lastUser || '').trim();
+
+      if (!contentToExport) {
+        return NextResponse.json(
+          {
+            text: `I don't see anything to export yet. Ask me to draft the content first, then say "put this into a ${exportFormat.toUpperCase()}".`,
+            model: 'file-export',
+            identity: SOLACE_NAME,
+            mode: 'Export',
+            confidence: 0.5,
+            filters: rawFilters,
+          },
+          { headers: corsHeaders(echoOrigin) }
+        );
+      }
+
+      const title: string =
+        body?.export_title || body?.title || 'Solace export';
+
+      const path =
+        exportFormat === 'pdf'
+          ? '/api/files/pdf'
+          : exportFormat === 'docx'
+          ? '/api/files/docx'
+          : '/api/files/csv';
+
+      const exportUrl = new URL(path, req.url);
+
+      let fileUrl: string | null = null;
+      try {
+        const resp = await fetch(exportUrl.toString(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title,
+            content: contentToExport,
+          }),
+        });
+
+        const data = (await resp.json().catch(() => ({}))) as any;
+        fileUrl = data?.url || data?.fileUrl || null;
+      } catch (err) {
+        // fall through to error response below
+      }
+
+      if (!fileUrl) {
+        return NextResponse.json(
+          {
+            text: `I tried to create a ${exportFormat.toUpperCase()} file, but something went wrong. Please try again in a moment.`,
+            model: 'file-export',
+            identity: SOLACE_NAME,
+            mode: 'Export',
+            confidence: 0,
+            filters: rawFilters,
+          },
+          { headers: corsHeaders(echoOrigin) }
+        );
+      }
+
+      return NextResponse.json(
+        {
+          text: `Your ${exportFormat.toUpperCase()} file is ready:\n${fileUrl}`,
+          file_url: fileUrl,
+          model: 'file-export',
+          identity: SOLACE_NAME,
+          mode: 'Export',
+          confidence: 1,
+          filters: rawFilters,
+        },
+        { headers: corsHeaders(echoOrigin) }
+      );
+    }
 
     /* ===== IMAGE GENERATION FAST-PATH (CONTEXT-PRESERVING) ===== */
     if (wantsImageGeneration(lastUser)) {
@@ -695,4 +789,3 @@ CONTEXT OVERRIDE SEAL
     );
   }
 }
-
