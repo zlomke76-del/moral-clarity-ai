@@ -2,6 +2,8 @@
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+import { put } from '@vercel/blob';
+
 import { NextRequest, NextResponse } from 'next/server';
 
 import { runDeepResearch } from '@/lib/research';
