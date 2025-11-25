@@ -1,61 +1,55 @@
-// app/api/files/docx/route.ts
-export const runtime = "nodejs";
+export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-import {
-  Document,
-  Packer,
-  Paragraph,
-  HeadingLevel,
-  TextRun,
-} from "docx";
+import { slugFromText } from "@/lib/files/slug";
+import { put } from "@vercel/blob";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => ({}));
+    const body = await req.json();
+    const title = body?.title || "Solace Document";
+    const text = body?.content || "";
 
-    const {
-      title = "Document",
-      sections = [],
-      filename = "document.docx",
-    } = body;
+    const filename = slugFromText(title, "docx");
 
-    const doc = new Document({
-      sections: [
-        {
-          children: [
-            new Paragraph({
-              text: title,
-              heading: HeadingLevel.HEADING_1,
-            }),
-            ...sections.flatMap((s: any) => [
-              new Paragraph({
-                text: s.heading || "",
-                heading: HeadingLevel.HEADING_2,
-              }),
-              new Paragraph({
-                children: [new TextRun(s.text || "")],
-              }),
-            ]),
-          ],
-        },
-      ],
+    const py = await fetch(process.env.PY_WORKER_URL!, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.PY_WORKER_KEY}`,
+      },
+      body: JSON.stringify({
+        type: "docx",
+        title,
+        content: text,
+      }),
     });
 
-    const buffer = await Packer.toBuffer(doc);
-    const b64 = buffer.toString("base64");
+    if (!py.ok) {
+      return NextResponse.json(
+        { error: "DOCX worker error" },
+        { status: 500 }
+      );
+    }
+
+    const buf = Buffer.from(await py.arrayBuffer());
+
+    const blob = await put(`exports/${filename}`, buf, {
+      access: "public",
+      contentType:
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
 
     return NextResponse.json({
       ok: true,
+      url: blob.url,
       filename,
-      mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      base64: b64,
-      download_url: `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${b64}`,
+      type: "docx",
     });
   } catch (err: any) {
     return NextResponse.json(
-      { error: err?.message || "DOCX generation failed." },
+      { ok: false, error: err?.message || String(err) },
       { status: 500 }
     );
   }
