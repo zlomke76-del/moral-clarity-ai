@@ -274,7 +274,7 @@ export async function POST(req: NextRequest) {
     if (wantsImageGeneration(lastUser)) {
       const rawPrompt = lastUser.replace(/^img:\s*/i, '').trim() || lastUser;
       try {
-        // generateImage now takes a single prompt argument and normalizes URL/base64.
+        // generateImage now takes a single prompt argument and returns URL/base64.
         const imageUrl = await generateImage(rawPrompt);
 
         // IMPORTANT: return an <img> tag so SolaceDock can render it.
@@ -716,4 +716,52 @@ CONTEXT OVERRIDE SEAL
     const apiKey = process.env.OPENAI_API_KEY || '';
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        stream: true,
+        temperature: 0.2,
+        messages: [
+          { role: 'system', content: system },
+          ...rolledWithAttachments.map((m) => ({
+            role: m.role === 'assistant' ? 'assistant' : 'user',
+            content: m.content,
+          })),
+        ],
+      }),
+    });
 
+    if (!r.ok || !r.body) {
+      const t = await r.text().catch(() => '');
+      return new NextResponse(`Model error: ${r.status} ${t}`, {
+        status: 500,
+        headers: corsHeaders(echoOrigin),
+      });
+    }
+
+    return new NextResponse(r.body as any, {
+      headers: {
+        ...headersToRecord(corsHeaders(echoOrigin)),
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'X-Accel-Buffering': 'no',
+      },
+    });
+  } catch (err: any) {
+    const echoOrigin = pickAllowedOrigin(req.headers.get('origin'));
+    const msg =
+      err?.message === 'Request timed out'
+        ? '⚠️ Connection timed out. Please try again.'
+        : err?.message || String(err);
+    return NextResponse.json(
+      { error: msg, identity: SOLACE_NAME },
+      {
+        status: err?.message === 'Request timed out' ? 504 : 500,
+        headers: corsHeaders(echoOrigin),
+      }
+    );
+  }
+}
