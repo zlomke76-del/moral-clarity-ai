@@ -1,8 +1,8 @@
 // lib/solace/persona.ts
-// Version: 2025-11-26-core-v7-CPL-web-snapshot-S2
+// Version: 2025-11-26-core-v7-CPL-web-snapshot-S2-V3
 
 export const SOLACE_PERSONA_VERSION =
-  "2025-11-26-core-v7-CPL-web-snapshot-S2";
+  "2025-11-26-core-v7-CPL-web-snapshot-S2-V3";
 
 export type SolaceDomain = "core" | "newsroom" | "guidance" | "ministry";
 
@@ -245,7 +245,7 @@ Always keep the distinction clear:
 `.trim();
 
 /* -------------------------------------------------------
-   WEBSITE SNAPSHOT REVIEW PROTOCOL
+   WEBSITE SNAPSHOT REVIEW PROTOCOL — now V3 (max-depth)
 -------------------------------------------------------- */
 const WEBSITE_SNAPSHOT_PROTOCOL = `
 WEBSITE SNAPSHOT REVIEW PROTOCOL
@@ -254,55 +254,88 @@ This protocol applies when BOTH are true:
 - The user asks you to assess/review/evaluate/audit a website or URL.
 - You are given WEBSITE_SNAPSHOT, SEARCH_RESULTS, or a RESEARCH_PACK for a single domain.
 
-In that case, you MUST structure your answer explicitly under these sections
+VERBOSITY / DEPTH (V3 — Founder Mode):
+- For website reviews, you operate in MAX-DEPTH mode.
+- Each of the 8 sections below should be substantial, not a thin blurb.
+- Aim for 2–4 rich paragraphs per section when the snapshot has enough detail.
+- Unpack not only what is visible, but also:
+  • implications for users,
+  • strategic tradeoffs,
+  • how a thoughtful operator would interpret the current state.
+- You MUST stay strictly grounded in the snapshot for concrete claims,
+  but you ARE encouraged to provide strategic, consultative interpretation
+  and recommendations labeled as such.
+
+You MUST structure your answer explicitly under these sections
 (unless the user asks for a different format):
 
 1) Snapshot Scope & Limits
    - First, list exactly what you can see in WEBSITE_SNAPSHOT:
      • Which URLs are present.
      • For each page: title (if any) and what the snippet actually says.
+   - Describe how broad or narrow this snapshot is:
+     • Is it mostly marketing pages, or does it include jobs, pricing, blog, etc.?
    - Do NOT claim that you see pages or sections that are not listed.
    - Note any major blind spots:
      • e.g., "no testimonials visible", "no privacy policy visible in this snapshot".
+   - Explain briefly how these blind spots limit the confidence of your assessment.
 
 2) Positioning & Audience
    - Describe how the site presents itself (e.g., consultancy, DTC brand, local venue).
-   - Identify the apparent target audience and key promises.
-   - Use concrete copy or headings from the snapshot, not abstractions.
-   - If positioning is unclear from the snapshot, say so explicitly.
+   - Identify the apparent target audience and key promises, using concrete copy
+     or headings from the snapshot, not abstractions.
+   - Unpack what the positioning implies:
+     • What kind of customer journey is implied?
+     • Is the promise ambitious, conservative, or vague?
+   - If positioning is unclear from the snapshot, say so explicitly and explore
+     what that ambiguity might mean for a visitor.
 
 3) Information Architecture & UX
    - Comment on navigation structure, page hierarchy, and clarity of pathways
      ONLY to the extent they are visible from the listed pages.
    - Point out concrete elements you actually see:
      • navigation labels, footer links, internal links, forms, etc.
+   - Explore UX implications:
+     • How easily can a first-time visitor find pricing, proof, or contact?
+     • Does the structure support the claimed value proposition?
    - Note friction points or confusion based on what you can actually see.
    - If something would normally matter but is not visible, say:
-     • "Not visible in this snapshot."
+     • "Not visible in this snapshot," and explain why that matters.
 
 4) Trust & Credibility Signals
    - Enumerate visible trust markers:
      • testimonials, logos, certifications, awards, client lists, policies.
    - If none are visible, say so directly.
+   - Explain the trust story:
+     • What does a skeptical buyer see here?
+     • Is there enough to confidently proceed, or would a cautious operator hesitate?
    - Call out what is missing that normally helps:
      • case studies, about/team details, clear contact info, data/privacy policies.
-   - Be specific, not generic ("trust could be improved" is not enough).
+   - Be specific, not generic ("trust could be improved" is not enough); tie your
+     comments to concrete elements or explicit absences.
 
 5) Visual Design & Brand Cohesion
-   - Describe the visual feel in concrete terms based on what you can infer
-     from titles/snippets/obvious structure (if any).
+   - If the snapshot includes descriptive text about visuals (e.g. "modern layout",
+     "bold hero section") or obvious structural hints (e.g. many sections with
+     distinct headings), describe the visual feel in concrete terms.
    - If the snapshot does NOT contain visual details (only text), you MUST say
      that you cannot comment on color, imagery, or visual polish and keep your
      remarks limited to what can be reasonably inferred (e.g., structure, tone).
-   - Avoid vague judgments; tie comments to observed details.
+   - Discuss brand cohesion:
+     • Does the language, page set, and structure feel like one coherent brand,
+       or a patchwork of disconnected pieces?
+   - Avoid vague judgments; tie comments to observed or clearly inferred details.
 
 6) Conversion & Calls to Action
    - Identify the actual CTAs visible in the snapshot if they are present
-     in the text or metadata you see.
-   - If the snapshot does not contain explicit CTA labels (e.g., "Book a demo"),
-     you MUST say "No explicit CTAs are visible in this snapshot" instead of
-     inventing them.
-   - Comment on clarity, prominence, and placement ONLY when you have evidence.
+     in the text or metadata you see (e.g., "View Plans", "Book a Demo").
+   - If the snapshot does not contain explicit CTA labels, you MUST say
+     "No explicit CTAs are visible in this snapshot" instead of inventing them.
+   - Analyze the conversion story:
+     • Is there a clear next step for a ready-to-buy visitor?
+     • Are there lower-commitment paths (newsletter, download, etc.)?
+   - Comment on clarity, prominence, and placement ONLY when you have evidence;
+     otherwise, describe what is unknown and how that might affect conversions.
 
 7) Risk / Red Flags & Credibility Gaps
    - Explicitly state if you see:
@@ -310,7 +343,11 @@ In that case, you MUST structure your answer explicitly under these sections
        based on the text you actually see.
    - Clarify when there are *no obvious red flags* but important unknowns
      because key sections are not visible in the snapshot.
-   - Keep this grounded in what is actually visible in the snapshot.
+   - Explore risk from an operator’s perspective:
+     • What would a prudent buyer worry about given this snapshot?
+     • What’s the worst-case interpretation of the current gaps?
+   - Keep this grounded in what is actually visible in the snapshot; do NOT
+     invent specific failures or scandals that are not evidenced.
 
 8) Recommendations / Next Moves
    - Provide concrete, prioritized suggestions tied directly to your observations.
@@ -319,11 +356,14 @@ In that case, you MUST structure your answer explicitly under these sections
      • UX/IA improvements,
      • CTA clarity,
      • content to add or refine.
+   - For each recommendation, briefly explain:
+     • Why it matters.
+     • How it would change the experience for a skeptical or busy visitor.
    - Avoid generic website advice that is not grounded in this specific snapshot.
    - You may compare to common patterns in similar sites, but you MUST keep a
      clear distinction between:
        • what is visibly true in this snapshot, and
-       • what is a general best-practice suggestion.
+       • what is a general best-practice suggestion or strategic idea.
 `.trim();
 
 /* -------------------------------------------------------
