@@ -22,7 +22,7 @@ import {
 import { MCA_WORKSPACE_ID, MCA_USER_KEY } from '@/lib/mca-config';
 
 /* ========= IMAGE GENERATION ========= */
-import { generateImage } from '@/lib/chat/image-gen' ;
+import { generateImage } from '@/lib/chat/image-gen';
 
 /* ========= NEWS → LEDGERS ========= */
 import { logNewsBatchToLedgers } from '@/lib/news-ledger';
@@ -278,40 +278,39 @@ export async function POST(req: NextRequest) {
       const title: string =
         body?.export_title || body?.title || 'Solace export';
 
-// === EXPORT THROUGH THE WORKER ===
-const WORKER_URL =
-  process.env.NEXT_PUBLIC_EXPORT_WORKER_URL ||
-  "https://mca-export-worker.vercel.app/api/generate";
+      // === EXPORT THROUGH THE WORKER ===
+      const WORKER_URL =
+        process.env.NEXT_PUBLIC_EXPORT_WORKER_URL ||
+        'https://mca-export-worker.vercel.app/api/generate';
 
-let fileUrl: string | null = null;
+      let fileUrl: string | null = null;
 
-try {
-  const resp = await fetch(WORKER_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.PY_WORKER_KEY || ""}`,
-    },
-    body: JSON.stringify({
-      type: exportFormat,          // 'pdf' | 'docx' | 'csv'
-      title: title,
-      content: contentToExport,
-    }),
-  });
+      try {
+        const resp = await fetch(WORKER_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.PY_WORKER_KEY || ''}`,
+          },
+          body: JSON.stringify({
+            type: exportFormat, // 'pdf' | 'docx' | 'csv'
+            title: title,
+            content: contentToExport,
+          }),
+        });
 
-  if (resp.ok) {
-    const blob = await resp.blob();
-    const suffix = exportFormat === "docx" ? "docx" : exportFormat;
-    const storageFile = `solace_export_${Date.now()}.${suffix}`;
-    const upload = await put(storageFile, blob, {
-      access: "public",
-    });
-    fileUrl = upload?.url || null;
-  }
-} catch (err) {
-  console.error("EXPORT ERROR:", err);
-}
-
+        if (resp.ok) {
+          const blob = await resp.blob();
+          const suffix = exportFormat === 'docx' ? 'docx' : exportFormat;
+          const storageFile = `solace_export_${Date.now()}.${suffix}`;
+          const upload = await put(storageFile, blob, {
+            access: 'public',
+          });
+          fileUrl = upload?.url || null;
+        }
+      } catch (err) {
+        console.error('EXPORT ERROR:', err);
+      }
 
       if (!fileUrl) {
         return NextResponse.json(
@@ -486,17 +485,25 @@ try {
     try {
       const wantsDeep = wantsDeepResearch(lastUser);
       const urlInUser = extractFirstUrl(lastUser);
+      const hasUrl = !!urlInUser;
+
+      // For any URL, ALWAYS run deep research (authoritative context),
+      // even if the user didn't explicitly say "deep research".
+      const shouldRunDeepResearch = webFlag && (wantsDeep || hasUrl);
 
       // Deep research (website / multi-search)
-      if (webFlag && (wantsDeep || urlInUser)) {
-        const pack = await runDeepResearch(lastUser);
+      if (shouldRunDeepResearch) {
+        const queryForResearch =
+          hasUrl && !wantsDeep ? urlInUser! : lastUser || urlInUser!;
+
+        const pack = await runDeepResearch(queryForResearch);
 
         try {
           await logResearchSnapshot({
             workspaceId,
             userKey,
             userId,
-            query: lastUser,
+            query: queryForResearch,
             researchPack: pack,
           });
         } catch (err) {
@@ -512,7 +519,7 @@ try {
           : '';
 
         const clarificationHint =
-          urlInUser && !wantsDeep
+          hasUrl && !wantsDeep
             ? `\n\nNOTE FOR ASSISTANT\n- The user shared a URL (${urlInUser}) but did not clearly state what aspect they want evaluated (design/UX, messaging/clarity, SEO/traffic, trustworthiness, etc.). Before giving a long evaluation, briefly ask which of these they care about most, then tailor your analysis.`
             : '';
 
@@ -800,3 +807,4 @@ CONTEXT OVERRIDE SEAL
     );
   }
 }
+
