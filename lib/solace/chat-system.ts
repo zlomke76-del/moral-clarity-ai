@@ -1,99 +1,247 @@
 // lib/solace/chat-system.ts
-// Clean unified version — optimized for stability and minimal drift.
 
-import type { SolaceDomain } from "@/lib/solace/persona";
+import { buildSolaceSystemPrompt, type SolaceDomain } from "./persona";
 
-/* -------------------------------------------------------
-   BASIC TEXT HELPERS
--------------------------------------------------------- */
+export type ChatMessage = { role: string; content: string };
 
-export function trimConversation(messages: any[]): any[] {
-  if (!Array.isArray(messages)) return [];
-  return messages
-    .map((m) => ({
-      role: m.role || "user",
-      content: typeof m.content === "string" ? m.content.trim() : "",
-    }))
-    .filter((m) => m.content.length > 0)
-    .slice(-40);
-}
-
-export function normalizeFilters(filters: string[]): string[] {
-  if (!Array.isArray(filters)) return [];
-  return filters
-    .map((f) => String(f).trim().toLowerCase())
-    .filter(Boolean);
-}
+export type ChatPersonaInput = {
+  filters: string[];
+  messages: ChatMessage[];
+  userWantsSecular: boolean;
+  routeMode: string;
+};
 
 /* -------------------------------------------------------
-   MODE DETECTION
+   FILTER NORMALIZATION
 -------------------------------------------------------- */
 
-export function wantsSecular(messages: any[]): boolean {
-  const last = [...messages].reverse().find((m) => m.role === "user");
-  if (!last) return false;
-  const text = last.content.toLowerCase();
+export function normalizeFilters(raw: string[] | Set<string>): string[] {
+  const out = new Set<string>();
 
-  return /\b(secular|non-religious|no ministry)\b/.test(text);
+  const arr = Array.isArray(raw) ? raw : Array.from(raw || []);
+  for (const f of arr) {
+    const v = String(f || "").trim().toLowerCase();
+    if (!v) continue;
+
+    switch (v) {
+      case "ministry":
+      case "abrahamic":
+      case "guidance":
+      case "newsroom":
+        out.add(v);
+        break;
+      case "news":
+        out.add("newsroom");
+        break;
+      case "coach":
+        out.add("guidance");
+        break;
+      default:
+        out.add(v);
+        break;
+    }
+  }
+
+  return Array.from(out);
 }
 
-export function extractFirstUrl(text: string | null): string | null {
-  if (!text) return null;
-  const m = text.match(/https?:\/\/[^\s]+/i);
-  return m ? m[0] : null;
+/* -------------------------------------------------------
+   CONVERSATION TRIMMING
+-------------------------------------------------------- */
+
+export function trimConversation(
+  messages: ChatMessage[],
+  maxTokens = 4096,
+  maxMessages = 32
+): ChatMessage[] {
+  if (!Array.isArray(messages) || !messages.length) return [];
+
+  const sliced = messages.slice(-maxMessages);
+
+  // Naive token estimate: ~4 chars / token. Good enough for trimming.
+  let total = 0;
+  const trimmed: ChatMessage[] = [];
+
+  for (let i = sliced.length - 1; i >= 0; i--) {
+    const m = sliced[i];
+    const len = (m.content || "").length / 4;
+    if (total + len > maxTokens && trimmed.length) break;
+    total += len;
+    trimmed.push(m);
+  }
+
+  return trimmed.reverse();
 }
 
-export function wantsImageGeneration(text: string | null): boolean {
-  if (!text) return false;
-  return /^img:\s*/i.test(text) || /\b(generate|make)\s+(an?|the)\s+image\b/i.test(text);
+/* -------------------------------------------------------
+   SECULAR / MINISTRY SIGNAL
+-------------------------------------------------------- */
+
+export function wantsSecular(messages: ChatMessage[]): boolean {
+  const last = [...messages].reverse().find((m) => m.role.toLowerCase() === "user");
+  if (!last?.content) return false;
+
+  const t = last.content.toLowerCase();
+
+  if (/\b(secular( mode)?|keep it secular)\b/.test(t)) return true;
+  if (/\bno (religion|church|bible|scripture|ministry)\b/.test(t)) return true;
+  if (/\b(no god talk|no faith talk)\b/.test(t)) return true;
+
+  return false;
 }
 
-export function wantsDeepResearch(text: string | null): boolean {
-  if (!text) return false;
-  const t = text.toLowerCase();
+/* -------------------------------------------------------
+   IMAGE GENERATION DETECTION
+-------------------------------------------------------- */
+
+export function wantsImageGeneration(
+  textOrMessages: string | ChatMessage[]
+): boolean {
+  let t: string;
+
+  if (typeof textOrMessages === "string") {
+    t = textOrMessages;
+  } else {
+    const last = [...textOrMessages]
+      .reverse()
+      .find((m) => m.role.toLowerCase() === "user");
+    t = last?.content || "";
+  }
+
+  t = t.trim().toLowerCase();
+  if (!t) return false;
+
+  if (t.startsWith("img:")) return true;
+
   return (
-    /\bdeep\s+research\b/.test(t) ||
-    /\blookup\b/.test(t) ||
-    /\bsearch\b/.test(t) ||
-    extractFirstUrl(text) !== null
+    /\b(generate|create|make|draw|design)\b/.test(t) &&
+    /\b(image|picture|photo|logo|icon|graphic|art)\b/.test(t)
   );
 }
 
-export function looksLikeGenericNewsQuestion(text: string | null): boolean {
+/* -------------------------------------------------------
+   URL + DEEP RESEARCH DETECTION
+-------------------------------------------------------- */
+
+export function extractFirstUrl(
+  text: string | null | undefined
+): string | null {
+  if (!text) return null;
+  const m = text.match(/\bhttps?:\/\/[^\s)]+/i);
+  return m ? m[0] : null;
+}
+
+export function wantsDeepResearch(
+  text: string | null | undefined
+): boolean {
   if (!text) return false;
   const t = text.toLowerCase();
-  return /\bnews\b/.test(t) && !/\bheadline(s)?\b/.test(t);
+
+  if (/\bdeep research\b/.test(t)) return true;
+  if (/\b(thorough|in-depth|detailed)\b.*\b(analysis|review|comparison)\b/.test(t))
+    return true;
+  if (/\b(analyze|audit|evaluate|break down)\b.*\b(site|website|page|article|paper)\b/.test(t))
+    return true;
+  if (/\bcompare\b.*\b(options|vendors|providers|sources)\b/.test(t)) return true;
+
+  return false;
 }
 
 /* -------------------------------------------------------
-   ROUTE MODE
-   Handles "Guidance", "Neutral", "Create", "Red Team", etc.
+   GENERIC NEWS QUESTION DETECTION
 -------------------------------------------------------- */
 
-export function routeMode(
-  lastUser: string,
-  opts: { lastMode?: string } = {}
-): { mode: SolaceDomain; confidence: number } {
-  const t = (lastUser || "").toLowerCase();
+export function looksLikeGenericNewsQuestion(
+  text: string | null | undefined
+): boolean {
+  if (!text) return false;
+  const t = text.toLowerCase();
 
-  // Explicit newsroom triggers
-  if (/\b(news|headlines|digest|what's happening)\b/.test(t)) {
-    return { mode: "newsroom", confidence: 0.9 };
-  }
-
-  // Guidance triggers
-  if (
-    /\b(should i|what do you recommend|help me think|i need advice|next steps)\b/.test(t)
-  ) {
-    return { mode: "guidance", confidence: 0.85 };
-  }
-
-  // Ministry triggers
-  if (/\b(pray|scripture|faith|mercy|abrahamic)\b/.test(t)) {
-    return { mode: "ministry", confidence: 0.8 };
-  }
-
-  // Fallback to core
-  return { mode: "core", confidence: 0.6 };
+  return /\b(what('?| i)?s (the )?news( today)?|news today|today('?| i)?s news|what('?| i)?s going on in the world)\b/.test(
+    t
+  );
 }
 
+/* -------------------------------------------------------
+   PERSONA BUILDER
+-------------------------------------------------------- */
+
+export function buildChatPersonaPrompt(
+  input: ChatPersonaInput
+): { systemBase: string; domain: SolaceDomain } {
+  const { filters, messages, userWantsSecular, routeMode } = input;
+
+  const filterSet = new Set(filters.map((f) => f.toLowerCase()));
+  const mode = String(routeMode || "").toLowerCase();
+
+  let domain: SolaceDomain = "core";
+
+  if (mode === "newsroom") {
+    domain = "newsroom";
+  } else if (mode === "guidance") {
+    domain = "guidance";
+  } else if (mode === "ministry") {
+    domain = "ministry";
+  }
+
+  if (filterSet.has("newsroom")) domain = "newsroom";
+  else if (filterSet.has("guidance")) domain = "guidance";
+  else if (filterSet.has("ministry")) domain = "ministry";
+
+  if (userWantsSecular && domain === "ministry") {
+    domain = filterSet.has("guidance") ? "guidance" : "core";
+  }
+
+  const lastUser =
+    [...messages].reverse().find((m) => m.role.toLowerCase() === "user")
+      ?.content || "";
+
+  const extrasLines: string[] = [];
+
+  if (filterSet.size) {
+    extrasLines.push(
+      `Active filters: ${Array.from(filterSet).join(
+        ", "
+      )}. Reflect them only when they genuinely improve clarity.`
+    );
+  }
+
+  if (userWantsSecular) {
+    extrasLines.push(
+      "User explicitly requested a secular frame. Avoid religious framing unless they reopen that door."
+    );
+  }
+
+  if (domain === "newsroom") {
+    extrasLines.push(
+      "You are in NEWSROOM mode: use only the NEWS CONTEXT provided by the backend. Do not invent extra news."
+    );
+  }
+
+  if (domain === "guidance") {
+    extrasLines.push(
+      "You are in GUIDANCE mode: prioritize decision support, tradeoffs, and concrete next steps over long exposition."
+    );
+  }
+
+  if (domain === "ministry" && !userWantsSecular) {
+    extrasLines.push(
+      "You are in MINISTRY mode: you may gently weave in Abrahamic themes (mercy, justice, conscience, hope) without proselytizing."
+    );
+  }
+
+  if (lastUser) {
+    extrasLines.push(
+      `Anchor your next response to the user's latest message. Do not restart the conversation: "${lastUser.slice(
+        0,
+        240
+      )}${lastUser.length > 240 ? "…" : ""}"`
+    );
+  }
+
+  const extras = extrasLines.join("\n");
+
+  const systemBase = buildSolaceSystemPrompt(domain, extras);
+
+  return { systemBase, domain };
+}
