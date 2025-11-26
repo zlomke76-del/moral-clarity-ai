@@ -3,154 +3,228 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
+
 import { webSearch } from "@/lib/search";
-import { getOpenAI } from "@/lib/openai";
 import { buildInternetSystemPrompt } from "@/lib/solace/internet-mode";
-import { getSolaceFeatureFlags } from "@/lib/solace/settings";
+import { SolaceEngine } from "@/lib/solace-engine/engine";
+import type { SolaceDomain } from "@/lib/solace/persona";
 
-// Local defaults so we don't depend on lib/mcai/config
-const SOLACE_WEB_MODEL =
-  process.env.OPENAI_RESPONSE_MODEL ||
-  process.env.OPENAI_MODEL ||
-  "gpt-4.1";
+/* -------------------------------------------------------
+   ORIGINS / CORS  (mirrors /api/chat)
+-------------------------------------------------------- */
 
-type SearchResult = {
-  title: string;
-  url: string;
-  content?: string;
-  score?: number;
-  published_date?: string;
-};
+const STATIC_ALLOWED_ORIGINS = [
+  "https://moralclarity.ai",
+  "https://www.moralclarity.ai",
+  "https://studio.moralclarity.ai",
+  "https://studio-founder.moralclarity.ai",
+  "https://moralclarityai.com",
+  "https://www.moralclarityai.com",
+  "http://localhost:3000",
+];
 
-type WebEvalBody = {
-  question: string;
-  url?: string;
-  maxResults?: number;
-};
+const ENV_ALLOWED_ORIGINS = (process.env.MCAI_ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
-function jsonError(
-  message: string,
-  status = 400,
-  extra: Record<string, unknown> = {}
-) {
-  return NextResponse.json({ ok: false, error: message, ...extra }, { status });
+const ALLOWED_SET = new Set<string>([
+  ...STATIC_ALLOWED_ORIGINS,
+  ...ENV_ALLOWED_ORIGINS,
+]);
+
+function hostIsAllowedWildcard(hostname: string) {
+  return (
+    /^([a-z0-9-]+\.)*moralclarity\.ai$/i.test(hostname) ||
+    /^([a-z0-9-]+\.)*moralclarityai\.com$/i.test(hostname)
+  );
 }
 
-export async function POST(req: NextRequest) {
+function pickAllowedOrigin(origin: string | null): string | null {
+  if (!origin) return null;
   try {
-    const flags = getSolaceFeatureFlags();
-    if (!flags.internetEnabled) {
-      return jsonError("Internet access for Solace is disabled.", 403, {
-        code: "INTERNET_DISABLED",
-      });
-    }
-
-    const body = (await req.json().catch(() => null)) as WebEvalBody | null;
-    if (!body || !body.question?.trim()) {
-      return jsonError("Missing 'question' in body.", 400, {
-        code: "BAD_REQUEST",
-      });
-    }
-
-    const { question } = body;
-    const max = Math.max(1, Math.min(body.maxResults ?? 6, 10));
-
-    // If a URL is provided, bias the query to that domain.
-    let query = question.trim();
-    if (body.url) {
-      try {
-        const u = new URL(body.url);
-        const host = u.hostname.replace(/^www\./i, "");
-        query = `site:${host} ${question}`;
-      } catch {
-        // keep original query if URL parsing fails
-      }
-    }
-
-    const searchResults = (await webSearch(query, {
-      max,
-      news: false,
-    })) as SearchResult[];
-
-    const openai: any = await getOpenAI();
-
-    const system = buildInternetSystemPrompt(
-      `
-You are helping the user evaluate or understand information retrieved from the web.
-
-You are given:
-- USER_QUESTION: what the user wants to know.
-- SEARCH_RESULTS: JSON array of matched pages/snippets.
-
-Rules:
-- Base your reasoning ONLY on SEARCH_RESULTS.
-- Be explicit when something is unknown or underspecified.
-- Prefer synthesis ("here's the pattern") over link dumps.
-- If results are thin or noisy, say so clearly.
-      `.trim()
-    );
-
-    const prompt = `
-SYSTEM_INSTRUCTIONS:
-${system}
-
-USER_QUESTION:
-${question}
-
-SEARCH_RESULTS (JSON):
-${JSON.stringify(searchResults, null, 2)}
-    `.trim();
-
-    // Use simple string input to keep the SDK typing happy.
-    // Higher max_output_tokens so Solace can deliver full, high-context analyses.
-    const resp = await openai.responses.create({
-      model: SOLACE_WEB_MODEL,
-      input: prompt,
-      max_output_tokens: 2800,
-    });
-
-    const answer = (resp as any).output_text as string | undefined;
-
-    return NextResponse.json({
-      ok: true,
-      question,
-      queryUsed: query,
-      maxResults: max,
-      resultsCount: searchResults.length,
-      searchResults,
-      answer: answer ?? "",
-      model: SOLACE_WEB_MODEL,
-    });
-  } catch (err: any) {
-    console.error("[solace/web] fatal error", err);
-    return jsonError(
-      err?.message || "Unexpected error in Solace web evaluation route.",
-      500,
-      { code: "SOLACE_WEB_FATAL" }
-    );
+    if (ALLOWED_SET.has(origin)) return origin;
+    const url = new URL(origin);
+    if (hostIsAllowedWildcard(url.hostname)) return origin;
+  } catch {
+    // ignore
   }
+  return null;
 }
+
+function corsHeaders(origin: string | null): Headers {
+  const h = new Headers();
+  h.set("Vary", "Origin");
+  h.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  h.set(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-Requested-With, X-Context-Id"
+  );
+  h.set("Access-Control-Max-Age", "86400");
+  if (origin) h.set("Access-Control-Allow-Origin", origin);
+  return h;
+}
+
+function headersToRecord(h: Headers): Record<string, string> {
+  const out: Record<string, string> = {};
+  h.forEach((v, k) => (out[k] = v));
+  return out;
+}
+
+/* -------------------------------------------------------
+   TYPES
+-------------------------------------------------------- */
+
+type WebMessage = { role: "user" | "assistant"; content: string };
+
+type WebBody = {
+  query?: string;
+  messages?: WebMessage[];
+  maxResults?: number;
+  depth?: "basic" | "advanced";
+};
+
+/* -------------------------------------------------------
+   HEALTHCHECK
+-------------------------------------------------------- */
 
 export async function GET(req: NextRequest) {
-  // Convenience: allow GET with query params (?q=...&url=...&max=...)
-  const url = new URL(req.url);
-  const question =
-    url.searchParams.get("q") || url.searchParams.get("question");
-  const targetUrl = url.searchParams.get("url") || undefined;
-  const maxParam = url.searchParams.get("max");
-  const maxResults = maxParam ? Number(maxParam) || undefined : undefined;
+  const origin = pickAllowedOrigin(req.headers.get("origin"));
+  return NextResponse.json(
+    {
+      ok: true,
+      route: "/api/solace/web",
+      tavilyEnabled: Boolean(
+        process.env.TAVILY_API_KEY || process.env.NEXT_PUBLIC_TAVILY_API_KEY
+      ),
+    },
+    { headers: corsHeaders(origin) }
+  );
+}
 
-  const body: WebEvalBody = {
-    question: question || "Evaluate this website.",
-    url: targetUrl,
-    maxResults,
-  };
+/* -------------------------------------------------------
+   OPTIONS (CORS preflight)
+-------------------------------------------------------- */
 
-  const fakeReq = new NextRequest(req.url, {
-    method: "POST",
-    headers: req.headers,
-    body: JSON.stringify(body),
-  });
+export async function OPTIONS(req: NextRequest) {
+  const origin = pickAllowedOrigin(req.headers.get("origin"));
+  return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
+}
 
-  return POST(fakeReq);
+/* -------------------------------------------------------
+   POST — Internet evaluation using Tavily + Solace
+-------------------------------------------------------- */
+
+export async function POST(req: NextRequest) {
+  const reqOrigin = req.headers.get("origin");
+  const echoOrigin = pickAllowedOrigin(reqOrigin);
+  const sameOrNoOrigin = !reqOrigin;
+
+  if (!echoOrigin && !sameOrNoOrigin) {
+    return NextResponse.json(
+      { error: "Origin not allowed", allowed: Array.from(ALLOWED_SET) },
+      { status: 403, headers: corsHeaders(null) }
+    );
+  }
+
+  try {
+    const body = (await req.json().catch(() => ({}))) as WebBody;
+
+    const query = String(body.query || "").trim();
+    const messages = Array.isArray(body.messages) ? body.messages : [];
+
+    if (!query) {
+      return NextResponse.json(
+        { error: "Missing query" },
+        { status: 400, headers: corsHeaders(echoOrigin) }
+      );
+    }
+
+    const maxResults =
+      typeof body.maxResults === "number" && body.maxResults > 0
+        ? Math.min(body.maxResults, 10)
+        : 6;
+
+    const depthFlag =
+      body.depth === "advanced" ? "advanced" : ("basic" as "basic" | "advanced");
+
+    // ---- Tavily search ----
+    const results = await webSearch(query, {
+      max: maxResults,
+      // For now we treat this as generic web search, not news-only.
+      // If you want a dedicated news internet route, we can split later.
+    });
+
+    // Compact SEARCH_RESULTS wrapper for the system prompt.
+    const searchPayload = {
+      query,
+      depth: depthFlag,
+      items: results,
+      generated_at: new Date().toISOString(),
+    };
+
+    const searchJson = JSON.stringify(searchPayload, null, 2);
+
+    // ---- Build Solace system prompt for Internet mode ----
+    const extras = `
+SEARCH_RESULTS (JSON):
+
+"""json
+${searchJson}
+"""
+
+You are helping the user understand or evaluate the information above.
+
+- Treat SEARCH_RESULTS as your factual window into the web for this request.
+- You MUST NOT say "I can't browse the internet" or similar, because you have this snapshot.
+- Anchor your answer in concrete details from SEARCH_RESULTS (titles, snippets, domains, dates).
+- If results conflict, call out the conflict and explain how you'd interpret it.
+- If the results are thin or noisy, say so and explain limits on confidence.
+`.trim();
+
+    const system = buildInternetSystemPrompt(extras);
+
+    const rolledMessages: WebMessage[] = [
+      ...messages,
+      { role: "user", content: query },
+    ];
+
+    // ---- Call Solace engine (non-stream) ----
+    const text = (await SolaceEngine.generate({
+      payload: {
+        mode: "Guidance",
+        system,
+        messages: rolledMessages,
+        temperature: 0.2,
+        max_output_tokens: 900,
+        context: {
+          research: extras,
+          news: null,
+          memory: null,
+        },
+        context_mode: "authoritative",
+      },
+      stream: false,
+      isFounder: false,
+      fallback: true,
+      max_output_tokens: 900,
+      timeoutMs: 40_000,
+    })) as string;
+
+    return NextResponse.json(
+      {
+        text,
+        search_results: searchPayload,
+        model: "internet-solace",
+      },
+      { headers: corsHeaders(echoOrigin) }
+    );
+  } catch (err: any) {
+    const echoOrigin = pickAllowedOrigin(req.headers.get("origin"));
+    const msg = err?.message || String(err);
+    return NextResponse.json(
+      { error: msg },
+      { status: 500, headers: corsHeaders(echoOrigin) }
+    );
+  }
 }
