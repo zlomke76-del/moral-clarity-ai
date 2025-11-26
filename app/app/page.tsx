@@ -1,15 +1,16 @@
 // app/app/page.tsx
-import FeatureGrid from "@/app/components/FeatureGrid";
+import NeuralShell from "@/app/components/NeuralShell";
 import NeuralSidebar from "@/app/components/NeuralSidebar";
 import BrainHero from "@/app/components/BrainHero";
+import FeatureGrid from "@/app/components/FeatureGrid";
 
 export const runtime = "nodejs";
 
 export default function AppHome() {
   return (
-    <div className="min-h-[70vh] py-8 md:py-10">
+    <NeuralShell>
       {/* Hero: neural sidebar + brain center */}
-      <section className="mx-auto flex w-full max-w-6xl flex-col gap-6 md:grid md:grid-cols-[260px,minmax(0,1fr)] md:items-stretch">
+      <section className="flex w-full flex-col gap-6 md:grid md:grid-cols-[260px,minmax(0,1fr)] md:items-stretch">
         {/* Left neural nav */}
         <NeuralSidebar />
 
@@ -17,10 +18,10 @@ export default function AppHome() {
         <BrainHero />
       </section>
 
-      {/* Existing feature grid moved below hero */}
-      <section className="mx-auto mt-12 w-full max-w-6xl">
+      {/* Workspaces grid below hero */}
+      <section className="mt-10 md:mt-12">
         <FeatureGrid />
       </section>
-    </div>
+    </NeuralShell>
   );
 }
