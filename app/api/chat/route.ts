@@ -1,14 +1,14 @@
 // app/api/chat/route.ts
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-import { put } from '@vercel/blob';
+import { put } from "@vercel/blob";
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
-import { runDeepResearch } from '@/lib/research';
-import { logResearchSnapshot } from '@/lib/truth-ledger';
-import { routeMode } from '@/core/mode-router';
+import { runDeepResearch } from "@/lib/research";
+import { logResearchSnapshot } from "@/lib/truth-ledger";
+import { routeMode } from "@/core/mode-router";
 
 /* ========= MEMORY ========= */
 import {
@@ -16,19 +16,19 @@ import {
   remember,
   getMemoryPack,
   maybeStoreEpisode,
-} from '@/lib/memory';
+} from "@/lib/memory";
 
 /* ========= MCA CONFIG (defaults for user/workspace) ========= */
-import { MCA_WORKSPACE_ID, MCA_USER_KEY } from '@/lib/mca-config';
+import { MCA_WORKSPACE_ID, MCA_USER_KEY } from "@/lib/mca-config";
 
 /* ========= IMAGE GENERATION ========= */
-import { generateImage } from '@/lib/chat/image-gen';
+import { generateImage } from "@/lib/chat/image-gen";
 
 /* ========= NEWS → LEDGERS ========= */
-import { logNewsBatchToLedgers } from '@/lib/news-ledger';
+import { logNewsBatchToLedgers } from "@/lib/news-ledger";
 
 /* ========= ATTACHMENTS HELPER ========= */
-import { buildAttachmentSection, type Attachment } from '@/lib/chat/attachments';
+import { buildAttachmentSection, type Attachment } from "@/lib/chat/attachments";
 
 /* ========= SOLACE PERSONA / CHAT SYSTEM ========= */
 import {
@@ -40,19 +40,19 @@ import {
   wantsDeepResearch,
   looksLikeGenericNewsQuestion,
   buildChatPersonaPrompt,
-} from '@/lib/solace/chat-system';
+} from "@/lib/solace/chat-system";
 
 /* ========= NEUTRAL NEWS DIGEST ========= */
 import {
   getSolaceNewsDigest,
   type SolaceDigestStory,
-} from '@/lib/news/solace-digest';
+} from "@/lib/news/solace-digest";
 
 /* ========= SOLACE ENGINE (PRIMARY + FALLBACK) ========= */
-import { SolaceEngine, withTimeout } from '@/lib/solace-engine/engine';
+import { SolaceEngine } from "@/lib/solace-engine/engine";
 
 /* ========= MODEL / TIMEOUT (BASELINE) ========= */
-const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+const MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 const BASE_REQUEST_TIMEOUT_MS = 20_000;
 
 /* ========= FOUNDER MODE (userKey/email based) ========= */
@@ -66,9 +66,9 @@ const BASE_REQUEST_TIMEOUT_MS = 20_000;
  * Any request whose effective userKey matches one of these
  * gets higher token limits + longer timeout + larger memory pack.
  */
-const FOUNDER_USER_EMAIL = (process.env.FOUNDER_USER_EMAIL || '').toLowerCase();
-const FOUNDER_USER_KEYS = (process.env.FOUNDER_USER_KEYS || '')
-  .split(',')
+const FOUNDER_USER_EMAIL = (process.env.FOUNDER_USER_EMAIL || "").toLowerCase();
+const FOUNDER_USER_KEYS = (process.env.FOUNDER_USER_KEYS || "")
+  .split(",")
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
 
@@ -89,7 +89,7 @@ function isFounderUserKey(userKey: string | null | undefined): boolean {
   if (!key) return false;
 
   // Hard-wire Tim as founder
-  if (key === 'zlomke76@gmail.com') return true;
+  if (key === "zlomke76@gmail.com") return true;
 
   if (FOUNDER_USER_EMAIL && key === FOUNDER_USER_EMAIL) return true;
   if (FOUNDER_USER_KEYS.length && FOUNDER_USER_KEYS.includes(key)) return true;
@@ -99,21 +99,24 @@ function isFounderUserKey(userKey: string | null | undefined): boolean {
 
 /* ========= ORIGINS ========= */
 const STATIC_ALLOWED_ORIGINS = [
-  'https://moralclarity.ai',
-  'https://www.moralclarity.ai',
-  'https://studio.moralclarity.ai',
-  'https://studio-founder.moralclarity.ai',
-  'https://moralclarityai.com',
-  'https://www.moralclarityai.com',
-  'http://localhost:3000',
+  "https://moralclarity.ai",
+  "https://www.moralclarity.ai",
+  "https://studio.moralclarity.ai",
+  "https://studio-founder.moralclarity.ai",
+  "https://moralclarityai.com",
+  "https://www.moralclarityai.com",
+  "http://localhost:3000",
 ];
 
-const ENV_ALLOWED_ORIGINS = (process.env.MCAI_ALLOWED_ORIGINS || '')
-  .split(',')
+const ENV_ALLOWED_ORIGINS = (process.env.MCAI_ALLOWED_ORIGINS || "")
+  .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
 
-const ALLOWED_SET = new Set<string>([...STATIC_ALLOWED_ORIGINS, ...ENV_ALLOWED_ORIGINS]);
+const ALLOWED_SET = new Set<string>([
+  ...STATIC_ALLOWED_ORIGINS,
+  ...ENV_ALLOWED_ORIGINS,
+]);
 
 function hostIsAllowedWildcard(hostname: string) {
   return (
@@ -136,14 +139,14 @@ function pickAllowedOrigin(origin: string | null): string | null {
 
 function corsHeaders(origin: string | null): Headers {
   const h = new Headers();
-  h.set('Vary', 'Origin');
-  h.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  h.set("Vary", "Origin");
+  h.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   h.set(
-    'Access-Control-Allow-Headers',
-    'Content-Type, Authorization, X-Requested-With, X-Context-Id, X-Last-Mode, X-User-Key'
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-Requested-With, X-Context-Id, X-Last-Mode, X-User-Key",
   );
-  h.set('Access-Control-Max-Age', '86400');
-  if (origin) h.set('Access-Control-Allow-Origin', origin);
+  h.set("Access-Control-Max-Age", "86400");
+  if (origin) h.set("Access-Control-Allow-Origin", origin);
   return h;
 }
 
@@ -154,12 +157,12 @@ function headersToRecord(h: Headers): Record<string, string> {
 }
 
 /* ========= SOLACE BACKEND LABELS ========= */
-const SOLACE_NAME = 'Solace';
+const SOLACE_NAME = "Solace";
 
 /* ========= Small helpers ========= */
 
 function getUserKeyFromReq(req: NextRequest, body: any) {
-  return req.headers.get('x-user-key') || body?.user_key || MCA_USER_KEY || 'guest';
+  return req.headers.get("x-user-key") || body?.user_key || MCA_USER_KEY || "guest";
 }
 
 function detectExplicitRemember(text: string) {
@@ -177,14 +180,16 @@ function detectExplicitRemember(text: string) {
 
 /* ========= EXPORT INTENT DETECTION ========= */
 function detectExportIntent(
-  text: string | null | undefined
-): 'pdf' | 'docx' | 'csv' | null {
+  text: string | null | undefined,
+): "pdf" | "docx" | "csv" | null {
   if (!text) return null;
   const t = text.toLowerCase();
 
-  if (t.includes('pdf')) return 'pdf';
-  if (t.includes('docx') || t.includes('word')) return 'docx';
-  if (t.includes('csv') || t.includes('spreadsheet') || t.includes('excel')) return 'csv';
+  if (t.includes("pdf")) return "pdf";
+  if (t.includes("docx") || t.includes("word")) return "docx";
+  if (t.includes("csv") || t.includes("spreadsheet") || t.includes("excel")) {
+    return "csv";
+  }
 
   return null;
 }
@@ -197,35 +202,35 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env
 
 /* ========= HEALTHCHECK ========= */
 export async function GET(req: NextRequest) {
-  const origin = pickAllowedOrigin(req.headers.get('origin'));
+  const origin = pickAllowedOrigin(req.headers.get("origin"));
 
   const backend =
-    process.env.SOLACE_API_URL && process.env.SOLACE_API_KEY ? 'solace' : 'openai';
+    process.env.SOLACE_API_URL && process.env.SOLACE_API_KEY ? "solace" : "openai";
 
   const memoryEnabled = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
   return NextResponse.json(
     { ok: true, model: MODEL, identity: SOLACE_NAME, backend, memoryEnabled },
-    { headers: corsHeaders(origin) }
+    { headers: corsHeaders(origin) },
   );
 }
 
 /* ========= OPTIONS (CORS preflight) ========= */
 export async function OPTIONS(req: NextRequest) {
-  const origin = pickAllowedOrigin(req.headers.get('origin'));
+  const origin = pickAllowedOrigin(req.headers.get("origin"));
   return new NextResponse(null, { status: 204, headers: corsHeaders(origin) });
 }
 
 /* ========= POST ========= */
 export async function POST(req: NextRequest) {
   try {
-    const reqOrigin = req.headers.get('origin');
+    const reqOrigin = req.headers.get("origin");
     const echoOrigin = pickAllowedOrigin(reqOrigin);
     const sameOrNoOrigin = !reqOrigin;
 
     if (!echoOrigin && !sameOrNoOrigin) {
       return NextResponse.json(
-        { error: 'Origin not allowed', allowed: Array.from(ALLOWED_SET) },
-        { status: 403, headers: corsHeaders(null) }
+        { error: "Origin not allowed", allowed: Array.from(ALLOWED_SET) },
+        { status: 403, headers: corsHeaders(null) },
       );
     }
 
@@ -239,11 +244,12 @@ export async function POST(req: NextRequest) {
     const rolled = trimConversation(messages);
     const userAskedForSecular = wantsSecular(rolled);
     const lastUser =
-      [...rolled].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content || '';
+      [...rolled].reverse().find((m) => m.role?.toLowerCase() === "user")?.content ||
+      "";
 
     /* ===== USER KEY & FOUNDER FLAG ===== */
     let userKey = getUserKeyFromReq(req, body);
-    if (!userKey || userKey === 'guest') {
+    if (!userKey || userKey === "guest") {
       userKey = `u_${crypto.randomUUID()}`;
     }
     const isFounder = isFounderUserKey(userKey);
@@ -258,38 +264,38 @@ export async function POST(req: NextRequest) {
       const lastAssistant =
         [...rolled]
           .reverse()
-          .find((m) => m.role?.toLowerCase() === 'assistant')?.content || '';
-      const contentToExport = (lastAssistant || lastUser || '').trim();
+          .find((m) => m.role?.toLowerCase() === "assistant")?.content || "";
+      const contentToExport = (lastAssistant || lastUser || "").trim();
 
       if (!contentToExport) {
         return NextResponse.json(
           {
             text: `I don't see anything to export yet. Ask me to draft the content first, then say "put this into a ${exportFormat.toUpperCase()}".`,
-            model: 'file-export',
+            model: "file-export",
             identity: SOLACE_NAME,
-            mode: 'Export',
+            mode: "Export",
             confidence: 0.5,
             filters: rawFilters,
           },
-          { headers: corsHeaders(echoOrigin) }
+          { headers: corsHeaders(echoOrigin) },
         );
       }
 
-      const title: string = body?.export_title || body?.title || 'Solace export';
+      const title: string = body?.export_title || body?.title || "Solace export";
 
       // === EXPORT THROUGH THE WORKER ===
       const WORKER_URL =
         process.env.NEXT_PUBLIC_EXPORT_WORKER_URL ||
-        'https://mca-export-worker.vercel.app/api/generate';
+        "https://mca-export-worker.vercel.app/api/generate";
 
       let fileUrl: string | null = null;
 
       try {
         const resp = await fetch(WORKER_URL, {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.PY_WORKER_KEY || ''}`,
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.PY_WORKER_KEY || ""}`,
           },
           body: JSON.stringify({
             type: exportFormat, // 'pdf' | 'docx' | 'csv'
@@ -300,28 +306,28 @@ export async function POST(req: NextRequest) {
 
         if (resp.ok) {
           const blob = await resp.blob();
-          const suffix = exportFormat === 'docx' ? 'docx' : exportFormat;
+          const suffix = exportFormat === "docx" ? "docx" : exportFormat;
           const storageFile = `solace_export_${Date.now()}.${suffix}`;
           const upload = await put(storageFile, blob, {
-            access: 'public',
+            access: "public",
           });
           fileUrl = upload?.url || null;
         }
       } catch (err) {
-        console.error('EXPORT ERROR:', err);
+        console.error("EXPORT ERROR:", err);
       }
 
       if (!fileUrl) {
         return NextResponse.json(
           {
             text: `I tried to create a ${exportFormat.toUpperCase()} file, but something went wrong. Please try again in a moment.`,
-            model: 'file-export',
+            model: "file-export",
             identity: SOLACE_NAME,
-            mode: 'Export',
+            mode: "Export",
             confidence: 0,
             filters: rawFilters,
           },
-          { headers: corsHeaders(echoOrigin) }
+          { headers: corsHeaders(echoOrigin) },
         );
       }
 
@@ -329,19 +335,19 @@ export async function POST(req: NextRequest) {
         {
           text: `Your ${exportFormat.toUpperCase()} file is ready:\n${fileUrl}`,
           file_url: fileUrl,
-          model: 'file-export',
+          model: "file-export",
           identity: SOLACE_NAME,
-          mode: 'Export',
+          mode: "Export",
           confidence: 1,
           filters: rawFilters,
         },
-        { headers: corsHeaders(echoOrigin) }
+        { headers: corsHeaders(echoOrigin) },
       );
     }
 
     /* ===== IMAGE GENERATION FAST-PATH (CONTEXT-PRESERVING) ===== */
     if (wantsImageGeneration(lastUser)) {
-      const rawPrompt = lastUser.replace(/^img:\s*/i, '').trim() || lastUser;
+      const rawPrompt = lastUser.replace(/^img:\s*/i, "").trim() || lastUser;
       try {
         // generateImage now takes a single prompt argument and normalizes URL/base64.
         const imageUrl = await generateImage(rawPrompt);
@@ -357,7 +363,7 @@ export async function POST(req: NextRequest) {
           try {
             await maybeStoreEpisode(userKey, workspaceId, rolled);
           } catch (err) {
-            console.error('[chat] maybeStoreEpisode (image) failed (non-fatal)', err);
+            console.error("[chat] maybeStoreEpisode (image) failed (non-fatal)", err);
           }
         }
 
@@ -365,69 +371,71 @@ export async function POST(req: NextRequest) {
           {
             text,
             image_url: imageUrl,
-            model: 'gpt-image-1',
+            model: "gpt-image-1",
             identity: SOLACE_NAME,
-            mode: 'Image',
+            mode: "Image",
             confidence: 1,
             filters: rawFilters,
           },
-          { headers: corsHeaders(echoOrigin) }
+          { headers: corsHeaders(echoOrigin) },
         );
       } catch (e: any) {
-        const msg = e?.message || 'Image generation failed';
+        const msg = e?.message || "Image generation failed";
         return NextResponse.json(
           {
             text: `⚠️ Image generation error: ${msg}`,
-            model: 'gpt-image-1',
+            model: "gpt-image-1",
             identity: SOLACE_NAME,
-            mode: 'Image',
+            mode: "Image",
             confidence: 0,
             filters: rawFilters,
           },
-          { headers: corsHeaders(echoOrigin) }
+          { headers: corsHeaders(echoOrigin) },
         );
       }
     }
 
     /* Route -> Guidance flag */
-    const lastModeHeader = req.headers.get('x-last-mode');
+    const lastModeHeader = req.headers.get("x-last-mode");
     const route = routeMode(lastUser, { lastMode: lastModeHeader as any });
 
     /* Effective filters */
     const incoming = new Set(rawFilters);
-    if (route.mode === 'Guidance') incoming.add('guidance');
+    if (route.mode === "Guidance") incoming.add("guidance");
     if (!userAskedForSecular) {
-      incoming.add('ministry');
-      incoming.add('abrahamic');
+      incoming.add("ministry");
+      incoming.add("abrahamic");
     }
     if (body?.ministry === false) {
-      incoming.delete('ministry');
-      incoming.delete('abrahamic');
+      incoming.delete("ministry");
+      incoming.delete("abrahamic");
     }
     const effectiveFilters = Array.from(incoming);
 
-    let memorySection = '';
+    let memorySection = "";
 
     /* ===== MEMORY: recall pack (scoped, episodic + factual) ===== */
     if (memoryEnabled) {
       try {
         const fallbackQuery =
           rolled
-            .filter((m) => m.role === 'user')
+            .filter((m) => m.role === "user")
             .map((m) => m.content)
             .slice(-3)
-            .join('\n') || 'general';
+            .join("\n") || "general";
 
         const explicitInTurns = rolled
-          .filter((m) => m.role === 'user')
+          .filter((m) => m.role === "user")
           .map((m) => m.content.match(/\bremember(?:\s+that)?\s+(.+)/i)?.[1])
           .filter(Boolean)
-          .join(' ; ');
+          .join(" ; ");
 
         const baseQuery = lastUser || fallbackQuery;
-        const query = [baseQuery, explicitInTurns].filter(Boolean).join(' | ');
+        const query = [baseQuery, explicitInTurns].filter(Boolean).join(" | ");
 
-        const factsLimit = isFounder ? FOUNDER_MEMORY_FACTS_LIMIT : NORMAL_MEMORY_FACTS_LIMIT;
+        const factsLimit = isFounder
+          ? FOUNDER_MEMORY_FACTS_LIMIT
+          : NORMAL_MEMORY_FACTS_LIMIT;
         const episodesLimit = isFounder
           ? FOUNDER_MEMORY_EPISODES_LIMIT
           : NORMAL_MEMORY_EPISODES_LIMIT;
@@ -447,10 +455,10 @@ export async function POST(req: NextRequest) {
           `- If multiple memories relate to the same project, person, or concern, tie them together\n` +
           `  and reason across them instead of handling each in isolation.\n` +
           `- When the user seems stuck, zoom out and reflect patterns you see across these memories.\n` +
-          (pack || '• (none)');
+          (pack || "• (none)");
       } catch (err) {
-        console.error('[chat] memory recall failed', err);
-        memorySection = '';
+        console.error("[chat] memory recall failed", err);
+        memorySection = "";
       }
     }
 
@@ -458,28 +466,37 @@ export async function POST(req: NextRequest) {
 
     const wantsFresh =
       /\b(what('?s)?\s+the\s+news(\s+today)?|news\s+today|today('?s)?\s+news|latest\s+news|top\s+news|top\s+stories(\s+today)?|breaking\s+news|news\s+headlines|headlines\s+today)\b/i.test(
-        lastUser.toLowerCase()
+        lastUser.toLowerCase(),
       );
 
     const wantsGenericNews = looksLikeGenericNewsQuestion(lastUser);
 
-    // TEMP: hard-enable web research while we debug flags.
-    const webFlag = true;
+    const rawWebFlag =
+      process.env.NEXT_PUBLIC_OPENAI_WEB_ENABLED_flag ??
+      process.env.OPENAI_WEB_ENABLED_flag ??
+      "";
+
+    const webFlag =
+      typeof rawWebFlag === "string"
+        ? rawWebFlag.length > 0 && !/^0|false$/i.test(rawWebFlag)
+        : !!rawWebFlag;
 
     /* ===== DEEP RESEARCH (Tavily lives only here now) ===== */
-    let researchSection = '';
+    let researchSection = "";
     let hasResearchContext = false;
 
-    let newsSection = '';
+    let newsSection = "";
     let hasNewsContext = false;
     let newsStoriesForLedger: SolaceDigestStory[] | null = null;
 
     try {
       const wantsDeep = wantsDeepResearch(lastUser);
       const urlInUser = extractFirstUrl(lastUser);
+      const hasUrl = !!urlInUser;
 
-      // Deep research (website / multi-search)
-      if (webFlag && (wantsDeep || urlInUser)) {
+      const shouldRunDeepResearch = wantsDeep || hasUrl;
+
+      if (shouldRunDeepResearch) {
         const pack = await runDeepResearch(lastUser);
 
         try {
@@ -491,24 +508,33 @@ export async function POST(req: NextRequest) {
             researchPack: pack,
           });
         } catch (err) {
-          console.error('[truth-ledger] logResearchSnapshot failed (non-fatal)', err);
+          console.error(
+            "[truth-ledger] logResearchSnapshot failed (non-fatal)",
+            err,
+          );
         }
 
         const bulletsText = pack.bullets?.length
-          ? pack.bullets.map((b: string) => `• ${b}`).join('\n')
-          : '• (no external sources were found for this query)';
+          ? pack.bullets.map((b: string) => `• ${b}`).join("\n")
+          : "• (no external sources were found for this query)";
 
         const websiteSnippet = pack.urlTextSnippet
           ? `\n\nWEBSITE TEXT SNAPSHOT (truncated)\n"""${pack.urlTextSnippet}""""`
-          : '';
+          : "";
 
         const clarificationHint =
           urlInUser && !wantsDeep
             ? `\n\nNOTE FOR ASSISTANT\n- The user shared a URL (${urlInUser}) but did not clearly state what aspect they want evaluated (design/UX, messaging/clarity, SEO/traffic, trustworthiness, etc.). Before giving a long evaluation, briefly ask which of these they care about most, then tailor your analysis.`
-            : '';
+            : "";
 
         researchSection =
-          `\n\nRESEARCH CONTEXT\n- This section aggregates deeper web research (multiple searches and, when applicable, a direct fetch of the target website).\n\nSOURCES\n${bulletsText}${websiteSnippet}${clarificationHint}\n\nGuidance:\n- Use this RESEARCH CONTEXT for deeper analysis, comparisons, and website evaluations.\n- When you reference specific sources from this section, use [R1], [R2], etc., matching the labels in the bullet list.\n- Do NOT claim you lack internet access when this section is present.`;
+          `\n\nRESEARCH CONTEXT\n` +
+          `- This section aggregates deeper web research (multiple searches and, when applicable, a direct fetch of the target website).\n\n` +
+          `SOURCES\n${bulletsText}${websiteSnippet}${clarificationHint}\n\n` +
+          `Guidance:\n` +
+          `- Use this RESEARCH CONTEXT for deeper analysis, comparisons, and website evaluations.\n` +
+          `- When you reference specific sources from this section, use [R1], [R2], etc., matching the labels in the bullet list.\n` +
+          `- Do NOT claim you lack internet access when this section is present.`;
 
         hasResearchContext = true;
       }
@@ -528,12 +554,14 @@ export async function POST(req: NextRequest) {
               const srcParts = [];
               if (s.outlet) srcParts.push(s.outlet);
               if (s.outlet_group) srcParts.push(`group: ${s.outlet_group}`);
-              const src = srcParts.length ? ` — ${srcParts.join(' / ')}` : '';
-              const url = s.url ? ` — ${s.url}` : '';
-              const summary = s.neutral_summary || '';
+              const src = srcParts.length
+                ? ` — ${srcParts.join(" / ")}`
+                : "";
+              const url = s.url ? ` — ${s.url}` : "";
+              const summary = s.neutral_summary || "";
               return `• [${label}] ${s.title}${src}${url}\n${summary}`;
             })
-            .join('\n\n');
+            .join("\n\n");
 
           newsSection =
             `\n\nNEWS CONTEXT (Neutral News Digest)\n` +
@@ -541,7 +569,7 @@ export async function POST(req: NextRequest) {
             `- Use ONLY this NEWS CONTEXT when answering generic questions like "what is the news today", "news today", or "what's going on in the world?".\n` +
             `- When the user asks for "news" (and does NOT specifically ask for "headlines"), you MUST:\n` +
             `   • Select the 3 most relevant digest items.\n` +
-            `   • Expand each into a 300–400 word narrative story.\n` +
+            `   • Expand each into 300–400 word narrative stories.\n` +
             `   • Use ONLY the facts and sequence from that digest item's neutral summary.\n` +
             `   • Maintain a neutral, bias-removed tone while still being engaging and readable.\n` +
             `   • Begin each story with: "[D#] <title> — <outlet> — <url>".\n` +
@@ -559,18 +587,20 @@ export async function POST(req: NextRequest) {
         }
       }
     } catch (err) {
-      console.error('runDeepResearch / Neutral News block failed:', err);
+      console.error("runDeepResearch / Neutral News block failed:", err);
     }
 
     /* ===== Attachments digest (delegated) ===== */
-    let attachmentSection = '';
+    let attachmentSection = "";
     try {
-      const atts = (Array.isArray(body?.attachments) ? body.attachments : []) as Attachment[];
+      const atts = (Array.isArray(body?.attachments)
+        ? body.attachments
+        : []) as Attachment[];
       if (atts.length) {
         attachmentSection = await buildAttachmentSection(atts);
       }
     } catch {
-      attachmentSection = '';
+      attachmentSection = "";
     }
 
     /* ===== Persona system: Solace core via persona.ts ===== */
@@ -585,7 +615,7 @@ export async function POST(req: NextRequest) {
     const webAssertion =
       hasResearchContext || hasNewsContext
         ? `\n\nREAL-TIME CONTEXT\n- You DO have recent or web-derived context above (NEWS CONTEXT and/or RESEARCH CONTEXT). Do NOT say you cannot provide real-time updates or that you lack internet access.\n- Synthesize a brief, accurate answer using that context, and include bracketed refs like [D1], [D2] or [R1], [R2] when you rely on specific items.`
-        : '';
+        : "";
 
     const CONTEXT_SEAL = `
 
@@ -611,7 +641,7 @@ CONTEXT OVERRIDE SEAL
           cacheStories: newsStoriesForLedger,
         });
       } catch (err) {
-        console.error('[news-ledger] batch logging failed (non-fatal)', err);
+        console.error("[news-ledger] batch logging failed (non-fatal)", err);
       }
     }
 
@@ -624,21 +654,21 @@ CONTEXT OVERRIDE SEAL
             workspace_id: workspaceId,
             user_key: userKey,
             content: explicit,
-            purpose: 'fact',
-            title: '',
+            purpose: "fact",
+            title: "",
           });
           const ack = `Got it — I'll remember that: ${explicit}`;
           if (!wantStream) {
             return NextResponse.json(
               {
                 text: ack,
-                model: 'memory',
+                model: "memory",
                 identity: SOLACE_NAME,
                 mode: route.mode,
                 confidence: route.confidence,
                 filters: effectiveFilters,
               },
-              { headers: corsHeaders(echoOrigin) }
+              { headers: corsHeaders(echoOrigin) },
             );
           } else {
             const enc = new TextEncoder();
@@ -651,9 +681,9 @@ CONTEXT OVERRIDE SEAL
             return new NextResponse(stream as any, {
               headers: {
                 ...headersToRecord(corsHeaders(echoOrigin)),
-                'Content-Type': 'text/plain; charset=utf-8',
-                'Cache-Control': 'no-cache, no-transform',
-                'X-Accel-Buffering': 'no',
+                "Content-Type": "text/plain; charset=utf-8",
+                "Cache-Control": "no-cache, no-transform",
+                "X-Accel-Buffering": "no",
               },
             });
           }
@@ -668,18 +698,22 @@ CONTEXT OVERRIDE SEAL
       try {
         await maybeStoreEpisode(userKey, workspaceId, rolled);
       } catch (err) {
-        console.error('[chat] maybeStoreEpisode failed (non-fatal)', err);
+        console.error("[chat] maybeStoreEpisode failed (non-fatal)", err);
       }
     }
 
     /* ===== Build message list (include attachments) ===== */
     const rolledWithAttachments = attachmentSection
-      ? [...rolled, { role: 'user', content: attachmentSection }]
+      ? [...rolled, { role: "user", content: attachmentSection }]
       : rolled;
 
     /* ===== Dynamic caps: founder vs normal ===== */
-    const maxOutputTokens = isFounder ? FOUNDER_MAX_OUTPUT_TOKENS : NORMAL_MAX_OUTPUT_TOKENS;
-    const requestTimeoutMs = isFounder ? FOUNDER_REQUEST_TIMEOUT_MS : NORMAL_REQUEST_TIMEOUT_MS;
+    const maxOutputTokens = isFounder
+      ? FOUNDER_MAX_OUTPUT_TOKENS
+      : NORMAL_MAX_OUTPUT_TOKENS;
+    const requestTimeoutMs = isFounder
+      ? FOUNDER_REQUEST_TIMEOUT_MS
+      : NORMAL_REQUEST_TIMEOUT_MS;
 
     /* ===== Non-stream: go through unified engine ===== */
     if (!wantStream) {
@@ -697,7 +731,8 @@ CONTEXT OVERRIDE SEAL
             news: hasNewsContext ? newsSection : null,
             memory: memorySection || null,
           },
-          context_mode: hasResearchContext || hasNewsContext ? 'authoritative' : 'none',
+          context_mode:
+            hasResearchContext || hasNewsContext ? "authoritative" : "none",
         },
         stream: false,
         isFounder,
@@ -707,9 +742,10 @@ CONTEXT OVERRIDE SEAL
       })) as string;
 
       const modelLabel =
-        isFounder || !(process.env.SOLACE_API_URL && process.env.SOLACE_API_KEY)
+        isFounder ||
+        !(process.env.SOLACE_API_URL && process.env.SOLACE_API_KEY)
           ? MODEL
-          : 'solace';
+          : "solace";
 
       return NextResponse.json(
         {
@@ -720,7 +756,7 @@ CONTEXT OVERRIDE SEAL
           confidence: route.confidence,
           filters: effectiveFilters,
         },
-        { headers: corsHeaders(echoOrigin) }
+        { headers: corsHeaders(echoOrigin) },
       );
     }
 
@@ -739,7 +775,8 @@ CONTEXT OVERRIDE SEAL
           news: hasNewsContext ? newsSection : null,
           memory: memorySection || null,
         },
-        context_mode: hasResearchContext || hasNewsContext ? 'authoritative' : 'none',
+        context_mode:
+          hasResearchContext || hasNewsContext ? "authoritative" : "none",
       },
       stream: true,
       isFounder,
@@ -751,7 +788,7 @@ CONTEXT OVERRIDE SEAL
     // If engine returned a Response (OpenAI SSE), unwrap body; otherwise it's a ReadableStream.
     if (result instanceof Response) {
       if (!result.body) {
-        const t = await result.text().catch(() => '');
+        const t = await result.text().catch(() => "");
         return new NextResponse(`Model error: ${t}`, {
           status: 500,
           headers: corsHeaders(echoOrigin),
@@ -760,9 +797,9 @@ CONTEXT OVERRIDE SEAL
       return new NextResponse(result.body as any, {
         headers: {
           ...headersToRecord(corsHeaders(echoOrigin)),
-          'Content-Type': 'text/event-stream; charset=utf-8',
-          'Cache-Control': 'no-cache, no-transform',
-          'X-Accel-Buffering': 'no',
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          "X-Accel-Buffering": "no",
         },
       });
     }
@@ -771,23 +808,23 @@ CONTEXT OVERRIDE SEAL
     return new NextResponse(stream as any, {
       headers: {
         ...headersToRecord(corsHeaders(echoOrigin)),
-        'Content-Type': 'text/event-stream; charset=utf-8',
-        'Cache-Control': 'no-cache, no-transform',
-        'X-Accel-Buffering': 'no',
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        "X-Accel-Buffering": "no",
       },
     });
   } catch (err: any) {
-    const echoOrigin = pickAllowedOrigin(req.headers.get('origin'));
+    const echoOrigin = pickAllowedOrigin(req.headers.get("origin"));
     const msg =
-      err?.message === 'Request timed out'
-        ? '⚠️ Connection timed out. Please try again.'
+      err?.message === "Request timed out"
+        ? "⚠️ Connection timed out. Please try again."
         : err?.message || String(err);
     return NextResponse.json(
       { error: msg, identity: SOLACE_NAME },
       {
-        status: err?.message === 'Request timed out' ? 504 : 500,
+        status: err?.message === "Request timed out" ? 504 : 500,
         headers: corsHeaders(echoOrigin),
-      }
+      },
     );
   }
 }
