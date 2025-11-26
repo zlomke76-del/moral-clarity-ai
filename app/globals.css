@@ -9,14 +9,14 @@
 /* ---------- Design tokens ---------- */
 :root {
   /* Brand / surfaces */
-  --mc-bg:       #0a0d12;
-  --mc-panel:    #0f1623;
-  --mc-surface:  #0e131a;
-  --mc-border:   #223047;
+  --mc-bg: #0a0d12;
+  --mc-panel: #0f1623;
+  --mc-surface: #0e131a;
+  --mc-border: #223047;
 
   /* Text */
-  --mc-text:   #e8eef6;
-  --mc-muted:  #9fb0c6;
+  --mc-text: #e8eef6;
+  --mc-muted: #9fb0c6;
 
   /* Accent */
   --mc-accent: #7aa2ff;
@@ -26,15 +26,15 @@
   --mc-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
 
   /* Solace Dock visual tokens */
-  --sd-bg:      color-mix(in oklab, var(--mc-panel) 88%, transparent);
-  --sd-border:  var(--mc-border);
-  --sd-fg:      var(--mc-text);
-  --sd-muted:   var(--mc-muted);
+  --sd-bg: color-mix(in oklab, var(--mc-panel) 88%, transparent);
+  --sd-border: var(--mc-border);
+  --sd-fg: var(--mc-text);
+  --sd-muted: var(--mc-muted);
   --sd-chip-bg: #1a2436;
   --sd-chip-fg: #e8eef6;
-  --sd-accent:  var(--mc-accent);
-  --sd-radius:  20px;
-  --sd-shadow:  var(--mc-shadow);
+  --sd-accent: var(--mc-accent);
+  --sd-radius: 20px;
+  --sd-shadow: var(--mc-shadow);
 }
 
 /* ---------- Base reset / body ---------- */
@@ -220,7 +220,8 @@ button:disabled {
    ========================================================= */
 
 .solace-dock {
-  /* DO NOT set position here – the component controls that */
+  /* Positioning is controlled in the React component.
+     Do NOT override position here – it breaks mobile layouts. */
   background: color-mix(in oklab, rgba(12, 18, 28, 0.86) 92%, transparent);
   border-radius: var(--sd-radius);
   border: 1px solid rgba(148, 163, 184, 0.45);
@@ -524,21 +525,3 @@ button:disabled {
     box-shadow: 0 0 34px rgba(56, 189, 248, 0.9);
   }
 }
-
-/* --- Restore Solace Dock fixed global positioning --- */
-.solace-dock {
-  position: fixed !important;
-  bottom: 24px !important;
-  right: 24px !important;
-  z-index: 999999 !important;
-  max-height: calc(100vh - 48px);
-  max-width: min(700px, 90vw);
-  overflow: hidden;
-}
-
-/* Make inner content scroll independently */
-.solace-dock .dock-body {
-  overflow-y: auto !important;
-  max-height: calc(100vh - 140px);
-}
-
