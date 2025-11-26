@@ -93,6 +93,210 @@ function sanitizeMessagesForSend(msgs: Message[]): Message[] {
   });
 }
 
+/* ---------- URL rendering helpers ---------- */
+
+function isDownloadUrl(url: string): boolean {
+  return /\.(pdf|docx?|csv|xlsx?|pptx?)(\?|#|$)/i.test(url);
+}
+
+function getDomainParts(url: string): { host: string; short: string } {
+  try {
+    const u = new URL(url);
+    let host = u.hostname.toLowerCase();
+    if (host.startsWith("www.")) host = host.slice(4);
+    const parts = host.split(".");
+    const core = parts.length > 2 ? parts[parts.length - 2] : parts[0];
+    const short =
+      core.length <= 3 ? core.toUpperCase() : core.slice(0, 2).toUpperCase();
+    return { host, short };
+  } catch {
+    return { host: url, short: "∙" };
+  }
+}
+
+function renderDownloadOrb(url: string, key: string) {
+  return (
+    <a
+      key={key}
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      title="Download file"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 30,
+        height: 30,
+        borderRadius: "999px",
+        margin: "0 4px",
+        border: "1px solid rgba(251,191,36,.85)",
+        background:
+          "radial-gradient(65% 65% at 50% 35%, #fde68a 0%, #fbbf24 40%, #92400e 100%)",
+        boxShadow:
+          "0 0 0 1px rgba(0,0,0,.35) inset, 0 0 24px rgba(251,191,36,.75), 0 10px 24px rgba(0,0,0,.6)",
+        color: "#111827",
+        fontSize: 14,
+        textDecoration: "none",
+      }}
+    >
+      ⬇
+    </a>
+  );
+}
+
+function renderOutletLink(url: string, key: string) {
+  const { host, short } = getDomainParts(url);
+
+  return (
+    <a
+      key={key}
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "2px 8px 2px 4px",
+        margin: "0 2px",
+        borderRadius: 999,
+        border: "1px solid rgba(148,163,184,.5)",
+        background: "rgba(15,23,42,.9)",
+        textDecoration: "none",
+        color: "rgba(226,232,240,.98)",
+        font: "11px system-ui",
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          width: 14,
+          height: 14,
+          borderRadius: "50%",
+          border: "1px solid rgba(148,163,184,.9)",
+          background:
+            "radial-gradient(80% 80% at 50% 30%, #1f2937 0%, #020617 100%)",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 8,
+          fontWeight: 700,
+          color: "#e5e7eb",
+        }}
+      >
+        {short}
+      </span>
+      <span style={{ maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis" }}>
+        {host}
+      </span>
+    </a>
+  );
+}
+
+function renderTextWithUrls(text: string, keyPrefix: string): React.ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let idx = 0;
+
+  while ((match = urlRegex.exec(text)) !== null) {
+    const url = match[0];
+    const start = match.index;
+
+    if (start > lastIndex) {
+      nodes.push(text.slice(lastIndex, start));
+    }
+
+    const nodeKey = `${keyPrefix}-url-${idx++}`;
+    if (isDownloadUrl(url)) {
+      nodes.push(renderDownloadOrb(url, nodeKey));
+    } else {
+      nodes.push(renderOutletLink(url, nodeKey));
+    }
+
+    lastIndex = start + url.length;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(text.slice(lastIndex));
+  }
+
+  return nodes;
+}
+
+function renderTextWithNewlinesAndUrls(
+  text: string,
+  keyPrefix: string
+): React.ReactNode[] {
+  const lines = text.split("\n");
+  const nodes: React.ReactNode[] = [];
+
+  lines.forEach((line, i) => {
+    if (i > 0) {
+      nodes.push(<br key={`${keyPrefix}-br-${i}`} />);
+    }
+    nodes.push(
+      ...renderTextWithUrls(line, `${keyPrefix}-line-${i}`)
+    );
+  });
+
+  return nodes;
+}
+
+/**
+ * Render message content with:
+ * - <img> tags turned into styled <img> components.
+ * - inline URLs converted into:
+ *   • Download orb for file URLs (pdf/doc/csv/xls/etc).
+ *   • Clickable outlet link chips for regular URLs.
+ */
+function renderMessageContent(content: string, keyPrefix: string) {
+  if (!content) return null;
+
+  const parts = content.split(/(<img[^>]*>)/i);
+  const nodes: React.ReactNode[] = [];
+
+  parts.forEach((part, idx) => {
+    const partKey = `${keyPrefix}-part-${idx}`;
+
+    if (/^<img[^>]*>$/i.test(part.trim())) {
+      const srcMatch = part.match(/src=["']([^"']+)["']/i);
+      const altMatch = part.match(/alt=["']([^"']+)["']/i);
+      const src = srcMatch?.[1] || "";
+      const alt = altMatch?.[1] || "";
+
+      if (src) {
+        nodes.push(
+          <img
+            key={partKey}
+            src={src}
+            alt={alt}
+            style={{
+              maxWidth: "100%",
+              height: "auto",
+              borderRadius: 12,
+              display: "block",
+              margin: "8px auto",
+              boxShadow: "0 0 18px rgba(0,0,0,.35)",
+            }}
+          />
+        );
+      }
+    } else if (part) {
+      nodes.push(
+        <React.Fragment key={partKey}>
+          {renderTextWithNewlinesAndUrls(part, partKey)}
+        </React.Fragment>
+      );
+    }
+  });
+
+  return nodes;
+}
+
 /* ============================================================
    COMPONENT
    ============================================================ */
@@ -748,13 +952,6 @@ export default function SolaceDock() {
           }}
         >
           {messages.map((m, i) => {
-            const html = m.content
-              .replace(
-                /<img([^>]+)>/g,
-                `<img $1 style="max-width:100%;height:auto;border-radius:12px;display:block;margin:8px auto;box-shadow:0 0 18px rgba(0,0,0,.35);" />`
-              )
-              .replace(/\n/g, "<br />");
-
             return (
               <div
                 key={i}
@@ -768,14 +965,11 @@ export default function SolaceDock() {
                     m.role === "user"
                       ? "rgba(39,52,74,.6)"
                       : "rgba(28,38,54,.6)",
+                  font: "14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
                 }}
               >
                 <div style={{ width: "100%" }}>
-                  <div
-                    dangerouslySetInnerHTML={{
-                      __html: html,
-                    }}
-                  />
+                  {renderMessageContent(m.content, `msg-${i}`)}
                 </div>
               </div>
             );
