@@ -9,8 +9,8 @@ type Props = {
 
 /**
  * NeuralShell
- *  - Provides animated MCAI "neural grid" + brain hero background.
- *  - Keeps animation local to the /app page; does not affect other routes.
+ *  - Animated MCAI "neural grid" + brain hero background.
+ *  - Scoped to the /app experience only (does not affect other routes).
  */
 export default function NeuralShell({ children }: Props) {
   return (
@@ -19,10 +19,7 @@ export default function NeuralShell({ children }: Props) {
       <div className="mca-brain-layer pointer-events-none" aria-hidden="true" />
 
       {/* Animated neural grid layer */}
-      <div
-        className="mca-neural-layer pointer-events-none"
-        aria-hidden="true"
-      />
+      <div className="mca-neural-layer pointer-events-none" aria-hidden="true" />
 
       {/* Soft vignette / glow */}
       <div
@@ -36,12 +33,12 @@ export default function NeuralShell({ children }: Props) {
         }}
       />
 
-      {/* Content */}
-      <div className="relative z-10 mx-auto max-w-6xl px-4 py-10">
+      {/* Content container */}
+      <div className="relative z-10 mx-auto max-w-6xl px-4 py-8 md:py-10">
         {children}
       </div>
 
-      {/* Styled-JSX global animation + layers */}
+      {/* Global animation + layers */}
       <style jsx global>{`
         .mca-brain-layer {
           position: fixed;
