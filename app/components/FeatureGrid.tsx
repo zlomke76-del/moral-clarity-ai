@@ -72,28 +72,63 @@ const WORKSPACES: WorkspaceLink[] = [
 export default function FeatureGrid() {
   return (
     <section className="relative min-h-[calc(100vh-6rem)] overflow-hidden">
-      {/* Neural backdrop hook – this is where the animated layer will live */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-60"
-      >
-        {/* Dark radial fade to keep text readable on the left */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#020617] via-transparent to-[#020617]" />
-        {/* Right-side brain hero */}
-        <div
-          className="absolute inset-y-[-6%] right-[-8%] w-[56vw] min-w-[540px] bg-[url('/mca-brain-hero.png')] bg-contain bg-right bg-no-repeat mix-blend-screen opacity-90"
-          style={{
-            filter:
-              "drop-shadow(0 0 40px rgba(59,130,246,0.75)) drop-shadow(0 0 90px rgba(56,189,248,0.55))",
-          }}
-        />
-        {/* Subtle vertical gradient behind Solace area */}
-        <div className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-black/60 via-black/20 to-transparent" />
+      {/* =========================================================
+          NEURAL BACKDROP LAYER (image + animation + triangle slot)
+         ========================================================= */}
+      <div aria-hidden className="neural-ambient">
+        {/* Soft dark fade so text stays readable on the left */}
+        <div className="neural-ambient__fade" />
+
+        {/* MCAI brain hero on the right */}
+        <div className="neural-ambient__brain" />
+
+        {/* Animated circuit sweeps */}
+        <div className="neural-ambient__line neural-ambient__line--slow" />
+        <div className="neural-ambient__line neural-ambient__line--fast" />
+
+        {/* Pulsing neural nodes */}
+        <div className="neural-ambient__pulse neural-ambient__pulse--tl" />
+        <div className="neural-ambient__pulse neural-ambient__pulse--br" />
+
+        {/* Triangle / anchor badge slot (visual only for now) */}
+        <div className="neural-anchor-badge">
+          <div className="neural-anchor-badge__glow" />
+          <svg
+            viewBox="0 0 64 64"
+            className="neural-anchor-badge__icon"
+            aria-hidden="true"
+          >
+            {/* Triangle */}
+            <path
+              d="M32 6 L10 52 H54 Z"
+              fill="none"
+              stroke="rgba(148, 197, 253, 0.9)"
+              strokeWidth="1.5"
+            />
+            {/* Inner anchor */}
+            <path
+              d="M32 16c-1.9 0-3.4 1.5-3.4 3.4 0 1.7 1.2 3.1 2.8 3.4v10.1l-4.6-3.1m4.6 3.1 4.6-3.1M24 36.8c0 4.4 3.6 8 8 8s8-3.6 8-8"
+              fill="none"
+              stroke="rgba(191, 219, 254, 0.96)"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <circle
+              cx="32"
+              cy="19.4"
+              r="1.6"
+              fill="rgba(191, 219, 254, 1)"
+            />
+          </svg>
+        </div>
       </div>
 
-      {/* Content grid */}
+      {/* =========================================================
+          CONTENT GRID
+         ========================================================= */}
       <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-10 lg:flex-row lg:items-stretch lg:gap-12">
-        {/* LEFT COLUMN – Anchors + Workspaces */}
+        {/* LEFT COLUMN – Solace system + anchors + workspaces */}
         <div className="w-full max-w-md shrink-0 space-y-8">
           {/* Solace system label */}
           <div className="space-y-1">
@@ -177,10 +212,9 @@ export default function FeatureGrid() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN – reserved space under Solace dock */}
+        {/* RIGHT COLUMN – reserved vertical lane under Solace */}
         <div className="relative flex-1">
-          {/* This empty column just ensures the hero + Solace have space.
-              The actual SolaceDock floats globally from layout.tsx. */}
+          {/* This just reserves breathing room so the dock doesn’t crowd the left. */}
           <div className="h-full min-h-[420px]" />
         </div>
       </div>
