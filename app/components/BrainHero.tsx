@@ -5,7 +5,7 @@ import Link from "next/link";
 export default function BrainHero() {
   return (
     <section className="relative overflow-hidden rounded-3xl border border-neutral-800/80 bg-[radial-gradient(circle_at_top,#1e293b_0,#020617_55%,#02030a_100%)] px-5 py-6 sm:px-8 sm:py-8 md:px-10 md:py-10 shadow-[0_24px_80px_rgba(0,0,0,0.9)]">
-      {/* Neural background overlay */}
+      {/* Neural overlay */}
       <div className="mc-neural-overlay" aria-hidden="true" />
 
       {/* Triangle + anchor badge (top-right) */}
@@ -50,7 +50,7 @@ export default function BrainHero() {
             </Link>
 
             <Link
-              href="/login"
+              href="/auth/sign-in"
               prefetch={false}
               className="inline-flex items-center justify-center rounded-full border border-sky-400/50 bg-sky-400/5 px-4 py-2 text-sm font-semibold text-sky-200/90 backdrop-blur-sm transition hover:border-sky-300 hover:bg-sky-300/10"
             >
@@ -87,6 +87,83 @@ export default function BrainHero() {
           </p>
         </div>
       </div>
+
+      <style jsx>{`
+        .mc-neural-overlay {
+          position: absolute;
+          inset: -40%;
+          background-image:
+            radial-gradient(
+              circle at 10% 0%,
+              rgba(56, 189, 248, 0.28),
+              transparent 55%
+            ),
+            radial-gradient(
+              circle at 90% 100%,
+              rgba(168, 85, 247, 0.3),
+              transparent 55%
+            ),
+            repeating-linear-gradient(
+              120deg,
+              rgba(15, 23, 42, 0.3) 0px,
+              rgba(15, 23, 42, 0.3) 1px,
+              transparent 1px,
+              transparent 6px
+            );
+          mix-blend-mode: screen;
+          opacity: 0.7;
+          pointer-events: none;
+        }
+
+        .mc-brain-orb {
+          position: absolute;
+          inset: 8%;
+          border-radius: 999px;
+          background:
+            radial-gradient(
+              circle at 50% 20%,
+              rgba(248, 250, 252, 0.25),
+              transparent 55%
+            ),
+            radial-gradient(
+              circle at 50% 100%,
+              rgba(56, 189, 248, 0.5),
+              transparent 60%
+            );
+          filter: blur(18px);
+          opacity: 0.75;
+        }
+
+        .mc-anchor-badge {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 34px;
+          height: 34px;
+        }
+
+        .mc-anchor-triangle {
+          position: absolute;
+          inset: 0;
+          clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+          background: radial-gradient(
+            circle at 50% 0%,
+            rgba(248, 250, 252, 0.95),
+            rgba(148, 163, 184, 0.4)
+          );
+          box-shadow:
+            0 0 24px rgba(56, 189, 248, 0.9),
+            0 18px 40px rgba(15, 23, 42, 0.9);
+        }
+
+        .mc-anchor-icon {
+          position: relative;
+          font-size: 0.9rem;
+          color: #020617;
+          text-shadow: 0 1px 2px rgba(15, 23, 42, 0.8);
+        }
+      `}</style>
     </section>
   );
 }
