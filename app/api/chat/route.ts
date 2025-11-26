@@ -494,7 +494,7 @@ export async function POST(req: NextRequest) {
       const urlInUser = extractFirstUrl(lastUser);
       const hasUrl = !!urlInUser;
 
-      const shouldRunDeepResearch = wantsDeep || hasUrl;
+  const shouldRunDeepResearch = wantsDeep || hasUrl;
 
       if (shouldRunDeepResearch) {
         const pack = await runDeepResearch(lastUser);
