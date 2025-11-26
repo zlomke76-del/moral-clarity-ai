@@ -20,10 +20,9 @@ export const fetchCache = "force-no-store";
 export const runtime = "nodejs";
 
 // SolaceDock lives under /app/components
-const SolaceDock = NextDynamic(
-  () => import("@/app/components/SolaceDock"),
-  { ssr: false }
-);
+const SolaceDock = NextDynamic(() => import("@/app/components/SolaceDock"), {
+  ssr: false,
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.moralclarity.ai"),
@@ -58,10 +57,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           {/* ===== HEADER ===== */}
           <header className="sticky top-0 z-50 border-b border-neutral-900 bg-gradient-to-b from-black/90 via-neutral-950/90 to-neutral-950/80 backdrop-blur">
-            <nav className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-4">
+            <nav className="mx-auto flex flex-wrap items-center justify-between gap-3 px-4 py-2 sm:h-14 sm:py-0 w-full max-w-7xl">
               {/* Left: logo + product tag */}
-              <div className="flex items-center gap-2">
-                <Link href="/app" className="flex items-center gap-2" prefetch>
+              <div className="flex min-w-0 items-center gap-2">
+                <Link
+                  href="/app"
+                  className="flex items-center gap-2"
+                  prefetch
+                >
                   <Image
                     src="/MoralClarityAI_QuietDepth_Logos/icon-180.png"
                     alt="Moral Clarity AI"
@@ -71,19 +74,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     className="rounded-md shadow-sm"
                   />
                   <div className="flex flex-col leading-tight">
-                    <span className="text-sm font-semibold tracking-tight">
+                    <span className="text-sm font-semibold tracking-tight truncate max-w-[160px] sm:max-w-none">
                       Moral Clarity AI
                     </span>
-                    <span className="text-[11px] text-neutral-400">
+                    <span className="hidden text-[11px] text-neutral-400 sm:block">
                       MCAI Studio • Neural workspaces
                     </span>
                   </div>
                 </Link>
-                <DemoBadge />
+                <span className="hidden sm:inline-flex">
+                  <DemoBadge />
+                </span>
               </div>
 
               {/* Right: Workspaces + Magic key */}
-              <div className="flex items-center gap-3 text-xs sm:text-sm">
+              <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
                 <Link
                   href="/app"
                   className="rounded-md border border-neutral-700/80 bg-neutral-900/60 px-3 py-1.5 font-medium text-neutral-100 shadow-sm hover:border-neutral-400 hover:bg-neutral-900 transition"
@@ -130,14 +135,26 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <footer className="mx-auto w-full max-w-7xl border-t border-neutral-900 px-4 py-10 text-xs sm:text-sm text-neutral-500">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <span>© {new Date().getFullYear()} Moral Clarity AI</span>
-              <div className="flex gap-5">
-                <Link href="/privacy" className="hover:text-neutral-300" prefetch>
+              <div className="flex flex-wrap gap-5">
+                <Link
+                  href="/privacy"
+                  className="hover:text-neutral-300"
+                  prefetch
+                >
                   Privacy
                 </Link>
-                <Link href="/terms" className="hover:text-neutral-300" prefetch>
+                <Link
+                  href="/terms"
+                  className="hover:text-neutral-300"
+                  prefetch
+                >
                   Terms
                 </Link>
-                <Link href="/status" className="hover:text-neutral-300" prefetch={false}>
+                <Link
+                  href="/status"
+                  className="hover:text-neutral-300"
+                  prefetch={false}
+                >
                   Status
                 </Link>
               </div>
