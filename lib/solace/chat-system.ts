@@ -126,12 +126,21 @@ export function wantsDeepResearch(text: string): boolean {
   return false;
 }
 
-/* ========= Generic news question detection ========= */
+/* ========= Generic + topical news question detection ========= */
 
+/**
+ * Broad detector for "give me the news" AND "news about X" queries.
+ * This is intentionally generous so that:
+ *  - "any news on ai today",
+ *  - "what's in the news about inflation",
+ *  - "recent headlines on Ukraine"
+ * all route into NEWSROOM / digest mode instead of generic world-knowledge.
+ */
 export function looksLikeGenericNewsQuestion(text: string): boolean {
   const t = (text || '').toLowerCase();
   if (!t.trim()) return false;
 
+  // Legacy explicit patterns (keep them)
   const patterns = [
     /\bwhat\s+is\s+the\s+news\s+today\b/,
     /\bwhat'?s\s+the\s+news\s+today\b/,
@@ -145,7 +154,70 @@ export function looksLikeGenericNewsQuestion(text: string): boolean {
     /\bheadlines\s+today\b/,
   ];
 
-  return patterns.some((rx) => rx.test(t));
+  if (patterns.some((rx) => rx.test(t))) return true;
+
+  // Generic "news about X" / "any news on X" / "what's in the news" detectors
+  if (
+    /\bany\s+news\b/.test(t) ||
+    /\bnews\s+(on|about|regarding|around)\b/.test(t) ||
+    /\bheadlines\s+(on|about|for)\b/.test(t) ||
+    /\bwhat'?s\s+in\s+the\s+news\b/.test(t) ||
+    /\bwhat is\s+in\s+the\s+news\b/.test(t) ||
+    /\brecent\s+news\b/.test(t)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Optional helper: extract the topical part of a "news about X" query.
+ * Safe to ignore for now; routes can keep using the raw user query.
+ * Exported so /api/chat or a dedicated news route can bias digest search.
+ */
+export function extractNewsTopic(text: string): string | null {
+  const raw = (text || '').toLowerCase().trim();
+  if (!raw) return null;
+
+  const clean = raw.replace(/\s+/g, ' ');
+
+  const patterns = [
+    'news on ',
+    'news about ',
+    'news regarding ',
+    'news around ',
+    'headlines on ',
+    'headlines about ',
+    'headlines for ',
+    'stories on ',
+    'stories about ',
+    'stories regarding ',
+    'anything on ',
+    'anything about ',
+    "what's in the news about ",
+    'whats in the news about ',
+    "what's happening with ",
+    'whats happening with ',
+  ];
+
+  for (const p of patterns) {
+    const idx = clean.indexOf(p);
+    if (idx !== -1) {
+      const topic = clean.slice(idx + p.length).trim();
+      if (topic && topic !== 'today' && topic !== 'this week') {
+        return topic.replace(/[?.!]+$/, '').trim();
+      }
+    }
+  }
+
+  if (clean.startsWith('any news')) {
+    const after = clean.replace(/^any news( on| about| regarding| around)?\s*/, '');
+    const topic = after.replace(/\b(today|this week|recently)\b/gi, '').trim();
+    if (topic) return topic.replace(/[?.!]+$/, '').trim();
+  }
+
+  return null;
 }
 
 /* ========= Turn / emotional cue helpers ========= */
