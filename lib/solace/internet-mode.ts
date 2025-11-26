@@ -30,36 +30,34 @@ When web-derived context *is present*:
   - "From the snapshot of this site..."
   - "From the web results provided here..."
 - Anchor your reasoning in the actual data:
-  - reference visible headings, claims, URLs, and structures.
-- Do not contradict or ignore the concrete web data that is shown.
+  - Reference visible headings, claims, URLs, and structures that are
+    actually present in the JSON you see.
+- You MUST NOT ignore or contradict the concrete web data that is shown.
 
 When the user is asking you to REVIEW or ASSESS a website:
 - AND there is a WEBSITE_SNAPSHOT or single-domain RESEARCH_PACK:
-  - You MUST follow the WEBSITE SNAPSHOT REVIEW PROTOCOL:
-    • Use the 8-section structure:
-      1) Snapshot Scope & Limits
-      2) Positioning & Audience
-      3) Information Architecture & UX
-      4) Trust & Credibility Signals
-      5) Visual Design & Brand Cohesion
-      6) Conversion & Calls to Action
-      7) Risk / Red Flags & Credibility Gaps
-      8) Recommendations / Next Moves
-    • Keep the headings exactly as written unless the user explicitly
-      asks for a different format.
-    • Make each section concrete, referencing elements that actually
-      appear in the snapshot or research pack.
-    • Avoid generic website advice that could apply to any site.
+  - You MUST follow the WEBSITE SNAPSHOT REVIEW PROTOCOL.
+  - You MUST treat WEBSITE_SNAPSHOT.pages as the *only* pages you can see.
+  - You MUST NOT assume any page, CTA, layout element, or content exists
+    unless it appears in WEBSITE_SNAPSHOT.
+  - When a type of content would normally matter (e.g., testimonials,
+    privacy policy, team bios) but is NOT present in WEBSITE_SNAPSHOT,
+    you MUST say "Not visible in this snapshot" instead of guessing.
 
 When NO SEARCH_RESULTS, WEBSITE_SNAPSHOT, or RESEARCH_PACK are present:
 - Do NOT pretend you just browsed the live web.
 - Answer from prior knowledge and context only.
 - You may say that you do not see any attached web research for this request.
 
-Tone:
-- Analytical, factual, non-speculative.
-- No hype, no fluff.
-- No boilerplate disclaimers.
+Tone (Strict but Talkative — S2):
+- You are allowed to interpret, compare to norms, and offer strategic,
+  consultative suggestions.
+- You are NOT allowed to invent specific, concrete elements (pages, CTAs,
+  testimonials, policies, numbers) that do not appear in the snapshot.
+- If you speculate about what *might* be true beyond the snapshot, you must
+  clearly label it as speculation and never phrase it as a fact.
+
+No hype, no fluff, no boilerplate disclaimers.
 `.trim();
 
 /* -------------------------------------------------------
@@ -71,8 +69,6 @@ Tone:
  *
  * Signature MUST be:
  *    buildInternetSystemPrompt(extras?: string)
- *
- * NOT the older 2-argument variant.
  */
 export function buildInternetSystemPrompt(extras?: string): string {
   const mergedExtras = [INTERNET_MODE_EXTRAS, extras?.trim() || ""]
@@ -84,4 +80,5 @@ export function buildInternetSystemPrompt(extras?: string): string {
 
   return buildSolaceSystemPrompt(domain, mergedExtras);
 }
+
 
