@@ -7,7 +7,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { webSearch } from "@/lib/search";
 import { buildInternetSystemPrompt } from "@/lib/solace/internet-mode";
 import { SolaceEngine } from "@/lib/solace-engine/engine";
-import type { SolaceDomain } from "@/lib/solace/persona";
 
 /* -------------------------------------------------------
    ORIGINS / CORS  (mirrors /api/chat)
@@ -65,12 +64,6 @@ function corsHeaders(origin: string | null): Headers {
   return h;
 }
 
-function headersToRecord(h: Headers): Record<string, string> {
-  const out: Record<string, string> = {};
-  h.forEach((v, k) => (out[k] = v));
-  return out;
-}
-
 /* -------------------------------------------------------
    TYPES
 -------------------------------------------------------- */
@@ -82,7 +75,70 @@ type WebBody = {
   messages?: WebMessage[];
   maxResults?: number;
   depth?: "basic" | "advanced";
+  /**
+   * Optional mode hint:
+   *  - "auto"    => infer from query (default)
+   *  - "website" => treat as website review (URL/domain-centric)
+   *  - "search"  => treat as generic web search
+   */
+  mode?: "auto" | "website" | "search";
 };
+
+type GenericSearchPayload = {
+  kind: "search";
+  query: string;
+  depth: "basic" | "advanced";
+  items: any[];
+  generated_at: string;
+};
+
+type WebsitePageSnapshot = {
+  url: string;
+  title: string | null;
+  snippet: string | null;
+};
+
+type WebsiteSnapshotPayload = {
+  kind: "website";
+  query: string;
+  domain: string;
+  depth: "basic" | "advanced";
+  pages: WebsitePageSnapshot[];
+  generated_at: string;
+};
+
+/* -------------------------------------------------------
+   HELPERS
+-------------------------------------------------------- */
+
+function headersToRecord(h: Headers): Record<string, string> {
+  const out: Record<string, string> = {};
+  h.forEach((v, k) => (out[k] = v));
+  return out;
+}
+
+function looksLikeUrlOrDomain(query: string): boolean {
+  const trimmed = query.trim().toLowerCase();
+  if (!trimmed) return false;
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return true;
+  }
+  // crude but safe domain heuristic
+  return /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(trimmed);
+}
+
+function normalizeDomain(input: string): string | null {
+  try {
+    let url = input.trim();
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      url = `https://${url}`;
+    }
+    const u = new URL(url);
+    return u.hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+}
 
 /* -------------------------------------------------------
    HEALTHCHECK
@@ -145,28 +201,127 @@ export async function POST(req: NextRequest) {
         ? Math.min(body.maxResults, 10)
         : 6;
 
-    const depthFlag =
-      body.depth === "advanced" ? "advanced" : ("basic" as "basic" | "advanced");
+    const depthFlag: "basic" | "advanced" =
+      body.depth === "advanced" ? "advanced" : "basic";
+
+    const modeHint = body.mode || "auto";
+
+    // Decide mode: website-centric vs generic search
+    const websiteMode =
+      modeHint === "website" ||
+      (modeHint === "auto" && looksLikeUrlOrDomain(query));
 
     // ---- Tavily search ----
     const results = await webSearch(query, {
       max: maxResults,
-      // For now we treat this as generic web search, not news-only.
-      // If you want a dedicated news internet route, we can split later.
     });
 
-    // Compact SEARCH_RESULTS wrapper for the system prompt.
-    const searchPayload = {
-      query,
-      depth: depthFlag,
-      items: results,
-      generated_at: new Date().toISOString(),
-    };
+    let extras: string;
+    let researchPayload: GenericSearchPayload | WebsiteSnapshotPayload;
 
-    const searchJson = JSON.stringify(searchPayload, null, 2);
+    if (websiteMode) {
+      // WEBSITE SNAPSHOT MODE — depth-1 multi-page, domain-filtered
+      const domain = normalizeDomain(query);
+      const now = new Date().toISOString();
 
-    // ---- Build Solace system prompt for Internet mode ----
-    const extras = `
+      const pages: WebsitePageSnapshot[] = [];
+
+      if (Array.isArray(results)) {
+        for (const item of results) {
+          const url = typeof item?.url === "string" ? item.url : null;
+          if (!url) continue;
+
+          if (domain) {
+            try {
+              const u = new URL(url);
+              if (u.hostname.toLowerCase() !== domain) {
+                continue;
+              }
+            } catch {
+              continue;
+            }
+          }
+
+          const title =
+            typeof item?.title === "string" && item.title.trim()
+              ? item.title.trim()
+              : null;
+
+          const snippetSource =
+            (typeof item?.content === "string" && item.content.trim()) ||
+            (typeof item?.snippet === "string" && item.snippet.trim()) ||
+            "";
+
+          const snippet =
+            snippetSource.length > 600
+              ? snippetSource.slice(0, 600) + "…"
+              : snippetSource || null;
+
+          pages.push({
+            url,
+            title,
+            snippet,
+          });
+        }
+      }
+
+      researchPayload = {
+        kind: "website",
+        query,
+        domain: domain || "unknown",
+        depth: depthFlag,
+        pages,
+        generated_at: now,
+      };
+
+      const websiteJson = JSON.stringify(researchPayload, null, 2);
+
+      extras = `
+WEBSITE_SNAPSHOT (JSON):
+
+"""json
+${websiteJson}
+"""
+
+You are evaluating a website based on this multi-page snapshot.
+
+- Treat WEBSITE_SNAPSHOT as your ONLY window into the site for this request.
+- DO NOT assume any pages, content, CTAs, or elements exist if they are not
+  visible in WEBSITE_SNAPSHOT.pages.
+- You MUST NOT say "I can't browse the internet" or similar, because you have
+  this snapshot.
+- Before analyzing, briefly list what is actually visible:
+  • Which URLs you see.
+  • For each page: title (if any) and a short snippet summary based only on
+    the snippet text provided.
+
+Then:
+- If the user is asking for an assessment/review/audit of the site, you MUST
+  follow the WEBSITE SNAPSHOT REVIEW PROTOCOL from your system prompt.
+- In every section of that protocol, you MUST ground your comments in concrete
+  details from WEBSITE_SNAPSHOT.pages.
+- When something would normally matter (e.g. testimonials, privacy policy,
+  team bios) but is NOT visible in the snapshot, you MUST say:
+    "Not visible in this snapshot."
+- You are allowed to interpret, compare to norms, and suggest improvements,
+  but you are NOT allowed to state that a specific element exists if it is
+  not visible in the snapshot.
+`.trim();
+    } else {
+      // GENERIC SEARCH MODE
+      const searchPayload: GenericSearchPayload = {
+        kind: "search",
+        query,
+        depth: depthFlag,
+        items: results,
+        generated_at: new Date().toISOString(),
+      };
+
+      researchPayload = searchPayload;
+
+      const searchJson = JSON.stringify(searchPayload, null, 2);
+
+      extras = `
 SEARCH_RESULTS (JSON):
 
 """json
@@ -176,11 +331,14 @@ ${searchJson}
 You are helping the user understand or evaluate the information above.
 
 - Treat SEARCH_RESULTS as your factual window into the web for this request.
-- You MUST NOT say "I can't browse the internet" or similar, because you have this snapshot.
-- Anchor your answer in concrete details from SEARCH_RESULTS (titles, snippets, domains, dates).
+- You MUST NOT say "I can't browse the internet" or similar, because you have
+  this snapshot.
+- Anchor your answer in concrete details from SEARCH_RESULTS (titles, snippets,
+  domains, dates).
 - If results conflict, call out the conflict and explain how you'd interpret it.
 - If the results are thin or noisy, say so and explain limits on confidence.
 `.trim();
+    }
 
     const system = buildInternetSystemPrompt(extras);
 
@@ -214,7 +372,7 @@ You are helping the user understand or evaluate the information above.
     return NextResponse.json(
       {
         text,
-        search_results: searchPayload,
+        research: researchPayload,
         model: "internet-solace",
       },
       { headers: corsHeaders(echoOrigin) }
@@ -228,3 +386,4 @@ You are helping the user understand or evaluate the information above.
     );
   }
 }
+
