@@ -1,223 +1,112 @@
 // app/components/FeatureGrid.tsx
 import Link from "next/link";
+import NeuralSidebar from "./NeuralSidebar";
 
-type AnchorLink = {
-  label: string;
-  description: string;
-  href: string;
-};
-
-type WorkspaceLink = {
-  label: string;
-  tagline: string;
-  href: string;
-};
-
-const ANCHORS: AnchorLink[] = [
+const workspaceCards = [
   {
-    label: "Workspace Live",
-    description: "Your anchored conversations with Solace.",
-    href: "/app",
-  },
-  {
-    label: "Newsroom Cabinet",
-    description: "Neutral digest, outlet scores, and ledgers.",
-    href: "/app/newsroom",
-  },
-  {
-    label: "Memory Center",
-    description: "Review and edit your stored memories.",
-    href: "/app/memories",
-  },
-  {
-    label: "Attachments",
-    description: "Files, exports, and reference packs.",
-    href: "/app/attachments",
-  },
-  {
-    label: "Guidance Modes",
-    description: "Neutral • Guidance • Ministry lenses.",
-    href: "/app/modes",
-  },
-];
-
-const WORKSPACES: WorkspaceLink[] = [
-  {
+    id: "decision-brief",
     label: "Decision Brief",
-    tagline: "One clear page to move from signal to action.",
+    description: "One clear page to move from signal to action.",
     href: "/app/decision-brief",
   },
   {
+    id: "journey-planner",
     label: "Journey Planner",
-    tagline: "Next moves, owners, and aligned timelines.",
+    description: "Map grounded next moves, owners, and aligned timelines.",
     href: "/app/journey",
   },
   {
+    id: "newsroom-cabinet",
     label: "Newsroom Cabinet",
-    tagline: "Anchored news, outlet cabinet, and bias telemetry.",
+    description: "Neutral news digest, outlet cabinet, and bias telemetry.",
     href: "/app/newsroom",
   },
   {
+    id: "memory-studio",
     label: "Memory Studio",
-    tagline: "Rewrite, curate, and steward stored memories.",
-    href: "/app/memories",
+    description: "Rewrite, curate, and steward stored memories.",
+    href: "/app/memory-studio",
   },
   {
+    id: "founder-lane",
     label: "Founder Lane",
-    tagline: "Brain, news, and memory routed through Solace.",
+    description: "Founder view of brain, news, and memory routed through Solace.",
     href: "/app/founder-lane",
   },
 ];
 
 export default function FeatureGrid() {
   return (
-    <section className="relative min-h-[calc(100vh-6rem)] overflow-hidden">
-      {/* =========================================================
-          NEURAL BACKDROP LAYER (image + animation + triangle slot)
-         ========================================================= */}
-      <div aria-hidden className="neural-ambient">
-        {/* Soft dark fade so text stays readable on the left */}
-        <div className="neural-ambient__fade" />
-
-        {/* MCAI brain hero on the right */}
-        <div className="neural-ambient__brain" />
-
-        {/* Animated circuit sweeps */}
-        <div className="neural-ambient__line neural-ambient__line--slow" />
-        <div className="neural-ambient__line neural-ambient__line--fast" />
-
-        {/* Pulsing neural nodes */}
-        <div className="neural-ambient__pulse neural-ambient__pulse--tl" />
-        <div className="neural-ambient__pulse neural-ambient__pulse--br" />
-
-        {/* Triangle / anchor badge slot (visual only for now) */}
-        <div className="neural-anchor-badge">
-          <div className="neural-anchor-badge__glow" />
-          <svg
-            viewBox="0 0 64 64"
-            className="neural-anchor-badge__icon"
-            aria-hidden="true"
-          >
-            {/* Triangle */}
-            <path
-              d="M32 6 L10 52 H54 Z"
-              fill="none"
-              stroke="rgba(148, 197, 253, 0.9)"
-              strokeWidth="1.5"
-            />
-            {/* Inner anchor */}
-            <path
-              d="M32 16c-1.9 0-3.4 1.5-3.4 3.4 0 1.7 1.2 3.1 2.8 3.4v10.1l-4.6-3.1m4.6 3.1 4.6-3.1M24 36.8c0 4.4 3.6 8 8 8s8-3.6 8-8"
-              fill="none"
-              stroke="rgba(191, 219, 254, 0.96)"
-              strokeWidth="1.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <circle
-              cx="32"
-              cy="19.4"
-              r="1.6"
-              fill="rgba(191, 219, 254, 1)"
-            />
-          </svg>
-        </div>
+    <div className="relative min-h-[calc(100vh-5rem)] overflow-hidden">
+      {/* Neural glow & brain hero on the right */}
+      <div className="pointer-events-none absolute inset-0">
+        {/* soft cyan / violet wash */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_0,#22d3ee33,transparent_58%),radial-gradient(circle_at_90%_80%,#a855f733,transparent_55%)]" />
+        {/* brain image on the right */}
+        <div className="absolute inset-y-[-10%] right-[-8%] w-[60%] bg-[url('/mca-brain-hero.png')] bg-contain bg-right bg-no-repeat opacity-80 mix-blend-screen" />
       </div>
 
-      {/* =========================================================
-          CONTENT GRID
-         ========================================================= */}
-      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-10 lg:flex-row lg:items-stretch lg:gap-12">
-        {/* LEFT COLUMN – Solace system + anchors + workspaces */}
-        <div className="w-full max-w-md shrink-0 space-y-8">
-          {/* Solace system label */}
-          <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-400/80">
-              Solace System
-            </p>
-            <h1 className="text-2xl font-semibold tracking-tight text-sky-50">
+      {/* Content layer */}
+      <div className="relative z-10 flex flex-col gap-10 lg:flex-row">
+        {/* Floating neural sidebar */}
+        <aside className="w-full max-w-xs pt-4 lg:max-w-sm lg:pt-10 lg:pr-4 lg:shrink-0 lg:sticky lg:top-24">
+          <NeuralSidebar />
+        </aside>
+
+        {/* Main narrative */}
+        <section className="flex-1 pt-8 lg:pt-16">
+          <div className="max-w-2xl space-y-6">
+            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/40 bg-slate-900/70 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-cyan-200 shadow-[0_10px_40px_rgba(8,47,73,0.9)] backdrop-blur">
+              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_14px_rgba(34,211,238,0.9)]" />
               MCAI Neural Workspaces
-            </h1>
-            <p className="text-sm text-[var(--mc-muted)]">
-              The MCAI brain wired into moral clarity circuits. Each workspace
-              is an anchored entry point into Solace.
-            </p>
-          </div>
-
-          {/* Anchored entry points */}
-          <section className="space-y-3">
-            <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-300/80">
-              Anchored entry points
-            </h2>
-            <div className="flex flex-col gap-2">
-              {ANCHORS.map((anchor) => (
-                <Link
-                  key={anchor.label}
-                  href={anchor.href}
-                  className="group rounded-xl border border-sky-900/60 bg-sky-950/40 px-3 py-2.5 text-sm transition hover:border-sky-400/70 hover:bg-sky-900/40 hover:shadow-[0_0_30px_rgba(56,189,248,0.35)]"
-                  prefetch={false}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-sky-50">
-                      {anchor.label}
-                    </span>
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-sky-300/80 group-hover:text-sky-100">
-                      Open
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-xs text-sky-100/70">
-                    {anchor.description}
-                  </p>
-                </Link>
-              ))}
             </div>
-          </section>
 
-          {/* Neural workspaces list */}
-          <section className="space-y-3">
-            <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-300/80">
-              Workspaces
-            </h2>
-            <div className="flex flex-col gap-2">
-              {WORKSPACES.map((ws) => (
+            <div>
+              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-50 sm:text-4xl">
+                Your Anchor AI for truth, guidance, and ministry.
+              </h1>
+              <p className="mt-3 text-sm text-slate-300 sm:text-base">
+                Solace answers with grounded clarity, remembers your world, and
+                integrates neutral news, deep research, and ministry in a single
+                brain. This isn&apos;t a generic chatbot — it&apos;s your anchored
+                interface into the future of AI stewardship.
+              </p>
+              <p className="mt-2 text-sm text-slate-400">
+                No feeds, no doomscrolling — just anchored decisions you can
+                defend in front of people you respect.
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              {workspaceCards.map((ws) => (
                 <Link
-                  key={ws.label}
+                  key={ws.id}
                   href={ws.href}
-                  className="group rounded-xl border border-slate-800/70 bg-slate-950/50 px-3 py-2.5 text-sm transition hover:border-sky-400/70 hover:bg-slate-900/70 hover:shadow-[0_0_26px_rgba(59,130,246,0.35)]"
-                  prefetch={false}
+                  className="group relative overflow-hidden rounded-xl border border-slate-700/70 bg-slate-900/80 p-4 text-sm text-slate-100 shadow-[0_18px_60px_rgba(15,23,42,0.9)] transition hover:border-cyan-400/75 hover:bg-slate-900/95 hover:shadow-[0_24px_80px_rgba(8,47,73,0.95)]"
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-slate-50">
-                      {ws.label}
-                    </span>
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-300/80 group-hover:text-sky-100">
-                      Live
+                  <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100 pointer-events-none bg-[radial-gradient(circle_at_0%_0%,rgba(56,189,248,0.3),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(168,85,247,0.28),transparent_55%)]" />
+                  <div className="relative flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.9)]" />
+                      <span className="text-sm font-semibold">{ws.label}</span>
+                    </div>
+                    <p className="text-[13px] text-slate-300">{ws.description}</p>
+                    <span className="mt-1 text-[11px] text-cyan-300/90 group-hover:translate-x-0.5 transition-transform">
+                      Open workspace →
                     </span>
                   </div>
-                  <p className="mt-0.5 text-xs text-slate-300/75">
-                    {ws.tagline}
-                  </p>
                 </Link>
               ))}
             </div>
-          </section>
 
-          {/* Magic key CTA */}
-          <div className="pt-2 text-xs text-[var(--mc-muted)]">
-            <p>
-              <span className="font-semibold text-sky-300">Get magic key</span>{" "}
-              to anchor Solace to your world. No feeds, no doomscrolling — just
-              grounded decisions.
+            <p className="pt-2 text-[12px] text-slate-500">
+              Neural lines fire when Solace is thinking, remembering, or pulling
+              fresh news context from the Newsroom Cabinet — so you always see
+              when the brain is at work.
             </p>
           </div>
-        </div>
-
-        {/* RIGHT COLUMN – reserved vertical lane under Solace */}
-        <div className="relative flex-1">
-          {/* This just reserves breathing room so the dock doesn’t crowd the left. */}
-          <div className="h-full min-h-[420px]" />
-        </div>
+        </section>
       </div>
-    </section>
+    </div>
   );
 }
