@@ -248,9 +248,9 @@ export async function POST(req: NextRequest) {
               : null;
 
           const snippetSource =
-            (typeof item?.content === "string" && item.content.trim()) ||
-            (typeof item?.snippet === "string" && item.snippet.trim()) ||
-            "";
+            typeof item?.content === "string" && item.content.trim()
+              ? item.content.trim()
+              : "";
 
           const snippet =
             snippetSource.length > 600
