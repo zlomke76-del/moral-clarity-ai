@@ -7,7 +7,6 @@ import NextDynamic from "next/dynamic"; // avoid clash with `export const dynami
 import { Suspense } from "react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-import TopNav from "@/components/TopNav";
 import Breadcrumb from "@/components/Breadcrumb";
 import DemoBadge from "@/components/DemoBadge";
 import AuthProvider from "@/components/AuthProvider";
@@ -20,7 +19,9 @@ export const fetchCache = "force-no-store";
 export const runtime = "nodejs";
 
 // SolaceDock lives under /app/components
-const SolaceDock = NextDynamic(() => import("@/app/components/SolaceDock"), { ssr: false });
+const SolaceDock = NextDynamic(() => import("@/app/components/SolaceDock"), {
+  ssr: false,
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.moralclarity.ai"),
@@ -51,14 +52,14 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark h-full" data-skin="glass">
-      <body className="min-h-screen bg-neutral-950 text-neutral-100 antialiased flex flex-col">
+      <body className="flex min-h-screen flex-col bg-neutral-950 text-neutral-100 antialiased">
         <AuthProvider>
-          {/* ===== HEADER ===== */}
-          <header className="sticky top-0 z-50 border-b border-neutral-800 bg-neutral-950/80 backdrop-blur">
+          {/* ===== STUDIO HEADER (no marketing nav) ===== */}
+          <header className="sticky top-0 z-50 border-b border-neutral-800 bg-neutral-950/85 backdrop-blur">
             <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-              {/* Left: logo + demo badge */}
+              {/* Left: logo + name + demo badge */}
               <div className="flex items-center gap-2">
-                <Link href="/" className="flex items-center gap-2" prefetch>
+                <Link href="/app" className="flex items-center gap-2" prefetch>
                   <Image
                     src="/MoralClarityAI_QuietDepth_Logos/icon-180.png"
                     alt="Moral Clarity AI"
@@ -74,46 +75,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <DemoBadge />
               </div>
 
-              {/* Center navigation (desktop) */}
-              <div className="hidden sm:flex items-center gap-6 text-sm">
-                <Link href="/pricing" className="hover:opacity-80 leading-none" prefetch>
-                  Pricing
-                </Link>
-                <Link href="/docs" className="hover:opacity-80 leading-none" prefetch>
-                  Docs
-                </Link>
-                <Link href="/contact" className="hover:opacity-80 leading-none" prefetch>
-                  Contact
-                </Link>
+              {/* Right: magic-link login */}
+              <div className="flex items-center gap-3 text-sm">
+                <span className="hidden text-xs text-neutral-400 sm:inline">
+                  MCAI Studio ·{" "}
+                  <span className="text-neutral-100">Founder lane</span>
+                </span>
                 <Link
-                  href="/app"
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
+                  href="/login"
                   prefetch
+                  className="rounded-full border border-sky-400/70 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-100 shadow-[0_0_18px_rgba(56,189,248,0.55)] hover:border-sky-300/80 hover:bg-sky-500/20"
                 >
-                  Open the app
-                </Link>
-              </div>
-
-              {/* Mobile CTA */}
-              <div className="sm:hidden">
-                <Link
-                  href="/app"
-                  className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
-                  prefetch
-                >
-                  Open
+                  Get magic key
                 </Link>
               </div>
             </nav>
-
-            {/* ===== APP SUB-NAV ===== */}
-            <TopNav />
           </header>
 
           {/* ===== MAIN CONTENT ===== */}
-          <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-10 space-y-6">
+          <main className="mx-auto w-full max-w-6xl flex-1 space-y-6 px-4 py-10">
             <div id="breadcrumb-slot">
-              <Breadcrumb /* pass items where you render this if needed */ items={[]} />
+              <Breadcrumb items={[]} />
             </div>
             {children}
           </main>
@@ -140,7 +122,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <Link href="/terms" className="hover:text-neutral-300" prefetch>
                   Terms
                 </Link>
-                <Link href="/status" className="hover:text-neutral-300" prefetch={false}>
+                <Link
+                  href="/status"
+                  className="hover:text-neutral-300"
+                  prefetch={false}
+                >
                   Status
                 </Link>
               </div>
