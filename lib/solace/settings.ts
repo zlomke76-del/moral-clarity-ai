@@ -40,3 +40,39 @@ function resolveInternetMode(): InternetMode {
 export const DEFAULT_SETTINGS: MCAISettings = {
   internetMode: resolveInternetMode(),
 };
+
+/* -------------------------------------------------------
+   FEATURE FLAGS
+   (kept generic so routes can safely destructure)
+-------------------------------------------------------- */
+
+export type SolaceFeatureFlags = {
+  [key: string]: any;
+};
+
+/**
+ * Central place to read Solace feature flags from env.
+ *
+ * This stays intentionally generic so different routes
+ * can destructure what they need without type friction.
+ */
+export function getSolaceFeatureFlags(): SolaceFeatureFlags {
+  const uploadModerationRaw =
+    process.env.SOLACE_UPLOAD_MODERATION ||
+    process.env.NEXT_PUBLIC_SOLACE_UPLOAD_MODERATION ||
+    "";
+
+  const uploadModeration =
+    typeof uploadModerationRaw === "string"
+      ? uploadModerationRaw.trim().length > 0 &&
+        !/^0|false|off$/i.test(uploadModerationRaw)
+      : !!uploadModerationRaw;
+
+  return {
+    // Controls whether the moderate-upload route should actually call moderation.
+    uploadModeration,
+
+    // Expose internetMode so routes can align behavior if needed.
+    internetMode: DEFAULT_SETTINGS.internetMode,
+  };
+}
