@@ -113,7 +113,6 @@ a:hover {
 }
 
 /* ---------- Logo / brand resets ---------- */
-/* Prevent any old gradient/mask tricks from affecting new logos */
 .brand,
 .brand::before,
 .brand::after {
@@ -325,6 +324,7 @@ button:disabled {
     align-items: stretch;
   }
 }
+
 /* --- Restore Solace Dock fixed global positioning --- */
 .solace-dock {
   position: fixed !important;
@@ -340,4 +340,98 @@ button:disabled {
 .solace-dock .dock-body {
   overflow-y: auto !important;
   max-height: calc(100vh - 140px);
+}
+
+/* =========================================================
+   MCAI Neural Canvas – animated background
+   ========================================================= */
+
+/* Wrapper you can use around the /app content if you want */
+.mca-shell {
+  position: relative;
+  min-height: 60vh;
+  overflow: hidden;
+  background: radial-gradient(circle at top, #020617 0, #02030a 55%, #000 100%);
+}
+
+/* Fixed content layer on top of the neural canvas */
+.mca-shell-inner {
+  position: relative;
+  z-index: 10;
+}
+
+/* Brain hero image – bottom-right, glowing */
+.mca-brain-layer {
+  position: fixed;
+  inset: 0;
+  background-image: url("/mca-brain-hero.png");
+  background-repeat: no-repeat;
+  background-position: right bottom;
+  background-size: min(80vh, 60vw);
+  opacity: 0.88;
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 35px rgba(56, 189, 248, 0.45));
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Animated neural traces behind everything */
+.mca-neural-layer {
+  position: fixed;
+  inset: -40%;
+  background-image:
+    /* horizontal traces */
+    repeating-linear-gradient(
+      0deg,
+      rgba(56, 189, 248, 0.16) 0px,
+      rgba(56, 189, 248, 0.16) 1px,
+      transparent 1px,
+      transparent 6px
+    ),
+    /* vertical traces */
+    repeating-linear-gradient(
+      90deg,
+      rgba(129, 140, 248, 0.12) 0px,
+      rgba(129, 140, 248, 0.12) 1px,
+      transparent 1px,
+      transparent 10px
+    ),
+    /* pulse sparks */
+    radial-gradient(
+      circle at 10% 20%,
+      rgba(56, 189, 248, 0.35),
+      transparent 55%
+    ),
+    radial-gradient(
+      circle at 70% 10%,
+      rgba(59, 130, 246, 0.38),
+      transparent 55%
+    ),
+    radial-gradient(
+      circle at 85% 75%,
+      rgba(56, 189, 248, 0.4),
+      transparent 55%
+    );
+  opacity: 0.45;
+  mix-blend-mode: screen;
+  animation: mcaNeuralSweep 26s linear infinite;
+  z-index: 0;
+  pointer-events: none;
+}
+
+@keyframes mcaNeuralSweep {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.4;
+  }
+  30% {
+    opacity: 0.55;
+  }
+  60% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate3d(-160px, -120px, 0);
+    opacity: 0.4;
+  }
 }
