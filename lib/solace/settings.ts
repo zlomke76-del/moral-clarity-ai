@@ -1,26 +1,42 @@
 // lib/solace/settings.ts
 
+export type InternetMode = "off" | "conservative" | "full";
+
+export type MCAISettings = {
+  /**
+   * Controls how aggressively Solace relies on internet / web-derived context.
+   *
+   * - "off"          → never trigger deep research / web context automatically.
+   * - "conservative" → only when clearly requested (URLs, "deep research", etc.).
+   * - "full"         → allowed whenever it would clearly help answer.
+   */
+  internetMode: InternetMode;
+};
+
 /**
- * Central feature flags for Solace capabilities.
+ * Resolve the internet mode from environment, with a safe default.
  *
- * These can later be wired to user/workspace-level settings or
- * environment flags (e.g., founder-only vs public).
+ * You can override via:
+ * - NEXT_PUBLIC_MCAI_INTERNET_MODE
+ * - MCAI_INTERNET_MODE
+ *
+ * Valid values: "off" | "conservative" | "full" (case-insensitive).
  */
+function resolveInternetMode(): InternetMode {
+  const raw =
+    process.env.NEXT_PUBLIC_MCAI_INTERNET_MODE ||
+    process.env.MCAI_INTERNET_MODE ||
+    "";
 
-export type SolaceFeatureFlags = {
-  internetEnabled: boolean;
-  visionEnabled: boolean;
-  uploadModerationEnabled: boolean;
-};
+  const v = raw.trim().toLowerCase();
+  if (v === "off" || v === "conservative" || v === "full") {
+    return v;
+  }
 
-const DEFAULT_FLAGS: SolaceFeatureFlags = {
-  internetEnabled: true,          // You can gate this by workspace or env.
-  visionEnabled: true,            // Safe-vision interpretation pipeline.
-  uploadModerationEnabled: true,  // Text/file/image moderation.
-};
-
-export function getSolaceFeatureFlags(): SolaceFeatureFlags {
-  // In the future you can read from env or Supabase.
-  // For now, return a static baseline.
-  return { ...DEFAULT_FLAGS };
+  // Default: conservative (only when clearly asked).
+  return "conservative";
 }
+
+export const DEFAULT_SETTINGS: MCAISettings = {
+  internetMode: resolveInternetMode(),
+};
