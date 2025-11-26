@@ -20,7 +20,6 @@ const anchorEntries: AnchorEntry[] = [
     id: "workspace-live",
     label: "Workspace Live",
     description: "Your anchored conversations with Solace.",
-    // TODO: point this to your live chat route if different
     href: "/app/decision-brief",
   },
   {
@@ -103,7 +102,7 @@ export default function NeuralSidebar() {
         </div>
 
         <Link
-          href="/app/magic-key"
+          href="/auth/sign-in"
           className="inline-flex items-center rounded-full bg-sky-500/95 px-3 py-1 text-[11px] font-semibold text-slate-950 shadow-[0_0_22px_rgba(56,189,248,0.7)] transition hover:bg-sky-400/95 hover:shadow-[0_0_32px_rgba(56,189,248,0.9)]"
         >
           Get magic key
@@ -169,4 +168,5 @@ export default function NeuralSidebar() {
     </aside>
   );
 }
+
 
