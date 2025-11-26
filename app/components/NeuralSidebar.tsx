@@ -1,100 +1,172 @@
 // app/components/NeuralSidebar.tsx
 import Link from "next/link";
 
-type NavItem = {
+type AnchorEntry = {
+  id: string;
   label: string;
   description: string;
   href: string;
-  badge?: string;
 };
 
-const NAV_ITEMS: NavItem[] = [
+type Workspace = {
+  id: string;
+  label: string;
+  description: string;
+  href: string;
+};
+
+const anchorEntries: AnchorEntry[] = [
   {
-    label: "Workspace",
+    id: "workspace-live",
+    label: "Workspace Live",
     description: "Your anchored conversations with Solace.",
-    href: "/app",
-    badge: "Live",
+    // TODO: point this to your live chat route if different
+    href: "/app/decision-brief",
   },
   {
+    id: "newsroom",
     label: "Newsroom Cabinet",
     description: "Neutral digest, outlet scores, and ledgers.",
     href: "/app/newsroom",
   },
   {
+    id: "memory-center",
     label: "Memory Center",
     description: "Review and edit your stored memories.",
     href: "/app/memories",
   },
   {
+    id: "attachments",
     label: "Attachments",
     description: "Files, exports, and reference packs.",
-    href: "/app/files",
+    href: "/app/attachments",
   },
   {
+    id: "guidance-modes",
     label: "Guidance Modes",
-    description: "Neutral • Guidance • Ministry lenses.",
-    href: "/app/modes",
+    description: "Neutral, Guidance, and Ministry lenses.",
+    href: "/app/guidance-modes",
+  },
+  {
+    id: "founder-lane",
+    label: "Founder Lane",
+    description: "MCAI brain, news, and memory routed through Solace.",
+    href: "/app/founder-lane",
+  },
+];
+
+const workspaces: Workspace[] = [
+  {
+    id: "decision-brief",
+    label: "Decision Brief",
+    description: "One clear page to move from signal to action.",
+    href: "/app/decision-brief",
+  },
+  {
+    id: "journey-planner",
+    label: "Journey Planner",
+    description: "Next moves, owners, and aligned timelines.",
+    href: "/app/journey",
+  },
+  {
+    id: "newsroom-cabinet",
+    label: "Newsroom Cabinet",
+    description: "Anchored news, outlet cabinet, and bias telemetry.",
+    href: "/app/newsroom",
+  },
+  {
+    id: "memory-studio",
+    label: "Memory Studio",
+    description: "Rewrite, curate, and steward stored memories.",
+    href: "/app/memory-studio",
+  },
+  {
+    id: "founder-lane-ws",
+    label: "Founder Lane",
+    description: "Founder view of brain, news, and memory.",
+    href: "/app/founder-lane",
   },
 ];
 
 export default function NeuralSidebar() {
   return (
-    <aside
-      className="mc-neural-sidebar relative h-full rounded-3xl border border-neutral-800/80 bg-neutral-950/70 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.85)] backdrop-blur-md"
-      aria-label="Solace navigation"
-    >
-      {/* Spine glow behind nodes */}
-      <div className="mc-neural-spine" aria-hidden="true" />
-
-      <div className="mb-5 flex items-center gap-2">
-        <div className="mc-neural-orb">
-          <span className="mc-neural-orb-core" />
-        </div>
+    <aside className="neural-sidebar relative rounded-2xl border border-slate-700/70 bg-slate-950/80 px-4 py-5 shadow-[0_24px_80px_rgba(15,23,42,0.95)] backdrop-blur-xl ring-1 ring-cyan-400/10">
+      {/* Header + Magic Key */}
+      <div className="mb-4 flex items-center justify-between gap-2">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-400">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-300/80">
             Solace System
           </p>
-          <p className="text-sm text-neutral-300">Anchored entry points</p>
+          <p className="mt-1 text-[11px] text-slate-300/80">
+            Anchored entry points
+          </p>
+        </div>
+
+        <Link
+          href="/app/magic-key"
+          className="inline-flex items-center rounded-full bg-sky-500/95 px-3 py-1 text-[11px] font-semibold text-slate-950 shadow-[0_0_22px_rgba(56,189,248,0.7)] transition hover:bg-sky-400/95 hover:shadow-[0_0_32px_rgba(56,189,248,0.9)]"
+        >
+          Get magic key
+        </Link>
+      </div>
+
+      {/* Anchored entries */}
+      <div className="space-y-3">
+        {anchorEntries.map((entry) => (
+          <Link
+            key={entry.id}
+            href={entry.href}
+            className="group block rounded-xl border border-slate-700/70 bg-slate-900/80 px-3 py-3 text-xs leading-snug text-slate-200/95 shadow-[0_12px_40px_rgba(15,23,42,0.95)] transition hover:border-cyan-400/80 hover:bg-slate-900/95 hover:shadow-[0_18px_50px_rgba(8,47,73,0.9)]"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.9)] transition-transform group-hover:scale-125" />
+                  <span className="text-[12px] font-semibold">
+                    {entry.label}
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] text-slate-400">
+                  {entry.description}
+                </p>
+              </div>
+              <span className="mt-0.5 text-[11px] text-cyan-300/90 transition-transform group-hover:translate-x-0.5">
+                Open →
+              </span>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      {/* Workspaces list */}
+      <div className="mt-5 border-t border-slate-700/70 pt-3">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+          Workspaces
+        </p>
+        <div className="space-y-1.5">
+          {workspaces.map((ws) => (
+            <Link
+              key={ws.id}
+              href={ws.href}
+              className="group flex items-start justify-between gap-2 rounded-lg px-1 py-1 text-[11px] text-slate-300 hover:text-cyan-100"
+            >
+              <div className="flex items-center gap-1.5">
+                <span className="h-1 w-1 rounded-full bg-slate-500/80 group-hover:bg-cyan-400 group-hover:shadow-[0_0_10px_rgba(34,211,238,0.9)]" />
+                <span className="font-medium">{ws.label}</span>
+              </div>
+              <span className="ml-2 truncate text-[10px] text-slate-500 group-hover:text-cyan-300/90">
+                {ws.description}
+              </span>
+            </Link>
+          ))}
         </div>
       </div>
 
-      <nav className="space-y-2">
-        {NAV_ITEMS.map((item, idx) => (
-          <div key={item.label} className="mc-neural-node-block">
-            {/* Node + link */}
-            <Link
-              href={item.href}
-              className="mc-neural-node group"
-              prefetch={false}
-            >
-              <div className="mc-neural-node-dot" />
-              <div className="mc-neural-node-body">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-neutral-50">
-                    {item.label}
-                  </span>
-                  {item.badge && (
-                    <span className="rounded-full bg-emerald-500/15 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
-                      {item.badge}
-                    </span>
-                  )}
-                </div>
-                <p className="mt-0.5 text-xs text-neutral-400">
-                  {item.description}
-                </p>
-              </div>
-            </Link>
-
-            {/* Wire between this node and the next */}
-            {idx < NAV_ITEMS.length - 1 && (
-              <div className="mc-neural-link" aria-hidden="true">
-                <div className="mc-neural-link-line" />
-                <div className="mc-neural-link-pulse" />
-              </div>
-            )}
-          </div>
-        ))}
-      </nav>
+      <p className="mt-4 text-[11px] text-slate-500">
+        Neural lines fire when Solace is thinking, remembering, or pulling fresh
+        news context.
+      </p>
     </aside>
   );
 }
+
