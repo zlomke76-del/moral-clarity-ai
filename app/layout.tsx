@@ -11,8 +11,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body className="bg-[#020617] text-slate-50 antialiased">
-        <main className="min-h-screen">{children}</main>
+      <body className="bg-[#020617] text-slate-50 antialiased min-h-screen w-full overflow-hidden">
+        {/* Full-frame container expected by NeuralShell */}
+        <div className="relative flex min-h-screen w-full">
+          {/* children includes <NeuralShell> and the entire Solace workstation */}
+          {children}
+        </div>
       </body>
     </html>
   );
