@@ -5,12 +5,11 @@ import React from "react";
 
 /**
  * NeuralShell
- * Final clean version:
- * - Circuit PNG is fully visible
- * - One (1) controlled fade layer on top of PNG
- * - Triangle badge floats on the right without interfering
- * - No sidebar hover bleed
- * - All legacy systems removed
+ * - Circuit PNG fully visible
+ * - One controlled fade layer
+ * - Triangle badge clean + floating
+ * - No interference with sidebar or hover zones
+ * - No forced centering (handled at layout/page level)
  */
 export default function NeuralShell({
   children,
@@ -36,7 +35,7 @@ export default function NeuralShell({
         }}
       />
 
-      {/* ANCHOR TRIANGLE (desktop only) */}
+      {/* ANCHOR TRIANGLE */}
       <div className="hidden lg:flex items-center justify-center absolute top-10 right-12 z-30 pointer-events-none">
         <div className="absolute inset-0 rounded-2xl border border-blue-400/50 shadow-[0_0_40px_rgba(56,189,248,0.65)] opacity-70 animate-pulse" />
         <img
@@ -46,7 +45,7 @@ export default function NeuralShell({
         />
       </div>
 
-      {/* CONTENT LAYER */}
+      {/* CONTENT LAYER — stays neutral */}
       <div className="relative z-40">{children}</div>
     </div>
   );
