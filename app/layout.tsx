@@ -1,22 +1,22 @@
 // app/layout.tsx
+"use client";
+
 import "./globals.css";
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import SolaceDock from "./components/SolaceDock";
 
-export const metadata = {
-  title: "Moral Clarity AI",
-  description: "Solace — Anchored AI guidance.",
-};
-
 export default function RootLayout({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const showSolaceDock = pathname?.startsWith("/app");
+
   return (
     <html lang="en">
       <body className="bg-[#020617] text-slate-50 antialiased">
-        {/* Clean root: no header, no sidebars, no workspace tiles */}
         <main className="min-h-screen">{children}</main>
 
-        {/* Solace dock stays globally available */}
-        <SolaceDock />
+        {/* Only show SolaceDock inside the app routes */}
+        {showSolaceDock && <SolaceDock />}
       </body>
     </html>
   );
