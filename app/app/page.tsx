@@ -1,11 +1,15 @@
 // app/app/page.tsx
+"use client";
 
-export default function AppPage() {
-  // Minimal Studio shell: we intentionally render an empty canvas.
-  // SolaceDock is mounted globally via layout, so it will sit on top of this.
+import SolaceDock from "@/app/components/SolaceDock";
+import NeuralShell from "@/app/components/NeuralShell";
+
+export default function AppHome() {
   return (
-    <main className="relative min-h-screen bg-[#020617]">
-      {/* MCAI Studio /app is temporarily Solace-only. */}
-    </main>
+    <NeuralShell>
+      <div className="flex min-h-screen items-center justify-center">
+        <SolaceDock />
+      </div>
+    </NeuralShell>
   );
 }
