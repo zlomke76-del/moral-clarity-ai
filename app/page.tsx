@@ -1,6 +1,8 @@
 // app/page.tsx
 
 import SolaceDock from "./components/SolaceDock";
+import NeuralShell from "./components/NeuralShell";
+import NeuralSidebar from "./components/NeuralSidebar";
 
 export const metadata = {
   title: "Solace • Moral Clarity AI",
@@ -8,11 +10,16 @@ export const metadata = {
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-[#020617] text-slate-100">
-      {/* Center Solace on the page, nothing else */}
-      <div className="mx-auto flex max-w-6xl items-center justify-center px-4 py-10 md:py-16">
-        <SolaceDock />
+    <NeuralShell>
+      <div className="flex min-h-screen items-stretch">
+        {/* Left: Neural sidebar (chip-style cards) */}
+        <NeuralSidebar />
+
+        {/* Right: main Solace workstation area */}
+        <main className="flex flex-1 items-center justify-center px-4 py-6">
+          <SolaceDock />
+        </main>
       </div>
-    </main>
+    </NeuralShell>
   );
 }
