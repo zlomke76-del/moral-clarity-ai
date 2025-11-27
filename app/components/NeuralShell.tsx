@@ -9,14 +9,26 @@ type Props = {
 
 /**
  * NeuralShell
- * Clean minimal background using the Triangle-Anchor hero image.
- * No sidebars, no clutter — Solace front and center.
+ * Core Solace workstation shell.
+ * - Triangle-Anchor hero in the background
+ * - Dimmed, recessed, non-distracting
+ * - Content sits clearly above the canvas
  */
 export default function NeuralShell({ children }: Props) {
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#020617]">
-      {/* Triangle Anchor hero */}
+      {/* Triangle Anchor hero (background layer) */}
       <div className="mca-anchor-layer pointer-events-none" aria-hidden="true" />
+
+      {/* Darkening overlay to push the art back */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        aria-hidden="true"
+        style={{
+          backgroundColor: "rgba(2, 6, 23, 0.7)", // deep slate with ~70% opacity
+          mixBlendMode: "multiply",
+        }}
+      />
 
       {/* Soft glow overlay */}
       <div
@@ -24,7 +36,7 @@ export default function NeuralShell({ children }: Props) {
         aria-hidden="true"
         style={{
           background:
-            "radial-gradient(circle at 50% 60%, rgba(56,189,248,0.20) 0, transparent 60%)",
+            "radial-gradient(circle at 50% 60%, rgba(56,189,248,0.16) 0, transparent 60%)",
           opacity: 0.5,
         }}
       />
@@ -43,13 +55,13 @@ export default function NeuralShell({ children }: Props) {
           background-repeat: no-repeat;
           background-position: center center;
           background-size: contain; /* No stretch */
-          opacity: 0.85;
-          filter: drop-shadow(0 0 35px rgba(56, 189, 248, 0.45));
+          opacity: 0.4; /* Medium dim: clearly there, not dominant */
+          filter: drop-shadow(0 0 24px rgba(56, 189, 248, 0.35));
           z-index: 0;
         }
 
         @media (prefers-reduced-motion: reduce) {
-          /* No animations to reduce motion */
+          /* Reserved for future: keep background static if we add motion later */
         }
       `}</style>
     </div>
