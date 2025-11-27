@@ -1,74 +1,55 @@
-// app/app/page.tsx
-import NeuralSidebar from "@/app/components/NeuralSidebar";
-import FeatureGrid from "@/app/components/FeatureGrid";
+// app/page.tsx
+import Link from "next/link";
 
-export const runtime = "nodejs";
-
-export default function AppHome() {
+export default function HomePage() {
   return (
-    <div
-      className="
-        relative min-h-[70vh] px-4 py-8 md:py-10
-        bg-[url('/mca-brain-hero.png')]
-        bg-no-repeat bg-right-bottom
-        bg-[length:min(80vh,52vw)]
-      "
-    >
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 lg:flex-row">
-        {/* Left: Solace system / anchored entry points */}
-        <div className="w-full max-w-xs shrink-0">
-          <NeuralSidebar />
-        </div>
-
-        {/* Right: Anchor AI narrative + workspaces */}
-        <main className="flex-1">
-          {/* Anchor AI hero copy */}
-          <section className="max-w-2xl space-y-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-300/80">
-              Moral Clarity AI
-            </p>
-
-            <h1 className="text-balance text-2xl font-semibold leading-tight text-slate-50 sm:text-3xl">
-              Your Anchor AI for truth, guidance, and ministry.
-            </h1>
-
-            <p className="text-sm text-slate-200 sm:text-[0.95rem]">
-              Solace answers with grounded clarity, remembers your world, and
-              integrates neutral news, deep research, and ministry in a single
-              brain. This isn&apos;t a generic chatbot — it&apos;s your anchored
-              interface into the future of AI stewardship.
-            </p>
-
-            <p className="text-[13px] text-slate-400">
-              No feeds, no doomscrolling — just anchored decisions you can
-              defend in front of people you respect.
-            </p>
-          </section>
-
-          {/* Workspaces section */}
-          <section className="mt-8 max-w-3xl space-y-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-                MCAI Neural Workspaces
-              </p>
-              <p className="mt-2 text-[13px] text-slate-300">
-                Each workspace is an anchored entry point into Solace. You move
-                between them, but the same brain stays with you — memory, news,
-                and guidance all wired into one system.
-              </p>
-            </div>
-
-            {/* Simple grid of workspace cards */}
-            <FeatureGrid />
-          </section>
-
-          <p className="mt-4 text-[11px] text-slate-500">
-            Neural lines fire when Solace is thinking, remembering, or pulling
-            fresh news context — so you always see when the brain is at work.
+    <main className="min-h-screen bg-[#020617] text-slate-50">
+      <div className="mx-auto flex max-w-4xl flex-col gap-8 px-4 py-16">
+        {/* Simple header */}
+        <header className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-300/80">
+            Moral Clarity AI
           </p>
-        </main>
+          <h1 className="text-3xl font-bold sm:text-4xl">
+            Solace • Anchored AI guidance.
+          </h1>
+          <p className="max-w-2xl text-sm text-slate-300">
+            This is your clean starting point. No sidebars, no workspace tiles —
+            just a simple entry into the app routes you care about.
+          </p>
+        </header>
+
+        {/* Primary actions */}
+        <section className="grid gap-4 sm:grid-cols-2">
+          <Link
+            href="/app/decision-brief"
+            className="rounded-xl border border-slate-700/70 bg-slate-900/80 p-4 text-sm shadow-[0_18px_60px_rgba(15,23,42,0.9)] transition hover:border-sky-400/80 hover:bg-slate-900 hover:shadow-[0_24px_80px_rgba(8,47,73,0.95)]"
+          >
+            <h2 className="mb-1 text-sm font-semibold">Open Solace Workspace</h2>
+            <p className="text-xs text-slate-300">
+              Go straight into your Solace decision workspace.
+            </p>
+          </Link>
+
+          <Link
+            href="/app/newsroom"
+            className="rounded-xl border border-slate-700/70 bg-slate-900/80 p-4 text-sm shadow-[0_18px_60px_rgba(15,23,42,0.9)] transition hover:border-sky-400/80 hover:bg-slate-900 hover:shadow-[0_24px_80px_rgba(8,47,73,0.95)]"
+          >
+            <h2 className="mb-1 text-sm font-semibold">Neutral Newsroom</h2>
+            <p className="text-xs text-slate-300">
+              Jump into the Neutrality Cabinet and digest view.
+            </p>
+          </Link>
+        </section>
+
+        {/* Lightweight footer text */}
+        <footer className="mt-8 border-t border-slate-800 pt-4 text-xs text-slate-500">
+          <p>
+            This layout is intentionally minimal. We removed the old Neural
+            Sidebar and FeatureGrid so you can rebuild navigation on your own terms.
+          </p>
+        </footer>
       </div>
-    </div>
+    </main>
   );
 }
-
