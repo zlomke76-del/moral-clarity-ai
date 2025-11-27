@@ -31,7 +31,9 @@ declare global {
 type Message = { role: "user" | "assistant"; content: string };
 type ModeHint = "Create" | "Next Steps" | "Red Team" | "Neutral";
 
+const POS_KEY = "solace:pos:v3";
 const MINISTRY_KEY = "solace:ministry";
+const PAD = 12;
 
 /* ============================================================
    THEME
@@ -236,7 +238,9 @@ function renderTextWithNewlinesAndUrls(
     if (i > 0) {
       nodes.push(<br key={`${keyPrefix}-br-${i}`} />);
     }
-    nodes.push(...renderTextWithUrls(line, `${keyPrefix}-line-${i}`));
+    nodes.push(
+      ...renderTextWithUrls(line, `${keyPrefix}-line-${i}`)
+    );
   });
 
   return nodes;
@@ -262,7 +266,7 @@ function renderMessageContent(content: string, keyPrefix: string) {
       const srcMatch = part.match(/src=["']([^"']+)["']/i);
       const altMatch = part.match(/alt=["']([^"']+)["']/i);
       const src = srcMatch?.[1] || "";
-      the alt = altMatch?.[1] || "";
+      const alt = altMatch?.[1] || "";
 
       if (src) {
         nodes.push(
@@ -310,9 +314,16 @@ export default function SolaceDock() {
     };
   }, []);
 
-  const { visible, filters, setFilters } = useSolaceStore();
+  const { visible, x, y, setPos, filters, setFilters } = useSolaceStore();
 
   /* ------------------ Local state ------------------ */
+  const [dragging, setDragging] = useState(false);
+  const [offset, setOffset] = useState({ dx: 0, dy: 0 });
+  const [posReady, setPosReady] = useState(false);
+
+  const [panelH, setPanelH] = useState(0);
+  const [panelW, setPanelW] = useState(0);
+
   const [modeHint, setModeHint] = useState<ModeHint>("Neutral");
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: "Ready when you are." },
@@ -388,12 +399,98 @@ export default function SolaceDock() {
     setCollapsed(isMobile);
   }, [isMobile]);
 
+  /* ------------------ Measure panel ------------------ */
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      setPanelH(r.height);
+      setPanelW(r.width);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
+
+  /* ------------------ Desktop position restore ------------------ */
+  useEffect(() => {
+    if (!canRender || !visible) return;
+
+    if (window.innerWidth <= 768) {
+      setPosReady(true);
+      return;
+    }
+
+    try {
+      const raw = localStorage.getItem(POS_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw) as { x: number; y: number } | null;
+        if (saved) {
+          setPos(saved.x, saved.y);
+          setPosReady(true);
+          return;
+        }
+      }
+    } catch {}
+
+    requestAnimationFrame(() => {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const w = panelW || 760;
+      const h = panelH || 560;
+      const startX = Math.max(PAD, Math.round((vw - w) / 2));
+      const startY = Math.max(PAD, Math.round((vh - h) / 2));
+      setPos(startX, startY);
+      setPosReady(true);
+    });
+  }, [canRender, visible, panelW, panelH, setPos]);
+
+  /* ------------------ Save desktop position ------------------ */
+  useEffect(() => {
+    if (!posReady) return;
+    if (isMobile) return;
+    try {
+      localStorage.setItem(POS_KEY, JSON.stringify({ x, y }));
+    } catch {}
+  }, [x, y, posReady, isMobile]);
+
+  /* ------------------ Dragging ------------------ */
+  function onHeaderMouseDown(e: React.MouseEvent) {
+    if (isMobile) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    setOffset({
+      dx: e.clientX - (rect?.left ?? 0),
+      dy: e.clientY - (rect?.top ?? 0),
+    });
+    setDragging(true);
+  }
+
+  useEffect(() => {
+    if (!dragging) return;
+    const onMove = (e: MouseEvent) =>
+      setPos(e.clientX - offset.dx, e.clientY - offset.dy);
+    const onUp = () => setDragging(false);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [dragging, offset, setPos]);
+
   /* ------------------ Autosize textarea ------------------ */
   useEffect(() => {
     const ta = taRef.current;
     if (!ta) return;
     ta.style.height = "0px";
     ta.style.height = Math.min(220, ta.scrollHeight) + "px";
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [input]);
 
   /* ------------------ Default ministry ON ------------------ */
@@ -406,7 +503,8 @@ export default function SolaceDock() {
     next.add("ministry");
     setFilters(next);
     localStorage.setItem(MINISTRY_KEY, "1");
-  }, [filters, setFilters]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ============================================================
      SEND — CHAT + VISION
@@ -648,22 +746,58 @@ export default function SolaceDock() {
   }
 
   /* ============================================================
-     PANEL STYLE — EMBEDDED IN LAYOUT
+     PANEL POSITION — DESKTOP
      ============================================================ */
-  const panelStyle: CSSProperties = {
-    width: "100%",
-    maxWidth: isMobile ? "100%" : "960px",
-    height: "clamp(460px, 62vh, 820px)", // <- restored workstation height
-    maxHeight: "90vh",
-    display: "flex",
-    flexDirection: "column",
-    overflow: "hidden",
-    background: ui.panelBg,
-    borderRadius: isMobile ? 16 : 20,
-    border: ui.border,
-    boxShadow: ministryOn ? ui.glowOn : ui.shadow,
-    backdropFilter: "blur(8px)",
-  };
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  const tx = Math.min(Math.max(0, x - PAD), Math.max(0, vw - panelW - PAD));
+  const ty = Math.min(Math.max(0, y - PAD), Math.max(0, vh - panelH - PAD));
+
+  const panelStyle: CSSProperties = isMobile
+    ? {
+        position: "fixed",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: "100%",
+        height: "70vh",
+        maxHeight: "80vh",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        background: ui.panelBg,
+        borderRadius: "20px 20px 0 0",
+        border: ui.border,
+        boxShadow: ministryOn ? ui.glowOn : ui.shadow,
+        backdropFilter: "blur(8px)",
+        opacity: posReady ? 1 : 0,
+        pointerEvents: posReady ? "auto" : "none",
+        transition: "opacity 120ms ease",
+        zIndex: 60,
+      }
+    : {
+        position: "fixed",
+        left: PAD,
+        top: PAD,
+        width: "clamp(560px, 56vw, 980px)",
+        height: "clamp(460px, 62vh, 820px)",
+        maxHeight: "90vh",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        background: ui.panelBg,
+        borderRadius: 20,
+        border: ui.border,
+        boxShadow: ministryOn ? ui.glowOn : ui.shadow,
+        backdropFilter: "blur(8px)",
+        transform: `translate3d(${tx}px, ${ty}px, 0)`,
+        opacity: posReady ? 1 : 0,
+        pointerEvents: posReady ? "auto" : "none",
+        transition: "opacity 120ms ease",
+        resize: "both",
+        zIndex: 60,
+      };
 
   /* ============================================================
      FINAL RENDER
@@ -678,6 +812,7 @@ export default function SolaceDock() {
     >
       {/* HEADER */}
       <header
+        onMouseDown={onHeaderMouseDown}
         style={{
           display: "flex",
           alignItems: "center",
@@ -686,6 +821,7 @@ export default function SolaceDock() {
           borderBottom: ui.edge,
           color: ui.text,
           userSelect: "none",
+          cursor: isMobile ? "default" : "move",
           background:
             "linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.00))",
         }}
@@ -829,8 +965,7 @@ export default function SolaceDock() {
                     m.role === "user"
                       ? "rgba(39,52,74,.6)"
                       : "rgba(28,38,54,.6)",
-                  font:
-                    "14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
+                  font: "14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
                 }}
               >
                 <div style={{ width: "100%" }}>
@@ -1009,8 +1144,7 @@ export default function SolaceDock() {
     </section>
   );
 
-  // Open dock is embedded in the layout (no portal/fixed).
-  return panel;
+  return createPortal(panel, document.body);
 }
 
 /* ============================================================
@@ -1025,4 +1159,3 @@ const iconBtn: CSSProperties = {
   color: "var(--mc-text)",
   cursor: "pointer",
 };
-
