@@ -16,7 +16,7 @@ export default function NeuralShell({ children }: { children: React.ReactNode })
     <div className="relative min-h-screen w-full overflow-hidden bg-[#020617]">
       {/* --- BACKDROP LAYER (your new PNG) --- */}
       <div
-        className="absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat opacity-[0.92]"
+        className="absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat opacity-[0.50]"
         style={{
           backgroundImage: `url("/mca-backdrop.png")`,
         }}
