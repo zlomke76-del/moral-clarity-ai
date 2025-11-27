@@ -4,10 +4,10 @@ import React from "react";
 
 /**
  * NeuralShell
- * Wraps the entire /app workspace with:
- * - Circuit-board PNG background
- * - Triangle badge (desktop only)
- * - Soft gradient fades for sidebar visibility
+ * Clean + corrected layering:
+ * - PNG fully visible
+ * - Fade overlay above PNG, below UI
+ * - Triangle badge restored and not interfering with sidebar
  */
 export default function NeuralShell({
   children,
@@ -17,25 +17,25 @@ export default function NeuralShell({
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-[#020617]">
 
-      {/* BACKDROP LAYER (mca-backdrop.png) */}
+      {/* BACKDROP — circuit PNG (fully visible) */}
       <div
-        className="absolute inset-0 -z-[10] bg-cover bg-center bg-no-repeat opacity-[1]"
+        className="absolute inset-0 -z-20 bg-cover bg-center bg-no-repeat opacity-100"
         style={{
           backgroundImage: `url("/mca-backdrop.png")`,
         }}
       />
 
-      {/* SIDEBAR LEGIBILITY FADE */}
+      {/* FADE — above PNG, below UI */}
       <div
-        className="absolute inset-0 pointer-events-none -z-[20]"
+        className="absolute inset-0 pointer-events-none -z-10"
         style={{
           background:
-            "linear-gradient(to right, rgba(2,6,23,0.45) 0%, rgba(2,6,23,0.20) 18%, rgba(2,6,23,0.00) 36%, rgba(2,6,23,0.00) 64%, rgba(2,6,23,0.15) 90%, rgba(2,6,23,0.45) 100%)",
+            "linear-gradient(to right, rgba(2,6,23,0.55) 0%, rgba(2,6,23,0.25) 18%, rgba(2,6,23,0.00) 36%, rgba(2,6,23,0.00) 64%, rgba(2,6,23,0.20) 90%, rgba(2,6,23,0.55) 100%)",
         }}
       />
 
-      {/* TRIANGLE ANCHOR BADGE (top-right) */}
-      <div className="lg:flex neural-anchor-badge pointer-events-none">
+      {/* ANCHOR TRIANGLE — fixed z-index + no pointer issues */}
+      <div className="hidden lg:flex neural-anchor-badge pointer-events-none z-10">
         <div className="neural-anchor-badge__glow" />
         <img
           src="/Triangle-Anchor.png"
@@ -44,8 +44,8 @@ export default function NeuralShell({
         />
       </div>
 
-      {/* CHILDREN (Sidebar + SolaceDock) */}
-      <div className="relative z-10">{children}</div>
+      {/* CHILDREN */}
+      <div className="relative z-20">{children}</div>
     </div>
   );
 }
