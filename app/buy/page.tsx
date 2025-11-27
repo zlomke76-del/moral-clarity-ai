@@ -1,82 +1,81 @@
-"use client";
+// app/buy/page.tsx
+import Link from "next/link";
 
-import { useEffect, useMemo, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+export const metadata = {
+  title: "Pricing & access – Moral Clarity AI",
+};
 
 export default function BuyPage() {
-  const [loading, setLoading] = useState<string | null>(null);
-  const [ready, setReady] = useState(false); // avoid double-runs
-
-  // LIVE price IDs
-  const PRICES = useMemo(
-    () => ({
-      standard:  "price_1SCsmG0tWJXzci1AX3GLoTj8",
-      family:    "price_1SCsmv0tWJXzci1A6hvi2Ccp",
-      ministry:  "price_1SCso80tWJXzci1AoZiKFy3b",
-      memory1gb: "price_1SIQry0tWJXzci1A38ftypv9",
-    }),
-    []
-  );
-
-  async function startCheckout(which: keyof typeof PRICES) {
-    setLoading(which);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      // redirect to login and come back
-      const next = `/buy?plan=${encodeURIComponent(which)}`;
-      window.location.href = `/login?next=${encodeURIComponent(next)}`;
-      return;
-    }
-    const res = await fetch("/api/stripe/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: user.id, priceId: PRICES[which] }),
-    });
-    const data = await res.json();
-    setLoading(null);
-    if (data.url) window.location.href = data.url;
-    else alert(data.error || "Failed to start checkout");
-  }
-
-  // If we arrive with ?plan=..., gate on auth first; if signed in, auto-start checkout
-  useEffect(() => {
-    if (ready) return;
-    (async () => {
-      const params = new URLSearchParams(window.location.search);
-      const plan = params.get("plan") as keyof typeof PRICES | null;
-      if (!plan || !PRICES[plan]) { setReady(true); return; }
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        const next = `/buy?plan=${encodeURIComponent(plan)}`;
-        window.location.href = `/login?next=${encodeURIComponent(next)}`;
-        return;
-      }
-      await startCheckout(plan);
-      setReady(true);
-    })();
-  }, [PRICES, ready]);
-
   return (
-    <div className="p-6 space-y-3">
-      <h1 className="text-2xl font-semibold">Choose your plan</h1>
-      <button onClick={() => startCheckout("standard")} disabled={!!loading}>
-        {loading === "standard" ? "Redirecting…" : "Standard $25/mo"}
-      </button>
-      <button onClick={() => startCheckout("family")} disabled={!!loading}>
-        {loading === "family" ? "Redirecting…" : "Family $50/mo"}
-      </button>
-      <button onClick={() => startCheckout("ministry")} disabled={!!loading}>
-        {loading === "ministry" ? "Redirecting…" : "Ministry $249/mo"}
-      </button>
-      <button onClick={() => startCheckout("memory1gb")} disabled={!!loading}>
-        {loading === "memory1gb" ? "Redirecting…" : "Add 1 GB Memory $5/mo"}
-      </button>
-    </div>
+    <main className="min-h-screen bg-[#020617] text-slate-100">
+      <div className="mx-auto flex max-w-3xl flex-col gap-10 px-4 py-16 md:py-20">
+        <header>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-300/80">
+            Moral Clarity AI
+          </p>
+          <h1 className="mt-3 text-3xl font-semibold leading-tight md:text-4xl">
+            Access Solace with anchored AI guidance.
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm text-slate-300">
+            We&apos;re in a controlled rollout phase. Seats are limited while we
+            finish stress-testing Solace, Neutral Newsroom, and the memory stack.
+          </p>
+        </header>
+
+        <section className="grid gap-6 md:grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)]">
+          <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.95)]">
+            <h2 className="text-lg font-semibold">Founder / Early access</h2>
+            <p className="mt-2 text-sm text-slate-300">
+              Designed for people who want Solace as a real working partner:
+              deep conversations, Neutral Newsroom, and anchored memory.
+            </p>
+
+            <ul className="mt-4 space-y-2 text-sm text-slate-300">
+              <li>• Full Solace workspace with Ministry &amp; Guidance modes</li>
+              <li>• Neutral news digest and outlet cabinet</li>
+              <li>• Early access to memory features and roadmap experiments</li>
+              <li>• Direct feedback channel to the builder</li>
+            </ul>
+
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <Link
+                href="/auth/sign-in"
+                className="inline-flex items-center justify-center rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-[0_0_28px_rgba(56,189,248,0.8)] transition hover:bg-sky-400"
+              >
+                Request access
+              </Link>
+              <span className="text-xs text-slate-400">
+                We&apos;ll follow up with details and current pricing before you
+                commit.
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-4 text-sm text-slate-300">
+            <div className="rounded-2xl border border-slate-800/70 bg-slate-950/70 p-4">
+              <h3 className="text-sm font-semibold text-slate-100">
+                Why there isn&apos;t a big pricing table yet
+              </h3>
+              <p className="mt-2 text-xs text-slate-300">
+                We&apos;re still tuning infrastructure, news ingestion, and
+                memory economics. Until that&apos;s stable, we&apos;d rather
+                keep access human and direct instead of locking prices into a
+                static chart.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-800/70 bg-slate-950/70 p-4">
+              <h3 className="text-sm font-semibold text-slate-100">
+                What happens after you request access
+              </h3>
+              <ol className="mt-2 space-y-1 text-xs text-slate-300">
+                <li>1. You sign in and confirm your email.</li>
+                <li>2. We confirm fit and current capacity.</li>
+                <li>3. You get a link with the actual plan &amp; payment flow.</li>
+              </ol>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
   );
 }
