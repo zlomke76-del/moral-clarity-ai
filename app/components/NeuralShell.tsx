@@ -9,7 +9,8 @@ type Props = {
 
 /**
  * NeuralShell
- *  - Animated MCAI "neural grid" + brain hero background.
+ *  - MCAI "neural grid" + brain hero background.
+ *  - Single-column canvas: center Solace + tools, no sidebar layout assumptions.
  *  - Scoped to the /app experience only (does not affect other routes).
  */
 export default function NeuralShell({ children }: Props) {
@@ -33,7 +34,7 @@ export default function NeuralShell({ children }: Props) {
         }}
       />
 
-      {/* Content container */}
+      {/* Content container — single centered column */}
       <div className="relative z-10 mx-auto max-w-6xl px-4 py-8 md:py-10">
         {children}
       </div>
@@ -121,3 +122,4 @@ export default function NeuralShell({ children }: Props) {
     </div>
   );
 }
+
