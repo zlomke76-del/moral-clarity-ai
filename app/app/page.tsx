@@ -1,22 +1,9 @@
 // app/app/page.tsx
-"use client";
+// This file is intentionally disabled.
+// The live Solace workstation is served from /app/page.tsx.
 
-import SolaceDock from "@/app/components/SolaceDock";
-import NeuralShell from "@/app/components/NeuralShell";
-import NeuralSidebar from "@/app/components/NeuralSidebar";
+export const dynamic = "force-static";
 
-export default function AppHome() {
-  return (
-    <NeuralShell>
-      <div className="flex min-h-screen items-stretch">
-        {/* Left: Neural sidebar (chip-style cards) */}
-        <NeuralSidebar />
-
-        {/* Right: main Solace workstation area */}
-        <main className="flex flex-1 items-center justify-center px-4 py-6">
-          <SolaceDock />
-        </main>
-      </div>
-    </NeuralShell>
-  );
+export default function DisabledLegacyAppPage() {
+  return null;
 }
