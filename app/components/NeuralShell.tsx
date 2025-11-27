@@ -1,63 +1,48 @@
-// app/components/NeuralShell.tsx
 "use client";
 
-import React, { type ReactNode } from "react";
+import React from "react";
 
 /**
  * NeuralShell
- *
- * - Provides the full-screen MCA backdrop (mca-backdrop.png).
- * - Adds neural ambient effects (brain hero, sweeps, pulses, anchor badge).
- * - Wraps the /app workspace content.
- *
- * Very intentional:
- * - The PNG is the true background layer.
- * - We do NOT override SolaceDock positioning.
- * - No extra gradients that would hide the circuits.
+ * -----------
+ * Wraps the entire /app workspace. Provides:
+ * - Full-screen animated neural backdrop (mca-backdrop.png)
+ * - Anchor triangle badge (Triangle-Anchor.png)
+ * - Optional brain-hero overlay on the right
+ * - Fade overlays to keep the left sidebar readable
  */
-export default function NeuralShell({ children }: { children: ReactNode }) {
+export default function NeuralShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-[#020617] text-slate-50">
-      {/* Base backdrop: full-screen PNG with circuits */}
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#020617]">
+      {/* --- BACKDROP LAYER (your new PNG) --- */}
       <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-30 bg-[url('/mca-backdrop.png')] bg-cover bg-center"
+        className="absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat opacity-[0.92]"
+        style={{
+          backgroundImage: `url("/mca-backdrop.png")`,
+        }}
       />
 
-      {/* Neural ambient layer (brain, lines, pulses, anchor badge) */}
+      {/* --- OPTIONAL FADE TO IMPROVE LEFT SIDEBAR LEGIBILITY --- */}
       <div
-        aria-hidden="true"
-        className="neural-ambient absolute inset-0 -z-20"
-      >
-        {/* NOTE: we intentionally omit the .neural-ambient__fade here
-            so the PNG backdrop stays visible and crisp. */}
+        className="absolute inset-0 pointer-events-none -z-[5]"
+        style={{
+          background:
+            "linear-gradient(to right, rgba(2,6,23,0.85) 0%, rgba(2,6,23,0.45) 22%, rgba(2,6,23,0.0) 38%, rgba(2,6,23,0.0) 60%, rgba(2,6,23,0.35) 92%, rgba(2,6,23,0.85) 100%)",
+        }}
+      />
 
-        {/* Brain hero on the right */}
-        <div className="neural-ambient__brain" />
-
-        {/* Sweeping neural lines */}
-        <div className="neural-ambient__line neural-ambient__line--slow" />
-        <div className="neural-ambient__line neural-ambient__line--fast" />
-
-        {/* Pulsing nodes */}
-        <div className="neural-ambient__pulse neural-ambient__pulse--tl" />
-        <div className="neural-ambient__pulse neural-ambient__pulse--br" />
-
-        {/* Anchor badge in the top-right */}
-        <div className="neural-anchor-badge">
-          <div className="neural-anchor-badge__glow" />
-          <img
-            className="neural-anchor-badge__icon"
-            src="/Triangle-Anchor.png"
-            alt="Moral Clarity anchor emblem"
-          />
-        </div>
+      {/* --- ANCHOR TRIANGLE BADGE (top-right corner) --- */}
+      <div className="hidden lg:flex neural-anchor-badge">
+        <div className="neural-anchor-badge__glow" />
+        <img
+          src="/Triangle-Anchor.png"
+          alt="Moral Clarity Anchor Symbol"
+          className="neural-anchor-badge__icon"
+        />
       </div>
 
-      {/* Foreground content: sidebar + SolaceDock workspace */}
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl px-4 py-8">
-        {children}
-      </div>
+      {/* --- CHILDREN (Sidebar + SolaceDock) --- */}
+      <div className="relative z-10">{children}</div>
     </div>
   );
 }
