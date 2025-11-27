@@ -20,22 +20,27 @@ type Props = {
  * NeuralSidebar
  *
  * Left-side vertical navigation using "chip-style" cards.
- * - Neon chip outline
- * - Soft glow
- * - Stack of cards for Account, Memory, Newsroom, Magic Key, etc.
- *
- * This component is PRESENTATIONAL only.
- * You control routing via href/onClick when you wire it in.
+ * This version includes a glassmorphism sidebar background.
  */
 export default function NeuralSidebar({ items }: Props) {
   const sidebarItems: NeuralSidebarItem[] =
     items && items.length > 0 ? items : DEFAULT_ITEMS;
 
   return (
-    <aside className="hidden h-full w-72 flex-shrink-0 flex-col gap-4 border-r border-slate-800/70 bg-slate-950/60 px-4 py-5 backdrop-blur md:flex">
+    <aside
+      className="
+        hidden 
+        h-full w-72 flex-shrink-0 flex-col gap-4
+        border-r border-cyan-400/20
+        bg-slate-900/40
+        backdrop-blur-xl
+        px-4 py-5
+        md:flex
+      "
+    >
       {/* Logo / Brand */}
       <div className="mb-2 flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-400/60 bg-slate-950/80 shadow-[0_0_20px_rgba(34,211,238,0.35)]">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-400/60 bg-slate-950/80 shadow-[0_0_18px_rgba(34,211,238,0.35)]">
           <span className="text-xs font-semibold tracking-[0.18em] text-cyan-200">
             AI
           </span>
@@ -68,14 +73,31 @@ type ChipCardProps = {
 
 function ChipCard({ item }: ChipCardProps) {
   const content = (
-    <div className="relative flex cursor-pointer flex-col gap-1 rounded-2xl border border-cyan-400/40 bg-slate-950/70 px-3.5 py-3 shadow-[0_0_24px_rgba(34,211,238,0.25)] transition-all duration-200 hover:border-cyan-300/80 hover:shadow-[0_0_32px_rgba(34,211,238,0.45)]">
-      {/* Circuit traces – subtle lines extending from the chip */}
+    <div
+      className="
+        relative flex cursor-pointer flex-col gap-1 
+        rounded-2xl border border-cyan-400/40 
+        bg-slate-950/60 
+        px-3.5 py-3
+        shadow-[0_0_24px_rgba(34,211,238,0.25)]
+        transition-all duration-200 
+        hover:border-cyan-300/80 
+        hover:shadow-[0_0_32px_rgba(34,211,238,0.45)]
+      "
+    >
+      {/* Circuit traces */}
       <div className="pointer-events-none absolute -left-4 top-1/2 h-px w-4 -translate-y-1/2 bg-cyan-400/40" />
       <div className="pointer-events-none absolute -right-4 top-1/2 h-px w-4 -translate-y-1/2 bg-cyan-400/25" />
 
       <div className="flex items-center gap-2.5">
         {item.icon && (
-          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl border border-cyan-400/50 bg-slate-900/80 text-cyan-200">
+          <div
+            className="
+              flex h-7 w-7 flex-shrink-0 items-center justify-center 
+              rounded-xl border border-cyan-400/50 
+              bg-slate-900/80 text-cyan-200
+            "
+          >
             {item.icon}
           </div>
         )}
@@ -98,7 +120,13 @@ function ChipCard({ item }: ChipCardProps) {
       <a
         href={item.href}
         onClick={item.onClick}
-        className="group block focus:outline-none focus:ring-2 focus:ring-cyan-400/70 focus:ring-offset-2 focus:ring-offset-slate-950 rounded-2xl"
+        className="
+          group block 
+          focus:outline-none 
+          focus:ring-2 focus:ring-cyan-400/70 
+          focus:ring-offset-2 focus:ring-offset-slate-950 
+          rounded-2xl
+        "
       >
         {content}
       </a>
@@ -109,7 +137,13 @@ function ChipCard({ item }: ChipCardProps) {
     <button
       type="button"
       onClick={item.onClick}
-      className="group block w-full text-left focus:outline-none focus:ring-2 focus:ring-cyan-400/70 focus:ring-offset-2 focus:ring-offset-slate-950 rounded-2xl"
+      className="
+        group block w-full text-left 
+        focus:outline-none 
+        focus:ring-2 focus:ring-cyan-400/70 
+        focus:ring-offset-2 focus:ring-offset-slate-950 
+        rounded-2xl
+      "
     >
       {content}
     </button>
@@ -118,7 +152,6 @@ function ChipCard({ item }: ChipCardProps) {
 
 /* -------------------------------------------------------
    Default items (safe placeholders)
-   - You can override by passing `items` prop.
 -------------------------------------------------------- */
 
 const DEFAULT_ITEMS: NeuralSidebarItem[] = [
@@ -147,3 +180,4 @@ const DEFAULT_ITEMS: NeuralSidebarItem[] = [
     href: "#magic-key",
   },
 ];
+
