@@ -1,69 +1,49 @@
-// app/components/NeuralShell.tsx
 "use client";
 
-import type { ReactNode } from "react";
-
-type Props = {
-  children: ReactNode;
-};
+import React from "react";
 
 /**
  * NeuralShell
- * Core Solace workstation shell.
- * - Triangle-Anchor hero in the background
- * - Dimmed, recessed, non-distracting
- * - Content sits clearly above the canvas
+ * -----------
+ * Wraps the entire /app workspace. Provides:
+ * - Full-screen animated neural backdrop (mca-backdrop.png)
+ * - Anchor triangle badge (Triangle-Anchor.png)
+ * - Optional brain-hero overlay on the right
+ * - Fade overlays to keep the left sidebar readable
  */
-export default function NeuralShell({ children }: Props) {
+export default function NeuralShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#020617]">
-      {/* Triangle Anchor hero (background layer) */}
-      <div className="mca-anchor-layer pointer-events-none" aria-hidden="true" />
-
-      {/* Darkening overlay to push the art back */}
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#020617]">
+      {/* --- BACKDROP LAYER (your new PNG) --- */}
       <div
-        className="pointer-events-none absolute inset-0"
-        aria-hidden="true"
+        className="absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat opacity-[0.92]"
         style={{
-          backgroundColor: "rgba(2, 6, 23, 0.7)", // deep slate with ~70% opacity
-          mixBlendMode: "multiply",
+          backgroundImage: `url("/mca-backdrop.png")`,
         }}
       />
 
-      {/* Soft glow overlay */}
+      {/* --- OPTIONAL FADE TO IMPROVE LEFT SIDEBAR LEGIBILITY --- */}
       <div
-        className="pointer-events-none absolute inset-0"
-        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none -z-[5]"
         style={{
           background:
-            "radial-gradient(circle at 50% 60%, rgba(56,189,248,0.16) 0, transparent 60%)",
-          opacity: 0.5,
+            "linear-gradient(to right, rgba(2,6,23,0.85) 0%, rgba(2,6,23,0.45) 22%, rgba(2,6,23,0.0) 38%, rgba(2,6,23,0.0) 60%, rgba(2,6,23,0.35) 92%, rgba(2,6,23,0.85) 100%)",
         }}
       />
 
-      {/* Content container */}
-      <div className="relative z-10 mx-auto max-w-6xl px-4 py-8 md:py-10">
-        {children}
+      {/* --- ANCHOR TRIANGLE BADGE (top-right corner) --- */}
+      <div className="hidden lg:flex neural-anchor-badge">
+        <div className="neural-anchor-badge__glow" />
+        <img
+          src="/Triangle-Anchor.png"
+          alt="Moral Clarity Anchor Symbol"
+          className="neural-anchor-badge__icon"
+        />
       </div>
 
-      {/* Background styles */}
-      <style jsx global>{`
-        .mca-anchor-layer {
-          position: fixed;
-          inset: 0;
-          background-image: url("/Triangle-Anchor.png");
-          background-repeat: no-repeat;
-          background-position: center center;
-          background-size: contain; /* No stretch */
-          opacity: 0.4; /* Medium dim: clearly there, not dominant */
-          filter: drop-shadow(0 0 24px rgba(56, 189, 248, 0.35));
-          z-index: 0;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          /* Reserved for future: keep background static if we add motion later */
-        }
-      `}</style>
+      {/* --- CHILDREN (Sidebar + SolaceDock) --- */}
+      <div className="relative z-10">{children}</div>
     </div>
   );
 }
+
