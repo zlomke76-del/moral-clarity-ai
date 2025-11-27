@@ -61,6 +61,24 @@ body {
     sans-serif;
 }
 
+/* =========================================================
+   FIX: FULL-VIEWPORT CIRCUIT & ANCHOR BACKDROP
+   ========================================================= */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+
+  /* 🔥 Use your actual circuit-grid + anchor image */
+  background: url("/mca-neural-grid.png") center/cover no-repeat;
+
+  opacity: 0.18; /* matches your screenshot */
+  mix-blend-mode: normal;
+}
+
+/* ---------- Reset ---------- */
 *,
 *::before,
 *::after {
@@ -99,7 +117,6 @@ a:hover {
   text-decoration: underline;
 }
 
-/* Optional prose helper (does NOT override Tailwind utilities) */
 .prose {
   max-width: 65ch;
 }
@@ -113,7 +130,6 @@ a:hover {
 }
 
 /* ---------- Logo / brand resets ---------- */
-/* Prevent any old gradient/mask tricks from affecting new logos */
 .brand,
 .brand::before,
 .brand::after {
@@ -139,7 +155,7 @@ footer.mc-footer {
   font-size: 0.85rem;
 }
 
-/* ---------- Form controls & buttons (generic) ---------- */
+/* ---------- Form controls ---------- */
 
 input,
 select,
@@ -186,7 +202,6 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Variants */
 .btn-primary {
   background: var(--mc-accent);
   color: #020617;
@@ -204,7 +219,6 @@ button:disabled {
   color: var(--mc-text);
 }
 
-/* Generic card helper */
 .card {
   background: var(--mc-panel);
   border-radius: var(--mc-radius);
@@ -216,12 +230,10 @@ button:disabled {
 }
 
 /* =========================================================
-   Solace Dock – visual only (no positioning overrides)
+   Solace Dock – visual only (no positioning)
    ========================================================= */
 
 .solace-dock {
-  /* Positioning is controlled in the React component.
-     Do NOT override position here – it breaks mobile layouts. */
   background: color-mix(in oklab, rgba(12, 18, 28, 0.86) 92%, transparent);
   border-radius: var(--sd-radius);
   border: 1px solid rgba(148, 163, 184, 0.45);
@@ -232,7 +244,6 @@ button:disabled {
   backdrop-filter: blur(16px);
 }
 
-/* Subtle ambient glow */
 .solace-dock::before {
   content: "";
   position: absolute;
@@ -250,12 +261,10 @@ button:disabled {
   pointer-events: none;
 }
 
-/* Header line inside dock */
 .solace-dock header {
   border-bottom: 1px solid color-mix(in oklab, var(--sd-border) 80%, transparent);
 }
 
-/* Dock textarea */
 .solace-dock textarea {
   background: color-mix(in oklab, var(--sd-bg) 80%, black);
   color: var(--sd-fg) !important;
@@ -275,7 +284,6 @@ button:disabled {
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--sd-accent) 22%, transparent);
 }
 
-/* Primary action in dock */
 .solace-dock button.primary {
   background: var(--sd-accent) !important;
   color: #fff !important;
@@ -300,7 +308,6 @@ button:disabled {
   opacity: 0.55;
 }
 
-/* Text + chips */
 .solace-dock .muted {
   color: var(--sd-muted) !important;
 }
@@ -313,7 +320,6 @@ button:disabled {
   font-size: 0.72rem;
 }
 
-/* Simple flex row helper inside dock */
 .solace-dock .row {
   display: flex;
   align-items: center;
@@ -328,7 +334,7 @@ button:disabled {
 }
 
 /* =========================================================
-   Neural backdrop animation (home app grid)
+   Neural backdrop animation (kept unchanged)
    ========================================================= */
 
 .neural-ambient {
@@ -338,7 +344,6 @@ button:disabled {
   overflow: hidden;
 }
 
-/* Dark radial fade so left column stays readable */
 .neural-ambient__fade {
   position: absolute;
   inset: 0;
@@ -351,7 +356,6 @@ button:disabled {
   z-index: 0;
 }
 
-/* Brain hero on the right */
 .neural-ambient__brain {
   position: absolute;
   inset: -6% -8% -10% auto;
@@ -369,7 +373,6 @@ button:disabled {
   z-index: 1;
 }
 
-/* Sweeping neural lines */
 .neural-ambient__line {
   position: absolute;
   left: -20%;
@@ -401,7 +404,6 @@ button:disabled {
   animation-delay: 2.2s;
 }
 
-/* Pulsing nodes */
 .neural-ambient__pulse {
   position: absolute;
   width: 18px;
@@ -427,7 +429,6 @@ button:disabled {
   animation-delay: 1.4s;
 }
 
-/* Triangle / anchor badge */
 .neural-anchor-badge {
   position: absolute;
   top: 40px;
@@ -442,7 +443,7 @@ button:disabled {
   box-shadow:
     0 0 24px rgba(56, 189, 248, 0.4),
     0 18px 40px rgba(15, 23, 42, 0.95);
-  display: none; /* only show on large screens */
+  display: none;
   align-items: center;
   justify-content: center;
   z-index: 3;
@@ -525,3 +526,4 @@ button:disabled {
     box-shadow: 0 0 34px rgba(56, 189, 248, 0.9);
   }
 }
+
