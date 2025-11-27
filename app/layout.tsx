@@ -1,20 +1,16 @@
-// app/layout.tsx
 import "./globals.css";
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
   title: "Moral Clarity AI",
   description: "Solace — anchored AI guidance.",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className="bg-[#020617] text-slate-50 antialiased min-h-screen w-full overflow-hidden">
-        {/* Full-frame container expected by NeuralShell */}
-        <div className="relative flex min-h-screen w-full">
-          {/* children includes <NeuralShell> and the entire Solace workstation */}
+        <div className="relative min-h-screen w-full">
           {children}
         </div>
       </body>
