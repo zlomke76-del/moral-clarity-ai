@@ -3,29 +3,24 @@
 @tailwind utilities;
 
 /* =========================================================
-   Moral Clarity AI – Global Styles (Tailwind-friendly)
+   Moral Clarity AI – Global Styles (CLEAN VERSION)
    ========================================================= */
 
 /* ---------- Design tokens ---------- */
 :root {
-  /* Brand / surfaces */
   --mc-bg: #0a0d12;
   --mc-panel: #0f1623;
   --mc-surface: #0e131a;
   --mc-border: #223047;
 
-  /* Text */
   --mc-text: #e8eef6;
   --mc-muted: #9fb0c6;
 
-  /* Accent */
   --mc-accent: #7aa2ff;
 
-  /* Radii / effects */
   --mc-radius: 12px;
   --mc-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
 
-  /* Solace Dock visual tokens */
   --sd-bg: color-mix(in oklab, var(--mc-panel) 88%, transparent);
   --sd-border: var(--mc-border);
   --sd-fg: var(--mc-text);
@@ -37,7 +32,7 @@
   --sd-shadow: var(--mc-shadow);
 }
 
-/* ---------- Base reset / body ---------- */
+/* ---------- Base reset ---------- */
 html,
 body {
   height: 100%;
@@ -46,12 +41,13 @@ body {
 body {
   margin: 0;
 
-  /* IMPORTANT FIX: remove the gradient so PNG backdrop displays clean */
-  background: #020617; /* deep navy base */
-  
+  /* clean dark base; NeuralShell handles all backdrops */
+  background: #020617;
+
   color: var(--mc-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
   font-family:
     ui-sans-serif,
     system-ui,
@@ -70,27 +66,14 @@ body {
   box-sizing: border-box;
 }
 
-/* Selection */
 ::selection {
   background: color-mix(in oklab, var(--mc-accent) 25%, transparent);
   color: var(--mc-text);
 }
 
-/* Accessible focus */
 :focus-visible {
   outline: 2px solid color-mix(in oklab, var(--mc-accent) 75%, white);
   outline-offset: 2px;
-}
-
-/* Motion safety */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation: none !important;
-    transition: none !important;
-    scroll-behavior: auto !important;
-  }
 }
 
 /* ---------- Typography ---------- */
@@ -102,46 +85,11 @@ a:hover {
   text-decoration: underline;
 }
 
-/* Optional prose helper (does NOT override Tailwind utilities) */
 .prose {
   max-width: 65ch;
 }
 
-.prose :where(h1, h2, h3, h4) {
-  font-weight: 600;
-}
-
-.prose :where(p, ul, ol) {
-  line-height: 1.7;
-}
-
-/* ---------- Logo / brand resets ---------- */
-.brand,
-.brand::before,
-.brand::after {
-  background: none !important;
-  content: none !important;
-  mask-image: none !important;
-  -webkit-mask-image: none !important;
-}
-
-/* ---------- Site chrome (nav + footer) ---------- */
-nav.mc-nav {
-  background: linear-gradient(to right, #020617, #02071a);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
-  box-shadow:
-    0 24px 80px rgba(15, 23, 42, 0.9),
-    inset 0 -1px 0 rgba(148, 163, 184, 0.2);
-}
-
-footer.mc-footer {
-  background: radial-gradient(circle at top, #020617, #02040c 55%, #000 100%);
-  border-top: 1px solid rgba(148, 163, 184, 0.25);
-  color: var(--mc-muted);
-  font-size: 0.85rem;
-}
-
-/* ---------- Form controls & buttons (generic) ---------- */
+/* ---------- Generic inputs ---------- */
 input,
 select,
 textarea {
@@ -151,7 +99,6 @@ textarea {
   background: var(--mc-surface);
   color: var(--mc-text);
   padding: 0.55rem 0.8rem;
-  font-size: 0.95rem;
 }
 
 input::placeholder,
@@ -166,11 +113,7 @@ button {
   color: var(--mc-text);
   padding: 0.55rem 0.95rem;
   cursor: pointer;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease,
-    opacity 0.15s ease,
-    transform 0.05s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 button:hover {
@@ -178,48 +121,12 @@ button:hover {
   color: #020617;
 }
 
-button:active {
-  transform: translateY(1px);
-}
-
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-/* Variants */
-.btn-primary {
-  background: var(--mc-accent);
-  color: #020617;
-  border-color: color-mix(in oklab, var(--mc-accent) 60%, var(--mc-border));
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--mc-text);
-  border-color: rgba(148, 163, 184, 0.5);
-}
-
-.btn-ghost:hover {
-  background: rgba(148, 163, 184, 0.12);
-  color: var(--mc-text);
-}
-
-/* Generic card helper */
-.card {
-  background: var(--mc-panel);
-  border-radius: var(--mc-radius);
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  box-shadow:
-    0 18px 60px rgba(15, 23, 42, 0.9),
-    0 0 0 1px rgba(15, 23, 42, 0.9);
-  padding: 1rem;
-}
-
-/* =========================================================
-   Solace Dock – visual only (no positioning overrides)
-   ========================================================= */
-
+/* ---------- Solace Dock styling ---------- */
 .solace-dock {
   background: color-mix(in oklab, rgba(12, 18, 28, 0.86) 92%, transparent);
   border-radius: var(--sd-radius);
@@ -238,6 +145,8 @@ button:disabled {
   z-index: -1;
   filter: blur(18px);
   opacity: 0.22;
+  pointer-events: none;
+
   background:
     radial-gradient(
       120px 60px at 20% 90%,
@@ -249,11 +158,6 @@ button:disabled {
       rgba(40, 120, 255, 0.35),
       transparent 70%
     );
-  pointer-events: none;
-}
-
-.solace-dock header {
-  border-bottom: 1px solid color-mix(in oklab, var(--sd-border) 80%, transparent);
 }
 
 .solace-dock textarea {
@@ -261,239 +165,16 @@ button:disabled {
   color: var(--sd-fg) !important;
   border-radius: 12px;
   border: 1px solid var(--sd-border) !important;
-  width: 100%;
-  resize: none;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
-.solace-dock textarea:focus {
-  border-color: color-mix(in oklab, var(--sd-accent) 60%, var(--sd-border));
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--sd-accent) 22%, transparent);
-}
-
-.solace-dock button.primary {
-  background: var(--sd-accent) !important;
-  color: #fff !important;
-  border: none !important;
-  border-radius: 999px;
-  padding-inline: 1.1rem;
-}
-
-.solace-dock .muted {
-  color: var(--sd-muted) !important;
-}
-
-.solace-dock .chip {
-  background: var(--sd-chip-bg) !important;
-  color: var(--sd-chip-fg) !important;
-  border-radius: 999px;
-  padding: 0.2rem 0.55rem;
-  font-size: 0.72rem;
-}
-
-.solace-dock .row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-@media (max-width: 640px) {
-  .solace-dock .row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
-
-/* =========================================================
-   Neural backdrop animation (home app grid)
-   ========================================================= */
-
-.neural-ambient {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.neural-ambient__fade {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 15% 20%, rgba(15, 23, 42, 0.85), transparent 55%),
-    radial-gradient(circle at 10% 70%, rgba(15, 23, 42, 0.9), transparent 55%),
-    radial-gradient(circle at 85% 15%, rgba(15, 23, 42, 0.8), transparent 55%),
-    linear-gradient(to right, #020617 0%, transparent 45%, #020617 100%);
-  mix-blend-mode: normal;
-  z-index: 0;
-}
-
-.neural-ambient__brain {
-  position: absolute;
-  inset: -6% -8% -10% auto;
-  width: 56vw;
-  min-width: 540px;
-  background-image: url("/mca-brain-hero.png");
-  background-repeat: no-repeat;
-  background-position: right center;
-  background-size: contain;
-  mix-blend-mode: screen;
-  opacity: 0.9;
-  filter:
-    drop-shadow(0 0 40px rgba(59, 130, 246, 0.75))
-    drop-shadow(0 0 90px rgba(56, 189, 248, 0.55));
-  z-index: 1;
-}
-
-.neural-ambient__line {
-  position: absolute;
-  left: -20%;
-  right: -20%;
-  height: 2px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(56, 189, 248, 0) 10%,
-    rgba(56, 189, 248, 0.8) 40%,
-    rgba(129, 140, 248, 0.9) 55%,
-    rgba(56, 189, 248, 0.0) 90%,
-    transparent 100%
-  );
-  opacity: 0.0;
-  filter: blur(0.5px);
-  mix-blend-mode: screen;
-  z-index: 2;
-}
-
-.neural-ambient__line--slow {
-  top: 32%;
-  animation: neural-sweep 11s linear infinite;
-}
-
-.neural-ambient__line--fast {
-  top: 66%;
-  animation: neural-sweep 7s linear infinite;
-  animation-delay: 2.2s;
-}
-
-.neural-ambient__pulse {
-  position: absolute;
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  background: radial-gradient(circle, rgba(56, 189, 248, 0.95), transparent 70%);
-  filter: blur(1px);
-  opacity: 0.0;
-  mix-blend-mode: screen;
-  z-index: 2;
-}
-
-.neural-ambient__pulse--tl {
-  left: 18%;
-  top: 28%;
-  animation: neural-pulse 6.5s ease-in-out infinite;
-}
-
-.neural-ambient__pulse--br {
-  right: 24%;
-  bottom: 18%;
-  animation: neural-pulse 8.2s ease-in-out infinite;
-  animation-delay: 1.4s;
-}
-
-.neural-anchor-badge {
-  position: absolute;
-  top: 40px;
-  right: 52px;
-  width: 68px;
-  height: 68px;
-  border-radius: 18px;
-  border: 1px solid rgba(148, 163, 184, 0.7);
-  background: radial-gradient(circle at 30% 0%, rgba(191, 219, 254, 0.35), transparent 60%),
-    radial-gradient(circle at 80% 100%, rgba(59, 130, 246, 0.45), transparent 60%),
-    rgba(15, 23, 42, 0.92);
-  box-shadow:
-    0 0 24px rgba(56, 189, 248, 0.4),
-    0 18px 40px rgba(15, 23, 42, 0.95);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 3;
-}
-
-@media (min-width: 1024px) {
-  .neural-anchor-badge {
-    display: flex;
-  }
-}
-
-.neural-anchor-badge__glow {
-  position: absolute;
-  inset: 8px;
-  border-radius: inherit;
-  border: 1px solid rgba(96, 165, 250, 0.5);
-  box-shadow: 0 0 28px rgba(56, 189, 248, 0.7);
-  opacity: 0.4;
-  animation: neural-badge-pulse 5.5s ease-in-out infinite;
-}
-
-.neural-anchor-badge__icon {
-  position: relative;
-  width: 36px;
-  height: 36px;
-}
-
-@keyframes neural-sweep {
-  0% {
-    transform: translateX(-25%);
-    opacity: 0;
-  }
-  12% {
-    opacity: 0.6;
-  }
-  40% {
-    opacity: 0.9;
-  }
-  70% {
-    opacity: 0.4;
-  }
-  100% {
-    transform: translateX(25%);
-    opacity: 0;
-  }
-}
-
-@keyframes neural-pulse {
-  0% {
-    transform: scale(0.6);
-    opacity: 0;
-  }
-  20% {
-    transform: scale(1);
-    opacity: 0.9;
-  }
-  45% {
-    transform: scale(1.25);
-    opacity: 0.35;
-  }
-  70% {
-    transform: scale(1.05);
-    opacity: 0.6;
-  }
-  100% {
-    transform: scale(0.7);
-    opacity: 0;
-  }
-}
-
-@keyframes neural-badge-pulse {
-  0%,
-  100% {
-    opacity: 0.35;
-    box-shadow: 0 0 18px rgba(56, 189, 248, 0.55);
-  }
-  50% {
-    opacity: 0.8;
-    box-shadow: 0 0 34px rgba(56, 189, 248, 0.9);
-  }
-}
+/* ---------- Removed legacy neural-ambient system ----------
+   The following were deleted:
+   - .neural-ambient
+   - .neural-ambient__fade
+   - .neural-ambient__brain
+   - .neural-ambient__line
+   - .neural-ambient__pulse
+   - all related keyframes
+   - old triangle badge overrides
+------------------------------------------------------------ */
 
