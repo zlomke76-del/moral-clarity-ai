@@ -1,22 +1,16 @@
 // app/layout.tsx
 import "./globals.css";
-import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import { SupabaseProvider } from "./providers/supabase-provider";
 
-export const metadata: Metadata = {
-  title: "Moral Clarity AI",
-  description: "Solace — anchored AI guidance.",
-};
-
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      {/* mc-root class is where we hang the background images */}
-      <body className="mc-root text-slate-50 antialiased">
-        <div className="min-h-screen w-full flex">
+      <body>
+        <SupabaseProvider>
           {children}
-        </div>
+        </SupabaseProvider>
       </body>
     </html>
   );
 }
+
