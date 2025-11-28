@@ -1,18 +1,21 @@
 // app/layout.tsx
-'use client';
+import "./globals.css";
+import type { ReactNode } from "react";
+import { SupabaseProvider } from "@/lib/supabase/provider";
 
-import './globals.css';
-import { SupabaseSessionProvider } from '@/app/providers/supabase-session';
+export const metadata = {
+  title: "Moral Clarity Studio",
+  description: "Solace • Moral Clarity AI",
+};
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <body>
-        <SupabaseSessionProvider>{children}</SupabaseSessionProvider>
+    <html
+      lang="en"
+      className="h-full bg-slate-950"
+    >
+      <body className="min-h-screen bg-slate-950 text-slate-50 antialiased">
+        <SupabaseProvider>{children}</SupabaseProvider>
       </body>
     </html>
   );
