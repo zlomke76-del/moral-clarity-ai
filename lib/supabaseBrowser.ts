@@ -1,24 +1,40 @@
-'use client';
+// lib/supabaseBrowser.ts
+"use client";
 
-import { createBrowserClient } from '@supabase/ssr';
+import { createBrowserClient } from "@supabase/ssr";
 
-let client: ReturnType<typeof createBrowserClient> | null = null;
+type SupabaseClientType = ReturnType<typeof createBrowserClient>;
 
-export function createSupabaseBrowser() {
-  if (!client) {
-    client = createBrowserClient(
+let browserClient: SupabaseClientType | null = null;
+
+/**
+ * Browser Supabase client using implicit auth flow.
+ * - Magic links use implicit flow (no PKCE verifier cookie).
+ * - detectSessionInUrl reads tokens from the redirect URL.
+ */
+export function createSupabaseBrowser(): SupabaseClientType {
+  if (!browserClient) {
+    browserClient = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         auth: {
-          flowType: 'implicit', // REQUIRED for magic links in App Router
+          flowType: "implicit",
           detectSessionInUrl: true,
           persistSession: true,
-          autoRefreshToken: true
-        }
+          autoRefreshToken: true,
+        },
       }
     );
   }
 
-  return client;
+  return browserClient;
+}
+
+/**
+ * Backwards compatibility alias.
+ * Other modules still import getSupabaseBrowser, so we export it.
+ */
+export function getSupabaseBrowser(): SupabaseClientType {
+  return createSupabaseBrowser();
 }
