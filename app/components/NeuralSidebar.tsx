@@ -110,13 +110,13 @@ const DEFAULT_ITEMS: NeuralSidebarItem[] = [
   {
     id: "account",
     label: "Account",
-    description: "Profile & billing",
+    description: "Profile",
     href: "#account",
   },
   {
     id: "memory",
     label: "Memory",
-    description: "View Supabase memories",
+    description: "View or edit memories",
     href: "#memory",
   },
   {
@@ -128,7 +128,7 @@ const DEFAULT_ITEMS: NeuralSidebarItem[] = [
   {
     id: "magic-key",
     label: "Magic Key",
-    description: "Generate a new secure key",
+    description: "Generate a secure key",
     href: "#magic-key",
   },
 ];
