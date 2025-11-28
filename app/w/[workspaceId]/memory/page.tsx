@@ -27,9 +27,9 @@ export default function WorkspaceMemoryPage({
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // -----------------------------
+  // ------------------------------------
   // LOAD MEMORIES
-  // -----------------------------
+  // ------------------------------------
   async function loadMemories() {
     setLoading(true);
 
@@ -38,7 +38,10 @@ export default function WorkspaceMemoryPage({
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (!error && data) setItems(data as any);
+    if (!error && data) {
+      setItems(data as any);
+    }
+
     setLoading(false);
   }
 
@@ -46,9 +49,9 @@ export default function WorkspaceMemoryPage({
     loadMemories();
   }, []);
 
-  // -----------------------------
+  // ------------------------------------
   // ADD MEMORY
-  // -----------------------------
+  // ------------------------------------
   async function addMemory() {
     if (!newMemory.trim()) return;
 
@@ -63,13 +66,13 @@ export default function WorkspaceMemoryPage({
 
   return (
     <div className="min-h-screen w-full relative">
-      {/* Main container with spacing so it's not hidden behind sidebar */}
+      {/* Main content area with sidebar offset */}
       <div className="pl-[22rem] pr-8 pt-10 pb-20">
         <h1 className="text-3xl font-semibold mb-6">Solace Memories</h1>
 
         {/* Add Memory */}
         <div className="bg-slate-800/60 border border-slate-700 rounded-lg p-4 mb-10">
-          <h2 classOthers="text-xl mb-3">Add new memory</h2>
+          <h2 className="text-xl mb-3">Add new memory</h2>
 
           <textarea
             className="w-full bg-slate-900 border border-slate-700 rounded p-3 mb-3 text-gray-200"
@@ -122,7 +125,7 @@ export default function WorkspaceMemoryPage({
         </div>
       </div>
 
-      {/* Solace Dock fixed bottom */}
+      {/* Solace Dock area */}
       <div className="fixed bottom-4 right-4 w-[600px] max-w-full">
         <div className="bg-slate-900 border border-slate-700 rounded-xl p-4">
           <div className="text-gray-300 mb-2">Solace</div>
@@ -136,3 +139,5 @@ export default function WorkspaceMemoryPage({
     </div>
   );
 }
+
+
