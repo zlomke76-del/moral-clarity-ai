@@ -43,7 +43,7 @@ export default function NeuralSidebar({ items }: Props) {
       <div className="neural-sidebar-section-label">Workspace</div>
 
       {/* Chip list */}
-      <nav className="neural-sidebar-list" aria-label="Workspace navigation">
+      <nav className="neural-sidebar-list">
         {sidebarItems.map((item) => (
           <ChipCard key={item.id} item={item} />
         ))}
@@ -110,25 +110,29 @@ const DEFAULT_ITEMS: NeuralSidebarItem[] = [
   {
     id: "account",
     label: "Account",
-    description: "Profile",
+    description: "Profile & billing",
+    // Keep as anchor until we fully migrate to /account
     href: "#account",
   },
   {
     id: "memory",
     label: "Memory",
-    description: "View or edit memories",
+    description: "View Supabase memories",
+    // Keep as anchor until /memory page is live
     href: "#memory",
   },
   {
     id: "newsroom",
     label: "Newsroom Cabinet",
     description: "Neutrality & outlet metrics",
-    href: "#newsroom",
+    // ✅ Real route
+    href: "/newsroom/cabinet",
   },
   {
     id: "magic-key",
     label: "Magic Key",
-    description: "Generate a secure key",
-    href: "#magic-key",
+    description: "Generate a new secure key",
+    // ✅ Real (or soon-to-be) route
+    href: "/magic-key",
   },
 ];
