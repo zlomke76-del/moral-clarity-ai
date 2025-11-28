@@ -1,3 +1,4 @@
+// app/providers/supabase-provider.tsx
 "use client";
 
 import { createContext, useContext, useState } from "react";
@@ -7,6 +8,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 const SupabaseContext = createContext<SupabaseClient | null>(null);
 
 export function SupabaseProvider({ children }: { children: React.ReactNode }) {
+  // Create a single client instance for the whole app
   const [client] = useState(() => createClientComponentClient());
   return (
     <SupabaseContext.Provider value={client}>
@@ -16,7 +18,9 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useSupabase() {
-  const ctx = useContext(SupabaseContext);
-  if (!ctx) throw new Error("useSupabase must be inside SupabaseProvider");
-  return ctx;
+  const client = useContext(SupabaseContext);
+  if (!client) {
+    throw new Error("useSupabase must be used inside <SupabaseProvider>");
+  }
+  return client;
 }
