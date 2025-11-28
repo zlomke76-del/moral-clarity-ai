@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/browser";
+import { createBrowserClient } from "@supabase/ssr";
 import {
   listUserMemories,
   createUserMemory,
-  updateUserMemory,
   deleteUserMemory,
   type UserMemoryRow,
 } from "@/lib/mca-memory-client";
@@ -22,7 +21,15 @@ export default function WorkspaceMemoryPage() {
   const [newContent, setNewContent] = useState("");
   const [newKind, setNewKind] = useState<KindFilter>("fact");
 
-  const supabase = useMemo(() => createClient(), []);
+  // Supabase browser client using your public env vars
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
 
   // ----------------------------------------------------
   // Get current user email → user_key
@@ -77,7 +84,7 @@ export default function WorkspaceMemoryPage() {
   }, [userKey, kindFilter, search]);
 
   // ----------------------------------------------------
-  // Create / Update / Delete
+  // Create / Delete
   // ----------------------------------------------------
   async function handleCreate() {
     if (!userKey || !newContent.trim()) return;
@@ -103,9 +110,6 @@ export default function WorkspaceMemoryPage() {
       console.error("memory page: deleteUserMemory error", err);
     }
   }
-
-  // (Optional) simple inline title editor in future – stub left here
-  // async function handleUpdateTitle(id: string, title: string) { ... }
 
   // ----------------------------------------------------
   // Render
@@ -257,6 +261,4 @@ export default function WorkspaceMemoryPage() {
     </div>
   );
 }
-
-
 
