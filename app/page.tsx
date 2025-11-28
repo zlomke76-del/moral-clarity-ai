@@ -1,24 +1,20 @@
 // app/page.tsx
-"use client";
-
+import SolaceDock from "./components/SolaceDock";
 import NeuralShell from "./components/NeuralShell";
 import NeuralSidebar from "./components/NeuralSidebar";
-import SolaceDock from "./components/SolaceDock";
 
-/**
- * Root page for studio.moralclarity.ai/
- * This loads the Solace workstation (sidebar + dock)
- * wrapped inside NeuralShell which handles the full backdrop.
- */
+export const metadata = {
+  title: "Solace • Moral Clarity AI",
+};
+
 export default function HomePage() {
   return (
     <NeuralShell>
-      <div className="flex min-h-screen items-stretch w-full">
-        
-        {/* Left Sidebar */}
+      <div className="flex min-h-screen items-stretch">
+        {/* Left: Neural sidebar (chip-style cards) */}
         <NeuralSidebar />
 
-        {/* Main Solace Workspace */}
+        {/* Right: main Solace workstation area */}
         <main className="flex flex-1 items-center justify-center px-4 py-6">
           <SolaceDock />
         </main>
@@ -26,3 +22,4 @@ export default function HomePage() {
     </NeuralShell>
   );
 }
+
