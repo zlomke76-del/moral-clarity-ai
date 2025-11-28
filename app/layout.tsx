@@ -1,25 +1,21 @@
 // app/layout.tsx
-"use client";
-
 import "./globals.css";
-import { SupabaseProvider } from "@/lib/supabase/provider";
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export const metadata: Metadata = {
+  title: "Moral Clarity AI",
+  description: "Solace — anchored AI guidance.",
+};
+
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className="h-full">
-      {/* 
-        IMPORTANT:
-        - Apply mc-root so global background system activates
-        - Remove the hardcoded bg-[#020617] override that broke the backdrop
-      */}
-      <body className="mc-root h-full">
-        <SupabaseProvider>
+    <html lang="en">
+      {/* mc-root class is where we hang the background images */}
+      <body className="mc-root text-slate-50 antialiased">
+        <div className="min-h-screen w-full flex">
           {children}
-        </SupabaseProvider>
+        </div>
       </body>
     </html>
   );
