@@ -21,7 +21,7 @@
 // updated_at      timestamptz
 //
 
-import { createClient } from "@/lib/supabase/browser";
+import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 
 export type UserMemoryRow = {
   id: string;
@@ -49,7 +49,7 @@ export async function listUserMemories(
 ): Promise<UserMemoryRow[]> {
   if (!userKey) return [];
 
-  const supabase = createClient();
+  const supabase = createSupabaseBrowser();
 
   let q = supabase
     .from("user_memories")
@@ -57,19 +57,16 @@ export async function listUserMemories(
     .eq("user_key", userKey)
     .order("created_at", { ascending: false });
 
-  // Filter by kind
   if (opts?.kind && opts.kind !== "all") {
     q = q.eq("kind", opts.kind);
   }
 
-  // Search content or title
   if (opts?.search) {
     q = q.or(
       `content.ilike.%${opts.search}%,title.ilike.%${opts.search}%,episode_summary.ilike.%${opts.search}%`
     );
   }
 
-  // Limit
   if (opts?.limit) {
     q = q.limit(opts.limit);
   }
@@ -94,7 +91,7 @@ export async function createUserMemory(args: {
   title?: string | null;
   workspaceId?: string | null;
 }): Promise<string> {
-  const supabase = createClient();
+  const supabase = createSupabaseBrowser();
 
   const { userKey, content, kind, title, workspaceId } = args;
 
@@ -129,7 +126,7 @@ export async function updateUserMemory(
     kind?: string;
   }
 ): Promise<void> {
-  const supabase = createClient();
+  const supabase = createSupabaseBrowser();
 
   const { error } = await supabase
     .from("user_memories")
@@ -151,7 +148,7 @@ export async function updateUserMemory(
    Delete memory
 -------------------------------------------------------- */
 export async function deleteUserMemory(id: string): Promise<void> {
-  const supabase = createClient();
+  const supabase = createSupabaseBrowser();
 
   const { error } = await supabase
     .from("user_memories")
