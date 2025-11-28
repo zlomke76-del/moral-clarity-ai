@@ -2,67 +2,11 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import type { ReactNode } from "react";
+import { MCA_WORKSPACE_ID } from "@/lib/mca-config";  // ⬅️ import your default workspace
 
-export type NeuralSidebarItem = {
-  id: string;
-  label: string;
-  description?: string;
-  icon?: ReactNode;
-  href?: string;
-  onClick?: () => void;
-};
-
-type Props = {
-  items?: NeuralSidebarItem[];
-};
-
-export default function NeuralSidebar({ items }: Props) {
-  const pathname = usePathname();
-
-  // ✅ Fix: pathname may be null on first render
-  const safePath = pathname ?? "";
-
-  // Extract workspaceId from /w/[workspaceId]/**
-  let workspaceId: string | null = null;
-  const parts = safePath.split("/").filter(Boolean);
-
-  if (parts[0] === "w" && parts.length > 1) {
-    workspaceId = parts[1];
-  }
-
-  const sidebarItems: NeuralSidebarItem[] =
-    items && items.length > 0
-      ? items
-      : buildDefaultItems(workspaceId);
-
-  return (
-    <aside className="neural-sidebar">
-      {/* Brand */}
-      <div className="neural-sidebar-brand">
-        <div className="neural-sidebar-brand-mark">
-          <span>AI</span>
-        </div>
-        <div className="neural-sidebar-brand-text">
-          <span className="neural-sidebar-brand-line-1">Moral Clarity</span>
-          <span className="neural-sidebar-brand-line-2">Studio</span>
-        </div>
-      </div>
-
-      <div className="neural-sidebar-section-label">Workspace</div>
-
-      <nav className="neural-sidebar-list">
-        {sidebarItems.map((item) => (
-          <ChipCard key={item.id} item={item} />
-        ))}
-      </nav>
-    </aside>
-  );
-}
-
-/* -------------------------------------------------------
-   Chip Card
--------------------------------------------------------- */
+// ...everything above stays the same...
 
 function ChipCard({ item }: { item: NeuralSidebarItem }) {
   const core = (
@@ -84,15 +28,20 @@ function ChipCard({ item }: { item: NeuralSidebarItem }) {
   );
 
   if (item.href) {
+    // ✅ Use Next.js Link for client-side navigation
     return (
-      <a href={item.href} className="neural-sidebar-link">
+      <Link href={item.href} className="neural-sidebar-link">
         {core}
-      </a>
+      </Link>
     );
   }
 
   return (
-    <button type="button" onClick={item.onClick} className="neural-sidebar-link">
+    <button
+      type="button"
+      onClick={item.onClick}
+      className="neural-sidebar-link"
+    >
       {core}
     </button>
   );
@@ -103,6 +52,8 @@ function ChipCard({ item }: { item: NeuralSidebarItem }) {
 -------------------------------------------------------- */
 
 function buildDefaultItems(workspaceId: string | null): NeuralSidebarItem[] {
+  const effectiveWorkspaceId = workspaceId ?? MCA_WORKSPACE_ID;
+
   return [
     {
       id: "account",
@@ -114,7 +65,7 @@ function buildDefaultItems(workspaceId: string | null): NeuralSidebarItem[] {
       id: "memory",
       label: "Memory",
       description: "Review & edit Solace memory",
-      href: workspaceId ? `/w/${workspaceId}/memory` : "/memories",
+      href: `/w/${effectiveWorkspaceId}/memory`,
     },
     {
       id: "newsroom",
