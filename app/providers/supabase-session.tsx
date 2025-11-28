@@ -1,36 +1,24 @@
-"use client";
+// app/providers/supabase-session.tsx
+'use client';
 
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import type { Session, AuthChangeEvent } from "@supabase/supabase-js";
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { createContext, useContext, useEffect, useState } from 'react';
+import type { Session } from '@supabase/supabase-js';
+import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
 
-/* -------------------------------------------------------
-   CONTEXT
--------------------------------------------------------- */
-
-type SupabaseContextValue = {
+type SupabaseSessionValue = {
   session: Session | null;
   loading: boolean;
 };
 
 const SupabaseSessionContext =
-  createContext<SupabaseContextValue | undefined>(undefined);
-
-/* -------------------------------------------------------
-   PROVIDER
--------------------------------------------------------- */
+  createContext<SupabaseSessionValue | undefined>(undefined);
 
 export function SupabaseSessionProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createClientComponentClient();
+  const supabase = createSupabaseBrowser();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -38,21 +26,17 @@ export function SupabaseSessionProvider({
     let ignore = false;
 
     async function loadSession() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
+      const { data } = await supabase.auth.getSession();
       if (!ignore) {
-        setSession(session ?? null);
+        setSession(data.session ?? null);
         setLoading(false);
       }
     }
 
     loadSession();
 
-    // Typed listener fixes build error
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (event: AuthChangeEvent, newSession: Session | null) => {
+      (_event, newSession) => {
         if (!ignore) {
           setSession(newSession ?? null);
           setLoading(false);
@@ -73,15 +57,11 @@ export function SupabaseSessionProvider({
   );
 }
 
-/* -------------------------------------------------------
-   HOOK
--------------------------------------------------------- */
-
 export function useSupabaseSession() {
   const ctx = useContext(SupabaseSessionContext);
   if (!ctx) {
     throw new Error(
-      "useSupabaseSession must be used inside <SupabaseSessionProvider>"
+      'useSupabaseSession must be used inside <SupabaseSessionProvider>'
     );
   }
   return ctx;
