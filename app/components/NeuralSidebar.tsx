@@ -17,16 +17,15 @@ type Props = {
   items?: NeuralSidebarItem[];
 };
 
-/**
- * NeuralSidebar
- * Left-side navigation using chip-style cards on a glass panel.
- */
 export default function NeuralSidebar({ items }: Props) {
   const pathname = usePathname();
 
-  // Extract workspaceId from /w/[workspaceId]/** path
+  // ✅ Fix: pathname may be null on first render
+  const safePath = pathname ?? "";
+
+  // Extract workspaceId from /w/[workspaceId]/**
   let workspaceId: string | null = null;
-  const parts = pathname.split("/").filter(Boolean);
+  const parts = safePath.split("/").filter(Boolean);
 
   if (parts[0] === "w" && parts.length > 1) {
     workspaceId = parts[1];
@@ -50,10 +49,8 @@ export default function NeuralSidebar({ items }: Props) {
         </div>
       </div>
 
-      {/* Section */}
       <div className="neural-sidebar-section-label">Workspace</div>
 
-      {/* Items */}
       <nav className="neural-sidebar-list">
         {sidebarItems.map((item) => (
           <ChipCard key={item.id} item={item} />
@@ -64,14 +61,10 @@ export default function NeuralSidebar({ items }: Props) {
 }
 
 /* -------------------------------------------------------
-   Chip-style card
+   Chip Card
 -------------------------------------------------------- */
 
-type ChipCardProps = {
-  item: NeuralSidebarItem;
-};
-
-function ChipCard({ item }: ChipCardProps) {
+function ChipCard({ item }: { item: NeuralSidebarItem }) {
   const core = (
     <div className="neural-sidebar-chip">
       <div className="neural-sidebar-chip-inner">
@@ -106,7 +99,7 @@ function ChipCard({ item }: ChipCardProps) {
 }
 
 /* -------------------------------------------------------
-   Build default items with dynamic workspace memory link
+   Defaults
 -------------------------------------------------------- */
 
 function buildDefaultItems(workspaceId: string | null): NeuralSidebarItem[] {
@@ -121,9 +114,7 @@ function buildDefaultItems(workspaceId: string | null): NeuralSidebarItem[] {
       id: "memory",
       label: "Memory",
       description: "Review & edit Solace memory",
-      href: workspaceId
-        ? `/w/${workspaceId}/memory`
-        : "/memories", // fallback to avoid breaking if accessed globally
+      href: workspaceId ? `/w/${workspaceId}/memory` : "/memories",
     },
     {
       id: "newsroom",
