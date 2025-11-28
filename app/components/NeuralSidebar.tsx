@@ -19,8 +19,8 @@ type Props = {
 /**
  * NeuralSidebar
  * Left-side navigation using chip-style cards on a glass panel.
- * This version uses dedicated CSS classes defined in globals.css
- * (no dependence on Tailwind utilities for the core visual).
+ * Uses dedicated .neural-sidebar* classes defined in globals.css
+ * so Tailwind purging / specificity can't strip the visual.
  */
 export default function NeuralSidebar({ items }: Props) {
   const sidebarItems: NeuralSidebarItem[] =
