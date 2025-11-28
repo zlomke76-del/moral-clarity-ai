@@ -33,7 +33,7 @@
 }
 
 /* =========================================================
-   ROOT BACKGROUND SYSTEM — TRIANGLE REMOVED
+   ROOT BACKGROUND SYSTEM — TRIANGLE REMOVED, NO DIMMING
    ========================================================= */
 
 .mc-root {
@@ -42,14 +42,11 @@
 
   background-color: #020617;
 
-  /* Only the dimmer + circuit backdrop remain */
-  background-image:
-    linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)),
-    url("/mca-backdrop.png");
-
-  background-repeat: no-repeat, no-repeat;
-  background-position: center center, center center;
-  background-size: cover, cover;
+  /* Only the circuit backdrop, full brightness */
+  background-image: url("/mca-backdrop.png");
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
 
   color: var(--mc-text);
   -webkit-font-smoothing: antialiased;
@@ -65,32 +62,6 @@
     Arial,
     "Noto Sans",
     sans-serif;
-}
-
-/* =========================================================
-   SOFT BACKGROUND OVERLAY (still adds depth)
-   ========================================================= */
-
-.mc-root::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-
-  background:
-    radial-gradient(
-      circle at 50% 55%,
-      rgba(10, 20, 35, 0.20),
-      rgba(5, 10, 20, 0.35) 70%
-    ),
-    linear-gradient(
-      to bottom,
-      rgba(8, 14, 25, 0.25),
-      rgba(4, 8, 16, 0.40)
-    );
-
-  mix-blend-mode: overlay;
 }
 
 /* =========================================================
@@ -217,4 +188,18 @@ button:disabled {
   border-radius: 12px;
   border: 1px solid var(--sd-border) !important;
 }
+
+/* =========================================================
+   REMOVED LEGACY SYSTEMS (deliberately missing)
+   =========================================================
+
+   - .neural-ambient*
+   - .mca-anchor-layer
+   - .brain-hero*
+   - ANY old background-image properties
+   - ANY old animation layers
+
+   They are gone by design so nothing conflicts 
+   with the mc-root background.
+========================================================= */
 
