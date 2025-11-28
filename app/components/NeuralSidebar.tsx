@@ -111,28 +111,27 @@ const DEFAULT_ITEMS: NeuralSidebarItem[] = [
     id: "account",
     label: "Account",
     description: "Profile & billing",
-    // Keep as anchor until we fully migrate to /account
+    // Still using anchor until /account is fully live
     href: "#account",
   },
   {
     id: "memory",
     label: "Memory",
     description: "View Supabase memories",
-    // Keep as anchor until /memory page is live
+    // Still using anchor until /memory is fully live
     href: "#memory",
   },
   {
     id: "newsroom",
     label: "Newsroom Cabinet",
     description: "Neutrality & outlet metrics",
-    // ✅ Real route
     href: "/newsroom/cabinet",
   },
   {
     id: "magic-key",
     label: "Magic Key",
     description: "Generate a new secure key",
-    // ✅ Real (or soon-to-be) route
-    href: "/magic-key",
+    // 🔑 Magic Key route
+    href: "/auth/sign-in",
   },
 ];
