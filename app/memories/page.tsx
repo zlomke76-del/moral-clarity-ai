@@ -2,283 +2,255 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  listUserMemories,
-  updateUserMemory,
-  deleteUserMemory,
-  createUserMemory,
-  type UserMemoryRow,
-} from "@/lib/mca-memory-client";
-
-const DEFAULT_USER_KEY = "ignored"; // API ignores this; security is enforced server-side.
-
-const KIND_OPTIONS = [
-  { value: "all", label: "All" },
-  { value: "fact", label: "Facts" },
-  { value: "episode", label: "Episodes" },
-  { value: "profile", label: "Profile" },
-  { value: "note", label: "Notes" },
-];
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 export default function MemoriesPage() {
-  const [userKey] = useState(DEFAULT_USER_KEY);
-  const [kindFilter, setKindFilter] = useState<string>("all");
-  const [search, setSearch] = useState("");
+  const supabase = createClientComponentClient();
+
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [rows, setRows] = useState<UserMemoryRow[]>([]);
+
+  const [kindFilter, setKindFilter] = useState("all");
+  const [search, setSearch] = useState("");
+
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<{
-    title: string;
-    content: string;
-    kind: string;
-  }>({ title: "", content: "", kind: "fact" });
+  const [editDraft, setEditDraft] = useState({
+    title: "",
+    content: "",
+    kind: "fact",
+  });
+
   const [newContent, setNewContent] = useState("");
   const [newKind, setNewKind] = useState("fact");
+
   const [error, setError] = useState<string | null>(null);
 
-  async function loadMemories() {
-    setLoading(true);
-    setError(null);
-    try {
-      const rows = await listUserMemories(userKey, {
-        kind: kindFilter,
-        search: search.trim() || undefined,
-        limit: 100,
-      });
-      setRows(rows);
-    } catch (err: any) {
-      console.error("loadMemories error", err);
-      setError(err?.message || "Failed to load memories");
-    } finally {
-      setLoading(false);
-    }
+  async function bootstrapAuth() {
+    const { data } = await supabase.auth.getSession();
+    const email = data.session?.user?.email ?? null;
+    setUserEmail(email);
+
+    if (email) loadMemories(email);
   }
 
   useEffect(() => {
-    loadMemories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userKey, kindFilter]);
+    bootstrapAuth();
+  }, []);
 
-  function startEdit(row: UserMemoryRow) {
-    setEditingId(row.id);
-    setEditDraft({
-      title: row.title ?? "",
-      content: row.content ?? row.episode_summary ?? "",
-      kind: row.kind ?? "fact",
-    });
+  async function loadMemories(email: string) {
+    setLoading(true);
+    setError(null);
+
+    let query = supabase
+      .from("user_memories")
+      .select("*")
+      .eq("user_key", email)
+      .order("created_at", { ascending: false });
+
+    if (kindFilter !== "all") query = query.eq("kind", kindFilter);
+
+    if (search.trim()) {
+      query = query.or(
+        `title.ilike.%${search}%,content.ilike.%${search}%,episode_summary.ilike.%${search}%`
+      );
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      setError(error.message);
+    } else {
+      setRows(data || []);
+    }
+
+    setLoading(false);
   }
 
-  function cancelEdit() {
-    setEditingId(null);
-    setEditDraft({ title: "", content: "", kind: "fact" });
+  async function saveNewMemory() {
+    if (!userEmail || !newContent.trim()) return;
+
+    const { error } = await supabase.from("user_memories").insert({
+      user_key: userEmail,
+      content: newContent.trim(),
+      kind: newKind,
+    });
+
+    if (error) setError(error.message);
+
+    setNewContent("");
+    setNewKind("fact");
+    loadMemories(userEmail);
   }
 
   async function saveEdit(id: string) {
-    try {
-      await updateUserMemory(id, {
+    const { error } = await supabase
+      .from("user_memories")
+      .update({
         title: editDraft.title,
         content: editDraft.content,
         kind: editDraft.kind,
-      });
-      await loadMemories();
-      cancelEdit();
-    } catch (err: any) {
-      console.error("saveEdit error", err);
-      setError(err?.message || "Failed to save memory");
-    }
+      })
+      .eq("id", id);
+
+    if (error) setError(error.message);
+
+    setEditingId(null);
+    loadMemories(userEmail!);
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Delete this memory? This cannot be undone.")) return;
-    try {
-      await deleteUserMemory(id);
-      await loadMemories();
-    } catch (err: any) {
-      console.error("delete error", err);
-      setError(err?.message || "Failed to delete memory");
-    }
-  }
+  async function deleteMemory(id: string) {
+    if (!confirm("Delete this memory permanently?")) return;
 
-  async function handleCreate() {
-    if (!newContent.trim()) return;
-    try {
-      await createUserMemory({
-        userKey,
-        content: newContent.trim(),
-        kind: newKind,
-      });
-      setNewContent("");
-      setNewKind("fact");
-      await loadMemories();
-    } catch (err: any) {
-      console.error("create error", err);
-      setError(err?.message || "Failed to create memory");
-    }
+    const { error } = await supabase
+      .from("user_memories")
+      .delete()
+      .eq("id", id);
+
+    if (error) setError(error.message);
+
+    loadMemories(userEmail!);
   }
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold">Solace Memories</h1>
-        <p className="text-sm text-gray-500">
-          View and edit what Solace remembers about you. Changes here
-          take effect immediately for future conversations.
-        </p>
-      </header>
 
-      {/* Controls */}
-      <div className="flex flex-wrap items-center gap-3">
+      <h1 className="text-2xl font-semibold">Solace Memories</h1>
+      {!userEmail && (
+        <p className="text-sm text-red-400">
+          You must be signed in to view memories.
+        </p>
+      )}
+
+      {/* Filters */}
+      <div className="flex gap-3 items-center">
         <select
           value={kindFilter}
-          onChange={(e) => setKindFilter(e.target.value)}
-          className="border rounded-md px-2 py-1 text-sm"
+          onChange={(e) => {
+            setKindFilter(e.target.value);
+            if (userEmail) loadMemories(userEmail);
+          }}
+          className="border px-2 py-1 rounded-md text-sm"
         >
-          {KIND_OPTIONS.map((k) => (
-            <option key={k.value} value={k.value}>
-              {k.label}
-            </option>
-          ))}
+          <option value="all">All</option>
+          <option value="fact">Facts</option>
+          <option value="episode">Episodes</option>
+          <option value="profile">Profile</option>
+          <option value="note">Notes</option>
         </select>
 
         <input
-          type="text"
-          placeholder="Search content / title..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") loadMemories();
-          }}
-          className="border rounded-md px-3 py-1 text-sm flex-1 min-w-[180px]"
+          onKeyDown={(e) => e.key === "Enter" && userEmail && loadMemories(userEmail)}
+          placeholder="Search…"
+          className="border px-3 py-1 rounded-md text-sm flex-1"
         />
 
         <button
-          onClick={loadMemories}
-          disabled={loading}
-          className="border rounded-md px-3 py-1 text-sm disabled:opacity-50"
+          onClick={() => userEmail && loadMemories(userEmail)}
+          className="border px-3 py-1 rounded-md"
         >
-          {loading ? "Loading..." : "Refresh"}
+          Refresh
         </button>
       </div>
 
-      {error && (
-        <div className="text-sm text-red-600 border border-red-200 rounded-md px-3 py-2 bg-red-50">
-          {error}
-        </div>
-      )}
-
-      {/* New memory form */}
-      <section className="border rounded-xl p-4 space-y-3 bg-gray-50">
+      {/* New Memory */}
+      <section className="border rounded-xl p-4 bg-gray-50 space-y-2">
         <h2 className="text-sm font-semibold">Add new memory</h2>
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap gap-2 items-center">
-            <label className="text-xs text-gray-600">Kind</label>
-            <select
-              value={newKind}
-              onChange={(e) => setNewKind(e.target.value)}
-              className="border rounded-md px-2 py-1 text-xs"
-            >
-              <option value="fact">Fact</option>
-              <option value="profile">Profile</option>
-              <option value="preference">Preference</option>
-              <option value="note">Note</option>
-            </select>
-          </div>
-          <textarea
-            value={newContent}
-            onChange={(e) => setNewContent(e.target.value)}
-            placeholder="What do you want Solace to remember?"
-            className="border rounded-md px-3 py-2 text-sm min-h-[60px]"
-          />
-          <div className="flex justify-end">
-            <button
-              onClick={handleCreate}
-              className="bg-black text-white text-sm px-3 py-1 rounded-md"
-            >
-              Save memory
-            </button>
-          </div>
-        </div>
+
+        <select
+          value={newKind}
+          onChange={(e) => setNewKind(e.target.value)}
+          className="border px-2 py-1 rounded-md text-xs"
+        >
+          <option value="fact">Fact</option>
+          <option value="profile">Profile</option>
+          <option value="episode">Episode</option>
+          <option value="note">Note</option>
+        </select>
+
+        <textarea
+          className="border rounded-md px-3 py-2 text-sm min-h-[60px]"
+          placeholder="What should Solace remember?"
+          value={newContent}
+          onChange={(e) => setNewContent(e.target.value)}
+        />
+
+        <button
+          onClick={saveNewMemory}
+          className="bg-black text-white px-3 py-1 rounded-md text-sm"
+        >
+          Save
+        </button>
       </section>
 
-      {/* Table */}
-      <section className="border rounded-xl overflow-hidden">
+      {/* Results Table */}
+      {loading && <p>Loading...</p>}
+      {!loading && rows.length === 0 && (
+        <p className="text-sm text-gray-500">No memories found.</p>
+      )}
+
+      {rows.length > 0 && (
         <table className="w-full text-sm">
           <thead className="bg-gray-100 text-xs uppercase tracking-wide text-gray-500">
             <tr>
-              <th className="text-left px-3 py-2 w-[18%]">Title / Summary</th>
-              <th className="text-left px-3 py-2 w-[40%]">Content</th>
-              <th className="text-left px-3 py-2 w-[10%]">Kind</th>
-              <th className="text-left px-3 py-2 w-[16%]">Created</th>
-              <th className="text-right px-3 py-2 w-[16%]">Actions</th>
+              <th className="px-3 py-2 text-left">Summary</th>
+              <th className="px-3 py-2 text-left">Content</th>
+              <th className="px-3 py-2">Kind</th>
+              <th className="px-3 py-2">Actions</th>
             </tr>
           </thead>
+
           <tbody>
-            {rows.length === 0 && (
-              <tr>
-                <td
-                  colSpan={5}
-                  className="px-3 py-4 text-center text-xs text-gray-400"
-                >
-                  No memories found.
-                </td>
-              </tr>
-            )}
-
             {rows.map((row) => {
-              const isEditing = editingId === row.id;
-              const created = row.created_at
-                ? new Date(row.created_at).toLocaleString()
-                : "";
+              const editing = editingId === row.id;
 
-              if (isEditing) {
+              if (editing) {
                 return (
-                  <tr key={row.id} className="border-t align-top bg-yellow-50/40">
+                  <tr key={row.id} className="border-t bg-yellow-50/50">
                     <td className="px-3 py-2">
                       <input
-                        type="text"
+                        className="border rounded-md px-2 py-1 text-xs w-full"
                         value={editDraft.title}
                         onChange={(e) =>
                           setEditDraft((d) => ({ ...d, title: e.target.value }))
                         }
-                        className="border rounded-md px-2 py-1 text-xs w-full"
-                        placeholder="Title (optional)"
                       />
                     </td>
                     <td className="px-3 py-2">
                       <textarea
+                        className="border rounded-md px-2 py-1 text-xs w-full"
                         value={editDraft.content}
                         onChange={(e) =>
                           setEditDraft((d) => ({ ...d, content: e.target.value }))
                         }
-                        className="border rounded-md px-2 py-1 text-xs w-full min-h-[70px]"
                       />
                     </td>
                     <td className="px-3 py-2">
                       <select
+                        className="border rounded-md px-2 py-1 text-xs"
                         value={editDraft.kind}
                         onChange={(e) =>
                           setEditDraft((d) => ({ ...d, kind: e.target.value }))
                         }
-                        className="border rounded-md px-2 py-1 text-xs"
                       >
                         <option value="fact">fact</option>
-                        <option value="episode">episode</option>
                         <option value="profile">profile</option>
-                        <option value="preference">preference</option>
+                        <option value="episode">episode</option>
                         <option value="note">note</option>
                       </select>
                     </td>
-                    <td className="px-3 py-2 text-xs text-gray-500">{created}</td>
-                    <td className="px-3 py-2 text-right space-x-2">
+                    <td className="px-3 py-2 flex gap-2">
                       <button
+                        className="text-xs bg-black text-white px-2 py-1 rounded-md"
                         onClick={() => saveEdit(row.id)}
-                        className="text-xs px-2 py-1 rounded-md bg-black text-white"
                       >
                         Save
                       </button>
                       <button
-                        onClick={cancelEdit}
-                        className="text-xs px-2 py-1 rounded-md border"
+                        className="text-xs border px-2 py-1 rounded-md"
+                        onClick={() => setEditingId(null)}
                       >
                         Cancel
                       </button>
@@ -287,38 +259,35 @@ export default function MemoriesPage() {
                 );
               }
 
-              const summary =
-                row.title ||
-                row.episode_summary ||
-                (row.content || "").slice(0, 80);
-
               return (
-                <tr key={row.id} className="border-t align-top">
+                <tr key={row.id} className="border-t">
                   <td className="px-3 py-2 text-xs font-medium">
-                    {summary || <span className="text-gray-400">Untitled</span>}
+                    {row.title || row.episode_summary || row.content.slice(0, 60)}
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-700 whitespace-pre-wrap">
-                    {(row.content || row.episode_summary || "").slice(0, 220)}
-                    {(row.content || row.episode_summary || "").length > 220
-                      ? "…"
-                      : ""}
+                  <td className="px-3 py-2 text-xs whitespace-pre-wrap">
+                    {row.content.slice(0, 150)}…
                   </td>
-                  <td className="px-3 py-2 text-xs">
-                    <span className="inline-flex items-center rounded-full border px-2 py-0.5">
-                      {row.kind || "—"}
-                    </span>
+                  <td className="px-3 py-2 text-xs text-center">
+                    {row.kind}
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-500">{created}</td>
-                  <td className="px-3 py-2 text-right space-x-2">
+                  <td className="px-3 py-2 text-xs text-right space-x-2">
                     <button
-                      onClick={() => startEdit(row)}
-                      className="text-xs px-2 py-1 rounded-md border"
+                      className="border px-2 py-1 rounded-md"
+                      onClick={() => {
+                        setEditingId(row.id);
+                        setEditDraft({
+                          title: row.title ?? "",
+                          content: row.content ?? "",
+                          kind: row.kind ?? "fact",
+                        });
+                      }}
                     >
                       Edit
                     </button>
+
                     <button
-                      onClick={() => handleDelete(row.id)}
-                      className="text-xs px-2 py-1 rounded-md border border-red-400 text-red-600"
+                      className="border border-red-400 text-red-600 px-2 py-1 rounded-md"
+                      onClick={() => deleteMemory(row.id)}
                     >
                       Delete
                     </button>
@@ -328,7 +297,8 @@ export default function MemoriesPage() {
             })}
           </tbody>
         </table>
-      </section>
+      )}
     </div>
   );
 }
+
