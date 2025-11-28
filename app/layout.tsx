@@ -1,18 +1,18 @@
-import "./globals.css";
-import { SupabaseSessionProvider } from "@/app/providers/supabase-session";
+// app/layout.tsx
+'use client';
 
-export const metadata = {
-  title: "Moral Clarity Studio",
-  description: "Solace Workspace",
-};
+import './globals.css';
+import { SupabaseSessionProvider } from '@/app/providers/supabase-session';
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
       <body>
-        <SupabaseSessionProvider>
-          {children}
-        </SupabaseSessionProvider>
+        <SupabaseSessionProvider>{children}</SupabaseSessionProvider>
       </body>
     </html>
   );
