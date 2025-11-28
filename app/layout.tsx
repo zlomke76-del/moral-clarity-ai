@@ -2,7 +2,16 @@
 import "./globals.css";
 import { SupabaseProvider } from "./providers/supabase-provider";
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export const metadata = {
+  title: "Moral Clarity AI Studio",
+  description: "Solace Workspace",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
       <body>
@@ -13,4 +22,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-
