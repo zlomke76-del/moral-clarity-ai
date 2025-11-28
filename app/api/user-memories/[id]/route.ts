@@ -1,31 +1,38 @@
 // app/api/user-memories/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 
-function sb() {
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error("Supabase env vars missing");
-  }
-  return createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-    { auth: { persistSession: false } }
-  );
-}
-
-// PATCH /api/user-memories/:id
-// body: { title?, content?, kind?, importance?, episode_summary? }
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     const id = params.id;
-    const body = await req.json().catch(() => ({}));
-
     if (!id) {
       return NextResponse.json({ error: "id is required" }, { status: 400 });
     }
+
+    const cookieStore = cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userKey = user.email || user.id;
+    if (!userKey) {
+      return NextResponse.json(
+        { error: "User has no email/id" },
+        { status: 400 }
+      );
+    }
+
+    const body = await req.json().catch(() => ({}));
 
     const update: Record<string, any> = {};
     if (typeof body.title === "string") update.title = body.title;
@@ -42,11 +49,11 @@ export async function PATCH(
       );
     }
 
-    const client = sb();
-    const { data, error } = await client
+    const { data, error } = await supabase
       .from("user_memories")
       .update(update)
       .eq("id", id)
+      .eq("user_key", userKey) // critical: cannot edit others' rows
       .select()
       .single();
 
@@ -65,7 +72,6 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/user-memories/:id
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: { id: string } }
@@ -76,8 +82,30 @@ export async function DELETE(
       return NextResponse.json({ error: "id is required" }, { status: 400 });
     }
 
-    const client = sb();
-    const { error } = await client.from("user_memories").delete().eq("id", id);
+    const cookieStore = cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userKey = user.email || user.id;
+    if (!userKey) {
+      return NextResponse.json(
+        { error: "User has no email/id" },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await supabase
+      .from("user_memories")
+      .delete()
+      .eq("id", id)
+      .eq("user_key", userKey); // cannot delete others' memories
 
     if (error) {
       console.error("[user-memories] DELETE error", error);
@@ -93,3 +121,4 @@ export async function DELETE(
     );
   }
 }
+
