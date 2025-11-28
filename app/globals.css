@@ -50,11 +50,17 @@
 
   background-color: #020617;
 
-  /* Layer 1: triangle (top) + Layer 2: circuits (bottom) */
-  background-image: url("/Triangle-Anchor.png"), url("/mca-backdrop.png");
-  background-repeat: no-repeat, no-repeat;
-  background-position: center center, center center;
-  background-size: min(72vh, 72vw), cover;
+/* Layer 1: dimmer overlay   */
+/* Layer 2: triangle image   */
+/* Layer 3: circuit backdrop */
+background-image:
+  linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)),
+  url("/Triangle-Anchor.png"),
+  url("/mca-backdrop.png");
+
+background-repeat: no-repeat, no-repeat, no-repeat;
+background-position: center center, center center, center center;
+background-size: min(72vh, 72vw), min(72vh, 72vw), cover;
 
   color: var(--mc-text);
   -webkit-font-smoothing: antialiased;
