@@ -3,62 +3,55 @@
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
+import { resolveOrCreateWorkspace } from "@/lib/workspaces";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
   const params = useSearchParams();
 
   useEffect(() => {
-    const run = async () => {
+    (async () => {
       const supabase = createSupabaseBrowser();
 
-      // 1. Let Supabase read tokens from URL (implicit flow)
-      const { error: sessionErr } = await supabase.auth.getSession();
-      if (sessionErr) {
-        console.error("Error loading session:", sessionErr);
-      }
+      // Required for implicit flow (magic links)
+      await supabase.auth.getSession();
 
-      // 2. Get the user — if missing, fallback to sign-in
+      // Validate that user exists
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      if (!user) {
-        router.replace("/auth/sign-in?err=no_user");
+      if (!session) {
+        router.replace("/auth/sign-in?err=missing-session");
         return;
       }
 
-      const userEmail = user.email!;
-      
-      // 3. Look up the user's workspace
-      const { data: membership, error: memErr } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("email", userEmail)
-        .maybeSingle();
+      // Ensure profile exists in mca_user_profiles
+      const { data: existingProfiles } = await supabase
+        .from("mca_user_profiles")
+        .select("*")
+        .eq("user_uid", session.user.id);
 
-      if (memErr) {
-        console.error("workspace lookup error:", memErr);
+      if (!existingProfiles || existingProfiles.length === 0) {
+        await supabase.from("mca_user_profiles").insert({
+          user_uid: session.user.id,
+          display_name: session.user.email || "User",
+        });
       }
 
-      // 4. If user has a workspace → send them there
-      if (membership?.workspace_id) {
-        router.replace(`/w/${membership.workspace_id}`);
-        return;
-      }
+      // Resolve workspace
+      const workspaceId = await resolveOrCreateWorkspace();
 
-      // 5. If user is new → send to onboarding or workspace creation
-      router.replace("/welcome"); // You can adjust this
-    };
-
-    run();
-  }, [router, params]);
+      // Preferred redirect
+      const next = params?.get("next") || `/w/${workspaceId}`;
+      router.replace(next);
+    })();
+  }, []);
 
   return (
-    <div className="min-h-screen grid place-items-center text-white">
-      <p>Finishing sign-in…</p>
-    </div>
+    <main className="min-h-screen grid place-items-center text-white">
+      Processing login…
+    </main>
   );
 }
-
 
