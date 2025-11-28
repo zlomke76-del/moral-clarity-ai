@@ -1,38 +1,37 @@
 // app/api/user-memories/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { remember, type MemoryPurpose } from "@/lib/memory";
 
-function sb() {
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error("Supabase env vars missing");
-  }
-  return createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-    { auth: { persistSession: false } }
-  );
-}
-
-// GET /api/user-memories?user_key=...&kind=fact&search=...&limit=50&offset=0
 export async function GET(req: NextRequest) {
   try {
+    const cookieStore = cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userKey = user.email || user.id;
+    if (!userKey) {
+      return NextResponse.json(
+        { error: "User has no email/id" },
+        { status: 400 }
+      );
+    }
+
     const url = new URL(req.url);
-    const userKey = url.searchParams.get("user_key");
     const kind = url.searchParams.get("kind");
     const search = url.searchParams.get("search")?.trim();
     const limit = parseInt(url.searchParams.get("limit") || "50", 10);
     const offset = parseInt(url.searchParams.get("offset") || "0", 10);
 
-    if (!userKey) {
-      return NextResponse.json(
-        { error: "user_key is required" },
-        { status: 400 }
-      );
-    }
-
-    const client = sb();
-    let query = client
+    let query = supabase
       .from("user_memories")
       .select(
         `
@@ -60,7 +59,6 @@ export async function GET(req: NextRequest) {
     }
 
     if (search) {
-      // Simple ILIKE search on content/title; vector search still handled elsewhere.
       query = query.or(
         `content.ilike.%${search}%,title.ilike.%${search}%,episode_summary.ilike.%${search}%`
       );
@@ -83,25 +81,41 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/user-memories
-// body: { userKey, content, kind?, title?, workspaceId? }
 export async function POST(req: NextRequest) {
   try {
+    const cookieStore = cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userKey = user.email || user.id;
+    if (!userKey) {
+      return NextResponse.json(
+        { error: "User has no email/id" },
+        { status: 400 }
+      );
+    }
+
     const body = await req.json().catch(() => ({}));
-    const userKey: string | null = body?.userKey ?? null;
     const content: string | null = body?.content ?? null;
     const kind: MemoryPurpose = body?.kind ?? "fact";
     const title: string | null = body?.title ?? null;
     const workspaceId: string | null = body?.workspaceId ?? null;
 
-    if (!userKey || !content?.trim()) {
+    if (!content?.trim()) {
       return NextResponse.json(
-        { error: "userKey and content are required" },
+        { error: "content is required" },
         { status: 400 }
       );
     }
 
-    // Reuse the existing memory engine so embeddings + classification stay coherent.
+    // Use unified memory engine; embeddings + classification stay consistent.
     const res = await remember({
       user_key: userKey,
       content,
@@ -110,7 +124,10 @@ export async function POST(req: NextRequest) {
       workspace_id: workspaceId ?? undefined,
     });
 
-    return NextResponse.json({ row: res.row, classification: res.classification });
+    return NextResponse.json({
+      row: res.row,
+      classification: res.classification,
+    });
   } catch (err: any) {
     console.error("[user-memories] POST exception", err);
     return NextResponse.json(
