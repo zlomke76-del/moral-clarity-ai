@@ -1,9 +1,9 @@
 // app/auth/callback/CallbackInner.tsx
 "use client";
 
+import { useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
-import { useEffect } from "react";
 
 export default function CallbackInner() {
   const params = useSearchParams();
@@ -13,10 +13,14 @@ export default function CallbackInner() {
     async function handle() {
       const supabase = createSupabaseBrowser();
 
-      // Trigger session extraction from URL
+      // This forces Supabase to inspect the URL and establish the session
       await supabase.auth.getSession();
 
-      const next = params.get("next") || "/app";
+      // TypeScript thinks params might be null; at runtime it never is,
+      // but we still satisfy the type checker here.
+      const search = params ?? new URLSearchParams();
+      const next = search.get("next") || "/app";
+
       router.replace(next);
     }
 
