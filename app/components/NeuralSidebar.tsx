@@ -128,7 +128,7 @@ const DEFAULT_ITEMS: NeuralSidebarItem[] = [
   {
     id: "magic-key",
     label: "Magic Key",
-    description: "Generate a new fabulous secure key",
+    description: "Generate a new secure key",
     href: "#magic-key",
   },
 ];
