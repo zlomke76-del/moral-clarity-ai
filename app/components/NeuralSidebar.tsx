@@ -1,6 +1,7 @@
 // app/components/NeuralSidebar.tsx
 "use client";
 
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 export type NeuralSidebarItem = {
@@ -21,8 +22,20 @@ type Props = {
  * Left-side navigation using chip-style cards on a glass panel.
  */
 export default function NeuralSidebar({ items }: Props) {
+  const pathname = usePathname();
+
+  // Extract workspaceId from /w/[workspaceId]/** path
+  let workspaceId: string | null = null;
+  const parts = pathname.split("/").filter(Boolean);
+
+  if (parts[0] === "w" && parts.length > 1) {
+    workspaceId = parts[1];
+  }
+
   const sidebarItems: NeuralSidebarItem[] =
-    items && items.length > 0 ? items : DEFAULT_ITEMS;
+    items && items.length > 0
+      ? items
+      : buildDefaultItems(workspaceId);
 
   return (
     <aside className="neural-sidebar">
@@ -77,7 +90,6 @@ function ChipCard({ item }: ChipCardProps) {
     </div>
   );
 
-  // Use <a> for navigation
   if (item.href) {
     return (
       <a href={item.href} className="neural-sidebar-link">
@@ -94,33 +106,36 @@ function ChipCard({ item }: ChipCardProps) {
 }
 
 /* -------------------------------------------------------
-   Default items
+   Build default items with dynamic workspace memory link
 -------------------------------------------------------- */
 
-const DEFAULT_ITEMS: NeuralSidebarItem[] = [
-  {
-    id: "account",
-    label: "Account",
-    description: "Profile & billing",
-    href: "/account",
-  },
-  {
-    id: "memory",
-    label: "Memory",
-    description: "Review & edit Solace memory",
-    href: "/memories",
-  },
-  {
-    id: "newsroom",
-    label: "Newsroom Cabinet",
-    description: "Neutrality & outlet metrics",
-    href: "/newsroom/cabinet",
-  },
-  {
-    id: "magic-key",
-    label: "Magic Key",
-    description: "Generate a new secure key",
-    href: "/auth/sign-in",
-  },
-];
-
+function buildDefaultItems(workspaceId: string | null): NeuralSidebarItem[] {
+  return [
+    {
+      id: "account",
+      label: "Account",
+      description: "Profile & billing",
+      href: "/account",
+    },
+    {
+      id: "memory",
+      label: "Memory",
+      description: "Review & edit Solace memory",
+      href: workspaceId
+        ? `/w/${workspaceId}/memory`
+        : "/memories", // fallback to avoid breaking if accessed globally
+    },
+    {
+      id: "newsroom",
+      label: "Newsroom Cabinet",
+      description: "Neutrality & outlet metrics",
+      href: "/newsroom/cabinet",
+    },
+    {
+      id: "magic-key",
+      label: "Magic Key",
+      description: "Generate a new secure key",
+      href: "/auth/sign-in",
+    },
+  ];
+}
