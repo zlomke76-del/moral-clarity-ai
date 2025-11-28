@@ -1,8 +1,14 @@
 // app/providers/supabase-session.tsx
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
-import type { Session } from '@supabase/supabase-js';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react';
+import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
 
 type SupabaseSessionValue = {
@@ -13,11 +19,7 @@ type SupabaseSessionValue = {
 const SupabaseSessionContext =
   createContext<SupabaseSessionValue | undefined>(undefined);
 
-export function SupabaseSessionProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
   const supabase = createSupabaseBrowser();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,7 +38,7 @@ export function SupabaseSessionProvider({
     loadSession();
 
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
+      (_event: AuthChangeEvent, newSession: Session | null) => {
         if (!ignore) {
           setSession(newSession ?? null);
           setLoading(false);
@@ -66,5 +68,4 @@ export function useSupabaseSession() {
   }
   return ctx;
 }
-
 
