@@ -1,16 +1,15 @@
-// app/layout.tsx
 "use client";
 
 import "./globals.css";
-import { SupabaseProvider } from "@/lib/supabase/provider";
+import { SupabaseSessionProvider } from "@/app/providers/supabase-session";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <SupabaseProvider>
+        <SupabaseSessionProvider>
           {children}
-        </SupabaseProvider>
+        </SupabaseSessionProvider>
       </body>
     </html>
   );
