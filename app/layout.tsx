@@ -11,8 +11,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full">
-      <body className="min-h-screen bg-[#020617] text-gray-100 antialiased">
-        <SupabaseProvider>{children}</SupabaseProvider>
+      {/* 
+        IMPORTANT:
+        - Apply mc-root so global background system activates
+        - Remove the hardcoded bg-[#020617] override that broke the backdrop
+      */}
+      <body className="mc-root h-full">
+        <SupabaseProvider>
+          {children}
+        </SupabaseProvider>
       </body>
     </html>
   );
