@@ -33,34 +33,26 @@
 }
 
 /* =========================================================
-   ROOT BACKGROUND SYSTEM (ONLY VERSION THAT MATTERS)
+   ROOT BACKGROUND SYSTEM
    ========================================================= */
 
-/**
- * .mc-root is applied to <body> in app/layout.tsx
- * This is the ONLY place where backgrounds are declared.
- *
- * Layer order:
- *   1. Triangle-Anchor.png (top, centered, no stretch, 72vh)
- *   2. mca-backdrop.png (full circuit board)
- */
 .mc-root {
   min-height: 100vh;
   margin: 0;
 
   background-color: #020617;
 
-/* Layer 1: dimmer overlay   */
-/* Layer 2: triangle image   */
-/* Layer 3: circuit backdrop */
-background-image:
-  linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)),
-  url("/Triangle-Anchor.png"),
-  url("/mca-backdrop.png");
+  /* Layer 1: dimmer overlay   */
+  /* Layer 2: triangle image   */
+  /* Layer 3: circuit backdrop */
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
+    url("/Triangle-Anchor.png"),
+    url("/mca-backdrop.png");
 
-background-repeat: no-repeat, no-repeat, no-repeat;
-background-position: center center, center center, center center;
-background-size: min(72vh, 72vw), min(72vh, 72vw), cover;
+  background-repeat: no-repeat, no-repeat, no-repeat;
+  background-position: center center, center center, center center;
+  background-size: min(72vh, 72vw), min(72vh, 72vw), cover;
 
   color: var(--mc-text);
   -webkit-font-smoothing: antialiased;
@@ -76,7 +68,12 @@ background-size: min(72vh, 72vw), min(72vh, 72vw), cover;
     Arial,
     "Noto Sans",
     sans-serif;
-/* Soft navy overlay to unify triangle panel + external backdrop */
+}
+
+/* =========================================================
+   SOFT BACKGROUND OVERLAY (BLENDING FIX)
+   ========================================================= */
+
 .mc-root::after {
   content: "";
   position: fixed;
@@ -84,7 +81,8 @@ background-size: min(72vh, 72vw), min(72vh, 72vw), cover;
   pointer-events: none;
   z-index: 0;
 
-  background: radial-gradient(
+  background:
+    radial-gradient(
       circle at 50% 55%,
       rgba(10, 20, 35, 0.20),
       rgba(5, 10, 20, 0.45) 70%
@@ -95,7 +93,7 @@ background-size: min(72vh, 72vw), min(72vh, 72vw), cover;
       rgba(4, 8, 16, 0.40)
     );
 
-  mix-blend-mode: overlay;   /* MAGIC LINE */
+  mix-blend-mode: overlay;
 }
 
 /* =========================================================
@@ -224,16 +222,6 @@ button:disabled {
 }
 
 /* =========================================================
-   REMOVED LEGACY SYSTEMS (deliberately missing)
-   =========================================================
-
-   - .neural-ambient*
-   - .mca-anchor-layer
-   - .brain-hero*
-   - ANY old background-image properties
-   - ANY old animation layers
-
-   They are gone by design so nothing conflicts 
-   with the mc-root background.
-========================================================= */
+   REMOVED LEGACY SYSTEMS
+   ========================================================= */
 
