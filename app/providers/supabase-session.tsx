@@ -1,10 +1,37 @@
 "use client";
 
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { useEffect, useState } from "react";
+import {
+  createClientComponentClient,
+} from "@supabase/auth-helpers-nextjs";
 import type { Session } from "@supabase/supabase-js";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
-export function useSupabaseSession() {
+/* -------------------------------------------------------
+   CONTEXT
+-------------------------------------------------------- */
+
+type SupabaseContextValue = {
+  session: Session | null;
+  loading: boolean;
+};
+
+const SupabaseSessionContext =
+  createContext<SupabaseContextValue | undefined>(undefined);
+
+/* -------------------------------------------------------
+   PROVIDER
+-------------------------------------------------------- */
+
+export function SupabaseSessionProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const supabase = createClientComponentClient();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -12,24 +39,24 @@ export function useSupabaseSession() {
   useEffect(() => {
     let ignore = false;
 
-    async function load() {
+    async function loadSession() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
       if (!ignore) {
-        setSession(session);
+        setSession(session ?? null);
         setLoading(false);
       }
     }
 
-    load();
+    loadSession();
 
     // Listen for auth state changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(
+    const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, newSession) => {
         if (!ignore) {
-          setSession(newSession);
+          setSession(newSession ?? null);
           setLoading(false);
         }
       }
@@ -37,9 +64,28 @@ export function useSupabaseSession() {
 
     return () => {
       ignore = true;
-      authListener.subscription.unsubscribe();
+      listener.subscription.unsubscribe();
     };
   }, [supabase]);
 
-  return { session, loading };
+  return (
+    <SupabaseSessionContext.Provider value={{ session, loading }}>
+      {children}
+    </SupabaseSessionContext.Provider>
+  );
 }
+
+/* -------------------------------------------------------
+   HOOK
+-------------------------------------------------------- */
+
+export function useSupabaseSession() {
+  const ctx = useContext(SupabaseSessionContext);
+  if (!ctx) {
+    throw new Error(
+      "useSupabaseSession must be used inside <SupabaseSessionProvider>"
+    );
+  }
+  return ctx;
+}
+
