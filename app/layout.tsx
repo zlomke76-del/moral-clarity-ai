@@ -11,9 +11,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body className="bg-[#020617] text-slate-50 antialiased min-h-screen w-full">
-        {/* Let NeuralShell own positioning / overflow */}
-        <div className="min-h-screen w-full">
+      {/* mc-root class is where we hang the background images */}
+      <body className="mc-root text-slate-50 antialiased">
+        <div className="min-h-screen w-full flex">
           {children}
         </div>
       </body>
