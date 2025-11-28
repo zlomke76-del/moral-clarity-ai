@@ -111,15 +111,15 @@ const DEFAULT_ITEMS: NeuralSidebarItem[] = [
     id: "account",
     label: "Account",
     description: "Profile & billing",
-    // Still using anchor until /account is fully live
+    // Placeholder until /account is fully live
     href: "#account",
   },
   {
     id: "memory",
     label: "Memory",
-    description: "View Supabase memories",
-    // Still using anchor until /memory is fully live
-    href: "#memory",
+    description: "Review & edit Solace memory",
+    // ✅ Wire directly into the secure memories page
+    href: "/memories",
   },
   {
     id: "newsroom",
@@ -131,7 +131,7 @@ const DEFAULT_ITEMS: NeuralSidebarItem[] = [
     id: "magic-key",
     label: "Magic Key",
     description: "Generate a new secure key",
-    // 🔑 Magic Key route
     href: "/auth/sign-in",
   },
 ];
+
