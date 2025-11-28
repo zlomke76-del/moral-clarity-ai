@@ -43,7 +43,7 @@ export default function NeuralSidebar({ items }: Props) {
       <div className="neural-sidebar-section-label">Workspace</div>
 
       {/* Chip list */}
-      <nav className="neural-sidebar-list">
+      <nav className="neural-sidebar-list" aria-label="Workspace navigation">
         {sidebarItems.map((item) => (
           <ChipCard key={item.id} item={item} />
         ))}
