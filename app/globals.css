@@ -69,6 +69,9 @@
 html,
 body {
   height: 100%;
+  /* Kill the tiny horizontal scrollbar caused by side traces, 
+     while keeping normal vertical scrolling everywhere. */
+  overflow-x: hidden;
 }
 
 *,
@@ -223,7 +226,7 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.35rem;
 }
 
 .neural-sidebar-brand-mark {
@@ -239,7 +242,7 @@ button:disabled {
 }
 
 .neural-sidebar-brand-mark span {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -253,21 +256,21 @@ button:disabled {
 }
 
 .neural-sidebar-brand-line-1 {
-  font-size: 0.6rem;
+  font-size: 0.68rem; /* a bit larger for legibility */
   font-weight: 600;
-  letter-spacing: 0.28em;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
   color: #94a3b8;
 }
 
 .neural-sidebar-brand-line-2 {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 500;
   color: #e5e7eb;
 }
 
 .neural-sidebar-section-label {
-  font-size: 0.7rem;
+  font-size: 0.78rem; /* bumped up slightly */
   font-weight: 500;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -281,6 +284,7 @@ button:disabled {
   gap: 0.75rem;
   padding-bottom: 0.5rem;
   overflow-y: auto;
+  overflow-x: visible; /* ensure side traces don't trigger horizontal scroll */
 }
 
 .neural-sidebar-link {
@@ -299,7 +303,7 @@ button:disabled {
   border-radius: 1rem;
   border: 1px solid rgba(34, 211, 238, 0.55);
   background: rgba(15, 23, 42, 0.98);
-  padding: 0.75rem 0.85rem;
+  padding: 0.75rem 0.9rem;
   box-shadow: 0 0 26px rgba(15, 23, 42, 0.9);
   transition:
     border-color 0.15s ease,
@@ -346,7 +350,7 @@ button:disabled {
   border: 1px solid rgba(34, 211, 238, 0.55);
   background: #020617;
   color: #a5f3fc;
-  font-size: 0.75rem;
+  font-size: 0.78rem;
 }
 
 .neural-sidebar-chip-text {
@@ -356,7 +360,7 @@ button:disabled {
 }
 
 .neural-sidebar-chip-label {
-  font-size: 0.85rem;
+  font-size: 0.9rem; /* slightly larger */
   font-weight: 500;
   color: #f9fafb;
   white-space: nowrap;
@@ -366,7 +370,7 @@ button:disabled {
 
 .neural-sidebar-chip-description {
   margin-top: 0.1rem;
-  font-size: 0.7rem;
+  font-size: 0.75rem; /* slightly larger */
   color: #94a3b8;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -393,3 +397,4 @@ button:disabled {
    They are gone by design so nothing conflicts 
    with the mc-root background.
 ========================================================= */
+
