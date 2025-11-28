@@ -33,7 +33,7 @@
 }
 
 /* =========================================================
-   ROOT BACKGROUND SYSTEM — TRIANGLE REMOVED, NO DIMMING
+   ROOT BACKGROUND SYSTEM — TRIANGLE REMOVED
    ========================================================= */
 
 .mc-root {
@@ -41,8 +41,6 @@
   margin: 0;
 
   background-color: #020617;
-
-  /* Only the circuit backdrop, full brightness */
   background-image: url("/mca-backdrop.png");
   background-repeat: no-repeat;
   background-position: center center;
@@ -190,6 +188,199 @@ button:disabled {
 }
 
 /* =========================================================
+   NEURAL SIDEBAR – EXPLICIT STYLING
+   ========================================================= */
+
+.neural-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 18rem; /* ~ w-72 */
+  min-height: 100vh;
+  padding: 1.5rem 1.25rem;
+  background: linear-gradient(
+    to bottom,
+    rgba(15, 23, 42, 0.97),
+    rgba(15, 23, 42, 0.92)
+  );
+  border-right: 1px solid rgba(148, 163, 184, 0.55);
+  box-shadow: 18px 0 48px rgba(3, 7, 18, 0.95);
+  backdrop-filter: blur(18px);
+  z-index: 10;
+}
+
+/* hide on small screens, like hidden md:flex */
+@media (max-width: 767px) {
+  .neural-sidebar {
+    display: none;
+  }
+}
+
+.neural-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.neural-sidebar-brand-mark {
+  display: flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(34, 211, 238, 0.7);
+  background: #020617;
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.6);
+}
+
+.neural-sidebar-brand-mark span {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #a5f3fc;
+}
+
+.neural-sidebar-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.neural-sidebar-brand-line-1 {
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.neural-sidebar-brand-line-2 {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #e5e7eb;
+}
+
+.neural-sidebar-section-label {
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.neural-sidebar-list {
+  margin-top: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-bottom: 0.5rem;
+  overflow-y: auto;
+}
+
+.neural-sidebar-link {
+  display: block;
+  border-radius: 1rem;
+  text-decoration: none;
+}
+
+.neural-sidebar-link:focus-visible {
+  outline: 2px solid rgba(34, 211, 238, 0.8);
+  outline-offset: 3px;
+}
+
+.neural-sidebar-chip {
+  position: relative;
+  border-radius: 1rem;
+  border: 1px solid rgba(34, 211, 238, 0.55);
+  background: rgba(15, 23, 42, 0.98);
+  padding: 0.75rem 0.85rem;
+  box-shadow: 0 0 26px rgba(15, 23, 42, 0.9);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease,
+    background 0.15s ease;
+}
+
+/* side traces */
+.neural-sidebar-chip::before,
+.neural-sidebar-chip::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 1.25rem;
+  height: 1px;
+  background: rgba(34, 211, 238, 0.55);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.neural-sidebar-chip::before {
+  left: -1.1rem;
+}
+
+.neural-sidebar-chip::after {
+  right: -1.1rem;
+  opacity: 0.7;
+}
+
+.neural-sidebar-chip-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.neural-sidebar-chip-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.75rem;
+  width: 1.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(34, 211, 238, 0.55);
+  background: #020617;
+  color: #a5f3fc;
+  font-size: 0.75rem;
+}
+
+.neural-sidebar-chip-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.neural-sidebar-chip-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #f9fafb;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.neural-sidebar-chip-description {
+  margin-top: 0.1rem;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.neural-sidebar-chip:hover {
+  transform: translateY(-1px);
+  border-color: rgba(125, 211, 252, 0.9);
+  background: rgba(15, 23, 42, 0.98);
+  box-shadow: 0 0 34px rgba(34, 211, 238, 0.9);
+}
+
+/* =========================================================
    REMOVED LEGACY SYSTEMS (deliberately missing)
    =========================================================
 
@@ -202,4 +393,3 @@ button:disabled {
    They are gone by design so nothing conflicts 
    with the mc-root background.
 ========================================================= */
-
