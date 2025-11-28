@@ -1,23 +1,22 @@
-'use client';
+"use client";
 
-import { useEffect, useState, type FormEvent } from 'react';
-import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
+import { useEffect, useState, type FormEvent } from "react";
+import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 
 const CANONICAL_BASE =
-  typeof process.env.NEXT_PUBLIC_SITE_URL === 'string'
-    ? process.env.NEXT_PUBLIC_SITE_URL.replace(/\/+$/, '')
+  typeof process.env.NEXT_PUBLIC_SITE_URL === "string"
+    ? process.env.NEXT_PUBLIC_SITE_URL.replace(/\/+$/, "")
     : undefined;
 
 export default function SignInPage() {
   const [emailSent, setEmailSent] = useState(false);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // If someone lands on auth at the wrong origin (e.g. moralclarity.ai),
-  // bounce them to studio.moralclarity.ai so auth is consistent.
+  // Enforce studio.moralclarity.ai as the auth origin.
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
     if (!CANONICAL_BASE) return;
 
     try {
@@ -25,20 +24,20 @@ export default function SignInPage() {
       const canonicalOrigin = new URL(CANONICAL_BASE).origin;
 
       if (currentOrigin !== canonicalOrigin) {
-        const search = window.location.search || '';
+        const search = window.location.search || "";
         const canonicalUrl = `${canonicalOrigin}/auth/sign-in${search}`;
         window.location.replace(canonicalUrl);
       }
     } catch (e) {
-      console.error('[auth/sign-in] canonical redirect error', e);
+      console.error("[auth/sign-in] canonical redirect error", e);
     }
   }, []);
 
-  // Surface ?err= from callback
+  // Surface ?err= from callback (just in case we ever send one again).
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    const e = params.get('err');
+    const e = params.get("err");
     if (e) setErr(e);
   }, []);
 
@@ -51,18 +50,18 @@ export default function SignInPage() {
       const supabase = createSupabaseBrowser();
 
       const baseUrl =
-        CANONICAL_BASE && typeof window !== 'undefined'
+        CANONICAL_BASE && typeof window !== "undefined"
           ? new URL(CANONICAL_BASE).origin
-          : typeof window !== 'undefined'
+          : typeof window !== "undefined"
           ? window.location.origin
-          : '';
+          : "";
 
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          // Magic link will redirect back here; implicit flow will read tokens from URL.
+          // Magic link will redirect back here; callback then sends you to "/".
           emailRedirectTo: `${baseUrl}/auth/callback?next=${encodeURIComponent(
-            '/app',
+            "/"
           )}`,
         },
       });
@@ -70,10 +69,10 @@ export default function SignInPage() {
       if (error) throw error;
       setEmailSent(true);
     } catch (e: any) {
-      console.error('[auth/sign-in] magic link error', e);
+      console.error("[auth/sign-in] magic link error", e);
       setErr(
         e?.message ??
-          'Failed to send magic link. Please double-check your email and try again.',
+          "Failed to send magic link. Please double-check your email and try again."
       );
     } finally {
       setLoading(false);
@@ -108,7 +107,7 @@ export default function SignInPage() {
               type="submit"
               disabled={loading || !email}
             >
-              {loading ? 'Sending magic link…' : 'Send magic link'}
+              {loading ? "Sending magic link…" : "Send magic link"}
             </button>
             {err && <p className="text-red-400 text-sm">{err}</p>}
           </form>
@@ -117,3 +116,4 @@ export default function SignInPage() {
     </main>
   );
 }
+
