@@ -33,7 +33,7 @@
 }
 
 /* =========================================================
-   ROOT BACKGROUND SYSTEM
+   ROOT BACKGROUND SYSTEM — TRIANGLE REMOVED
    ========================================================= */
 
 .mc-root {
@@ -42,17 +42,14 @@
 
   background-color: #020617;
 
-  /* Layer 1: dimmer overlay   */
-  /* Layer 2: triangle image   */
-  /* Layer 3: circuit backdrop */
+  /* Only the dimmer + circuit backdrop remain */
   background-image:
-    linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
-    url("/Triangle-Anchor.png"),
+    linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)),
     url("/mca-backdrop.png");
 
-  background-repeat: no-repeat, no-repeat, no-repeat;
-  background-position: center center, center center, center center;
-  background-size: min(72vh, 72vw), min(72vh, 72vw), cover;
+  background-repeat: no-repeat, no-repeat;
+  background-position: center center, center center;
+  background-size: cover, cover;
 
   color: var(--mc-text);
   -webkit-font-smoothing: antialiased;
@@ -71,7 +68,7 @@
 }
 
 /* =========================================================
-   SOFT BACKGROUND OVERLAY (BLENDING FIX)
+   SOFT BACKGROUND OVERLAY (still adds depth)
    ========================================================= */
 
 .mc-root::after {
@@ -220,8 +217,4 @@ button:disabled {
   border-radius: 12px;
   border: 1px solid var(--sd-border) !important;
 }
-
-/* =========================================================
-   REMOVED LEGACY SYSTEMS
-   ========================================================= */
 
