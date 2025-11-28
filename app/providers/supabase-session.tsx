@@ -1,63 +1,37 @@
 "use client";
 
-import {
-  createClientComponentClient,
-} from "@supabase/auth-helpers-nextjs";
-import type { Session } from "@supabase/supabase-js";
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 
-/* -------------------------------------------------------
-   CONTEXT
--------------------------------------------------------- */
-
-type SupabaseContextValue = {
-  session: Session | null;
+export type SupabaseSessionValue = {
+  session: any;
   loading: boolean;
 };
 
-const SupabaseSessionContext =
-  createContext<SupabaseContextValue | undefined>(undefined);
+const SupabaseSessionContext = createContext<SupabaseSessionValue | null>(null);
 
-/* -------------------------------------------------------
-   PROVIDER
--------------------------------------------------------- */
-
-export function SupabaseSessionProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const supabase = createClientComponentClient();
-  const [session, setSession] = useState<Session | null>(null);
+export function SupabaseSessionProvider({ children }: { children: React.ReactNode }) {
+  const supabase = createSupabaseBrowser();
+  const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let ignore = false;
 
     async function loadSession() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
+      const { data } = await supabase.auth.getSession();
       if (!ignore) {
-        setSession(session ?? null);
+        setSession(data.session ?? null);
         setLoading(false);
       }
     }
 
     loadSession();
 
-    // Listen for auth state changes
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, newSession) => {
         if (!ignore) {
           setSession(newSession ?? null);
-          setLoading(false);
         }
       }
     );
@@ -75,17 +49,10 @@ export function SupabaseSessionProvider({
   );
 }
 
-/* -------------------------------------------------------
-   HOOK
--------------------------------------------------------- */
-
 export function useSupabaseSession() {
   const ctx = useContext(SupabaseSessionContext);
-  if (!ctx) {
-    throw new Error(
-      "useSupabaseSession must be used inside <SupabaseSessionProvider>"
-    );
-  }
+  if (!ctx) throw new Error("useSupabaseSession must be used inside <SupabaseSessionProvider>");
   return ctx;
 }
+
 
