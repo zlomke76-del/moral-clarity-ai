@@ -1,9 +1,8 @@
-// lib/supabaseBrowser.ts
 'use client';
 
 import { createBrowserClient } from '@supabase/ssr';
 
-let client = null;
+let client: ReturnType<typeof createBrowserClient> | null = null;
 
 export function createSupabaseBrowser() {
   if (!client) {
@@ -12,15 +11,14 @@ export function createSupabaseBrowser() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         auth: {
-          flowType: 'implicit',
+          flowType: 'implicit', // REQUIRED for magic links in App Router
           detectSessionInUrl: true,
-          autoRefreshToken: true,
           persistSession: true,
-        },
+          autoRefreshToken: true
+        }
       }
     );
   }
 
   return client;
 }
-
