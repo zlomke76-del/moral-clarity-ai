@@ -19,8 +19,6 @@ type Props = {
 /**
  * NeuralSidebar
  * Left-side navigation using chip-style cards on a glass panel.
- * Uses dedicated .neural-sidebar* classes defined in globals.css
- * so Tailwind purging / specificity can't strip the visual.
  */
 export default function NeuralSidebar({ items }: Props) {
   const sidebarItems: NeuralSidebarItem[] =
@@ -28,7 +26,7 @@ export default function NeuralSidebar({ items }: Props) {
 
   return (
     <aside className="neural-sidebar">
-      {/* Logo / Brand */}
+      {/* Brand */}
       <div className="neural-sidebar-brand">
         <div className="neural-sidebar-brand-mark">
           <span>AI</span>
@@ -39,10 +37,10 @@ export default function NeuralSidebar({ items }: Props) {
         </div>
       </div>
 
-      {/* Label */}
+      {/* Section */}
       <div className="neural-sidebar-section-label">Workspace</div>
 
-      {/* Chip list */}
+      {/* Items */}
       <nav className="neural-sidebar-list">
         {sidebarItems.map((item) => (
           <ChipCard key={item.id} item={item} />
@@ -79,24 +77,17 @@ function ChipCard({ item }: ChipCardProps) {
     </div>
   );
 
+  // Use <a> for navigation
   if (item.href) {
     return (
-      <a
-        href={item.href}
-        onClick={item.onClick}
-        className="neural-sidebar-link"
-      >
+      <a href={item.href} className="neural-sidebar-link">
         {core}
       </a>
     );
   }
 
   return (
-    <button
-      type="button"
-      onClick={item.onClick}
-      className="neural-sidebar-link"
-    >
+    <button type="button" onClick={item.onClick} className="neural-sidebar-link">
       {core}
     </button>
   );
@@ -111,14 +102,12 @@ const DEFAULT_ITEMS: NeuralSidebarItem[] = [
     id: "account",
     label: "Account",
     description: "Profile & billing",
-    // Placeholder until /account is fully live
-    href: "#account",
+    href: "/account",
   },
   {
     id: "memory",
     label: "Memory",
     description: "Review & edit Solace memory",
-    // ✅ Wire directly into the secure memories page
     href: "/memories",
   },
   {
