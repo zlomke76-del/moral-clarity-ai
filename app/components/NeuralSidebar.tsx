@@ -27,31 +27,25 @@ export default function NeuralSidebar({ items }: Props) {
   return (
     <aside
       className="
-        hidden
+        hidden md:flex
         h-full
         w-72
         flex-shrink-0
         flex-col
         gap-4
-        border-r
-        border-slate-800/80
-        bg-slate-950/80
-        bg-gradient-to-b
-        from-slate-950/95
-        via-slate-900/80
-        to-slate-950/95
-        px-4
-        py-5
-        shadow-[18px_0_50px_rgba(3,7,18,0.95)]
+        border-r border-slate-800/80
+        bg-slate-950/85
+        bg-gradient-to-b from-slate-950 via-slate-900/90 to-slate-950
+        px-5 py-6
+        shadow-[18px_0_48px_rgba(3,7,18,0.95)]
         backdrop-blur-2xl
-        md:flex
         relative
         z-10
       "
     >
       {/* Logo / Brand */}
-      <div className="mb-3 flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-400/60 bg-slate-950 shadow-[0_0_18px_rgba(34,211,238,0.55)]">
+      <div className="mb-4 flex items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-400/70 bg-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.6)]">
           <span className="text-xs font-semibold tracking-[0.18em] text-cyan-200">
             AI
           </span>
@@ -66,8 +60,13 @@ export default function NeuralSidebar({ items }: Props) {
         </div>
       </div>
 
+      {/* Label */}
+      <div className="text-[0.7rem] font-medium uppercase tracking-[0.22em] text-slate-500">
+        Workspace
+      </div>
+
       {/* Chip grid */}
-      <div className="flex flex-1 flex-col gap-3 overflow-y-auto pb-2">
+      <div className="mt-1 flex flex-1 flex-col gap-3 overflow-y-auto pb-2">
         {sidebarItems.map((item) => (
           <ChipCard key={item.id} item={item} />
         ))}
@@ -94,26 +93,25 @@ function ChipCard({ item }: ChipCardProps) {
         flex-col
         gap-1
         rounded-2xl
-        border
-        border-cyan-400/40
-        bg-slate-950/90
+        border border-cyan-400/45
+        bg-slate-950/95
         px-3.5
         py-3
         shadow-[0_0_26px_rgba(15,23,42,0.9)]
         transition-all
         duration-150
         hover:-translate-y-[1px]
-        hover:border-cyan-300/70
-        hover:shadow-[0_0_34px_rgba(34,211,238,0.75)]
+        hover:border-cyan-300/80
+        hover:shadow-[0_0_34px_rgba(34,211,238,0.9)]
       "
     >
-      {/* Circuit traces into the panel */}
-      <div className="pointer-events-none absolute -left-6 top-1/2 h-px w-6 -translate-y-1/2 bg-cyan-400/50" />
-      <div className="pointer-events-none absolute -right-6 top-1/2 h-px w-6 -translate-y-1/2 bg-cyan-400/30" />
+      {/* Side traces */}
+      <div className="pointer-events-none absolute -left-5 top-1/2 h-px w-5 -translate-y-1/2 bg-cyan-400/50" />
+      <div className="pointer-events-none absolute -right-5 top-1/2 h-px w-5 -translate-y-1/2 bg-cyan-400/35" />
 
       <div className="flex items-center gap-2.5">
         {item.icon && (
-          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl border border-cyan-400/50 bg-slate-900 text-cyan-200">
+          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl border border-cyan-400/55 bg-slate-900 text-cyan-200">
             {item.icon}
           </div>
         )}
@@ -200,7 +198,7 @@ const DEFAULT_ITEMS: NeuralSidebarItem[] = [
   {
     id: "magic-key",
     label: "Magic Key",
-    description: "Generate a new secure key",
+    description: "Generate a new fabulous secure key",
     href: "#magic-key",
   },
 ];
