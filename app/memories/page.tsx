@@ -10,7 +10,10 @@ import {
   type UserMemoryRow,
 } from "@/lib/mca-memory-client";
 
-const DEFAULT_USER_KEY = "zlomke76@gmail.com"; // TODO: derive from session/auth
+// Fallback if we can't infer the current user (you, in founder lane).
+const DEFAULT_USER_KEY = "zlomke76@gmail.com";
+// Local storage key so each browser/user keeps their own memory scope.
+const LOCAL_STORAGE_KEY = "mca:userKey";
 
 const KIND_OPTIONS = [
   { value: "all", label: "All" },
@@ -21,7 +24,9 @@ const KIND_OPTIONS = [
 ];
 
 export default function MemoriesPage() {
-  const [userKey] = useState(DEFAULT_USER_KEY);
+  const [userKey, setUserKey] = useState<string>("");
+  const [bootstrapped, setBootstrapped] = useState(false);
+
   const [kindFilter, setKindFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -36,12 +41,26 @@ export default function MemoriesPage() {
   const [newKind, setNewKind] = useState("fact");
   const [error, setError] = useState<string | null>(null);
 
-  async function loadMemories() {
-    if (!userKey) return;
+  // Bootstrap the userKey from localStorage (per-user) or fallback.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const stored = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+    const initial = (stored && stored.trim()) || DEFAULT_USER_KEY;
+
+    setUserKey(initial);
+    setBootstrapped(true);
+    window.localStorage.setItem(LOCAL_STORAGE_KEY, initial);
+  }, []);
+
+  async function loadMemories(activeUserKey?: string) {
+    const key = activeUserKey ?? userKey;
+    if (!key) return;
+
     setLoading(true);
     setError(null);
     try {
-      const rows = await listUserMemories(userKey, {
+      const rows = await listUserMemories(key, {
         kind: kindFilter,
         search: search.trim() || undefined,
         limit: 100,
@@ -55,10 +74,19 @@ export default function MemoriesPage() {
     }
   }
 
+  // Auto-load when userKey + filter are ready.
   useEffect(() => {
-    loadMemories();
+    if (!bootstrapped || !userKey) return;
+    void loadMemories(userKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userKey, kindFilter]);
+  }, [bootstrapped, userKey, kindFilter]);
+
+  function handleUserKeyChange(value: string) {
+    setUserKey(value);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(LOCAL_STORAGE_KEY, value.trim());
+    }
+  }
 
   function startEdit(row: UserMemoryRow) {
     setEditingId(row.id);
@@ -101,7 +129,7 @@ export default function MemoriesPage() {
   }
 
   async function handleCreate() {
-    if (!newContent.trim()) return;
+    if (!newContent.trim() || !userKey) return;
     try {
       await createUserMemory({
         userKey,
@@ -126,6 +154,33 @@ export default function MemoriesPage() {
           take effect immediately for future conversations.
         </p>
       </header>
+
+      {/* User key (per-user scoping) */}
+      <section className="border rounded-xl p-4 space-y-2 bg-white/70 shadow-sm">
+        <label className="text-xs font-medium text-gray-600">
+          Memory user key (email / identifier)
+        </label>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <input
+            type="text"
+            value={userKey}
+            onChange={(e) => handleUserKeyChange(e.target.value)}
+            placeholder="Typically your email used with Solace"
+            className="border rounded-md px-3 py-2 text-sm flex-1"
+          />
+          <button
+            onClick={() => loadMemories(userKey)}
+            disabled={loading || !userKey}
+            className="border rounded-md px-3 py-2 text-sm disabled:opacity-50"
+          >
+            {loading ? "Loading..." : "Apply / Refresh"}
+          </button>
+        </div>
+        <p className="text-xs text-gray-500">
+          This key is stored locally in your browser so each person only sees
+          their own memories.
+        </p>
+      </section>
 
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3">
@@ -153,7 +208,7 @@ export default function MemoriesPage() {
         />
 
         <button
-          onClick={loadMemories}
+          onClick={() => loadMemories()}
           disabled={loading}
           className="border rounded-md px-3 py-1 text-sm disabled:opacity-50"
         >
@@ -193,7 +248,8 @@ export default function MemoriesPage() {
           <div className="flex justify-end">
             <button
               onClick={handleCreate}
-              className="bg-black text-white text-sm px-3 py-1 rounded-md"
+              disabled={!userKey}
+              className="bg-black text-white text-sm px-3 py-1 rounded-md disabled:opacity-50"
             >
               Save memory
             </button>
