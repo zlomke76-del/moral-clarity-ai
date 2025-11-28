@@ -4,12 +4,31 @@
 import { useEffect, useState } from "react";
 import { useSupabase } from "../providers/supabase-provider";
 
+type MemoryRow = {
+  id: string;
+  user_key: string;
+  title: string | null;
+  content: string | null;
+  kind: string | null;
+  episode_summary?: string | null;
+  created_at: string | null;
+};
+
+const KIND_OPTIONS = [
+  { value: "all", label: "All" },
+  { value: "fact", label: "Facts" },
+  { value: "episode", label: "Episodes" },
+  { value: "profile", label: "Profile" },
+  { value: "note", label: "Notes" },
+];
+
 export default function MemoriesPage() {
   const supabase = useSupabase();
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [rows, setRows] = useState<any[]>([]);
+  const [rows, setRows] = useState<MemoryRow[]>([]);
   const [loading, setLoading] = useState(false);
+
   const [kindFilter, setKindFilter] = useState("all");
   const [search, setSearch] = useState("");
 
@@ -22,27 +41,26 @@ export default function MemoriesPage() {
 
   const [newContent, setNewContent] = useState("");
   const [newKind, setNewKind] = useState("fact");
-
   const [error, setError] = useState<string | null>(null);
 
-  // --------------------------
-  // AUTH BOOTSTRAP
-  // --------------------------
-  async function bootstrapAuth() {
-    const { data } = await supabase.auth.getSession();
-    const email = data.session?.user?.email ?? null;
-    setUserEmail(email);
-
-    if (email) loadMemories(email);
-  }
-
+  // ---------------------------------------------------------
+  // Bootstrap current user
+  // ---------------------------------------------------------
   useEffect(() => {
-    bootstrapAuth();
+    const bootstrap = async () => {
+      const { data } = await supabase.auth.getSession();
+      const email = data.session?.user?.email ?? null;
+
+      setUserEmail(email);
+      if (email) loadMemories(email);
+    };
+
+    bootstrap();
   }, []);
 
-  // --------------------------
-  // LOAD USER MEMORIES
-  // --------------------------
+  // ---------------------------------------------------------
+  // Load memories for this user
+  // ---------------------------------------------------------
   async function loadMemories(email: string) {
     setLoading(true);
     setError(null);
@@ -56,20 +74,21 @@ export default function MemoriesPage() {
     if (kindFilter !== "all") query = query.eq("kind", kindFilter);
     if (search.trim()) {
       query = query.or(
-        `title.ilike.%${search}%,content.ilike.%${search}%,episode_summary.ilike.%${search}%`
+        `content.ilike.%${search}%,title.ilike.%${search}%,episode_summary.ilike.%${search}%`
       );
     }
 
     const { data, error } = await query;
+
     if (error) setError(error.message);
-    else setRows(data || []);
+    else setRows(data ?? []);
 
     setLoading(false);
   }
 
-  // --------------------------
-  // CREATE MEMORY
-  // --------------------------
+  // ---------------------------------------------------------
+  // Create memory
+  // ---------------------------------------------------------
   async function createMemory() {
     if (!userEmail || !newContent.trim()) return;
 
@@ -86,10 +105,12 @@ export default function MemoriesPage() {
     loadMemories(userEmail);
   }
 
-  // --------------------------
-  // SAVE EDIT
-  // --------------------------
+  // ---------------------------------------------------------
+  // Save edits
+  // ---------------------------------------------------------
   async function saveEdit(id: string) {
+    if (!userEmail) return;
+
     const { error } = await supabase
       .from("user_memories")
       .update({
@@ -102,14 +123,15 @@ export default function MemoriesPage() {
     if (error) setError(error.message);
 
     setEditingId(null);
-    loadMemories(userEmail!);
+    loadMemories(userEmail);
   }
 
-  // --------------------------
-  // DELETE MEMORY
-  // --------------------------
+  // ---------------------------------------------------------
+  // Delete
+  // ---------------------------------------------------------
   async function deleteMemory(id: string) {
-    if (!confirm("Delete this memory permanently?")) return;
+    if (!userEmail) return;
+    if (!confirm("Delete this memory? This cannot be undone.")) return;
 
     const { error } = await supabase
       .from("user_memories")
@@ -118,24 +140,23 @@ export default function MemoriesPage() {
 
     if (error) setError(error.message);
 
-    loadMemories(userEmail!);
+    loadMemories(userEmail);
   }
 
-  // --------------------------
-  // RENDER
-  // --------------------------
+  // ---------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
-
       <h1 className="text-2xl font-semibold">Solace Memories</h1>
 
       {!userEmail && (
-        <p className="text-sm text-red-400">
+        <p className="text-sm text-red-500">
           You must be signed in to view memories.
         </p>
       )}
 
-      {/* Filters */}
+      {/* Controls */}
       <div className="flex gap-3 items-center">
         <select
           value={kindFilter}
@@ -143,28 +164,26 @@ export default function MemoriesPage() {
             setKindFilter(e.target.value);
             if (userEmail) loadMemories(userEmail);
           }}
-          className="border px-2 py-1 rounded-md text-sm"
+          className="border rounded-md px-2 py-1 text-sm"
         >
-          <option value="all">All</option>
-          <option value="fact">Facts</option>
-          <option value="episode">Episodes</option>
-          <option value="profile">Profile</option>
-          <option value="note">Notes</option>
+          {KIND_OPTIONS.map((k) => (
+            <option key={k.value} value={k.value}>
+              {k.label}
+            </option>
+          ))}
         </select>
 
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) =>
-            e.key === "Enter" && userEmail && loadMemories(userEmail)
-          }
+          onKeyDown={(e) => e.key === "Enter" && userEmail && loadMemories(userEmail)}
           placeholder="Search…"
-          className="border px-3 py-1 rounded-md text-sm flex-1"
+          className="border rounded-md px-3 py-1 flex-1 text-sm"
         />
 
         <button
           onClick={() => userEmail && loadMemories(userEmail)}
-          className="border px-3 py-1 rounded-md"
+          className="border rounded-md px-3 py-1 text-sm"
         >
           Refresh
         </button>
@@ -176,14 +195,14 @@ export default function MemoriesPage() {
         </p>
       )}
 
-      {/* Add New Memory */}
+      {/* Create */}
       <section className="border rounded-xl p-4 bg-gray-50 space-y-2">
         <h2 className="text-sm font-semibold">Add new memory</h2>
 
         <select
           value={newKind}
           onChange={(e) => setNewKind(e.target.value)}
-          className="border px-2 py-1 rounded-md text-xs"
+          className="border rounded-md px-2 py-1 text-xs"
         >
           <option value="fact">Fact</option>
           <option value="profile">Profile</option>
@@ -206,7 +225,7 @@ export default function MemoriesPage() {
         </button>
       </section>
 
-      {/* Memory List */}
+      {/* Table */}
       {loading && <p>Loading…</p>}
       {!loading && rows.length === 0 && (
         <p className="text-sm text-gray-500">No memories found.</p>
@@ -218,18 +237,21 @@ export default function MemoriesPage() {
             <tr>
               <th className="px-3 py-2 text-left">Summary</th>
               <th className="px-3 py-2 text-left">Content</th>
-              <th className="px-3 py-2">Kind</th>
-              <th className="px-3 py-2">Actions</th>
+              <th className="px-3 py-2 text-center">Kind</th>
+              <th className="px-3 py-2 text-right">Actions</th>
             </tr>
           </thead>
 
           <tbody>
             {rows.map((row) => {
-              const editing = editingId === row.id;
+              const isEditing = editingId === row.id;
+              const created = row.created_at
+                ? new Date(row.created_at).toLocaleString()
+                : "";
 
-              if (editing) {
+              if (isEditing) {
                 return (
-                  <tr key={row.id} className="border-t bg-yellow-50/50">
+                  <tr key={row.id} className="border-t bg-yellow-50">
                     <td className="px-3 py-2">
                       <input
                         className="border rounded-md px-2 py-1 text-xs w-full"
@@ -265,7 +287,7 @@ export default function MemoriesPage() {
                       </select>
                     </td>
 
-                    <td className="px-3 py-2 flex gap-2 justify-end">
+                    <td className="px-3 py-2 text-right space-x-2">
                       <button
                         className="text-xs bg-black text-white px-2 py-1 rounded-md"
                         onClick={() => saveEdit(row.id)}
@@ -283,25 +305,27 @@ export default function MemoriesPage() {
                 );
               }
 
+              const summary =
+                row.title ||
+                row.episode_summary ||
+                (row.content ?? "").slice(0, 80);
+
               return (
                 <tr key={row.id} className="border-t">
-                  <td className="px-3 py-2 text-xs font-medium">
-                    {row.title ||
-                      row.episode_summary ||
-                      row.content.slice(0, 60)}
-                  </td>
+                  <td className="px-3 py-2 text-xs font-medium">{summary}</td>
 
                   <td className="px-3 py-2 text-xs whitespace-pre-wrap">
-                    {row.content.slice(0, 150)}…
+                    {(row.content ?? "").slice(0, 200)}
+                    {(row.content ?? "").length > 200 ? "…" : ""}
                   </td>
 
                   <td className="px-3 py-2 text-xs text-center">
                     {row.kind}
                   </td>
 
-                  <td className="px-3 py-2 text-xs text-right space-x-2">
+                  <td className="px-3 py-2 text-right space-x-2">
                     <button
-                      className="border px-2 py-1 rounded-md"
+                      className="text-xs border px-2 py-1 rounded-md"
                       onClick={() => {
                         setEditingId(row.id);
                         setEditDraft({
@@ -313,9 +337,8 @@ export default function MemoriesPage() {
                     >
                       Edit
                     </button>
-
                     <button
-                      className="border border-red-400 text-red-600 px-2 py-1 rounded-md"
+                      className="text-xs border border-red-400 text-red-600 px-2 py-1 rounded-md"
                       onClick={() => deleteMemory(row.id)}
                     >
                       Delete
