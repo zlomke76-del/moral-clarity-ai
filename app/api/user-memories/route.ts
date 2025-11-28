@@ -1,37 +1,41 @@
 // app/api/user-memories/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@supabase/supabase-js";
 import { remember, type MemoryPurpose } from "@/lib/memory";
 
+function sb() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    throw new Error("SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing");
+  }
+
+  return createClient(url, key, {
+    auth: { persistSession: false },
+  });
+}
+
+// GET /api/user-memories?user_key=...&kind=fact&search=...&limit=50&offset=0
 export async function GET(req: NextRequest) {
   try {
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userKey = user.email || user.id;
-    if (!userKey) {
-      return NextResponse.json(
-        { error: "User has no email/id" },
-        { status: 400 }
-      );
-    }
-
     const url = new URL(req.url);
+    const userKey = url.searchParams.get("user_key");
     const kind = url.searchParams.get("kind");
     const search = url.searchParams.get("search")?.trim();
     const limit = parseInt(url.searchParams.get("limit") || "50", 10);
     const offset = parseInt(url.searchParams.get("offset") || "0", 10);
 
-    let query = supabase
+    if (!userKey) {
+      return NextResponse.json(
+        { error: "user_key is required" },
+        { status: 400 }
+      );
+    }
+
+    const client = sb();
+
+    let query = client
       .from("user_memories")
       .select(
         `
@@ -81,41 +85,26 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// POST /api/user-memories
+// body: { userKey, content, kind?, title?, workspaceId? }
 export async function POST(req: NextRequest) {
   try {
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userKey = user.email || user.id;
-    if (!userKey) {
-      return NextResponse.json(
-        { error: "User has no email/id" },
-        { status: 400 }
-      );
-    }
-
     const body = await req.json().catch(() => ({}));
+
+    const userKey: string | null = body?.userKey ?? null;
     const content: string | null = body?.content ?? null;
     const kind: MemoryPurpose = body?.kind ?? "fact";
     const title: string | null = body?.title ?? null;
     const workspaceId: string | null = body?.workspaceId ?? null;
 
-    if (!content?.trim()) {
+    if (!userKey || !content?.trim()) {
       return NextResponse.json(
-        { error: "content is required" },
+        { error: "userKey and content are required" },
         { status: 400 }
       );
     }
 
-    // Use unified memory engine; embeddings + classification stay consistent.
+    // Use the unified memory engine so embeddings + classification stay consistent.
     const res = await remember({
       user_key: userKey,
       content,
@@ -136,3 +125,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
