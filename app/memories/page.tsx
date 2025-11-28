@@ -2,15 +2,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useSupabase } from "../providers/supabase-provider";
 
 export default function MemoriesPage() {
-  const supabase = createClientComponentClient();
+  const supabase = useSupabase();
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-
   const [kindFilter, setKindFilter] = useState("all");
   const [search, setSearch] = useState("");
 
@@ -26,6 +25,9 @@ export default function MemoriesPage() {
 
   const [error, setError] = useState<string | null>(null);
 
+  // --------------------------
+  // AUTH BOOTSTRAP
+  // --------------------------
   async function bootstrapAuth() {
     const { data } = await supabase.auth.getSession();
     const email = data.session?.user?.email ?? null;
@@ -38,6 +40,9 @@ export default function MemoriesPage() {
     bootstrapAuth();
   }, []);
 
+  // --------------------------
+  // LOAD USER MEMORIES
+  // --------------------------
   async function loadMemories(email: string) {
     setLoading(true);
     setError(null);
@@ -49,7 +54,6 @@ export default function MemoriesPage() {
       .order("created_at", { ascending: false });
 
     if (kindFilter !== "all") query = query.eq("kind", kindFilter);
-
     if (search.trim()) {
       query = query.or(
         `title.ilike.%${search}%,content.ilike.%${search}%,episode_summary.ilike.%${search}%`
@@ -57,17 +61,16 @@ export default function MemoriesPage() {
     }
 
     const { data, error } = await query;
-
-    if (error) {
-      setError(error.message);
-    } else {
-      setRows(data || []);
-    }
+    if (error) setError(error.message);
+    else setRows(data || []);
 
     setLoading(false);
   }
 
-  async function saveNewMemory() {
+  // --------------------------
+  // CREATE MEMORY
+  // --------------------------
+  async function createMemory() {
     if (!userEmail || !newContent.trim()) return;
 
     const { error } = await supabase.from("user_memories").insert({
@@ -83,6 +86,9 @@ export default function MemoriesPage() {
     loadMemories(userEmail);
   }
 
+  // --------------------------
+  // SAVE EDIT
+  // --------------------------
   async function saveEdit(id: string) {
     const { error } = await supabase
       .from("user_memories")
@@ -99,6 +105,9 @@ export default function MemoriesPage() {
     loadMemories(userEmail!);
   }
 
+  // --------------------------
+  // DELETE MEMORY
+  // --------------------------
   async function deleteMemory(id: string) {
     if (!confirm("Delete this memory permanently?")) return;
 
@@ -112,10 +121,14 @@ export default function MemoriesPage() {
     loadMemories(userEmail!);
   }
 
+  // --------------------------
+  // RENDER
+  // --------------------------
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 space-y-6">
 
       <h1 className="text-2xl font-semibold">Solace Memories</h1>
+
       {!userEmail && (
         <p className="text-sm text-red-400">
           You must be signed in to view memories.
@@ -142,7 +155,9 @@ export default function MemoriesPage() {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && userEmail && loadMemories(userEmail)}
+          onKeyDown={(e) =>
+            e.key === "Enter" && userEmail && loadMemories(userEmail)
+          }
           placeholder="Search…"
           className="border px-3 py-1 rounded-md text-sm flex-1"
         />
@@ -155,7 +170,13 @@ export default function MemoriesPage() {
         </button>
       </div>
 
-      {/* New Memory */}
+      {error && (
+        <p className="text-sm text-red-600 border border-red-200 rounded-md px-3 py-2 bg-red-50">
+          {error}
+        </p>
+      )}
+
+      {/* Add New Memory */}
       <section className="border rounded-xl p-4 bg-gray-50 space-y-2">
         <h2 className="text-sm font-semibold">Add new memory</h2>
 
@@ -178,15 +199,15 @@ export default function MemoriesPage() {
         />
 
         <button
-          onClick={saveNewMemory}
+          onClick={createMemory}
           className="bg-black text-white px-3 py-1 rounded-md text-sm"
         >
           Save
         </button>
       </section>
 
-      {/* Results Table */}
-      {loading && <p>Loading...</p>}
+      {/* Memory List */}
+      {loading && <p>Loading…</p>}
       {!loading && rows.length === 0 && (
         <p className="text-sm text-gray-500">No memories found.</p>
       )}
@@ -218,6 +239,7 @@ export default function MemoriesPage() {
                         }
                       />
                     </td>
+
                     <td className="px-3 py-2">
                       <textarea
                         className="border rounded-md px-2 py-1 text-xs w-full"
@@ -227,7 +249,8 @@ export default function MemoriesPage() {
                         }
                       />
                     </td>
-                    <td className="px-3 py-2">
+
+                    <td className="px-3 py-2 text-center">
                       <select
                         className="border rounded-md px-2 py-1 text-xs"
                         value={editDraft.kind}
@@ -236,12 +259,13 @@ export default function MemoriesPage() {
                         }
                       >
                         <option value="fact">fact</option>
-                        <option value="profile">profile</option>
                         <option value="episode">episode</option>
+                        <option value="profile">profile</option>
                         <option value="note">note</option>
                       </select>
                     </td>
-                    <td className="px-3 py-2 flex gap-2">
+
+                    <td className="px-3 py-2 flex gap-2 justify-end">
                       <button
                         className="text-xs bg-black text-white px-2 py-1 rounded-md"
                         onClick={() => saveEdit(row.id)}
@@ -262,14 +286,19 @@ export default function MemoriesPage() {
               return (
                 <tr key={row.id} className="border-t">
                   <td className="px-3 py-2 text-xs font-medium">
-                    {row.title || row.episode_summary || row.content.slice(0, 60)}
+                    {row.title ||
+                      row.episode_summary ||
+                      row.content.slice(0, 60)}
                   </td>
+
                   <td className="px-3 py-2 text-xs whitespace-pre-wrap">
                     {row.content.slice(0, 150)}…
                   </td>
+
                   <td className="px-3 py-2 text-xs text-center">
                     {row.kind}
                   </td>
+
                   <td className="px-3 py-2 text-xs text-right space-x-2">
                     <button
                       className="border px-2 py-1 rounded-md"
@@ -301,4 +330,3 @@ export default function MemoriesPage() {
     </div>
   );
 }
-
