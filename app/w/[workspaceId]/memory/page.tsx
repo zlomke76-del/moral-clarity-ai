@@ -21,7 +21,7 @@ export default function WorkspaceMemoryPage() {
   const [newContent, setNewContent] = useState("");
   const [newKind, setNewKind] = useState<KindFilter>("fact");
 
-  // Supabase browser client using your public env vars
+  // Supabase browser client using public env vars
   const supabase = useMemo(
     () =>
       createBrowserClient(
@@ -112,10 +112,11 @@ export default function WorkspaceMemoryPage() {
   }
 
   // ----------------------------------------------------
-  // Render
+  // Render – NOTE: no min-h-screen and no vertical centering.
+  // This content will sit at the very top of <main> right beside NeuralSidebar.
   // ----------------------------------------------------
   return (
-    <div className="w-full min-h-screen px-4 py-4 md:px-10 md:py-6 space-y-6">
+    <div className="w-full flex flex-col gap-6 px-4 py-4 md:px-8 md:py-6">
       {/* Header */}
       <header className="space-y-1">
         <h1 className="text-3xl font-semibold text-slate-50">
@@ -280,4 +281,5 @@ export default function WorkspaceMemoryPage() {
     </div>
   );
 }
+
 
