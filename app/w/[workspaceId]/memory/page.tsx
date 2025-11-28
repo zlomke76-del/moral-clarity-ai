@@ -115,10 +115,10 @@ export default function WorkspaceMemoryPage() {
   // Render
   // ----------------------------------------------------
   return (
-    <div className="w-full min-h-screen px-10 py-10 space-y-8">
+    <div className="w-full min-h-screen px-4 py-4 md:px-10 md:py-6 space-y-6">
       {/* Header */}
-      <header>
-        <h1 className="text-3xl font-semibold text-slate-50 mb-2">
+      <header className="space-y-1">
+        <h1 className="text-3xl font-semibold text-slate-50">
           Solace Memories
         </h1>
         {!userKey && (
@@ -128,57 +128,70 @@ export default function WorkspaceMemoryPage() {
         )}
       </header>
 
-      {/* Controls + New memory */}
       {userKey && (
-        <section className="space-y-6">
-          {/* Filters / search */}
-          <div className="flex flex-wrap items-center gap-3">
-            <select
-              className="bg-slate-900 border border-slate-700 text-sm rounded px-2 py-1 text-slate-200"
-              value={kindFilter}
-              onChange={(e) => setKindFilter(e.target.value as KindFilter)}
-            >
-              <option value="all">All</option>
-              <option value="fact">Facts</option>
-              <option value="episode">Episodes</option>
-              <option value="profile">Profile</option>
-              <option value="note">Notes</option>
-              <option value="preference">Preferences</option>
-            </select>
+        <>
+          {/* Filters / search row */}
+          <section className="bg-slate-900/80 border border-slate-800 rounded-lg p-3 md:p-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium tracking-wide uppercase text-slate-400">
+                  Filter
+                </span>
+                <select
+                  className="bg-slate-950 border border-slate-700 text-xs rounded px-2 py-1 text-slate-200"
+                  value={kindFilter}
+                  onChange={(e) => setKindFilter(e.target.value as KindFilter)}
+                >
+                  <option value="all">All</option>
+                  <option value="fact">Facts</option>
+                  <option value="episode">Episodes</option>
+                  <option value="profile">Profile</option>
+                  <option value="note">Notes</option>
+                  <option value="preference">Preferences</option>
+                </select>
+              </div>
 
-            <input
-              className="bg-slate-900 border border-slate-700 text-sm rounded px-3 py-1 text-slate-100 flex-1 min-w-[180px]"
-              placeholder="Search title, content, or summary…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-
-            <button
-              type="button"
-              onClick={refreshMemories}
-              className="text-sm border border-slate-600 rounded px-3 py-1 bg-slate-800 hover:bg-slate-700"
-            >
-              Refresh
-            </button>
-          </div>
+              <div className="flex-1 flex items-center gap-2">
+                <input
+                  className="flex-1 bg-slate-950 border border-slate-700 text-sm rounded px-3 py-1.5 text-slate-100"
+                  placeholder="Search title, content, or summary…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={refreshMemories}
+                  className="text-xs md:text-sm border border-slate-600 rounded px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-100"
+                >
+                  Refresh
+                </button>
+              </div>
+            </div>
+          </section>
 
           {/* Add new memory */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-lg p-4 space-y-3">
+          <section className="bg-slate-900/80 border border-slate-800 rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-medium text-slate-100">
                 Add new memory
               </h2>
-              <select
-                className="bg-slate-950 border border-slate-700 text-xs rounded px-2 py-1 text-slate-200"
-                value={newKind}
-                onChange={(e) => setNewKind(e.target.value as KindFilter)}
-              >
-                <option value="fact">Fact</option>
-                <option value="episode">Episode</option>
-                <option value="profile">Profile</option>
-                <option value="note">Note</option>
-                <option value="preference">Preference</option>
-              </select>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-400 uppercase tracking-wide">
+                  Kind
+                </span>
+                <select
+                  className="bg-slate-950 border border-slate-700 text-xs rounded px-2 py-1 text-slate-200"
+                  value={newKind}
+                  onChange={(e) => setNewKind(e.target.value as KindFilter)}
+                >
+                  <option value="fact">Fact</option>
+                  <option value="episode">Episode</option>
+                  <option value="profile">Profile</option>
+                  <option value="note">Note</option>
+                  <option value="preference">Preference</option>
+                </select>
+              </div>
             </div>
 
             <textarea
@@ -189,15 +202,17 @@ export default function WorkspaceMemoryPage() {
               onChange={(e) => setNewContent(e.target.value)}
             />
 
-            <button
-              type="button"
-              onClick={handleCreate}
-              className="inline-flex items-center justify-center rounded bg-blue-500 hover:bg-blue-400 px-4 py-2 text-sm font-medium text-slate-950"
-            >
-              Save memory
-            </button>
-          </div>
-        </section>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleCreate}
+                className="inline-flex items-center justify-center rounded bg-blue-500 hover:bg-blue-400 px-4 py-2 text-sm font-medium text-slate-950"
+              >
+                Save memory
+              </button>
+            </div>
+          </section>
+        </>
       )}
 
       {/* Memory table */}
@@ -215,11 +230,13 @@ export default function WorkspaceMemoryPage() {
             <table className="w-full text-sm text-slate-100 border-collapse">
               <thead>
                 <tr className="border-b border-slate-700 text-slate-300">
-                  <th className="text-left py-2 pr-3 w-[10%]">Kind</th>
-                  <th className="text-left py-2 pr-3 w-[30%]">Title / Summary</th>
+                  <th className="text-left py-2 pr-3 w-[8%]">Kind</th>
+                  <th className="text-left py-2 pr-3 w-[24%]">
+                    Title / Summary
+                  </th>
                   <th className="text-left py-2 pr-3">Content</th>
-                  <th className="text-left py-2 pr-3 w-[15%]">Created</th>
-                  <th className="text-left py-2 w-[8%]">Actions</th>
+                  <th className="text-left py-2 pr-3 w-[14%]">Created</th>
+                  <th className="text-left py-2 w-[7%]">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -232,7 +249,9 @@ export default function WorkspaceMemoryPage() {
                       {m.kind ?? "fact"}
                     </td>
                     <td className="py-2 pr-3 text-slate-100">
-                      {m.title || <span className="text-slate-500">—</span>}
+                      {m.title || (
+                        <span className="text-slate-500 italic">—</span>
+                      )}
                     </td>
                     <td className="py-2 pr-3 text-slate-200 whitespace-pre-wrap">
                       {m.content || m.episode_summary || ""}
