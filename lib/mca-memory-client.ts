@@ -1,69 +1,27 @@
 // lib/mca-memory-client.ts
-import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
+//
+// High-level client used by the Memory Page to read/write
+// the consolidated `user_memories` table.
+//
+// Table definition:
+//
+// id              uuid PK
+// user_key        text  (email)
+// title           text
+// content         text
+// kind            text  ('fact' | 'episode' | 'profile' | 'note' | 'preference')
+// workspace_id    uuid | null
+// embedding       vector(1536) | null
+// episodic_type   text | null
+// episode_summary text | null
+// importance      smallint | null
+// source          text | null
+// origin_text     text | null
+// created_at      timestamptz
+// updated_at      timestamptz
+//
 
-/* -------------------------------------------------------
- * Workspace memories (existing behavior, if you still use it)
- * ------------------------------------------------------ */
-
-export type WorkspaceMemoryRow = {
-  id: string;
-  workspace_id: string;
-  title: string | null;
-  content: string | null;
-  created_at: string;
-};
-
-export async function listWorkspaceMemories(limit = 25) {
-  const url = `/api/memory?mode=workspace&workspace_id=${encodeURIComponent(
-    MCA_WORKSPACE_ID
-  )}&limit=${limit}`;
-  const r = await fetch(url, { method: "GET", cache: "no-store" });
-  if (!r.ok) throw new Error(`memory list ${r.status}`);
-  const j = await r.json();
-  return (j.rows || []) as WorkspaceMemoryRow[];
-}
-
-export async function createWorkspaceMemory(input: {
-  title?: string;
-  content: string;
-}) {
-  const r = await fetch("/api/memory", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      mode: "workspace",
-      workspace_id: MCA_WORKSPACE_ID,
-      title: input.title ?? null,
-      content: input.content,
-    }),
-  });
-  if (!r.ok)
-    throw new Error(`memory create ${r.status}: ${await r.text().catch(() => "")}`);
-  return (await r.json()) as { id: string };
-}
-
-/**
- * Optional helper for user-scoped vector search (if you’re using user_memories + RPC).
- * Pass the same user key you send to /api/chat via X-User-Key, or centralize it in mca-config.
- */
-export async function searchUserMemories(
-  userKey: string,
-  q: string,
-  limit = 8
-) {
-  const url = `/api/memory?mode=user&user_key=${encodeURIComponent(
-    userKey
-  )}&q=${encodeURIComponent(q)}&limit=${limit}`;
-  const r = await fetch(url, { method: "GET", cache: "no-store" });
-  if (!r.ok) throw new Error(`user memory search ${r.status}`);
-  const j = await r.json();
-  return j.rows || [];
-}
-
-/* -------------------------------------------------------
- * User memories (unified table: user_memories)
- * For Solace memory page / manual editing.
- * ------------------------------------------------------ */
+import { createClient } from "@/lib/supabase/browser";
 
 export type UserMemoryRow = {
   id: string;
@@ -74,102 +32,135 @@ export type UserMemoryRow = {
   workspace_id: string | null;
   episodic_type: string | null;
   episode_summary: string | null;
-  importance: number | null;
-  source: string | null;
-  origin: string | null;
-  created_at: string;
+  created_at: string | null;
   updated_at: string | null;
 };
 
-type ListUserMemoriesOptions = {
-  kind?: string; // 'all' | 'fact' | 'episode' | ...
-  search?: string;
-  limit?: number;
-  offset?: number;
-};
-
+/* -------------------------------------------------------
+   List memories for one user
+-------------------------------------------------------- */
 export async function listUserMemories(
   userKey: string,
-  opts: ListUserMemoriesOptions = {}
+  opts?: {
+    kind?: string;
+    search?: string;
+    limit?: number;
+  }
 ): Promise<UserMemoryRow[]> {
-  const params = new URLSearchParams();
-  params.set("user_key", userKey);
-  if (opts.kind) params.set("kind", opts.kind);
-  if (opts.search) params.set("search", opts.search);
-  if (typeof opts.limit === "number")
-    params.set("limit", String(opts.limit));
-  if (typeof opts.offset === "number")
-    params.set("offset", String(opts.offset));
+  if (!userKey) return [];
 
-  const url = `/api/user-memories?${params.toString()}`;
-  const r = await fetch(url, { method: "GET", cache: "no-store" });
-  if (!r.ok)
-    throw new Error(`listUserMemories failed: ${r.status} ${r.statusText}`);
-  const j = await r.json();
-  return (j.rows || []) as UserMemoryRow[];
+  const supabase = createClient();
+
+  let q = supabase
+    .from("user_memories")
+    .select("*")
+    .eq("user_key", userKey)
+    .order("created_at", { ascending: false });
+
+  // Filter by kind
+  if (opts?.kind && opts.kind !== "all") {
+    q = q.eq("kind", opts.kind);
+  }
+
+  // Search content or title
+  if (opts?.search) {
+    q = q.or(
+      `content.ilike.%${opts.search}%,title.ilike.%${opts.search}%,episode_summary.ilike.%${opts.search}%`
+    );
+  }
+
+  // Limit
+  if (opts?.limit) {
+    q = q.limit(opts.limit);
+  }
+
+  const { data, error } = await q;
+
+  if (error) {
+    console.error("listUserMemories error:", error);
+    throw error;
+  }
+
+  return (data || []) as UserMemoryRow[];
 }
 
-export async function createUserMemory(input: {
+/* -------------------------------------------------------
+   Create new memory row
+-------------------------------------------------------- */
+export async function createUserMemory(args: {
   userKey: string;
   content: string;
-  kind?: string;
-  title?: string;
+  kind: string;
+  title?: string | null;
   workspaceId?: string | null;
-}) {
-  const r = await fetch("/api/user-memories", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      userKey: input.userKey,
-      content: input.content,
-      kind: input.kind ?? "fact",
-      title: input.title ?? null,
-      workspaceId: input.workspaceId ?? null,
-    }),
-  });
+}): Promise<string> {
+  const supabase = createClient();
 
-  if (!r.ok) {
-    throw new Error(
-      `createUserMemory failed: ${r.status} ${await r.text().catch(() => "")}`
-    );
+  const { userKey, content, kind, title, workspaceId } = args;
+
+  const { data, error } = await supabase
+    .from("user_memories")
+    .insert({
+      user_key: userKey,
+      content,
+      kind,
+      title: title || null,
+      workspace_id: workspaceId || null,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error("createUserMemory error:", error);
+    throw error;
   }
-  return r.json();
+
+  return data.id;
 }
 
+/* -------------------------------------------------------
+   Update memory
+-------------------------------------------------------- */
 export async function updateUserMemory(
   id: string,
-  payload: {
-    title?: string;
+  fields: {
+    title?: string | null;
     content?: string;
     kind?: string;
-    importance?: number;
-    episode_summary?: string;
   }
-) {
-  const r = await fetch(`/api/user-memories/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+): Promise<void> {
+  const supabase = createClient();
 
-  if (!r.ok) {
-    throw new Error(
-      `updateUserMemory failed: ${r.status} ${await r.text().catch(() => "")}`
-    );
+  const { error } = await supabase
+    .from("user_memories")
+    .update({
+      title: fields.title ?? null,
+      content: fields.content ?? null,
+      kind: fields.kind ?? null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) {
+    console.error("updateUserMemory error:", error);
+    throw error;
   }
-  return r.json();
 }
 
-export async function deleteUserMemory(id: string) {
-  const r = await fetch(`/api/user-memories/${id}`, {
-    method: "DELETE",
-  });
+/* -------------------------------------------------------
+   Delete memory
+-------------------------------------------------------- */
+export async function deleteUserMemory(id: string): Promise<void> {
+  const supabase = createClient();
 
-  if (!r.ok) {
-    throw new Error(
-      `deleteUserMemory failed: ${r.status} ${await r.text().catch(() => "")}`
-    );
+  const { error } = await supabase
+    .from("user_memories")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("deleteUserMemory error:", error);
+    throw error;
   }
-  return r.json();
 }
 
