@@ -1,8 +1,7 @@
-// app/w/[workspaceId]/memory/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { useEffect, useMemo, useState } from "react";
+import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 
 type MemoryRow = {
   id: string;
@@ -16,9 +15,14 @@ type MemoryRow = {
   created_at?: string | null;
 };
 
-export default function WorkspaceMemoryPage() {
+export default function WorkspaceMemoryPage({
+  params,
+}: {
+  params: { workspaceId: string };
+}) {
   const [items, setItems] = useState<MemoryRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [filterKind, setFilterKind] = useState<"all" | "fact" | "episode">(
     "all"
@@ -28,61 +32,66 @@ export default function WorkspaceMemoryPage() {
   const [newKind, setNewKind] = useState<"fact" | "episode">("fact");
   const [newText, setNewText] = useState("");
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const supabase = useMemo(() => createSupabaseBrowser(), []);
 
-  // --------------------------------------------------
-  // Load memories from Supabase
-  // --------------------------------------------------
   async function loadMemories() {
     setLoading(true);
+    setError(null);
 
     const { data, error } = await supabase
       .from("memory_episode_chunks")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (!error && data) {
-      setItems(data as MemoryRow[]);
+    if (error) {
+      console.error("loadMemories error:", error);
+      setItems([]);
+      setError(error.message ?? "Failed to load memories.");
+    } else {
+      setItems((data || []) as MemoryRow[]);
     }
 
     setLoading(false);
   }
 
   useEffect(() => {
-    // initial load
     void loadMemories();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // --------------------------------------------------
-  // Add a new memory
-  // --------------------------------------------------
   async function addMemory() {
     if (!newText.trim()) return;
 
-    await supabase.from("memory_episode_chunks").insert({
+    const { error } = await supabase.from("memory_episode_chunks").insert({
       memory_type: newKind,
       memory_text: newText.trim(),
     });
+
+    if (error) {
+      console.error("addMemory error:", error);
+      setError(error.message ?? "Failed to add memory.");
+      return;
+    }
 
     setNewText("");
     await loadMemories();
   }
 
-  // --------------------------------------------------
-  // Delete a memory
-  // --------------------------------------------------
   async function deleteMemory(id: string) {
-    await supabase.from("memory_episode_chunks").delete().eq("id", id);
+    const { error } = await supabase
+      .from("memory_episode_chunks")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error("deleteMemory error:", error);
+      setError(error.message ?? "Failed to delete memory.");
+      return;
+    }
+
     await loadMemories();
   }
 
-  // --------------------------------------------------
-  // Filtering
-  // --------------------------------------------------
   const filteredItems = items.filter((m) => {
     const kind =
       (m.kind as string) ||
@@ -110,10 +119,8 @@ export default function WorkspaceMemoryPage() {
     return matchesKind && matchesSearch;
   });
 
-  // --------------------------------------------------
-  // Render (sits directly to the right of NeuralSidebar)
-  // --------------------------------------------------
   return (
+    // 👇 This is ONLY the main column; sidebar is handled by layout.tsx
     <div className="w-full max-w-6xl mx-auto px-8 py-10 space-y-8">
       {/* HEADER */}
       <header>
@@ -122,6 +129,18 @@ export default function WorkspaceMemoryPage() {
           Manage what Solace remembers about you.
         </p>
       </header>
+
+      {/* DEBUG / STATUS */}
+      <div className="text-xs text-slate-400">
+        Total rows: {items.length} | After filter: {filteredItems.length}
+        {params?.workspaceId ? ` | workspaceId: ${params.workspaceId}` : null}
+      </div>
+
+      {error && (
+        <div className="text-sm text-red-400 bg-red-900/30 border border-red-700 rounded px-3 py-2">
+          {error}
+        </div>
+      )}
 
       {/* FILTER BAR */}
       <section className="bg-slate-900/70 border border-slate-700 rounded-lg p-4 space-y-3">
@@ -204,7 +223,9 @@ export default function WorkspaceMemoryPage() {
         {loading ? (
           <div className="text-slate-300 text-sm">Loading memories…</div>
         ) : filteredItems.length === 0 ? (
-          <div className="text-slate-300 text-sm">No memories stored yet.</div>
+          <div className="text-slate-300 text-sm">
+            No memories stored yet (or none match your filters).
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -256,5 +277,6 @@ export default function WorkspaceMemoryPage() {
     </div>
   );
 }
+
 
 
