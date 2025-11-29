@@ -31,7 +31,12 @@ export function createSupabaseBrowser(): SupabaseClient {
   return coreSupabaseBrowser();
 }
 
-// Keep default + named export for newer code:
+// Default export for newer code that does:
+//   import supabaseBrowser from "@/lib/supabaseBrowser";
 export default supabaseBrowser;
-export { supabaseBrowser };
+
+// Only export the *other* helpers as named exports.
+// supabaseBrowser is already a named export via the function declaration above.
+export { getSupabaseBrowser, createSupabaseBrowser };
+
 export type { SupabaseClient };
