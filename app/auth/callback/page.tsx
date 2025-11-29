@@ -1,14 +1,19 @@
 // app/auth/callback/page.tsx
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+
+// 🔧 Tell Next.js not to prerender this page
+export const dynamic = "force-dynamic";
 
 export default function AuthCallbackPage() {
   return (
     <main className="min-h-screen flex items-center justify-center text-slate-100">
-      <CallbackInner />
+      <Suspense fallback={<p className="text-sm text-slate-300">Signing you in…</p>}>
+        <CallbackInner />
+      </Suspense>
     </main>
   );
 }
@@ -26,11 +31,11 @@ function CallbackInner() {
     let cancelled = false;
 
     async function run() {
-      // hydrate Supabase session cookie
+      // hydrate Supabase auth state
       await supabase.auth.getSession();
       if (cancelled) return;
 
-      // ✅ Safely read `next` with optional chaining, default to "/"
+      // Safely read `next` param, default to "/"
       const rawNext = searchParams?.get("next") ?? null;
 
       const next =
