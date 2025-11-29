@@ -18,25 +18,27 @@ export default function AuthCallbackPage() {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       );
 
-      // Wait for Supabase session
+      // Ensure Supabase finishes the session handshake
       await supabase.auth.getSession();
 
-      // Default redirect
+      // Default redirect target
       let next = "/app";
 
       try {
         const qs = new URLSearchParams(window.location.search);
         const rawNext = qs.get("next");
 
-        if (
-          rawNext &&
-          rawNext.startsWith("/") &&
-          !rawNext.startsWith("//") &&
-          rawNext !== "/auth/callback"
-        ) {
-          next = rawNext;
-        }
+        // Treat /memory as invalid (we no longer support that route)
+        const isBadNext =
+          !rawNext ||
+          rawNext === "/memory" ||
+          !rawNext.startsWith("/") ||
+          rawNext.startsWith("//") ||
+          rawNext === "/auth/callback";
+
+        next = isBadNext ? "/app" : rawNext;
       } catch {
+        // On any parsing error, just go to /app
         next = "/app";
       }
 
