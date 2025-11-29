@@ -1,115 +1,87 @@
+// app/auth/sign-in/page.tsx
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
-import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
-
-const CANONICAL_BASE =
-  typeof process.env.NEXT_PUBLIC_SITE_URL === "string"
-    ? process.env.NEXT_PUBLIC_SITE_URL.replace(/\/+$/, "")
-    : undefined;
+import { useState } from "react";
+import { createBrowserClient } from "@supabase/ssr";
 
 export default function SignInPage() {
-  const [emailSent, setEmailSent] = useState(false);
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
   const [email, setEmail] = useState("");
-  const [err, setErr] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Enforce studio.moralclarity.ai as the auth origin.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!CANONICAL_BASE) return;
-
-    try {
-      const currentOrigin = window.location.origin;
-      const canonicalOrigin = new URL(CANONICAL_BASE).origin;
-
-      if (currentOrigin !== canonicalOrigin) {
-        const search = window.location.search || "";
-        const canonicalUrl = `${canonicalOrigin}/auth/sign-in${search}`;
-        window.location.replace(canonicalUrl);
-      }
-    } catch (e) {
-      console.error("[auth/sign-in] canonical redirect error", e);
-    }
-  }, []);
-
-  // Surface ?err= from callback (just in case we ever send one again).
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const e = params.get("err");
-    if (e) setErr(e);
-  }, []);
-
-  async function onSubmit(e: FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setErr(null);
+    setError(null);
     setLoading(true);
 
     try {
-      const supabase = createSupabaseBrowser();
-
-      const baseUrl =
-        CANONICAL_BASE && typeof window !== "undefined"
-          ? new URL(CANONICAL_BASE).origin
-          : typeof window !== "undefined"
-          ? window.location.origin
-          : "";
+      const origin =
+        typeof window !== "undefined" ? window.location.origin : "";
 
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          // Magic link will redirect back here; callback then sends you to "/".
-          emailRedirectTo: `${baseUrl}/auth/callback?next=${encodeURIComponent(
-            "/"
-          )}`,
+          // ✅ After login, go to "/" (not /memory)
+          emailRedirectTo: `${origin}/auth/callback?next=/`,
         },
       });
 
-      if (error) throw error;
-      setEmailSent(true);
-    } catch (e: any) {
-      console.error("[auth/sign-in] magic link error", e);
-      setErr(
-        e?.message ??
-          "Failed to send magic link. Please double-check your email and try again."
-      );
+      if (error) {
+        setError(error.message);
+      } else {
+        setSent(true);
+      }
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main className="min-h-screen grid place-items-center p-6 bg-black text-white">
-      <div className="w-full max-w-md rounded-xl border border-neutral-800 p-6 bg-black/40">
-        <h1 className="text-xl font-semibold mb-4">Sign in</h1>
+    <main className="min-h-screen flex items-center justify-center text-slate-100">
+      <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-950/90 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.8)]">
+        <h1 className="text-xl font-semibold mb-2">Magic Key</h1>
+        <p className="text-sm text-slate-300 mb-4">
+          Enter your email and we&apos;ll send you a secure sign-in link.
+        </p>
 
-        {emailSent ? (
-          <div className="space-y-2 text-sm text-neutral-200">
-            <p>Check your email for a magic sign-in link.</p>
-            <p className="text-neutral-400">
-              For security, open the link on the same device and browser where
-              you requested it.
-            </p>
-          </div>
+        {sent ? (
+          <p className="text-sm text-emerald-300">
+            Check your email for a sign-in link. You can close this window.
+          </p>
         ) : (
-          <form onSubmit={onSubmit} className="space-y-4">
-            <input
-              type="email"
-              className="w-full rounded-md bg-neutral-900 p-3 outline-none"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold mb-1 text-slate-300">
+                Email
+              </label>
+              <input
+                type="email"
+                required
+                className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+
+            {error && (
+              <div className="text-xs text-red-400 bg-red-900/30 border border-red-700/60 rounded px-3 py-2">
+                {error}
+              </div>
+            )}
+
             <button
-              className="w-full rounded-md bg-amber-500/90 hover:bg-amber-500 p-3 font-medium disabled:opacity-60 disabled:cursor-not-allowed"
               type="submit"
-              disabled={loading || !email}
+              disabled={loading}
+              className="w-full rounded-md bg-blue-500 py-2 text-sm font-medium text-white hover:bg-blue-400 disabled:opacity-60"
             >
-              {loading ? "Sending magic link…" : "Send magic link"}
+              {loading ? "Sending link..." : "Send magic link"}
             </button>
-            {err && <p className="text-red-400 text-sm">{err}</p>}
           </form>
         )}
       </div>
