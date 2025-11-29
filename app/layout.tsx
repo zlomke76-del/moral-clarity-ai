@@ -1,19 +1,19 @@
+// app/layout.tsx
 "use client";
 
 import "./globals.css";
 import { SupabaseProvider } from "@/lib/supabase/provider";
-import type { ReactNode } from "react";
+import SolaceDock from "@/app/components/SolaceDock";
 
-export default function RootLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function RootLayout({ children }) {
   return (
     <html lang="en" className="h-full">
-      <body className="mc-root h-full">
+      <body className="mc-root min-h-screen">
         <SupabaseProvider>
           {children}
+
+          {/* 🔥 Solace ALWAYS mounted */}
+          <SolaceDock />
         </SupabaseProvider>
       </body>
     </html>
