@@ -1,14 +1,16 @@
 // app/app/page.tsx
-import { redirect } from "next/navigation";
 
 /**
- * Legacy /app route.
+ * Main Solace workspace entry.
  *
- * We used to send magic-link callbacks to /app, but the main workspace
- * shell now lives at the root (/). This page simply redirects there so:
- * - Old magic links keep working.
- * - Any hard-coded /app links don't 404.
+ * We don't need to render the chat UI directly here because SolaceDock
+ * is mounted globally in app/layout.tsx. This page's job is simply to
+ * provide a stable surface for that workspace.
  */
 export default function AppIndexPage() {
-  redirect("/");
+  return (
+    <div className="w-full h-full flex items-center justify-center">
+      {/* SolaceDock renders globally; this keeps layout centered. */}
+    </div>
+  );
 }
