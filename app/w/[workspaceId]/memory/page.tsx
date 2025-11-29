@@ -20,27 +20,19 @@ export default function WorkspaceMemoryPage() {
   const [items, setItems] = useState<MemoryRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [kind, setKind] = useState<string>("fact");
+  const [kind, setKind] = useState("fact");
   const [text, setText] = useState("");
   const [search, setSearch] = useState("");
 
-  // ----------------------------------------
-  // LOAD MEMORIES
-  // ----------------------------------------
   async function loadMemories() {
     setLoading(true);
 
-    let query = supabase
+    const { data, error } = await supabase
       .from("user_memories")
       .select("id, kind, title, content, created_at")
       .order("created_at", { ascending: false });
 
-    const { data, error } = await query;
-
-    if (!error && data) {
-      setItems(data as any);
-    }
-
+    if (!error && data) setItems(data);
     setLoading(false);
   }
 
@@ -48,9 +40,6 @@ export default function WorkspaceMemoryPage() {
     loadMemories();
   }, []);
 
-  // ----------------------------------------
-  // ADD MEMORY
-  // ----------------------------------------
   async function addMemory() {
     if (!text.trim()) return;
 
@@ -60,20 +49,16 @@ export default function WorkspaceMemoryPage() {
       title: text.trim().slice(0, 120),
     };
 
-    const { error } = await supabase.from("user_memories").insert(payload as any);
+    const { error } = await supabase
+      .from("user_memories")
+      .insert(payload as any);
 
-    if (error) {
-      console.error("Error inserting memory", error);
-      return;
+    if (!error) {
+      setText("");
+      loadMemories();
     }
-
-    setText("");
-    await loadMemories();
   }
 
-  // ----------------------------------------
-  // FILTERED VIEW (client-side search)
-  // ----------------------------------------
   const filtered = items.filter((m) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
@@ -85,14 +70,15 @@ export default function WorkspaceMemoryPage() {
   });
 
   return (
-    <div className="px-10 py-10 w-full max-w-[1400px] mx-auto">
+    <div className="flex flex-col w-full h-full px-8 py-8 overflow-y-auto">
       {/* Header */}
-      <h1 className="text-3xl font-semibold mb-6">Solace Memories</h1>
+      <h1 className="text-3xl font-semibold mb-4">Solace Memories</h1>
 
       {/* Filter row */}
       <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-3 mb-6">
         <div className="flex flex-col md:flex-row md:items-center gap-3">
           <div className="text-sm font-medium text-slate-200">Filter</div>
+
           <select
             className="w-full md:w-40 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm text-slate-100"
             value="all"
@@ -103,13 +89,12 @@ export default function WorkspaceMemoryPage() {
 
           <input
             className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-sm text-slate-100"
-            placeholder="Search title, content, or summary..."
+            placeholder="Search title, content, or summary…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
 
           <button
-            type="button"
             className="px-3 py-1.5 rounded text-sm bg-slate-800 border border-slate-600 text-slate-100"
             onClick={loadMemories}
           >
@@ -137,21 +122,15 @@ export default function WorkspaceMemoryPage() {
           </select>
         </div>
 
-        <div className="mb-3">
-          <label className="block text-xs font-semibold text-slate-300 mb-1">
-            What should Solace remember?
-          </label>
-          <textarea
-            className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-100"
-            rows={3}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Short description of the fact or episode…"
-          />
-        </div>
+        <textarea
+          className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-slate-100 mb-3"
+          rows={3}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Short description…"
+        />
 
         <button
-          type="button"
           className="px-4 py-2 rounded bg-blue-500 hover:bg-blue-600 text-sm font-medium text-white"
           onClick={addMemory}
         >
@@ -159,7 +138,7 @@ export default function WorkspaceMemoryPage() {
         </button>
       </section>
 
-      {/* Memory table */}
+      {/* Memory list */}
       <section className="bg-slate-900/60 border border-slate-700 rounded-lg p-4">
         {loading ? (
           <div className="text-slate-400 text-sm">Loading memories…</div>
@@ -173,27 +152,16 @@ export default function WorkspaceMemoryPage() {
                   <th className="text-left py-2 pr-4">Kind</th>
                   <th className="text-left py-2 pr-4">Title</th>
                   <th className="text-left py-2 pr-4">Content</th>
-                  <th className="text-left py-2 pr-4 whitespace-nowrap">
-                    Created
-                  </th>
+                  <th className="text-left py-2 pr-4">Created</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((m) => (
-                  <tr
-                    key={m.id}
-                    className="border-b border-slate-800 last:border-0 align-top"
-                  >
-                    <td className="py-2 pr-4 text-blue-300">
-                      {(m.kind ?? "").toLowerCase()}
-                    </td>
-                    <td className="py-2 pr-4 text-slate-100 max-w-xs">
-                      {m.title || "—"}
-                    </td>
-                    <td className="py-2 pr-4 text-slate-200 max-w-xl">
-                      {m.content}
-                    </td>
-                    <td className="py-2 pr-4 text-slate-400 whitespace-nowrap">
+                  <tr key={m.id} className="border-b border-slate-800">
+                    <td className="py-2 pr-4 text-blue-300">{m.kind}</td>
+                    <td className="py-2 pr-4 text-slate-100">{m.title}</td>
+                    <td className="py-2 pr-4 text-slate-200">{m.content}</td>
+                    <td className="py-2 pr-4 text-slate-400">
                       {new Date(m.created_at).toLocaleString()}
                     </td>
                   </tr>
@@ -206,5 +174,4 @@ export default function WorkspaceMemoryPage() {
     </div>
   );
 }
-
 
