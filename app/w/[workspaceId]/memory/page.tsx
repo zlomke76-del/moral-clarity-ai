@@ -1,4 +1,3 @@
-// app/w/[workspaceId]/memory/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -86,9 +85,9 @@ export default function WorkspaceMemoryPage() {
   });
 
   return (
-    <div className="flex-1 min-h-screen px-8 py-8 overflow-y-auto">
+    <div className="px-10 py-10 w-full max-w-[1400px] mx-auto">
       {/* Header */}
-      <h1 className="text-3xl font-semibold mb-4">Solace Memories</h1>
+      <h1 className="text-3xl font-semibold mb-6">Solace Memories</h1>
 
       {/* Filter row */}
       <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-3 mb-6">
@@ -97,9 +96,7 @@ export default function WorkspaceMemoryPage() {
           <select
             className="w-full md:w-40 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm text-slate-100"
             value="all"
-            onChange={() => {
-              /* reserved for future server-side filter */
-            }}
+            onChange={() => {}}
           >
             <option value="all">All</option>
           </select>
@@ -149,7 +146,7 @@ export default function WorkspaceMemoryPage() {
             rows={3}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Short description of the fact or episode you want Solace to remember…"
+            placeholder="Short description of the fact or episode…"
           />
         </div>
 
@@ -174,7 +171,7 @@ export default function WorkspaceMemoryPage() {
               <thead>
                 <tr className="border-b border-slate-700 text-slate-300">
                   <th className="text-left py-2 pr-4">Kind</th>
-                  <th className="text-left py-2 pr-4">Title / Summary</th>
+                  <th className="text-left py-2 pr-4">Title</th>
                   <th className="text-left py-2 pr-4">Content</th>
                   <th className="text-left py-2 pr-4 whitespace-nowrap">
                     Created
@@ -209,3 +206,5 @@ export default function WorkspaceMemoryPage() {
     </div>
   );
 }
+
+
