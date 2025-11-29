@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
+import { createBrowserClient } from "@supabase/ssr";
 
 type MemoryRow = {
   id: string;
@@ -32,8 +32,19 @@ export default function WorkspaceMemoryPage({
   const [newKind, setNewKind] = useState<"fact" | "episode">("fact");
   const [newText, setNewText] = useState("");
 
-  const supabase = useMemo(() => createSupabaseBrowser(), []);
+  // Single browser client instance
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
 
+  /* ----------------------------------------------------
+     LOAD MEMORIES FROM memory_episode_chunks
+  ---------------------------------------------------- */
   async function loadMemories() {
     setLoading(true);
     setError(null);
@@ -56,9 +67,11 @@ export default function WorkspaceMemoryPage({
 
   useEffect(() => {
     void loadMemories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [supabase]);
 
+  /* ----------------------------------------------------
+     ADD MEMORY
+  ---------------------------------------------------- */
   async function addMemory() {
     if (!newText.trim()) return;
 
@@ -77,6 +90,9 @@ export default function WorkspaceMemoryPage({
     await loadMemories();
   }
 
+  /* ----------------------------------------------------
+     DELETE MEMORY
+  ---------------------------------------------------- */
   async function deleteMemory(id: string) {
     const { error } = await supabase
       .from("memory_episode_chunks")
@@ -92,6 +108,9 @@ export default function WorkspaceMemoryPage({
     await loadMemories();
   }
 
+  /* ----------------------------------------------------
+     FILTERING
+  ---------------------------------------------------- */
   const filteredItems = items.filter((m) => {
     const kind =
       (m.kind as string) ||
@@ -119,8 +138,11 @@ export default function WorkspaceMemoryPage({
     return matchesKind && matchesSearch;
   });
 
+  /* ----------------------------------------------------
+     RENDER – this sits to the RIGHT of NeuralSidebar
+     (sidebar comes from app/w/[workspaceId]/layout.tsx)
+  ---------------------------------------------------- */
   return (
-    // 👇 This is ONLY the main column; sidebar is handled by layout.tsx
     <div className="w-full max-w-6xl mx-auto px-8 py-10 space-y-8">
       {/* HEADER */}
       <header>
@@ -130,7 +152,7 @@ export default function WorkspaceMemoryPage({
         </p>
       </header>
 
-      {/* DEBUG / STATUS */}
+      {/* DEBUG LINE – helps confirm we’re actually fetching rows */}
       <div className="text-xs text-slate-400">
         Total rows: {items.length} | After filter: {filteredItems.length}
         {params?.workspaceId ? ` | workspaceId: ${params.workspaceId}` : null}
@@ -277,6 +299,7 @@ export default function WorkspaceMemoryPage({
     </div>
   );
 }
+
 
 
 
