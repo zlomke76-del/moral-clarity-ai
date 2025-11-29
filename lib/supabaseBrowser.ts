@@ -17,5 +17,5 @@ export function getSupabaseBrowser(): SupabaseClient {
 
 // Keep default + named export for newer code:
 export default supabaseBrowser;
-export { supabaseBrowser, getSupabaseBrowser };
+export { supabaseBrowser };
 export type { SupabaseClient };
