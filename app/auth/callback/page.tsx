@@ -26,12 +26,13 @@ function CallbackInner() {
     let cancelled = false;
 
     async function run() {
-      // Let Supabase hydrate the session cookie
+      // hydrate Supabase session cookie
       await supabase.auth.getSession();
       if (cancelled) return;
 
-      // ✅ Default to "/" if no or bad next param
-      const rawNext = searchParams.get("next");
+      // ✅ Safely read `next` with optional chaining, default to "/"
+      const rawNext = searchParams?.get("next") ?? null;
+
       const next =
         rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//")
           ? rawNext
@@ -53,3 +54,4 @@ function CallbackInner() {
     </p>
   );
 }
+
