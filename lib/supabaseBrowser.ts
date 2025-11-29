@@ -1,18 +1,34 @@
 // lib/supabaseBrowser.ts
 // Back-compat shim so existing imports keep working.
-// New code should import from "./supabase/client" directly.
+// Newer code should import from "./supabase/client" directly.
 
 "use client";
 
-import { supabaseBrowser } from "./supabase/client";
+import { supabaseBrowser as coreSupabaseBrowser } from "./supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
+
+/**
+ * Primary browser client wrapper.
+ * This matches the behavior of supabaseBrowser() from lib/supabase/client.
+ */
+export function supabaseBrowser(): SupabaseClient {
+  return coreSupabaseBrowser();
+}
 
 /**
  * Legacy helper used in a few client utilities:
  *   import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
  */
 export function getSupabaseBrowser(): SupabaseClient {
-  return supabaseBrowser();
+  return coreSupabaseBrowser();
+}
+
+/**
+ * Legacy helper used in auth callback and some older code:
+ *   import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
+ */
+export function createSupabaseBrowser(): SupabaseClient {
+  return coreSupabaseBrowser();
 }
 
 // Keep default + named export for newer code:
