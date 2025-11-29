@@ -2,19 +2,17 @@
 "use client";
 
 import { useState } from "react";
-import type { FormEvent } from "react";
-import { useSupabase } from "@/lib/supabase/provider";
+import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 
 export default function SignInPage() {
-  // Reuse the singleton Supabase client from the global provider
-  const { supabase } = useSupabase();
+  const supabase = getSupabaseBrowser();
 
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
@@ -26,7 +24,6 @@ export default function SignInPage() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          // After login, go to /app (not /memory)
           emailRedirectTo: `${origin}/auth/callback?next=/app`,
         },
       });
@@ -87,4 +84,5 @@ export default function SignInPage() {
     </main>
   );
 }
+
 
