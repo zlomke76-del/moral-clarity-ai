@@ -28,7 +28,7 @@ export default function SignInPage() {
         email,
         options: {
           // ✅ After login, go to "/" (not /memory)
-          emailRedirectTo: `${origin}/auth/callback?next=/`,
+          emailRedirectTo: `${origin}/auth/callback?next=/app`,
         },
       });
 
