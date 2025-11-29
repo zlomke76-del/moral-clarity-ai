@@ -5,21 +5,18 @@ import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import NeuralSidebar from "@/app/components/NeuralSidebar";
 
-type MemoryRow = {
+type MemoryItem = {
   id: string;
-  title: string | null;
-  content: string | null;
-  user_key: string | null;
+  memory_type: string | null;
+  memory_text: string | null;
   created_at: string | null;
-  workspace_id: string | null;
-  kind: string | null;
 };
 
 type FilterKind = "all" | "fact" | "episode";
 type NewKind = "fact" | "episode";
 
 export default function MemoryPage() {
-  const [items, setItems] = useState<MemoryRow[]>([]);
+  const [items, setItems] = useState<MemoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [filterKind, setFilterKind] = useState<FilterKind>("all");
@@ -27,6 +24,8 @@ export default function MemoryPage() {
 
   const [newKind, setNewKind] = useState<NewKind>("fact");
   const [newText, setNewText] = useState("");
+
+  const [error, setError] = useState<string | null>(null);
 
   // One Supabase client per page (browser-side only)
   const supabase = useMemo(
@@ -39,24 +38,26 @@ export default function MemoryPage() {
   );
 
   // --------------------------------------------------
-  // Load memories from Supabase `memories` table
+  // Load memories from `memory_episode_chunks`
   // --------------------------------------------------
   async function loadMemories() {
     setLoading(true);
+    setError(null);
 
     const { data, error } = await supabase
-      .from("memories")
+      .from("memory_episode_chunks")
       .select("*")
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error loading memories:", error);
+      console.error("Error loading memory_episode_chunks:", error);
       setItems([]);
+      setError(error.message ?? "Failed to load memories");
       setLoading(false);
       return;
     }
 
-    setItems((data ?? []) as MemoryRow[]);
+    setItems((data ?? []) as MemoryItem[]);
     setLoading(false);
   }
 
@@ -65,34 +66,20 @@ export default function MemoryPage() {
   }, [supabase]);
 
   // --------------------------------------------------
-  // Add a new memory into `memories`
+  // Add a new memory into `memory_episode_chunks`
   // --------------------------------------------------
   async function addMemory() {
     const text = newText.trim();
     if (!text) return;
 
-    // Try to capture the current user email for user_key if available
-    let userEmail: string | null = null;
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      userEmail = user?.email ?? null;
-    } catch (err) {
-      console.warn("Could not fetch user for memory insert:", err);
-    }
-
-    const insertPayload = {
-      kind: newKind,
-      content: text,
-      title: text.slice(0, 120), // lightweight title/summary
-      user_key: userEmail,
-    };
-
-    const { error } = await supabase.from("memories").insert(insertPayload);
+    const { error } = await supabase.from("memory_episode_chunks").insert({
+      memory_type: newKind,
+      memory_text: text,
+    });
 
     if (error) {
       console.error("Error inserting memory:", error);
+      setError(error.message ?? "Failed to add memory");
       return;
     }
 
@@ -104,10 +91,14 @@ export default function MemoryPage() {
   // Delete a memory
   // --------------------------------------------------
   async function deleteMemory(id: string) {
-    const { error } = await supabase.from("memories").delete().eq("id", id);
+    const { error } = await supabase
+      .from("memory_episode_chunks")
+      .delete()
+      .eq("id", id);
 
     if (error) {
       console.error("Error deleting memory:", error);
+      setError(error.message ?? "Failed to delete memory");
       return;
     }
 
@@ -118,13 +109,13 @@ export default function MemoryPage() {
   // Filtering
   // --------------------------------------------------
   const filteredItems = items.filter((m) => {
-    const kind = (m.kind ?? "").toLowerCase();
-
-    const text =
-      ((m.title ?? "") + " " + (m.content ?? "")).toString().toLowerCase();
+    const kind = (m.memory_type ?? "").toLowerCase();
+    const text = (m.memory_text ?? "").toLowerCase();
 
     const matchesKind =
-      filterKind === "all" ? true : kind === filterKind.toLowerCase();
+      filterKind === "all"
+        ? true
+        : kind === filterKind.toLowerCase();
 
     const matchesSearch = !search.trim()
       ? true
@@ -138,10 +129,10 @@ export default function MemoryPage() {
   // --------------------------------------------------
   return (
     <div className="flex min-h-screen w-full">
-      {/* Left sidebar – fixed width */}
+      {/* Left sidebar */}
       <NeuralSidebar />
 
-      {/* Main memory console area */}
+      {/* Main memory console area – table at the top */}
       <main className="flex-1 px-8 py-10 overflow-y-auto">
         <div className="max-w-6xl mx-auto space-y-8">
           {/* HEADER */}
@@ -156,6 +147,13 @@ export default function MemoryPage() {
               Manage what Solace remembers about you.
             </p>
           </header>
+
+          {/* ERROR BANNER (if any) */}
+          {error && (
+            <div className="rounded-md border border-red-500 bg-red-900/30 px-4 py-2 text-sm text-red-100">
+              {error}
+            </div>
+          )}
 
           {/* FILTER BAR */}
           <section className="bg-slate-900/70 border border-slate-700 rounded-lg p-4 space-y-3">
@@ -176,7 +174,7 @@ export default function MemoryPage() {
 
               <input
                 className="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm"
-                placeholder="Search title, content, or summary…"
+                placeholder="Search memory text…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -230,12 +228,12 @@ export default function MemoryPage() {
                 className="px-4 py-2 rounded bg-blue-500 text-sm font-medium text-white"
                 onClick={addMemory}
               >
-                Save memory
+              Save memory
               </button>
             </div>
           </section>
 
-          {/* MEMORY TABLE */}
+          {/* MEMORY TABLE – AT THE TOP, UNDER HEADER/CONTROLS */}
           <section className="bg-slate-900/70 border border-slate-700 rounded-lg p-4">
             {loading ? (
               <div className="text-slate-300 text-sm">Loading memories…</div>
@@ -247,7 +245,6 @@ export default function MemoryPage() {
                   <thead className="text-slate-300 border-b border-slate-700">
                     <tr>
                       <th className="text-left py-2 pr-4">Kind</th>
-                      <th className="text-left py-2 pr-4">Title / Summary</th>
                       <th className="text-left py-2 pr-4">Content</th>
                       <th className="text-left py-2 pr-4">Created</th>
                       <th className="text-left py-2 pr-4">Actions</th>
@@ -260,13 +257,10 @@ export default function MemoryPage() {
                         className="border-b border-slate-800 last:border-0"
                       >
                         <td className="py-2 pr-4 text-blue-300">
-                          {m.kind ?? "—"}
-                        </td>
-                        <td className="py-2 pr-4 text-slate-100 max-w-xs">
-                          {m.title ?? "—"}
+                          {m.memory_type ?? "—"}
                         </td>
                         <td className="py-2 pr-4 text-slate-200 max-w-xl">
-                          {m.content ?? "—"}
+                          {m.memory_text ?? "—"}
                         </td>
                         <td className="py-2 pr-4 text-slate-400 whitespace-nowrap">
                           {m.created_at
@@ -294,3 +288,4 @@ export default function MemoryPage() {
     </div>
   );
 }
+
