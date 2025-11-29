@@ -2,20 +2,19 @@
 "use client";
 
 import { useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import type { FormEvent } from "react";
+import { useSupabase } from "@/lib/supabase/provider";
 
 export default function SignInPage() {
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  // Reuse the singleton Supabase client from the global provider
+  const { supabase } = useSupabase();
 
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setLoading(true);
@@ -27,7 +26,7 @@ export default function SignInPage() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          // ✅ After login, go to "/" (not /memory)
+          // After login, go to /app (not /memory)
           emailRedirectTo: `${origin}/auth/callback?next=/app`,
         },
       });
