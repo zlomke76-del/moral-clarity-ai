@@ -1,39 +1,45 @@
 // lib/supabaseBrowser.ts
-// Back-compat shim so existing imports keep working.
-// Newer code should import from "./supabase/client" directly.
-
 "use client";
 
-import { supabaseBrowser as coreSupabaseBrowser } from "./supabase/client";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+
+const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+let browserClient: SupabaseClient | null = null;
 
 /**
- * Primary browser client wrapper.
- * This matches the behavior of supabaseBrowser() from lib/supabase/client.
- */
-export function supabaseBrowser(): SupabaseClient {
-  return coreSupabaseBrowser();
-}
-
-/**
- * Legacy helper used in a few client utilities:
- *   import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
+ * Canonical browser Supabase client.
+ * Singleton: only one GoTrueClient per browser context.
  */
 export function getSupabaseBrowser(): SupabaseClient {
-  return coreSupabaseBrowser();
+  if (!browserClient) {
+    if ((!URL || !ANON) && process.env.NODE_ENV !== "production") {
+      throw new Error(
+        "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY"
+      );
+    }
+
+    browserClient = createClient(URL, ANON, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    });
+  }
+
+  return browserClient;
 }
 
 /**
- * Legacy helper used in auth callback and some older code:
- *   import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
+ * Back-compat name for existing imports.
+ * (mca-memory-client and any older code can keep using this.)
  */
 export function createSupabaseBrowser(): SupabaseClient {
-  return coreSupabaseBrowser();
+  return getSupabaseBrowser();
 }
 
-// Default export for code that does:
-//   import supabaseBrowser from "@/lib/supabaseBrowser";
-export default supabaseBrowser;
-
-export type { SupabaseClient };
+// Default export if anyone does `import supabaseBrowser from "@/lib/supabaseBrowser"`
+export default getSupabaseBrowser;
 
