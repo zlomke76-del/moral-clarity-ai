@@ -5,9 +5,9 @@ import { createBrowserClient } from "@supabase/ssr";
 
 type MemoryRow = {
   id: string;
-  kind?: string | null;
   memory_type?: string | null;
   episodic_type?: string | null;
+  kind?: string | null;
   title?: string | null;
   title_summary?: string | null;
   content?: string | null;
@@ -32,7 +32,7 @@ export default function WorkspaceMemoryPage({
   const [newKind, setNewKind] = useState<"fact" | "episode">("fact");
   const [newText, setNewText] = useState("");
 
-  // Single browser client instance
+  // Single Supabase browser client instance
   const supabase = useMemo(
     () =>
       createBrowserClient(
@@ -139,7 +139,7 @@ export default function WorkspaceMemoryPage({
   });
 
   /* ----------------------------------------------------
-     RENDER – this sits to the RIGHT of NeuralSidebar
+     LAYOUT – sits to the RIGHT of NeuralSidebar
      (sidebar comes from app/w/[workspaceId]/layout.tsx)
   ---------------------------------------------------- */
   return (
@@ -152,9 +152,10 @@ export default function WorkspaceMemoryPage({
         </p>
       </header>
 
-      {/* DEBUG LINE – helps confirm we’re actually fetching rows */}
+      {/* DEBUG LINE – tells us if Supabase is actually returning rows */}
       <div className="text-xs text-slate-400">
-        Total rows: {items.length} | After filter: {filteredItems.length}
+        Total rows from Supabase: {items.length} | After filter:{" "}
+        {filteredItems.length}
         {params?.workspaceId ? ` | workspaceId: ${params.workspaceId}` : null}
       </div>
 
@@ -299,6 +300,7 @@ export default function WorkspaceMemoryPage({
     </div>
   );
 }
+
 
 
 
