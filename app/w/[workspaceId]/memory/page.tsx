@@ -1,10 +1,23 @@
+// app/w/[workspaceId]/memory/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 
+type MemoryRow = {
+  id: string;
+  kind?: string | null;
+  memory_type?: string | null;
+  episodic_type?: string | null;
+  title?: string | null;
+  title_summary?: string | null;
+  content?: string | null;
+  memory_text?: string | null;
+  created_at?: string | null;
+};
+
 export default function WorkspaceMemoryPage() {
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<MemoryRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [filterKind, setFilterKind] = useState<"all" | "fact" | "episode">(
@@ -26,21 +39,21 @@ export default function WorkspaceMemoryPage() {
   async function loadMemories() {
     setLoading(true);
 
-    // Use the existing episodic memory table
     const { data, error } = await supabase
       .from("memory_episode_chunks")
       .select("*")
       .order("created_at", { ascending: false });
 
     if (!error && data) {
-      setItems(data);
+      setItems(data as MemoryRow[]);
     }
 
     setLoading(false);
   }
 
   useEffect(() => {
-    loadMemories();
+    // initial load
+    void loadMemories();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -70,7 +83,7 @@ export default function WorkspaceMemoryPage() {
   // --------------------------------------------------
   // Filtering
   // --------------------------------------------------
-  const filteredItems = items.filter((m: any) => {
+  const filteredItems = items.filter((m) => {
     const kind =
       (m.kind as string) ||
       (m.memory_type as string) ||
@@ -98,10 +111,10 @@ export default function WorkspaceMemoryPage() {
   });
 
   // --------------------------------------------------
-  // Render
+  // Render (sits directly to the right of NeuralSidebar)
   // --------------------------------------------------
   return (
-    <div className="space-y-8">
+    <div className="w-full max-w-6xl mx-auto px-8 py-10 space-y-8">
       {/* HEADER */}
       <header>
         <h1 className="text-3xl font-semibold mb-1">Solace Memories</h1>
@@ -205,7 +218,7 @@ export default function WorkspaceMemoryPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredItems.map((m: any) => (
+                {filteredItems.map((m) => (
                   <tr
                     key={m.id}
                     className="border-b border-slate-800 last:border-0"
@@ -243,4 +256,5 @@ export default function WorkspaceMemoryPage() {
     </div>
   );
 }
+
 
