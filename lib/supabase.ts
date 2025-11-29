@@ -1,29 +1,63 @@
 // lib/supabase.ts
-// Back-compat shim over the new Supabase modules.
+// Back-compat shim over the new Supabase setup.
+// Provides the old helpers: supabaseServer, supabaseService, supabaseBrowser.
 
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { supabaseBrowser } from "./supabase/client";
-import { createServerSupabase } from "./supabase/server";
-import { createAdminSupabase } from "./supabase/admin";
 
 /**
- * Server-side Supabase client using the anon key + cookie auth.
- * Matches the previous `supabaseServer()` API.
+ * Server-side Supabase client using the anon key.
+ * (Used by simple API routes like /api/health.)
  */
-export function supabaseServer() {
-  return createServerSupabase();
+export function supabaseServer(): SupabaseClient {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anonKey) {
+    if (process.env.NODE_ENV !== "production") {
+      throw new Error(
+        "supabaseServer: Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY"
+      );
+    }
+  }
+
+  return createClient(url!, anonKey!, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
 }
 
 /**
  * Service-role Supabase client.
- * Matches the previous `supabaseService()` API.
+ * Used for admin / worker code that needs RLS bypass.
  */
-export function supabaseService() {
-  return createAdminSupabase();
+export function supabaseService(): SupabaseClient {
+  const url = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !serviceKey) {
+    if (process.env.NODE_ENV !== "production") {
+      throw new Error(
+        "supabaseService: Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY"
+      );
+    }
+  }
+
+  return createClient(url!, serviceKey!, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
 }
 
 /**
- * Re-export browser helper so old code that did
- * `import { supabaseBrowser } from "@/lib/supabase"`
- * still works.
+ * Re-export browser helper so old imports keep working:
+ *   import { supabaseBrowser } from "@/lib/supabase"
  */
 export { supabaseBrowser };
+export type { SupabaseClient };
