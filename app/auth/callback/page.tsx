@@ -18,10 +18,10 @@ export default function AuthCallbackPage() {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       );
 
-      // Make sure Supabase finishes establishing the session
+      // Wait for Supabase session
       await supabase.auth.getSession();
 
-      // Read ?next= from the URL on the client side
+      // Default redirect
       let next = "/app";
 
       try {
@@ -37,7 +37,6 @@ export default function AuthCallbackPage() {
           next = rawNext;
         }
       } catch {
-        // If anything goes wrong, just fall back to /app
         next = "/app";
       }
 
@@ -47,8 +46,6 @@ export default function AuthCallbackPage() {
     handleAuthCallback();
   }, [router]);
 
-  // Nothing to render – this page only exists to complete the login + redirect
   return null;
 }
-
 
