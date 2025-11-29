@@ -15,16 +15,16 @@ export default function WorkspaceLayout({
 }) {
   return (
     <SupabaseSessionProvider>
-      <div className="min-h-screen flex bg-[#020617] relative">
-        {/* Left navigation */}
+      <div className="min-h-screen bg-[#020617] grid grid-cols-[20rem_1fr] relative">
+        {/* Sidebar (fixed width) */}
         <NeuralSidebar />
 
-        {/* Main content */}
-        <main className="flex-1 flex flex-col items-stretch justify-start relative">
+        {/* Main content (takes remaining space) */}
+        <main className="w-full h-full px-10 py-10 overflow-y-auto">
           {children}
         </main>
 
-        {/* Solace Dock — global across workspace */}
+        {/* Solace Dock */}
         <SolaceDock />
       </div>
     </SupabaseSessionProvider>
