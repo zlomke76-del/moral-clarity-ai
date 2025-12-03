@@ -1,27 +1,182 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* =========================================================
-   NEURAL SIDEBAR — RESTORED ILLUMINATION + SPACING
+   Moral Clarity AI – Global Styles
    ========================================================= */
 
-/* container */
+/* ---------- Design tokens ---------- */
+:root {
+  --mc-bg: #0a0d12;
+  --mc-panel: #0f1623;
+  --mc-surface: #0e131a;
+  --mc-border: #223047;
+
+  --mc-text: #e8eef6;
+  --mc-muted: #9fb0c6;
+
+  --mc-accent: #7aa2ff;
+
+  --mc-radius: 12px;
+  --mc-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+
+  --sd-bg: color-mix(in oklab, var(--mc-panel) 88%, transparent);
+  --sd-border: var(--mc-border);
+  --sd-fg: var(--mc-text);
+  --sd-muted: var(--mc-muted);
+  --sd-chip-bg: #1a2436;
+  --sd-chip-fg: #e8eef6;
+  --sd-accent: var(--mc-accent);
+  --sd-radius: 20px;
+  --sd-shadow: var(--mc-shadow);
+}
+
+/* =========================================================
+   ROOT BACKGROUND SYSTEM
+   ========================================================= */
+
+/* Applied to <body> via app/layout.tsx */
+.mc-root {
+  min-height: 100vh;
+  margin: 0;
+
+  /* NEW GLOBAL BACKGROUND */
+  background-color: #020617;
+  background-image: url("/Global-CSS-Background.png");
+  background-repeat: repeat;          /* ensures pattern repeats */
+  background-size: 1200px;            /* scalable for large screens */
+  background-position: top center;
+  background-attachment: fixed;       /* subtle parallax stability */
+
+  color: var(--mc-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    "Noto Sans",
+    sans-serif;
+}
+
+/* =========================================================
+   BASE RESET
+   ========================================================= */
+html, body {
+  height: 100%;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--mc-accent) 25%, transparent);
+  color: var(--mc-text);
+}
+
+:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--mc-accent) 75%, white);
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   TYPOGRAPHY
+   ========================================================= */
+a {
+  color: var(--mc-accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+.prose {
+  max-width: 65ch;
+}
+
+/* =========================================================
+   INPUTS / FORMS
+   ========================================================= */
+input,
+select,
+textarea {
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid var(--mc-border);
+  background: var(--mc-surface);
+  color: var(--mc-text);
+  padding: 0.55rem 0.8rem;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: color-mix(in oklab, var(--mc-muted) 80%, transparent);
+}
+
+button {
+  border-radius: 0.5rem;
+  border: 1px solid var(--mc-border);
+  background: #111827;
+  color: var(--mc-text);
+  padding: 0.55rem 0.95rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+button:hover {
+  background: var(--mc-accent);
+  color: #020617;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   SOLACE DOCK
+   ========================================================= */
+.solace-dock {
+  background: color-mix(in oklab, rgba(12, 18, 28, 0.86) 92%, transparent);
+  border-radius: var(--sd-radius);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  box-shadow:
+    0 22px 70px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  color: var(--sd-fg);
+  backdrop-filter: blur(16px);
+}
+
+.solace-dock textarea {
+  background: color-mix(in oklab, var(--sd-bg) 80%, black);
+  color: var(--sd-fg) !important;
+  border-radius: 12px;
+  border: 1px solid var(--sd-border) !important;
+}
+
+/* =========================================================
+   NEURAL SIDEBAR
+   ========================================================= */
 .neural-sidebar {
   position: relative;
   display: none;
   flex-direction: column;
-  gap: 1.35rem;              /* increased spacing */
-  padding: 2rem 1.5rem;      /* more breathing room */
+  gap: 1rem;
+  padding: 1.5rem 1.25rem 1.25rem;
   width: 20rem;
-  max-width: 20rem;
   height: 100vh;
   flex-shrink: 0;
 
-  border-right: 1px solid rgba(148,163,184,0.35);
-  background:
-    radial-gradient(circle at 0 0, rgba(10, 16, 26, 0.92), rgba(10, 16, 26, 0.96)),
-    linear-gradient(to bottom, #020617, #020617);
-
-  box-shadow: 22px 0 60px rgba(0, 0, 0, 0.85);  /* restored shadow */
+  border-right: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(15, 23, 42, 0.96);
   backdrop-filter: blur(24px);
-  z-index: 10;
 }
 
 @media (min-width: 768px) {
@@ -30,49 +185,14 @@
   }
 }
 
-/* chip card */
 .neural-sidebar-chip {
-  position: relative;
   border-radius: 1rem;
-  border: 1px solid rgba(34, 211, 238, 0.55);
+  border: 1px solid rgba(34, 211, 238, 0.45);
   background-color: rgba(15, 23, 42, 0.98);
-
-  padding: 0.85rem 1rem;
-
-  box-shadow:
-    0 0 26px rgba(15, 23, 42, 0.75),
-    0 0 12px rgba(34, 211, 238, 0.25);  /* neon halo */
-
-  transition:
-    transform 150ms ease,
-    border-color 150ms ease,
-    box-shadow 150ms ease,
-    background-color 150ms ease;
+  padding: 0.7rem 0.9rem;
 }
 
-/* glow beams */
-.neural-sidebar-chip::before,
-.neural-sidebar-chip::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  width: 1.5rem;
-  height: 1px;
-  background: rgba(34, 211, 238, 0.45);
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-.neural-sidebar-chip::before { left: -1.5rem; }
-.neural-sidebar-chip::after { right: -1.5rem; }
-
-/* hover lift + stronger glow */
-.neural-sidebar-chip:hover {
-  transform: translateY(-2px);
-  border-color: rgba(125, 211, 252, 1);
-
-  box-shadow:
-    0 0 30px rgba(34, 211, 238, 0.7),
-    0 0 50px rgba(34, 211, 238, 0.45),
-    0 0 8px rgba(34, 211, 238, 0.6);
-}
+/* =========================================================
+   REMOVED LEGACY LAYERS
+   ========================================================= */
 
