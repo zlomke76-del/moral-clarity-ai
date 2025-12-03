@@ -3,42 +3,52 @@
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { Session } from '@supabase/supabase-js';
-import { createSupabaseBrowser } from '@/lib/supabase/client';
+import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
 
 export default function HomeShell() {
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    // create the client only in the browser
     const supabase = typeof window === 'undefined' ? null : createSupabaseBrowser();
     if (!supabase) return;
 
     let alive = true;
+
     (async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
         if (!alive) return;
 
+        // If Supabase throws, assume not authenticated
         if (error) {
-          if (!pathname?.startsWith('/auth')) router.replace('/auth?next=%2Fapp');
+          if (!pathname?.startsWith('/auth')) {
+            router.replace('/auth/sign-in?next=%2Fstudio');
+          }
           return;
         }
 
         const session: Session | null = data.session ?? null;
+
         if (session) {
-          if (pathname !== '/app') router.replace('/app');
+          // Logged in → route to Studio home
+          if (pathname !== '/studio') {
+            router.replace('/studio');
+          }
         } else {
-          if (!pathname?.startsWith('/auth')) router.replace('/auth?next=%2Fapp');
+          // Not logged in → go to auth
+          if (!pathname?.startsWith('/auth')) {
+            router.replace('/auth/sign-in?next=%2Fstudio');
+          }
         }
       } catch {
-        if (!pathname?.startsWith('/auth')) router.replace('/auth?next=%2Fapp');
+        if (!pathname?.startsWith('/auth')) {
+          router.replace('/auth/sign-in?next=%2Fstudio');
+        }
       }
     })();
 
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [router, pathname]);
 
   return (
