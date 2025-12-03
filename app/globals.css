@@ -3,10 +3,10 @@
 @tailwind utilities;
 
 /* =========================================================
-   Moral Clarity AI – Global Styles
+   Moral Clarity AI — Global Styles (Full Clean Rewrite)
    ========================================================= */
 
-/* ---------- Design tokens ---------- */
+/* ---------- Design Tokens ---------- */
 :root {
   --mc-bg: #0a0d12;
   --mc-panel: #0f1623;
@@ -33,19 +33,19 @@
 }
 
 /* =========================================================
-   ROOT BACKGROUND SYSTEM
+   ROOT BACKGROUND (APPLIED IN app/layout.tsx VIA .mc-root)
    ========================================================= */
 
-/* applied to <body> in app/layout.tsx */
 .mc-root {
   min-height: 100vh;
   margin: 0;
 
+  /* Global repeated backdrop */
   background-color: #020617;
-  background-image: url("/mca-backdrop.png");
-  background-repeat: no-repeat;
-  background-position: center center;
-  background-size: cover;
+  background-image: url("/Global-CSS-Background.png");
+  background-repeat: repeat;        /* repeat both directions */
+  background-position: top left;    /* clean tile anchor */
+  background-size: auto;            /* use natural pixel density */
 
   color: var(--mc-text);
   -webkit-font-smoothing: antialiased;
@@ -131,7 +131,9 @@ button {
   color: var(--mc-text);
   padding: 0.55rem 0.95rem;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 button:hover {
@@ -157,6 +159,13 @@ button:disabled {
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
   color: var(--sd-fg);
   backdrop-filter: blur(16px);
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  z-index: 999999 !important;
+  max-height: calc(100vh - 48px);
+  max-width: min(700px, 90vw);
+  overflow: hidden;
 }
 
 .solace-dock::before {
@@ -189,17 +198,16 @@ button:disabled {
 }
 
 /* =========================================================
-   NEURAL SIDEBAR (custom classes used by NeuralSidebar.tsx)
+   NEURAL SIDEBAR
    ========================================================= */
 
-/* container */
 .neural-sidebar {
   position: relative;
-  display: none;         /* default hidden, shown on md+ */
+  display: none;
   flex-direction: column;
   gap: 1rem;
   padding: 1.5rem 1.25rem 1.25rem;
-  width: 20rem;          /* wider so no horizontal scrollbar */
+  width: 20rem;
   max-width: 20rem;
   height: 100vh;
   flex-shrink: 0;
@@ -220,7 +228,7 @@ button:disabled {
   }
 }
 
-/* brand row */
+/* Brand */
 .neural-sidebar-brand {
   display: flex;
   align-items: center;
@@ -265,7 +273,7 @@ button:disabled {
   color: #e5e7eb;
 }
 
-/* section label */
+/* Section Label */
 .neural-sidebar-section-label {
   font-size: 0.72rem;
   font-weight: 500;
@@ -274,7 +282,7 @@ button:disabled {
   color: #64748b;
 }
 
-/* list container */
+/* Item List */
 .neural-sidebar-list {
   margin-top: 0.35rem;
   display: flex;
@@ -284,28 +292,26 @@ button:disabled {
   overflow-y: auto;
   padding-bottom: 0.75rem;
 
-  /* hide scrollbar visually but keep scrollability */
-  scrollbar-width: none;          /* Firefox */
-  -ms-overflow-style: none;       /* IE / Edge legacy */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 .neural-sidebar-list::-webkit-scrollbar {
-  display: none;                  /* WebKit */
+  display: none;
 }
 
-/* link wrapper */
+/* Link wrapper */
 .neural-sidebar-link {
   display: block;
   width: 100%;
-  border: 0;
+  background: transparent;
+  border: none;
   padding: 0;
   margin: 0;
-  background: transparent;
   text-align: left;
-  text-decoration: none;
   cursor: pointer;
 }
 
-/* chip card */
+/* Chip */
 .neural-sidebar-chip {
   position: relative;
   border-radius: 1rem;
@@ -317,25 +323,6 @@ button:disabled {
     transform 150ms ease,
     border-color 150ms ease,
     box-shadow 150ms ease;
-}
-
-.neural-sidebar-chip::before,
-.neural-sidebar-chip::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  width: 1.25rem;
-  height: 1px;
-  background: rgba(34, 211, 238, 0.45);
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-.neural-sidebar-chip::before {
-  left: -1.25rem;
-}
-.neural-sidebar-chip::after {
-  right: -1.25rem;
-  opacity: 0.7;
 }
 
 .neural-sidebar-chip:hover {
@@ -371,7 +358,7 @@ button:disabled {
 }
 
 .neural-sidebar-chip-label {
-  font-size: 0.85rem;          /* slightly larger for readability */
+  font-size: 0.85rem;
   font-weight: 500;
   color: #e5e7eb;
   white-space: nowrap;
@@ -380,7 +367,6 @@ button:disabled {
 }
 
 .neural-sidebar-chip-description {
-  margin-top: 0.05rem;
   font-size: 0.7rem;
   color: #94a3b8;
   white-space: nowrap;
@@ -388,13 +374,3 @@ button:disabled {
   text-overflow: ellipsis;
 }
 
-/* =========================================================
-   REMOVED LEGACY SYSTEMS (deliberately missing)
-   =========================================================
-
-   - .neural-ambient*
-   - .mca-anchor-layer
-   - .brain-hero*
-   - any old background-image properties
-   - any old animation layers
-========================================================= */
