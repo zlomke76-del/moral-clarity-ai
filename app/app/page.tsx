@@ -1,10 +1,14 @@
 // app/app/page.tsx
-"use client";
+import { redirect } from "next/navigation";
 
-export default function AppHomePage() {
-  return (
-    <div className="w-full h-full">
-      {/* Solace chat renders inside SolaceDock, so nothing needed here */}
-    </div>
-  );
+/**
+ * Legacy /app route.
+ *
+ * We used to send magic-link callbacks to /app, but the main workspace
+ * shell now lives at the root (/). This page simply redirects there so:
+ * - Old magic links keep working.
+ * - Any hard-coded /app links don't 404.
+ */
+export default function AppIndexPage() {
+  redirect("/");
 }
