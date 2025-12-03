@@ -19,9 +19,9 @@ export const revalidate = 0;
 export const fetchCache = "force-no-store";
 export const runtime = "nodejs";
 
-// FIXED: Correct path for SolaceDock
+// Correct path for SolaceDock
 const SolaceDock = NextDynamic(
-  () => import("@/app/components/SolaceDock"),
+  () => import("@/components/SolaceDock"),
   { ssr: false }
 );
 
@@ -91,9 +91,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   Contact
                 </Link>
 
-                {/* Open app → now /studio */}
+                {/* Open app → now /app */}
                 <Link
-                  href="/studio"
+                  href="/app"
                   className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
                   prefetch
                 >
@@ -104,7 +104,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {/* Mobile CTA */}
               <div className="sm:hidden">
                 <Link
-                  href="/studio"
+                  href="/app"
                   className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
                   prefetch
                 >
