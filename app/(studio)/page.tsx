@@ -4,8 +4,9 @@
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-import NeuralSidebar from "@/components/NeuralSidebar";
-import SolaceDock from "@/components/SolaceDock";
+import NeuralSidebar from "@/app/components/NeuralSidebar";
+import SolaceDock from "@/app/components/SolaceDock";
+
 
 
 export default function StudioHome() {
