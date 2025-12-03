@@ -33,21 +33,22 @@
 }
 
 /* =========================================================
-   ROOT BACKGROUND SYSTEM
+   ROOT BACKGROUND SYSTEM (Cinematic, no tiling)
    ========================================================= */
 
-/* Applied to <body> via app/layout.tsx */
 .mc-root {
   min-height: 100vh;
   margin: 0;
 
-  /* NEW GLOBAL BACKGROUND */
+  /* Solid base behind image */
   background-color: #020617;
+
+  /* **FIXED GLOBAL BACKGROUND** (your PNG) */
   background-image: url("/Global-CSS-Background.png");
-  background-repeat: repeat;          /* ensures pattern repeats */
-  background-size: 1200px;            /* scalable for large screens */
-  background-position: top center;
-  background-attachment: fixed;       /* subtle parallax stability */
+  background-repeat: no-repeat;       /* prevent squares */
+  background-size: cover;             /* cinematic full-screen */
+  background-position: center top;    /* align circuitry */
+  background-attachment: fixed;       /* premium parallax stability */
 
   color: var(--mc-text);
   -webkit-font-smoothing: antialiased;
@@ -162,20 +163,27 @@ button:disabled {
 }
 
 /* =========================================================
-   NEURAL SIDEBAR
+   NEURAL SIDEBAR (restored spacing + glow)
    ========================================================= */
+
 .neural-sidebar {
   position: relative;
   display: none;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1.5rem 1.25rem 1.25rem;
+  gap: 1.25rem;               /* FIXED SPACING — restored */
+  padding: 1.75rem 1.5rem;
   width: 20rem;
   height: 100vh;
   flex-shrink: 0;
 
   border-right: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(15, 23, 42, 0.96);
+
+  /* Restored original deeper navy w/ glow */
+  background:
+    radial-gradient(circle at 0% 0%, rgba(4, 20, 40, 0.55), transparent 60%),
+    rgba(13, 22, 36, 0.96);
+
+  box-shadow: 18px 0 48px rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(24px);
 }
 
@@ -185,14 +193,31 @@ button:disabled {
   }
 }
 
+/* CARD / CHIP — restored glow + breathing hover */
 .neural-sidebar-chip {
   border-radius: 1rem;
   border: 1px solid rgba(34, 211, 238, 0.45);
   background-color: rgba(15, 23, 42, 0.98);
-  padding: 0.7rem 0.9rem;
+  padding: 0.9rem 1rem;
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+
+  /* Restored subtle inner glow */
+  box-shadow:
+    0 0 16px rgba(34, 211, 238, 0.1),
+    inset 0 0 12px rgba(34, 211, 238, 0.08);
+}
+
+.neural-sidebar-chip:hover {
+  transform: translateY(-2px);
+  border-color: rgba(125, 211, 252, 1);
+  box-shadow:
+    0 0 30px rgba(34, 211, 238, 0.65),
+    inset 0 0 14px rgba(34, 211, 238, 0.25);
 }
 
 /* =========================================================
-   REMOVED LEGACY LAYERS
+   LEGACY CLEANUP
    ========================================================= */
-
