@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import "./globals.css";
-import NextDynamic from "next/dynamic"; // avoid clash with `export const dynamic`
+import NextDynamic from "next/dynamic";
 import { Suspense } from "react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
@@ -13,14 +13,14 @@ import DemoBadge from "@/components/DemoBadge";
 import AuthProvider from "@/components/AuthProvider";
 import Toaster from "@/components/Toaster";
 
-// Route segment config — keep these named exports
+// Route segment config
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 export const runtime = "nodejs";
 
-// SolaceDock lives under /app/components
-const SolaceDock = NextDynamic(() => import("@/app/components/SolaceDock"), { ssr: false });
+// FIXED: SolaceDock is now under /components
+const SolaceDock = NextDynamic(() => import("@/components/SolaceDock"), { ssr: false });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.moralclarity.ai"),
@@ -56,7 +56,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {/* ===== HEADER ===== */}
           <header className="sticky top-0 z-50 border-b border-neutral-800 bg-neutral-950/80 backdrop-blur">
             <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-              {/* Left: logo + demo badge */}
               <div className="flex items-center gap-2">
                 <Link href="/" className="flex items-center gap-2" prefetch>
                   <Image
@@ -74,7 +73,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <DemoBadge />
               </div>
 
-              {/* Center navigation (desktop) */}
+              {/* FIXED: Send users to /studio, not /app */}
               <div className="hidden sm:flex items-center gap-6 text-sm">
                 <Link href="/pricing" className="hover:opacity-80 leading-none" prefetch>
                   Pricing
@@ -86,7 +85,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   Contact
                 </Link>
                 <Link
-                  href="/app"
+                  href="/studio"
                   className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
                   prefetch
                 >
@@ -97,7 +96,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               {/* Mobile CTA */}
               <div className="sm:hidden">
                 <Link
-                  href="/app"
+                  href="/studio"
                   className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
                   prefetch
                 >
@@ -106,14 +105,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
             </nav>
 
-            {/* ===== APP SUB-NAV ===== */}
             <TopNav />
           </header>
 
           {/* ===== MAIN CONTENT ===== */}
           <main className="flex-1 mx-auto w-full max-w-6xl px-4 py-10 space-y-6">
             <div id="breadcrumb-slot">
-              <Breadcrumb /* pass items where you render this if needed */ items={[]} />
+              <Breadcrumb items={[]} />
             </div>
             {children}
           </main>
@@ -126,7 +124,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Toaster />
           </Suspense>
 
-          {/* Vercel Speed Insights */}
           <SpeedInsights />
 
           {/* ===== FOOTER ===== */}
@@ -151,3 +148,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
+
