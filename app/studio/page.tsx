@@ -1,4 +1,3 @@
-// app/studio/page.tsx
 "use client";
 
 export default function StudioHome() {
