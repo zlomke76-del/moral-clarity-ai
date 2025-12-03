@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import type { Session } from "@supabase/supabase-js";
 import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 
 export default function AppHome() {
@@ -14,20 +15,28 @@ export default function AppHome() {
     if (!supabase) return;
 
     let alive = true;
-
     (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!alive) return;
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (!alive) return;
 
-      const session = data.session;
+        if (error) {
+          router.replace("/auth?next=%2Fapp");
+          return;
+        }
 
-      if (!session) {
+        const session: Session | null = data.session ?? null;
+
+        if (session) {
+          // Logged in → stay on /app
+          if (pathname !== "/app") router.replace("/app");
+        } else {
+          // Not logged in → go to auth
+          router.replace("/auth?next=%2Fapp");
+        }
+      } catch {
         router.replace("/auth?next=%2Fapp");
-        return;
       }
-
-      // Logged in → show the app
-      router.replace("/journey");
     })();
 
     return () => {
@@ -41,5 +50,4 @@ export default function AppHome() {
     </main>
   );
 }
-
 
