@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 
-export default function AppRedirect() {
+export default function AppHome() {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -22,11 +22,12 @@ export default function AppRedirect() {
       const session = data.session;
 
       if (!session) {
-        router.replace("/auth?next=%2Fstudio");
+        router.replace("/auth?next=%2Fapp");
         return;
       }
 
-      router.replace("/studio");
+      // Logged in → show the app
+      router.replace("/journey");
     })();
 
     return () => {
@@ -40,3 +41,5 @@ export default function AppRedirect() {
     </main>
   );
 }
+
+
