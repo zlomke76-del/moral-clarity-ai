@@ -3,10 +3,10 @@
 @tailwind utilities;
 
 /* =========================================================
-   Moral Clarity AI — Global Styles (Full Clean Rewrite)
+   Moral Clarity AI – Global Styles
    ========================================================= */
 
-/* ---------- Design Tokens ---------- */
+/* ---------- Design tokens ---------- */
 :root {
   --mc-bg: #0a0d12;
   --mc-panel: #0f1623;
@@ -33,19 +33,21 @@
 }
 
 /* =========================================================
-   ROOT BACKGROUND (APPLIED IN app/layout.tsx VIA .mc-root)
+   ROOT BACKGROUND SYSTEM
    ========================================================= */
 
+/* Applied to <body> via app/layout.tsx */
 .mc-root {
   min-height: 100vh;
   margin: 0;
 
-  /* Global repeated backdrop */
+  /* NEW GLOBAL BACKGROUND */
   background-color: #020617;
   background-image: url("/Global-CSS-Background.png");
-  background-repeat: repeat;        /* repeat both directions */
-  background-position: top left;    /* clean tile anchor */
-  background-size: auto;            /* use natural pixel density */
+  background-repeat: repeat;          /* ensures pattern repeats */
+  background-size: 1200px;            /* scalable for large screens */
+  background-position: top center;
+  background-attachment: fixed;       /* subtle parallax stability */
 
   color: var(--mc-text);
   -webkit-font-smoothing: antialiased;
@@ -64,17 +66,13 @@
 }
 
 /* =========================================================
-   BASE ELEMENT RESET
+   BASE RESET
    ========================================================= */
-
-html,
-body {
+html, body {
   height: 100%;
 }
 
-*,
-*::before,
-*::after {
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
@@ -91,7 +89,6 @@ body {
 /* =========================================================
    TYPOGRAPHY
    ========================================================= */
-
 a {
   color: var(--mc-accent);
   text-decoration: none;
@@ -105,9 +102,8 @@ a:hover {
 }
 
 /* =========================================================
-   INPUTS + FORMS
+   INPUTS / FORMS
    ========================================================= */
-
 input,
 select,
 textarea {
@@ -131,9 +127,7 @@ button {
   color: var(--mc-text);
   padding: 0.55rem 0.95rem;
   cursor: pointer;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 button:hover {
@@ -149,7 +143,6 @@ button:disabled {
 /* =========================================================
    SOLACE DOCK
    ========================================================= */
-
 .solace-dock {
   background: color-mix(in oklab, rgba(12, 18, 28, 0.86) 92%, transparent);
   border-radius: var(--sd-radius);
@@ -159,35 +152,6 @@ button:disabled {
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
   color: var(--sd-fg);
   backdrop-filter: blur(16px);
-  position: fixed !important;
-  bottom: 24px !important;
-  right: 24px !important;
-  z-index: 999999 !important;
-  max-height: calc(100vh - 48px);
-  max-width: min(700px, 90vw);
-  overflow: hidden;
-}
-
-.solace-dock::before {
-  content: "";
-  position: absolute;
-  inset: 4px;
-  z-index: -1;
-  filter: blur(18px);
-  opacity: 0.22;
-  pointer-events: none;
-
-  background:
-    radial-gradient(
-      120px 60px at 20% 90%,
-      color-mix(in oklab, var(--sd-accent) 30%, transparent),
-      transparent 70%
-    ),
-    radial-gradient(
-      200px 80px at 80% 95%,
-      rgba(40, 120, 255, 0.35),
-      transparent 70%
-    );
 }
 
 .solace-dock textarea {
@@ -200,7 +164,6 @@ button:disabled {
 /* =========================================================
    NEURAL SIDEBAR
    ========================================================= */
-
 .neural-sidebar {
   position: relative;
   display: none;
@@ -208,169 +171,28 @@ button:disabled {
   gap: 1rem;
   padding: 1.5rem 1.25rem 1.25rem;
   width: 20rem;
-  max-width: 20rem;
   height: 100vh;
   flex-shrink: 0;
 
   border-right: 1px solid rgba(148, 163, 184, 0.35);
-  background:
-    radial-gradient(circle at 0 0, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.98)),
-    linear-gradient(to bottom, #020617, #020617);
-  box-shadow: 18px 0 48px rgba(3, 7, 18, 0.95);
+  background: rgba(15, 23, 42, 0.96);
   backdrop-filter: blur(24px);
-  z-index: 10;
 }
 
-/* show on md+ */
 @media (min-width: 768px) {
   .neural-sidebar {
     display: flex;
   }
 }
 
-/* Brand */
-.neural-sidebar-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-
-.neural-sidebar-brand-mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 2.25rem;
-  width: 2.25rem;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(34, 211, 238, 0.7);
-  background-color: #020617;
-  box-shadow: 0 0 20px rgba(34, 211, 238, 0.6);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #a5f3fc;
-}
-
-.neural-sidebar-brand-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.1;
-}
-
-.neural-sidebar-brand-line-1 {
-  font-size: 0.6rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.28em;
-  color: #94a3b8;
-}
-
-.neural-sidebar-brand-line-2 {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #e5e7eb;
-}
-
-/* Section Label */
-.neural-sidebar-section-label {
-  font-size: 0.72rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.22em;
-  color: #64748b;
-}
-
-/* Item List */
-.neural-sidebar-list {
-  margin-top: 0.35rem;
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  gap: 0.75rem;
-  overflow-y: auto;
-  padding-bottom: 0.75rem;
-
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.neural-sidebar-list::-webkit-scrollbar {
-  display: none;
-}
-
-/* Link wrapper */
-.neural-sidebar-link {
-  display: block;
-  width: 100%;
-  background: transparent;
-  border: none;
-  padding: 0;
-  margin: 0;
-  text-align: left;
-  cursor: pointer;
-}
-
-/* Chip */
 .neural-sidebar-chip {
-  position: relative;
   border-radius: 1rem;
   border: 1px solid rgba(34, 211, 238, 0.45);
   background-color: rgba(15, 23, 42, 0.98);
-  box-shadow: 0 0 26px rgba(15, 23, 42, 0.9);
   padding: 0.7rem 0.9rem;
-  transition:
-    transform 150ms ease,
-    border-color 150ms ease,
-    box-shadow 150ms ease;
 }
 
-.neural-sidebar-chip:hover {
-  transform: translateY(-1px);
-  border-color: rgba(125, 211, 252, 0.9);
-  box-shadow: 0 0 34px rgba(34, 211, 238, 0.9);
-}
-
-.neural-sidebar-chip-inner {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-}
-
-.neural-sidebar-chip-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  flex-shrink: 0;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(34, 211, 238, 0.55);
-  background-color: #020617;
-  color: #a5f3fc;
-  font-size: 0.9rem;
-}
-
-.neural-sidebar-chip-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.neural-sidebar-chip-label {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: #e5e7eb;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.neural-sidebar-chip-description {
-  font-size: 0.7rem;
-  color: #94a3b8;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+/* =========================================================
+   REMOVED LEGACY LAYERS
+   ========================================================= */
 
