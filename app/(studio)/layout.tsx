@@ -1,21 +1,24 @@
+// app/(studio)/layout.tsx
 "use client";
 
-import NeuralSidebar from "@/app/components/NeuralSidebar";
-import SolaceDock from "@/app/components/SolaceDock";
+import type { ReactNode } from "react";
+import NeuralSidebar from "@/components/NeuralSidebar";
+import SolaceDock from "@/components/SolaceDock";
 
-export default function StudioLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function StudioLayout({ children }: { children: ReactNode }) {
   return (
-    <div style={{ display: "flex", height: "100vh", width: "100%" }}>
-      <NeuralSidebar />
+    <div className="flex min-h-screen bg-neutral-950 text-neutral-100">
+      {/* Sidebar */}
+      <aside className="w-64 border-r border-neutral-800">
+        <NeuralSidebar />
+      </aside>
 
-      <main style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+      {/* Main content */}
+      <main className="flex-1 p-6">
         {children}
       </main>
 
+      {/* Solace Dock */}
       <SolaceDock />
     </div>
   );
