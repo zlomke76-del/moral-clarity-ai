@@ -2,10 +2,9 @@
 
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import type { Session } from "@supabase/supabase-js";
 import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 
-export default function HomePage() {
+export default function AppRedirect() {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -17,37 +16,17 @@ export default function HomePage() {
     let alive = true;
 
     (async () => {
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        if (!alive) return;
+      const { data } = await supabase.auth.getSession();
+      if (!alive) return;
 
-        const session: Session | null = data.session ?? null;
+      const session = data.session;
 
-        // If Supabase errored → treat as logged out
-        if (error) {
-          if (!pathname?.startsWith("/auth")) {
-            router.replace("/auth?next=%2Fstudio");
-          }
-          return;
-        }
-
-        // If logged in → send to studio
-        if (session) {
-          if (pathname !== "/studio") {
-            router.replace("/studio");
-          }
-          return;
-        }
-
-        // If logged out → force to auth with next=/studio
-        if (!pathname?.startsWith("/auth")) {
-          router.replace("/auth?next=%2Fstudio");
-        }
-      } catch {
-        if (!pathname?.startsWith("/auth")) {
-          router.replace("/auth?next=%2Fstudio");
-        }
+      if (!session) {
+        router.replace("/auth?next=%2Fstudio");
+        return;
       }
+
+      router.replace("/studio");
     })();
 
     return () => {
