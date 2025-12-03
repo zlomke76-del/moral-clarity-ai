@@ -1,14 +1,12 @@
 // app/(studio)/page.tsx
 "use client";
 
-export const runtime = "nodejs";
-
 export default function StudioHome() {
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-semibold">Welcome to Studio</h1>
-      <p className="text-neutral-400 mt-2">
-        Select a tool from the sidebar.
+    <div className="p-10 text-neutral-200">
+      <h1 className="text-3xl font-semibold mb-4">Welcome to the Studio</h1>
+      <p className="opacity-80">
+        Your workspace is ready. Choose a tool from the sidebar to begin.
       </p>
     </div>
   );
