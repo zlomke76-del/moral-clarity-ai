@@ -20,35 +20,29 @@ export default function HomeShell() {
         const { data, error } = await supabase.auth.getSession();
         if (!alive) return;
 
-        // If Supabase throws, assume not authenticated
+        // ERROR fallback
         if (error) {
-          if (!pathname?.startsWith('/auth')) {
-            router.replace('/auth/sign-in?next=%2Fstudio');
-          }
+          if (!pathname?.startsWith('/auth')) router.replace('/auth?next=%2Fstudio');
           return;
         }
 
         const session: Session | null = data.session ?? null;
 
         if (session) {
-          // Logged in → route to Studio home
-          if (pathname !== '/studio') {
-            router.replace('/studio');
-          }
+          // AUTHENTICATED → always send to /studio
+          if (pathname !== '/studio') router.replace('/studio');
         } else {
-          // Not logged in → go to auth
-          if (!pathname?.startsWith('/auth')) {
-            router.replace('/auth/sign-in?next=%2Fstudio');
-          }
+          // NOT AUTHENTICATED → redirect to auth with next=/studio
+          if (!pathname?.startsWith('/auth')) router.replace('/auth?next=%2Fstudio');
         }
       } catch {
-        if (!pathname?.startsWith('/auth')) {
-          router.replace('/auth/sign-in?next=%2Fstudio');
-        }
+        if (!pathname?.startsWith('/auth')) router.replace('/auth?next=%2Fstudio');
       }
     })();
 
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [router, pathname]);
 
   return (
@@ -57,3 +51,4 @@ export default function HomeShell() {
     </main>
   );
 }
+
