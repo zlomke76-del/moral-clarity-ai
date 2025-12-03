@@ -1,10 +1,21 @@
 // app/(studio)/page.tsx
-export const runtime = "nodejs";
+"use client";
+
+import NeuralSidebar from "@/app/components/NeuralSidebar";
+import SolaceDock from "@/app/components/SolaceDock";
 
 export default function StudioHome() {
-  // Solace + Neural Sidebar are global via layout.tsx.
-  // The page intentionally stays empty.
   return (
-    <div className="min-h-screen" />
+    <div className="flex min-h-screen w-full">
+      {/* Sidebar */}
+      <div className="w-[260px] border-r border-neutral-800 bg-neutral-950">
+        <NeuralSidebar />
+      </div>
+
+      {/* Main content area with Solace */}
+      <div className="flex-1 relative">
+        <SolaceDock />
+      </div>
+    </div>
   );
 }
