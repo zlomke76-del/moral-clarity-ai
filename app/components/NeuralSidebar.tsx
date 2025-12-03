@@ -20,23 +20,24 @@ type Props = {
 };
 
 export default function NeuralSidebar({ items }: Props) {
-  const pathname = usePathname();
-  const safePath = pathname ?? "";
+  const pathname = usePathname() ?? "";
 
-  // Extract workspaceId from /w/[workspaceId]/**
+  // Extract workspaceId from /w/[workspaceId]/*
   let workspaceId: string | null = null;
-  const parts = safePath.split("/").filter(Boolean);
+  const parts = pathname.split("/").filter(Boolean);
 
-  if (parts[0] === "w" && parts.length > 1) {
+  if (parts[0] === "w" && parts[1]) {
     workspaceId = parts[1];
   }
 
-  const sidebarItems: NeuralSidebarItem[] =
-    items && items.length > 0 ? items : buildDefaultItems(workspaceId);
+  const sidebarItems =
+    items && items.length > 0
+      ? items
+      : buildDefaultItems(workspaceId ?? MCA_WORKSPACE_ID);
 
   return (
     <aside className="neural-sidebar">
-      {/* Brand */}
+      {/* BRAND */}
       <div className="neural-sidebar-brand">
         <div className="neural-sidebar-brand-mark">
           <span>AI</span>
@@ -51,7 +52,7 @@ export default function NeuralSidebar({ items }: Props) {
 
       <nav className="neural-sidebar-list">
         {sidebarItems.map((item) => (
-          <ChipCard key={item.id} item={item} />
+          <SidebarChip key={item.id} item={item} />
         ))}
       </nav>
     </aside>
@@ -59,18 +60,18 @@ export default function NeuralSidebar({ items }: Props) {
 }
 
 /* -------------------------------------------------------
-   Chip Card
+   CHIP COMPONENT
 -------------------------------------------------------- */
 
-function ChipCard({ item }: { item: NeuralSidebarItem }) {
-  const core = (
+function SidebarChip({ item }: { item: NeuralSidebarItem }) {
+  const inner = (
     <div className="neural-sidebar-chip">
       <div className="neural-sidebar-chip-inner">
-        {item.icon && (
-          <div className="neural-sidebar-chip-icon">{item.icon}</div>
-        )}
+        {item.icon && <div className="neural-sidebar-chip-icon">{item.icon}</div>}
+
         <div className="neural-sidebar-chip-text">
           <div className="neural-sidebar-chip-label">{item.label}</div>
+
           {item.description && (
             <div className="neural-sidebar-chip-description">
               {item.description}
@@ -84,29 +85,23 @@ function ChipCard({ item }: { item: NeuralSidebarItem }) {
   if (item.href) {
     return (
       <Link href={item.href} className="neural-sidebar-link">
-        {core}
+        {inner}
       </Link>
     );
   }
 
   return (
-    <button
-      type="button"
-      onClick={item.onClick}
-      className="neural-sidebar-link"
-    >
-      {core}
+    <button type="button" onClick={item.onClick} className="neural-sidebar-link">
+      {inner}
     </button>
   );
 }
 
 /* -------------------------------------------------------
-   Defaults
+   DEFAULT ITEMS
 -------------------------------------------------------- */
 
-function buildDefaultItems(workspaceId: string | null): NeuralSidebarItem[] {
-  const effectiveWorkspaceId = workspaceId ?? MCA_WORKSPACE_ID;
-
+function buildDefaultItems(workspaceId: string): NeuralSidebarItem[] {
   return [
     {
       id: "account",
@@ -118,7 +113,7 @@ function buildDefaultItems(workspaceId: string | null): NeuralSidebarItem[] {
       id: "memory",
       label: "Memory",
       description: "Review & edit Solace memory",
-      href: `/w/${effectiveWorkspaceId}/memory`,
+      href: `/w/${workspaceId}/memory`,
     },
     {
       id: "newsroom",
