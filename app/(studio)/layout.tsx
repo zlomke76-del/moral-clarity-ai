@@ -2,23 +2,21 @@
 "use client";
 
 import type { ReactNode } from "react";
-import NeuralSidebar from "@/components/NeuralSidebar";
-import SolaceDock from "@/components/SolaceDock";
+
+// Correct paths — these files are under /app/components
+import NeuralSidebar from "@/app/components/NeuralSidebar";
+import SolaceDock from "@/app/components/SolaceDock";
 
 export default function StudioLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-neutral-950 text-neutral-100">
+    <div className="flex h-screen w-screen">
       {/* Sidebar */}
-      <aside className="w-64 border-r border-neutral-800">
-        <NeuralSidebar />
-      </aside>
+      <NeuralSidebar />
 
       {/* Main content */}
-      <main className="flex-1 p-6">
-        {children}
-      </main>
+      <div className="flex-1 overflow-auto">{children}</div>
 
-      {/* Solace Dock */}
+      {/* Solace floating dock */}
       <SolaceDock />
     </div>
   );
