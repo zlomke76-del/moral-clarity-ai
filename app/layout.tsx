@@ -41,9 +41,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark h-full" data-skin="glass">
-      <body className="min-h-screen bg-neutral-950 text-neutral-100 antialiased">
+      {/* APPLY YOUR GLOBAL BACKGROUND HERE */}
+      <body className="mc-root">
         <AuthProvider>
-          {/* Each route is responsible for its own layout/chrome */}
+
           {children}
 
           {/* Global overlays */}
