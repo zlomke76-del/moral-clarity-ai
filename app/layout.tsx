@@ -19,8 +19,11 @@ export const revalidate = 0;
 export const fetchCache = "force-no-store";
 export const runtime = "nodejs";
 
-// FIXED: SolaceDock is now under /components
-const SolaceDock = NextDynamic(() => import("@/components/SolaceDock"), { ssr: false });
+// FIXED: Correct path for SolaceDock
+const SolaceDock = NextDynamic(
+  () => import("@/app/components/SolaceDock"),
+  { ssr: false }
+);
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.moralclarity.ai"),
@@ -53,9 +56,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className="dark h-full" data-skin="glass">
       <body className="min-h-screen bg-neutral-950 text-neutral-100 antialiased flex flex-col">
         <AuthProvider>
+
           {/* ===== HEADER ===== */}
           <header className="sticky top-0 z-50 border-b border-neutral-800 bg-neutral-950/80 backdrop-blur">
             <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
+
+              {/* Logo + badge */}
               <div className="flex items-center gap-2">
                 <Link href="/" className="flex items-center gap-2" prefetch>
                   <Image
@@ -73,7 +79,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <DemoBadge />
               </div>
 
-              {/* FIXED: Send users to /studio, not /app */}
+              {/* Nav links */}
               <div className="hidden sm:flex items-center gap-6 text-sm">
                 <Link href="/pricing" className="hover:opacity-80 leading-none" prefetch>
                   Pricing
@@ -84,6 +90,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <Link href="/contact" className="hover:opacity-80 leading-none" prefetch>
                   Contact
                 </Link>
+
+                {/* Open app → now /studio */}
                 <Link
                   href="/studio"
                   className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
@@ -116,10 +124,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </main>
 
-          {/* ===== GLOBAL FLOATING COMPONENTS ===== */}
+          {/* ===== FLOATING COMPONENTS ===== */}
           <Suspense>
             <SolaceDock />
           </Suspense>
+
           <Suspense>
             <Toaster />
           </Suspense>
@@ -143,6 +152,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
             </div>
           </footer>
+
         </AuthProvider>
       </body>
     </html>
