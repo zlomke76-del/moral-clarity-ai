@@ -15,7 +15,7 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-[#050505]/60 backdrop-blur-sm">
+ <div className="relative h-screen flex items-center justify-center bg-[#050505] overflow-hidden">
 
       {/* AUTH CARD */}
       <div className="z-auth w-full max-w-md px-8 py-10 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.5)]">
