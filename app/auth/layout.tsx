@@ -1,13 +1,13 @@
-// app/auth/layout.tsx
-export default function AuthLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AuthLayout({ children }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-        {children}
+    <html lang="en" className="dark h-full">
+      <body className="mc-root">
+        <div className="mc-bg-1" />
+        <div className="mc-noise" />
+
+        <main className="mc-content">
+          {children}
+        </main>
       </body>
     </html>
   );
