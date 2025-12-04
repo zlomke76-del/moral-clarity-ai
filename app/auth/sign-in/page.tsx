@@ -1,22 +1,23 @@
-"use client";
-
-import { useState } from "react";
+import React, { useState } from 'react';
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 export default function SignInPage() {
-  const supabase = supabaseBrowser();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
 
-  async function signIn(e: React.FormEvent) {
+  async function signIn(e) {
     e.preventDefault();
-    const { error } = await supabase.auth.signInWithOtp({ email });
-    if (!error) setSent(true);
+    const { error } = await supabaseBrowser.auth.signInWithOtp({ email });
+    if (error) {
+      console.error("Error sending magic link:", error.message);
+      // Display error message to the user
+    } else {
+      setSent(true);
+    }
   }
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-[#050505] overflow-hidden">
-
       {/* BACKGROUND (Always stays behind form) */}
       <div className="absolute inset-0 z-0">
         <img
@@ -27,8 +28,7 @@ export default function SignInPage() {
       </div>
 
       {/* GLASS CARD (Must float ABOVE everything) */}
-      <div className="relative z-[50] w-full max-w-md px-8 py-10 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.4)]">
-
+      <div className="relative z-20 w-full max-w-md px-8 py-10 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.4)]">
         {/* Magic key icon */}
         <div className="flex justify-center mb-6">
           <img
@@ -73,4 +73,3 @@ export default function SignInPage() {
     </div>
   );
 }
-
