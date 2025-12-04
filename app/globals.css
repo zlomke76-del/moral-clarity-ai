@@ -75,7 +75,6 @@
    AUTH & MODAL PRIORITY
    ============================================ */
 
-/* Ensures sign-in card ALWAYS floats above everything */
 .z-auth {
   position: relative;
   z-index: 999 !important;
@@ -91,15 +90,17 @@
    LAYOUT GRID (Sidebar + Main Panel)
    ============================================ */
 
+/*  THE ONE AND ONLY VALID SHELL RULE  
+    (removes duplication + flex override)
+*/
 .mc-shell {
   position: relative;
   display: grid;
   grid-template-columns: 260px 1fr; /* Sidebar | Content */
   width: 100%;
   min-height: 100vh;
-  z-index: 10; /* Above background, below overlays */
+  z-index: 10;
 }
-
 
 /* SIDEBAR PANEL */
 .mc-sidebar {
