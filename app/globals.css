@@ -1,109 +1,65 @@
 /* ============================================================
-   GLOBAL FRAME / BACKGROUND SYSTEM
+   LUXURY NEURAL SIDEBAR — GOLD / NAVY / GLASS SYSTEM
    ============================================================ */
 
-.mc-root {
-  min-height: 100vh;
-  background-color: #020617;
-  background-image: url("/Global-CSS-Background.png");
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center top;
-  background-attachment: fixed;
-  position: relative;
-  z-index: 0;
-  color: var(--mc-text);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, "Noto Sans", sans-serif;
-}
-
-.mc-bg {
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  pointer-events: none;
-}
-
-.mc-noise {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image: url("/noise.png");
-  opacity: 0.04;
-}
-
-.mc-content {
-  position: relative;
-  z-index: 10;
-}
-
-.mc-ui {
-  position: relative;
-  z-index: 20;
-}
-
-.z-auth {
-  position: relative;
-  z-index: 999 !important;
-}
-
-.z-solace {
-  position: relative;
-  z-index: 50;
-}
-
-
-/* ============================================================
-   NEURAL SIDEBAR — LUXURY PANEL (LEVEL A)
-   ============================================================ */
-
+/* ROOT SIDEBAR PANEL */
 .neural-sidebar {
   width: 280px;
   height: 100vh;
-  padding: 1rem 0;
+  padding: 1.25rem 1rem 2rem 1.25rem;
+
+  background: rgba(4, 10, 25, 0.55);
+  backdrop-filter: blur(28px);
+
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.03);
+
   display: flex;
   flex-direction: column;
-  gap: 24px;
-
-  /* Glass & depth */
-  background: rgba(3, 10, 25, 0.55);
-  backdrop-filter: blur(28px) saturate(140%);
-  border-right: 1px solid rgba(255, 255, 255, 0.04);
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.03);
+  gap: 1.75rem;
 
   position: relative;
   z-index: 30;
 }
 
-
 /* ============================================================
-   BRAND AREA
+   BRAND HEADER
    ============================================================ */
 
 .neural-sidebar-brand {
-  padding: 1.25rem 1.25rem 2rem 1.25rem;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
+  padding-bottom: 1rem;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+.neural-sidebar-brand:hover .neural-sidebar-brand-mark {
+  box-shadow: 0 0 18px rgba(247, 199, 106, 0.35);
+  transform: translateY(-1px);
 }
 
 .neural-sidebar-brand-mark {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: linear-gradient(145deg, #111, #0c0c0c);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: #f7c76a;
-  font-weight: 700;
-  font-size: 1rem;
+  width: 46px;
+  height: 46px;
 
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 0 18px rgba(247, 199, 106, 0.15);
+  background: linear-gradient(145deg, #f7c76a, #ca9d40);
+  border-radius: 12px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #000;
+  font-weight: 800;
+  font-size: 1.1rem;
+
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 16px rgba(247, 199, 106, 0.2);
+
+  transition: all 0.2s ease;
 }
 
 .neural-sidebar-brand-text {
@@ -120,382 +76,166 @@
 
 .neural-sidebar-brand-line-2 {
   font-size: 13px;
-  opacity: 0.65;
+  opacity: 0.7;
 }
 
-
 /* ============================================================
-   SECTION LABEL
+   WORKSPACE SECTION LABEL
    ============================================================ */
 
 .neural-sidebar-section-label {
-  padding: 0 1.25rem;
-  margin-top: 0.5rem;
-  margin-bottom: 0.75rem;
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.45);
+  font-size: 11px;
   text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: rgba(255, 255, 255, 0.42);
+  padding-left: 0.25rem;
 }
 
-
 /* ============================================================
-   LIST WRAPPER
+   NAV LIST
    ============================================================ */
 
 .neural-sidebar-list {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  padding: 0 1.25rem;
+  gap: 0.85rem;
 }
 
-
 /* ============================================================
-   CHIP CONTAINER (link wrapper)
+   LINK WRAPPER
    ============================================================ */
 
 .neural-sidebar-link {
   text-decoration: none;
   display: block;
+  cursor: pointer;
   color: inherit;
 }
 
-
 /* ============================================================
-   CHIP BODY
+   CHIP CARD
    ============================================================ */
 
 .neural-sidebar-chip {
   background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  padding: 0.85rem 1rem;
-  border-radius: 10px;
-  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  padding: 1rem 1rem;
+  border-radius: 12px;
+
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+
   display: flex;
   align-items: center;
-
-  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
 }
 
 .neural-sidebar-chip:hover {
-  transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.18);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
   background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
 }
 
-
 /* ============================================================
-   CHIP INNER TEXT
+   CHIP INNER CONTENT
    ============================================================ */
 
 .neural-sidebar-chip-inner {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 0.9rem;
 }
 
+/* ICON */
+.neural-sidebar-chip-icon .neural-icon {
+  opacity: 0.9;
+  color: rgba(255, 255, 255, 0.75);
+  transition: color 0.2s ease;
+}
+
+.neural-sidebar-chip:hover .neural-sidebar-chip-icon .neural-icon {
+  color: #f7c76a;
+}
+
+/* TEXT */
 .neural-sidebar-chip-label {
-  font-size: 0.95rem;
+  font-size: 15px;
   font-weight: 600;
   color: white;
 }
 
 .neural-sidebar-chip-description {
+  font-size: 12px;
+  opacity: 0.55;
   margin-top: 2px;
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.45);
 }
 
-
 /* ============================================================
-   ACTIVE CHIP (current route)
+   ACTIVE STATE — GOLD EDGE BAR
    ============================================================ */
 
 .neural-sidebar-link.active .neural-sidebar-chip {
+  background: rgba(247, 199, 106, 0.12);
   border-color: rgba(247, 199, 106, 0.55);
-  background: rgba(247, 199, 106, 0.09);
-  box-shadow: inset 0 0 12px rgba(247, 199, 106, 0.15);
-  position: relative;
+  box-shadow: inset 0 0 14px rgba(247, 199, 106, 0.16);
 }
 
 .neural-sidebar-link.active .neural-sidebar-chip::before {
   content: "";
   position: absolute;
-  left: -6px;
+  left: -4px;
   top: 50%;
   transform: translateY(-50%);
-  height: 60%;
-  width: 3px;
-  border-radius: 2px;
-  background: linear-gradient(
-    180deg,
-    rgba(247, 199, 106, 0.6),
-    rgba(247, 199, 106, 0.15)
-  );
-}
-/* ============================================================
-   LEVEL B — CINEMATIC DEPTH + MOTION
-   ============================================================ */
-
-/* --- GLOBAL AMBIENT GLOW BEHIND SIDEBAR --- */
-.neural-sidebar::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 100%;
-  pointer-events: none;
-
-  background: radial-gradient(
-    circle at 40% 20%,
-    rgba(247, 199, 106, 0.13),
-    rgba(0, 0, 0, 0) 55%
-  );
-
-  opacity: 0.7;
-  transition: opacity 0.6s ease;
-  z-index: -1;
-}
-
-/* On hover, sidebar "comes alive" */
-.neural-sidebar:hover::before {
-  opacity: 1;
-}
-
-
-/* ============================================================
-   CHIP — MAGNETIC HOVER + LIGHT PLAY
-   ============================================================ */
-
-.neural-sidebar-chip {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-}
-
-/* Soft gold hover light that sweeps across the card */
-.neural-sidebar-chip::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    120deg,
-    rgba(247, 199, 106, 0.07),
-    rgba(247, 199, 106, 0.0) 60%
-  );
-  opacity: 0;
-  transform: translateX(-40%);
-  transition: all 0.35s ease;
-  z-index: -1;
-}
-
-.neural-sidebar-chip:hover::after {
-  opacity: 1;
-  transform: translateX(0%);
-}
-
-
-/* ============================================================
-   CHIP TEXT — SOFT BOOM ON HOVER (SUBTLE)
-   ============================================================ */
-
-.neural-sidebar-chip-label,
-.neural-sidebar-chip-description {
-  transition: transform 0.25s ease, opacity 0.25s ease;
-}
-
-.neural-sidebar-chip:hover .neural-sidebar-chip-label {
-  transform: translateX(2px);
-}
-
-.neural-sidebar-chip:hover .neural-sidebar-chip-description {
-  opacity: 0.75;
-}
-
-
-/* ============================================================
-   ACTIVE ITEM — CINEMATIC PULSE + GOLD GLASS
-   ============================================================ */
-
-.neural-sidebar-link.active .neural-sidebar-chip {
-  background: rgba(247, 199, 106, 0.13);
-  box-shadow:
-    inset 0 0 20px rgba(247, 199, 106, 0.15),
-    0 0 12px rgba(247, 199, 106, 0.18);
-  border-color: rgba(247, 199, 106, 0.65);
-  animation: activeGlowPulse 3s ease-in-out infinite;
-}
-
-@keyframes activeGlowPulse {
-  0% { box-shadow: inset 0 0 18px rgba(247,199,106,0.14), 0 0 10px rgba(247,199,106,0.17); }
-  50% { box-shadow: inset 0 0 26px rgba(247,199,106,0.23), 0 0 16px rgba(247,199,106,0.28); }
-  100% { box-shadow: inset 0 0 18px rgba(247,199,106,0.14), 0 0 10px rgba(247,199,106,0.17); }
-}
-
-
-/* ============================================================
-   HIGHLIGHT BAR — ANIMATED GOLD EDGE (SEXY)
-   ============================================================ */
-
-.neural-sidebar-link.active .neural-sidebar-chip::before {
-  width: 3px;
-  left: -6px;
-  height: 60%;
-  border-radius: 3px;
-  opacity: 1;
-
-  background: linear-gradient(
-    180deg,
-    rgba(247, 199, 106, 0.75),
-    rgba(247, 199, 106, 0.25)
-  );
-
-  animation: barGlow 2.4s ease-in-out infinite;
-}
-
-@keyframes barGlow {
-  0% { opacity: 0.65; transform: translateY(-4px); }
-  50% { opacity: 1; transform: translateY(4px); }
-  100% { opacity: 0.65; transform: translateY(-4px); }
-}
-
-
-/* ============================================================
-   SIDEBAR PARALLAX SHIFT (MICRO MOVEMENT)
-   ============================================================ */
-
-.neural-sidebar {
-  transition: transform 0.35s ease;
-}
-
-.neural-sidebar:hover {
-  transform: translateX(-1px);
-}
-.neural-sidebar-brand-link {
-  cursor: pointer;
-  text-decoration: none;
-  color: inherit;
-  transition: transform 0.2s ease, opacity 0.2s ease;
-}
-
-.neural-sidebar-brand-link:hover {
-  transform: translateX(2px);
-  opacity: 0.9;
-}
-.neural-sidebar-brand-mark {
-  position: relative;
-  overflow: visible;
-}
-
-.neural-sidebar-brand-mark::after {
-  content: "";
-  position: absolute;
-  inset: -18px;
-  background: radial-gradient(
-    circle at 50% 40%,
-    rgba(247, 199, 106, 0.35),
-    rgba(247, 199, 106, 0.0) 70%
-  );
-  filter: blur(18px);
-  pointer-events: none;
-  z-index: -1;
-}
-.neural-sidebar {
-  background: linear-gradient(
-      to bottom,
-      rgba(3, 10, 25, 0.70),
-      rgba(3, 10, 25, 0.40)
-    ),
-    rgba(3, 10, 25, 0.55);
-  backdrop-filter: blur(30px) saturate(140%);
-}
-.neural-sidebar-chip {
-  position: relative;
-  overflow: hidden;
-}
-
-.neural-sidebar-chip::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    circle at var(--mx, 50%) var(--my, 50%),
-    rgba(255, 255, 255, 0.09),
-    rgba(255, 255, 255, 0.0) 60%
-  );
-  opacity: 0;
-  transition: opacity 0.25s ease;
-}
-
-.neural-sidebar-chip:hover::after {
-  opacity: 1;
-}
-.neural-sidebar-chip:hover {
-  cursor: pointer;
-}
-
-.neural-sidebar-chip:hover {
-  --mx: var(--cursor-x);
-  --my: var(--cursor-y);
-}
-.neural-sidebar-link.active .neural-sidebar-chip {
-  background: linear-gradient(
-    to right,
-    rgba(247, 199, 106, 0.18),
-    rgba(247, 199, 106, 0.07)
-  );
-  border-color: rgba(247, 199, 106, 0.45);
-  box-shadow:
-    inset 0 0 18px rgba(247, 199, 106, 0.20),
-    0 4px 14px rgba(0, 0, 0, 0.35);
-  transform: translateY(-2px);
-}
-
-.neural-sidebar-link.active .neural-sidebar-chip::before {
-  content: "";
-  position: absolute;
-  left: -8px;
-  top: 50%;
-  transform: translateY(-50%);
-  height: 70%;
   width: 4px;
+  height: 60%;
   border-radius: 4px;
   background: linear-gradient(
     180deg,
     rgba(247, 199, 106, 0.85),
-    rgba(247, 199, 106, 0.25)
+    rgba(247, 199, 106, 0.2)
   );
-}
-.neural-sidebar::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: url("/noise.png");
-  opacity: 0.06;
-  mix-blend-mode: soft-light;
-}
-.neural-sidebar-brand {
-  position: relative;
 }
 
-.neural-sidebar-brand::after {
-  content: "";
-  position: absolute;
-  left: 1.25rem;
-  right: 1.25rem;
-  bottom: -12px;
-  height: 1px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(255, 255, 255, 0.12),
-    transparent
-  );
-  opacity: 0.6;
+/* ============================================================
+   ACCOUNT AVATAR (upload icon)
+   ============================================================ */
+
+.neural-avatar {
+  width: 40px;
+  height: 40px;
+
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+
+.neural-avatar:hover {
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 0 12px rgba(247, 199, 106, 0.3);
+  transform: translateY(-2px);
+}
+
+.neural-avatar-initial {
+  opacity: 0.85;
+}
+
+/* Ensure icon alignment */
+.neural-sidebar-chip-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
