@@ -1,13 +1,11 @@
-// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Suspense } from "react";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import AuthProvider from "@/components/AuthProvider";
 import Toaster from "@/components/Toaster";
 import SolaceGuard from "@/app/components/SolaceGuard";
-import NeuralSidebar from "@/app/components/NeuralSidebar";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -28,26 +26,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className="dark h-full">
       <body className="mc-root">
         
-        {/* Background Layers */}
+        {/* --- Background Layers --- */}
         <div className="mc-bg" />
         <div className="mc-noise" />
 
         <AuthProvider>
-          {/* -------------------------------
-              RESTORED PROFESSIONAL SIDEBAR
-             ------------------------------- */}
-          <div className="mc-shell">
-            <aside className="mc-sidebar">
-              <NeuralSidebar />
-            </aside>
+          
+          {/* --- Normal Page Content --- */}
+          <main className="mc-content">
+            {children}
+          </main>
 
-            {/* Main content panel */}
-            <main className="mc-panel">
-              {children}
-            </main>
-          </div>
-
-          {/* UI overlays: Solace + Toaster */}
+          {/* --- Solace + Toaster Overlays --- */}
           <div className="mc-ui">
             <Suspense>
               <SolaceGuard />
@@ -59,6 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
             <SpeedInsights />
           </div>
+
         </AuthProvider>
 
       </body>
