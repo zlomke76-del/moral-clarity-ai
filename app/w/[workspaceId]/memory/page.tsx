@@ -1,10 +1,10 @@
 // app/w/[workspaceId]/memory/page.tsx
-import Link from 'next/link';
-import { supabaseServer } from '@/lib/supabase';
-import MemoryComposer from '@/components/MemoryComposer';
-import MemoryList from '@/components/MemoryList';
+import Link from "next/link";
+import { supabaseServer } from "@/lib/supabase";
+import MemoryComposer from "@/components/MemoryComposer";
+import MemoryList from "@/components/MemoryList";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 /**
  * Workspace Memory Page
@@ -19,16 +19,16 @@ export default async function WorkspaceMemoryPage({
 }) {
   const workspaceId = decodeURIComponent(params.workspaceId);
 
-  // Initialize Supabase server client
-  const sb = supabaseServer();
+  // ✅ MUST AWAIT to get the actual Supabase client
+  const sb = await supabaseServer();
 
   // Fetch the most recent memories for this workspace
   const { data, error } = await sb
-    .schema('mca')
-    .from('memories')
-    .select('id, title, created_at, workspace_id')
-    .eq('workspace_id', workspaceId)
-    .order('created_at', { ascending: false })
+    .schema("mca")
+    .from("memories")
+    .select("id, title, created_at, workspace_id")
+    .eq("workspace_id", workspaceId)
+    .order("created_at", { ascending: false })
     .limit(50);
 
   const rows = !error && Array.isArray(data) ? data : [];
@@ -41,12 +41,11 @@ export default async function WorkspaceMemoryPage({
             Workspace Memories
           </h1>
           <p className="text-sm text-neutral-400">
-            Workspace:{' '}
-            <code className="text-neutral-300 break-all">
-              {workspaceId}
-            </code>
+            Workspace:{" "}
+            <code className="text-neutral-300 break-all">{workspaceId}</code>
           </p>
         </div>
+
         <Link
           href={`/w/${workspaceId}`}
           className="text-sm text-neutral-300 hover:text-white underline underline-offset-4"
@@ -56,7 +55,7 @@ export default async function WorkspaceMemoryPage({
       </header>
 
       <div className="space-y-6">
-        {/* Memory composer (new note input) */}
+        {/* Composer */}
         <MemoryComposer workspaceId={workspaceId} />
 
         {/* Memory list */}
@@ -68,3 +67,5 @@ export default async function WorkspaceMemoryPage({
     </section>
   );
 }
+
+
