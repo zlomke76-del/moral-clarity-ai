@@ -50,4 +50,116 @@
   position: relative;
   z-index: 50;
 }
+/* ============================================================
+   NEURAL SIDEBAR — LUX DARK PANEL
+   ============================================================ */
+
+.neural-sidebar {
+  width: 260px;
+  height: 100vh;
+  padding: 28px 20px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(18px);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  position: relative;
+  z-index: 30;
+}
+
+/* BRAND */
+.neural-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.neural-sidebar-brand-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fde047, #eab308);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #000;
+  font-size: 18px;
+}
+
+.neural-sidebar-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.neural-sidebar-brand-line-1 {
+  font-size: 15px;
+  font-weight: 600;
+  opacity: 0.95;
+}
+
+.neural-sidebar-brand-line-2 {
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+/* SECTION LABEL */
+.neural-sidebar-section-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 10px;
+}
+
+/* LIST WRAPPER */
+.neural-sidebar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* LINK WRAPPER */
+.neural-sidebar-link {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* CHIP */
+.neural-sidebar-chip {
+  background: rgba(255, 255, 255, 0.04);
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.neural-sidebar-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* CHIP INNER */
+.neural-sidebar-chip-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* TEXT */
+.neural-sidebar-chip-label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.neural-sidebar-chip-description {
+  font-size: 12px;
+  opacity: 0.65;
+}
 
