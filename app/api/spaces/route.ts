@@ -1,30 +1,29 @@
-// app/api/spaces/route.ts
-import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { cookies } from "next/headers";
+import type { CookieOptions } from "@/lib/cookies";
 
-export async function POST(req: NextRequest) {
-  const cookieStore = cookies()
+export async function GET() {
+  const cookieStore = await cookies(); // ✅ REQUIRED in Next 16
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options?: CookieOptions) {
-          cookieStore.set({ name, value, ...options })
-        },
-        remove(name: string, options?: CookieOptions) {
-          cookieStore.set({ name, value: '', ...options, maxAge: 0 })
-        },
+  const adapter = {
+    cookies: {
+      get(name: string) {
+        const c = cookieStore.get(name);
+        return c ? c.value : null;
       },
-    }
-  )
 
-  const body = await req.json()
-  // e.g. await supabase.from('spaces').insert({ name: body.name })
-  return NextResponse.json({ ok: true })
+      set(name: string, value: string, options?: CookieOptions) {
+        cookieStore.set({ name, value, ...options });
+      },
+
+      delete(name: string) {
+        cookieStore.set({
+          name,
+          value: "",
+          maxAge: 0,
+        });
+      },
+    },
+  };
+
+  return Response.json({ ok: true, adapter });
 }
