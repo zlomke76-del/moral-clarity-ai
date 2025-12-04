@@ -7,7 +7,6 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import AuthProvider from "@/components/AuthProvider";
 import Toaster from "@/components/Toaster";
 import SolaceGuard from "@/app/components/SolaceGuard";
-import NeuralSidebar from "@/app/components/NeuralSidebar";
 
 import { headers } from "next/headers";
 
@@ -25,17 +24,20 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const h = headers();
+export default async function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // FIX: Next.js 16 requires awaiting headers()
+  const h = await headers();
   const pathname = h.get("x-pathname") || "";
 
-  // Detect auth routes
   const isAuthRoute =
     pathname.startsWith("/auth") ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/sign-in");
 
-  // Detect studio/workspace routes
   const isStudioRoute =
     pathname.startsWith("/w/") ||
     pathname.startsWith("/studio") ||
@@ -45,37 +47,28 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className="dark h-full">
       <body className="mc-root">
 
-        {/* Background layers (always behind everything) */}
+        {/* Background layers */}
         <div className="mc-bg" />
         <div className="mc-noise" />
 
         <AuthProvider>
-
-          {/* ============================
-              AUTH PAGES (Sign-in, Magic Link)
-              Centered + isolated from workspace
-             ============================ */}
           {isAuthRoute ? (
+            /* AUTH PAGE WRAPPER */
             <div className="z-auth min-h-screen flex items-center justify-center">
               {children}
             </div>
           ) : (
-            /* ============================
-               MAIN APP LAYOUT (Sidebar + Workspace)
-               ============================ */
+            /* MAIN APP LAYOUT */
             <div className="mc-shell">
-
-              {/* SIDEBAR */}
               <aside className="mc-sidebar">
                 <NeuralSidebar />
               </aside>
 
-              {/* MAIN PANEL CONTENT */}
               <main className="mc-panel">{children}</main>
             </div>
           )}
 
-          {/* GLOBAL UI OVERLAYS — Solace, Toaster, SpeedInsights */}
+          {/* GLOBAL OVERLAYS */}
           <div className="mc-ui">
             {!isAuthRoute && (
               <Suspense>
