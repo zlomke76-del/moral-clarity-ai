@@ -236,4 +236,143 @@
     rgba(247, 199, 106, 0.15)
   );
 }
+/* ============================================================
+   LEVEL B — CINEMATIC DEPTH + MOTION
+   ============================================================ */
+
+/* --- GLOBAL AMBIENT GLOW BEHIND SIDEBAR --- */
+.neural-sidebar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  pointer-events: none;
+
+  background: radial-gradient(
+    circle at 40% 20%,
+    rgba(247, 199, 106, 0.13),
+    rgba(0, 0, 0, 0) 55%
+  );
+
+  opacity: 0.7;
+  transition: opacity 0.6s ease;
+  z-index: -1;
+}
+
+/* On hover, sidebar "comes alive" */
+.neural-sidebar:hover::before {
+  opacity: 1;
+}
+
+
+/* ============================================================
+   CHIP — MAGNETIC HOVER + LIGHT PLAY
+   ============================================================ */
+
+.neural-sidebar-chip {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Soft gold hover light that sweeps across the card */
+.neural-sidebar-chip::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    rgba(247, 199, 106, 0.07),
+    rgba(247, 199, 106, 0.0) 60%
+  );
+  opacity: 0;
+  transform: translateX(-40%);
+  transition: all 0.35s ease;
+  z-index: -1;
+}
+
+.neural-sidebar-chip:hover::after {
+  opacity: 1;
+  transform: translateX(0%);
+}
+
+
+/* ============================================================
+   CHIP TEXT — SOFT BOOM ON HOVER (SUBTLE)
+   ============================================================ */
+
+.neural-sidebar-chip-label,
+.neural-sidebar-chip-description {
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.neural-sidebar-chip:hover .neural-sidebar-chip-label {
+  transform: translateX(2px);
+}
+
+.neural-sidebar-chip:hover .neural-sidebar-chip-description {
+  opacity: 0.75;
+}
+
+
+/* ============================================================
+   ACTIVE ITEM — CINEMATIC PULSE + GOLD GLASS
+   ============================================================ */
+
+.neural-sidebar-link.active .neural-sidebar-chip {
+  background: rgba(247, 199, 106, 0.13);
+  box-shadow:
+    inset 0 0 20px rgba(247, 199, 106, 0.15),
+    0 0 12px rgba(247, 199, 106, 0.18);
+  border-color: rgba(247, 199, 106, 0.65);
+  animation: activeGlowPulse 3s ease-in-out infinite;
+}
+
+@keyframes activeGlowPulse {
+  0% { box-shadow: inset 0 0 18px rgba(247,199,106,0.14), 0 0 10px rgba(247,199,106,0.17); }
+  50% { box-shadow: inset 0 0 26px rgba(247,199,106,0.23), 0 0 16px rgba(247,199,106,0.28); }
+  100% { box-shadow: inset 0 0 18px rgba(247,199,106,0.14), 0 0 10px rgba(247,199,106,0.17); }
+}
+
+
+/* ============================================================
+   HIGHLIGHT BAR — ANIMATED GOLD EDGE (SEXY)
+   ============================================================ */
+
+.neural-sidebar-link.active .neural-sidebar-chip::before {
+  width: 3px;
+  left: -6px;
+  height: 60%;
+  border-radius: 3px;
+  opacity: 1;
+
+  background: linear-gradient(
+    180deg,
+    rgba(247, 199, 106, 0.75),
+    rgba(247, 199, 106, 0.25)
+  );
+
+  animation: barGlow 2.4s ease-in-out infinite;
+}
+
+@keyframes barGlow {
+  0% { opacity: 0.65; transform: translateY(-4px); }
+  50% { opacity: 1; transform: translateY(4px); }
+  100% { opacity: 0.65; transform: translateY(-4px); }
+}
+
+
+/* ============================================================
+   SIDEBAR PARALLAX SHIFT (MICRO MOVEMENT)
+   ============================================================ */
+
+.neural-sidebar {
+  transition: transform 0.35s ease;
+}
+
+.neural-sidebar:hover {
+  transform: translateX(-1px);
+}
 
