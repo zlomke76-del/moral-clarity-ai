@@ -38,15 +38,16 @@ export default function NeuralSidebar({ items }: Props) {
   return (
     <aside className="neural-sidebar">
       {/* BRAND */}
-      <div className="neural-sidebar-brand">
-        <div className="neural-sidebar-brand-mark">
-          <span>AI</span>
-        </div>
-        <div className="neural-sidebar-brand-text">
-          <span className="neural-sidebar-brand-line-1">Moral Clarity</span>
-          <span className="neural-sidebar-brand-line-2">Studio</span>
-        </div>
-      </div>
+<Link href="/app" className="neural-sidebar-brand neural-sidebar-brand-link">
+  <div className="neural-sidebar-brand-mark">
+    <span>AI</span>
+  </div>
+  <div className="neural-sidebar-brand-text">
+    <span className="neural-sidebar-brand-line-1">Moral Clarity</span>
+    <span className="neural-sidebar-brand-line-2">Studio</span>
+  </div>
+</Link>
+
 
       <div className="neural-sidebar-section-label">Workspace</div>
 
