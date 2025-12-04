@@ -3,10 +3,11 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Suspense } from "react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { headers } from "next/headers";
 
 import AuthProvider from "@/components/AuthProvider";
 import Toaster from "@/components/Toaster";
-import SolaceGuard from "@/app/components/SolaceGuard"; // ✅ Client-side Solace visibility controller
+import SolaceGuard from "@/app/components/SolaceGuard";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -29,22 +30,31 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Read current path from Next headers (server-side safe)
+  const h = headers();
+  const pathname = h.get("x-pathname") || "";
+
+  const isAuthRoute =
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/sign-in") ||
+    pathname.startsWith("/sign-out");
+
   return (
     <html lang="en" className="dark h-full" data-skin="glass">
-      <body className="mc-root">
+      <body className={`mc-root ${isAuthRoute ? "no-global-bg" : ""}`}>
         <AuthProvider>
-          {/* Page content */}
+
+          {/* PAGE CONTENT */}
           {children}
 
-          {/* Solace appears everywhere EXCEPT on auth pages */}
-          <Suspense>
-            <SolaceGuard />
-          </Suspense>
+          {/* SHOW SOLACE EVERYWHERE EXCEPT AUTH */}
+          {!isAuthRoute && (
+            <Suspense>
+              <SolaceGuard />
+            </Suspense>
+          )}
 
           <Suspense>
             <Toaster />
@@ -56,4 +66,5 @@ export default function RootLayout({
     </html>
   );
 }
+
 
