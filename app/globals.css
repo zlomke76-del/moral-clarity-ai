@@ -1,3 +1,7 @@
+/* ============================================================
+   GLOBAL FRAME / BACKGROUND SYSTEM
+   ============================================================ */
+
 .mc-root {
   min-height: 100vh;
   background-color: #020617;
@@ -50,123 +54,35 @@
   position: relative;
   z-index: 50;
 }
+
+
 /* ============================================================
-   NEURAL SIDEBAR — LUX DARK PANEL
+   NEURAL SIDEBAR — LUXURY PANEL (LEVEL A)
    ============================================================ */
 
 .neural-sidebar {
-  width: 260px;
+  width: 280px;
   height: 100vh;
-  padding: 28px 20px;
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(18px);
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 1rem 0;
   display: flex;
   flex-direction: column;
   gap: 24px;
+
+  /* Glass & depth */
+  background: rgba(3, 10, 25, 0.55);
+  backdrop-filter: blur(28px) saturate(140%);
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.03);
+
   position: relative;
   z-index: 30;
 }
 
-/* BRAND */
-.neural-sidebar-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
 
-.neural-sidebar-brand-mark {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #fde047, #eab308);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  color: #000;
-  font-size: 18px;
-}
+/* ============================================================
+   BRAND AREA
+   ============================================================ */
 
-.neural-sidebar-brand-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.1;
-}
-
-.neural-sidebar-brand-line-1 {
-  font-size: 15px;
-  font-weight: 600;
-  opacity: 0.95;
-}
-
-.neural-sidebar-brand-line-2 {
-  font-size: 13px;
-  opacity: 0.75;
-}
-
-/* SECTION LABEL */
-.neural-sidebar-section-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.4);
-  margin-top: 10px;
-}
-
-/* LIST WRAPPER */
-.neural-sidebar-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-/* LINK WRAPPER */
-.neural-sidebar-link {
-  text-decoration: none;
-  color: inherit;
-  cursor: pointer;
-}
-
-/* CHIP */
-.neural-sidebar-chip {
-  background: rgba(255, 255, 255, 0.04);
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-
-  display: flex;
-  align-items: center;
-  transition: all 0.2s ease;
-}
-
-.neural-sidebar-chip:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.12);
-}
-
-/* CHIP INNER */
-.neural-sidebar-chip-inner {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-/* TEXT */
-.neural-sidebar-chip-label {
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.neural-sidebar-chip-description {
-  font-size: 12px;
-  opacity: 0.65;
-}
-/* ===============================================
-   SUBTLE LUXURY UPGRADE — LEVEL 1
-   =============================================== */
-
-/* --- BRAND AREA --- */
 .neural-sidebar-brand {
   padding: 1.25rem 1.25rem 2rem 1.25rem;
   display: flex;
@@ -185,21 +101,33 @@
   color: #f7c76a;
   font-weight: 700;
   font-size: 1rem;
+
   border: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow: 0 0 18px rgba(247, 199, 106, 0.15);
 }
 
-/* --- SIDEBAR PANEL --- */
-.neural-sidebar {
-  width: 280px;
-  padding: 1rem 0;
-  background: rgba(3, 10, 25, 0.55);
-  backdrop-filter: blur(28px);
-  border-right: 1px solid rgba(255, 255, 255, 0.04);
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.03);
+.neural-sidebar-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
 }
 
-/* Section Label */
+.neural-sidebar-brand-line-1 {
+  font-size: 15px;
+  font-weight: 600;
+  opacity: 0.95;
+}
+
+.neural-sidebar-brand-line-2 {
+  font-size: 13px;
+  opacity: 0.65;
+}
+
+
+/* ============================================================
+   SECTION LABEL
+   ============================================================ */
+
 .neural-sidebar-section-label {
   padding: 0 1.25rem;
   margin-top: 0.5rem;
@@ -208,9 +136,14 @@
   letter-spacing: 0.08em;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
 }
 
-/* --- CHIP LIST --- */
+
+/* ============================================================
+   LIST WRAPPER
+   ============================================================ */
+
 .neural-sidebar-list {
   display: flex;
   flex-direction: column;
@@ -218,11 +151,21 @@
   padding: 0 1.25rem;
 }
 
-/* --- CHIP CONTAINER --- */
+
+/* ============================================================
+   CHIP CONTAINER (link wrapper)
+   ============================================================ */
+
 .neural-sidebar-link {
   text-decoration: none;
   display: block;
+  color: inherit;
 }
+
+
+/* ============================================================
+   CHIP BODY
+   ============================================================ */
 
 .neural-sidebar-chip {
   background: rgba(255, 255, 255, 0.035);
@@ -230,6 +173,9 @@
   padding: 0.85rem 1rem;
   border-radius: 10px;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+
   box-shadow: 0 0 0 rgba(0, 0, 0, 0);
 }
 
@@ -240,7 +186,17 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
-/* --- CHIP CONTENT --- */
+
+/* ============================================================
+   CHIP INNER TEXT
+   ============================================================ */
+
+.neural-sidebar-chip-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .neural-sidebar-chip-label {
   font-size: 0.95rem;
   font-weight: 600;
@@ -253,7 +209,11 @@
   color: rgba(255, 255, 255, 0.45);
 }
 
-/* --- ACTIVE CHIP (current route) --- */
+
+/* ============================================================
+   ACTIVE CHIP (current route)
+   ============================================================ */
+
 .neural-sidebar-link.active .neural-sidebar-chip {
   border-color: rgba(247, 199, 106, 0.55);
   background: rgba(247, 199, 106, 0.09);
