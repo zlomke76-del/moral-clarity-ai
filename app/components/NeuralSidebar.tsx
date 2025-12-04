@@ -84,7 +84,12 @@ function SidebarChip({ item }: { item: NeuralSidebarItem }) {
 
   if (item.href) {
     return (
-      <Link href={item.href} className="neural-sidebar-link">
+      const pathname = usePathname();
+<Link
+  href={item.href}
+  className={`neural-sidebar-link ${pathname === item.href ? "active" : ""}`}
+>
+
         {inner}
       </Link>
     );
