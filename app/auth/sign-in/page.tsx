@@ -27,7 +27,7 @@ export default function SignInPage() {
         <img
           src="/Magic key.png"
           alt="Magic Key"
-          className="h-24 w-24 object-contain"
+          className="h-2 w-2 object-contain"
         />
       </div>
 
