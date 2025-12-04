@@ -1,4 +1,3 @@
-// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Suspense } from "react";
@@ -6,12 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import AuthProvider from "@/components/AuthProvider";
 import Toaster from "@/components/Toaster";
-import SolaceGuard from "@/app/components/SolaceGuard"; // client-side hiding logic
-
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const fetchCache = "force-no-store";
-export const runtime = "nodejs";
+import SolaceGuard from "@/app/components/SolaceGuard";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.moralclarity.ai"),
@@ -29,16 +23,20 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en" className="dark h-full" data-skin="glass">
+    <html lang="en" className="dark h-full">
       <body className="mc-root">
         <AuthProvider>
 
-          {/* PAGE CONTENT */}
+          {/* Main page */}
           {children}
 
-          {/* Solace hidden on auth routes (handled inside SolaceGuard) */}
+          {/* Solace loads everywhere EXCEPT auth routes */}
           <Suspense>
             <SolaceGuard />
           </Suspense>
