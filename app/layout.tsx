@@ -6,7 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import AuthProvider from "@/components/AuthProvider";
 import Toaster from "@/components/Toaster";
-import SolaceGuard from "@/components/SolaceGuard"; // ✅ Client-side Solace visibility controller
+import SolaceGuard from "@/app/components/SolaceGuard"; // ✅ Client-side Solace visibility controller
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
