@@ -1,4 +1,3 @@
-// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Suspense } from "react";
@@ -11,7 +10,6 @@ import SolaceGuard from "@/app/components/SolaceGuard";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
-export const runtime = "nodejs";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.moralclarity.ai"),
@@ -30,19 +28,9 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  // Next 16 gives us pathname via headers for server layouts
-  const path = typeof window === "undefined"
-    ? "" // SSR safeguard
-    : window.location.pathname;
-
-  const isAuthRoute =
-    path.startsWith("/auth") ||
-    path.startsWith("/login") ||
-    path.startsWith("/sign-in");
-
   return (
     <html lang="en" className="dark h-full" data-skin="glass">
-      <body className={isAuthRoute ? "mc-root no-global-bg" : "mc-root"}>
+      <body className="mc-root">
         <AuthProvider>
 
           {children}
@@ -56,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </Suspense>
 
           <SpeedInsights />
+
         </AuthProvider>
       </body>
     </html>
