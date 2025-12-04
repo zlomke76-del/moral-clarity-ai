@@ -7,7 +7,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import AuthProvider from "@/components/AuthProvider";
 import Toaster from "@/components/Toaster";
-import SolaceDockLoader from "@/components/SolaceDockLoader";
+import SolaceDockLoader from "@/app/components/SolaceDockLoader";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
