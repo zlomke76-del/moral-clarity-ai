@@ -68,6 +68,11 @@ export default function SolaceDock() {
 
   const { visible, x, y, setPos, filters, setFilters } = useSolaceStore();
 
+  // ---------------------------------------------------------
+  // NEW MINIMIZE STATE
+  const [minimized, setMinimized] = useState(false);
+  // ---------------------------------------------------------
+
   // --- state ----------------------------------------------------
   const [dragging, setDragging] = useState(false);
   const [offset, setOffset] = useState({ dx: 0, dy: 0 });
@@ -96,15 +101,14 @@ export default function SolaceDock() {
     el.scrollTop = el.scrollHeight;
   }, [messages]);
 
-  // MEMORY hook: userKey + memory cache
+  // MEMORY hook
   const { userKey, memReady, memoryCacheRef } = useSolaceMemory();
 
-  // helper: append assistant-side info/system messages
   const appendInfo = (content: string) => {
     setMessages((m) => [...m, { role: "assistant", content }]);
   };
 
-  // ATTACHMENTS hook
+  // ATTACHMENTS
   const {
     pendingFiles,
     handleFiles,
@@ -119,7 +123,7 @@ export default function SolaceDock() {
     [filters]
   );
 
-  // seed welcome once
+  // seed welcome
   useEffect(() => {
     if (messages.length === 0) {
       setMessages([{ role: "assistant", content: "Ready when you are." }]);
@@ -147,7 +151,7 @@ export default function SolaceDock() {
     };
   }, []);
 
-  // basic viewport breakpoint
+  // viewport breakpoint
   useEffect(() => {
     if (!canRender) return;
     const check = () => {
@@ -158,20 +162,18 @@ export default function SolaceDock() {
     return () => window.removeEventListener("resize", check);
   }, [canRender]);
 
-  // when we flip into mobile, default to collapsed pill so it doesn’t block UI
   useEffect(() => {
     if (isMobile) setCollapsed(true);
     else setCollapsed(false);
   }, [isMobile]);
 
-  // restore position or center (desktop only)
+  // restore / center
   useEffect(() => {
     if (!canRender || !visible) return;
 
     const vw = window.innerWidth;
     const vh = window.innerHeight;
 
-    // On mobile we ignore custom positioning and use a bottom sheet
     if (vw <= 768) {
       setPosReady(true);
       return;
@@ -201,7 +203,7 @@ export default function SolaceDock() {
     });
   }, [canRender, visible, panelW, panelH, setPos]);
 
-  // persist position (desktop only)
+  // persist pos
   useEffect(() => {
     if (!posReady || isMobile) return;
     try {
@@ -209,7 +211,7 @@ export default function SolaceDock() {
     } catch {}
   }, [x, y, posReady, isMobile]);
 
-  // dragging (desktop only)
+  // dragging
   function onHeaderMouseDown(e: React.MouseEvent) {
     if (isMobile) return;
     const rect = containerRef.current?.getBoundingClientRect();
@@ -219,6 +221,7 @@ export default function SolaceDock() {
     });
     setDragging(true);
   }
+
   useEffect(() => {
     if (!dragging) return;
     const onMove = (e: MouseEvent) =>
@@ -232,7 +235,7 @@ export default function SolaceDock() {
     };
   }, [dragging, offset, setPos]);
 
-  // autoresize textarea
+  // autoresize
   const taRef = useRef<HTMLTextAreaElement | null>(null);
   useEffect(() => {
     const ta = taRef.current;
@@ -241,7 +244,7 @@ export default function SolaceDock() {
     ta.style.height = Math.min(220, ta.scrollHeight) + "px";
   }, [input]);
 
-  // default ministry ON (with persist), unless explicitly turned off before
+  // ministry default
   useEffect(() => {
     try {
       const saved = localStorage.getItem(MINISTRY_KEY);
@@ -259,9 +262,9 @@ export default function SolaceDock() {
         localStorage.setItem(MINISTRY_KEY, "1");
       } catch {}
     }
-  }, []); // run once
+  }, []);
 
-  // ---------- actions -------------------------------------------------
+  // send actions -------------------------------------------------
 
   async function sendToChat(userMsg: string, nextMsgs: Message[]) {
     const activeFilters: string[] = Array.from(filters);
@@ -301,7 +304,6 @@ export default function SolaceDock() {
     const imageUrl = getAttachmentUrl(imageAttachment);
 
     if (!imageUrl) {
-      // Fallback: if we somehow can't get a URL, just tell the user.
       setMessages((m) => [
         ...m,
         {
@@ -314,8 +316,6 @@ export default function SolaceDock() {
       return;
     }
 
-    // Show the user's message in the transcript if it wasn't already
-    // (we already appended nextMsgs to state before calling this).
     const prompt =
       userMsg.trim() ||
       "Look at this image and describe what you see, then offer practical, nonjudgmental help.";
@@ -326,10 +326,7 @@ export default function SolaceDock() {
         "Content-Type": "application/json",
         "X-User-Key": userKey,
       },
-      body: JSON.stringify({
-        prompt,
-        imageUrl,
-      }),
+      body: JSON.stringify({ prompt, imageUrl }),
     });
 
     clearPending();
@@ -369,17 +366,12 @@ export default function SolaceDock() {
     } catch (e: any) {
       setMessages((m) => [
         ...m,
-        {
-          role: "assistant",
-          content: `⚠️ ${e?.message ?? "Error"}`,
-        },
+        { role: "assistant", content: `⚠️ ${e?.message ?? "Error"}` },
       ]);
     } finally {
       setStreaming(false);
     }
   }
-
-  // ===================================================================
 
   function toggleMinistry() {
     if (ministryOn) {
@@ -434,6 +426,42 @@ export default function SolaceDock() {
   }
 
   if (!canRender || !visible) return null;
+
+  // ---------------------------------------------------------
+  // ⭐ NEW MINIMIZED BUBBLE (safe early return)
+  if (minimized) {
+    const bubbleStyle: React.CSSProperties = {
+      position: "fixed",
+      bottom: 20,
+      right: 20,
+      width: 58,
+      height: 58,
+      borderRadius: "50%",
+      background:
+        "radial-gradient(62% 62% at 50% 42%, rgba(251,191,36,1) 0%, rgba(251,191,36,.65) 38%, rgba(251,191,36,.22) 72%, rgba(251,191,36,.12) 100%)",
+      boxShadow: "0 0 26px rgba(251,191,36,.55)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "pointer",
+      zIndex: 999999,
+      color: "#000",
+      fontWeight: 700,
+      border: "1px solid rgba(255,255,255,.18)",
+    };
+
+    return createPortal(
+      <button
+        onClick={() => setMinimized(false)}
+        style={bubbleStyle}
+        aria-label="Open Solace"
+      >
+        S
+      </button>,
+      document.body
+    );
+  }
+  // ---------------------------------------------------------
 
   // clamp within viewport (desktop)
   const vw = window.innerWidth;
@@ -611,7 +639,7 @@ export default function SolaceDock() {
     </button>
   );
 
-  // ---------- MOBILE PILL (collapsed) ---------------------------------
+  // mobile pill
   if (isMobile && collapsed) {
     const pillStyle: React.CSSProperties = {
       position: "fixed",
@@ -651,7 +679,8 @@ export default function SolaceDock() {
     );
   }
 
-  // ---------- FULL PANEL UI -------------------------------------------
+  // FULL PANEL ---------------------------------------------------
+
   const panel = (
     <section
       ref={containerRef}
@@ -659,7 +688,6 @@ export default function SolaceDock() {
       aria-label="Solace"
       style={panelStyle}
       onClick={(e) => {
-        // Alt+Click header area (desktop) to re-center
         if (!containerRef.current || isMobile) return;
         if ((e as any).altKey) {
           const vw2 = window.innerWidth;
@@ -690,7 +718,8 @@ export default function SolaceDock() {
           <span style={{ font: "12px system-ui", color: ui.sub }}>
             Create with moral clarity
           </span>
-          {/* tiny status dot for memory load */}
+
+          {/* memory dot */}
           <span
             title={memReady ? "Memory ready" : "Loading memory…"}
             style={{
@@ -704,7 +733,7 @@ export default function SolaceDock() {
           />
         </div>
 
-        {/* middle: lenses */}
+        {/* lenses */}
         <div style={{ display: "flex", gap: 8, marginLeft: 12 }}>
           {chip("Create", modeHint === "Create", () => setModeHint("Create"))}
           {chip("Next", modeHint === "Next Steps", () =>
@@ -713,7 +742,7 @@ export default function SolaceDock() {
           {chip("Red", modeHint === "Red Team", () => setModeHint("Red Team"))}
         </div>
 
-        {/* right: ministry + collapse (mobile) */}
+        {/* right side */}
         <div
           style={{
             marginLeft: "auto",
@@ -723,6 +752,32 @@ export default function SolaceDock() {
           }}
         >
           {ministryTab}
+
+          {/* ----------------------------------------------------
+              NEW MINIMIZE BUTTON (desktop only)
+          ---------------------------------------------------- */}
+          {!isMobile && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setMinimized(true);
+              }}
+              title="Minimize"
+              style={{
+                borderRadius: 6,
+                padding: "4px 8px",
+                font: "600 12px system-ui",
+                background: "#0e1726",
+                border: ui.edge,
+                color: ui.sub,
+                cursor: "pointer",
+              }}
+            >
+              –
+            </button>
+          )}
+
           {isMobile && (
             <button
               type="button"
@@ -776,7 +831,6 @@ export default function SolaceDock() {
         style={composerWrapStyle}
         onPaste={(e) => handlePaste(e, { prefix: "solace" })}
       >
-        {/* pending attachments preview */}
         {pendingFiles.length > 0 && (
           <div
             style={{
@@ -918,3 +972,4 @@ export default function SolaceDock() {
 }
 
 /* ========= end component ========= */
+
