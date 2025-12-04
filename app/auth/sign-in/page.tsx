@@ -15,21 +15,12 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-[#050505] overflow-hidden">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+      {/* Dark overlay to ensure visibility */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
 
-      {/* ======= SMALLER KEY BACKGROUND (Centered) ======= */}
-      <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
-        <img
-          src="/Global-CSS-Background.png"
-          alt="Key Background"
-          className="max-w-[600px] w-full opacity-60 object-contain"
-        />
-      </div>
-
-      {/* ======= SIGN-IN CARD (Always on top) ======= */}
-      <div className="relative z-20 w-full max-w-md px-8 py-10 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.4)]">
-
-        {/* Magic key icon */}
+      {/* SIGN-IN CARD */}
+      <div className="relative z-10 w-full max-w-md px-8 py-10 rounded-2xl border border-white/10 bg-white/5 shadow-xl backdrop-blur-xl">
         <div className="flex justify-center mb-6">
           <img
             src="/Magic key.png"
@@ -73,4 +64,5 @@ export default function SignInPage() {
     </div>
   );
 }
+
 
