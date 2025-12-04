@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 export default function SignInPage() {
@@ -15,19 +15,24 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-      {/* Dark overlay to ensure visibility */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+    <div className="relative min-h-screen flex items-center justify-center">
 
-      {/* SIGN-IN CARD */}
-      <div className="relative z-10 w-full max-w-md px-8 py-10 rounded-2xl border border-white/10 bg-white/5 shadow-xl backdrop-blur-xl">
-        <div className="flex justify-center mb-6">
-          <img
-            src="/Magic key.png"
-            alt="Magic Key"
-            className="h-16 w-16 drop-shadow-[0_0_15px_rgba(0,180,255,0.4)] animate-[pulse_3s_ease-in-out_infinite]"
-          />
-        </div>
+      {/* Cinematic glow (layered ABOVE background but BELOW form) */}
+      <div className="absolute inset-0 z-[2] flex items-center justify-center">
+        <div className="w-[260px] h-[260px] bg-blue-500/25 blur-[150px] opacity-60" />
+      </div>
+
+      {/* Small cinematic key, behind the form */}
+      <div className="absolute top-20 z-[3] flex justify-center w-full opacity-60">
+        <img
+          src="/Magic key.png"
+          alt="Magic Key"
+          className="h-24 w-24 object-contain"
+        />
+      </div>
+
+      {/* Actual Sign-in Card (ALWAYS ON TOP) */}
+      <div className="relative z-[50] w-full max-w-md px-8 py-10 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.4)]">
 
         <h1 className="text-3xl font-semibold text-center mb-2 text-white">
           Sign in
