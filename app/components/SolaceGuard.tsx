@@ -1,17 +1,18 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import SolaceDockLoader from "./SolaceDockLoader";
+import SolaceDockLoader from "@/app/components/SolaceDockLoader";
 
 export default function SolaceGuard() {
-  const path = usePathname() || "";
+  const pathname = usePathname() || "";
 
   const hide =
-    path.startsWith("/auth") ||
-    path.startsWith("/login") ||
-    path.startsWith("/sign-in") ||
-    path.startsWith("/sign-out");
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/sign-in") ||
+    pathname.startsWith("/sign-out");
 
   if (hide) return null;
+
   return <SolaceDockLoader />;
 }
