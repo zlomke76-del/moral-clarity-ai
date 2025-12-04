@@ -1,8 +1,6 @@
-/* globals.css */
-
-/* ----------------------------------------
-   ROOT BACKGROUND SYSTEM (Cinematic, no tiling)
------------------------------------------ */
+/* ============================================
+   ROOT BACKGROUND SYSTEM (Cinematic, Fixed)
+   ============================================ */
 
 .mc-root {
   min-height: 100vh;
@@ -18,7 +16,7 @@
   background-position: center top;
   background-attachment: fixed;
 
-  /* CRITICAL: put this whole background STAYING UNDER all UI */
+  /* Must sit UNDER all app layers */
   position: relative;
   z-index: 0;
 
@@ -38,42 +36,88 @@
     sans-serif;
 }
 
-/* Utility: ensure modal / auth card layers float above background */
-.z-auth {
-  position: relative;
-  z-index: 999 !important;
-}
-
-/* Optional: Solace dock should always be above normal UI but under modals */
-.z-solace {
-  position: relative;
-  z-index: 50;
-}
-/* BACKGROUND LAYERS MUST BE BEHIND EVERYTHING */
+/* ============================================
+   BACKGROUND LAYERS (behind everything)
+   ============================================ */
 
 .mc-bg {
   position: fixed;
   inset: 0;
-  z-index: -2;   /* Push far behind */
+  z-index: -2;
   pointer-events: none;
 }
 
 .mc-noise {
   position: fixed;
   inset: 0;
-  z-index: -1;   /* Behind UI */
+  z-index: -1;
   pointer-events: none;
+  background-image: url("/noise.png");
+  opacity: 0.04;
 }
 
-/* MAIN APP UI STACK */
+/* ============================================
+   APP CONTENT LAYERS (normal depth)
+   ============================================ */
 
 .mc-content {
   position: relative;
-  z-index: 10;   /* Normal UI layer */
+  z-index: 10; /* Primary UI layer */
 }
 
+/* Global overlays (Toaster, Solace) */
 .mc-ui {
   position: relative;
-  z-index: 20;   /* Toaster / Solace UI overlay */
+  z-index: 20; /* Above main content */
 }
+
+/* ============================================
+   AUTH & MODAL PRIORITY
+   ============================================ */
+
+/* Ensures sign-in card ALWAYS floats above everything */
+.z-auth {
+  position: relative;
+  z-index: 999 !important;
+}
+
+/* Solace dock layer – above UI but below modal */
+.z-solace {
+  position: relative;
+  z-index: 50;
+}
+
+/* ============================================
+   LAYOUT GRID (Sidebar + Main Panel)
+   ============================================ */
+
+.mc-shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: 260px 1fr; /* Sidebar + content */
+  height: 100%;
+  min-height: 100vh;
+  width: 100%;
+  z-index: 5; /* Above background layers */
+}
+
+/* SIDEBAR PANEL */
+.mc-sidebar {
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  position: relative;
+  z-index: 6;
+}
+
+/* MAIN WORKSPACE PANEL */
+.mc-panel {
+  position: relative;
+  z-index: 6;
+  padding: 24px;
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+}
+
 
