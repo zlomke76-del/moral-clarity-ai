@@ -1,94 +1,71 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 export default function SignInPage() {
   const supabase = supabaseBrowser();
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
+  const [sent, setSent] = useState(false);
 
-  async function sendMagicLink() {
-    if (!email) return;
-    setStatus("sending");
-
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${location.origin}/auth/callback` },
-    });
-
-    if (!error) {
-      setStatus("sent");
-    } else {
-      setStatus("idle");
-    }
+  async function signIn(e: React.FormEvent) {
+    e.preventDefault();
+    const { error } = await supabase.auth.signInWithOtp({ email });
+    if (!error) setSent(true);
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#05070A] text-white px-6 py-12">
-      <div className="w-full max-w-md rounded-2xl bg-[#0A0D12] border border-[#1a1f27] shadow-xl p-10 flex flex-col items-center">
+    <div className="relative min-h-screen flex items-center justify-center bg-[#050505] overflow-hidden">
+
+      {/* Background gradient + subtle noise */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] to-black opacity-90" />
+      <div className="absolute inset-0 pointer-events-none bg-[url('/noise.png')] opacity-[0.05]" />
+
+      {/* Animated halo behind the key */}
+      <div className="absolute w-[420px] h-[420px] rounded-full bg-blue-500/25 blur-[200px] animate-pulse"></div>
+
+      {/* Card */}
+      <div className="relative z-10 w-full max-w-md px-8 py-10 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.4)]">
         
-        {/* Magic Key Graphic */}
-        <div className="mb-6">
-          <Image
+        {/* Key icon */}
+        <div className="flex justify-center mb-6">
+          <img
             src="/Magic key.png"
             alt="Magic Key"
-            width={90}
-            height={90}
-            className="opacity-90 drop-shadow-lg"
-            priority
+            className="h-16 w-16 drop-shadow-[0_0_15px_rgba(0,180,255,0.4)] animate-[pulse_3s_ease-in-out_infinite]"
           />
         </div>
 
-        {/* Title */}
-        <h1 className="text-2xl font-semibold tracking-tight mb-2">
-          Sign in
+        <h1 className="text-3xl font-semibold text-center mb-2 text-white">
+          Enter your world
         </h1>
-        <p className="text-sm text-gray-400 mb-6 text-center">
-          Enter your email to receive a secure magic link.
+
+        <p className="text-center text-neutral-400 mb-8 text-sm">
+          A secure magic link will be sent to your email.
         </p>
 
-        {/* Email Input */}
-        <input
-          type="email"
-          placeholder="you@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="
-            w-full px-4 py-3 rounded-lg
-            bg-[#0F141B] border border-[#20262f]
-            focus:border-blue-500 focus:outline-none
-            text-sm
-          "
-        />
+        {sent ? (
+          <div className="text-center text-green-400 text-sm">
+            ✨ Magic link sent — check your inbox.
+          </div>
+        ) : (
+          <form onSubmit={signIn} className="space-y-4">
+            <input
+              type="email"
+              required
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-neutral-500 focus:border-blue-500 focus:outline-none transition"
+            />
 
-        {/* Button */}
-        <button
-          onClick={sendMagicLink}
-          disabled={status === "sending"}
-          className={`
-            w-full mt-4 py-3 rounded-lg text-sm font-medium
-            text-white
-            ${
-              status === "sending"
-                ? "bg-blue-700 opacity-60 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-500 cursor-pointer"
-            }
-          `}
-        >
-          {status === "sent"
-            ? "Magic Link Sent ✓"
-            : status === "sending"
-            ? "Sending…"
-            : "Send magic link"}
-        </button>
-
-        {/* Footer message */}
-        {status === "sent" && (
-          <p className="text-green-400 text-xs mt-4 text-center">
-            Check your inbox — your secure sign-in link is on its way.
-          </p>
+            <button
+              type="submit"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium shadow-lg shadow-blue-900/40 hover:scale-[1.02] transition-transform"
+            >
+              Send magic link
+            </button>
+          </form>
         )}
       </div>
     </div>
