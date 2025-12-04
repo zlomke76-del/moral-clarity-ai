@@ -1,12 +1,21 @@
 // app/auth/layout.tsx
 "use client";
 
-import type { ReactNode } from "react";
+import NeuralSidebar from "@/app/components/NeuralSidebar";
+import "../globals.css";
 
-export default function AuthLayout({ children }: { children: ReactNode }) {
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-6 z-auth">
-      {children}
+    <div className="flex h-screen w-screen overflow-hidden">
+
+      {/* LEFT SIDEBAR */}
+      <NeuralSidebar />
+
+      {/* RIGHT SIDE CONTENT */}
+      <main className="flex-1 flex items-center justify-center p-6">
+        {children}
+      </main>
+
     </div>
   );
 }
