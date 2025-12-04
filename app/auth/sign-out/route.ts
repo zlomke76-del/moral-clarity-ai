@@ -1,44 +1,38 @@
-// app/auth/sign-out/route.ts
 import { cookies } from "next/headers";
-import { NextRequest, NextResponse } from "next/server";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { redirect } from "next/navigation";
+import type { CookieOptions } from "@/lib/cookies";
 
-export const runtime = "nodejs";
+export async function GET() {
+  // ⬅️ NEXT 16: MUST AWAIT
+  const reqCookies = await cookies();
 
-export async function POST(req: NextRequest) {
-  const reqCookies = cookies();
+  // Adapter for compatibility with existing code
+  const adapter = {
+    cookies: {
+      get(name: string) {
+        const c = reqCookies.get(name);
+        return c ? c.value : null;
+      },
 
-  // Prefer explicit site URL, but fall back to request origin if needed
-  const reqUrl = req.nextUrl;
-  const fallbackOrigin = `${reqUrl.protocol}//${reqUrl.host}`;
-  const redirectBase =
-    process.env.NEXT_PUBLIC_SITE_URL ?? fallbackOrigin;
+      set(name: string, value: string, options: CookieOptions) {
+        // Write cookies onto the redirect response
+        reqCookies.set({ name, value, ...options });
+      },
 
-  // You can change "/" → "/auth/sign-in" if you want to always land on sign-in
-  const res = NextResponse.redirect(new URL("/", redirectBase));
+      delete(name: string) {
+        reqCookies.set({
+          name,
+          value: "",
+          maxAge: 0,
+        });
+      },
+    },
+  };
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      // Minimal adapter that works across @supabase/ssr versions
-      cookies: {
-        get(name: string) {
-          return reqCookies.get(name)?.value;
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          // Write mutations onto the redirect response
-          res.cookies.set({ name, value, ...options });
-        },
-        remove(name: string, options: CookieOptions) {
-          // Supabase will pass the right options (e.g. path, domain, maxAge)
-          res.cookies.set({ name, value: "", ...options });
-        },
-      } as any,
-    }
-  );
+  // Clear the session cookie
+  adapter.cookies.delete("mcai-session");
 
-  await supabase.auth.signOut();
-
-  return res;
+  // Send the user back to the sign-in page
+  return redirect("/auth/sign-in");
 }
+
