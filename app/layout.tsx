@@ -1,3 +1,4 @@
+// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Suspense } from "react";
@@ -8,18 +9,12 @@ import Toaster from "@/components/Toaster";
 import SolaceGuard from "@/app/components/SolaceGuard";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.moralclarity.ai"),
   title: { default: "Moral Clarity AI", template: "%s • Moral Clarity AI" },
   description: "Anchored answers. Neutral • Guidance • Ministry.",
-  icons: {
-    icon: "/MoralClarityAI_QuietDepth_Logos/icon-180.png",
-    apple: "/MoralClarityAI_QuietDepth_Logos/icon-180.png",
-    shortcut: "/favicon.ico",
-  },
 };
 
 export const viewport: Viewport = {
@@ -29,22 +24,32 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark h-full" data-skin="glass">
+    <html lang="en" className="dark h-full">
       <body className="mc-root">
+
+        {/* Layer 1 – Cinematic Background */}
+        <div className="mc-bg" />
+        <div className="mc-noise" />
+
         <AuthProvider>
 
-          {children}
+          {/* Layer 2 – Content */}
+          <main className="mc-content">
+            {children}
+          </main>
 
-          <Suspense>
-            <SolaceGuard />
-          </Suspense>
+          {/* Layer 3 – UI Overlay */}
+          <div className="mc-ui">
+            <Suspense>
+              <SolaceGuard />
+            </Suspense>
 
-          <Suspense>
-            <Toaster />
-          </Suspense>
+            <Suspense>
+              <Toaster />
+            </Suspense>
 
-          <SpeedInsights />
-
+            <SpeedInsights />
+          </div>
         </AuthProvider>
       </body>
     </html>
