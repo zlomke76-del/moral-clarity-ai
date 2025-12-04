@@ -33,16 +33,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <AuthProvider>
 
-          {/* Main App Frame */}
+          {/* Main App Shell (Sidebar + Main Panel) */}
           <div className="mc-shell">
-            <NeuralSidebar />
+            
+            {/* LEFT SIDEBAR */}
+            <aside className="mc-sidebar">
+              <NeuralSidebar />
+            </aside>
 
-            <main className="mc-content">
+            {/* RIGHT MAIN PANEL */}
+            <main className="mc-panel">
               {children}
             </main>
+
           </div>
 
-          {/* Global Overlays */}
+          {/* Overlays: Solace + Toaster */}
           <div className="mc-ui">
             <Suspense>
               <SolaceGuard />
