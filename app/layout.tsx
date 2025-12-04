@@ -1,4 +1,3 @@
-// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Suspense } from "react";
@@ -22,23 +21,29 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark h-full">
       <body className="mc-root">
-        {/* Global cinematic background */}
+
+        {/* Background layers exactly as in the working build */}
         <div className="mc-bg" />
         <div className="mc-noise" />
 
         <AuthProvider>
-          {/* Whatever the current route renders (home, /app, /auth, etc.) */}
-          <div className="mc-content">{children}</div>
 
-          {/* Global overlays (Solace dock, toasts, etc.) */}
+          {/* 
+            MAIN CONTENT WRAPPER
+            This is exactly how the real working version renders:
+            - No sidebar
+            - No mc-shell
+            - The page content flows full-width
+          */}
+          <main className="mc-content">
+            {children}
+          </main>
+
+          {/* Global overlays (unchanged) */}
           <div className="mc-ui">
             <Suspense>
               <SolaceGuard />
@@ -50,7 +55,9 @@ export default function RootLayout({
 
             <SpeedInsights />
           </div>
+
         </AuthProvider>
+
       </body>
     </html>
   );
