@@ -1,3 +1,4 @@
+// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Suspense } from "react";
@@ -26,27 +27,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="dark h-full">
       <body className="mc-root">
-
+        
         {/* Background Layers */}
         <div className="mc-bg" />
         <div className="mc-noise" />
 
         <AuthProvider>
-
-          {/* 
-            MAIN APP SHELL — CRITICAL ORDER
-            SolaceGuard MUST COME *AFTER* mc-shell
-            otherwise it injects fallback navigation.
-          */}
+          {/* -------------------------------
+              RESTORED PROFESSIONAL SIDEBAR
+             ------------------------------- */}
           <div className="mc-shell">
-            <NeuralSidebar />
+            <aside className="mc-sidebar">
+              <NeuralSidebar />
+            </aside>
 
-            <main className="mc-content">
+            {/* Main content panel */}
+            <main className="mc-panel">
               {children}
             </main>
           </div>
 
-          {/* SOLACE + TOASTER — ALWAYS LAST */}
+          {/* UI overlays: Solace + Toaster */}
           <div className="mc-ui">
             <Suspense>
               <SolaceGuard />
@@ -58,11 +59,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
             <SpeedInsights />
           </div>
-
         </AuthProvider>
+
       </body>
     </html>
   );
 }
-
 
