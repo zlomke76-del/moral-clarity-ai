@@ -30,20 +30,20 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Detect the current pathname via Next headers (server-safe).
- const h = await headers();
-const path = h.get("x-pathname") || "";
+  // Detect the current pathname via Next 16 headers()
+  const h = await headers();
+  const path = h.get("x-pathname") || "";
 
-  // Hide Solace on authentication routes.
+  // Hide Solace on authentication routes
   const hideSolace =
     path.startsWith("/auth") ||
-    path === "/auth" ||
-    path.includes("/auth/");
+    path.startsWith("/login") ||
+    path.startsWith("/sign-in");
 
   return (
     <html lang="en" className="dark h-full" data-skin="glass">
