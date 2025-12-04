@@ -1,43 +1,19 @@
-/* ============================================
-   ROOT BACKGROUND SYSTEM (Cinematic)
-   ============================================ */
-
 .mc-root {
   min-height: 100vh;
-  margin: 0;
-
   background-color: #020617;
-
-  /* Cinematic PNG background */
   background-image: url("/Global-CSS-Background.png");
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center top;
   background-attachment: fixed;
-
   position: relative;
   z-index: 0;
-
   color: var(--mc-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    "Helvetica Neue",
-    Arial,
-    "Noto Sans",
-    sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", sans-serif;
 }
-
-
-/* ============================================
-   BACKGROUND LAYERS
-   ============================================ */
 
 .mc-bg {
   position: fixed;
@@ -51,35 +27,19 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
-
   background-image: url("/noise.png");
   opacity: 0.04;
 }
-
-
-/* ============================================
-   NORMAL CONTENT LAYER
-   ============================================ */
 
 .mc-content {
   position: relative;
   z-index: 10;
 }
 
-
-/* ============================================
-   GLOBAL UI OVERLAYS (Solace, Toaster)
-   ============================================ */
-
 .mc-ui {
   position: relative;
   z-index: 20;
 }
-
-
-/* ============================================
-   AUTH / MODALS PRIORITY
-   ============================================ */
 
 .z-auth {
   position: relative;
