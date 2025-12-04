@@ -64,6 +64,8 @@ export default function NeuralSidebar({ items }: Props) {
 -------------------------------------------------------- */
 
 function SidebarChip({ item }: { item: NeuralSidebarItem }) {
+  const pathname = usePathname();   // ✅ MUST BE HERE (not inside return)
+
   const inner = (
     <div className="neural-sidebar-chip">
       <div className="neural-sidebar-chip-inner">
@@ -84,23 +86,28 @@ function SidebarChip({ item }: { item: NeuralSidebarItem }) {
 
   if (item.href) {
     return (
-      const pathname = usePathname();
-<Link
-  href={item.href}
-  className={`neural-sidebar-link ${pathname === item.href ? "active" : ""}`}
->
-
+      <Link
+        href={item.href}
+        className={`neural-sidebar-link ${
+          pathname === item.href ? "active" : ""
+        }`}
+      >
         {inner}
       </Link>
     );
   }
 
   return (
-    <button type="button" onClick={item.onClick} className="neural-sidebar-link">
+    <button
+      type="button"
+      onClick={item.onClick}
+      className="neural-sidebar-link"
+    >
       {inner}
     </button>
   );
 }
+
 
 /* -------------------------------------------------------
    DEFAULT ITEMS
