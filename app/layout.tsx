@@ -36,7 +36,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   // Detect the current pathname via Next headers (server-safe).
-  const path = headers().get("x-pathname") || "";
+ const h = await headers();
+const path = h.get("x-pathname") || "";
 
   // Hide Solace on authentication routes.
   const hideSolace =
