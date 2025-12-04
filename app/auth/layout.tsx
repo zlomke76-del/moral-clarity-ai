@@ -1,20 +1,11 @@
 // app/auth/layout.tsx
+import type { ReactNode } from "react";
 
-export default function AuthLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AuthLayout({ children }: { children: ReactNode }) {
+  // This is a *section* layout only; RootLayout still provides <html>/<body>.
   return (
-    <html lang="en" className="dark h-full">
-      <body className="mc-root">
-
-        {/* REQUIRED — this is what renders /auth/sign-in */}
-        <div className="auth-wrapper min-h-screen flex items-center justify-center p-6">
-          {children}
-        </div>
-
-      </body>
-    </html>
+    <div className="min-h-screen flex items-center justify-center">
+      {children}
+    </div>
   );
 }
