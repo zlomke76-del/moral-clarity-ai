@@ -1,40 +1,8 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* globals.css */
 
-/* =========================================================
-   Moral Clarity AI – Global Styles
-   ========================================================= */
-
-/* ---------- Design tokens ---------- */
-:root {
-  --mc-bg: #0a0d12;
-  --mc-panel: #0f1623;
-  --mc-surface: #0e131a;
-  --mc-border: #223047;
-
-  --mc-text: #e8eef6;
-  --mc-muted: #9fb0c6;
-
-  --mc-accent: #7aa2ff;
-
-  --mc-radius: 12px;
-  --mc-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
-
-  --sd-bg: color-mix(in oklab, var(--mc-panel) 88%, transparent);
-  --sd-border: var(--mc-border);
-  --sd-fg: var(--mc-text);
-  --sd-muted: var(--mc-muted);
-  --sd-chip-bg: #1a2436;
-  --sd-chip-fg: #e8eef6;
-  --sd-accent: var(--mc-accent);
-  --sd-radius: 20px;
-  --sd-shadow: var(--mc-shadow);
-}
-
-/* =========================================================
+/* ----------------------------------------
    ROOT BACKGROUND SYSTEM (Cinematic, no tiling)
-   ========================================================= */
+----------------------------------------- */
 
 .mc-root {
   min-height: 100vh;
@@ -43,12 +11,16 @@
   /* Solid base behind image */
   background-color: #020617;
 
-  /* **FIXED GLOBAL BACKGROUND** (your PNG) */
+  /* FIXED GLOBAL BACKGROUND (cinematic PNG) */
   background-image: url("/Global-CSS-Background.png");
-  background-repeat: no-repeat;       /* prevent squares */
-  background-size: cover;             /* cinematic full-screen */
-  background-position: center top;    /* align circuitry */
-  background-attachment: fixed;       /* premium parallax stability */
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center top;
+  background-attachment: fixed;
+
+  /* CRITICAL: put this whole background STAYING UNDER all UI */
+  position: relative;
+  z-index: 0;
 
   color: var(--mc-text);
   -webkit-font-smoothing: antialiased;
@@ -66,162 +38,15 @@
     sans-serif;
 }
 
-/* =========================================================
-   BASE RESET
-   ========================================================= */
-html, body {
-  height: 100%;
-}
-
-*, *::before, *::after {
-  box-sizing: border-box;
-}
-
-::selection {
-  background: color-mix(in oklab, var(--mc-accent) 25%, transparent);
-  color: var(--mc-text);
-}
-
-:focus-visible {
-  outline: 2px solid color-mix(in oklab, var(--mc-accent) 75%, white);
-  outline-offset: 2px;
-}
-
-/* =========================================================
-   TYPOGRAPHY
-   ========================================================= */
-a {
-  color: var(--mc-accent);
-  text-decoration: none;
-}
-a:hover {
-  text-decoration: underline;
-}
-
-.prose {
-  max-width: 65ch;
-}
-
-/* =========================================================
-   INPUTS / FORMS
-   ========================================================= */
-input,
-select,
-textarea {
-  width: 100%;
-  border-radius: 0.5rem;
-  border: 1px solid var(--mc-border);
-  background: var(--mc-surface);
-  color: var(--mc-text);
-  padding: 0.55rem 0.8rem;
-}
-
-input::placeholder,
-textarea::placeholder {
-  color: color-mix(in oklab, var(--mc-muted) 80%, transparent);
-}
-
-button {
-  border-radius: 0.5rem;
-  border: 1px solid var(--mc-border);
-  background: #111827;
-  color: var(--mc-text);
-  padding: 0.55rem 0.95rem;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-button:hover {
-  background: var(--mc-accent);
-  color: #020617;
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* =========================================================
-   SOLACE DOCK
-   ========================================================= */
-.solace-dock {
-  background: color-mix(in oklab, rgba(12, 18, 28, 0.86) 92%, transparent);
-  border-radius: var(--sd-radius);
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  box-shadow:
-    0 22px 70px rgba(0, 0, 0, 0.65),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  color: var(--sd-fg);
-  backdrop-filter: blur(16px);
-}
-
-.solace-dock textarea {
-  background: color-mix(in oklab, var(--sd-bg) 80%, black);
-  color: var(--sd-fg) !important;
-  border-radius: 12px;
-  border: 1px solid var(--sd-border) !important;
-}
-
-/* =========================================================
-   NEURAL SIDEBAR (restored spacing + glow)
-   ========================================================= */
-
-.neural-sidebar {
+/* Utility: ensure modal / auth card layers float above background */
+.z-auth {
   position: relative;
-  display: none;
-  flex-direction: column;
-  gap: 1.25rem;               /* FIXED SPACING — restored */
-  padding: 1.75rem 1.5rem;
-  width: 20rem;
-  height: 100vh;
-  flex-shrink: 0;
-
-  border-right: 1px solid rgba(148, 163, 184, 0.35);
-
-  /* Restored original deeper navy w/ glow */
-  background:
-    radial-gradient(circle at 0% 0%, rgba(4, 20, 40, 0.55), transparent 60%),
-    rgba(13, 22, 36, 0.96);
-
-  box-shadow: 18px 0 48px rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(24px);
+  z-index: 999 !important;
 }
 
-@media (min-width: 768px) {
-  .neural-sidebar {
-    display: flex;
-  }
+/* Optional: Solace dock should always be above normal UI but under modals */
+.z-solace {
+  position: relative;
+  z-index: 50;
 }
 
-/* CARD / CHIP — restored glow + breathing hover */
-.neural-sidebar-chip {
-  border-radius: 1rem;
-  border: 1px solid rgba(34, 211, 238, 0.45);
-  background-color: rgba(15, 23, 42, 0.98);
-  padding: 0.9rem 1rem;
-  transition:
-    transform 150ms ease,
-    border-color 150ms ease,
-    box-shadow 150ms ease;
-
-  /* Restored subtle inner glow */
-  box-shadow:
-    0 0 16px rgba(34, 211, 238, 0.1),
-    inset 0 0 12px rgba(34, 211, 238, 0.08);
-}
-
-.neural-sidebar-chip:hover {
-  transform: translateY(-2px);
-  border-color: rgba(125, 211, 252, 1);
-  box-shadow:
-    0 0 30px rgba(34, 211, 238, 0.65),
-    inset 0 0 14px rgba(34, 211, 238, 0.25);
-}
-/* Hides ALL global backgrounds on auth pages */
-.no-global-bg {
-  background: #050505 !important;
-}
-
-/* =========================================================
-   LEGACY CLEANUP
-   ========================================================= */
