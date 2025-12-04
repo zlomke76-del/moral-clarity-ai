@@ -1,6 +1,5 @@
 // app/layout.tsx
 import type { Metadata, Viewport } from "next";
-import type { ReactNode } from "react";
 import "./globals.css";
 import { Suspense } from "react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -8,7 +7,6 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import AuthProvider from "@/components/AuthProvider";
 import Toaster from "@/components/Toaster";
 import SolaceGuard from "@/app/components/SolaceGuard";
-import SolaceDock from "@/app/components/SolaceDock";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -24,23 +22,32 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark h-full">
-      <body className="mc-root min-h-screen">
+      <body className="mc-root">
+
         {/* Layer 1 — Cinematic Background */}
         <div className="mc-bg" />
 
-        {/* Layer 2 — Film Grain / Noise */}
+        {/* Layer 2 — Noise */}
         <div className="mc-noise" />
 
         <AuthProvider>
-          {/* Layer 3 — App Content (whatever layout/shell you already have) */}
-          <main className="mc-content">
-            {children}
-          </main>
 
-          {/* Layer 4 — Global UI overlays */}
+          {/* 
+            LAYER 3 — APP CONTENT
+            IMPORTANT:
+            - DO NOT center anything here.
+            - DO NOT force flex layout.
+            - Workspace must take full width.
+            - Auth routes use their own layout and center themselves.
+          */}
+          <div id="mc-app-content">
+            {children}
+          </div>
+
+          {/* Layer 4 — Global Overlays */}
           <div className="mc-ui">
             <Suspense>
               <SolaceGuard />
@@ -50,11 +57,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <Toaster />
             </Suspense>
 
-            {/* Solace always available */}
-            <SolaceDock />
-
             <SpeedInsights />
           </div>
+
         </AuthProvider>
       </body>
     </html>
