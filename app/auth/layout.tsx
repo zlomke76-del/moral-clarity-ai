@@ -1,20 +1,12 @@
 // app/auth/layout.tsx
 "use client";
 
-import "../globals.css";
+import type { ReactNode } from "react";
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex h-screen w-screen overflow-hidden">
-
-      {/* LEFT SIDEBAR */}
-      <NeuralSidebar />
-
-      {/* RIGHT SIDE CONTENT */}
-      <main className="flex-1 flex items-center justify-center p-6">
-        {children}
-      </main>
-
+    <div className="min-h-screen w-full flex items-center justify-center p-6 z-auth">
+      {children}
     </div>
   );
 }
