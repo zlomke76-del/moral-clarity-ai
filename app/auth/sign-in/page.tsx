@@ -1,13 +1,18 @@
-"use client"; // Add this line at the top
+"use client";
 
 import React, { useState } from 'react';
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseBrowser = createClient(
+  'https://your-supabase-url.supabase.co',
+  'your-anon-key'
+);
 
 export default function SignInPage() {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
 
-  async function signIn(e: React.FormEvent) { // Specify the type here
+  async function signIn(e: React.FormEvent) {
     e.preventDefault();
     const { error } = await supabaseBrowser.auth.signInWithOtp({ email });
     if (error) {
