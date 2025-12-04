@@ -31,7 +31,7 @@ export default function NeuralSidebar({ items }: Props) {
   const pathname = usePathname() ?? "";
 
   // ---------------------------
-  // Extract workspaceId from route
+  // Extract workspaceId from /w/[workspaceId]
   // ---------------------------
   let workspaceId: string | null = null;
   const parts = pathname.split("/").filter(Boolean);
@@ -47,10 +47,9 @@ export default function NeuralSidebar({ items }: Props) {
 
   return (
     <aside className="neural-sidebar">
-
       {/* ---------------------------------------------------------
-         TOP OPAQUE BRAND BLOCK
-      ---------------------------------------------------------- */}
+           BRAND HEADER (clickable)
+         --------------------------------------------------------- */}
       <Link href="/app" className="neural-sidebar-top neural-sidebar-brand">
         <div className="neural-sidebar-brand-mark">
           <span>AI</span>
@@ -63,8 +62,8 @@ export default function NeuralSidebar({ items }: Props) {
       </Link>
 
       {/* ---------------------------------------------------------
-         LOWER GLASS PANEL
-      ---------------------------------------------------------- */}
+           GLASS PANEL SECTION
+         --------------------------------------------------------- */}
       <div className="neural-sidebar-glass">
         <div className="neural-sidebar-section-label">Workspace</div>
 
@@ -81,21 +80,21 @@ export default function NeuralSidebar({ items }: Props) {
 /* ============================================================
    CHIP COMPONENT
    ============================================================ */
-function SidebarChip({ item }: { item: NeuralSidebarItem }) {
-  const pathname = usePathname();
 
+function SidebarChip({ item }: { item: NeuralSidebarItem }) {
+  const pathname = usePathname() ?? "";
+  const href = item.href ?? "";
+
+  // TS-SAFE ACTIVE LOGIC
   const isActive =
-    item.href &&
-    (pathname === item.href ||
-      pathname.startsWith(item.href + "/")); // Allow nested routes
+    href.length > 0 &&
+    (pathname === href || pathname.startsWith(href + "/"));
 
   const inner = (
     <div className={`neural-sidebar-chip ${isActive ? "active" : ""}`}>
       <div className="neural-sidebar-chip-inner">
         {item.icon && (
-          <div className="neural-sidebar-chip-icon">
-            {item.icon}
-          </div>
+          <div className="neural-sidebar-chip-icon">{item.icon}</div>
         )}
 
         <div>
@@ -111,10 +110,10 @@ function SidebarChip({ item }: { item: NeuralSidebarItem }) {
     </div>
   );
 
-  if (item.href) {
+  if (href) {
     return (
       <Link
-        href={item.href}
+        href={href}
         className={`neural-sidebar-link ${isActive ? "active" : ""}`}
       >
         {inner}
@@ -134,7 +133,7 @@ function SidebarChip({ item }: { item: NeuralSidebarItem }) {
 }
 
 /* ============================================================
-   DEFAULT ITEMS — now with icons
+   DEFAULT NAV ITEMS — with icons
    ============================================================ */
 
 function buildDefaultItems(workspaceId: string): NeuralSidebarItem[] {
