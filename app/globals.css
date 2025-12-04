@@ -375,4 +375,15 @@
 .neural-sidebar:hover {
   transform: translateX(-1px);
 }
+.neural-sidebar-brand-link {
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.neural-sidebar-brand-link:hover {
+  transform: translateX(2px);
+  opacity: 0.9;
+}
 
