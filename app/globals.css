@@ -85,14 +85,23 @@
    Used ONLY when .mc-shell appears in markup
    ============================================ */
 
+/* Only behave like a sidebar layout when .mc-sidebar exists inside */
 .mc-shell {
   position: relative;
-  display: grid;
-  grid-template-columns: 260px 1fr;  /* Sidebar | Workspace */
   width: 100%;
   min-height: 100vh;
   z-index: 10;
+
+  display: flex;       /* default = no forced sidebar column */
+  flex-direction: row;
 }
+
+/* When a real sidebar is present, turn shell into grid */
+.mc-shell:has(.mc-sidebar) {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+}
+
 
 /* SIDEBAR PANEL */
 .mc-sidebar {
