@@ -1,4 +1,3 @@
-// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Suspense } from "react";
@@ -7,9 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import AuthProvider from "@/components/AuthProvider";
 import Toaster from "@/components/Toaster";
 import SolaceGuard from "@/app/components/SolaceGuard";
-import NeuralSidebar from "@/app/components/NeuralSidebar";
-
-import { headers } from "next/headers";
+import NeuralSidebar from "@/app/components/NeuralSidebar";   // ← YOUR SIDEBAR
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -25,57 +22,36 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-export default async function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  // FIX: Next.js 16 requires awaiting headers()
-  const h = await headers();
-  const pathname = h.get("x-pathname") || "";
-
-  const isAuthRoute =
-    pathname.startsWith("/auth") ||
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/sign-in");
-
-  const isStudioRoute =
-    pathname.startsWith("/w/") ||
-    pathname.startsWith("/studio") ||
-    pathname.startsWith("/app");
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark h-full">
       <body className="mc-root">
 
-        {/* Background layers */}
+        {/* Cinematic Background Layers */}
         <div className="mc-bg" />
         <div className="mc-noise" />
 
         <AuthProvider>
-          {isAuthRoute ? (
-            /* AUTH PAGE WRAPPER */
-            <div className="z-auth min-h-screen flex items-center justify-center">
+
+          {/* 
+            MAIN APP SHELL — REQUIRED
+            – Sidebar on left
+            – App content on right
+            – Solace overlays above
+          */}
+          <div className="mc-shell">
+            <NeuralSidebar />
+
+            <main className="mc-content">
               {children}
-            </div>
-          ) : (
-            /* MAIN APP LAYOUT */
-            <div className="mc-shell">
-              <aside className="mc-sidebar">
-                <NeuralSidebar />
-              </aside>
+            </main>
+          </div>
 
-              <main className="mc-panel">{children}</main>
-            </div>
-          )}
-
-          {/* GLOBAL OVERLAYS */}
+          {/* SOLACE + TOASTER OVERLAYS */}
           <div className="mc-ui">
-            {!isAuthRoute && (
-              <Suspense>
-                <SolaceGuard />
-              </Suspense>
-            )}
+            <Suspense>
+              <SolaceGuard />
+            </Suspense>
 
             <Suspense>
               <Toaster />
@@ -83,6 +59,7 @@ export default async function RootLayout({
 
             <SpeedInsights />
           </div>
+
         </AuthProvider>
       </body>
     </html>
