@@ -15,21 +15,15 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center px-4">
+      {/* Card */}
+      <div className="w-full max-w-md bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-[0_0_40px_rgba(0,0,0,0.4)]">
 
-      {/* Cinematic glow (layered ABOVE background but BELOW form) */}
-      <div className="absolute inset-0 z-[2] flex items-center justify-center">
-        <div className="w-[260px] h-[260px] bg-blue-500/25 blur-[150px] opacity-60" />
-      </div>
-
-      {/* Actual Sign-in Card (ALWAYS ON TOP) */}
-      <div className="relative z-[50] w-full max-w-md px-8 py-10 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.4)]">
-
-        <h1 className="text-3xl font-semibold text-center mb-2 text-white">
+        <h1 className="text-3xl font-semibold text-center mb-3 text-white">
           Sign in
         </h1>
 
-        <p className="text-center text-neutral-400 mb-8 text-sm">
+        <p className="text-center text-neutral-300 mb-8 text-sm">
           Enter your email to receive a secure magic link.
         </p>
 
@@ -60,5 +54,4 @@ export default function SignInPage() {
     </div>
   );
 }
-
 
