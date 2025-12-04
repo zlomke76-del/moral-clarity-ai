@@ -28,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="mc-root">
 
         {/* Layer 1 – Cinematic Background */}
-        <div className="mc-bg" />
+        <div className="mc-bg-1" />
         <div className="mc-noise" />
 
         <AuthProvider>
