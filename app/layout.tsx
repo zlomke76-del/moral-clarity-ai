@@ -1,3 +1,4 @@
+// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Suspense } from "react";
@@ -5,7 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import AuthProvider from "@/components/AuthProvider";
 import Toaster from "@/components/Toaster";
-import SolaceDockLoader from "@/components/SolaceDockLoader"; // <-- NEW SAFE CLIENT WRAPPER
+import SolaceDockLoader from "@/app/components/SolaceDockLoader"; // ✅ FIXED IMPORT
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -37,11 +38,13 @@ export default function RootLayout({
     <html lang="en" className="dark h-full" data-skin="glass">
       <body className="mc-root">
         <AuthProvider>
+
+          {/* App content */}
           {children}
 
-          {/* SolaceDock must load through a CLIENT WRAPPER */}
+          {/* Global overlays */}
           <Suspense>
-            <SolaceDockLoader />
+            <SolaceDockLoader /> {/* ✅ SAFE CLIENT LOADER */}
           </Suspense>
 
           <Suspense>
