@@ -1,32 +1,69 @@
-"use client";
+// app/layout.tsx
+import type { Metadata, Viewport } from "next";
+import "./globals.css";
+import { Suspense } from "react";
 
-import type { ReactNode } from "react";
+import AuthProvider from "@/components/AuthProvider";
+import Toaster from "@/components/Toaster";
+import SolaceGuard from "@/app/components/SolaceGuard";
 import NeuralSidebar from "@/app/components/NeuralSidebar";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
+export const metadata: Metadata = {
+  metadataBase: new URL("https://www.moralclarity.ai"),
+  title: { default: "Moral Clarity AI", template: "%s • Moral Clarity AI" },
+  description: "Anchored answers. Neutral • Guidance • Ministry.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0a0a0a",
+  colorScheme: "dark",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark h-full">
       <body className="mc-root">
-        {/* Background layers */}
+
+        {/* Background Layers */}
         <div className="mc-bg" />
         <div className="mc-noise" />
 
-        {/* ===== REAL PAGE LAYOUT ===== */}
-        <div className="flex h-screen w-screen overflow-hidden">
-          
-          {/* SIDEBAR */}
-          <aside className="w-64 border-r border-neutral-800 bg-neutral-900/40">
-            <NeuralSidebar />
-          </aside>
+        <AuthProvider>
 
-          {/* MAIN CONTENT */}
-          <main className="flex-1 relative overflow-y-auto">
-            {children}
-          </main>
-        </div>
+          {/* --- MAIN SHELL (Sidebar + Content) --- */}
+          <div className="flex h-screen w-screen overflow-hidden">
 
-        {/* Solace + UI overlays */}
-        <div className="mc-ui" />
+            {/* 🚨 FIXED — no Tailwind overrides here */}
+            <aside>
+              <NeuralSidebar />
+            </aside>
+
+            {/* Main content */}
+            <main className="flex-1 overflow-y-auto">
+              <div className="mc-content">
+                {children}
+              </div>
+            </main>
+          </div>
+
+          {/* Solace + Toaster Overlays */}
+          <div className="mc-ui">
+            <Suspense>
+              <SolaceGuard />
+            </Suspense>
+
+            <Suspense>
+              <Toaster />
+            </Suspense>
+
+            <SpeedInsights />
+          </div>
+
+        </AuthProvider>
       </body>
     </html>
   );
