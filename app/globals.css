@@ -49,4 +49,31 @@
   position: relative;
   z-index: 50;
 }
+/* BACKGROUND LAYERS MUST BE BEHIND EVERYTHING */
+
+.mc-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -2;   /* Push far behind */
+  pointer-events: none;
+}
+
+.mc-noise {
+  position: fixed;
+  inset: 0;
+  z-index: -1;   /* Behind UI */
+  pointer-events: none;
+}
+
+/* MAIN APP UI STACK */
+
+.mc-content {
+  position: relative;
+  z-index: 10;   /* Normal UI layer */
+}
+
+.mc-ui {
+  position: relative;
+  z-index: 20;   /* Toaster / Solace UI overlay */
+}
 
