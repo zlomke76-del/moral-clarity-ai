@@ -1,7 +1,6 @@
 // app/auth/layout.tsx
 "use client";
 
-import NeuralSidebar from "@/app/components/NeuralSidebar";
 import "../globals.css";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
