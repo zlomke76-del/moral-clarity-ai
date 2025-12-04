@@ -21,10 +21,10 @@ export default function SignInPage() {
       <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] to-black opacity-90" />
       <div className="absolute inset-0 pointer-events-none bg-[url('/noise.png')] opacity-[0.05]" />
 
-      {/* Animated halo behind the key */}
+      {/* Animated glow halo */}
       <div className="absolute w-[420px] h-[420px] rounded-full bg-blue-500/25 blur-[200px] animate-pulse"></div>
 
-      {/* Card */}
+      {/* Glass card */}
       <div className="relative z-10 w-full max-w-md px-8 py-10 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.4)]">
         
         {/* Key icon */}
@@ -37,11 +37,11 @@ export default function SignInPage() {
         </div>
 
         <h1 className="text-3xl font-semibold text-center mb-2 text-white">
-          Enter your world
+          Sign in
         </h1>
 
         <p className="text-center text-neutral-400 mb-8 text-sm">
-          A secure magic link will be sent to your email.
+          Enter your email to receive a secure magic link.
         </p>
 
         {sent ? (
