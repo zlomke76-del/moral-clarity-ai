@@ -9,13 +9,11 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 
-// STORE + HOOKS
 import { useSolaceStore } from "@/app/providers/solace-store";
 import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
 import { useSolaceMemory } from "./useSolaceMemory";
 import { useSolaceAttachments } from "./useSolaceAttachments";
 
-// CHILD UI PANEL
 import SolaceDockPanel from "./SolaceDockPanel";
 
 declare global {
@@ -34,7 +32,7 @@ const MINISTRY_KEY = "solace:ministry";
 const PAD = 12;
 
 export default function SolaceDock() {
-  // Prevent duplicate mounts
+  // prevent duplicate mounts
   const [canRender, setCanRender] = useState(false);
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -49,9 +47,9 @@ export default function SolaceDock() {
 
   const { visible, x, y, setPos, filters, setFilters } = useSolaceStore();
 
-  // ------------------------------------------
-  // CORE STATE
-  // ------------------------------------------
+  // ---------------------------------------------------------
+  // STATE
+  // ---------------------------------------------------------
   const [dragging, setDragging] = useState(false);
   const [offset, setOffset] = useState({ dx: 0, dy: 0 });
   const [posReady, setPosReady] = useState(false);
@@ -65,15 +63,15 @@ export default function SolaceDock() {
 
   const [modeHint, setModeHint] = useState<ModeHint>("Neutral");
 
-  // Speech
+  // speech
   const [listening, setListening] = useState(false);
   const recogRef = useRef<any>(null);
 
-  // Mobile
+  // mobile
   const [isMobile, setIsMobile] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
-  // Transcript
+  // transcript auto-scroll
   const transcriptRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -82,13 +80,14 @@ export default function SolaceDock() {
     el.scrollTop = el.scrollHeight;
   }, [messages]);
 
-  // Memory hook
+  // memory hook
   const { userKey, memReady, memoryCacheRef } = useSolaceMemory();
 
+  // helper
   const appendInfo = (content: string) =>
     setMessages((m) => [...m, { role: "assistant", content }]);
 
-  // Attachments
+  // attachments
   const {
     pendingFiles,
     handleFiles,
@@ -98,13 +97,12 @@ export default function SolaceDock() {
     onInfoMessage: appendInfo,
   });
 
-  // Ministry toggle state
   const ministryOn = useMemo(
     () => filters.has("abrahamic") && filters.has("ministry"),
     [filters]
   );
 
-  // Initial welcome message
+  // seed welcome message
   useEffect(() => {
     if (messages.length === 0) {
       setMessages([{ role: "assistant", content: "Ready when you are." }]);
@@ -113,7 +111,7 @@ export default function SolaceDock() {
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Measure panel size
+  // measure dimensions
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -134,12 +132,11 @@ export default function SolaceDock() {
     };
   }, []);
 
-  // Mobile breakpoint
+  // isMobile
   useEffect(() => {
     if (!canRender) return;
     const check = () => setIsMobile(window.innerWidth <= 768);
     check();
-
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, [canRender]);
@@ -149,7 +146,7 @@ export default function SolaceDock() {
     else setCollapsed(false);
   }, [isMobile]);
 
-  // Restore panel position
+  // restore position
   useEffect(() => {
     if (!canRender || !visible) return;
 
@@ -178,16 +175,14 @@ export default function SolaceDock() {
     requestAnimationFrame(() => {
       const w = panelW || Math.min(980, Math.max(560, Math.round(vw * 0.56)));
       const h = panelH || Math.min(820, Math.max(460, Math.round(vh * 0.62)));
-
       const startX = Math.max(PAD, Math.round((vw - w) / 2));
       const startY = Math.max(PAD, Math.round((vh - h) / 2));
-
       setPos(startX, startY);
       setPosReady(true);
     });
   }, [canRender, visible, panelW, panelH, setPos]);
 
-  // Persist panel position
+  // persist pos
   useEffect(() => {
     if (!posReady || isMobile) return;
     try {
@@ -195,7 +190,7 @@ export default function SolaceDock() {
     } catch {}
   }, [x, y, posReady, isMobile]);
 
-  // Dragging desktop
+  // dragging
   function onHeaderMouseDown(e: React.MouseEvent) {
     if (isMobile) return;
     const rect = containerRef.current?.getBoundingClientRect();
@@ -222,7 +217,7 @@ export default function SolaceDock() {
     };
   }, [dragging, offset, setPos]);
 
-  // Resize textarea
+  // textarea autoresize
   const taRef = useRef<HTMLTextAreaElement | null>(null);
   useEffect(() => {
     const ta = taRef.current;
@@ -231,7 +226,7 @@ export default function SolaceDock() {
     ta.style.height = Math.min(220, ta.scrollHeight) + "px";
   }, [input]);
 
-  // Default ministry ON
+  // ministry default
   useEffect(() => {
     try {
       const saved = localStorage.getItem(MINISTRY_KEY);
@@ -243,15 +238,16 @@ export default function SolaceDock() {
       next.add("abrahamic");
       next.add("ministry");
       setFilters(next);
+
       try {
         localStorage.setItem(MINISTRY_KEY, "1");
       } catch {}
     }
   }, []);
 
-  // ------------------------------------------
-  // BACKEND CALLS
-  // ------------------------------------------
+  // ---------------------------------------------------------
+  // SEND TO BACKEND
+  // ---------------------------------------------------------
   async function sendToChat(userMsg: string, nextMsgs: Message[]) {
     const activeFilters = Array.from(filters);
 
@@ -289,10 +285,13 @@ export default function SolaceDock() {
     setMessages((m) => [...m, { role: "assistant", content: reply }]);
   }
 
+  // TS SAFE VERSION — THIS FIXES YOUR BUILD ERROR
   async function sendToVision(userMsg: string, nextMsgs: Message[]) {
-    const imageAttachment = pendingFiles.find(
-      (f) => f?.mime?.startsWith("image/") || f?.type?.startsWith("image/")
-    );
+    const imageAttachment = pendingFiles.find((f: any) => {
+      const mime = (f?.mime || f?.type || "") as string;
+      return mime.startsWith("image/");
+    });
+
     const imageUrl =
       imageAttachment?.url ||
       imageAttachment?.publicUrl ||
@@ -300,9 +299,7 @@ export default function SolaceDock() {
       null;
 
     if (!imageUrl) {
-      appendInfo(
-        "I see an image attachment but no usable URL. Try re-attaching."
-      );
+      appendInfo("I see an image attachment but no usable URL. Try re-attaching.");
       clearPending();
       return;
     }
@@ -332,19 +329,20 @@ export default function SolaceDock() {
 
     const data = await res.json();
     const reply = String(data.answer ?? "[No reply]");
-
     setMessages((m) => [...m, { role: "assistant", content: reply }]);
   }
 
-  // ------------------------------------------
-  // SEND MESSAGE
-  // ------------------------------------------
+  // ---------------------------------------------------------
+  // SEND
+  // ---------------------------------------------------------
   async function send() {
     const text = input.trim();
     const hasAny = pendingFiles.length > 0;
-    const hasImage = pendingFiles.some((f) =>
-      (f?.mime || f?.type || "").startsWith("image/")
-    );
+
+    const hasImage = pendingFiles.some((f: any) => {
+      const mime = (f?.mime || f?.type || "") as string;
+      return mime.startsWith("image/");
+    });
 
     if (!text && !hasAny) return;
     if (streaming) return;
@@ -352,18 +350,15 @@ export default function SolaceDock() {
     setInput("");
 
     const userMsg = text || (hasAny ? "Attachments:" : "");
-    const nextUser: Message = { role: "user", content: userMsg };
+    const nextUser = { role: "user", content: userMsg };
     const nextMsgs = [...messages, nextUser];
 
     setMessages(nextMsgs);
     setStreaming(true);
 
     try {
-      if (hasImage) {
-        await sendToVision(userMsg, nextMsgs);
-      } else {
-        await sendToChat(userMsg, nextMsgs);
-      }
+      if (hasImage) await sendToVision(userMsg, nextMsgs);
+      else await sendToChat(userMsg, nextMsgs);
     } catch (e: any) {
       appendInfo(`⚠️ ${e?.message ?? "Error"}`);
     } finally {
@@ -371,9 +366,9 @@ export default function SolaceDock() {
     }
   }
 
-  // ------------------------------------------
+  // ---------------------------------------------------------
   // MINISTRY TOGGLE
-  // ------------------------------------------
+  // ---------------------------------------------------------
   function toggleMinistry() {
     if (ministryOn) {
       const next = Array.from(filters).filter(
@@ -394,16 +389,16 @@ export default function SolaceDock() {
     }
   }
 
-  // ------------------------------------------
+  // ---------------------------------------------------------
   // MIC
-  // ------------------------------------------
+  // ---------------------------------------------------------
   function toggleMic() {
     const SR =
       (window as any).SpeechRecognition ||
       (window as any).webkitSpeechRecognition;
 
     if (!SR) {
-      appendInfo("🎤 Microphone not supported in this browser.");
+      appendInfo("🎤 Microphone not supported.");
       return;
     }
 
@@ -424,30 +419,29 @@ export default function SolaceDock() {
       const t = Array.from(e.results)
         .map((r: any) => r[0]?.transcript)
         .join(" ");
-      setInput((prev) => (prev ? prev + " " : "") + t);
+      setInput((p) => (p ? p + " " : "") + t);
     };
 
-    sr.onend = () => setListening(false);
     sr.onerror = () => setListening(false);
+    sr.onend = () => setListening(false);
 
     recogRef.current = sr;
     sr.start();
     setListening(true);
   }
 
-  // ------------------------------------------
-  // MINIMIZE (desktop)
-  // ------------------------------------------
+  // ---------------------------------------------------------
+  // MINIMIZE
+  // ---------------------------------------------------------
   function minimize() {
     setCollapsed(true);
   }
 
-  // ------------------------------------------
+  // ---------------------------------------------------------
   // READY CHECK
-  // ------------------------------------------
+  // ---------------------------------------------------------
   if (!canRender || !visible) return null;
 
-  // CLAMP PANEL POSITION
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
@@ -459,9 +453,9 @@ export default function SolaceDock() {
 
   const invisible = !posReady;
 
-  // ------------------------------------------
-  // RENDER PANEL (Portal)
-  // ------------------------------------------
+  // ---------------------------------------------------------
+  // RENDER
+  // ---------------------------------------------------------
   return createPortal(
     <SolaceDockPanel
       // state
@@ -506,4 +500,5 @@ export default function SolaceDock() {
     document.body
   );
 }
+
 
