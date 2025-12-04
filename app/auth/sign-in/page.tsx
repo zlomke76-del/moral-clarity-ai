@@ -22,15 +22,6 @@ export default function SignInPage() {
         <div className="w-[260px] h-[260px] bg-blue-500/25 blur-[150px] opacity-60" />
       </div>
 
-      {/* Small cinematic key, behind the form */}
-      <div className="absolute top-20 z-[3] flex justify-center w-full opacity-60">
-        <img
-          src="/Magic key.png"
-          alt="Magic Key"
-          className="h-2 w-2 object-contain"
-        />
-      </div>
-
       {/* Actual Sign-in Card (ALWAYS ON TOP) */}
       <div className="relative z-[50] w-full max-w-md px-8 py-10 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.4)]">
 
