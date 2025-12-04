@@ -1,27 +1,20 @@
-import { createServerClient, type CookieOptions, type CookieMethodsServer } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { cookies } from "next/headers";
+import type { CookieMethodsServer, CookieOptions } from "@/lib/cookies";
 
 export default async function SpacesPage() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies(); // ✅ REQUIRED in Next 16
 
   const cookieAdapter: CookieMethodsServer = {
     get(name: string) {
-      return cookieStore.get(name)?.value;
+      return cookieStore.get(name)?.value ?? null; // safe return
     },
     set(name: string, value: string, options?: CookieOptions) {
       cookieStore.set({ name, value, ...options });
     },
-    remove(name: string, options?: CookieOptions) {
-      // remove == set with maxAge 0
-      cookieStore.set({ name, value: '', ...options, maxAge: 0 });
+    delete(name: string) {
+      cookieStore.delete({ name });
     },
-  } as unknown as CookieMethodsServer; // <- makes TS happy across minor @supabase/ssr variants
+  };
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: cookieAdapter }
-  );
-
-  // …rest of the page
+  // your existing logic continues here...
 }
