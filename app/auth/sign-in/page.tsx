@@ -1,4 +1,3 @@
-// app/auth/sign-in/page.tsx
 "use client";
 
 import { useState, FormEvent } from "react";
@@ -11,19 +10,13 @@ export default function SignInPage() {
 
   async function signIn(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-
     const { error } = await supabase.auth.signInWithOtp({ email });
-
-    if (!error) {
-      setSent(true);
-    }
-    // if there is an error, you could surface it here later
+    if (!error) setSent(true);
   }
 
   return (
-    // This container uses the height of the main content area from RootLayout
-    <div className="flex h-full w-full items-center justify-center z-auth">
-      <div className="w-full max-w-md bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-xl">
+    <div className="auth-wrapper">
+      <div className="auth-card">
         <h1 className="text-3xl font-bold text-white mb-4 text-center">
           Sign in
         </h1>
