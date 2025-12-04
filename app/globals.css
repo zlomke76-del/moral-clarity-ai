@@ -1,52 +1,52 @@
-/* globals.css */
+/* ============================
+   GLOBAL ROOT — CINEMATIC SYSTEM
+   ============================ */
 
-/* ----------------------------------------
-   ROOT BACKGROUND SYSTEM (Cinematic, no tiling)
------------------------------------------ */
-
-.mc-root {
-  min-height: 100vh;
+html, body {
   margin: 0;
-
-  /* Solid base behind image */
-  background-color: #020617;
-
-  /* FIXED GLOBAL BACKGROUND (cinematic PNG) */
-  background-image: url("/Global-CSS-Background.png");
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center top;
-  background-attachment: fixed;
-
-  /* CRITICAL: put this whole background STAYING UNDER all UI */
-  position: relative;
-  z-index: 0;
-
-  color: var(--mc-text);
+  padding: 0;
+  min-height: 100vh;
+  background: #020617; /* Deep navy */
+  color: #e5e7eb;
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, Segoe UI,
+    Roboto, Helvetica Neue, Arial, Noto Sans, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    "Helvetica Neue",
-    Arial,
-    "Noto Sans",
-    sans-serif;
 }
 
-/* Utility: ensure modal / auth card layers float above background */
-.z-auth {
+/* Layer 1 — GLOBAL CINEMATIC BACKGROUND */
+.mc-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-image: url("/Global-CSS-Background.png");
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  pointer-events: none;
+  opacity: 0.65;
+}
+
+/* Noise layer (subtle cinematic texture) */
+.mc-noise {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  background-image: url("/noise.png");
+  opacity: 0.05;
+  pointer-events: none;
+}
+
+/* Utility — ensures content ALWAYS appears above background */
+.mc-content {
   position: relative;
-  z-index: 999 !important;
+  z-index: 10;
 }
 
-/* Optional: Solace dock should always be above normal UI but under modals */
-.z-solace {
+/* SolaceDock + UI overlays always sit above all other layers */
+.mc-ui {
   position: relative;
-  z-index: 50;
+  z-index: 9999;
 }
-
