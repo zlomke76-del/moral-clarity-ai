@@ -7,6 +7,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import AuthProvider from "@/components/AuthProvider";
 import Toaster from "@/components/Toaster";
 import SolaceGuard from "@/app/components/SolaceGuard";
+import NeuralSidebar from "@/app/components/NeuralSidebar"; // ← REQUIRED
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -22,25 +23,36 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" className="dark h-full">
       <body className="mc-root">
 
-        {/* Layer 1 — Cinematic Background (correct class!) */}
+        {/* Layer 1 — Cinematic Background */}
         <div className="mc-bg" />
 
-        {/* Layer 2 — Noise */}
+        {/* Layer 2 — Film Grain / Noise */}
         <div className="mc-noise" />
 
         <AuthProvider>
+          {/* Core App Shell: Sidebar + Content Area */}
+          <div className="mc-shell">
+            {/* Left Sidebar (restored) */}
+            <aside className="mc-sidebar">
+              <NeuralSidebar />
+            </aside>
 
-          {/* Layer 3 — App Content */}
-          <main className="mc-content">
-            {children}
-          </main>
+            {/* Main Content */}
+            <main className="mc-content">
+              {children}
+            </main>
+          </div>
 
-          {/* Layer 4 — Overlays */}
+          {/* Layer 4 — Dock, Toasts, Insights */}
           <div className="mc-ui">
             <Suspense>
               <SolaceGuard />
