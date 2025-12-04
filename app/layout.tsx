@@ -1,22 +1,16 @@
-// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import NextDynamic from "next/dynamic";
 import { Suspense } from "react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import AuthProvider from "@/components/AuthProvider";
 import Toaster from "@/components/Toaster";
+import SolaceDockLoader from "@/components/SolaceDockLoader"; // <-- NEW SAFE CLIENT WRAPPER
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 export const runtime = "nodejs";
-
-const SolaceDock = NextDynamic(
-  () => import("@/app/components/SolaceDock"),
-  { ssr: false }
-);
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.moralclarity.ai"),
@@ -41,16 +35,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark h-full" data-skin="glass">
-      {/* APPLY YOUR GLOBAL BACKGROUND HERE */}
       <body className="mc-root">
         <AuthProvider>
-
           {children}
 
-          {/* Global overlays */}
+          {/* SolaceDock must load through a CLIENT WRAPPER */}
           <Suspense>
-            <SolaceDock />
+            <SolaceDockLoader />
           </Suspense>
+
           <Suspense>
             <Toaster />
           </Suspense>
