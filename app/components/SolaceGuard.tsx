@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import SolaceDockLoader from "@/app/components/SolaceDockLoader";
+import SolaceDockLoader from "@/components/SolaceDockLoader";
 
 export default function SolaceGuard() {
   const pathname = usePathname() || "";
