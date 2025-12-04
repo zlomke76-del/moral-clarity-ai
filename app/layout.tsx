@@ -6,6 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import AuthProvider from "@/components/AuthProvider";
 import Toaster from "@/components/Toaster";
 import SolaceGuard from "@/app/components/SolaceGuard";
+import NeuralSidebar from "@/app/components/NeuralSidebar";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -26,24 +27,26 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className="dark h-full">
       <body className="mc-root">
 
-        {/* Background layers exactly as in the working build */}
+        {/* Background Layers */}
         <div className="mc-bg" />
         <div className="mc-noise" />
 
         <AuthProvider>
 
           {/* 
-            MAIN CONTENT WRAPPER
-            This is exactly how the real working version renders:
-            - No sidebar
-            - No mc-shell
-            - The page content flows full-width
+            MAIN APP SHELL — CRITICAL ORDER
+            SolaceGuard MUST COME *AFTER* mc-shell
+            otherwise it injects fallback navigation.
           */}
-          <main className="mc-content">
-            {children}
-          </main>
+          <div className="mc-shell">
+            <NeuralSidebar />
 
-          {/* Global overlays (unchanged) */}
+            <main className="mc-content">
+              {children}
+            </main>
+          </div>
+
+          {/* SOLACE + TOASTER — ALWAYS LAST */}
           <div className="mc-ui">
             <Suspense>
               <SolaceGuard />
@@ -57,7 +60,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
 
         </AuthProvider>
-
       </body>
     </html>
   );
