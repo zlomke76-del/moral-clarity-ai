@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import AuthProvider from "@/components/AuthProvider";
 import Toaster from "@/components/Toaster";
 import SolaceGuard from "@/app/components/SolaceGuard";
+import NeuralSidebar from "@/app/components/NeuralSidebar";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const dynamic = "force-dynamic";
@@ -26,32 +27,46 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className="dark h-full">
       <body className="mc-root">
 
-        {/* Background */}
+        {/* BACKGROUND */}
         <div className="mc-bg" />
         <div className="mc-noise" />
 
         <AuthProvider>
-          
-          {/* DIRECT CHILDREN — NO EXTRA WRAPPING */}
-          {children}
 
-          {/* Solace + Toaster overlays */}
-          <Suspense>
-            <SolaceGuard />
-          </Suspense>
+          {/* ===== MAIN APP FRAME ===== */}
+          <div className="flex h-screen w-screen overflow-hidden">
 
-          <Suspense>
-            <Toaster />
-          </Suspense>
+            {/* LEFT: Neural Sidebar */}
+            <aside className="w-64 h-full border-r border-neutral-800 bg-neutral-900/40 backdrop-blur-md z-20">
+              <NeuralSidebar />
+            </aside>
 
-          <SpeedInsights />
+            {/* RIGHT: PAGE CONTENT */}
+            <main className="flex-1 h-full overflow-y-auto mc-content p-6">
+              {children}
+            </main>
+
+          </div>
+
+          {/* ===== GLOBAL OVERLAYS (Solace, Toaster) ===== */}
+          <div className="mc-ui">
+            <Suspense>
+              <SolaceGuard />
+            </Suspense>
+
+            <Suspense>
+              <Toaster />
+            </Suspense>
+
+            <SpeedInsights />
+          </div>
 
         </AuthProvider>
+
       </body>
     </html>
   );
 }
-
 
 
 
