@@ -27,18 +27,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className="dark h-full">
       <body className="mc-root">
 
-        {/* Layer 1 – Cinematic Background */}
-        <div className="mc-bg-1" />
+        {/* Layer 1 — Cinematic Background (correct class!) */}
+        <div className="mc-bg" />
+
+        {/* Layer 2 — Noise */}
         <div className="mc-noise" />
 
         <AuthProvider>
 
-          {/* Layer 2 – Content */}
+          {/* Layer 3 — App Content */}
           <main className="mc-content">
             {children}
           </main>
 
-          {/* Layer 3 – UI Overlay */}
+          {/* Layer 4 — Overlays */}
           <div className="mc-ui">
             <Suspense>
               <SolaceGuard />
