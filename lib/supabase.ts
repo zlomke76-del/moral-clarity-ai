@@ -1,30 +1,34 @@
-// /lib/supabase.ts
-import 'server-only';
-import { cookies } from 'next/headers';
-import { createServerClient, createBrowserClient } from '@supabase/ssr';
+import { cookies } from "next/headers";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
-export function supabaseServer() {
-  const c = cookies();
-  return createServerClient(
+/**
+ * Next 16 requires `cookies()` to be awaited.
+ * This wrapper returns a fully typed Supabase client
+ * with correct cookie adapter semantics.
+ */
+export async function supabaseServer() {
+  const cookieStore = await cookies();
+
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { get: (n: string) => c.get(n)?.value } }
-  );
-}
+    {
+      cookies: {
+        get(name: string) {
+          const c = cookieStore.get(name);
+          return c?.value ?? null;
+        },
 
-export function supabaseService() {
-  // Accept either SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL
-  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url) throw new Error('supabaseUrl is required.');
-  if (!key) throw new Error('service-role key missing (SUPABASE_SERVICE_ROLE_KEY).');
-  const { createClient } = require('@supabase/supabase-js');
-  return createClient(url, key, { auth: { persistSession: false } });
-}
+        set(name: string, value: string, options: CookieOptions) {
+          cookieStore.set({ name, value, ...options });
+        },
 
-export function supabaseBrowser() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        remove(name: string, options: CookieOptions) {
+          cookieStore.set({ name, value: "", maxAge: 0, ...options });
+        },
+      },
+    }
   );
+
+  return supabase;
 }
