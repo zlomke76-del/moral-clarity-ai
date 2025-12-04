@@ -50,3 +50,7 @@ html, body {
   position: relative;
   z-index: 9999;
 }
+.auth-shell {
+  position: relative;
+  z-index: 10;
+}
