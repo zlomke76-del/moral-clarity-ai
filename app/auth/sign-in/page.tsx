@@ -1,117 +1,92 @@
-// app/auth/sign-in/page.tsx
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
-import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
-
-const CANONICAL_BASE =
-  typeof process.env.NEXT_PUBLIC_SITE_URL === "string"
-    ? process.env.NEXT_PUBLIC_SITE_URL.replace(/\/+$/, "")
-    : undefined;
+import { useState } from "react";
+import Image from "next/image";
+import { createClient } from "@/lib/supabase/client";
 
 export default function SignInPage() {
-  const [emailSent, setEmailSent] = useState(false);
+  const supabase = createClient();
   const [email, setEmail] = useState("");
-  const [err, setErr] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
 
-  // Canonical domain enforcement
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!CANONICAL_BASE) return;
+  async function sendMagicLink() {
+    if (!email) return;
+    setStatus("sending");
 
-    try {
-      const currentOrigin = window.location.origin;
-      const canonicalOrigin = new URL(CANONICAL_BASE).origin;
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: `${location.origin}/auth/callback` },
+    });
 
-      if (currentOrigin !== canonicalOrigin) {
-        const search = window.location.search || "";
-        const canonicalUrl = `${canonicalOrigin}/auth/sign-in${search}`;
-        window.location.replace(canonicalUrl);
-      }
-    } catch (e) {
-      console.error("[auth/sign-in] canonical redirect error", e);
-    }
-  }, []);
-
-  // Surface ?err= from callback
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const e = params.get("err");
-    if (e) setErr(e);
-  }, []);
-
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setErr(null);
-    setLoading(true);
-
-    try {
-      const supabase = createSupabaseBrowser();
-
-      const baseUrl =
-        CANONICAL_BASE && typeof window !== "undefined"
-          ? new URL(CANONICAL_BASE).origin
-          : typeof window !== "undefined"
-          ? window.location.origin
-          : "";
-
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${baseUrl}/auth/callback?next=${encodeURIComponent(
-            "/app"
-          )}`,
-        },
-      });
-
-      if (error) throw error;
-      setEmailSent(true);
-    } catch (e: any) {
-      console.error("[auth/sign-in] magic link error", e);
-      setErr(
-        e?.message ??
-          "Failed to send magic link. Please double-check your email and try again."
-      );
-    } finally {
-      setLoading(false);
-    }
+    if (!error) setStatus("sent");
+    else setStatus("idle");
   }
 
   return (
-    <main className="w-full max-w-md rounded-xl border border-neutral-800 p-6 bg-neutral-900/40">
-      <h1 className="text-xl font-semibold mb-4">Sign in</h1>
-
-      {emailSent ? (
-        <div className="space-y-2 text-sm text-neutral-200">
-          <p>Check your email for a magic sign-in link.</p>
-          <p className="text-neutral-400">
-            For security, open the link on the same device and browser where you
-            requested it.
-          </p>
-        </div>
-      ) : (
-        <form onSubmit={onSubmit} className="space-y-4">
-          <input
-            type="email"
-            className="w-full rounded-md bg-neutral-900 p-3 outline-none"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#05070A] text-white px-6 py-12">
+      <div className="w-full max-w-md rounded-2xl bg-[#0A0D12] border border-[#1a1f27] shadow-xl p-10 flex flex-col items-center">
+        
+        {/* Magic Key Graphic */}
+        <div className="mb-6">
+          <Image
+            src="/Magic key.png"
+            alt="Magic Key"
+            width={90}
+            height={90}
+            className="opacity-90 drop-shadow-lg"
+            priority
           />
-          <button
-            className="w-full rounded-md bg-amber-500/90 hover:bg-amber-500 p-3 font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-            type="submit"
-            disabled={loading || !email}
-          >
-            {loading ? "Sending magic link…" : "Send magic link"}
-          </button>
-          {err && <p className="text-red-400 text-sm">{err}</p>}
-        </form>
-      )}
-    </main>
+        </div>
+
+        {/* Title */}
+        <h1 className="text-2xl font-semibold tracking-tight mb-2">
+          Sign in
+        </h1>
+        <p className="text-sm text-gray-400 mb-6 text-center">
+          Enter your email to receive a secure magic link.
+        </p>
+
+        {/* Email Input */}
+        <input
+          type="email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="
+            w-full px-4 py-3 rounded-lg
+            bg-[#0F141B] border border-[#20262f]
+            focus:border-blue-500 focus:outline-none
+            text-sm
+          "
+        />
+
+        {/* Button */}
+        <button
+          onClick={sendMagicLink}
+          disabled={status === "sending"}
+          className={`
+            w-full mt-4 py-3 rounded-lg text-sm font-medium
+            ${status === "sending"
+              ? "bg-blue-700 opacity-60 cursor-not-allowed"
+              : "bg-blue-600 hover:bg-blue-500 cursor-pointer"}
+          `}
+        >
+          {status === "sent"
+            ? "Magic Link Sent ✓"
+            : status === "sending"
+            ? "Sending…"
+            : "Send magic link"}
+        </button>
+
+        {/* Footer message */}
+        {status === "sent" && (
+          <p className="text-green-400 text-xs mt-4 text-center">
+            Check your inbox — your secure sign-in link is on its way.
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
+
 
