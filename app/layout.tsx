@@ -25,19 +25,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="dark h-full">
       <body className="mc-root">
-        
-        {/* --- Background Layers --- */}
+
+        {/* --- Global Background Layers --- */}
         <div className="mc-bg" />
         <div className="mc-noise" />
 
         <AuthProvider>
-          
-          {/* --- Normal Page Content --- */}
+
+          {/* --- Raw Page Content (no shells, no wrappers) --- */}
           <main className="mc-content">
             {children}
           </main>
 
-          {/* --- Solace + Toaster Overlays --- */}
+          {/* --- Solace + Toaster --- */}
           <div className="mc-ui">
             <Suspense>
               <SolaceGuard />
