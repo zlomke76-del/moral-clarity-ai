@@ -1,3 +1,4 @@
+// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Suspense } from "react";
@@ -6,7 +7,6 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import AuthProvider from "@/components/AuthProvider";
 import Toaster from "@/components/Toaster";
 import SolaceGuard from "@/app/components/SolaceGuard";
-import NeuralSidebar from "@/app/components/NeuralSidebar";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -22,33 +22,23 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" className="dark h-full">
       <body className="mc-root">
-
-        {/* Background Layers */}
+        {/* Global cinematic background */}
         <div className="mc-bg" />
         <div className="mc-noise" />
 
         <AuthProvider>
+          {/* Whatever the current route renders (home, /app, /auth, etc.) */}
+          <div className="mc-content">{children}</div>
 
-          {/* Main App Shell (Sidebar + Main Panel) */}
-          <div className="mc-shell">
-            
-            {/* LEFT SIDEBAR */}
-            <aside className="mc-sidebar">
-              <NeuralSidebar />
-            </aside>
-
-            {/* RIGHT MAIN PANEL */}
-            <main className="mc-panel">
-              {children}
-            </main>
-
-          </div>
-
-          {/* Overlays: Solace + Toaster */}
+          {/* Global overlays (Solace dock, toasts, etc.) */}
           <div className="mc-ui">
             <Suspense>
               <SolaceGuard />
@@ -60,7 +50,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
             <SpeedInsights />
           </div>
-
         </AuthProvider>
       </body>
     </html>
