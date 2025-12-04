@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { supabaseBrowser } from "@/lib/supabase/client";
 
 export default function SignInPage() {
-  const supabase = getSupabaseBrowserClient();
+  const supabase = supabaseBrowser();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
 
@@ -18,8 +18,11 @@ export default function SignInPage() {
       options: { emailRedirectTo: `${location.origin}/auth/callback` },
     });
 
-    if (!error) setStatus("sent");
-    else setStatus("idle");
+    if (!error) {
+      setStatus("sent");
+    } else {
+      setStatus("idle");
+    }
   }
 
   return (
@@ -67,9 +70,11 @@ export default function SignInPage() {
           className={`
             w-full mt-4 py-3 rounded-lg text-sm font-medium
             text-white
-            ${status === "sending"
-              ? "bg-blue-700 opacity-60 cursor-not-allowed"
-              : "bg-blue-600 hover:bg-blue-500 cursor-pointer"}
+            ${
+              status === "sending"
+                ? "bg-blue-700 opacity-60 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-500 cursor-pointer"
+            }
           `}
         >
           {status === "sent"
@@ -89,5 +94,6 @@ export default function SignInPage() {
     </div>
   );
 }
+
 
 
