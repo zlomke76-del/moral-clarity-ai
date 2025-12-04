@@ -1,3 +1,8 @@
-export default function AppSectionLayout({ children }: { children: React.ReactNode }) {
-  return children; // no wrapper, no sidebar, defer to RootLayout
+export default function AppSectionLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // DO NOT WRAP OR MODIFY — RootLayout handles sidebar + solace
+  return <>{children}</>;
 }
