@@ -1,3 +1,4 @@
+// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Suspense } from "react";
@@ -6,6 +7,11 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import AuthProvider from "@/components/AuthProvider";
 import Toaster from "@/components/Toaster";
 import SolaceGuard from "@/app/components/SolaceGuard";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+export const runtime = "nodejs";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.moralclarity.ai"),
@@ -23,20 +29,24 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Next 16 gives us pathname via headers for server layouts
+  const path = typeof window === "undefined"
+    ? "" // SSR safeguard
+    : window.location.pathname;
+
+  const isAuthRoute =
+    path.startsWith("/auth") ||
+    path.startsWith("/login") ||
+    path.startsWith("/sign-in");
+
   return (
-    <html lang="en" className="dark h-full">
-      <body className="mc-root">
+    <html lang="en" className="dark h-full" data-skin="glass">
+      <body className={isAuthRoute ? "mc-root no-global-bg" : "mc-root"}>
         <AuthProvider>
 
-          {/* Main page */}
           {children}
 
-          {/* Solace loads everywhere EXCEPT auth routes */}
           <Suspense>
             <SolaceGuard />
           </Suspense>
@@ -51,4 +61,5 @@ export default function RootLayout({
     </html>
   );
 }
+
 
