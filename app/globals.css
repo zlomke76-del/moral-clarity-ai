@@ -217,6 +217,10 @@ button:disabled {
     0 0 30px rgba(34, 211, 238, 0.65),
     inset 0 0 14px rgba(34, 211, 238, 0.25);
 }
+/* Hides ALL global backgrounds on auth pages */
+.no-global-bg {
+  background: #050505 !important;
+}
 
 /* =========================================================
    LEGACY CLEANUP
