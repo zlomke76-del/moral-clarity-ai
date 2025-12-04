@@ -1,38 +1,26 @@
 "use client";
 
-import React, { useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseBrowser = createClient(
-  'https://your-supabase-url.supabase.co',
-  'your-anon-key'
-);
+import React, { useState } from "react";
+import { supabaseBrowser } from "@/lib/supabase/client";
 
 export default function SignInPage() {
-  const [email, setEmail] = useState('');
+  const supabase = supabaseBrowser();
+  const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
-    const { error } = await supabaseBrowser.auth.signInWithOtp({ email });
-    if (error) {
-      console.error("Error sending magic link:", error.message);
-    } else {
-      setSent(true);
-    }
+    const { error } = await supabase.auth.signInWithOtp({ email });
+    if (!error) setSent(true);
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-[#050505] overflow-hidden">
-      <div className="absolute inset-0 z-0">
-        <img
-          src="/Global-CSS-Background.png"
-          alt="Background"
-          className="w-full h-full object-cover"
-        />
-      </div>
+    <div className="relative min-h-screen flex items-center justify-center bg-[#050505]/60 backdrop-blur-sm">
 
-      <div className="relative z-20 w-full max-w-md px-8 py-10 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.4)]">
+      {/* AUTH CARD */}
+      <div className="z-auth w-full max-w-md px-8 py-10 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+
+        {/* Large floating key */}
         <div className="flex justify-center mb-6">
           <img
             src="/Magic key.png"
@@ -76,3 +64,4 @@ export default function SignInPage() {
     </div>
   );
 }
+
