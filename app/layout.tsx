@@ -30,14 +30,19 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full dark">
-      <body className="mc-root">
-        {/* Global background + noise */}
-        <div className="mc-bg" />
-        <div className="mc-noise" />
+      <body className="mc-root min-h-screen relative">
 
-        <AuthProvider>
-          <LayoutShell>{children}</LayoutShell>
-        </AuthProvider>
+        {/* Background layers MUST be absolutely positioned */}
+        <div className="mc-bg pointer-events-none absolute inset-0 z-0" />
+        <div className="mc-noise pointer-events-none absolute inset-0 z-0" />
+
+        {/* App content sits ABOVE (z-index > 0) */}
+        <div className="relative z-10 min-h-screen">
+          <AuthProvider>
+            <LayoutShell>{children}</LayoutShell>
+          </AuthProvider>
+        </div>
+
       </body>
     </html>
   );
