@@ -1,6 +1,6 @@
 // app/w/[workspaceId]/memory/page.tsx
 import Link from "next/link";
-import { supabaseServer } from "@/lib/supabase";
+import { supabaseServer } from "@/lib/supabaseServer";
 import MemoryComposer from "@/components/MemoryComposer";
 import MemoryList from "@/components/MemoryList";
 
@@ -13,19 +13,22 @@ export default async function WorkspaceMemoryPage({
 }) {
   const workspaceId = decodeURIComponent(params.workspaceId);
 
-  // Must await the server client
-  const sb = await supabaseServer();
+  const supabase = await supabaseServer();
 
-  const { data, error } = await sb
-    .schema("mca")
+  // Get the signed in user (email)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const userEmail = user?.email ?? "";
+
+  // Fetch workspace memories for this user
+  const { data: memories } = await supabase
     .from("memories")
-    .select("id, title, content, created_at, kind, user_key")
+    .select("id, title, content, created_at, kind")
     .eq("workspace_id", workspaceId)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-    .limit(100);
-
-  const rows = Array.isArray(data) ? data : [];
+    .eq("user_email", userEmail)
+    .order("created_at", { ascending: false });
 
   return (
     <section className="space-y-8 p-6">
@@ -34,8 +37,8 @@ export default async function WorkspaceMemoryPage({
           <h1 className="text-2xl font-semibold tracking-tight">
             Workspace Memories
           </h1>
-          <p className="text-sm text-neutral-400 break-all">
-            Workspace: {workspaceId}
+          <p className="text-sm text-neutral-400">
+            Workspace: <code>{workspaceId}</code>
           </p>
         </div>
 
@@ -47,13 +50,10 @@ export default async function WorkspaceMemoryPage({
         </Link>
       </header>
 
-      <MemoryComposer workspaceId={workspaceId} />
-
-      <MemoryList
-        items={rows}
-        workspaceId={workspaceId}
-        emptyHint="No memories yet. Add your first above."
-      />
+      <div className="space-y-6">
+        <MemoryComposer workspaceId={workspaceId} />
+        <MemoryList items={memories ?? []} emptyHint="No memories yet." />
+      </div>
     </section>
   );
 }
