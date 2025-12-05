@@ -1,126 +1,84 @@
-// components/MemoryComposer.tsx
 "use client";
 
-import { useRef, useState } from "react";
-import { toast } from "@/lib/toast";
+import { useState, useRef } from "react";
 import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
+import { toast } from "@/lib/toast";
 
-const UPLOAD_BUCKET =
-  process.env.NEXT_PUBLIC_SUPABASE_UPLOAD_BUCKET || "uploads";
-
-type Props = { workspaceId: string };
+type Props = {
+  workspaceId: string;
+};
 
 export default function MemoryComposer({ workspaceId }: Props) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [kind, setKind] = useState("note");
 
   const supabase = createSupabaseBrowser();
 
-  function onPickFiles(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    setPendingFiles((prev) => [...prev, ...files]);
-    if (fileRef.current) fileRef.current.value = "";
-  }
-
-  async function uploadAll(): Promise<string[]> {
-    if (!pendingFiles.length) return [];
-
-    setUploading(true);
-    const out: string[] = [];
-
-    try {
-      for (const f of pendingFiles) {
-        const safe = f.name.replace(/[^\w.\-]+/g, "_");
-        const key = `workspace/${workspaceId}/${Date.now()}_${safe}`;
-
-        const { error } = await supabase.storage
-          .from(UPLOAD_BUCKET)
-          .upload(key, f);
-
-        if (error) throw error;
-
-        const { data: pub } = supabase.storage
-          .from(UPLOAD_BUCKET)
-          .getPublicUrl(key);
-
-        out.push(pub.publicUrl);
-      }
-
-      return out;
-    } finally {
-      setUploading(false);
-    }
-  }
-
   async function submit() {
     try {
-      const attachmentUrls = await uploadAll();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user?.email) {
+        toast("Not signed in.");
+        return;
+      }
+
+      const body = {
+        title: title.trim() || null,
+        content: content.trim(),
+        kind,
+        workspace_id: workspaceId,
+        user_email: user.email,
+      };
 
       const res = await fetch("/api/memory", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workspace_id: workspaceId,
-          title: title || null,
-          content:
-            (content || "") +
-            (attachmentUrls.length
-              ? "\n\nAttachments:\n" +
-                attachmentUrls.map((u) => `• ${u}`).join("\n")
-              : ""),
-        }),
+        body: JSON.stringify(body),
       });
 
       const j = await res.json();
-
-      if (!res.ok) return toast(j.error || "Failed to save.");
+      if (!res.ok) {
+        toast(j.error ?? "Failed to save memory.");
+        return;
+      }
 
       toast("Saved.");
       setTitle("");
       setContent("");
-      setPendingFiles([]);
+
       window.location.reload();
-    } catch (err) {
-      toast("Failed.");
+    } catch (e: any) {
+      toast(e?.message ?? "Failed.");
     }
   }
 
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4 space-y-4">
+    <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4 space-y-3">
       <input
-        className="w-full rounded-md bg-black/30 border border-neutral-700 p-2 text-sm"
-        placeholder="Memory title…"
+        className="w-full rounded bg-neutral-800/50 p-2 text-sm"
+        placeholder="Memory title (optional)"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
       />
 
       <textarea
-        className="w-full rounded-md bg-black/30 border border-neutral-700 p-2 text-sm h-32"
-        placeholder="Write content…"
+        className="w-full rounded bg-neutral-800/50 p-2 text-sm h-32"
+        placeholder="Write memory..."
         value={content}
         onChange={(e) => setContent(e.target.value)}
       />
 
-      <div>
-        <input
-          ref={fileRef}
-          type="file"
-          multiple
-          onChange={onPickFiles}
-          className="text-sm"
-        />
-      </div>
-
       <button
+        className="px-4 py-2 rounded bg-amber-500 hover:bg-amber-400 text-black font-medium"
         onClick={submit}
-        disabled={uploading}
-        className="rounded-md bg-amber-600 px-4 py-2 text-sm hover:bg-amber-500 disabled:opacity-50"
       >
-        {uploading ? "Uploading…" : "Save memory"}
+        Save Memory
       </button>
     </div>
   );
 }
+
