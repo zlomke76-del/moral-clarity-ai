@@ -20,7 +20,7 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="flex w-full h-full items-start justify-end p-10">
+    <div className="flex w-full h-full items-center justify-center p-6">
       <div className="w-full max-w-md bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-xl z-10">
         <h1 className="text-3xl font-bold text-white mb-4 text-center">
           Sign in
@@ -43,13 +43,11 @@ export default function SignInPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white placeholder-neutral-500 focus:border-blue-500 focus:outline-none transition"
-              aria-label="Email address"
             />
 
             <button
               type="submit"
               className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium shadow-lg hover:scale-[1.02] transition-transform"
-              aria-label="Send magic link"
             >
               Send magic link
             </button>
