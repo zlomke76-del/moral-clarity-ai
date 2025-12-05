@@ -13,33 +13,30 @@ export default function LayoutShell({
   const pathname = usePathname() ?? "";
   const isAuth = pathname.startsWith("/auth");
 
-  // ---------------------------------------------------------
-  // AUTH PAGES — CLEAN FULL-WIDTH CENTERED PAGE, NO APP SHELL
-  // ---------------------------------------------------------
-  if (isAuth) {
-    return (
-      <div className="flex min-h-screen items-center justify-center px-6 py-24 relative z-10">
-        {children}
-      </div>
-    );
-  }
-
-  // ---------------------------------------------------------
-  // NORMAL APP SHELL — SIDEBAR ALWAYS ON
-  // ---------------------------------------------------------
   return (
     <div className="relative z-10 min-h-screen flex">
+      {/* Sidebar ALWAYS visible */}
       <aside className="shrink-0">
         <NeuralSidebar />
       </aside>
 
-      <main className="flex-1 overflow-y-auto">
-        <div className="w-full max-w-3xl mx-auto px-6 py-12">
+      {/* Main content area — FIXED so auth pages center correctly */}
+      <main className="flex-1 overflow-y-auto flex">
+        {/* When auth: center vertically + horizontally
+            When normal: standard app layout */}
+        <div
+          className={
+            isAuth
+              ? "flex flex-col items-center justify-center w-full px-6 py-24"
+              : "w-full max-w-3xl mx-auto px-6 py-12"
+          }
+        >
           {children}
         </div>
       </main>
 
-      <SolaceDock />
+      {/* Solace always visible, sidebar always visible */}
+      {!isAuth && <SolaceDock />}
     </div>
   );
 }
