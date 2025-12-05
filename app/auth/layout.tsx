@@ -1,23 +1,11 @@
-// app/auth/layout.tsx
-"use client";
-
-import "../globals.css";
+export const metadata = {
+  title: "Sign In — Moral Clarity AI",
+};
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark h-full">
-      <body className="mc-root">
-
-        {/* Background */}
-        <div className="mc-bg" />
-        <div className="mc-noise" />
-
-        {/* AUTH PAGE WITHOUT SIDEBAR */}
-        <div className="relative w-full h-full">
-          {children}
-        </div>
-
-      </body>
-    </html>
+    <div className="min-h-screen w-full flex items-center justify-center relative z-[10] bg-[#020617]">
+      {children}
+    </div>
   );
 }
