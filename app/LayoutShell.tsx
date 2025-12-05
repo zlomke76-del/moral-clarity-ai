@@ -2,35 +2,43 @@
 
 import { usePathname } from "next/navigation";
 import NeuralSidebar from "@/app/components/NeuralSidebar";
+import SolaceGuard from "@/app/components/SolaceGuard";
+import Toaster from "@/components/Toaster";
+import { Suspense } from "react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export default function LayoutShell({ children }: { children: React.ReactNode }) {
-  // Fix: pathname may be null → provide empty string as fallback
   const pathname = usePathname() ?? "";
   const isAuthPage = pathname.startsWith("/auth");
 
-  if (isAuthPage) {
-    return (
-      <div className="flex h-screen w-screen overflow-hidden">
-        <aside>
-          <NeuralSidebar />
-        </aside>
-
-        <main className="flex-1 flex items-center justify-center p-10 overflow-y-auto">
-          {children}
-        </main>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex h-screen w-screen overflow-hidden">
-      <aside>
-        <NeuralSidebar />
-      </aside>
+    <>
+      {isAuthPage ? (
+        <div className="flex h-screen w-screen overflow-hidden">
+          <aside><NeuralSidebar /></aside>
 
-      <main className="flex-1 overflow-y-auto">
-        <div className="mc-content">{children}</div>
-      </main>
-    </div>
+          <main className="flex-1 flex items-center justify-center p-10 overflow-y-auto">
+            {children}
+          </main>
+        </div>
+      ) : (
+        <div className="flex h-screen w-screen overflow-hidden">
+          <aside><NeuralSidebar /></aside>
+
+          <main className="flex-1 overflow-y-auto">
+            <div className="mc-content">{children}</div>
+          </main>
+        </div>
+      )}
+
+      {/* DO NOT SHOW SOLACE / OVERLAYS ON AUTH PAGES */}
+      {!isAuthPage && (
+        <div className="mc-ui">
+          <Suspense><SolaceGuard /></Suspense>
+          <Suspense><Toaster /></Suspense>
+          <SpeedInsights />
+        </div>
+      )}
+    </>
   );
 }
