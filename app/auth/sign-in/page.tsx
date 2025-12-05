@@ -25,7 +25,6 @@ export default function SignInPage() {
 
   return (
     <div className="auth-shell">
-      {/* Auth Card */}
       <div className="auth-card">
         <h1 className="text-3xl font-bold text-white mb-4 text-center">
           Sign in
