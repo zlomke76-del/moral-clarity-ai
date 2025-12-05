@@ -5,23 +5,28 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 
 export default function SignInPage() {
   const supabase = supabaseBrowser();
+
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function signIn(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
     const { error } = await supabase.auth.signInWithOtp({ email });
+
     if (error) {
       setError(error.message);
     } else {
       setSent(true);
+      setError(null);
     }
   }
 
   return (
-    <div className="flex w-full h-full items-center justify-center p-6">
-      <div className="w-full max-w-md bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-xl z-10">
+    <div className="auth-shell">
+      {/* Auth Card */}
+      <div className="auth-card">
         <h1 className="text-3xl font-bold text-white mb-4 text-center">
           Sign in
         </h1>
@@ -31,7 +36,7 @@ export default function SignInPage() {
         </p>
 
         {sent ? (
-          <div className="text-center text-green-400 text-sm">
+          <div className="text-green-400 text-center text-sm">
             ✨ Magic link sent — check your inbox.
           </div>
         ) : (
@@ -55,11 +60,10 @@ export default function SignInPage() {
         )}
 
         {error && (
-          <div className="text-red-500 text-center mt-4">
-            {error}
-          </div>
+          <div className="text-red-500 text-center mt-4 text-sm">{error}</div>
         )}
       </div>
     </div>
   );
 }
+
