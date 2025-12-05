@@ -28,21 +28,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className="dark h-full">
       <body className="mc-root">
 
-        {/* Background Layers */}
+        {/* Background */}
         <div className="mc-bg" />
         <div className="mc-noise" />
 
         <AuthProvider>
 
-          {/* MAIN LAYOUT SHELL: Sidebar + Content */}
+          {/* LAYOUT SHELL — NEUTRALIZED (NO FORCED ALIGNMENT) */}
           <div className="flex h-screen w-screen overflow-hidden">
 
-            {/* Sidebar */}
             <aside>
               <NeuralSidebar />
             </aside>
 
-            {/* Content Wrapper — FIXED: no forced centering */}
+            {/* MAIN CONTENT AREA — totally neutral */}
             <main className="flex-1 overflow-y-auto h-full">
               <div className="mc-content h-full">
                 {children}
@@ -51,8 +50,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
           </div>
 
-          {/* UI Overlays */}
-          <div className="mc-ui">
+          {/* OVERLAYS — ISOLATED (NO FLEX ON PARENT) */}
+          <div className="mc-ui pointer-events-none">
             <Suspense>
               <SolaceGuard />
             </Suspense>
@@ -69,4 +68,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-
