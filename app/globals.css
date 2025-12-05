@@ -51,14 +51,11 @@ html, body {
   padding: 0;
   position: relative;
   z-index: 30;
-  isolation: isolate; /* prevents background bleed */
+  isolation: isolate;
   border-right: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.03);
 }
 
-/* -------------------------------
-   TOP SECTION — OPAQUE BLOCK
---------------------------------*/
 .neural-sidebar-top {
   background: rgba(8, 12, 25, 0.95);
   padding: 1.5rem 1.25rem;
@@ -66,7 +63,6 @@ html, body {
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
 }
 
-/* Brand block */
 .neural-sidebar-brand {
   display: flex;
   align-items: center;
@@ -80,19 +76,15 @@ html, body {
   width: 46px;
   height: 46px;
   border-radius: 12px;
-
   background: linear-gradient(145deg, #f7c76a, #ca9d40);
   box-shadow: 0 0 16px rgba(247, 199, 106, 0.2);
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   color: #000;
   font-weight: 800;
   font-size: 1.1rem;
   border: 1px solid rgba(255, 255, 255, 0.05);
-
   transition: all 0.25s ease;
 }
 
@@ -117,9 +109,7 @@ html, body {
   opacity: 0.75;
 }
 
-/* -------------------------------
-   LOWER SECTION — GLASS PANEL
---------------------------------*/
+/* LOWER SECTION - GLASS PANEL */
 .neural-sidebar-glass {
   flex: 1;
   padding: 1.5rem 1.25rem;
@@ -127,7 +117,7 @@ html, body {
   backdrop-filter: blur(26px);
 }
 
-/* Section Label */
+/* Label */
 .neural-sidebar-section-label {
   font-size: 11px;
   text-transform: uppercase;
@@ -150,22 +140,17 @@ html, body {
   color: inherit;
 }
 
-/* ============================================================
-   CHIP CARDS (with icons)
-   ============================================================ */
+/* CHIP */
 .neural-sidebar-chip {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
-
-  padding: 1rem 1rem;
+  padding: 1rem;
   border-radius: 12px;
-
+  display: flex;
+  align-items: center;
   transition: all 0.25s ease;
   position: relative;
   overflow: hidden;
-
-  display: flex;
-  align-items: center;
 }
 
 .neural-sidebar-chip:hover {
@@ -175,7 +160,6 @@ html, body {
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
 }
 
-/* Icon container */
 .neural-sidebar-chip-inner {
   display: flex;
   align-items: center;
@@ -184,7 +168,6 @@ html, body {
 
 .neural-sidebar-chip-icon .neural-icon {
   color: rgba(255, 255, 255, 0.78);
-  font-size: 1.25rem;
   transition: all 0.2s ease;
 }
 
@@ -192,7 +175,6 @@ html, body {
   color: #f7c76a;
 }
 
-/* Text */
 .neural-sidebar-chip-label {
   font-size: 15px;
   font-weight: 600;
@@ -205,10 +187,7 @@ html, body {
   margin-top: 2px;
 }
 
-/* ============================================================
-   ACTIVE (selected) state — gold glow & sidebar bar
-   ============================================================ */
-
+/* ACTIVE CHIP */
 .neural-sidebar-link.active .neural-sidebar-chip {
   background: rgba(247, 199, 106, 0.09);
   border-color: rgba(247, 199, 106, 0.55);
@@ -232,65 +211,16 @@ html, body {
 }
 
 /* ============================================================
-   AVATAR / ACCOUNT ICON
+   AUTH LAYOUT — CLEAN + DEDUPED
    ============================================================ */
 
-.neural-avatar {
-  width: 40px;
-  height: 40px;
-
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  color: white;
-  font-weight: 600;
-  font-size: 14px;
-
-  transition: all 0.25s ease;
-  cursor: pointer;
-}
-
-.neural-avatar:hover {
-  background: rgba(255, 255, 255, 0.18);
-  box-shadow: 0 0 12px rgba(247, 199, 106, 0.3);
-  transform: translateY(-2px);
-}
-
-/* globals.css — AUTH SHELL & CARD */
-.auth-shell {
-  min-height: 100vh;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem;
-}
-
-.auth-card {
-  width: 100%;
-  max-width: 420px;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1.25rem;
-  padding: 2rem;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
-  z-index: 10;
-}
-/* AUTH LAYOUT FIX — prevents vertical drifting */
 .auth-main {
-  display: block;
-  height: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-height: 100vh;
-  padding-top: 4rem;
 }
 
-/* centers auth content in a controlled way */
 .auth-container {
   width: 100%;
   display: flex;
@@ -298,19 +228,18 @@ html, body {
   padding: 4rem 1.5rem;
 }
 
-/* shell ensures consistent max-width */
 .auth-shell {
   width: 100%;
   max-width: 420px;
 }
 
-/* card styling */
 .auth-card {
   background: rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   padding: 2rem;
   border-radius: 1.25rem;
+  width: 100%;
 }
 
 
