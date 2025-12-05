@@ -10,7 +10,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
   const isAuth = pathname.startsWith("/auth");
 
   return (
-<div class="relative z-10 flex">
+<div className="relative z-10 flex">
       {/* Sidebar always visible */}
       <aside className="shrink-0">
         <NeuralSidebar />
