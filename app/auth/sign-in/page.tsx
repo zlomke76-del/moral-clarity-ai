@@ -27,10 +27,8 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="auth-card w-full max-w-md mx-auto">
-      <h1 className="text-3xl font-bold text-white mb-4 text-center">
-        Sign in
-      </h1>
+    <div className="auth-card w-full">
+      <h1 className="text-3xl font-bold text-white mb-4 text-center">Sign in</h1>
 
       <p className="text-neutral-400 text-center mb-6 text-sm">
         Enter your email to receive a secure magic link.
@@ -56,7 +54,6 @@ export default function SignInPage() {
     </div>
   );
 }
-
 
 
 
