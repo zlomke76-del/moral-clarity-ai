@@ -24,45 +24,41 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-export default function RootLayout({
+// ⭐ MAKE ROOTLAYOUT ASYNC
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // ⭐ Server-safe route detection (this WORKS in layouts)
-  const pathname = headers().get("x-invoke-path") || "";
+  // ⭐ Await headers() because it returns Promise<ReadonlyHeaders>
+  const h = await headers();
+  const pathname = h.get("x-invoke-path") || "";
   const isAuthPage = pathname.startsWith("/auth");
 
   return (
     <html lang="en" className="dark h-full">
       <body className="mc-root">
-        {/* Background Layers */}
+        {/* Background */}
         <div className="mc-bg" />
         <div className="mc-noise" />
 
         <AuthProvider>
-          {/* ================================
-               AUTH PAGES (SIDEBAR + CLEAN MAIN)
-             ================================ */}
           {isAuthPage ? (
+            // AUTH LAYOUT
             <div className="flex h-screen w-screen overflow-hidden">
               <aside>
                 <NeuralSidebar />
               </aside>
-
               <main className="flex-1 flex items-center justify-center p-10 overflow-y-auto">
                 {children}
               </main>
             </div>
           ) : (
-            /* ================================
-               WORKSPACE PAGES (FULL SHELL)
-               ================================ */
+            // WORKSPACE LAYOUT
             <div className="flex h-screen w-screen overflow-hidden">
               <aside>
                 <NeuralSidebar />
               </aside>
-
               <main className="flex-1 overflow-y-auto">
                 <div className="mc-content">{children}</div>
               </main>
@@ -74,11 +70,9 @@ export default function RootLayout({
             <Suspense>
               <SolaceGuard />
             </Suspense>
-
             <Suspense>
               <Toaster />
             </Suspense>
-
             <SpeedInsights />
           </div>
         </AuthProvider>
@@ -86,5 +80,6 @@ export default function RootLayout({
     </html>
   );
 }
+
 
 
