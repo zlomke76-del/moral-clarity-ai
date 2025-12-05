@@ -1,31 +1,41 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import NeuralSidebar from "@/app/components/NeuralSidebar";
+import SolaceGuard from "@/app/components/SolaceGuard";
+import { Suspense } from "react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
-export default function LayoutShell({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function LayoutShell({ children }: { children: React.ReactNode }) {
+  const rawPath = usePathname();
+  const pathname = typeof rawPath === "string" ? rawPath : "";
+
+  const isAuthPage =
+    pathname === "/auth" ||
+    pathname.startsWith("/auth/");
+
   return (
-    <div
-      className="
-        grid
-        grid-cols-[20vw_1fr]
-        min-h-screen
-        relative
-        z-10
-      "
-    >
-      {/* Sidebar (20vw) */}
-      <aside className="h-full">
-        <NeuralSidebar />
-      </aside>
+    <>
+      {/* GRID LAYOUT — SIDEBAR 20% / CONTENT 80% */}
+      <div className="grid grid-cols-[20vw_1fr] min-h-screen relative z-10">
+        <aside className="h-full">
+          <NeuralSidebar />
+        </aside>
 
-      {/* Main column (80%) */}
-      <main className="h-full flex flex-col justify-start items-start px-12 py-16">
-        {children}
-      </main>
-    </div>
+        <main className="h-full flex flex-col items-start justify-start">
+          <div className="w-full max-w-2xl px-8 py-16">{children}</div>
+        </main>
+      </div>
+
+      {/* SOLACE — ONLY ON NON-AUTH ROUTES */}
+      {!isAuthPage && (
+        <div className="mc-ui">
+          <Suspense>
+            <SolaceGuard />
+          </Suspense>
+          <SpeedInsights />
+        </div>
+      )}
+    </>
   );
 }
