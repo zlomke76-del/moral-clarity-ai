@@ -1,22 +1,18 @@
-// /components/MemoryComposer.tsx
-'use client';
+// components/MemoryComposer.tsx
+"use client";
 
-import { useRef, useState } from 'react';
-import { toast } from '@/lib/toast';
-import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
+import { useRef, useState } from "react";
+import { toast } from "@/lib/toast";
+import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 
 const UPLOAD_BUCKET =
-  process.env.NEXT_PUBLIC_SUPABASE_UPLOAD_BUCKET || 'uploads';
+  process.env.NEXT_PUBLIC_SUPABASE_UPLOAD_BUCKET || "uploads";
 
 type Props = { workspaceId: string };
-type Uploaded = { name: string; url: string; type: string; key: string };
 
 export default function MemoryComposer({ workspaceId }: Props) {
-  const [tab, setTab] = useState<'workspace' | 'user'>('workspace');
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [kind, setKind] = useState<'profile'|'preference'|'fact'|'task'|'note'>('note');
-
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -25,36 +21,34 @@ export default function MemoryComposer({ workspaceId }: Props) {
 
   function onPickFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
-    if (files.length) setPendingFiles(prev => [...prev, ...files]);
-    if (fileRef.current) fileRef.current.value = '';
+    setPendingFiles((prev) => [...prev, ...files]);
+    if (fileRef.current) fileRef.current.value = "";
   }
 
-  function removePending(idx: number) {
-    setPendingFiles(prev => prev.filter((_, i) => i !== idx));
-  }
+  async function uploadAll(): Promise<string[]> {
+    if (!pendingFiles.length) return [];
 
-  async function uploadAll(files: File[], userKey = 'owner'): Promise<Uploaded[]> {
-    if (!files.length) return [];
     setUploading(true);
+    const out: string[] = [];
+
     try {
-      const out: Uploaded[] = [];
-      for (const f of files) {
-        const safe = f.name.replace(/[^\w.\-]+/g, '_');
-        const key = `${userKey}/${Date.now()}_${safe}`;
+      for (const f of pendingFiles) {
+        const safe = f.name.replace(/[^\w.\-]+/g, "_");
+        const key = `workspace/${workspaceId}/${Date.now()}_${safe}`;
+
         const { error } = await supabase.storage
-          .from(UPLOAD_BUCKET)                         // ← env bucket
-          .upload(key, f, {
-            upsert: false,
-            contentType: f.type || 'application/octet-stream',
-          });
-        if (error) throw new Error(error.message || 'Upload failed');
+          .from(UPLOAD_BUCKET)
+          .upload(key, f);
+
+        if (error) throw error;
 
         const { data: pub } = supabase.storage
-          .from(UPLOAD_BUCKET)                         // ← env bucket
+          .from(UPLOAD_BUCKET)
           .getPublicUrl(key);
 
-        out.push({ name: f.name, url: pub.publicUrl, type: f.type || 'application/octet-stream', key });
+        out.push(pub.publicUrl);
       }
+
       return out;
     } finally {
       setUploading(false);
@@ -63,46 +57,70 @@ export default function MemoryComposer({ workspaceId }: Props) {
 
   async function submit() {
     try {
-      const uploaded = await uploadAll(pendingFiles, 'owner');
-      const attachmentBlock =
-        uploaded.length
-          ? '\n\nAttachments:\n' + uploaded.map(a => `• ${a.name}: ${a.url}`).join('\n')
-          : '';
+      const attachmentUrls = await uploadAll();
 
-      const payload: any = {
-        mode: tab,
-        workspace_id: workspaceId,
-        attachments: uploaded,
-      };
-
-      if (tab === 'workspace') {
-        payload.title = title.trim() || undefined;
-        payload.content = (content.trim() + attachmentBlock).trim() || undefined;
-      } else {
-        payload.kind = kind;
-        payload.content = (content.trim() + attachmentBlock).trim();
-        payload.user_key = 'owner';
-      }
-
-      const res = await fetch('/api/memory', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+      const res = await fetch("/api/memory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspace_id: workspaceId,
+          title: title || null,
+          content:
+            (content || "") +
+            (attachmentUrls.length
+              ? "\n\nAttachments:\n" +
+                attachmentUrls.map((u) => `• ${u}`).join("\n")
+              : ""),
+        }),
       });
-      const j = await res.json();
-      if (!res.ok) return toast(j?.error ?? 'Failed to save');
 
-      toast('Saved.');
-      setTitle(''); setContent(''); setPendingFiles([]);
+      const j = await res.json();
+
+      if (!res.ok) return toast(j.error || "Failed to save.");
+
+      toast("Saved.");
+      setTitle("");
+      setContent("");
+      setPendingFiles([]);
       window.location.reload();
-    } catch (e: any) {
-      toast(e?.message ?? 'Failed to save');
+    } catch (err) {
+      toast("Failed.");
     }
   }
 
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900/40">
-      {/* …UI unchanged… */}
+    <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4 space-y-4">
+      <input
+        className="w-full rounded-md bg-black/30 border border-neutral-700 p-2 text-sm"
+        placeholder="Memory title…"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+      />
+
+      <textarea
+        className="w-full rounded-md bg-black/30 border border-neutral-700 p-2 text-sm h-32"
+        placeholder="Write content…"
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+      />
+
+      <div>
+        <input
+          ref={fileRef}
+          type="file"
+          multiple
+          onChange={onPickFiles}
+          className="text-sm"
+        />
+      </div>
+
+      <button
+        onClick={submit}
+        disabled={uploading}
+        className="rounded-md bg-amber-600 px-4 py-2 text-sm hover:bg-amber-500 disabled:opacity-50"
+      >
+        {uploading ? "Uploading…" : "Save memory"}
+      </button>
     </div>
   );
 }
