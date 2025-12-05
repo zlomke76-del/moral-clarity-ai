@@ -1,23 +1,25 @@
-// app/LayoutShell.tsx
 "use client";
 
 import NeuralSidebar from "@/app/components/NeuralSidebar";
 
-export default function LayoutShell({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function LayoutShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative z-10 min-h-screen flex">
-      
-      {/* LEFT SIDEBAR — fixed 20% width */}
-      <aside className="w-1/5 min-w-[240px]">
+    <div
+      className="
+        grid
+        grid-cols-[20vw_1fr]   /* COL1 = 20% viewport width, COL2 = remaining space */
+        min-h-screen
+        relative
+        z-10
+      "
+    >
+      {/* COLUMN 1 — Sidebar */}
+      <aside className="h-full">
         <NeuralSidebar />
       </aside>
 
-      {/* MAIN AREA — 80% width, centers its content */}
-      <main className="w-4/5 flex justify-center items-start">
+      {/* COLUMN 2 — Main Content */}
+      <main className="h-full flex flex-col items-center justify-start">
         <div className="w-full max-w-2xl px-8 py-16">
           {children}
         </div>
