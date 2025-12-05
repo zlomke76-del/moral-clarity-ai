@@ -3,6 +3,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import AuthProvider from "@/components/AuthProvider";
 import LayoutShell from "./LayoutShell";
+import SolaceGuard from "@/components/SolaceGuard";
+import Toaster from "@/components/Toaster";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -32,19 +34,27 @@ export default function RootLayout({
     <html lang="en" className="h-full dark">
       <body className="mc-root min-h-screen relative">
 
-        {/* Background layers MUST be absolutely positioned */}
+        {/* Background */}
         <div className="mc-bg pointer-events-none absolute inset-0 z-0" />
         <div className="mc-noise pointer-events-none absolute inset-0 z-0" />
 
-        {/* App content sits ABOVE (z-index > 0) */}
-        <div className="relative z-10 min-h-screen">
-          <AuthProvider>
+        <AuthProvider>
+          {/* Page content including sidebar */}
+          <div className="relative z-10 min-h-screen">
             <LayoutShell>{children}</LayoutShell>
-          </AuthProvider>
-        </div>
+          </div>
 
+          {/* ⭐ DO NOT RENDER SOLACE ON AUTH PAGES */}
+          {!children?.props?.segment?.startsWith("auth") && (
+            <>
+              <SolaceGuard />
+              <Toaster />
+            </>
+          )}
+        </AuthProvider>
       </body>
     </html>
   );
 }
+
 
