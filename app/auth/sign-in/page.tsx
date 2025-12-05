@@ -2,31 +2,27 @@
 "use client";
 
 import { useState } from "react";
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 
 export default function SignInPage() {
-  const supabase = supabaseBrowser();
-
   const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  async function signIn(e: React.FormEvent<HTMLFormElement>) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
 
-    const { error } = await supabase.auth.signInWithOtp({ email });
+    await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${location.origin}/auth/callback`,
+      },
+    });
 
-    if (error) {
-      setError(error.message);
-    } else {
-      setSent(true);
-      setError(null);
-    }
+    alert("Magic link sent!");
   }
 
   return (
-    <div className="auth-shell">
-      <div className="auth-card">
+    <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center min-h-screen px-6">
+      <div className="auth-card w-full">
         <h1 className="text-3xl font-bold text-white mb-4 text-center">
           Sign in
         </h1>
@@ -35,33 +31,23 @@ export default function SignInPage() {
           Enter your email to receive a secure magic link.
         </p>
 
-        {sent ? (
-          <div className="text-green-400 text-center text-sm">
-            ✨ Magic link sent — check your inbox.
-          </div>
-        ) : (
-          <form onSubmit={signIn} className="space-y-4">
-            <input
-              type="email"
-              required
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white placeholder-neutral-500 focus:border-blue-500 focus:outline-none transition"
-            />
+        <form onSubmit={handleLogin} className="space-y-4">
+          <input
+            type="email"
+            required
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white placeholder-neutral-500 focus:border-blue-500 focus:outline-none transition"
+          />
 
-            <button
-              type="submit"
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium shadow-lg hover:scale-[1.02] transition-transform"
-            >
-              Send magic link
-            </button>
-          </form>
-        )}
-
-        {error && (
-          <div className="text-red-500 text-center mt-4 text-sm">{error}</div>
-        )}
+          <button
+            type="submit"
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium shadow-lg hover:scale-[1.02] transition-transform"
+          >
+            Send magic link
+          </button>
+        </form>
       </div>
     </div>
   );
