@@ -23,35 +23,42 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const isAuthPage =
+    typeof window !== "undefined" &&
+    window.location.pathname.startsWith("/auth");
+
   return (
     <html lang="en" className="dark h-full">
       <body className="mc-root">
-
-        {/* Background */}
+        {/* Background Layers */}
         <div className="mc-bg" />
         <div className="mc-noise" />
 
         <AuthProvider>
+          {/* 🚨 If on /auth/* → DO NOT WRAP IN SIDEBAR / FLEX SHELL */}
+          {isAuthPage ? (
+            <main className="auth-shell">{children}</main>
+          ) : (
+            <div className="flex h-screen w-screen overflow-hidden">
+              {/* Sidebar */}
+              <aside>
+                <NeuralSidebar />
+              </aside>
 
-          {/* LAYOUT SHELL — NEUTRALIZED (NO FORCED ALIGNMENT) */}
-          <div className="flex h-screen w-screen overflow-hidden">
+              {/* Workspace Content */}
+              <main className="flex-1 overflow-y-auto">
+                <div className="mc-content">{children}</div>
+              </main>
+            </div>
+          )}
 
-            <aside>
-              <NeuralSidebar />
-            </aside>
-
-            {/* MAIN CONTENT AREA — totally neutral */}
-            <main className="flex-1 overflow-y-auto h-full">
-              <div className="mc-content h-full">
-                {children}
-              </div>
-            </main>
-
-          </div>
-
-          {/* OVERLAYS — ISOLATED (NO FLEX ON PARENT) */}
-          <div className="mc-ui pointer-events-none">
+          {/* UI Overlays */}
+          <div className="mc-ui">
             <Suspense>
               <SolaceGuard />
             </Suspense>
@@ -62,9 +69,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
             <SpeedInsights />
           </div>
-
         </AuthProvider>
       </body>
     </html>
   );
 }
+
