@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 export default function SignInPage() {
@@ -8,15 +8,15 @@ export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
 
-  async function signIn(e: FormEvent<HTMLFormElement>) {
+  async function signIn(e: React.FormEvent) {
     e.preventDefault();
     const { error } = await supabase.auth.signInWithOtp({ email });
     if (!error) setSent(true);
   }
 
   return (
-    <div className="auth-wrapper">
-      <div className="auth-card">
+    <div className="auth-wrapper w-full h-full flex items-center justify-center">
+      <div className="w-full max-w-md bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-xl z-auth">
         <h1 className="text-3xl font-bold text-white mb-4 text-center">
           Sign in
         </h1>
