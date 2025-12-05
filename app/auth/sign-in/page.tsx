@@ -1,3 +1,4 @@
+// app/auth/sign-in/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -24,49 +25,46 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="auth-container">
-      <div className="auth-shell">
-        <div className="auth-card">
-          <h1 className="text-3xl font-bold text-white mb-4 text-center">
-            Sign in
-          </h1>
+    <div className="auth-shell">
+      <div className="auth-card">
+        <h1 className="text-3xl font-bold text-white mb-4 text-center">
+          Sign in
+        </h1>
 
-          <p className="text-neutral-400 text-center mb-6 text-sm">
-            Enter your email to receive a secure magic link.
-          </p>
+        <p className="text-neutral-400 text-center mb-6 text-sm">
+          Enter your email to receive a secure magic link.
+        </p>
 
-          {sent ? (
-            <div className="text-green-400 text-center text-sm">
-              ✨ Magic link sent — check your inbox.
-            </div>
-          ) : (
-            <form onSubmit={signIn} className="space-y-4">
-              <input
-                type="email"
-                required
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white placeholder-neutral-500 focus:border-blue-500 focus:outline-none transition"
-              />
+        {sent ? (
+          <div className="text-green-400 text-center text-sm">
+            ✨ Magic link sent — check your inbox.
+          </div>
+        ) : (
+          <form onSubmit={signIn} className="space-y-4">
+            <input
+              type="email"
+              required
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white placeholder-neutral-500 focus:border-blue-500 focus:outline-none transition"
+            />
 
-              <button
-                type="submit"
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium shadow-lg hover:scale-[1.02] transition-transform"
-              >
-                Send magic link
-              </button>
-            </form>
-          )}
+            <button
+              type="submit"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium shadow-lg hover:scale-[1.02] transition-transform"
+            >
+              Send magic link
+            </button>
+          </form>
+        )}
 
-          {error && (
-            <div className="text-red-500 text-center mt-4 text-sm">
-              {error}
-            </div>
-          )}
-        </div>
+        {error && (
+          <div className="text-red-500 text-center mt-4 text-sm">{error}</div>
+        )}
       </div>
     </div>
   );
 }
+
 
