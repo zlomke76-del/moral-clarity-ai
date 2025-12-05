@@ -2,8 +2,7 @@
 "use client";
 
 import React from "react";
-import NeuralSidebar from "./components/NeuralSidebar"; // ✔ FIXED: relative path
-import SolaceDock from "@/app/components/SolaceDock";   // allowed (client → client)
+import NeuralSidebar from "./components/NeuralSidebar";
 
 export default function LayoutShell({
   children,
@@ -17,15 +16,10 @@ export default function LayoutShell({
         <NeuralSidebar />
       </aside>
 
-      {/* Main Content Area */}
+      {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
         {children}
       </main>
-
-      {/* Solace Dock always rendered */}
-      <SolaceDock />
     </div>
   );
 }
-
-
