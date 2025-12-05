@@ -7,29 +7,26 @@ import Toaster from "@/components/Toaster";
 import { Suspense } from "react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-export default function LayoutShell({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
-  const isAuthPage = pathname.startsWith("/auth");
+  const isAuth = pathname.startsWith("/auth");
 
   return (
     <>
-      {/* AUTH PAGES — sidebar ON, Solace OFF */}
-      {isAuthPage ? (
+      {/* --------- AUTH PAGES --------- */}
+      {isAuth ? (
         <div className="flex h-screen w-screen overflow-hidden">
           <aside>
             <NeuralSidebar />
           </aside>
 
-          <main className="flex-1 overflow-y-auto auth-main">
+          {/* Auth layout uses special centered logic */}
+          <main className="auth-main flex-1">
             {children}
           </main>
         </div>
       ) : (
-        /* NORMAL WORKSPACE */
+        /* --------- NORMAL WORKSPACE --------- */
         <div className="flex h-screen w-screen overflow-hidden">
           <aside>
             <NeuralSidebar />
@@ -41,19 +38,22 @@ export default function LayoutShell({
         </div>
       )}
 
-      {/* SOLACE + TOASTER — ONLY for workspace */}
-      {!isAuthPage && (
+      {/* Solace + Toaster ONLY on workspace */}
+      {!isAuth && (
         <div className="mc-ui">
           <Suspense>
             <SolaceGuard />
           </Suspense>
+
           <Suspense>
             <Toaster />
           </Suspense>
+
           <SpeedInsights />
         </div>
       )}
     </>
   );
 }
+
 
