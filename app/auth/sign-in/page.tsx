@@ -1,4 +1,3 @@
-// app/auth/sign-in/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -8,20 +7,21 @@ export default function SignInPage() {
   const supabase = supabaseBrowser();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState(null);
 
-  async function signIn(e: React.FormEvent) {
+  async function signIn(e) {
     e.preventDefault();
     const { error } = await supabase.auth.signInWithOtp({ email });
-    if (!error) {
+    if (error) {
+      setError(error.message);
+    } else {
       setSent(true);
     }
-    // you may want to handle error state here later
   }
 
   return (
-    // 🔹 This wrapper controls where the card lives in the main content area
     <div className="flex w-full h-full items-start justify-end p-10">
-      <div className="w-full max-w-md bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-xl z-auth">
+      <div className="w-full max-w-md bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-xl z-10">
         <h1 className="text-3xl font-bold text-white mb-4 text-center">
           Sign in
         </h1>
@@ -43,15 +43,23 @@ export default function SignInPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white placeholder-neutral-500 focus:border-blue-500 focus:outline-none transition"
+              aria-label="Email address"
             />
 
             <button
               type="submit"
               className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium shadow-lg hover:scale-[1.02] transition-transform"
+              aria-label="Send magic link"
             >
               Send magic link
             </button>
           </form>
+        )}
+
+        {error && (
+          <div className="text-red-500 text-center mt-4">
+            {error}
+          </div>
         )}
       </div>
     </div>
