@@ -13,25 +13,23 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
 
   return (
     <>
-      {/* AUTH LAYOUT — NO SIDEBAR */}
-      {isAuthPage ? (
+      {/* ⭐ AUTH AND NORMAL PAGES BOTH GET THE SIDEBAR */}
+      <div className="flex h-screen w-screen overflow-hidden">
+        <aside>
+          <NeuralSidebar />
+        </aside>
+
         <main className="flex-1 overflow-y-auto">
-          <div className="auth-shell">{children}</div>
-        </main>
-      ) : (
-        // NORMAL WORKSPACE LAYOUT
-        <div className="flex h-screen w-screen overflow-hidden">
-          <aside>
-            <NeuralSidebar />
-          </aside>
-
-          <main className="flex-1 overflow-y-auto">
+          {/* Auth pages get centered card; workspace pages get mc-content wrapper */}
+          {isAuthPage ? (
+            <div className="auth-shell">{children}</div>
+          ) : (
             <div className="mc-content">{children}</div>
-          </main>
-        </div>
-      )}
+          )}
+        </main>
+      </div>
 
-      {/* BLOCK SOLACE UI ON AUTH */}
+      {/* ⭐ Solace UI still disabled on auth */}
       {!isAuthPage && (
         <div className="mc-ui">
           <Suspense><SolaceGuard /></Suspense>
