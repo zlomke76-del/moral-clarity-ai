@@ -27,7 +27,7 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="auth-card w-full max-w-md">
+    <div className="auth-card w-full max-w-xl">
       <h1 className="text-3xl font-bold text-white mb-4 text-center">
         Sign in
       </h1>
