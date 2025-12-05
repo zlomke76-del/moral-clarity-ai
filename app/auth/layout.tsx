@@ -1,12 +1,23 @@
 // app/auth/layout.tsx
 "use client";
 
-import type { ReactNode } from "react";
+import "../globals.css";
 
-export default function AuthLayout({ children }: { children: ReactNode }) {
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-6 z-auth">
-      {children}
-    </div>
+    <html lang="en" className="dark h-full">
+      <body className="mc-root">
+
+        {/* Background */}
+        <div className="mc-bg" />
+        <div className="mc-noise" />
+
+        {/* AUTH PAGE WITHOUT SIDEBAR */}
+        <div className="relative w-full h-full">
+          {children}
+        </div>
+
+      </body>
+    </html>
   );
 }
