@@ -4,7 +4,8 @@ import { usePathname } from "next/navigation";
 import NeuralSidebar from "@/app/components/NeuralSidebar";
 
 export default function LayoutShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  // Fix: pathname may be null → provide empty string as fallback
+  const pathname = usePathname() ?? "";
   const isAuthPage = pathname.startsWith("/auth");
 
   if (isAuthPage) {
