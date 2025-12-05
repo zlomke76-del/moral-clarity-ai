@@ -4,9 +4,9 @@
 import React from "react";
 import { usePathname } from "next/navigation";
 
-// Correct absolute paths — match your actual filesystem
-import NeuralSidebar from "@/app/components/NeuralSidebar";
-import SolaceDock from "@/app/components/SolaceDock";
+// Use RELATIVE imports because of your import map behavior
+import NeuralSidebar from "./components/NeuralSidebar";
+import SolaceDock from "./components/SolaceDock";
 
 export default function LayoutShell({
   children,
@@ -15,34 +15,23 @@ export default function LayoutShell({
 }) {
   const pathname = usePathname();
 
-  // AUTH PAGES → NO SIDEBAR, NO SOLACE, CENTERED LAYOUT
-  const isAuth =
-    pathname?.startsWith("/auth") ||
-    pathname === "/auth" ||
-    pathname === "/auth/sign-in" ||
-    pathname === "/auth/callback";
+  // Auth routes: keep sidebar, just hide Solace
+  const isAuth = pathname?.startsWith("/auth");
 
-  if (isAuth) {
-    return (
-      <main className="flex-1 flex items-center justify-center min-h-screen overflow-y-auto">
-        {children}
-      </main>
-    );
-  }
-
-  // NORMAL APP PAGES → SIDEBAR + CONTENT + SOLACE
   return (
     <div className="relative z-10 min-h-screen flex">
-      {/* Sidebar */}
+      {/* Left Sidebar — always present */}
       <aside className="shrink-0">
         <NeuralSidebar />
       </aside>
 
-      {/* Page Content */}
-      <main className="flex-1 overflow-y-auto">{children}</main>
+      {/* Main content area */}
+      <main className="flex-1 overflow-y-auto">
+        {children}
+      </main>
 
-      {/* Solace Overlay */}
-      <SolaceDock />
+      {/* Solace overlay — disabled on auth pages */}
+      {!isAuth && <SolaceDock />}
     </div>
   );
 }
