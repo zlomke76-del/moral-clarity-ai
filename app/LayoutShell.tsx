@@ -14,16 +14,22 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
   return (
     <>
       {isAuthPage ? (
+        // AUTH LAYOUT — NO SOLACE UI
         <div className="flex h-screen w-screen overflow-hidden">
-          <aside><NeuralSidebar /></aside>
+          <aside>
+            <NeuralSidebar />
+          </aside>
 
           <main className="flex-1 flex items-center justify-center p-10 overflow-y-auto">
             {children}
           </main>
         </div>
       ) : (
+        // NORMAL WORKSPACE LAYOUT
         <div className="flex h-screen w-screen overflow-hidden">
-          <aside><NeuralSidebar /></aside>
+          <aside>
+            <NeuralSidebar />
+          </aside>
 
           <main className="flex-1 overflow-y-auto">
             <div className="mc-content">{children}</div>
@@ -31,7 +37,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
         </div>
       )}
 
-      {/* DO NOT SHOW SOLACE / OVERLAYS ON AUTH PAGES */}
+      {/* ⭐ ABSOLUTELY BLOCK SOLACE UI ON AUTH */}
       {!isAuthPage && (
         <div className="mc-ui">
           <Suspense><SolaceGuard /></Suspense>
@@ -42,3 +48,4 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
     </>
   );
 }
+
