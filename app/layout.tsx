@@ -6,9 +6,6 @@ import AuthProvider from "@/components/AuthProvider";
 import LayoutShell from "./LayoutShell";
 import Toaster from "@/components/Toaster";
 
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.moralclarity.ai"),
   title: {
@@ -25,35 +22,21 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="h-full dark">
       <body className="mc-root min-h-screen relative">
-        {/* --------------------------
-            GLOBAL BACKGROUND LAYERS
-           -------------------------- */}
+        {/* GLOBAL BACKGROUND LAYERS */}
         <div className="mc-bg absolute inset-0 pointer-events-none z-0" />
         <div className="mc-noise absolute inset-0 pointer-events-none z-0" />
 
-        {/* --------------------------
-            APP SHELL: Sidebar, Solace,
-            Content, AuthProvider
-           -------------------------- */}
         <AuthProvider>
           <LayoutShell>{children}</LayoutShell>
         </AuthProvider>
 
-        {/* Toast UI (always above main content) */}
         <Toaster />
       </body>
     </html>
   );
 }
-
-
-
 
