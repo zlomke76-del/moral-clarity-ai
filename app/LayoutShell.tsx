@@ -1,54 +1,51 @@
+// app/LayoutShell.tsx
 "use client";
 
+import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 import NeuralSidebar from "@/app/components/NeuralSidebar";
 import SolaceGuard from "@/app/components/SolaceGuard";
 import Toaster from "@/components/Toaster";
-import { Suspense } from "react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-export default function LayoutShell({ children }: { children: React.ReactNode }) {
+type LayoutShellProps = {
+  children: React.ReactNode;
+};
+
+export default function LayoutShell({ children }: LayoutShellProps) {
   const pathname = usePathname() ?? "";
-  const isAuth = pathname.startsWith("/auth");
+  const isAuthPage = pathname.startsWith("/auth");
 
   return (
     <>
-      {/* --------- AUTH PAGES --------- */}
-      {isAuth ? (
-        <div className="flex h-screen w-screen overflow-hidden">
-          <aside>
-            <NeuralSidebar />
-          </aside>
+      {/* Shared shell: sidebar is ALWAYS present */}
+      <div className="flex h-screen w-screen overflow-hidden">
+        <aside>
+          <NeuralSidebar />
+        </aside>
 
-          {/* Auth layout uses special centered logic */}
-          <main className="auth-main flex-1">
-            {children}
+        {isAuthPage ? (
+          // AUTH LAYOUT: sidebar + centered auth form, NO Solace
+          <main className="flex-1 overflow-y-auto auth-main">
+            <div className="auth-container">{children}</div>
           </main>
-        </div>
-      ) : (
-        /* --------- NORMAL WORKSPACE --------- */
-        <div className="flex h-screen w-screen overflow-hidden">
-          <aside>
-            <NeuralSidebar />
-          </aside>
-
+        ) : (
+          // NORMAL WORKSPACE LAYOUT
           <main className="flex-1 overflow-y-auto">
             <div className="mc-content">{children}</div>
           </main>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Solace + Toaster ONLY on workspace */}
-      {!isAuth && (
+      {/* Block Solace UI on auth routes */}
+      {!isAuthPage && (
         <div className="mc-ui">
           <Suspense>
             <SolaceGuard />
           </Suspense>
-
           <Suspense>
             <Toaster />
           </Suspense>
-
           <SpeedInsights />
         </div>
       )}
