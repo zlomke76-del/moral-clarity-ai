@@ -1,4 +1,3 @@
-// app/auth/sign-in/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -36,10 +35,7 @@ export default function SignInPage() {
         Enter your email to receive a secure magic link.
       </p>
 
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-4 w-full max-w-md mx-auto"
-      >
+      <form onSubmit={handleSubmit} className="space-y-4 w-full max-w-md mx-auto">
         <input
           type="email"
           required
@@ -62,6 +58,9 @@ export default function SignInPage() {
     </>
   );
 }
+
+
+
 
 
 
