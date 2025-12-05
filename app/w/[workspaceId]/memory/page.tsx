@@ -13,27 +13,19 @@ export default async function WorkspaceMemoryPage({
 }) {
   const workspaceId = decodeURIComponent(params.workspaceId);
 
-  // Build authenticated server-side client
+  // Must await the server client
   const sb = await supabaseServer();
 
-  // Fetch memories from the *public* schema
   const { data, error } = await sb
+    .schema("mca")
     .from("memories")
-    .select(
-      `
-      id,
-      title,
-      content,
-      created_at,
-      workspace_id
-    `
-    )
+    .select("id, title, content, created_at, kind, user_key")
     .eq("workspace_id", workspaceId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(100);
 
-  const rows = Array.isArray(data) && !error ? data : [];
+  const rows = Array.isArray(data) ? data : [];
 
   return (
     <section className="space-y-8 p-6">
@@ -42,10 +34,8 @@ export default async function WorkspaceMemoryPage({
           <h1 className="text-2xl font-semibold tracking-tight">
             Workspace Memories
           </h1>
-
-          <p className="text-sm text-neutral-400">
-            Workspace:{" "}
-            <code className="text-neutral-300 break-all">{workspaceId}</code>
+          <p className="text-sm text-neutral-400 break-all">
+            Workspace: {workspaceId}
           </p>
         </div>
 
@@ -57,20 +47,15 @@ export default async function WorkspaceMemoryPage({
         </Link>
       </header>
 
-      <div className="space-y-6">
-        {/* Composer */}
-        <MemoryComposer workspaceId={workspaceId} />
+      <MemoryComposer workspaceId={workspaceId} />
 
-        {/* Memory list */}
-        <MemoryList
-          items={rows}
-          emptyHint="No memories yet. Add your first above."
-        />
-      </div>
+      <MemoryList
+        items={rows}
+        workspaceId={workspaceId}
+        emptyHint="No memories yet. Add your first above."
+      />
     </section>
   );
 }
-
-
 
 
