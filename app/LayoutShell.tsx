@@ -2,8 +2,8 @@
 
 import React from "react";
 import { usePathname } from "next/navigation";
-import NeuralSidebar from "@/components/NeuralSidebar";
-import SolaceDock from "@/components/SolaceDock";
+import NeuralSidebar from "/components/NeuralSidebar";
+import SolaceDock from "/components/SolaceDock";
 
 export default function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
