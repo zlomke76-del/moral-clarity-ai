@@ -25,54 +25,65 @@ export const viewport: Viewport = {
 
 export default function RootLayout({
   children,
+  params,
 }: {
   children: React.ReactNode;
+  params: { slug?: string[] };
 }) {
-  const isAuthPage =
-    typeof window !== "undefined" &&
-    window.location.pathname.startsWith("/auth");
+  // ⭐ Read first route segment safely
+  const segment = params?.slug?.[0] || "";
+  const isAuthPage = segment === "auth";
 
   return (
     <html lang="en" className="dark h-full">
       <body className="mc-root">
-        {/* Background Layers */}
+
+        {/* Background */}
         <div className="mc-bg" />
         <div className="mc-noise" />
 
         <AuthProvider>
-          {/* 🚨 If on /auth/* → DO NOT WRAP IN SIDEBAR / FLEX SHELL */}
+
           {isAuthPage ? (
-            <main className="auth-shell">{children}</main>
-          ) : (
+            // ===========================
+            // AUTH LAYOUT (sidebar visible)
+            // ===========================
             <div className="flex h-screen w-screen overflow-hidden">
-              {/* Sidebar */}
               <aside>
                 <NeuralSidebar />
               </aside>
 
-              {/* Workspace Content */}
+              <main className="flex-1 flex items-center justify-center p-10 overflow-y-auto">
+                {children}
+              </main>
+            </div>
+          ) : (
+            // ===========================
+            // WORKSPACE LAYOUT
+            // ===========================
+            <div className="flex h-screen w-screen overflow-hidden">
+              <aside>
+                <NeuralSidebar />
+              </aside>
+
               <main className="flex-1 overflow-y-auto">
                 <div className="mc-content">{children}</div>
               </main>
             </div>
           )}
 
-          {/* UI Overlays */}
+          {/* UI Overlay */}
           <div className="mc-ui">
-            <Suspense>
-              <SolaceGuard />
-            </Suspense>
-
-            <Suspense>
-              <Toaster />
-            </Suspense>
-
+            <Suspense><SolaceGuard /></Suspense>
+            <Suspense><Toaster /></Suspense>
             <SpeedInsights />
           </div>
+
         </AuthProvider>
       </body>
     </html>
   );
 }
+
 
 
