@@ -9,35 +9,35 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export default function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
-  const isAuthPage = pathname.startsWith("/auth");
+  const isAuthPage = pathname.startsWith("/auth/");
 
+  if (isAuthPage) {
+    // AUTH PAGES → NO SIDEBAR, NO SOLACE
+    return (
+      <main className="min-h-screen w-full flex items-center justify-center">
+        {children}
+      </main>
+    );
+  }
+
+  // NORMAL PAGES → SIDEBAR + SOLACE
   return (
     <>
-      {/* ⭐ AUTH AND NORMAL PAGES BOTH GET THE SIDEBAR */}
       <div className="flex h-screen w-screen overflow-hidden">
         <aside>
           <NeuralSidebar />
         </aside>
 
         <main className="flex-1 overflow-y-auto">
-          {/* Auth pages get centered card; workspace pages get mc-content wrapper */}
-          {isAuthPage ? (
-            <div className="auth-shell">{children}</div>
-          ) : (
-            <div className="mc-content">{children}</div>
-          )}
+          <div className="mc-content">{children}</div>
         </main>
       </div>
 
-      {/* ⭐ Solace UI still disabled on auth */}
-      {!isAuthPage && (
-        <div className="mc-ui">
-          <Suspense><SolaceGuard /></Suspense>
-          <Suspense><Toaster /></Suspense>
-          <SpeedInsights />
-        </div>
-      )}
+      <div className="mc-ui">
+        <Suspense><SolaceGuard /></Suspense>
+        <Suspense><Toaster /></Suspense>
+        <SpeedInsights />
+      </div>
     </>
   );
 }
-
