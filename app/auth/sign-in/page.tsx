@@ -1,33 +1,6 @@
-"use client";
-
-import { useState } from "react";
-import { supabaseBrowser } from "@/lib/supabase/client";
-
-export default function SignInPage() {
-  const [email, setEmail] = useState("");
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-
-    const supabase = supabaseBrowser();
-
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${location.origin}/auth/callback`,
-      },
-    });
-
-    if (error) {
-      console.error("Magic link error:", error);
-      alert("There was an issue sending your magic link.");
-    } else {
-      alert("Magic link sent! Check your email.");
-    }
-  }
-
+export default function SignIn() {
   return (
-    <div className="auth-card w-full">
+    <div className="auth-card w-full max-w-md">
       <h1 className="text-3xl font-bold text-white mb-4 text-center">
         Sign in
       </h1>
@@ -36,19 +9,19 @@ export default function SignInPage() {
         Enter your email to receive a secure magic link.
       </p>
 
-      <form className="space-y-4" onSubmit={handleSubmit}>
+      <form className="space-y-4">
         <input
-          type="email"
           required
           placeholder="you@example.com"
-          className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white placeholder-neutral-500 focus:border-blue-500 focus:outline-none transition"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          type="email"
+          className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 
+          text-white placeholder-neutral-500 focus:border-blue-500 focus:outline-none transition"
         />
 
         <button
           type="submit"
-          className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium shadow-lg hover:scale-[1.02] transition-transform"
+          className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 
+          text-white font-medium shadow-lg hover:scale-[1.02] transition-transform"
         >
           Send magic link
         </button>
