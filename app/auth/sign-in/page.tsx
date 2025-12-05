@@ -12,13 +12,16 @@ export default function SignInPage() {
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
     const { error } = await supabase.auth.signInWithOtp({ email });
-    if (!error) setSent(true);
+    if (!error) {
+      setSent(true);
+    }
+    // you may want to handle error state here later
   }
 
   return (
-    <div className="absolute top-10 right-10 max-w-md w-full z-auth">
-
-      <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-xl">
+    // 🔹 This wrapper controls where the card lives in the main content area
+    <div className="flex w-full h-full items-start justify-end p-10">
+      <div className="w-full max-w-md bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-xl z-auth">
         <h1 className="text-3xl font-bold text-white mb-4 text-center">
           Sign in
         </h1>
@@ -33,27 +36,21 @@ export default function SignInPage() {
           </div>
         ) : (
           <form onSubmit={signIn} className="space-y-4">
-
             <input
               type="email"
               required
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10
-                         text-white placeholder-neutral-500 focus:border-blue-500
-                         transition"
+              className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white placeholder-neutral-500 focus:border-blue-500 focus:outline-none transition"
             />
 
             <button
               type="submit"
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500
-                         text-white font-medium shadow-lg hover:scale-[1.02]
-                         transition-transform"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium shadow-lg hover:scale-[1.02] transition-transform"
             >
               Send magic link
             </button>
-
           </form>
         )}
       </div>
