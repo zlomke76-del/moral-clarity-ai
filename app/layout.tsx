@@ -8,6 +8,7 @@ import Toaster from "@/components/Toaster";
 import SolaceGuard from "@/app/components/SolaceGuard";
 import NeuralSidebar from "@/app/components/NeuralSidebar";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -28,9 +29,9 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const isAuthPage =
-    typeof window !== "undefined" &&
-    window.location.pathname.startsWith("/auth");
+  // ⭐ Server-safe route detection (this WORKS in layouts)
+  const pathname = headers().get("x-invoke-path") || "";
+  const isAuthPage = pathname.startsWith("/auth");
 
   return (
     <html lang="en" className="dark h-full">
@@ -40,17 +41,28 @@ export default function RootLayout({
         <div className="mc-noise" />
 
         <AuthProvider>
-          {/* 🚨 If on /auth/* → DO NOT WRAP IN SIDEBAR / FLEX SHELL */}
+          {/* ================================
+               AUTH PAGES (SIDEBAR + CLEAN MAIN)
+             ================================ */}
           {isAuthPage ? (
-            <main className="auth-shell">{children}</main>
-          ) : (
             <div className="flex h-screen w-screen overflow-hidden">
-              {/* Sidebar */}
               <aside>
                 <NeuralSidebar />
               </aside>
 
-              {/* Workspace Content */}
+              <main className="flex-1 flex items-center justify-center p-10 overflow-y-auto">
+                {children}
+              </main>
+            </div>
+          ) : (
+            /* ================================
+               WORKSPACE PAGES (FULL SHELL)
+               ================================ */
+            <div className="flex h-screen w-screen overflow-hidden">
+              <aside>
+                <NeuralSidebar />
+              </aside>
+
               <main className="flex-1 overflow-y-auto">
                 <div className="mc-content">{children}</div>
               </main>
@@ -74,4 +86,5 @@ export default function RootLayout({
     </html>
   );
 }
+
 
