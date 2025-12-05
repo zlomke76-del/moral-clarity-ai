@@ -1,10 +1,8 @@
 // app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-
 import AuthProvider from "@/components/AuthProvider";
 import LayoutShell from "./LayoutShell";
-import SolaceGuard from "@/components/SolaceGuard"; 
 import Toaster from "@/components/Toaster";
 
 export const dynamic = "force-dynamic";
@@ -26,22 +24,27 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" className="h-full dark">
       <body className="mc-root min-h-screen relative">
+        {/* Global background layers */}
         <div className="mc-bg pointer-events-none absolute inset-0 z-0" />
         <div className="mc-noise pointer-events-none absolute inset-0 z-0" />
 
         <AuthProvider>
-          <SolaceGuard>
-            <LayoutShell>{children}</LayoutShell>
-          </SolaceGuard>
-          <Toaster />
+          <LayoutShell>{children}</LayoutShell>
         </AuthProvider>
+
+        <Toaster />
       </body>
     </html>
   );
 }
+
 
 
