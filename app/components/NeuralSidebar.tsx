@@ -25,7 +25,7 @@ type Props = {
 export default function NeuralSidebar({ items }: Props) {
   const pathname = usePathname() ?? "";
 
-  // Extract workspaceId from /w/[id]
+  // Get workspaceId from /w/[id]
   let workspaceId: string | null = null;
   const parts = pathname.split("/").filter(Boolean);
   if (parts[0] === "w" && parts[1]) workspaceId = parts[1];
@@ -36,9 +36,9 @@ export default function NeuralSidebar({ items }: Props) {
       : buildDefaultItems(workspaceId ?? MCA_WORKSPACE_ID);
 
   return (
-    /* FIX: no <aside> wrapper — LayoutShell already provides it */
+    /* FIX: no <aside> wrapper here */
     <div className="neural-sidebar">
-      {/* BRAND HEADER */}
+      {/* BRAND */}
       <Link href="/app" className="neural-sidebar-top neural-sidebar-brand">
         <div className="neural-sidebar-brand-mark">
           <span>AI</span>
@@ -50,7 +50,7 @@ export default function NeuralSidebar({ items }: Props) {
         </div>
       </Link>
 
-      {/* NAVIGATION */}
+      {/* SECTIONS */}
       <div className="neural-sidebar-glass">
         <div className="neural-sidebar-section-label">Workspace</div>
 
@@ -64,7 +64,7 @@ export default function NeuralSidebar({ items }: Props) {
   );
 }
 
-/* CHIP COMPONENT */
+/* CHIP */
 function SidebarChip({ item }: { item: NeuralSidebarItem }) {
   const pathname = usePathname() ?? "";
   const href = item.href ?? "";
@@ -114,7 +114,7 @@ function SidebarChip({ item }: { item: NeuralSidebarItem }) {
   );
 }
 
-/* DEFAULT NAV ITEMS */
+/* DEFAULT PAGES */
 function buildDefaultItems(workspaceId: string): NeuralSidebarItem[] {
   return [
     {
@@ -147,5 +147,4 @@ function buildDefaultItems(workspaceId: string): NeuralSidebarItem[] {
     },
   ];
 }
-
 
