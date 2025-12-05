@@ -1,67 +1,56 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const run = async () => {
-      const url = new URL(window.location.href);
-      const nextParam = url.searchParams.get('next') || '/app';
-
-      const next =
-        typeof nextParam === 'string' && nextParam.startsWith('/')
-          ? nextParam
-          : '/app';
-
+    const handleAuth = async () => {
       const supabase = createSupabaseBrowser();
 
-      try {
-        // With implicit flow + detectSessionInUrl, the first Supabase call
-        // will parse the URL, store the session, and then getSession()
-        // returns the current user/session.
-        const { data, error } = await supabase.auth.getSession();
+      // IMPORTANT: this forces Supabase to parse the URL code
+      const { data, error } = await supabase.auth.getSession();
 
-        if (error) {
-          console.error('[Callback] getSession error', error);
-          router.replace(
-            '/auth/error?err=' +
-              encodeURIComponent(error.message || 'Auth callback failed'),
-          );
-          return;
-        }
-
-        if (!data.session) {
-          console.error('[Callback] no session after implicit callback');
-          router.replace(
-            '/auth/error?err=' +
-              encodeURIComponent(
-                'Auth callback failed: no session could be established. Please request a new magic link.',
-              ),
-          );
-          return;
-        }
-
-        router.replace(next);
-      } catch (err: any) {
-        console.error('[Callback] unexpected error', err);
+      if (error) {
         router.replace(
-          '/auth/error?err=' +
-            encodeURIComponent('Unexpected error during callback'),
+          "/auth/error?err=" +
+            encodeURIComponent(error.message || "Auth callback failed")
         );
+        return;
       }
+
+      if (!data.session) {
+        // Try explicitly exchanging code for session
+        const { data: exchanged, error: exchangeError } =
+          await supabase.auth.exchangeCodeForSession(window.location.href);
+
+        if (exchangeError || !exchanged?.session) {
+          router.replace(
+            "/auth/error?err=" +
+              encodeURIComponent(
+                "Auth callback failed: no session could be established. Please request a new magic link."
+              )
+          );
+          return;
+        }
+
+        // If exchange works → redirect to /app
+        router.replace("/app");
+        return;
+      }
+
+      // Normal successful path
+      router.replace("/app");
     };
 
-    void run();
+    handleAuth();
   }, [router]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-black text-white">
+    <div className="flex min-h-screen items-center justify-center text-white">
       <p>Finishing sign-in…</p>
     </div>
   );
