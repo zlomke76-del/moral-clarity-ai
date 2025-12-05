@@ -34,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <AuthProvider>
 
-          {/* MAIN SHELL (Sidebar + Content) */}
+          {/* MAIN LAYOUT SHELL: Sidebar + Content */}
           <div className="flex h-screen w-screen overflow-hidden">
 
             {/* Sidebar */}
@@ -42,16 +42,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <NeuralSidebar />
             </aside>
 
-            {/* CONTENT AREA — FIXED + PROPER CENTERING */}
-            <main className="flex-1 flex items-center justify-center overflow-hidden h-full">
-              <div className="mc-content w-full h-full flex items-center justify-center">
+            {/* Content Wrapper — FIXED: no forced centering */}
+            <main className="flex-1 overflow-y-auto h-full">
+              <div className="mc-content h-full">
                 {children}
               </div>
             </main>
 
           </div>
 
-          {/* Solace & UI Overlays */}
+          {/* UI Overlays */}
           <div className="mc-ui">
             <Suspense>
               <SolaceGuard />
@@ -69,3 +69,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
+
