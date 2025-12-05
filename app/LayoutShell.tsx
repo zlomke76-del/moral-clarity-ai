@@ -13,18 +13,17 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
 
   return (
     <>
-      {isAuthPage ? (
-        // AUTH LAYOUT — NO SOLACE UI
-        <div className="flex h-screen w-screen overflow-hidden">
-          <aside>
-            <NeuralSidebar />
-          </aside>
+{isAuthPage ? (
+  <div className="flex h-screen w-screen overflow-hidden">
+    <aside>
+      <NeuralSidebar />
+    </aside>
 
-          <main className="flex-1 flex items-center justify-center p-10 overflow-y-auto">
-            {children}
-          </main>
-        </div>
-      ) : (
+    <main className="flex-1 overflow-y-auto">
+      {children}
+    </main>
+  </div>
+) : (
         // NORMAL WORKSPACE LAYOUT
         <div className="flex h-screen w-screen overflow-hidden">
           <aside>
