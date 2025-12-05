@@ -1,6 +1,7 @@
 /* ============================================================
-   GLOBAL RESTORATION — Required for background integrity
+   GLOBAL BACKGROUND / RESTORATION
    ============================================================ */
+
 html, body {
   background: transparent !important;
 }
@@ -13,16 +14,19 @@ html, body {
   background-size: cover;
   background-position: center top;
   background-attachment: fixed;
+
   position: relative;
   z-index: 0;
+
   color: var(--mc-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, "Noto Sans", sans-serif;
 }
 
-/* Ensure noise + background remain behind everything */
+/* Background layers behind everything */
 .mc-bg {
   position: fixed;
   inset: 0;
@@ -34,13 +38,13 @@ html, body {
   position: fixed;
   inset: 0;
   z-index: -1;
-  pointer-events: none;
   background-image: url("/noise.png");
   opacity: 0.04;
+  pointer-events: none;
 }
 
 /* ============================================================
-   HYBRID LUXURY SIDEBAR — Top opaque + lower glass
+   HYBRID LUXURY SIDEBAR
    ============================================================ */
 
 .neural-sidebar {
@@ -48,10 +52,11 @@ html, body {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  padding: 0;
+
   position: relative;
   z-index: 30;
   isolation: isolate;
+
   border-right: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.03);
 }
@@ -67,23 +72,27 @@ html, body {
   display: flex;
   align-items: center;
   gap: 0.85rem;
-  cursor: pointer;
   text-decoration: none;
   color: inherit;
+  cursor: pointer;
 }
 
 .neural-sidebar-brand-mark {
   width: 46px;
   height: 46px;
   border-radius: 12px;
+
   background: linear-gradient(145deg, #f7c76a, #ca9d40);
   box-shadow: 0 0 16px rgba(247, 199, 106, 0.2);
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   color: #000;
   font-weight: 800;
   font-size: 1.1rem;
+
   border: 1px solid rgba(255, 255, 255, 0.05);
   transition: all 0.25s ease;
 }
@@ -96,7 +105,6 @@ html, body {
 .neural-sidebar-brand-text {
   display: flex;
   flex-direction: column;
-  line-height: 1.1;
 }
 
 .neural-sidebar-brand-line-1 {
@@ -109,15 +117,14 @@ html, body {
   opacity: 0.75;
 }
 
-/* LOWER SECTION - GLASS PANEL */
 .neural-sidebar-glass {
   flex: 1;
   padding: 1.5rem 1.25rem;
+
   background: rgba(4, 10, 25, 0.45);
   backdrop-filter: blur(26px);
 }
 
-/* Label */
 .neural-sidebar-section-label {
   font-size: 11px;
   text-transform: uppercase;
@@ -126,7 +133,6 @@ html, body {
   margin-bottom: 0.75rem;
 }
 
-/* List */
 .neural-sidebar-list {
   display: flex;
   flex-direction: column;
@@ -136,26 +142,30 @@ html, body {
 .neural-sidebar-link {
   text-decoration: none;
   display: block;
-  cursor: pointer;
   color: inherit;
+  cursor: pointer;
 }
 
-/* CHIP */
+/* Chip container */
 .neural-sidebar-chip {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
+
   padding: 1rem;
   border-radius: 12px;
+
   display: flex;
   align-items: center;
-  transition: all 0.25s ease;
-  position: relative;
   overflow: hidden;
+  position: relative;
+
+  transition: all 0.25s ease;
 }
 
 .neural-sidebar-chip:hover {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.18);
+
   transform: translateY(-2px);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
 }
@@ -187,7 +197,7 @@ html, body {
   margin-top: 2px;
 }
 
-/* ACTIVE CHIP */
+/* ACTIVE STATE */
 .neural-sidebar-link.active .neural-sidebar-chip {
   background: rgba(247, 199, 106, 0.09);
   border-color: rgba(247, 199, 106, 0.55);
@@ -203,6 +213,7 @@ html, body {
   width: 4px;
   height: 60%;
   border-radius: 4px;
+
   background: linear-gradient(
     180deg,
     rgba(247, 199, 106, 0.85),
@@ -210,22 +221,21 @@ html, body {
   );
 }
 
-/* === AUTH LAYOUT (MAGIC LINK) ===================================== */
+/* ============================================================
+   AUTH AREA — Applies ONLY to the 80% panel
+   ============================================================ */
 
 .auth-main {
-  /* Right-hand workspace panel on auth routes */
   min-height: 100vh;
   display: flex;
-  align-items: center;     /* vertical centering */
-  justify-content: center; /* horizontal centering base */
+  justify-content: center;
+  align-items: start;
 }
 
 .auth-container {
   width: 100%;
   max-width: 520px;
   padding: 2.5rem 1.5rem;
-  display: flex;
-  justify-content: center;
 }
 
 @media (min-width: 1024px) {
@@ -234,18 +244,17 @@ html, body {
   }
 }
 
-.auth-shell {
-  width: 100%;
-}
-
 .auth-card {
   width: 100%;
   border-radius: 1rem;
+
   background: radial-gradient(circle at top, rgba(15, 23, 42, 0.95), #020617);
   border: 1px solid rgba(148, 163, 184, 0.25);
+
   box-shadow:
     0 22px 45px rgba(15, 23, 42, 0.8),
     0 0 0 1px rgba(15, 23, 42, 0.9);
+
   padding: 2.5rem 2rem;
 }
 
@@ -254,3 +263,4 @@ html, body {
     padding: 3rem 2.5rem;
   }
 }
+
