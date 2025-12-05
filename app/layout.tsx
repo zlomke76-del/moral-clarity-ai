@@ -6,8 +6,8 @@ import { Suspense } from "react";
 import AuthProvider from "@/components/AuthProvider";
 import Toaster from "@/components/Toaster";
 import SolaceGuard from "@/app/components/SolaceGuard";
-import NeuralSidebar from "@/app/components/NeuralSidebar";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import LayoutShell from "./LayoutShell";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -23,56 +23,20 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-export default function RootLayout({
-  children,
-  params,
-}: {
-  children: React.ReactNode;
-  params: { slug?: string[] };
-}) {
-  // ⭐ Read first route segment safely
-  const segment = params?.slug?.[0] || "";
-  const isAuthPage = segment === "auth";
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark h-full">
       <body className="mc-root">
 
-        {/* Background */}
         <div className="mc-bg" />
         <div className="mc-noise" />
 
         <AuthProvider>
 
-          {isAuthPage ? (
-            // ===========================
-            // AUTH LAYOUT (sidebar visible)
-            // ===========================
-            <div className="flex h-screen w-screen overflow-hidden">
-              <aside>
-                <NeuralSidebar />
-              </aside>
+          {/* CLIENT-SIDE LAYOUT SELECTION */}
+          <LayoutShell>{children}</LayoutShell>
 
-              <main className="flex-1 flex items-center justify-center p-10 overflow-y-auto">
-                {children}
-              </main>
-            </div>
-          ) : (
-            // ===========================
-            // WORKSPACE LAYOUT
-            // ===========================
-            <div className="flex h-screen w-screen overflow-hidden">
-              <aside>
-                <NeuralSidebar />
-              </aside>
-
-              <main className="flex-1 overflow-y-auto">
-                <div className="mc-content">{children}</div>
-              </main>
-            </div>
-          )}
-
-          {/* UI Overlay */}
+          {/* UI overlays */}
           <div className="mc-ui">
             <Suspense><SolaceGuard /></Suspense>
             <Suspense><Toaster /></Suspense>
