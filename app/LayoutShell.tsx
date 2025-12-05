@@ -19,7 +19,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
       <NeuralSidebar />
     </aside>
 
-    <main className="flex-1 overflow-y-auto">
+    <main className="flex-1 h-screen overflow-y-auto">
       {children}
     </main>
   </div>
