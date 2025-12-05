@@ -1,4 +1,17 @@
-export default function SignIn() {
+// app/auth/sign-in/page.tsx
+"use client";
+
+import { useState } from "react";
+import { supabase } from "@/lib/supabase/browser";
+
+export default function SignInPage() {
+  const [email, setEmail] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await supabase.auth.signInWithOtp({ email });
+  }
+
   return (
     <div className="auth-card w-full max-w-md">
       <h1 className="text-3xl font-bold text-white mb-4 text-center">
@@ -9,19 +22,24 @@ export default function SignIn() {
         Enter your email to receive a secure magic link.
       </p>
 
-      <form className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <input
           required
-          placeholder="you@example.com"
           type="email"
-          className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 
-          text-white placeholder-neutral-500 focus:border-blue-500 focus:outline-none transition"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10
+                     text-white placeholder-neutral-500
+                     focus:border-blue-500 focus:outline-none transition"
         />
 
         <button
           type="submit"
-          className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 
-          text-white font-medium shadow-lg hover:scale-[1.02] transition-transform"
+          className="w-full py-3 rounded-xl
+                     bg-gradient-to-r from-blue-600 to-cyan-500
+                     text-white font-medium shadow-lg
+                     hover:scale-[1.02] transition-transform"
         >
           Send magic link
         </button>
