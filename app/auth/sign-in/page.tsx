@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { supabaseBrowser } from "@/lib/supabase/client"; // ✔ correct import
 
 export default function SignInPage() {
   const [email, setEmail] = useState("");
@@ -10,12 +10,21 @@ export default function SignInPage() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
 
-    await supabase.auth.signInWithOtp({
+    // Create browser client
+    const supabase = supabaseBrowser();
+
+    const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         emailRedirectTo: `${location.origin}/auth/callback`,
       },
     });
+
+    if (error) {
+      console.error(error);
+      alert("Error sending magic link.");
+      return;
+    }
 
     alert("Magic link sent!");
   }
