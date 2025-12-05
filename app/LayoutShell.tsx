@@ -3,16 +3,18 @@
 import { usePathname } from "next/navigation";
 import NeuralSidebar from "@/app/components/NeuralSidebar";
 
-export default function LayoutShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+export default function LayoutShell({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname() ?? ""; // ← FIX: prevents null during build
 
   // --- AUTH ROUTES GET SIMPLE FULL-WIDTH LAYOUT ----
   if (pathname.startsWith("/auth")) {
     return (
       <div className="flex flex-col items-center justify-start w-full pt-24">
-        <div className="w-full max-w-2xl px-8">
-          {children}
-        </div>
+        <div className="w-full max-w-2xl px-8">{children}</div>
       </div>
     );
   }
@@ -35,11 +37,8 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
 
       {/* Main content column */}
       <main className="h-full flex flex-col items-start justify-start">
-        <div className="w-full max-w-4xl px-12 py-16">
-          {children}
-        </div>
+        <div className="w-full max-w-4xl px-12 py-16">{children}</div>
       </main>
     </div>
   );
 }
-
