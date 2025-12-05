@@ -7,9 +7,9 @@ export default function SignInPage() {
   const supabase = supabaseBrowser();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
-  async function signIn(e) {
+  async function signIn(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const { error } = await supabase.auth.signInWithOtp({ email });
     if (error) {
