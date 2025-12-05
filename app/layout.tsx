@@ -1,14 +1,9 @@
-"use client";
-
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
-import { usePathname } from "next/navigation";
-
 import AuthProvider from "@/components/AuthProvider";
-import LayoutShell from "./LayoutShell";
+import ClientLayout from "./ClientLayout";
 import Toaster from "@/components/Toaster";
-import SolaceDock from "@/app/components/SolaceDock";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -34,28 +29,22 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const isAuth = pathname?.startsWith("/auth");
-
   return (
     <html lang="en" className="h-full dark">
       <body className="mc-root min-h-screen relative">
-        {/* Global background layers */}
+        {/* Background */}
         <div className="mc-bg absolute inset-0 pointer-events-none z-0" />
         <div className="mc-noise absolute inset-0 pointer-events-none z-0" />
 
-        {/* Main App Shell */}
         <AuthProvider>
-          <LayoutShell>{children}</LayoutShell>
+          {/* All client-side logic (pathname, Solace Dock suppression) moves here */}
+          <ClientLayout>{children}</ClientLayout>
         </AuthProvider>
 
-        {/* Solace should NOT render on /auth routes */}
-        {!isAuth && <SolaceDock />}
-
-        {/* Toast UI */}
         <Toaster />
       </body>
     </html>
   );
 }
+
 
