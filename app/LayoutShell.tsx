@@ -19,7 +19,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
       </aside>
 
       {/* COLUMN 2 — Main Content */}
-      <main className="h-full flex flex-col items-center justify-start">
+      <main className="h-full flex flex-col items-start justify-start">
         <div className="w-full max-w-2xl px-8 py-16">
           {children}
         </div>
