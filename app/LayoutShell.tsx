@@ -1,6 +1,6 @@
+// app/LayoutShell.tsx
 "use client";
 
-import React from "react";
 import NeuralSidebar from "@/app/components/NeuralSidebar";
 
 export default function LayoutShell({
@@ -10,19 +10,18 @@ export default function LayoutShell({
 }) {
   return (
     <div className="relative z-10 min-h-screen flex">
-      {/* --- Sidebar (always visible) --- */}
+      {/* LEFT SIDEBAR */}
       <aside className="shrink-0">
         <NeuralSidebar />
       </aside>
 
-      {/* --- Main content area --- */}
-      <main className="flex-1 flex flex-col">
-        <div className="w-full max-w-xl mx-auto px-6 py-24 flex flex-col items-center">
+      {/* MAIN AREA */}
+      <main className="flex-1 flex justify-center items-start">
+        <div className="w-full max-w-md px-6 py-24">
           {children}
         </div>
       </main>
     </div>
   );
 }
-
 
