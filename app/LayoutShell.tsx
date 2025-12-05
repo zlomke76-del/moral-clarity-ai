@@ -3,7 +3,7 @@
 import React from "react";
 import { usePathname } from "next/navigation";
 
-// FIXED — correct relative paths
+// Correct relative imports
 import NeuralSidebar from "./components/NeuralSidebar";
 import SolaceDock from "./components/SolaceDock";
 
@@ -17,27 +17,27 @@ export default function LayoutShell({
 
   return (
     <div className="relative z-10 min-h-screen flex">
-      {/* Sidebar always visible */}
+      {/* Sidebar always present */}
       <aside className="shrink-0">
         <NeuralSidebar />
       </aside>
 
-      {/* Main content */}
+      {/* Main content area */}
       <main className="flex-1 overflow-y-auto">
         {isAuth ? (
-          // AUTH PAGES — narrow container
+          /* AUTH PAGES */
           <div className="w-full max-w-md mx-auto mt-24 mb-32 px-6">
             {children}
           </div>
         ) : (
-          // NORMAL PAGES — workspace container
+          /* REGULAR WORKSPACE */
           <div className="w-full max-w-3xl mx-auto px-6 py-12">
             {children}
           </div>
         )}
       </main>
 
-      {/* Solace is disabled on /auth */}
+      {/* Solace disabled on auth pages */}
       {!isAuth && <SolaceDock />}
     </div>
   );
