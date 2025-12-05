@@ -1,4 +1,3 @@
-// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
@@ -33,20 +32,19 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full dark">
       <body className="mc-root min-h-screen relative">
-        {/* GLOBAL BACKGROUND LAYERS */}
+        {/* Global background layers */}
         <div className="mc-bg absolute inset-0 pointer-events-none z-0" />
         <div className="mc-noise absolute inset-0 pointer-events-none z-0" />
 
-        {/* APP SHELL: Sidebar + Content + Auth */}
+        {/* App shell: sidebar + content (grid) */}
         <AuthProvider>
           <LayoutShell>{children}</LayoutShell>
         </AuthProvider>
 
-        {/* Toast UI (always above main content) */}
+        {/* Toasts */}
         <Toaster />
       </body>
     </html>
   );
 }
-
 
