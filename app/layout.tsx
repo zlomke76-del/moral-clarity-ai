@@ -9,19 +9,29 @@ export const fetchCache = "force-no-store";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.moralclarity.ai"),
-  title: { default: "Moral Clarity AI", template: "%s • Moral Clarity AI" },
+  title: {
+    default: "Moral Clarity AI",
+    template: "%s • Moral Clarity AI",
+  },
   description: "Anchored answers. Neutral • Guidance • Ministry.",
 };
 
 export const viewport: Viewport = {
   themeColor: "#0a0a0a",
   colorScheme: "dark",
+  width: "device-width",
+  initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en" className="dark h-full">
+    <html lang="en" className="h-full dark">
       <body className="mc-root">
+        {/* Global background + noise */}
         <div className="mc-bg" />
         <div className="mc-noise" />
 
@@ -32,6 +42,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-
-
 
