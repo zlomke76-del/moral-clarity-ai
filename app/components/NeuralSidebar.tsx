@@ -7,12 +7,7 @@ import type { ReactNode } from "react";
 import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
 
 /* Icons */
-import {
-  User,
-  BrainCircuit,
-  Newspaper,
-  KeyRound,
-} from "lucide-react";
+import { User, BrainCircuit, Newspaper, KeyRound } from "lucide-react";
 
 export type NeuralSidebarItem = {
   id: string;
@@ -30,15 +25,10 @@ type Props = {
 export default function NeuralSidebar({ items }: Props) {
   const pathname = usePathname() ?? "";
 
-  // ---------------------------
-  // Extract workspaceId from /w/[workspaceId]
-  // ---------------------------
+  // Extract workspaceId from /w/[id]
   let workspaceId: string | null = null;
   const parts = pathname.split("/").filter(Boolean);
-
-  if (parts[0] === "w" && parts[1]) {
-    workspaceId = parts[1];
-  }
+  if (parts[0] === "w" && parts[1]) workspaceId = parts[1];
 
   const sidebarItems =
     items && items.length > 0
@@ -46,10 +36,9 @@ export default function NeuralSidebar({ items }: Props) {
       : buildDefaultItems(workspaceId ?? MCA_WORKSPACE_ID);
 
   return (
-    <aside className="neural-sidebar">
-      {/* ---------------------------------------------------------
-           BRAND HEADER (clickable)
-         --------------------------------------------------------- */}
+    /* FIX: no <aside> wrapper — LayoutShell already provides it */
+    <div className="neural-sidebar">
+      {/* BRAND HEADER */}
       <Link href="/app" className="neural-sidebar-top neural-sidebar-brand">
         <div className="neural-sidebar-brand-mark">
           <span>AI</span>
@@ -61,9 +50,7 @@ export default function NeuralSidebar({ items }: Props) {
         </div>
       </Link>
 
-      {/* ---------------------------------------------------------
-           GLASS PANEL SECTION
-         --------------------------------------------------------- */}
+      {/* NAVIGATION */}
       <div className="neural-sidebar-glass">
         <div className="neural-sidebar-section-label">Workspace</div>
 
@@ -73,19 +60,15 @@ export default function NeuralSidebar({ items }: Props) {
           ))}
         </nav>
       </div>
-    </aside>
+    </div>
   );
 }
 
-/* ============================================================
-   CHIP COMPONENT
-   ============================================================ */
-
+/* CHIP COMPONENT */
 function SidebarChip({ item }: { item: NeuralSidebarItem }) {
   const pathname = usePathname() ?? "";
   const href = item.href ?? "";
 
-  // TS-SAFE ACTIVE LOGIC
   const isActive =
     href.length > 0 &&
     (pathname === href || pathname.startsWith(href + "/"));
@@ -99,7 +82,6 @@ function SidebarChip({ item }: { item: NeuralSidebarItem }) {
 
         <div>
           <div className="neural-sidebar-chip-label">{item.label}</div>
-
           {item.description && (
             <div className="neural-sidebar-chip-description">
               {item.description}
@@ -132,10 +114,7 @@ function SidebarChip({ item }: { item: NeuralSidebarItem }) {
   );
 }
 
-/* ============================================================
-   DEFAULT NAV ITEMS — with icons
-   ============================================================ */
-
+/* DEFAULT NAV ITEMS */
 function buildDefaultItems(workspaceId: string): NeuralSidebarItem[] {
   return [
     {
