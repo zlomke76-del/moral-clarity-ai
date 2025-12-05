@@ -13,19 +13,25 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
 
   return (
     <>
-      {/* ALWAYS SHOW SIDEBAR */}
       <div className="flex h-screen w-screen overflow-hidden">
-        <aside>
-          <NeuralSidebar />
-        </aside>
+        <NeuralSidebar />
 
-        {/* MAIN AREA */}
-        <main className="flex-1 overflow-y-auto flex items-center justify-center">
-          {children}
-        </main>
+        {isAuthPage ? (
+          // ⭐ AUTH LAYOUT
+          <main className="flex-1 overflow-y-auto">
+            <div className="auth-container px-6 py-20 flex justify-center">
+              {children}
+            </div>
+          </main>
+        ) : (
+          // ⭐ NORMAL WORKSPACE LAYOUT
+          <main className="flex-1 overflow-y-auto">
+            <div className="mc-content">{children}</div>
+          </main>
+        )}
       </div>
 
-      {/* HIDE SOLACE ON AUTH */}
+      {/* Hide Solace entirely during auth */}
       {!isAuthPage && (
         <div className="mc-ui">
           <Suspense><SolaceGuard /></Suspense>
