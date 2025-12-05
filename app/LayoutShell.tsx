@@ -1,12 +1,11 @@
-// app/LayoutShell.tsx
 "use client";
 
 import React from "react";
 import { usePathname } from "next/navigation";
 
-// Use RELATIVE imports because of your import map behavior
-import NeuralSidebar from "./components/NeuralSidebar";
-import SolaceDock from "./components/SolaceDock";
+// Correct paths
+import NeuralSidebar from "@/app/components/NeuralSidebar";
+import SolaceDock from "@/app/components/SolaceDock";
 
 export default function LayoutShell({
   children,
@@ -15,23 +14,28 @@ export default function LayoutShell({
 }) {
   const pathname = usePathname();
 
-  // Auth routes: keep sidebar, just hide Solace
-  const isAuth = pathname?.startsWith("/auth");
+  // Any /auth/* route should NOT show Solace
+  const hideSolace =
+    pathname?.startsWith("/auth/") ||
+    pathname === "/auth" ||
+    pathname === "/auth/sign-in";
 
   return (
     <div className="relative z-10 min-h-screen flex">
-      {/* Left Sidebar — always present */}
+      {/* Left Sidebar — always visible */}
       <aside className="shrink-0">
         <NeuralSidebar />
       </aside>
 
-      {/* Main content area */}
+      {/* Main content area — centered with max width */}
       <main className="flex-1 overflow-y-auto">
-        {children}
+        <div className="w-full max-w-3xl mx-auto px-6 py-12">
+          {children}
+        </div>
       </main>
 
-      {/* Solace overlay — disabled on auth pages */}
-      {!isAuth && <SolaceDock />}
+      {/* Solace — only on non-auth routes */}
+      {!hideSolace && <SolaceDock />}
     </div>
   );
 }
