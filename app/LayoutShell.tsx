@@ -10,13 +10,13 @@ export default function LayoutShell({
 }) {
   return (
     <div className="relative z-10 min-h-screen flex">
-      {/* LEFT SIDEBAR */}
-      <aside className="shrink-0">
+      {/* SIDEBAR — fixed 20% */}
+      <aside className="w-1/5 min-w-[240px]">
         <NeuralSidebar />
       </aside>
 
-      {/* MAIN AREA */}
-      <main className="flex-1 flex justify-center items-start">
+      {/* MAIN AREA — remaining 80% */}
+      <main className="w-4/5 flex flex-col justify-start items-center">
         <div className="w-full max-w-md px-6 py-24">
           {children}
         </div>
@@ -24,4 +24,3 @@ export default function LayoutShell({
     </div>
   );
 }
-
