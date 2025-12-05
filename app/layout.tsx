@@ -1,3 +1,4 @@
+// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Suspense } from "react";
@@ -33,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <AuthProvider>
 
-          {/* MAIN SHELL: Sidebar + Content */}
+          {/* MAIN SHELL (Sidebar + Content) */}
           <div className="flex h-screen w-screen overflow-hidden">
 
             {/* Sidebar */}
@@ -41,16 +42,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <NeuralSidebar />
             </aside>
 
-            {/* CONTENT AREA — FIXED HEIGHT PROPAGATION */}
-            <main className="flex-1 overflow-y-auto h-full">
-              <div className="mc-content h-full flex">
+            {/* CONTENT AREA — FIXED + PROPER CENTERING */}
+            <main className="flex-1 flex items-center justify-center overflow-hidden h-full">
+              <div className="mc-content w-full h-full flex items-center justify-center">
                 {children}
               </div>
             </main>
 
           </div>
 
-          {/* UI Overlays */}
+          {/* Solace & UI Overlays */}
           <div className="mc-ui">
             <Suspense>
               <SolaceGuard />
