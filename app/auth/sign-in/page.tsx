@@ -1,4 +1,31 @@
-export default function SignIn() {
+"use client";
+
+import { useState } from "react";
+import { supabaseBrowser } from "@/lib/supabase/client";
+
+export default function SignInPage() {
+  const [email, setEmail] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+
+    const supabase = supabaseBrowser();
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${location.origin}/auth/callback`,
+      },
+    });
+
+    if (error) {
+      console.error(error);
+      alert("There was an issue sending your magic link.");
+    } else {
+      alert("Magic link sent! Check your email.");
+    }
+  }
+
   return (
     <div className="auth-card w-full max-w-md">
       <h1 className="text-3xl font-bold text-white mb-4 text-center">
@@ -9,13 +36,15 @@ export default function SignIn() {
         Enter your email to receive a secure magic link.
       </p>
 
-      <form className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <input
+          type="email"
           required
           placeholder="you@example.com"
-          type="email"
           className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 
           text-white placeholder-neutral-500 focus:border-blue-500 focus:outline-none transition"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
         />
 
         <button
