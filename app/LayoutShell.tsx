@@ -3,8 +3,10 @@
 
 import React from "react";
 import { usePathname } from "next/navigation";
-import NeuralSidebar from "@/components/NeuralSidebar";
-import SolaceDock from "@/components/SolaceDock";
+
+// Correct paths (fixes build error)
+import NeuralSidebar from "@/app/components/NeuralSidebar";
+import SolaceDock from "@/app/components/SolaceDock";
 
 export default function LayoutShell({
   children,
@@ -16,8 +18,8 @@ export default function LayoutShell({
 
   return (
     <div className={`relative z-10 min-h-screen flex ${isAuth ? "auth-mode" : ""}`}>
-
-      {/* Sidebar visible only for normal pages */}
+      
+      {/* Sidebar: hide for auth pages */}
       {!isAuth && (
         <aside className="shrink-0">
           <NeuralSidebar />
@@ -29,7 +31,7 @@ export default function LayoutShell({
         {children}
       </main>
 
-      {/* Solace hidden on auth */}
+      {/* Solace: hide for auth pages */}
       {!isAuth && <SolaceDock />}
     </div>
   );
