@@ -8,12 +8,22 @@ export default function SignInPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
     const supabase = supabaseBrowser();
 
-    await supabase.auth.signInWithOtp({
+    const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${location.origin}/auth/callback` },
+      options: {
+        emailRedirectTo: `${location.origin}/auth/callback`,
+      },
     });
+
+    if (error) {
+      console.error("Magic link error:", error);
+      alert("There was an issue sending your magic link.");
+    } else {
+      alert("Magic link sent! Check your email.");
+    }
   }
 
   return (
@@ -27,7 +37,7 @@ export default function SignInPage() {
           Enter your email to receive a secure magic link.
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form className="space-y-4" onSubmit={handleSubmit}>
           <input
             type="email"
             required
@@ -48,5 +58,6 @@ export default function SignInPage() {
     </div>
   );
 }
+
 
 
