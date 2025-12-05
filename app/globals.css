@@ -260,27 +260,27 @@ html, body {
   box-shadow: 0 0 12px rgba(247, 199, 106, 0.3);
   transform: translateY(-2px);
 }
-/* SIGN-IN PAGE LAYOUT FIX */
-.auth-wrapper {
-  height: 100%;
+
+/* globals.css — AUTH SHELL & CARD */
+.auth-shell {
+  min-height: 100vh;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
-  position: relative;
-  z-index: 100; /* ensure above mc-content grid */
+  padding: 3rem;
 }
 
 .auth-card {
   width: 100%;
   max-width: 420px;
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.25rem;
   padding: 2rem;
-  box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+  z-index: 10;
 }
 
 
