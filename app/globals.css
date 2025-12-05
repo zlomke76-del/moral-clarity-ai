@@ -282,5 +282,35 @@ html, body {
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
   z-index: 10;
 }
+/* AUTH LAYOUT FIX — prevents vertical drifting */
+.auth-main {
+  display: block;
+  height: auto;
+  min-height: 100vh;
+  padding-top: 4rem;
+}
+
+/* centers auth content in a controlled way */
+.auth-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 4rem 1.5rem;
+}
+
+/* shell ensures consistent max-width */
+.auth-shell {
+  width: 100%;
+  max-width: 420px;
+}
+
+/* card styling */
+.auth-card {
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 2rem;
+  border-radius: 1.25rem;
+}
 
 
