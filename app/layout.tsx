@@ -2,13 +2,13 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Suspense } from "react";
+import { currentURL } from "next/server";
 
 import AuthProvider from "@/components/AuthProvider";
 import Toaster from "@/components/Toaster";
 import SolaceGuard from "@/app/components/SolaceGuard";
 import NeuralSidebar from "@/app/components/NeuralSidebar";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -24,37 +24,41 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-// ⭐ MAKE ROOTLAYOUT ASYNC
 export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // ⭐ Await headers() because it returns Promise<ReadonlyHeaders>
-  const h = await headers();
-  const pathname = h.get("x-invoke-path") || "";
+  const url = currentURL();
+  const pathname = url?.pathname || "";
   const isAuthPage = pathname.startsWith("/auth");
 
   return (
     <html lang="en" className="dark h-full">
       <body className="mc-root">
-        {/* Background */}
+
         <div className="mc-bg" />
         <div className="mc-noise" />
 
         <AuthProvider>
+
           {isAuthPage ? (
-            // AUTH LAYOUT
+            // ================================
+            // AUTH LAYOUT (Sidebar + Clean Main)
+            // ================================
             <div className="flex h-screen w-screen overflow-hidden">
               <aside>
                 <NeuralSidebar />
               </aside>
+
               <main className="flex-1 flex items-center justify-center p-10 overflow-y-auto">
                 {children}
               </main>
             </div>
           ) : (
+            // ================================
             // WORKSPACE LAYOUT
+            // ================================
             <div className="flex h-screen w-screen overflow-hidden">
               <aside>
                 <NeuralSidebar />
@@ -65,21 +69,16 @@ export default async function RootLayout({
             </div>
           )}
 
-          {/* UI Overlays */}
           <div className="mc-ui">
-            <Suspense>
-              <SolaceGuard />
-            </Suspense>
-            <Suspense>
-              <Toaster />
-            </Suspense>
+            <Suspense><SolaceGuard /></Suspense>
+            <Suspense><Toaster /></Suspense>
             <SpeedInsights />
           </div>
+
         </AuthProvider>
       </body>
     </html>
   );
 }
-
 
 
