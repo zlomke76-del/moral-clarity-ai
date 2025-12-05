@@ -1,4 +1,3 @@
-// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Suspense } from "react";
@@ -34,23 +33,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <AuthProvider>
 
-          {/* --- MAIN SHELL (Sidebar + Content) --- */}
+          {/* MAIN SHELL: Sidebar + Content */}
           <div className="flex h-screen w-screen overflow-hidden">
 
-            {/* 🚨 FIXED — no Tailwind overrides here */}
+            {/* Sidebar */}
             <aside>
               <NeuralSidebar />
             </aside>
 
-            {/* Main content */}
-            <main className="flex-1 overflow-y-auto">
-              <div className="mc-content">
+            {/* CONTENT AREA — FIXED HEIGHT PROPAGATION */}
+            <main className="flex-1 overflow-y-auto h-full">
+              <div className="mc-content h-full flex">
                 {children}
               </div>
             </main>
+
           </div>
 
-          {/* Solace + Toaster Overlays */}
+          {/* UI Overlays */}
           <div className="mc-ui">
             <Suspense>
               <SolaceGuard />
@@ -68,4 +68,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-
