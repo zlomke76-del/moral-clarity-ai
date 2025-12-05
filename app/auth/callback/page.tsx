@@ -1,52 +1,31 @@
+// app/auth/callback/page.tsx
 "use client";
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
+import { createSupabaseBrowser } from "@/lib/supabase/client";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const handleAuth = async () => {
+    const process = async () => {
       const supabase = createSupabaseBrowser();
 
-      // IMPORTANT: this forces Supabase to parse the URL code
-      const { data, error } = await supabase.auth.getSession();
+      try {
+        const { data, error } = await supabase.auth.getSession();
 
-      if (error) {
-        router.replace(
-          "/auth/error?err=" +
-            encodeURIComponent(error.message || "Auth callback failed")
-        );
-        return;
-      }
-
-      if (!data.session) {
-        // Try explicitly exchanging code for session
-        const { data: exchanged, error: exchangeError } =
-          await supabase.auth.exchangeCodeForSession(window.location.href);
-
-        if (exchangeError || !exchanged?.session) {
-          router.replace(
-            "/auth/error?err=" +
-              encodeURIComponent(
-                "Auth callback failed: no session could be established. Please request a new magic link."
-              )
-          );
-          return;
+        if (error || !data.session) {
+          return router.replace("/auth/error?err=Auth%20session%20failed");
         }
 
-        // If exchange works → redirect to /app
-        router.replace("/app");
-        return;
+        return router.replace("/app");
+      } catch {
+        return router.replace("/auth/error?err=Unexpected%20callback%20error");
       }
-
-      // Normal successful path
-      router.replace("/app");
     };
 
-    handleAuth();
+    process();
   }, [router]);
 
   return (
@@ -55,3 +34,4 @@ export default function AuthCallbackPage() {
     </div>
   );
 }
+
