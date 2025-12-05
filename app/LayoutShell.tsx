@@ -1,31 +1,48 @@
 // app/LayoutShell.tsx
 "use client";
 
+import React from "react";
 import { usePathname } from "next/navigation";
-import NeuralSidebar from "@/components/NeuralSidebar";
-import SolaceDock from "@/components/SolaceDock";
 
-export default function LayoutShell({ children }: { children: React.ReactNode }) {
+// Correct absolute paths — match your actual filesystem
+import NeuralSidebar from "@/app/components/NeuralSidebar";
+import SolaceDock from "@/app/components/SolaceDock";
+
+export default function LayoutShell({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
 
-  // AUTH PAGES → Sidebar YES, Solace NO
-  const isAuth = pathname.startsWith("/auth");
+  // AUTH PAGES → NO SIDEBAR, NO SOLACE, CENTERED LAYOUT
+  const isAuth =
+    pathname?.startsWith("/auth") ||
+    pathname === "/auth" ||
+    pathname === "/auth/sign-in" ||
+    pathname === "/auth/callback";
 
+  if (isAuth) {
+    return (
+      <main className="flex-1 flex items-center justify-center min-h-screen overflow-y-auto">
+        {children}
+      </main>
+    );
+  }
+
+  // NORMAL APP PAGES → SIDEBAR + CONTENT + SOLACE
   return (
     <div className="relative z-10 min-h-screen flex">
-
-      {/* Sidebar ALWAYS visible */}
+      {/* Sidebar */}
       <aside className="shrink-0">
         <NeuralSidebar />
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto flex justify-center items-start py-20">
-        {children}
-      </main>
+      {/* Page Content */}
+      <main className="flex-1 overflow-y-auto">{children}</main>
 
-      {/* Solace appears everywhere EXCEPT auth */}
-      {!isAuth && <SolaceDock />}
+      {/* Solace Overlay */}
+      <SolaceDock />
     </div>
   );
 }
