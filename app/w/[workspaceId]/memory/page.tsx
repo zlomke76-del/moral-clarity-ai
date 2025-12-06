@@ -14,8 +14,8 @@ export default async function WorkspaceMemoryPage({
 }) {
   const workspaceId = decodeURIComponent(params.workspaceId);
 
-  // Supabase server client (object, not function)
-  const sb = supabaseServer;
+  // MUST CALL the server helper — not reference it
+  const sb = await supabaseServer();
 
   const { data, error } = await sb
     .from("user_memories")
@@ -58,5 +58,6 @@ export default async function WorkspaceMemoryPage({
     </section>
   );
 }
+
 
 
