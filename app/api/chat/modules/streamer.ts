@@ -1,4 +1,5 @@
 // modules/streamer.ts
+
 import { NextResponse } from "next/server";
 
 export async function streamResult(stream: AsyncIterable<any>) {
@@ -8,26 +9,30 @@ export async function streamResult(stream: AsyncIterable<any>) {
     async start(controller) {
       try {
         for await (const event of stream) {
-          // handle text deltas
-          if (
-            event.type === "response.output_text.delta" &&
-            typeof event.text === "string"
-          ) {
-            controller.enqueue(encoder.encode(event.text));
+          // ---- Output text streaming -----------------------
+          if (event.type === "response.output_text.delta") {
+            controller.enqueue(encoder.encode(event.delta));
           }
 
-          // handle final output_text
-          if (
-            event.type === "response.output_text.done" &&
-            typeof event.text === "string"
-          ) {
-            controller.enqueue(encoder.encode(event.text));
+          if (event.type === "response.output_text.done") {
+            if (event.text) {
+              controller.enqueue(encoder.encode(event.text));
+            }
           }
 
-          // handle errors
+          // ---- Tool call events (future extension) ---------
+          if (event.type === "response.tool_call") {
+            controller.enqueue(
+              encoder.encode(`[TOOL_CALL] ${JSON.stringify(event)}\n`)
+            );
+          }
+
+          // ---- Errors -------------------------------------
           if (event.type === "response.error") {
             controller.enqueue(
-              encoder.encode(`\n[Stream Error] ${event.error?.message || ""}\n`)
+              encoder.encode(
+                `\n[Stream Error] ${event.error?.message || "Unknown error"}\n`
+              )
             );
           }
         }
