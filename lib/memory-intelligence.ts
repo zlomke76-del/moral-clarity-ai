@@ -1,94 +1,130 @@
 // lib/memory-intelligence.ts
 
-import type { Database } from "@/types/supabase";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient<Database>(
+// Server key client (service role) — for internal ops
+const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
   { auth: { persistSession: false } }
 );
 
-/**
- * importance scale:
- * 1 = Fact (stable, never overwritten automatically)
- * 2 = Key Context (moderately stable)
- * 3 = Preference (adaptive)
- * 4 = Narrative/Episode (volatile)
- */
+/* ============================================================
+   EMBEDDING UTILS
+   (We keep these lightweight — not calling OpenAI directly here.
+   Chat/route.ts runs the LLM, this layer only performs DB logic.)
+   ============================================================ */
 
-/** Reinforce memory importance based on usage pattern */
-export async function reinforceMemory(id: string) {
-  await supabase.rpc("increment_memory_importance", { mem_id: id }).catch(() => {});
+async function embed(text: string): Promise<number[] | null> {
+  try {
+    const res = await fetch(process.env.EMBEDDING_API_URL!, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ input: text }),
+    });
+
+    const j = await res.json();
+    return j.embedding || null;
+  } catch {
+    return null;
+  }
 }
 
-/** When new content conflicts with older memories, rewrite or merge. */
-export async function consolidateMemory(user_key: string, newContent: string) {
-  // Pull last 50 memories for comparison
-  const { data: recent } = await supabase
+/* ============================================================
+   1. CONSOLIDATION CHECK:
+      Detect near-duplicates and merge.
+   ============================================================ */
+
+export async function consolidateMemory(user_key: string, content: string) {
+  const embedding = await embed(content);
+  if (!embedding) return null;
+
+  // Search recent memories for similarity
+  const { data: recent, error } = await supabase
+    .rpc("match_memories", {
+      query_embedding: embedding,
+      match_threshold: 0.88,
+      match_count: 5,
+      p_user_key: user_key,
+    });
+
+  if (error || !recent?.length) return null;
+
+  const closest = recent[0];
+  if (closest.similarity < 0.88) return null;
+
+  // Merge by updating the existing memory’s content
+  const merged = `${closest.content}\n\n[[Merged Update]] ${content}`.trim();
+
+  await supabase
     .from("user_memories")
-    .select("id, content, importance")
-    .eq("user_key", user_key)
-    .order("created_at", { ascending: false })
-    .limit(50);
+    .update({ content: merged })
+    .eq("id", closest.id);
 
-  if (!recent) return;
+  return { mergedInto: closest.id };
+}
 
-  // Simple heuristic: check for near-duplicates
-  for (const mem of recent) {
-    if (!mem.content) continue;
+/* ============================================================
+   2. RELEVANCE WEIGHTING
+   ============================================================ */
 
-    const overlap =
-      similarity(mem.content.toLowerCase(), newContent.toLowerCase());
+export function scoreMemory(m: any, query: string): number {
+  let score = 0;
 
-    // If highly similar, reinforce instead of adding duplicate
-    if (overlap > 0.85) {
-      await reinforceMemory(mem.id);
-      return { mergedInto: mem.id };
-    }
+  if (m.kind === "fact") score += 3;
+  if (m.kind === "preference") score += 2;
+
+  if (m.content?.toLowerCase().includes(query.toLowerCase())) {
+    score += 5;
   }
 
-  return null;
+  score += 4 - (m.importance || 4);
+
+  return score;
 }
 
-/** Tiny similarity scorer for consolidation */
-function similarity(a: string, b: string) {
-  const as = new Set(a.split(" "));
-  const bs = new Set(b.split(" "));
-  let match = 0;
-  as.forEach((w) => bs.has(w) && match++);
-  return match / Math.max(as.size, bs.size);
-}
+/* ============================================================
+   3. BUILD MEMORY PACK FOR SOLACE
+   ============================================================ */
 
-/** Optional summarizer hook for high-volume narratives */
-export async function summarizeNarratives(user_key: string) {
-  // Identify all importance-4 memories older than 30 days
-  const { data: old } = await supabase
+export async function buildMemoryPack(user_key: string, query: string, opts: {
+  factsLimit: number;
+  episodesLimit: number;
+}) {
+  const { data: all, error } = await supabase
     .from("user_memories")
-    .select("id, content")
+    .select("*")
     .eq("user_key", user_key)
-    .eq("importance", 4)
-    .lte("created_at", new Date(Date.now() - 30 * 86400_000).toISOString());
+    .order("created_at", { ascending: false });
 
-  if (!old?.length) return;
+  if (error || !all) return { facts: [], episodes: [] };
 
-  const combined = old.map((m) => m.content).join("\n\n");
+  const scored = all
+    .map((m) => ({ m, score: scoreMemory(m, query) }))
+    .sort((a, b) => b.score - a.score);
 
-  // Replace with a summarization (LLM call eventually)
-  const summary = `Summary of your past narratives:\n${combined.slice(0, 2000)}...`;
+  const facts = scored
+    .filter((x) => x.m.kind === "fact")
+    .slice(0, opts.factsLimit)
+    .map((x) => x.m);
 
-  // Insert compressed summary
+  const episodes = scored
+    .filter((x) => x.m.kind === "episode" || x.m.kind === "note")
+    .slice(0, opts.episodesLimit)
+    .map((x) => x.m);
+
+  return { facts, episodes };
+}
+
+/* ============================================================
+   4. EPISODE STORAGE
+   ============================================================ */
+
+export async function storeEpisode(user_key: string, content: string) {
   await supabase.from("user_memories").insert({
     user_key,
-    content: summary,
-    importance: 3,
-    kind: "note",
+    content,
+    kind: "episode",
+    importance: 4,
   });
-
-  // Soft delete old items
-  await Promise.all(
-    old.map((m) =>
-      supabase.from("user_memories").update({ deleted_at: new Date().toISOString() }).eq("id", m.id)
-    )
-  );
 }
