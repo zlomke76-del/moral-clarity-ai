@@ -291,10 +291,23 @@ async function sendToChat(userMsg: string, nextMsgs: Message[]) {
     throw new Error(`HTTP ${res.status}: ${t}`);
   }
 
-  const data = await res.json();
-  const reply = String(data.text ?? "[No reply]");
+const data = await res.json();
 
-  setMessages((m) => [...m, { role: "assistant", content: reply }]);
+// Responses API structure:
+// { output: [ { content: [ { type: "output_text", text: "..."} ] } ] }
+
+let reply = "[No reply]";
+
+try {
+  const first = data.output?.[0];
+  const contentItem = first?.content?.[0];
+  reply = contentItem?.text ?? "[No reply]";
+} catch (err) {
+  reply = "[No reply]";
+}
+
+setMessages((m) => [...m, { role: "assistant", content: reply }]);
+
 }
 
 
