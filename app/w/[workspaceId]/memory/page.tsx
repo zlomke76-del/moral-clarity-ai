@@ -1,7 +1,7 @@
 // app/w/[workspaceId]/memory/page.tsx
 
 import Link from "next/link";
-import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseServerNode } from "@/lib/supabase/server-node";
 import MemoryComposer from "@/components/MemoryComposer";
 import MemoryList from "@/components/MemoryList";
 
@@ -14,8 +14,8 @@ export default async function WorkspaceMemoryPage({
 }) {
   const workspaceId = decodeURIComponent(params.workspaceId);
 
-  // Use the Supabase client directly — it is NOT a function
-  const sb = supabaseServer;
+  // Node-only Supabase client
+  const sb = supabaseServerNode;
 
   const { data, error } = await sb
     .from("user_memories")
@@ -49,12 +49,15 @@ export default async function WorkspaceMemoryPage({
 
       <div className="space-y-6">
         <MemoryComposer workspaceId={workspaceId} />
-        <MemoryList items={rows} emptyHint="No memories yet. Add your first above." />
+
+        <MemoryList
+          items={rows}
+          emptyHint="No memories yet. Add your first above."
+        />
       </div>
     </section>
   );
 }
-
 
 
 
