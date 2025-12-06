@@ -1,9 +1,10 @@
 // lib/memory-local.ts
-// Server utilities for reading workspace memories (no .schema() — Supabase v2 only)
+// Server utilities for reading workspace memories
 
-import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseServer } from "@/lib/supabase/server"; // <-- MUST BE THIS EXACT FILE
 
 export async function listMemories(workspaceId: string) {
+  // IMPORTANT: ensure this actually calls the function, not a client
   const sb = await supabaseServer();
 
   const { data, error } = await sb
