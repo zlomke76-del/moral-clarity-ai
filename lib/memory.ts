@@ -1,9 +1,12 @@
 // lib/memory.ts
 
 import { createClient } from "@supabase/supabase-js";
-import { classifyMemory } from "./ethics/classifier";
-import { evaluateMemoryLifecycle } from "./ethics/lifecycle";
-import { ethicalOversight } from "./ethics/oversight-engine";
+import {
+  consolidateMemory,
+  buildMemoryPack,
+  storeEpisode,
+  searchMemoryIndex,
+} from "./memory-intelligence";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -11,61 +14,50 @@ const supabase = createClient(
   { auth: { persistSession: false } }
 );
 
+export type MemoryPurpose =
+  | "fact"
+  | "identity"
+  | "value"
+  | "insight"
+  | "context"
+  | "note";
+
 export async function remember({
   user_key,
   content,
   title,
+  purpose,
   workspace_id,
 }: {
   user_key: string;
   content: string;
   title?: string | null;
+  purpose?: MemoryPurpose | null;
   workspace_id?: string | null;
 }) {
-  //
-  // 1. CLASSIFICATION
-  //
-  const classification = classifyMemory(content);
+  const merged = await consolidateMemory(user_key, content);
+  if (merged?.mergedInto) return { mergedInto: merged.mergedInto };
 
-  //
-  // 2. LIFECYCLE EVALUATION
-  //
-  const lifecycle = evaluateMemoryLifecycle(content);
-
-  //
-  // 3. OVERSIGHT (final decision)
-  //
-  const oversight = ethicalOversight(classification, lifecycle);
-
-  if (!oversight.allowed || !oversight.store) {
-    return { blocked: true, reason: "Ethical oversight restriction." };
-  }
-
-  //
-  // 4. IMPORTANCE
-  //
   const importance =
-    oversight.finalKind === "fact" ? 1 :
-    oversight.finalKind === "identity" ? 2 :
-    oversight.finalKind === "value" ? 3 :
-    oversight.finalKind === "insight" ? 3 :
-    4; // fallback for notes
+    purpose === "identity"
+      ? 1
+      : purpose === "value"
+      ? 2
+      : purpose === "fact"
+      ? 3
+      : purpose === "insight"
+      ? 4
+      : 5;
 
-  //
-  // 5. INSERT NEW MEMORY
-  //
   const { data, error } = await supabase
     .from("user_memories")
     .insert({
       user_key,
       content,
       title,
-      kind: oversight.finalKind,     // fact | identity | value | insight | note
+      kind: purpose || "note",
       importance,
       workspace_id,
-      sensitivity_score: classification.sensitivity,
-      emotional_weight: classification.emotionalWeight,
-      requires_review: oversight.requiresReview,
     })
     .select()
     .single();
@@ -73,4 +65,35 @@ export async function remember({
   if (error) throw new Error(error.message);
   return data;
 }
+
+/* ============================================================
+   REQUIRED EXPORT #1 — searchMemories  (used in chat + API)
+   ============================================================ */
+export async function searchMemories(user_key: string, query: string) {
+  return await searchMemoryIndex(user_key, query);
+}
+
+/* ============================================================
+   REQUIRED EXPORT #2 — getMemoryPack (used in chat route)
+   ============================================================ */
+export async function getMemoryPack(
+  user_key: string,
+  query: string,
+  opts: { factsLimit: number; episodesLimit: number }
+) {
+  return await buildMemoryPack(user_key, query, opts);
+}
+
+/* ============================================================
+   REQUIRED EXPORT #3 — maybeStoreEpisode (used in chat route)
+   ============================================================ */
+export async function maybeStoreEpisode(
+  user_key: string,
+  messages: { role: string; content: string }[],
+  shouldStore: boolean
+) {
+  if (!shouldStore) return;
+  await storeEpisode(user_key, messages);
+}
+
 
