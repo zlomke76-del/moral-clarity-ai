@@ -1,20 +1,23 @@
 // lib/ethics/drift.ts
+// Detects contradiction between new memory and existing memory.
 
 export type DriftResult = {
   driftDetected: boolean;
-  conflictLevel: number;
+  conflictLevel: number; // 0–3
 };
 
-export function detectDrift(newContent: string, existing: string): DriftResult {
-  const a = newContent.toLowerCase();
-  const b = existing.toLowerCase();
+export function detectDrift(newContent: string, oldContent: string): DriftResult {
+  const A = newContent.toLowerCase();
+  const B = oldContent.toLowerCase();
 
-  const contradiction =
-    (b.includes("yes") && a.includes("no")) ||
-    (b.includes("no") && a.includes("yes"));
+  const contradicts =
+    (A.includes("yes") && B.includes("no")) ||
+    (A.includes("no") && B.includes("yes")) ||
+    (A.includes("always") && B.includes("never")) ||
+    (A.includes("never") && B.includes("always"));
 
   return {
-    driftDetected: contradiction,
-    conflictLevel: contradiction ? 3 : 0,
+    driftDetected: contradicts,
+    conflictLevel: contradicts ? 3 : 0,
   };
 }
