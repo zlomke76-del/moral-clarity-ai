@@ -1,4 +1,5 @@
 // lib/ethics/oversight-engine.ts
+// Final decision-maker on whether memory is allowed and how to classify it.
 
 import { EthicalClassification } from "./classifier";
 import { LifecycleEvaluation } from "./lifecycle";
@@ -15,6 +16,7 @@ export function ethicalOversight(
   classification: EthicalClassification,
   lifecycle: LifecycleEvaluation
 ): OversightDecision {
+  // Hard-block very sensitive material
   if (classification.sensitivity >= 5) {
     return {
       allowed: false,
@@ -25,6 +27,7 @@ export function ethicalOversight(
     };
   }
 
+  // Promote to fact
   if (lifecycle.promoteToFact) {
     return {
       allowed: true,
@@ -35,6 +38,7 @@ export function ethicalOversight(
     };
   }
 
+  // Default
   return {
     allowed: true,
     store: true,
@@ -43,3 +47,4 @@ export function ethicalOversight(
     finalKind: classification.category,
   };
 }
+
