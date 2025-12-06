@@ -8,25 +8,22 @@ import {
   ENABLE_RESEARCH,
 } from "./constants";
 
-/**
- * Supabase client (Edge-safe)
- */
+/* ---------------------------------------------------------
+   Supabase Client (Edge-friendly)
+--------------------------------------------------------- */
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_KEY!,
   { auth: { persistSession: false } }
 );
 
-/**
- * Safely reduce null -> []
- */
 function rowsSafe<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
 }
 
-/**
- * Fetch persona for workspace (or default)
- */
+/* ---------------------------------------------------------
+   Load Persona
+--------------------------------------------------------- */
 async function loadPersona(workspaceId: string | null) {
   const { data } = await supabase
     .from("personas")
@@ -34,41 +31,53 @@ async function loadPersona(workspaceId: string | null) {
     .eq("is_default", true)
     .limit(1);
 
-  if (data && data.length > 0) return data[0].name || "Solace";
-
+  if (data?.length > 0) {
+    return data[0].name || "Solace";
+  }
   return "Solace";
 }
 
-/**
- * Expanded User Memory Bundle (Option 2)
- */
-function formatMemoryRecord(m: any) {
-  return {
-    id: m.id,
-    kind: m.kind,
-    title: m.title,
-    content: m.content,
-    weight: m.weight,
-    importance: m.importance,
-    tags: m.tags,
+/* ---------------------------------------------------------
+   Format memory records into natural language
+--------------------------------------------------------- */
+function summarizeMemory(memoryPack: any): string {
+  if (!memoryPack) return "none";
 
-    // episodic fields
-    episodic_type: m.episodic_type,
-    episode_summary: m.episode_summary,
-    story_excerpt: m.story_excerpt,
+  const lines: string[] = [];
 
-    // autobiographical hints
-    origin: m.origin,
-    source_channel: m.source_channel,
-    year: m.year,
-    autobioera: m.autobioera,
-  };
+  // basic user memories
+  for (const m of memoryPack.userMemories || []) {
+    if (m.title && m.content) {
+      lines.push(`• ${m.title}: ${m.content}`);
+    }
+  }
+
+  // episodic memories
+  for (const ep of memoryPack.episodicMemories || []) {
+    const summary =
+      ep.episode_summary ||
+      ep.story_excerpt ||
+      ep.title ||
+      "(episode)";
+    lines.push(`• Episode: ${summary}`);
+  }
+
+  // autobiography chapters
+  for (const ch of memoryPack.autobiography?.chapters || []) {
+    const label =
+      ch.summary ||
+      ch.title ||
+      `Life chapter ${ch.start_year || ""}-${ch.end_year || ""}`;
+    lines.push(`• ${label}`);
+  }
+
+  return lines.length ? lines.join("\n") : "none";
 }
 
-/**
- * Fetch user_memories (expanded bundle)
- */
-async function loadUserMemories(userKey: string, workspaceId: string | null) {
+/* ---------------------------------------------------------
+   Load User Memories
+--------------------------------------------------------- */
+async function loadUserMemories(userKey: string) {
   const { data } = await supabase
     .from("user_memories")
     .select("*")
@@ -76,13 +85,13 @@ async function loadUserMemories(userKey: string, workspaceId: string | null) {
     .order("created_at", { ascending: false })
     .limit(FACTS_LIMIT);
 
-  return rowsSafe(data).map(formatMemoryRecord);
+  return rowsSafe(data);
 }
 
-/**
- * Fetch episodic memories (episodes + chunks)
- */
-async function loadEpisodic(userKey: string, workspaceId: string | null) {
+/* ---------------------------------------------------------
+   Load Episodic Memories
+--------------------------------------------------------- */
+async function loadEpisodic(userKey: string) {
   const { data: episodes } = await supabase
     .from("episodic_memories")
     .select("*")
@@ -94,27 +103,25 @@ async function loadEpisodic(userKey: string, workspaceId: string | null) {
 
   if (epList.length === 0) return [];
 
-  // fetch chunks for all episode IDs
   const epIds = epList.map((e) => e.id);
 
   const { data: chunks } = await supabase
     .from("memory_episode_chunks")
     .select("*")
     .in("episode_id", epIds)
-    .order("seq", { ascending: true });
+    .order("seq");
 
   const chunkList = rowsSafe(chunks);
 
-  // attach chunks to episodes
   return epList.map((ep) => ({
     ...ep,
     chunks: chunkList.filter((c) => c.episode_id === ep.id),
   }));
 }
 
-/**
- * Fetch Autobiography (chapters + narrative entries)
- */
+/* ---------------------------------------------------------
+   Load Autobiography
+--------------------------------------------------------- */
 async function loadAutobiography(userKey: string) {
   const { data: chapters } = await supabase
     .from("user_autobio_chapters")
@@ -134,27 +141,30 @@ async function loadAutobiography(userKey: string) {
   };
 }
 
-/**
- * Fetch news digest (Solace neutral summaries)
- */
-async function loadNewsDigest(userKey: string, workspaceId: string | null) {
-  if (!ENABLE_NEWS) return [];
+/* ---------------------------------------------------------
+   Load News Digest
+--------------------------------------------------------- */
+async function loadNewsDigest(userKey: string) {
+  if (!ENABLE_NEWS) return "none";
 
   const { data } = await supabase
     .from("vw_solace_news_digest")
     .select("*")
     .eq("user_key", userKey)
     .order("scored_at", { ascending: false })
-    .limit(15);
+    .limit(10);
 
-  return rowsSafe(data);
+  const rows = rowsSafe(data);
+  if (rows.length === 0) return "none";
+
+  return rows.map((n) => `• ${n.title}`).join("\n");
 }
 
-/**
- * Research / Truth Facts
- */
-async function loadResearch(userKey: string, workspaceId: string | null) {
-  if (!ENABLE_RESEARCH) return [];
+/* ---------------------------------------------------------
+   Load Research
+--------------------------------------------------------- */
+async function loadResearch(userKey: string) {
+  if (!ENABLE_RESEARCH) return "none";
 
   const { data } = await supabase
     .from("truth_facts")
@@ -163,12 +173,15 @@ async function loadResearch(userKey: string, workspaceId: string | null) {
     .order("created_at", { ascending: false })
     .limit(10);
 
-  return rowsSafe(data);
+  const rows = rowsSafe(data);
+  if (rows.length === 0) return "none";
+
+  return rows.map((r) => `• ${r.fact}`).join("\n");
 }
 
-/**
- * MAIN — assembleContext
- */
+/* ---------------------------------------------------------
+   MAIN — assembleContext
+--------------------------------------------------------- */
 export async function assembleContext(
   userKey: string,
   workspaceId: string | null,
@@ -176,21 +189,25 @@ export async function assembleContext(
 ) {
   const persona = await loadPersona(workspaceId);
 
-  const memory = await loadUserMemories(userKey, workspaceId);
-  const episodic = await loadEpisodic(userKey, workspaceId);
+  const memory = await loadUserMemories(userKey);
+  const episodic = await loadEpisodic(userKey);
   const autobio = await loadAutobiography(userKey);
 
-  const newsDigest = await loadNewsDigest(userKey, workspaceId);
-  const researchContext = await loadResearch(userKey, workspaceId);
+  const newsDigest = await loadNewsDigest(userKey);
+  const researchContext = await loadResearch(userKey);
+
+  // Summarize memory into natural, readable text
+  const memoryPack = summarizeMemory({
+    userMemories: memory,
+    episodicMemories: episodic,
+    autobiography: autobio,
+  });
 
   return {
     persona,
-    memoryPack: {
-      userMemories: memory,
-      episodicMemories: episodic,
-      autobiography: autobio,
-    },
+    memoryPack,      // <-- readable, model-friendly
     newsDigest,
     researchContext,
   };
 }
+
