@@ -22,7 +22,7 @@ function rowsSafe<T>(rows: T[] | null): T[] {
 }
 
 /* ---------------------------------------------------------
-   Load Persona
+   Load Persona  (**FIXED**)
 --------------------------------------------------------- */
 async function loadPersona(workspaceId: string | null) {
   const { data } = await supabase
@@ -31,28 +31,27 @@ async function loadPersona(workspaceId: string | null) {
     .eq("is_default", true)
     .limit(1);
 
-  if (data?.length > 0) {
+  if (Array.isArray(data) && data.length > 0) {
     return data[0].name || "Solace";
   }
+
   return "Solace";
 }
 
 /* ---------------------------------------------------------
-   Format memory records into natural language
+   Memory summarizer
 --------------------------------------------------------- */
 function summarizeMemory(memoryPack: any): string {
   if (!memoryPack) return "none";
 
   const lines: string[] = [];
 
-  // basic user memories
   for (const m of memoryPack.userMemories || []) {
     if (m.title && m.content) {
       lines.push(`• ${m.title}: ${m.content}`);
     }
   }
 
-  // episodic memories
   for (const ep of memoryPack.episodicMemories || []) {
     const summary =
       ep.episode_summary ||
@@ -62,7 +61,6 @@ function summarizeMemory(memoryPack: any): string {
     lines.push(`• Episode: ${summary}`);
   }
 
-  // autobiography chapters
   for (const ch of memoryPack.autobiography?.chapters || []) {
     const label =
       ch.summary ||
@@ -100,7 +98,6 @@ async function loadEpisodic(userKey: string) {
     .limit(EPISODES_LIMIT);
 
   const epList = rowsSafe(episodes);
-
   if (epList.length === 0) return [];
 
   const epIds = epList.map((e) => e.id);
@@ -189,23 +186,22 @@ export async function assembleContext(
 ) {
   const persona = await loadPersona(workspaceId);
 
-  const memory = await loadUserMemories(userKey);
-  const episodic = await loadEpisodic(userKey);
-  const autobio = await loadAutobiography(userKey);
+  const userMemories = await loadUserMemories(userKey);
+  const episodicMemories = await loadEpisodic(userKey);
+  const autobiography = await loadAutobiography(userKey);
 
   const newsDigest = await loadNewsDigest(userKey);
   const researchContext = await loadResearch(userKey);
 
-  // Summarize memory into natural, readable text
   const memoryPack = summarizeMemory({
-    userMemories: memory,
-    episodicMemories: episodic,
-    autobiography: autobio,
+    userMemories,
+    episodicMemories,
+    autobiography,
   });
 
   return {
     persona,
-    memoryPack,      // <-- readable, model-friendly
+    memoryPack,
     newsDigest,
     researchContext,
   };
