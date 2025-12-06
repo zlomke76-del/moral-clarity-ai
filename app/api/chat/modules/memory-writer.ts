@@ -1,7 +1,8 @@
 // app/api/chat/modules/memory-writer.ts
+
 import { supabaseEdge } from "@/lib/supabase/edge";
 
-function shouldRemember(userMsg: string): boolean {
+function shouldRemember(userMsg: string, assistantReply: string): boolean {
   const msg = userMsg.toLowerCase();
 
   if (
@@ -19,12 +20,14 @@ function shouldRemember(userMsg: string): boolean {
     /i prefer/i,
     /i like/i,
     /i love/i,
-    /i live in/i,
-    /my goal/i,
+    /i don’t like/i,
     /my birthday/i,
+    /my goal/i,
     /my wife/i,
     /my husband/i,
     /my kids/i,
+    /i work at/i,
+    /i live in/i,
   ];
 
   return implicitPatterns.some((p) => p.test(userMsg));
@@ -34,7 +37,7 @@ function summarizeForMemory(userMsg: string, assistantReply: string): string {
   return (
     `User said: ${userMsg.trim()}\n` +
     `Solace responded: ${assistantReply.trim()}\n` +
-    `Summary: Personal detail noted.`
+    `Summary: This exchange included personally meaningful information that may help future conversations.`
   );
 }
 
@@ -44,7 +47,7 @@ export async function writeMemory(
   assistantReply: string
 ) {
   if (!userKey) return;
-  if (!shouldRemember(userMsg)) return;
+  if (!shouldRemember(userMsg, assistantReply)) return;
 
   const content = summarizeForMemory(userMsg, assistantReply);
 
@@ -54,11 +57,13 @@ export async function writeMemory(
     content,
     weight: 1,
     title: "User memory",
+    tags: [],
     importance: 1,
     source_channel: "conversation",
   });
 
-  if (error) console.error("[memory-writer] failed insert:", error);
+  if (error) {
+    console.error("[memory-writer] failed insert:", error);
+  }
 }
-
 
