@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
-import { createSupabaseBrowser } from '@/lib/supabaseBrowser';
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 type RetryState = {
   tries: number;
@@ -11,7 +11,7 @@ type RetryState = {
 };
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
-  const supabase = createSupabaseBrowser();
+  const supabase = supabaseBrowser();
   const retryRef = useRef<RetryState>({ tries: 0 });
 
   useEffect(() => {
