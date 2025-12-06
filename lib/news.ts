@@ -1,16 +1,10 @@
 // lib/news.ts
-// Stable interface used by the chat engine.
-// Uses the existing getCachedDigest() function as shown in repo history.
+// Stable interface for delivering a structured news digest to Solace.
 
-import { getCachedDigest } from "./news-cache";
+import { getNewsDigest as fetchDigest } from "./news-cache";
 
-/**
- * getNewsDigest()
- * Returns the most recent cached digest in a structure
- * compatible with the chat/context engine.
- */
 export async function getNewsDigest() {
-  const digest = await getCachedDigest();
+  const digest = await fetchDigest();
 
   return {
     date: digest?.date ?? null,
