@@ -1,10 +1,20 @@
 // lib/news.ts
-// Thin wrapper so the new chat modules can import cleanly.
-// Does NOT rewrite or replace your News Engine.
+// Safe façade wrapper that preserves your entire existing news pipeline
 
-import { getNewsDigest as existingGetNewsDigest } from "@/lib/news-engine"; 
-// ⬆️ If your real digest function lives somewhere else, tell me the path and I’ll update it.
+import { getCachedDigest } from "./news-cache";
+import { fetchNewsAndScore } from "./fetcher";
+import { getOutletLedger } from "./news-ledger";
 
-export async function getNewsDigest(userKey: string, query: string) {
-  return existingGetNewsDigest(userKey, query);
+// Unified interface consumed by the chat engine
+export async function getNewsDigest() {
+  // Prefer cached digest if available
+  const digest = await getCachedDigest();
+  if (digest) return digest;
+
+  // Otherwise fetch fresh news (existing logic)
+  const fresh = await fetchNewsAndScore();
+
+  return fresh;
 }
+
+export { getOutletLedger };
