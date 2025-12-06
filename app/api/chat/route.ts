@@ -27,21 +27,23 @@ export async function POST(req: Request) {
 
     // 4. Detect tool call -----------------------------------------
     const iterator = stream[Symbol.asyncIterator]();
-    const first = await iterator.next();
+    const firstChunk = await iterator.next();
 
-    let tool = extractToolCall(first.value);
+    // firstChunk.value → chunk is already the object
+    const tool = extractToolCall(firstChunk.value ?? firstChunk);
 
     if (tool) {
-      // ---- 4A. Collect the full arguments stream ---------------
+      // ---- 4A. Collect the full arguments stream ----------------
       let argsText = "";
+
       for await (const chunk of stream) {
-        const t = extractToolCall(chunk.value);
+        const t = extractToolCall(chunk);
         if (t?.arguments) {
           argsText += JSON.stringify(t.arguments);
         }
       }
 
-      // Parse arguments safely
+      // Parse JSON safely
       let parsedArgs = {};
       try {
         parsedArgs = JSON.parse(argsText || "{}");
@@ -49,14 +51,14 @@ export async function POST(req: Request) {
         parsedArgs = {};
       }
 
-      // ---- 4B. Execute the tool --------------------------------
+      // ---- 4B. Execute tool -------------------------------------
       const toolResult = await executeTool(
         tool.toolName,
         parsedArgs,
         userKey
       );
 
-      // ---- 4C. Rerun the model with tool result ----------------
+      // ---- 4C. Re-run model with tool result ---------------------
       const followupMessages = [
         ...messages,
         {
@@ -73,7 +75,8 @@ export async function POST(req: Request) {
     // 5. Normal streaming -----------------------------------------
     return await streamResult({
       async *[Symbol.asyncIterator]() {
-        yield first.value;
+        // same here — firstChunk.value removed
+        yield firstChunk.value ?? firstChunk;
         for await (const c of stream) yield c;
       },
     });
@@ -86,4 +89,5 @@ export async function POST(req: Request) {
     );
   }
 }
+
 
