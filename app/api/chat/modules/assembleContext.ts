@@ -8,60 +8,28 @@ import {
   ENABLE_RESEARCH,
 } from "./constants";
 
-/**
- * Edge-safe Supabase client using ROLE KEY
- */
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,   // ✅ correct key for Edge
+  process.env.SUPABASE_SERVICE_KEY!,
   { auth: { persistSession: false } }
 );
 
-function rowsSafe<T>(rows: T[] | null): T[] {
+function safeRows<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
 }
 
-/**
- * Load persona (fallback to Solace)
- */
-async function loadPersona(workspaceId: string | null) {
+// PERSONA -----------------------------------------------------
+async function loadPersona(): Promise<string> {
   const { data } = await supabase
     .from("personas")
     .select("*")
     .eq("is_default", true)
     .limit(1);
 
-  if (data && data.length > 0) return data[0].name || "Solace";
-  return "Solace";
+  return data?.[0]?.name || "Solace";
 }
 
-/**
- * Format expanded memory record
- */
-function formatMemoryRecord(m: any) {
-  return {
-    id: m.id,
-    kind: m.kind,
-    title: m.title,
-    content: m.content,
-    weight: m.weight,
-    importance: m.importance,
-    tags: m.tags,
-    // episodic fields
-    episodic_type: m.episodic_type,
-    episode_summary: m.episode_summary,
-    story_excerpt: m.story_excerpt,
-    // autobiographical hints
-    origin: m.origin,
-    source_channel: m.source_channel,
-    year: m.year,
-    autobioera: m.autobioera,
-  };
-}
-
-/**
- * Load user_memories (factual memories)
- */
+// USER MEMORIES ----------------------------------------------
 async function loadUserMemories(userKey: string) {
   const { data } = await supabase
     .from("user_memories")
@@ -70,12 +38,10 @@ async function loadUserMemories(userKey: string) {
     .order("created_at", { ascending: false })
     .limit(FACTS_LIMIT);
 
-  return rowsSafe(data).map(formatMemoryRecord);
+  return safeRows(data);
 }
 
-/**
- * Load episodic memories + chunks
- */
+// EPISODIC ----------------------------------------------------
 async function loadEpisodic(userKey: string) {
   const { data: episodes } = await supabase
     .from("episodic_memories")
@@ -84,28 +50,27 @@ async function loadEpisodic(userKey: string) {
     .order("created_at", { ascending: false })
     .limit(EPISODES_LIMIT);
 
-  const epList = rowsSafe(episodes);
+  const epList = safeRows(episodes);
   if (epList.length === 0) return [];
-
-  const ids = epList.map((e) => e.id);
 
   const { data: chunks } = await supabase
     .from("memory_episode_chunks")
     .select("*")
-    .in("episode_id", ids)
+    .in(
+      "episode_id",
+      epList.map((e) => e.id)
+    )
     .order("seq", { ascending: true });
 
-  const chunkList = rowsSafe(chunks);
+  const chunkList = safeRows(chunks);
 
-  return epList.map((ep) => ({
-    ...ep,
-    chunks: chunkList.filter((c) => c.episode_id === ep.id),
+  return epList.map((e) => ({
+    ...e,
+    chunks: chunkList.filter((c) => c.episode_id === e.id),
   }));
 }
 
-/**
- * Load autobiography (chapters + entries)
- */
+// AUTOBIO -----------------------------------------------------
 async function loadAutobiography(userKey: string) {
   const { data: chapters } = await supabase
     .from("user_autobio_chapters")
@@ -120,14 +85,12 @@ async function loadAutobiography(userKey: string) {
     .order("year", { ascending: true });
 
   return {
-    chapters: rowsSafe(chapters),
-    entries: rowsSafe(entries),
+    chapters: safeRows(chapters),
+    entries: safeRows(entries),
   };
 }
 
-/**
- * Load news digest
- */
+// NEWS --------------------------------------------------------
 async function loadNewsDigest(userKey: string) {
   if (!ENABLE_NEWS) return [];
 
@@ -138,12 +101,10 @@ async function loadNewsDigest(userKey: string) {
     .order("scored_at", { ascending: false })
     .limit(15);
 
-  return rowsSafe(data);
+  return safeRows(data);
 }
 
-/**
- * Load research facts
- */
+// RESEARCH ----------------------------------------------------
 async function loadResearch(userKey: string) {
   if (!ENABLE_RESEARCH) return [];
 
@@ -154,22 +115,20 @@ async function loadResearch(userKey: string) {
     .order("created_at", { ascending: false })
     .limit(10);
 
-  return rowsSafe(data);
+  return safeRows(data);
 }
 
-/**
- * MAIN — assembleContext
- */
+// MAIN EXPORT -------------------------------------------------
 export async function assembleContext(
   userKey: string,
   workspaceId: string | null,
   userMessage: string
 ) {
-  const persona = await loadPersona(workspaceId);
+  const persona = await loadPersona();
 
-  const userMemories = await loadUserMemories(userKey);
-  const episodicMemories = await loadEpisodic(userKey);
-  const autobiography = await loadAutobiography(userKey);
+  const memory = await loadUserMemories(userKey);
+  const episodic = await loadEpisodic(userKey);
+  const autobio = await loadAutobiography(userKey);
 
   const newsDigest = await loadNewsDigest(userKey);
   const researchContext = await loadResearch(userKey);
@@ -177,9 +136,9 @@ export async function assembleContext(
   return {
     persona,
     memoryPack: {
-      userMemories,
-      episodicMemories,
-      autobiography,
+      userMemories: memory,
+      episodicMemories: episodic,
+      autobiography: autobio,
     },
     newsDigest,
     researchContext,
