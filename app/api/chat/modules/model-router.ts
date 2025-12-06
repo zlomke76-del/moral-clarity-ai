@@ -8,16 +8,22 @@ import {
   MAX_TOKENS,
 } from "./constants";
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
+});
 
+/**
+ * Unified model runner using the new Responses API.
+ * Always returns a proper async stream compatible with route.ts
+ */
 export async function runModel(messages: any[], signal?: AbortSignal) {
   try {
-    return await client.chat.completions.create(
+    return client.responses.create(
       {
         model: DEFAULT_MODEL,
-        messages,
         temperature: TEMPERATURE,
-        max_tokens: MAX_TOKENS,
+        max_completion_tokens: MAX_TOKENS,
+        messages,
         stream: true,
       },
       { signal }
@@ -25,12 +31,12 @@ export async function runModel(messages: any[], signal?: AbortSignal) {
   } catch (err) {
     console.error("[router] Primary model failed:", err);
 
-    return await client.chat.completions.create(
+    return client.responses.create(
       {
         model: FALLBACK_MODEL,
-        messages,
         temperature: TEMPERATURE,
-        max_tokens: MAX_TOKENS,
+        max_completion_tokens: MAX_TOKENS,
+        messages,
         stream: true,
       },
       { signal }
