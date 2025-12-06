@@ -1,20 +1,31 @@
 // lib/news.ts
-// Safe façade wrapper that preserves your entire existing news pipeline
+// Unified, safe interface for the MCAI news system.
+// This version uses ONLY the cached digest (Option A) and no live fetching.
+// It aligns with the actual exports inside news-cache.ts and news-ledger.ts.
 
-import { getCachedDigest } from "./news-cache";
-import { fetchNewsAndScore } from "./fetcher";
-import { getOutletLedger } from "./news-ledger";
+import { getLatestDigest } from "./news-cache";
 
-// Unified interface consumed by the chat engine
+/**
+ * getNewsDigest
+ * Returns the most recent cached news digest in a stable shape
+ * compatible with the chat engine and context builder.
+ */
 export async function getNewsDigest() {
-  // Prefer cached digest if available
-  const digest = await getCachedDigest();
-  if (digest) return digest;
+  const digest = await getLatestDigest();
 
-  // Otherwise fetch fresh news (existing logic)
-  const fresh = await fetchNewsAndScore();
+  if (!digest) {
+    return {
+      date: null,
+      stories: [],
+      domainStats: {},
+      errors: ["No cached digest available"],
+    };
+  }
 
-  return fresh;
+  return {
+    date: digest.date ?? null,
+    stories: digest.stories ?? [],
+    domainStats: digest.domainStats ?? {},
+    errors: digest.errors ?? [],
+  };
 }
-
-export { getOutletLedger };
