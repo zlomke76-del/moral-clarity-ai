@@ -1,11 +1,15 @@
 // lib/memory.ts
+// Primary interface for storing, searching, and retrieving memory.
+// Delegates intelligence to memory-intelligence.ts and ethics pipeline.
 
 import { createClient } from "@supabase/supabase-js";
+
 import {
   consolidateMemory,
   buildMemoryPack,
   storeEpisode,
   searchMemoryIndex,
+  evaluateAndClassifyMemory,
 } from "./memory-intelligence";
 
 const supabase = createClient(
@@ -16,11 +20,17 @@ const supabase = createClient(
 
 export type MemoryPurpose =
   | "fact"
+  | "preference"
+  | "context"
   | "identity"
   | "value"
   | "insight"
-  | "context"
-  | "note";
+  | "note"
+  | "episode";
+
+/* -------------------------------------------------------------------------- */
+/*                                 REMEMBER                                   */
+/* -------------------------------------------------------------------------- */
 
 export async function remember({
   user_key,
@@ -35,47 +45,52 @@ export async function remember({
   purpose?: MemoryPurpose | null;
   workspace_id?: string | null;
 }) {
+  // 1. Ethical & lifecycle classification
+  const { decision } = await evaluateAndClassifyMemory(user_key, content);
+
+  if (!decision.allowed || !decision.store) {
+    return { blocked: true, reason: "restricted" };
+  }
+
+  // 2. Pre-merge consolidation
   const merged = await consolidateMemory(user_key, content);
   if (merged?.mergedInto) return { mergedInto: merged.mergedInto };
 
-  const importance =
-    purpose === "identity"
-      ? 1
-      : purpose === "value"
-      ? 2
-      : purpose === "fact"
-      ? 3
-      : purpose === "insight"
-      ? 4
-      : 5;
+  // 3. Assign FINAL kind (from oversight engine)
+  const kind = decision.finalKind || purpose || "note";
 
+  // 4. Insert memory
   const { data, error } = await supabase
     .from("user_memories")
     .insert({
       user_key,
       content,
       title,
-      kind: purpose || "note",
-      importance,
+      kind,
       workspace_id,
     })
     .select()
     .single();
 
   if (error) throw new Error(error.message);
+
+  // 5. Fact promotion handled inside finalKind (no extra logic needed)
+
   return data;
 }
 
-/* ============================================================
-   REQUIRED EXPORT #1 — searchMemories  (used in chat + API)
-   ============================================================ */
+/* -------------------------------------------------------------------------- */
+/*                               SIMPLE SEARCH                                */
+/* -------------------------------------------------------------------------- */
+
 export async function searchMemories(user_key: string, query: string) {
   return await searchMemoryIndex(user_key, query);
 }
 
-/* ============================================================
-   REQUIRED EXPORT #2 — getMemoryPack (used in chat route)
-   ============================================================ */
+/* -------------------------------------------------------------------------- */
+/*                               MEMORY PACK                                  */
+/* -------------------------------------------------------------------------- */
+
 export async function getMemoryPack(
   user_key: string,
   query: string,
@@ -84,16 +99,17 @@ export async function getMemoryPack(
   return await buildMemoryPack(user_key, query, opts);
 }
 
-/* ============================================================
-   REQUIRED EXPORT #3 — maybeStoreEpisode (used in chat route)
-   ============================================================ */
+/* -------------------------------------------------------------------------- */
+/*                           OPTIONAL EPISODE STORAGE                          */
+/* -------------------------------------------------------------------------- */
+
 export async function maybeStoreEpisode(
   user_key: string,
-  messages: { role: string; content: string }[],
+  content: string,
   shouldStore: boolean
 ) {
   if (!shouldStore) return;
-  await storeEpisode(user_key, messages);
+  await storeEpisode(user_key, content);
 }
 
 
