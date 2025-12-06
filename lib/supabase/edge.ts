@@ -1,14 +1,12 @@
 // lib/supabase/edge.ts
-// Edge-safe Supabase client (NO service key)
+// EDGE-safe client (anon key)
 
 import { createClient } from "@supabase/supabase-js";
 
 export const supabaseEdge = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, // anon only
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   {
-    auth: {
-      persistSession: false,
-    },
+    auth: { persistSession: false },
   }
 );
