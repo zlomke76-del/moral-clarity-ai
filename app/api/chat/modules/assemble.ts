@@ -1,7 +1,6 @@
 // modules/assemble.ts
 
-function safeText(label: string, data: any) {
-  if (!data) return `${label}: none`;
+function safe(label: string, data: any) {
   try {
     return `${label}: ${JSON.stringify(data)}`;
   } catch {
@@ -9,50 +8,62 @@ function safeText(label: string, data: any) {
   }
 }
 
-//
-// Responses API expects plain strings for content
-//
-export function assemblePrompt(context: any, history: any[], userMessage: string) {
+export function assemblePrompt(context: any, fullHistory: any[]) {
   const input: any[] = [];
 
-  // 1. Persona system prompt
+  // SYSTEM PERSONA
   input.push({
     role: "system",
-    content: `${context.persona} operates with ethics, clarity, neutrality, memory, and stable reasoning.`,
+    content: [
+      {
+        type: "text",
+        text: `${context.persona} operates with clarity, neutrality, memory, and ethical reasoning.`,
+      },
+    ],
   });
 
-  // 2. Memory
+  // MEMORY PACK
   input.push({
     role: "system",
-    content: safeText("Relevant memory", context.memoryPack),
+    content: [
+      {
+        type: "text",
+        text: safe("Relevant Memory", context.memoryPack),
+      },
+    ],
   });
 
-  // 3. News digest
+  // NEWS DIGEST
   input.push({
     role: "system",
-    content: safeText("News digest", context.newsDigest),
+    content: [
+      {
+        type: "text",
+        text: safe("News Digest", context.newsDigest),
+      },
+    ],
   });
 
-  // 4. Research context
+  // RESEARCH CONTEXT
   input.push({
     role: "system",
-    content: safeText("Research context", context.researchContext),
+    content: [
+      {
+        type: "text",
+        text: safe("Research Context", context.researchContext),
+      },
+    ],
   });
 
-  // 5. FULL CHAT HISTORY
-  for (const msg of history) {
-    if (!msg || !msg.role || !msg.content) continue;
+  // FULL CHAT HISTORY
+  for (const msg of fullHistory) {
+    if (!msg?.role || !msg?.content) continue;
+
     input.push({
       role: msg.role,
-      content: String(msg.content),
+      content: [{ type: "text", text: String(msg.content) }],
     });
   }
-
-  // 6. CURRENT USER MESSAGE
-  input.push({
-    role: "user",
-    content: userMessage,
-  });
 
   return input;
 }
