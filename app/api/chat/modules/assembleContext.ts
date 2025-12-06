@@ -8,26 +8,55 @@ import {
   ENABLE_RESEARCH,
 } from "./constants";
 
-function safeRows<T>(rows: T[] | null): T[] {
+// -----------------------------------------------------------------------------
+// UTILITIES
+// -----------------------------------------------------------------------------
+function safe<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
 }
 
-/* -----------------------------------------------------------
-   PERSONA
------------------------------------------------------------ */
+function needsEpisodic(message: string): boolean {
+  return [
+    "remember when",
+    "last time",
+    "earlier you said",
+    "continue the story",
+    "what happened yesterday",
+    "recap",
+    "episode",
+    "thread",
+  ].some((k) => message.toLowerCase().includes(k));
+}
+
+function needsAutobio(message: string): boolean {
+  return [
+    "my past",
+    "my childhood",
+    "life story",
+    "my history",
+    "journey",
+    "autobiography",
+    "who am i",
+    "identity",
+  ].some((k) => message.toLowerCase().includes(k));
+}
+
+// -----------------------------------------------------------------------------
+// PERSONA
+// -----------------------------------------------------------------------------
 async function loadPersona(): Promise<string> {
   const { data } = await supabaseEdge
     .from("personas")
-    .select("*")
+    .select("name")
     .eq("is_default", true)
-    .limit(1);
+    .maybeSingle();
 
-  return data?.[0]?.name || "Solace";
+  return data?.name || "Solace";
 }
 
-/* -----------------------------------------------------------
-   USER MEMORIES
------------------------------------------------------------ */
+// -----------------------------------------------------------------------------
+// USER MEMORIES (always loaded)
+// -----------------------------------------------------------------------------
 async function loadUserMemories(userKey: string) {
   const { data } = await supabaseEdge
     .from("user_memories")
@@ -36,13 +65,15 @@ async function loadUserMemories(userKey: string) {
     .order("created_at", { ascending: false })
     .limit(FACTS_LIMIT);
 
-  return safeRows(data);
+  return safe(data);
 }
 
-/* -----------------------------------------------------------
-   EPISODIC
------------------------------------------------------------ */
-async function loadEpisodic(userKey: string) {
+// -----------------------------------------------------------------------------
+// EPISODIC MEMORY (conditional)
+// -----------------------------------------------------------------------------
+async function loadEpisodic(userKey: string, enable: boolean) {
+  if (!enable) return [];
+
   const { data: episodes } = await supabaseEdge
     .from("episodic_memories")
     .select("*")
@@ -50,7 +81,7 @@ async function loadEpisodic(userKey: string) {
     .order("created_at", { ascending: false })
     .limit(EPISODES_LIMIT);
 
-  const epList = safeRows(episodes);
+  const epList = safe(episodes);
   if (epList.length === 0) return [];
 
   const { data: chunks } = await supabaseEdge
@@ -62,7 +93,7 @@ async function loadEpisodic(userKey: string) {
     )
     .order("seq", { ascending: true });
 
-  const chunkList = safeRows(chunks);
+  const chunkList = safe(chunks);
 
   return epList.map((e) => ({
     ...e,
@@ -70,10 +101,17 @@ async function loadEpisodic(userKey: string) {
   }));
 }
 
-/* -----------------------------------------------------------
-   AUTOBIOGRAPHY
------------------------------------------------------------ */
-async function loadAutobiography(userKey: string) {
+// -----------------------------------------------------------------------------
+// AUTOBIOGRAPHY (conditional)
+// -----------------------------------------------------------------------------
+async function loadAutobiography(userKey: string, enable: boolean) {
+  if (!enable) {
+    return {
+      chapters: [],
+      entries: [],
+    };
+  }
+
   const { data: chapters } = await supabaseEdge
     .from("user_autobio_chapters")
     .select("*")
@@ -87,14 +125,14 @@ async function loadAutobiography(userKey: string) {
     .order("year", { ascending: true });
 
   return {
-    chapters: safeRows(chapters),
-    entries: safeRows(entries),
+    chapters: safe(chapters),
+    entries: safe(entries),
   };
 }
 
-/* -----------------------------------------------------------
-   NEWS — CONDITIONAL
------------------------------------------------------------ */
+// -----------------------------------------------------------------------------
+// NEWS DIGEST (conditional by flag)
+// -----------------------------------------------------------------------------
 async function loadNewsDigest(userKey: string) {
   if (!ENABLE_NEWS) return [];
 
@@ -105,12 +143,12 @@ async function loadNewsDigest(userKey: string) {
     .order("scored_at", { ascending: false })
     .limit(15);
 
-  return safeRows(data);
+  return safe(data);
 }
 
-/* -----------------------------------------------------------
-   RESEARCH — CONDITIONAL
------------------------------------------------------------ */
+// -----------------------------------------------------------------------------
+// RESEARCH (conditional by flag)
+// -----------------------------------------------------------------------------
 async function loadResearch(userKey: string) {
   if (!ENABLE_RESEARCH) return [];
 
@@ -121,67 +159,46 @@ async function loadResearch(userKey: string) {
     .order("created_at", { ascending: false })
     .limit(10);
 
-  return safeRows(data);
+  return safe(data);
 }
 
-/* -----------------------------------------------------------
-   MAIN EXPORT — CONTEXT ASSEMBLER
------------------------------------------------------------ */
+// -----------------------------------------------------------------------------
+// MAIN CONTEXT ASSEMBLY
+// -----------------------------------------------------------------------------
 export async function assembleContext(
   userKey: string,
   workspaceId: string | null,
   userMessage: string
 ) {
-  /* ---------------------------------------------
-     Determine if we should load NEWS/RESEARCH
-  --------------------------------------------- */
+  // --------------------------------------------------------------
+  // Smart decisions based on user intent
+  // --------------------------------------------------------------
+  const episodicNeeded = needsEpisodic(userMessage);
+  const autobioNeeded = needsAutobio(userMessage);
 
-  const lower = userMessage.toLowerCase();
+  console.log("[Solace Context] Load decisions:", {
+    episodicNeeded,
+    autobioNeeded,
+    workspaceId,
+  });
 
-  const shouldLoadNews =
-    (ENABLE_NEWS &&
-      (
-        lower.includes("news") ||
-        lower.includes("headline") ||
-        lower.includes("story") ||
-        lower.includes("digest") ||
-        lower.includes("neutrality") ||
-        workspaceId === "newsroom"
-      )) ||
-    false;
+  // --------------------------------------------------------------
+  // Always load small memory domains
+  // --------------------------------------------------------------
+  const persona = await loadPersona();
+  const memory = await loadUserMemories(userKey);
 
-  const shouldLoadResearch =
-    ENABLE_RESEARCH &&
-    (
-      lower.includes("research") ||
-      lower.includes("find") ||
-      lower.includes("lookup") ||
-      lower.includes("investigate")
-    );
+  // --------------------------------------------------------------
+  // Conditional loads
+  // --------------------------------------------------------------
+  const episodic = await loadEpisodic(userKey, episodicNeeded);
+  const autobio = await loadAutobiography(userKey, autobioNeeded);
+  const newsDigest = await loadNewsDigest(userKey);
+  const researchContext = await loadResearch(userKey);
 
-  /* ---------------------------------------------
-     Load required memory domains in parallel
-  --------------------------------------------- */
-
-  const [
-    persona,
-    memory,
-    episodic,
-    autobio,
-    newsDigest,
-    researchContext,
-  ] = await Promise.all([
-    loadPersona(),
-    loadUserMemories(userKey),
-    loadEpisodic(userKey),
-    loadAutobiography(userKey),
-    shouldLoadNews ? loadNewsDigest(userKey) : Promise.resolve([]),
-    shouldLoadResearch ? loadResearch(userKey) : Promise.resolve([]),
-  ]);
-
-  /* ---------------------------------------------
-     Final Context Object
-  --------------------------------------------- */
+  // --------------------------------------------------------------
+  // Final shape
+  // --------------------------------------------------------------
   return {
     persona,
     memoryPack: {
