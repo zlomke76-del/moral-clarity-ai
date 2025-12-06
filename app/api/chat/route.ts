@@ -1,19 +1,15 @@
 // app/api/chat/route.ts
 
+export const runtime = "edge";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
 import { NextResponse } from "next/server";
 import { assembleContext } from "./modules/assembleContext";
 import { assemblePrompt } from "./modules/assemble";
 import { runModel } from "./modules/model-router";
 import { writeMemory } from "./modules/memory-writer";
-
-// Required for ANY Supabase key usage inside Route Handlers
-export const runtime = "edge";
-
-// Required to stop Next from evaluating this during the build
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-export const revalidate = 0;
-export const preferredRegion = "auto";
 
 export async function POST(req: Request) {
   try {
@@ -24,19 +20,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
-    // 1. Build context
+    // 1. Build context (persona + memories + news + research)
     const context = await assembleContext(userKey, workspaceId, message);
 
-    // 2. Build Responses API input blocks
+    // 2. Build flattened prompt block for Responses API
     const inputBlocks = assemblePrompt(context, history, message);
 
     // 3. Run model
     const replyText = await runModel(inputBlocks);
 
-    // 4. Hybrid memory write
+    // 4. Write memory (hybrid mode)
     await writeMemory(userKey, message, replyText);
 
-    // 5. Return
+    // 5. Return response
     return NextResponse.json({ text: replyText });
 
   } catch (err: any) {
@@ -47,5 +43,4 @@ export async function POST(req: Request) {
     );
   }
 }
-
 
