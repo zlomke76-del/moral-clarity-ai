@@ -7,7 +7,13 @@ import { supabaseNode } from "@/lib/supabase/node";
 import MemoryComposer from "@/components/MemoryComposer";
 import MemoryList from "@/components/MemoryList";
 
-export default async function WorkspaceMemoryPage({ params }) {
+type PageProps = {
+  params: {
+    workspaceId: string;
+  };
+};
+
+export default async function WorkspaceMemoryPage({ params }: PageProps) {
   const workspaceId = decodeURIComponent(params.workspaceId);
 
   const { data, error } = await supabaseNode
@@ -27,13 +33,14 @@ export default async function WorkspaceMemoryPage({ params }) {
             Workspace Memories
           </h1>
           <p className="text-sm text-neutral-400">
-            Workspace: <code>{workspaceId}</code>
+            Workspace:{" "}
+            <code className="text-neutral-300 break-all">{workspaceId}</code>
           </p>
         </div>
 
         <Link
           href={`/w/${workspaceId}`}
-          className="text-sm underline underline-offset-4"
+          className="text-sm text-neutral-300 hover:text-white underline underline-offset-4"
         >
           Back to workspace
         </Link>
@@ -46,5 +53,7 @@ export default async function WorkspaceMemoryPage({ params }) {
     </section>
   );
 }
+
+
 
 
