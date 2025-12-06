@@ -1,77 +1,93 @@
 // app/api/chat/modules/memory-writer.ts
-
 import { createClient } from "@supabase/supabase-js";
 
-/**
- * Edge-safe Supabase client using ROLE KEY
- */
+// Edge-safe Supabase client
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,   // ✅ correct key for Edge
-  { auth: { persistSession: false } }
+  process.env.SUPABASE_SERVICE_KEY!,
+  {
+    auth: { persistSession: false }
+  }
 );
 
 /**
- * Write a short factual memory when Solace explicitly says
- * "I will remember that" or patterns like that.
+ * Quick classifier to detect if a message should be remembered.
+ * Hybrid = AI decides + user can explicitly command.
  */
-export async function writeMemory(userKey: string, content: string) {
-  if (!userKey || !content) return;
+function shouldRemember(userMsg: string, assistantReply: string): boolean {
+  const msg = userMsg.toLowerCase();
 
-  const record = {
+  // Explicit user commands
+  if (
+    msg.includes("remember this") ||
+    msg.includes("save this") ||
+    msg.includes("don't forget") ||
+    msg.includes("you should remember") ||
+    msg.includes("store this")
+  ) {
+    return true;
+  }
+
+  // Implicit cues (name, identity, preference, personal detail)
+  const implicitPatterns = [
+    /my name is/i,
+    /i prefer/i,
+    /i like/i,
+    /i love/i,
+    /i don’t like/i,
+    /my birthday/i,
+    /my goal/i,
+    /my wife/i,
+    /my husband/i,
+    /my kids/i,
+    /i work at/i,
+    /i live in/i,
+  ];
+
+  if (implicitPatterns.some((p) => p.test(userMsg))) return true;
+
+  // No signal → ignore
+  return false;
+}
+
+/**
+ * Create a structured 3–5 sentence memory summary.
+ */
+function summarizeForMemory(userMsg: string, assistantReply: string): string {
+  return (
+    `User said: ${userMsg.trim()}\n` +
+    `Solace responded: ${assistantReply.trim()}\n` +
+    `Summary: This exchange included personally meaningful information that may help in future conversations.`
+  );
+}
+
+/**
+ * Write memory to Supabase
+ */
+export async function writeMemory(
+  userKey: string,
+  userMsg: string,
+  assistantReply: string
+) {
+  if (!userKey) return;
+  if (!shouldRemember(userMsg, assistantReply)) return;
+
+  const content = summarizeForMemory(userMsg, assistantReply);
+
+  const { error } = await supabase.from("user_memories").insert({
     user_key: userKey,
     kind: "fact",
     content,
     weight: 1,
+    title: "User memory",
+    tags: [],
     importance: 1,
     source_channel: "conversation",
-  };
-
-  const { error } = await supabase.from("user_memories").insert(record);
+  });
 
   if (error) {
-    console.error("[memory-writer] insert error:", error);
+    console.error("[memory-writer] failed insert:", error);
   }
 }
 
-/**
- * Write an episodic memory (optional future expansion)
- */
-export async function writeEpisode(
-  userKey: string,
-  summary: string,
-  chunks: string[]
-) {
-  if (!userKey || !summary) return;
-
-  const { data: episode, error: epError } = await supabase
-    .from("episodic_memories")
-    .insert({
-      user_key: userKey,
-      episode_summary: summary,
-      episodic_type: "conversation",
-    })
-    .select("*")
-    .single();
-
-  if (epError || !episode) {
-    console.error("[memory-writer] episode insert error:", epError);
-    return;
-  }
-
-  // Write chunks in sequence
-  const chunkRows = chunks.map((c, i) => ({
-    episode_id: episode.id,
-    seq: i,
-    chunk: c,
-  }));
-
-  const { error: chunkError } = await supabase
-    .from("memory_episode_chunks")
-    .insert(chunkRows);
-
-  if (chunkError) {
-    console.error("[memory-writer] chunk insert error:", chunkError);
-  }
-}
 
