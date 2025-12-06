@@ -269,39 +269,34 @@ export default function SolaceDock() {
 
   // send actions -------------------------------------------------
 
-  async function sendToChat(userMsg: string, nextMsgs: Message[]) {
-    const activeFilters: string[] = Array.from(filters);
+async function sendToChat(userMsg: string, nextMsgs: Message[]) {
+  const activeFilters = Array.from(filters);
 
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Last-Mode": modeHint,
-        "X-User-Key": userKey,
-      },
-      body: JSON.stringify({
-        message: userMsg,
-        history: nextMsgs,
-        filters: activeFilters,
-        stream: false,
-        attachments: pendingFiles,
-        ministry: activeFilters.includes("ministry"),
-        workspaceId: MCA_WORKSPACE_ID,
-        userKey,
-        memory_preview: memReady ? memoryCacheRef.current.slice(0, 50) : [],
-      }),
-    });
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-User-Key": userKey,
+    },
+    body: JSON.stringify({
+      message: userMsg,
+      history: nextMsgs,
+      userKey,
+      workspaceId: MCA_WORKSPACE_ID,
+    }),
+  });
 
-    clearPending();
-
-    if (!res.ok) {
-      const t = await res.text().catch(() => "");
-      throw new Error(`HTTP ${res.status}: ${t}`);
-    }
-    const data = await res.json();
-    const reply = String(data.text ?? "[No reply]");
-    setMessages((m) => [...m, { role: "assistant", content: reply }]);
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`HTTP ${res.status}: ${t}`);
   }
+
+  const data = await res.json();
+  const reply = String(data.text ?? "[No reply]");
+
+  setMessages((m) => [...m, { role: "assistant", content: reply }]);
+}
+
 
   async function sendToVision(userMsg: string, nextMsgs: Message[]) {
     const imageAttachment = pendingFiles.find(isImageAttachment);
