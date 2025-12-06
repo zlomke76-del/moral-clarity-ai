@@ -1,23 +1,16 @@
 // app/w/[workspaceId]/memory/page.tsx
-
-export const runtime = "nodejs"; // <---- forces server runtime
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { supabaseServerNode } from "@/lib/supabase/server-node";
+import { supabaseNode } from "@/lib/supabase/node";
 import MemoryComposer from "@/components/MemoryComposer";
 import MemoryList from "@/components/MemoryList";
 
-export default async function WorkspaceMemoryPage({
-  params,
-}: {
-  params: { workspaceId: string };
-}) {
+export default async function WorkspaceMemoryPage({ params }) {
   const workspaceId = decodeURIComponent(params.workspaceId);
 
-  const sb = supabaseServerNode;
-
-  const { data, error } = await sb
+  const { data, error } = await supabaseNode
     .from("user_memories")
     .select("id, title, created_at, workspace_id")
     .eq("workspace_id", workspaceId)
@@ -34,14 +27,13 @@ export default async function WorkspaceMemoryPage({
             Workspace Memories
           </h1>
           <p className="text-sm text-neutral-400">
-            Workspace:{" "}
-            <code className="text-neutral-300 break-all">{workspaceId}</code>
+            Workspace: <code>{workspaceId}</code>
           </p>
         </div>
 
         <Link
           href={`/w/${workspaceId}`}
-          className="text-sm text-neutral-300 hover:text-white underline underline-offset-4"
+          className="text-sm underline underline-offset-4"
         >
           Back to workspace
         </Link>
@@ -49,15 +41,10 @@ export default async function WorkspaceMemoryPage({
 
       <div className="space-y-6">
         <MemoryComposer workspaceId={workspaceId} />
-
-        <MemoryList
-          items={rows}
-          emptyHint="No memories yet. Add your first above."
-        />
+        <MemoryList items={rows} emptyHint="No memories yet." />
       </div>
     </section>
   );
 }
-
 
 
