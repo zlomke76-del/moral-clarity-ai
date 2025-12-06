@@ -1,46 +1,52 @@
 // modules/assemble.ts
 
-import { ChatMessage } from "./types";
-import { buildPersonaBlock } from "./persona";
+export function assemblePrompt(context: any, userMessage: string) {
+  const messages = [];
 
-export function assemblePrompt(context: any, userMessage: string): ChatMessage[] {
-  const msgs: ChatMessage[] = [];
-
-  // Persona
-  msgs.push({
+  // SYSTEM / PERSONA BLOCK
+  messages.push({
     role: "system",
-    content: buildPersonaBlock(),
+    content: [
+      {
+        type: "text",
+        text: context.persona + " operates with ethics, neutrality, and memory.",
+      }
+    ]
   });
 
-  // Memory Pack
+  // MEMORY PACK
   if (context.memoryPack) {
-    msgs.push({
+    messages.push({
       role: "system",
-      content: `Memory Pack:\n${JSON.stringify(context.memoryPack, null, 2)}`,
+      content: [
+        {
+          type: "text",
+          text: `Relevant memory:\n${JSON.stringify(context.memoryPack)}`
+        }
+      ]
     });
   }
 
-  // News
+  // NEWS DIGEST
   if (context.newsDigest) {
-    msgs.push({
+    messages.push({
       role: "system",
-      content: `News Digest (Neutral):\n${JSON.stringify(context.newsDigest, null, 2)}`,
+      content: [
+        {
+          type: "text",
+          text: `News digest:\n${JSON.stringify(context.newsDigest)}`
+        }
+      ]
     });
   }
 
-  // Deep Research
-  if (context.researchContext) {
-    msgs.push({
-      role: "system",
-      content: `Research Context:\n${JSON.stringify(context.researchContext, null, 2)}`,
-    });
-  }
-
-  // User message (primary)
-  msgs.push({
+  // USER MESSAGE
+  messages.push({
     role: "user",
-    content: userMessage,
+    content: [
+      { type: "text", text: userMessage }
+    ]
   });
 
-  return msgs;
+  return messages;
 }
