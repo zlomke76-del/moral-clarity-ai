@@ -1,26 +1,18 @@
 // lib/supabase/server.ts
-// Guaranteed-safe server Supabase client (Next.js 16 / Vercel Edge)
+// Edge-safe server Supabase client (Next.js 16+)
 
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-
-let serverClient: SupabaseClient | null = null;
+import { createClient } from "@supabase/supabase-js";
 
 /**
- * Return a singleton Supabase server client instance.
- * Never a function — always the real client.
+ * This exports a *SupabaseClient instance* — NOT a function.
+ * This fixes the "Property 'from' does not exist on type '() => SupabaseClient'" error.
  */
-export function supabaseServer(): SupabaseClient {
-  if (!serverClient) {
-    serverClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY!, // server key, bypasses RLS
-      {
-        auth: {
-          persistSession: false,
-        },
-      }
-    );
+export const supabaseServer = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!,  // service role key - server only
+  {
+    auth: {
+      persistSession: false,
+    },
   }
-
-  return serverClient;
-}
+);
