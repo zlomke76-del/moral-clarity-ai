@@ -14,8 +14,8 @@ export default async function WorkspaceMemoryPage({
 }) {
   const workspaceId = decodeURIComponent(params.workspaceId);
 
-  // MUST CALL the server helper — not reference it
-  const sb = await supabaseServer();
+  // Use the Supabase client directly — it is NOT a function
+  const sb = supabaseServer;
 
   const { data, error } = await sb
     .from("user_memories")
@@ -49,15 +49,12 @@ export default async function WorkspaceMemoryPage({
 
       <div className="space-y-6">
         <MemoryComposer workspaceId={workspaceId} />
-
-        <MemoryList
-          items={rows}
-          emptyHint="No memories yet. Add your first above."
-        />
+        <MemoryList items={rows} emptyHint="No memories yet. Add your first above." />
       </div>
     </section>
   );
 }
+
 
 
 
