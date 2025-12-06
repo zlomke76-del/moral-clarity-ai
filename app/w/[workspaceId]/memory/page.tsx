@@ -24,7 +24,7 @@ export default async function WorkspaceMemoryPage({
     .order("created_at", { ascending: false })
     .limit(50);
 
-  const rows = !error && Array.isArray(data) ? data : [];
+  const rows = Array.isArray(data) ? data : [];
 
   return (
     <section className="space-y-8 p-6">
@@ -58,6 +58,5 @@ export default async function WorkspaceMemoryPage({
     </section>
   );
 }
-
 
 
