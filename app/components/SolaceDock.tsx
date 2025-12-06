@@ -294,18 +294,8 @@ body: JSON.stringify({
 
 const data = await res.json();
 
-// Responses API structure:
-// { output: [ { content: [ { type: "output_text", text: "..."} ] } ] }
-
-let reply = "[No reply]";
-
-try {
-  const first = data.output?.[0];
-  const contentItem = first?.content?.[0];
-  reply = contentItem?.text ?? "[No reply]";
-} catch (err) {
-  reply = "[No reply]";
-}
+// Route now returns { text: "string" }
+let reply = data.text ?? "[No reply]";
 
 setMessages((m) => [...m, { role: "assistant", content: reply }]);
 
