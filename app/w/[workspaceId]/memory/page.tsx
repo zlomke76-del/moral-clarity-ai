@@ -1,11 +1,12 @@
 // app/w/[workspaceId]/memory/page.tsx
 
+export const runtime = "nodejs"; // <---- forces server runtime
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { supabaseServerNode } from "@/lib/supabase/server-node";
 import MemoryComposer from "@/components/MemoryComposer";
 import MemoryList from "@/components/MemoryList";
-
-export const dynamic = "force-dynamic";
 
 export default async function WorkspaceMemoryPage({
   params,
@@ -14,7 +15,6 @@ export default async function WorkspaceMemoryPage({
 }) {
   const workspaceId = decodeURIComponent(params.workspaceId);
 
-  // Node-only Supabase client
   const sb = supabaseServerNode;
 
   const { data, error } = await sb
