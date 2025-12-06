@@ -1,20 +1,26 @@
 // lib/supabase/server.ts
-// Edge-safe server Supabase client (Next.js 16+)
+// Guaranteed-safe server Supabase client (Next.js 16 / Vercel Edge)
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+
+let serverClient: SupabaseClient | null = null;
 
 /**
- * Factory function — creates a NEW Supabase server client per request.
- * This keeps signatures consistent with all `await supabaseServer()` usages.
+ * Return a singleton Supabase server client instance.
+ * Never a function — always the real client.
  */
-export async function supabaseServer() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!,  // server key, bypasses RLS
-    {
-      auth: {
-        persistSession: false,
-      },
-    }
-  );
+export function supabaseServer(): SupabaseClient {
+  if (!serverClient) {
+    serverClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_KEY!, // server key, bypasses RLS
+      {
+        auth: {
+          persistSession: false,
+        },
+      }
+    );
+  }
+
+  return serverClient;
 }
