@@ -1,6 +1,6 @@
 // app/api/chat/modules/assembleContext.ts
 
-import { supabaseNode } from "@/lib/supabase/node"; // IMPORTANT
+import { supabaseEdge } from "@/lib/supabase/edge";
 import {
   FACTS_LIMIT,
   EPISODES_LIMIT,
@@ -12,20 +12,24 @@ function safeRows<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
 }
 
-// PERSONA -----------------------------------------------------
-async function loadPersona(sb: any): Promise<string> {
-  const { data } = await sb
+/* -----------------------------------------------------------
+   PERSONA
+----------------------------------------------------------- */
+async function loadPersona(): Promise<string> {
+  const { data } = await supabaseEdge
     .from("personas")
-    .select("name")
+    .select("*")
     .eq("is_default", true)
     .limit(1);
 
   return data?.[0]?.name || "Solace";
 }
 
-// USER MEMORIES ----------------------------------------------
-async function loadUserMemories(sb: any, userKey: string) {
-  const { data } = await sb
+/* -----------------------------------------------------------
+   USER MEMORIES
+----------------------------------------------------------- */
+async function loadUserMemories(userKey: string) {
+  const { data } = await supabaseEdge
     .from("user_memories")
     .select("*")
     .eq("user_key", userKey)
@@ -35,9 +39,11 @@ async function loadUserMemories(sb: any, userKey: string) {
   return safeRows(data);
 }
 
-// EPISODIC ----------------------------------------------------
-async function loadEpisodic(sb: any, userKey: string) {
-  const { data: episodes } = await sb
+/* -----------------------------------------------------------
+   EPISODIC
+----------------------------------------------------------- */
+async function loadEpisodic(userKey: string) {
+  const { data: episodes } = await supabaseEdge
     .from("episodic_memories")
     .select("*")
     .eq("user_key", userKey)
@@ -47,12 +53,13 @@ async function loadEpisodic(sb: any, userKey: string) {
   const epList = safeRows(episodes);
   if (epList.length === 0) return [];
 
-  const ids = epList.map((e) => e.id);
-
-  const { data: chunks } = await sb
+  const { data: chunks } = await supabaseEdge
     .from("memory_episode_chunks")
     .select("*")
-    .in("episode_id", ids.length ? ids : ["_NOOP_"]) // avoids hanging
+    .in(
+      "episode_id",
+      epList.map((e) => e.id)
+    )
     .order("seq", { ascending: true });
 
   const chunkList = safeRows(chunks);
@@ -63,33 +70,35 @@ async function loadEpisodic(sb: any, userKey: string) {
   }));
 }
 
-// AUTOBIO -----------------------------------------------------
-async function loadAutobiography(sb: any, userKey: string) {
-  const [chaptersRes, entriesRes] = await Promise.all([
-    sb
-      .from("user_autobio_chapters")
-      .select("*")
-      .eq("user_key", userKey)
-      .order("start_year", { ascending: true }),
+/* -----------------------------------------------------------
+   AUTOBIOGRAPHY
+----------------------------------------------------------- */
+async function loadAutobiography(userKey: string) {
+  const { data: chapters } = await supabaseEdge
+    .from("user_autobio_chapters")
+    .select("*")
+    .eq("user_key", userKey)
+    .order("start_year", { ascending: true });
 
-    sb
-      .from("user_autobiography")
-      .select("*")
-      .eq("user_key", userKey)
-      .order("year", { ascending: true }),
-  ]);
+  const { data: entries } = await supabaseEdge
+    .from("user_autobiography")
+    .select("*")
+    .eq("user_key", userKey)
+    .order("year", { ascending: true });
 
   return {
-    chapters: safeRows(chaptersRes.data),
-    entries: safeRows(entriesRes.data),
+    chapters: safeRows(chapters),
+    entries: safeRows(entries),
   };
 }
 
-// NEWS --------------------------------------------------------
-async function loadNewsDigest(sb: any, userKey: string) {
+/* -----------------------------------------------------------
+   NEWS — CONDITIONAL
+----------------------------------------------------------- */
+async function loadNewsDigest(userKey: string) {
   if (!ENABLE_NEWS) return [];
 
-  const { data } = await sb
+  const { data } = await supabaseEdge
     .from("vw_solace_news_digest")
     .select("*")
     .eq("user_key", userKey)
@@ -99,11 +108,13 @@ async function loadNewsDigest(sb: any, userKey: string) {
   return safeRows(data);
 }
 
-// RESEARCH ----------------------------------------------------
-async function loadResearch(sb: any, userKey: string) {
+/* -----------------------------------------------------------
+   RESEARCH — CONDITIONAL
+----------------------------------------------------------- */
+async function loadResearch(userKey: string) {
   if (!ENABLE_RESEARCH) return [];
 
-  const { data } = await sb
+  const { data } = await supabaseEdge
     .from("truth_facts")
     .select("*")
     .eq("user_key", userKey)
@@ -113,15 +124,45 @@ async function loadResearch(sb: any, userKey: string) {
   return safeRows(data);
 }
 
-// MAIN EXPORT -------------------------------------------------
+/* -----------------------------------------------------------
+   MAIN EXPORT — CONTEXT ASSEMBLER
+----------------------------------------------------------- */
 export async function assembleContext(
   userKey: string,
   workspaceId: string | null,
   userMessage: string
 ) {
-  const sb = supabaseNode(); // NOT edge
+  /* ---------------------------------------------
+     Determine if we should load NEWS/RESEARCH
+  --------------------------------------------- */
 
-  // run everything concurrently
+  const lower = userMessage.toLowerCase();
+
+  const shouldLoadNews =
+    (ENABLE_NEWS &&
+      (
+        lower.includes("news") ||
+        lower.includes("headline") ||
+        lower.includes("story") ||
+        lower.includes("digest") ||
+        lower.includes("neutrality") ||
+        workspaceId === "newsroom"
+      )) ||
+    false;
+
+  const shouldLoadResearch =
+    ENABLE_RESEARCH &&
+    (
+      lower.includes("research") ||
+      lower.includes("find") ||
+      lower.includes("lookup") ||
+      lower.includes("investigate")
+    );
+
+  /* ---------------------------------------------
+     Load required memory domains in parallel
+  --------------------------------------------- */
+
   const [
     persona,
     memory,
@@ -130,14 +171,17 @@ export async function assembleContext(
     newsDigest,
     researchContext,
   ] = await Promise.all([
-    loadPersona(sb),
-    loadUserMemories(sb, userKey),
-    loadEpisodic(sb, userKey),
-    loadAutobiography(sb, userKey),
-    loadNewsDigest(sb, userKey),
-    loadResearch(sb, userKey),
+    loadPersona(),
+    loadUserMemories(userKey),
+    loadEpisodic(userKey),
+    loadAutobiography(userKey),
+    shouldLoadNews ? loadNewsDigest(userKey) : Promise.resolve([]),
+    shouldLoadResearch ? loadResearch(userKey) : Promise.resolve([]),
   ]);
 
+  /* ---------------------------------------------
+     Final Context Object
+  --------------------------------------------- */
   return {
     persona,
     memoryPack: {
