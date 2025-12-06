@@ -52,8 +52,7 @@ type NewsCacheRow = {
 };
 
 /**
- * Small helper to turn a potentially long story_text into
- * a compact summary string safe for prompts.
+ * Build compact story summary
  */
 function buildSummary(text: string | null | undefined): string {
   if (!text) return '';
@@ -64,9 +63,6 @@ function buildSummary(text: string | null | undefined): string {
 
 /**
  * Load cached news stories for a specific date (YYYY-MM-DD).
- *
- * This is used by /app/api/chat/route.ts to answer questions like
- * “what’s the news today?” without hitting Tavily every time.
  */
 export async function getNewsForDate(
   isoDate: string,
@@ -79,7 +75,6 @@ export async function getNewsForDate(
   try {
     const supabase = createAdminClient();
 
-    // story_date is a DATE column; isoDate is expected as YYYY-MM-DD
     const { data, error } = await supabase
       .from('news_cache')
       .select(
@@ -103,7 +98,8 @@ export async function getNewsForDate(
     const rows = (data || []) as NewsCacheRow[];
 
     return rows.map((row) => {
-      const title = (row.title || row.story_title || '').trim() || '(untitled story)';
+      const title =
+        (row.title || row.story_title || '').trim() || '(untitled story)';
       const url = row.url || row.story_url || null;
 
       return {
@@ -123,3 +119,60 @@ export async function getNewsForDate(
     return [];
   }
 }
+
+/**
+ * getNewsDigest()
+ * Canonical daily digest for the chat engine.
+ * Finds the most recent story_date and returns top stories.
+ */
+export async function getNewsDigest(limit = 8) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return {
+      date: null,
+      stories: [],
+      domainStats: {},
+      errors: ['Supabase credentials missing'],
+    };
+  }
+
+  try {
+    const supabase = createAdminClient();
+
+    // Fetch latest date with stories
+    const { data: dates, error: dateErr } = await supabase
+      .from('news_cache')
+      .select('story_date')
+      .order('story_date', { ascending: false })
+      .limit(1);
+
+    if (dateErr || !dates?.length) {
+      return {
+        date: null,
+        stories: [],
+        domainStats: {},
+        errors: ['No news available'],
+      };
+    }
+
+    const latestDate = dates[0].story_date;
+
+    // Fetch stories for this date
+    const stories = await getNewsForDate(latestDate, limit);
+
+    return {
+      date: latestDate,
+      stories,
+      domainStats: {}, // optional placeholder for your outlet scoring system
+      errors: [],
+    };
+  } catch (err) {
+    console.error('[news-cache] getNewsDigest fatal error', err);
+    return {
+      date: null,
+      stories: [],
+      domainStats: {},
+      errors: [String(err)],
+    };
+  }
+}
+
