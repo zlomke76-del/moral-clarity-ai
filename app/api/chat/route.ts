@@ -1,8 +1,10 @@
 // app/api/chat/route.ts
+
 import { NextResponse } from "next/server";
-import { assembleContext } from "./modules/context";
+import { assembleContext } from "./modules/assembleContext";
 import { assemblePrompt } from "./modules/assemble";
 import { runModel } from "./modules/model-router";
+import { processMemoryWrites } from "./modules/memory-writer";
 
 export const runtime = "edge";
 
@@ -12,32 +14,34 @@ export async function POST(req: Request) {
     const {
       message,
       history = [],
-      userKey = "guest",
-      workspaceId = null,
+      userKey,
     } = body;
 
-    if (!message || typeof message !== "string") {
+    if (!message) {
       return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
-    // 1. Build Solace persona + memory + news + research context
-    const context = await assembleContext(userKey, workspaceId, message);
+    // 1. Context load
+    const context = await assembleContext(userKey);
 
-    // 2. Build a VALID Responses API input block
-    const inputBlocks = assemblePrompt(context, history, message);
+    // 2. Build Responses API prompt
+    const blocks = assemblePrompt(context, history, message);
 
-    // 3. Call the model through the router
-    const replyText = await runModel(inputBlocks);
+    // 3. Run model
+    const reply = await runModel(blocks);
 
-    // 4. Return plain JSON { text }
-    return NextResponse.json({ text: replyText });
+    // 4. Memory write pipeline
+    await processMemoryWrites(userKey, message, reply);
+
+    return NextResponse.json({ text: reply });
 
   } catch (err: any) {
-    console.error("[chat route] fatal error", err);
+    console.error("CHAT ROUTE ERROR", err);
     return NextResponse.json(
-      { error: err?.message || "Chat route failed" },
+      { error: err?.message || "Chat failed" },
       { status: 500 }
     );
   }
 }
+
 
