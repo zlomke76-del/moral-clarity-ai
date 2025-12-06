@@ -1,11 +1,9 @@
 // lib/memory.ts
 
 import { createClient } from "@supabase/supabase-js";
-import {
-  consolidateMemory,
-  buildMemoryPack,
-  storeEpisode,
-} from "./memory-intelligence";
+import { classifyMemory } from "./ethics/classifier";
+import { evaluateMemoryLifecycle } from "./ethics/lifecycle";
+import { ethicalOversight } from "./ethics/oversight-engine";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -13,51 +11,61 @@ const supabase = createClient(
   { auth: { persistSession: false } }
 );
 
-export type MemoryPurpose =
-  | "fact"
-  | "preference"
-  | "context"
-  | "note"
-  | "episode";
-
-/* ============================================================
-   REMEMBER (INSERT)
-   ============================================================ */
-
 export async function remember({
   user_key,
   content,
   title,
-  purpose,
   workspace_id,
 }: {
   user_key: string;
   content: string;
   title?: string | null;
-  purpose?: MemoryPurpose | null;
   workspace_id?: string | null;
 }) {
-  const merged = await consolidateMemory(user_key, content);
-  if (merged?.mergedInto) return { mergedInto: merged.mergedInto };
+  //
+  // 1. CLASSIFICATION
+  //
+  const classification = classifyMemory(content);
 
+  //
+  // 2. LIFECYCLE EVALUATION
+  //
+  const lifecycle = evaluateMemoryLifecycle(content);
+
+  //
+  // 3. OVERSIGHT (final decision)
+  //
+  const oversight = ethicalOversight(classification, lifecycle);
+
+  if (!oversight.allowed || !oversight.store) {
+    return { blocked: true, reason: "Ethical oversight restriction." };
+  }
+
+  //
+  // 4. IMPORTANCE
+  //
   const importance =
-    purpose === "fact"
-      ? 1
-      : purpose === "context"
-      ? 2
-      : purpose === "preference"
-      ? 3
-      : 4;
+    oversight.finalKind === "fact" ? 1 :
+    oversight.finalKind === "identity" ? 2 :
+    oversight.finalKind === "value" ? 3 :
+    oversight.finalKind === "insight" ? 3 :
+    4; // fallback for notes
 
+  //
+  // 5. INSERT NEW MEMORY
+  //
   const { data, error } = await supabase
     .from("user_memories")
     .insert({
       user_key,
       content,
       title,
-      kind: purpose || "note",
+      kind: oversight.finalKind,     // fact | identity | value | insight | note
       importance,
       workspace_id,
+      sensitivity_score: classification.sensitivity,
+      emotional_weight: classification.emotionalWeight,
+      requires_review: oversight.requiresReview,
     })
     .select()
     .single();
@@ -66,58 +74,3 @@ export async function remember({
   return data;
 }
 
-/* ============================================================
-   SEARCH — FIXED SIGNATURE (accepts limit)
-   ============================================================ */
-
-export async function searchMemories(
-  user_key: string,
-  query: string,
-  limit: number = 8
-) {
-  const { data, error } = await supabase
-    .from("user_memories")
-    .select("*")
-    .eq("user_key", user_key)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  if (error || !data) return [];
-
-  return data.filter((m) =>
-    m.content?.toLowerCase().includes(query.toLowerCase())
-  );
-}
-
-/* ============================================================
-   MEMORY PACK — (used in Solace system prompt)
-   ============================================================ */
-
-export async function getMemoryPack(
-  user_key: string,
-  query: string,
-  opts: { factsLimit: number; episodesLimit: number }
-) {
-  return await buildMemoryPack(user_key, query, opts);
-}
-
-/* ============================================================
-   EPISODIC STORAGE — updated to match chat/route usage
-   ============================================================ */
-
-export async function maybeStoreEpisode(
-  user_key: string,
-  workspace_id: string,
-  messages: { role: string; content: string }[]
-) {
-  // Chat passes an array; if empty, nothing to store
-  if (!messages || !Array.isArray(messages) || messages.length === 0) return;
-
-  // Build consolidated episode text
-  const content = messages
-    .map((m) => `${m.role.toUpperCase()}: ${m.content}`)
-    .join("\n\n");
-
-  // Store it as an episode
-  await storeEpisode(user_key, content);
-}
