@@ -53,3 +53,36 @@ export type ToolCall = {
   toolName: string;
   arguments: Record<string, any>;
 };
+
+/* ============================================================
+   TOOL CALL EXTRACTION — Required by chat route
+   ============================================================ */
+
+/**
+ * Extracts a tool call block from the first streamed chunk.
+ * Supports the standard OpenAI "tool" message format.
+ */
+export function extractToolCall(chunk: any): ToolCall | null {
+  if (!chunk || !chunk.value) return null;
+
+  const msg = chunk.value;
+
+  // New model format: { type: "tool", toolName: string, arguments: any }
+  if (msg.type === "tool" && msg.toolName) {
+    return {
+      toolName: msg.toolName,
+      arguments: msg.arguments || {},
+    };
+  }
+
+  // Legacy format fallback: OpenAI often nests the call in message.tool_calls
+  if (msg.tool_calls && Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0) {
+    const call = msg.tool_calls[0];
+    return {
+      toolName: call.function?.name || "unknown",
+      arguments: call.function?.arguments ? JSON.parse(call.function.arguments) : {},
+    };
+  }
+
+  return null;
+}
