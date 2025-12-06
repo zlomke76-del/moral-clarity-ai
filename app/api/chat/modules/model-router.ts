@@ -8,36 +8,42 @@ import {
   MAX_TOKENS,
 } from "./constants";
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-/**
- * Runs a model using the new Responses API (streaming).
- * Ensures correct types and full compatibility with Edge runtime.
- */
 export async function runModel(messages: any[], signal?: AbortSignal) {
   try {
-    return await client.responses.stream(
+    // Responses API does NOT support:
+    // - temperature
+    // - max_tokens
+    // - max_completion_tokens (unless using generation)
+    // - top_p
+    // - frequency_penalty
+    // - presence_penalty
+    //
+    // Instead, you provide:
+    //   model
+    //   input: messages[]
+    //   stream: true
+
+    return await client.responses.create(
       {
         model: DEFAULT_MODEL,
-        input: messages,                // NEW REQUIRED FIELD
-        temperature: TEMPERATURE,
-        max_output_tokens: MAX_TOKENS,  // NEW FIELD (REPLACES max_tokens)
+        input: messages,
+        stream: true,
       },
       { signal }
     );
   } catch (err) {
     console.error("[router] Primary model failed:", err);
 
-    return await client.responses.stream(
+    return await client.responses.create(
       {
         model: FALLBACK_MODEL,
         input: messages,
-        temperature: TEMPERATURE,
-        max_output_tokens: MAX_TOKENS,
+        stream: true,
       },
       { signal }
     );
   }
 }
+
