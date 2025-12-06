@@ -1,4 +1,5 @@
 // lib/ethics/lifecycle.ts
+// Determines whether memory should be promoted to fact or demoted.
 
 export type LifecycleEvaluation = {
   promoteToFact: boolean;
@@ -7,12 +8,14 @@ export type LifecycleEvaluation = {
 };
 
 export function evaluateMemoryLifecycle(content: string): LifecycleEvaluation {
-  const stablePattern = /(i am|i prefer|i always|i believe|i value|my name is|i live)/i;
-  const isStable = stablePattern.test(content.toLowerCase());
+  const lower = content.toLowerCase();
+
+  const stable =
+    /(i am|i prefer|my name|i live|i believe|i always|i never)/i.test(lower);
 
   return {
-    promoteToFact: isStable,
+    promoteToFact: stable,
     demote: false,
-    confidence: isStable ? 0.9 : 0.2,
+    confidence: stable ? 0.9 : 0.2,
   };
 }
