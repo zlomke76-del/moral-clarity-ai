@@ -1,30 +1,36 @@
-// app/api/chat/modules/model-router.ts
+// modules/model-router.ts
 
 import { OpenAI } from "openai";
-import { DEFAULT_MODEL, FALLBACK_MODEL, MAX_TOKENS } from "./constants";
+import { DEFAULT_MODEL, FALLBACK_MODEL } from "./constants";
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-export async function runModel(input: any[], signal?: AbortSignal) {
+export async function runModel(inputBlocks: any[]) {
   try {
-    return client.responses.stream(
-      {
-        model: DEFAULT_MODEL,
-        input,
-        max_output_tokens: MAX_TOKENS,
-      },
-      { signal }
-    );
-  } catch (err) {
-    console.error("[router] Primary model failed:", err);
+    const res = await client.responses.create({
+      model: DEFAULT_MODEL,
+      input: inputBlocks,
+    });
 
-    return client.responses.stream(
-      {
-        model: FALLBACK_MODEL,
-        input,
-        max_output_tokens: MAX_TOKENS,
-      },
-      { signal }
-    );
+    return extractText(res);
+
+  } catch (err) {
+    console.error("[router] primary model failed", err);
+
+    const res = await client.responses.create({
+      model: FALLBACK_MODEL,
+      input: inputBlocks,
+    });
+
+    return extractText(res);
+  }
+}
+
+function extractText(res: any): string {
+  try {
+    const out = res.output_text;
+    return out ?? "[No reply]";
+  } catch {
+    return "[No reply]";
   }
 }
