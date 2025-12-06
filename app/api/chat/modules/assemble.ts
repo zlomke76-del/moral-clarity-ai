@@ -1,71 +1,72 @@
 // modules/assemble.ts
 
-function safe(label: string, data: any) {
+/**
+ * Safely stringify memory, news, research, or history.
+ * If the data cannot be stringified, produce a readable fallback.
+ */
+function safeBlock(label: string, data: any) {
+  if (!data) return `\n[${label}]: none\n`;
   try {
-    return `${label}: ${JSON.stringify(data)}`;
+    return `\n[${label}]: ${JSON.stringify(data, null, 2)}\n`;
   } catch {
-    return `${label}: [unserializable]`;
+    return `\n[${label}]: [unserializable]\n`;
   }
 }
 
-export function assemblePrompt(context: any, fullHistory: any[]) {
-  const input: any[] = [];
+/**
+ * FINAL Responses-API prompt builder.
+ *
+ * - No multi-message chat roles.
+ * - No input_text.
+ * - Everything collapses into ONE output_text block.
+ * - Solace receives persona + memory + news + research + history + user msg.
+ */
+export function assemblePrompt(
+  context: any,
+  history: any[],
+  userMessage: string
+) {
+  // --- Build the FULL flattened text prompt -------------------------------
+  let fullText = "";
 
-  // SYSTEM PERSONA
-  input.push({
-    role: "system",
-    content: [
-      {
-        type: "text",
-        text: `${context.persona} operates with clarity, neutrality, memory, and ethical reasoning.`,
-      },
-    ],
-  });
+  // Persona
+  fullText += `You are ${context.persona}, a stable, empathetic, neutral, memory-aware guide.\n`;
 
-  // MEMORY PACK
-  input.push({
-    role: "system",
-    content: [
-      {
-        type: "text",
-        text: safe("Relevant Memory", context.memoryPack),
-      },
-    ],
-  });
+  // Memory
+  fullText += safeBlock("Relevant memory", context.memoryPack);
 
-  // NEWS DIGEST
-  input.push({
-    role: "system",
-    content: [
-      {
-        type: "text",
-        text: safe("News Digest", context.newsDigest),
-      },
-    ],
-  });
+  // News digest
+  fullText += safeBlock("News digest", context.newsDigest);
 
-  // RESEARCH CONTEXT
-  input.push({
-    role: "system",
-    content: [
-      {
-        type: "text",
-        text: safe("Research Context", context.researchContext),
-      },
-    ],
-  });
+  // Research context
+  fullText += safeBlock("Research context", context.researchContext);
 
-  // FULL CHAT HISTORY
-  for (const msg of fullHistory) {
-    if (!msg?.role || !msg?.content) continue;
-
-    input.push({
-      role: msg.role,
-      content: [{ type: "text", text: String(msg.content) }],
-    });
+  // Chat history
+  if (history && Array.isArray(history) && history.length > 0) {
+    fullText += `\n[Chat history]:\n`;
+    for (const msg of history) {
+      if (!msg?.role || !msg?.content) continue;
+      fullText += `${msg.role.toUpperCase()}: ${String(msg.content)}\n`;
+    }
+  } else {
+    fullText += `\n[Chat history]: none\n`;
   }
 
-  return input;
+  // Current user message
+  fullText += `\n[User message]: ${userMessage}\n`;
+
+  // --- Return the SINGLE Responses-API input block ------------------------
+  return [
+    {
+      role: "user",
+      content: [
+        {
+          type: "output_text", // REQUIRED type for input
+          text: fullText,
+        },
+      ],
+    },
+  ];
 }
 
 
