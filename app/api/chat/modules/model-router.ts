@@ -10,6 +10,7 @@ import {
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
+// GPT-4.1 supports temperature, GPT-5 currently may not.
 function supportsTemperature(model: string) {
   return model.startsWith("gpt-4") || model.includes("4.1");
 }
@@ -22,7 +23,6 @@ export async function runModel(input: any[], signal?: AbortSignal) {
     const params: any = {
       model: primaryModel,
       input,
-      stream: true,
       max_output_tokens: MAX_TOKENS,
     };
 
@@ -30,7 +30,8 @@ export async function runModel(input: any[], signal?: AbortSignal) {
       params.temperature = TEMPERATURE;
     }
 
-    return await client.responses.create(params, { signal });
+    // *** IMPORTANT: use .stream() NOT .create()
+    return await client.responses.stream(params, { signal });
 
   } catch (err) {
     console.error("[router] Primary model failed:", err);
@@ -38,7 +39,6 @@ export async function runModel(input: any[], signal?: AbortSignal) {
     const backup: any = {
       model: fallbackModel,
       input,
-      stream: true,
       max_output_tokens: MAX_TOKENS,
     };
 
@@ -46,7 +46,7 @@ export async function runModel(input: any[], signal?: AbortSignal) {
       backup.temperature = TEMPERATURE;
     }
 
-    return await client.responses.create(backup, { signal });
+    return await client.responses.stream(backup, { signal });
   }
 }
 
