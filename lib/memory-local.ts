@@ -1,11 +1,11 @@
 // lib/memory-local.ts
 // Server utilities for reading workspace memories
 
-import { supabaseServer } from "@/lib/supabase/server"; // singleton Supabase client
+import { supabaseServer } from "@/lib/supabase/server"; 
 
 export async function listMemories(workspaceId: string) {
-  // Now a direct call — NOT awaited
-  const sb = supabaseServer();
+  // Direct instance — DO NOT CALL it
+  const sb = supabaseServer;
 
   const { data, error } = await sb
     .from("user_memories")
@@ -21,7 +21,7 @@ export async function listMemories(workspaceId: string) {
 }
 
 export async function getMemory(id: string) {
-  const sb = supabaseServer(); // no await
+  const sb = supabaseServer;
 
   const { data, error } = await sb
     .from("user_memories")
@@ -33,7 +33,7 @@ export async function getMemory(id: string) {
 }
 
 export async function deleteMemory(id: string) {
-  const sb = supabaseServer(); // no await
+  const sb = supabaseServer;
 
   const { error } = await sb
     .from("user_memories")
