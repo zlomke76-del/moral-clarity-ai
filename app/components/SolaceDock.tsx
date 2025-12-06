@@ -278,12 +278,13 @@ async function sendToChat(userMsg: string, nextMsgs: Message[]) {
       "Content-Type": "application/json",
       "X-User-Key": userKey,
     },
-    body: JSON.stringify({
-      message: userMsg,
-      history: nextMsgs,
-      userKey,
-      workspaceId: MCA_WORKSPACE_ID,
-    }),
+body: JSON.stringify({
+  message: userMsg,
+  history: nextMsgs,
+  userKey,
+  workspaceId: MCA_WORKSPACE_ID,
+}),
+
   });
 
   if (!res.ok) {
