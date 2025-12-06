@@ -1,4 +1,4 @@
-// modules/model-router.ts
+// app/api/chat/modules/model-router.ts
 
 import OpenAI from "openai";
 import { DEFAULT_MODEL, FALLBACK_MODEL } from "./constants";
@@ -8,33 +8,62 @@ const client = new OpenAI({
 });
 
 /**
- * Routes to primary model, then falls back if needed.
- * Fully compatible with the Responses API.
+ * runModel()
+ * - Primary → fallback
+ * - No temperature / top_p / max_tokens (not allowed in Responses API)
+ * - Extracts output_text cleanly and safely
  */
 export async function runModel(inputBlocks: any[]) {
   try {
-    // --- Primary model call ------------------------------------
+    // Primary model
     const primary = await client.responses.create({
-      model: DEFAULT_MODEL,  // "gpt-5" or whatever you set
+      model: DEFAULT_MODEL,
       input: inputBlocks,
     });
 
-    return primary.output_text?.[0] ?? "[no reply]";
+    const out1 = extract(primary);
+    if (out1) return out1;
   } catch (err) {
-    console.error("[router] Primary model failed:", err);
+    console.error("[router] primary model failed:", err);
+  }
 
-    // --- Fallback to mini-model -------------------------------
-    try {
-      const fallback = await client.responses.create({
-        model: FALLBACK_MODEL, // "gpt-4.1-mini"
-        input: inputBlocks,
-      });
+  // Fallback
+  try {
+    const fallback = await client.responses.create({
+      model: FALLBACK_MODEL,
+      input: inputBlocks,
+    });
 
-      return fallback.output_text?.[0] ?? "[no reply]";
-    } catch (err2) {
-      console.error("[router] Fallback model also failed:", err2);
-      return "[router failure]";
-    }
+    const out2 = extract(fallback);
+    if (out2) return out2;
+
+    return "[no reply]";
+  } catch (err2) {
+    console.error("[router] fallback model failed:", err2);
+    return "[router failure]";
+  }
+}
+
+/**
+ * extract()
+ * Correctly extracts output_text from a Responses API result.
+ */
+function extract(res: any): string | null {
+  try {
+    if (!res) return null;
+
+    // Canonical extraction for Responses API:
+    // res.output is an array of
+    //   { content: [ { type:text, text:"..." } ] }
+    const block = res.output?.[0];
+    if (!block) return null;
+
+    const content = block.content?.[0];
+    if (!content) return null;
+
+    return content.text ?? null;
+  } catch {
+    return null;
   }
 }
 
