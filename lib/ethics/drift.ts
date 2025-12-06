@@ -5,16 +5,16 @@ export type DriftResult = {
   conflictLevel: number;
 };
 
-export function detectDrift(newContent: string, existingContent: string): DriftResult {
-  const lowerNew = newContent.toLowerCase();
-  const lowerOld = existingContent.toLowerCase();
+export function detectDrift(newContent: string, existing: string): DriftResult {
+  const a = newContent.toLowerCase();
+  const b = existing.toLowerCase();
 
-  const contradicts =
-    (lowerOld.includes("yes") && lowerNew.includes("no")) ||
-    (lowerOld.includes("no") && lowerNew.includes("yes"));
+  const contradiction =
+    (b.includes("yes") && a.includes("no")) ||
+    (b.includes("no") && a.includes("yes"));
 
   return {
-    driftDetected: contradicts,
-    conflictLevel: contradicts ? 3 : 0,
+    driftDetected: contradiction,
+    conflictLevel: contradiction ? 3 : 0,
   };
 }
