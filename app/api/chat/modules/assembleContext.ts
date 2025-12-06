@@ -50,7 +50,10 @@ async function loadEpisodic(userKey: string) {
   const { data: chunks } = await supabaseEdge
     .from("memory_episode_chunks")
     .select("*")
-    .in("episode_id", epList.map((e) => e.id))
+    .in(
+      "episode_id",
+      epList.map((e) => e.id)
+    )
     .order("seq", { ascending: true });
 
   const chunkList = safeRows(chunks);
@@ -116,11 +119,9 @@ export async function assembleContext(
   userMessage: string
 ) {
   const persona = await loadPersona();
-
   const memory = await loadUserMemories(userKey);
   const episodic = await loadEpisodic(userKey);
   const autobio = await loadAutobiography(userKey);
-
   const newsDigest = await loadNewsDigest(userKey);
   const researchContext = await loadResearch(userKey);
 
