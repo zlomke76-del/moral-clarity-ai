@@ -26,15 +26,15 @@ export async function POST(req: Request) {
     // ---- 3. Run Model ---------------------------------------
     const stream = await runModel(messages);
 
-    // ---- 4. Check for tool calls ----------------------------
-    const firstChunk = await stream.next();
-    const tool = extractToolCall(firstChunk);
+// 4. Check for tool calls
+const iterator = stream[Symbol.asyncIterator]();
+const firstChunk = await iterator.next();
+const tool = extractToolCall(firstChunk.value);
 
-    if (tool) {
-      const result = await executeTool(tool.name, tool.args, userKey);
+if (tool) {
+  // handle tool call...
+}
 
-      return NextResponse.json({ toolResult: result });
-    }
 
     // ---- 5. Stream Response ---------------------------------
     return await streamResult({
