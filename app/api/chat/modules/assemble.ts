@@ -1,65 +1,68 @@
 // modules/assemble.ts
 
+function safeText(label: string, data: any) {
+  if (!data) return `${label}: none`;
+  try {
+    return `${label}: ${JSON.stringify(data)}`;
+  } catch {
+    return `${label}: [unserializable]`;
+  }
+}
+
 export function assemblePrompt(context: any, userMessage: string) {
   const messages = [];
 
-  // SYSTEM / PERSONA BLOCK
+  // SYSTEM / PERSONA
   messages.push({
     role: "system",
     content: [
       {
         type: "input_text",
-        text: context.persona + " operates with ethics, neutrality, and memory.",
+        text: `${context.persona} operates with ethics, clarity, memory, and neutrality.`
       }
     ]
   });
 
-  // MEMORY PACK
-  if (context.memoryPack) {
-    messages.push({
-      role: "system",
-      content: [
-        {
-          type: "input_text",
-          text: `Relevant memory:\n${JSON.stringify(context.memoryPack)}`
-        }
-      ]
-    });
-  }
+  // MEMORY PACK (safe wrapper)
+  messages.push({
+    role: "system",
+    content: [
+      {
+        type: "input_text",
+        text: safeText("Memory pack", context.memoryPack)
+      }
+    ]
+  });
 
-  // NEWS DIGEST
-  if (context.newsDigest) {
-    messages.push({
-      role: "system",
-      content: [
-        {
-          type: "input_text",
-          text: `News digest:\n${JSON.stringify(context.newsDigest)}`
-        }
-      ]
-    });
-  }
+  // NEWS DIGEST (safe wrapper)
+  messages.push({
+    role: "system",
+    content: [
+      {
+        type: "input_text",
+        text: safeText("News digest", context.newsDigest)
+      }
+    ]
+  });
 
-  // RESEARCH CONTEXT
-  if (context.researchContext) {
-    messages.push({
-      role: "system",
-      content: [
-        {
-          type: "input_text",
-          text: `Research context:\n${JSON.stringify(context.researchContext)}`
-        }
-      ]
-    });
-  }
+  // RESEARCH CONTEXT (safe wrapper)
+  messages.push({
+    role: "system",
+    content: [
+      {
+        type: "input_text",
+        text: safeText("Research context", context.researchContext)
+      }
+    ]
+  });
 
-  // USER MESSAGE
+  // USER MESSAGE (guaranteed string)
   messages.push({
     role: "user",
     content: [
       {
         type: "input_text",
-        text: userMessage
+        text: userMessage || " "
       }
     ]
   });
