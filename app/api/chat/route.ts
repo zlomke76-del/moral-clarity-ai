@@ -4,24 +4,20 @@ import { NextResponse } from "next/server";
 import { assembleContext } from "./modules/assembleContext";
 import { assemblePrompt } from "./modules/assemble";
 import { runModel } from "./modules/model-router";
-import { writeMemory } from "./modules/memory-wwriter";  // ✅ corrected import
+import { writeMemory } from "./modules/memory-writer";  // ✅ FIXED PATH
 
 export const runtime = "edge";
 
-
-// Very simple trigger: if Solace says "I will remember" or "I'll remember"
-// future improvements can expand this pattern matching.
 function detectMemoryIntent(replyText: string): boolean {
   if (!replyText) return false;
-  const lower = replyText.toLowerCase();
+  const t = replyText.toLowerCase();
   return (
-    lower.includes("i will remember") ||
-    lower.includes("i'll remember") ||
-    lower.includes("i will store this") ||
-    lower.includes("i'll store this")
+    t.includes("i will remember") ||
+    t.includes("i'll remember") ||
+    t.includes("i will store this") ||
+    t.includes("i'll store this")
   );
 }
-
 
 export async function POST(req: Request) {
   try {
@@ -40,13 +36,13 @@ export async function POST(req: Request) {
     // --- Build context (persona + memory + news + research)
     const context = await assembleContext(userKey, workspaceId, message);
 
-    // --- Build Responses API input blocks
+    // --- Build prompt
     const inputBlocks = assemblePrompt(context, history, message);
 
-    // --- Run model
+    // --- Run LLM
     const replyText = await runModel(inputBlocks);
 
-    // --- MEMORY CLEAN-UP
+    // --- Memory-writing trigger
     if (detectMemoryIntent(replyText)) {
       await writeMemory(userKey, message);
     }
