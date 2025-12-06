@@ -10,40 +10,43 @@ import {
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-export async function runModel(messages: any[], signal?: AbortSignal) {
-  try {
-    // Responses API does NOT support:
-    // - temperature
-    // - max_tokens
-    // - max_completion_tokens (unless using generation)
-    // - top_p
-    // - frequency_penalty
-    // - presence_penalty
-    //
-    // Instead, you provide:
-    //   model
-    //   input: messages[]
-    //   stream: true
+function supportsTemperature(model: string) {
+  return model.startsWith("gpt-4") || model.includes("4.1");
+}
 
-    return await client.responses.create(
-      {
-        model: DEFAULT_MODEL,
-        input: messages,
-        stream: true,
-      },
-      { signal }
-    );
+export async function runModel(input: any[], signal?: AbortSignal) {
+  const primaryModel = DEFAULT_MODEL;
+  const fallbackModel = FALLBACK_MODEL;
+
+  try {
+    const params: any = {
+      model: primaryModel,
+      input,
+      stream: true,
+      max_output_tokens: MAX_TOKENS,
+    };
+
+    if (supportsTemperature(primaryModel)) {
+      params.temperature = TEMPERATURE;
+    }
+
+    return await client.responses.create(params, { signal });
+
   } catch (err) {
     console.error("[router] Primary model failed:", err);
 
-    return await client.responses.create(
-      {
-        model: FALLBACK_MODEL,
-        input: messages,
-        stream: true,
-      },
-      { signal }
-    );
+    const backup: any = {
+      model: fallbackModel,
+      input,
+      stream: true,
+      max_output_tokens: MAX_TOKENS,
+    };
+
+    if (supportsTemperature(fallbackModel)) {
+      backup.temperature = TEMPERATURE;
+    }
+
+    return await client.responses.create(backup, { signal });
   }
 }
 
