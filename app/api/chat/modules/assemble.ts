@@ -16,10 +16,9 @@ function safeBlock(label: string, data: any) {
 /**
  * FINAL Responses-API prompt builder.
  *
- * - No multi-message chat roles.
- * - No input_text.
- * - Everything collapses into ONE output_text block.
- * - Solace receives persona + memory + news + research + history + user msg.
+ * - Flatten everything into text.
+ * - Use ONLY "input_text" as required by the Responses API.
+ * - Solace receives persona + memory + news + research + history + user message.
  */
 export function assemblePrompt(
   context: any,
@@ -61,7 +60,7 @@ export function assemblePrompt(
       role: "user",
       content: [
         {
-          type: "output_text", // REQUIRED type for input
+          type: "input_text",   // ✅ Correct API type
           text: fullText,
         },
       ],
