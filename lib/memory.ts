@@ -20,6 +20,10 @@ export type MemoryPurpose =
   | "note"
   | "episode";
 
+/* ============================================================
+   REMEMBER (INSERT)
+   ============================================================ */
+
 export async function remember({
   user_key,
   content,
@@ -33,7 +37,6 @@ export async function remember({
   purpose?: MemoryPurpose | null;
   workspace_id?: string | null;
 }) {
-  // Pre-merge check
   const merged = await consolidateMemory(user_key, content);
   if (merged?.mergedInto) return { mergedInto: merged.mergedInto };
 
@@ -64,24 +67,30 @@ export async function remember({
 }
 
 /* ============================================================
-   SEARCH (used for autocomplete, filtering, etc.)
+   SEARCH — FIXED SIGNATURE (accepts limit)
    ============================================================ */
 
-export async function searchMemories(user_key: string, query: string) {
+export async function searchMemories(
+  user_key: string,
+  query: string,
+  limit: number = 8
+) {
   const { data, error } = await supabase
     .from("user_memories")
     .select("*")
-    .eq("user_key", user_key);
+    .eq("user_key", user_key)
+    .order("created_at", { ascending: false })
+    .limit(limit);
 
   if (error || !data) return [];
 
   return data.filter((m) =>
-    m.content.toLowerCase().includes(query.toLowerCase())
+    m.content?.toLowerCase().includes(query.toLowerCase())
   );
 }
 
 /* ============================================================
-   MEMORY PACK (Solace system prompt)
+   MEMORY PACK — (used in Solace system prompt)
    ============================================================ */
 
 export async function getMemoryPack(
@@ -93,7 +102,7 @@ export async function getMemoryPack(
 }
 
 /* ============================================================
-   OPTIONAL EPISODE STORAGE
+   EPISODIC STORAGE
    ============================================================ */
 
 export async function maybeStoreEpisode(
@@ -104,6 +113,4 @@ export async function maybeStoreEpisode(
   if (!shouldStore) return;
   await storeEpisode(user_key, content);
 }
-
-
 
