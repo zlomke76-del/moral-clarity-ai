@@ -8,7 +8,7 @@ export function assemblePrompt(context: any, userMessage: string) {
     role: "system",
     content: [
       {
-        type: "text",
+        type: "input_text",
         text: context.persona + " operates with ethics, neutrality, and memory.",
       }
     ]
@@ -20,7 +20,7 @@ export function assemblePrompt(context: any, userMessage: string) {
       role: "system",
       content: [
         {
-          type: "text",
+          type: "input_text",
           text: `Relevant memory:\n${JSON.stringify(context.memoryPack)}`
         }
       ]
@@ -33,8 +33,21 @@ export function assemblePrompt(context: any, userMessage: string) {
       role: "system",
       content: [
         {
-          type: "text",
+          type: "input_text",
           text: `News digest:\n${JSON.stringify(context.newsDigest)}`
+        }
+      ]
+    });
+  }
+
+  // RESEARCH CONTEXT
+  if (context.researchContext) {
+    messages.push({
+      role: "system",
+      content: [
+        {
+          type: "input_text",
+          text: `Research context:\n${JSON.stringify(context.researchContext)}`
         }
       ]
     });
@@ -44,9 +57,13 @@ export function assemblePrompt(context: any, userMessage: string) {
   messages.push({
     role: "user",
     content: [
-      { type: "text", text: userMessage }
+      {
+        type: "input_text",
+        text: userMessage
+      }
     ]
   });
 
   return messages;
 }
+
