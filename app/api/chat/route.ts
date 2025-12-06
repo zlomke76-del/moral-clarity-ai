@@ -4,9 +4,24 @@ import { NextResponse } from "next/server";
 import { assembleContext } from "./modules/assembleContext";
 import { assemblePrompt } from "./modules/assemble";
 import { runModel } from "./modules/model-router";
-import { processMemoryWrites } from "./modules/memory-writer";
+import { writeMemory } from "./modules/memory-wwriter";  // ✅ corrected import
 
 export const runtime = "edge";
+
+
+// Very simple trigger: if Solace says "I will remember" or "I'll remember"
+// future improvements can expand this pattern matching.
+function detectMemoryIntent(replyText: string): boolean {
+  if (!replyText) return false;
+  const lower = replyText.toLowerCase();
+  return (
+    lower.includes("i will remember") ||
+    lower.includes("i'll remember") ||
+    lower.includes("i will store this") ||
+    lower.includes("i'll store this")
+  );
+}
+
 
 export async function POST(req: Request) {
   try {
@@ -14,31 +29,33 @@ export async function POST(req: Request) {
     const {
       message,
       history = [],
-      userKey,
+      userKey = "guest",
+      workspaceId = null,
     } = body;
 
-    if (!message) {
+    if (!message || typeof message !== "string") {
       return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
-    // 1. Context load
-    const context = await assembleContext(userKey);
+    // --- Build context (persona + memory + news + research)
+    const context = await assembleContext(userKey, workspaceId, message);
 
-    // 2. Build Responses API prompt
-    const blocks = assemblePrompt(context, history, message);
+    // --- Build Responses API input blocks
+    const inputBlocks = assemblePrompt(context, history, message);
 
-    // 3. Run model
-    const reply = await runModel(blocks);
+    // --- Run model
+    const replyText = await runModel(inputBlocks);
 
-    // 4. Memory write pipeline
-    await processMemoryWrites(userKey, message, reply);
+    // --- MEMORY CLEAN-UP
+    if (detectMemoryIntent(replyText)) {
+      await writeMemory(userKey, message);
+    }
 
-    return NextResponse.json({ text: reply });
-
+    return NextResponse.json({ text: replyText });
   } catch (err: any) {
-    console.error("CHAT ROUTE ERROR", err);
+    console.error("[chat route] fatal error", err);
     return NextResponse.json(
-      { error: err?.message || "Chat failed" },
+      { error: err?.message || "Chat route failed" },
       { status: 500 }
     );
   }
