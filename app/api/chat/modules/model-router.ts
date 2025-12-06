@@ -1,7 +1,7 @@
 // modules/model-router.ts
 
 import OpenAI from "openai";
-import { DEFAULT_MODEL, FALLBACK_MODEL } from "@/modules/constants";
+import { DEFAULT_MODEL, FALLBACK_MODEL } from "./constants";
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
