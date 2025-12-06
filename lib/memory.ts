@@ -1,7 +1,11 @@
 // lib/memory.ts
 
 import { createClient } from "@supabase/supabase-js";
-import { consolidateMemory } from "./memory-intelligence";
+import {
+  consolidateMemory,
+  buildMemoryPack,
+  storeEpisode,
+} from "./memory-intelligence";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -14,12 +18,8 @@ export type MemoryPurpose =
   | "preference"
   | "context"
   | "note"
-  | "episode"
-  | "other";
+  | "episode";
 
-/**
- * Create a new memory record with consolidation intelligence.
- */
 export async function remember({
   user_key,
   content,
@@ -33,13 +33,10 @@ export async function remember({
   purpose?: MemoryPurpose | null;
   workspace_id?: string | null;
 }) {
-  // 1. Consolidation check
-  const consolidation = await consolidateMemory(user_key, content);
-  if (consolidation?.mergedInto) {
-    return { mergedInto: consolidation.mergedInto };
-  }
+  // Pre-merge check
+  const merged = await consolidateMemory(user_key, content);
+  if (merged?.mergedInto) return { mergedInto: merged.mergedInto };
 
-  // 2. Base importance mapping
   const importance =
     purpose === "fact"
       ? 1
@@ -49,7 +46,6 @@ export async function remember({
       ? 3
       : 4;
 
-  // 3. Insert memory
   const { data, error } = await supabase
     .from("user_memories")
     .insert({
@@ -68,68 +64,46 @@ export async function remember({
 }
 
 /* ============================================================
-   BACKWARD COMPATIBILITY EXPORTS
-   The chat engine and API endpoints still import these.
-   Keeping them avoids breaking the entire system.
+   SEARCH (used for autocomplete, filtering, etc.)
    ============================================================ */
 
-const sb = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false } }
-);
-
-/**
- * Old API: keyword search over memories
- */
 export async function searchMemories(user_key: string, query: string) {
-  const { data, error } = await sb
+  const { data, error } = await supabase
     .from("user_memories")
     .select("*")
     .eq("user_key", user_key);
 
-  if (error) throw new Error(error.message);
+  if (error || !data) return [];
 
-  if (!query) return data;
-
-  const q = query.toLowerCase();
-  return data.filter((m) => m.content?.toLowerCase().includes(q));
+  return data.filter((m) =>
+    m.content.toLowerCase().includes(query.toLowerCase())
+  );
 }
 
-/**
- * Old API: pack of memories sorted by importance + recency
- */
-export async function getMemoryPack(user_key: string) {
-  const { data, error } = await sb
-    .from("user_memories")
-    .select("*")
-    .eq("user_key", user_key)
-    .order("importance")
-    .order("created_at", { ascending: false });
+/* ============================================================
+   MEMORY PACK (Solace system prompt)
+   ============================================================ */
 
-  if (error) throw new Error(error.message);
-
-  return {
-    user_key,
-    memories: data ?? [],
-    count: data?.length ?? 0,
-  };
+export async function getMemoryPack(
+  user_key: string,
+  query: string,
+  opts: { factsLimit: number; episodesLimit: number }
+) {
+  return await buildMemoryPack(user_key, query, opts);
 }
 
-/**
- * Old API: episode storage
- * For compatibility, episodes map to purpose="episode"
- */
-export async function maybeStoreEpisode(user_key: string, text: string) {
-  if (!text || text.length < 20) return null;
+/* ============================================================
+   OPTIONAL EPISODE STORAGE
+   ============================================================ */
 
-  const row = await remember({
-    user_key,
-    content: text,
-    purpose: "episode",
-  });
-
-  return row;
+export async function maybeStoreEpisode(
+  user_key: string,
+  content: string,
+  shouldStore: boolean
+) {
+  if (!shouldStore) return;
+  await storeEpisode(user_key, content);
 }
+
 
 
