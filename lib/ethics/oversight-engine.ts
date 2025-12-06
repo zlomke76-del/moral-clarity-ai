@@ -15,7 +15,6 @@ export function ethicalOversight(
   classification: EthicalClassification,
   lifecycle: LifecycleEvaluation
 ): OversightDecision {
-  // Hard-stop for extremely sensitive material
   if (classification.sensitivity >= 5) {
     return {
       allowed: false,
@@ -26,7 +25,6 @@ export function ethicalOversight(
     };
   }
 
-  // Fact promotion path
   if (lifecycle.promoteToFact) {
     return {
       allowed: true,
@@ -37,12 +35,11 @@ export function ethicalOversight(
     };
   }
 
-  // Default pathway
   return {
     allowed: true,
     store: true,
     promoteToFact: false,
     requiresReview: classification.requiresReview,
-    finalKind: "note",
+    finalKind: classification.category,
   };
 }
