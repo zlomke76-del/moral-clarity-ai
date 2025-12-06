@@ -1,10 +1,13 @@
 // app/layout.tsx
+"use client";
+
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 import AuthProvider from "@/components/AuthProvider";
 import LayoutShell from "./LayoutShell";
 import Toaster from "@/components/Toaster";
+import SolaceDock from "@/app/components/SolaceDock";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.moralclarity.ai"),
@@ -26,17 +29,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="h-full dark">
       <body className="mc-root min-h-screen relative">
+
         {/* GLOBAL BACKGROUND LAYERS */}
         <div className="mc-bg absolute inset-0 pointer-events-none z-0" />
         <div className="mc-noise absolute inset-0 pointer-events-none z-0" />
 
+        {/* APP PROVIDERS */}
         <AuthProvider>
           <LayoutShell>{children}</LayoutShell>
+
+          {/* ⭐️ MOUNT SOLACE DOCK HERE – ALWAYS PRESENT */}
+          <SolaceDock />
         </AuthProvider>
 
+        {/* GLOBAL TOASTER */}
         <Toaster />
       </body>
     </html>
   );
 }
-
