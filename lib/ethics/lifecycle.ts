@@ -7,10 +7,8 @@ export type LifecycleEvaluation = {
 };
 
 export function evaluateMemoryLifecycle(content: string): LifecycleEvaluation {
-  const lower = content.toLowerCase();
-
-  const isStable =
-    /(i am|i prefer|my name is|i live|i believe|i always|i never)/i.test(lower);
+  const stablePattern = /(i am|i prefer|i always|i believe|i value|my name is|i live)/i;
+  const isStable = stablePattern.test(content.toLowerCase());
 
   return {
     promoteToFact: isStable,
