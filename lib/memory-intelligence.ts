@@ -1,7 +1,5 @@
 // lib/memory-intelligence.ts
-// Final production-grade deterministic memory intelligence layer.
-// Includes consolidation, ethical classification, lifecycle evaluation,
-// drift detection, episodic logging, recall scoring, and memory pack assembly.
+// Deterministic memory engine powering consolidation, recall, scoring, and pack-building.
 
 import { createClient } from "@supabase/supabase-js";
 import { classifyMemory } from "./ethics/classifier";
@@ -16,69 +14,24 @@ const supabase = createClient(
   { auth: { persistSession: false } }
 );
 
-/* -------------------------------------------------------------------------- */
-/*                               CONSOLIDATION                                */
-/* -------------------------------------------------------------------------- */
+/* ---------------------------------------------------------
+   1. BASIC MEMORY SCORING
+--------------------------------------------------------- */
 
-export async function consolidateMemory(user_key: string, content: string) {
-  const { data, error } = await supabase
-    .from("user_memories")
-    .select("id, content")
-    .eq("user_key", user_key);
+export function scoreMemory(content: string): number {
+  let score = 1;
 
-  if (error || !data) return null;
+  if (/i am|my name|i live|i work/i.test(content)) score += 3;
+  if (/i believe|i value|my principle/i.test(content)) score += 2;
+  if (/i realized|i learned/i.test(content)) score += 2;
 
-  const lower = content.toLowerCase();
-
-  for (const row of data) {
-    const existing = (row.content || "").toLowerCase();
-
-    // Moderate consolidation: only merge if content is highly similar
-    if (
-      existing === lower ||
-      (existing.includes(lower) && lower.length > 20) ||
-      (lower.includes(existing) && existing.length > 20)
-    ) {
-      return { mergedInto: row.id };
-    }
-  }
-
-  return null;
+  return score;
 }
 
-/* -------------------------------------------------------------------------- */
-/*                                 EPISODES                                   */
-/* -------------------------------------------------------------------------- */
+/* ---------------------------------------------------------
+   2. SEARCH INDEX (deterministic, non-vector)
+--------------------------------------------------------- */
 
-export async function storeEpisode(user_key: string, content: string) {
-  await supabase.from("user_memories").insert({
-    user_key,
-    content,
-    kind: "episode",
-    importance: 1,
-  });
-
-  // Keep only the last 50 episodes
-  const { data } = await supabase
-    .from("user_memories")
-    .select("id, created_at")
-    .eq("user_key", user_key)
-    .eq("kind", "episode")
-    .order("created_at", { ascending: false });
-
-  if (!data) return;
-
-  const excess = data.slice(50);
-
-  if (excess.length > 0) {
-    const ids = excess.map((r) => r.id);
-    await supabase.from("user_memories").delete().in("id", ids);
-  }
-}
-
-/* -------------------------------------------------------------------------- */
-/*                              MEMORY INDEX SEARCH                            */
-/* -------------------------------------------------------------------------- */
 export async function searchMemoryIndex(user_key: string, query: string) {
   const { data, error } = await supabase
     .from("user_memories")
@@ -89,72 +42,147 @@ export async function searchMemoryIndex(user_key: string, query: string) {
 
   const q = query.toLowerCase();
 
-  return data.filter((m) =>
+  return data.filter(m =>
+    (m.title || "").toLowerCase().includes(q) ||
     (m.content || "").toLowerCase().includes(q)
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/*                                    SCORING                                 */
-/* -------------------------------------------------------------------------- */
-export function scoreMemory(memory: any) {
-  const base = memory.importance ?? 1;
+/* ---------------------------------------------------------
+   3. CONSOLIDATION ENGINE
+--------------------------------------------------------- */
 
-  const weight =
-    base +
-    (memory.emotional_weight || 0) * 0.5 -
-    (memory.sensitivity_score || 0) * 0.25;
+export async function consolidateMemory(user_key: string, newContent: string) {
+  const { data: rows } = await supabase
+    .from("user_memories")
+    .select("*")
+    .eq("user_key", user_key)
+    .order("created_at", { ascending: false })
+    .limit(50);
 
-  return weight;
+  if (!rows || rows.length === 0) return null;
+
+  for (const existing of rows) {
+    const drift = detectDrift(newContent, existing.content);
+
+    // If conflict is too high → do not merge
+    if (drift.driftDetected && drift.conflictLevel >= 2) continue;
+
+    // If they are nearly identical, merge
+    if (existing.content.toLowerCase().trim() === newContent.toLowerCase().trim()) {
+      return { mergedInto: existing.id };
+    }
+
+    // If existing contains majority of new content → update existing
+    if (existing.content.includes(newContent.slice(0, 20))) {
+      await supabase
+        .from("user_memories")
+        .update({ content: newContent, updated_at: new Date().toISOString() })
+        .eq("id", existing.id);
+
+      return { mergedInto: existing.id };
+    }
+  }
+
+  return null;
 }
 
-/* -------------------------------------------------------------------------- */
-/*                                MEMORY PACK                                 */
-/* -------------------------------------------------------------------------- */
+/* ---------------------------------------------------------
+   4. INSIGHT DETECTION
+--------------------------------------------------------- */
 
-export async function buildMemoryPack(
+export function detectInsight(content: string): boolean {
+  return /(i realized|i learned|i understood|it occurred to me|breakthrough)/i.test(
+    content.toLowerCase()
+  );
+}
+
+/* ---------------------------------------------------------
+   5. STORE EPISODE
+--------------------------------------------------------- */
+
+export async function storeEpisode(
   user_key: string,
-  query: string,
-  opts: { factsLimit: number; episodesLimit: number }
+  content: string,
+  workspace_id?: string | null
 ) {
   const { data, error } = await supabase
     .from("user_memories")
-    .select("*")
-    .eq("user_key", user_key);
+    .insert({
+      user_key,
+      content,
+      title: "Episode",
+      kind: "episode",
+      workspace_id,
+      importance: 1,
+    })
+    .select()
+    .single();
 
-  if (error || !data) return { facts: [], episodes: [], contextual: [] };
-
-  const memories = data;
-
-  // Ranking for intelligent recall
-  const ranked = rankMemories(memories);
-
-  const facts = ranked.filter((m) => m.kind === "fact").slice(0, opts.factsLimit);
-
-  const contextual = ranked
-    .filter((m) =>
-      ["context", "identity", "value", "insight", "preference"].includes(m.kind)
-    )
-    .slice(0, 15);
-
-  const episodes = ranked.filter((m) => m.kind === "episode").slice(0, opts.episodesLimit);
-
-  return { facts, contextual, episodes };
+  if (error) throw new Error(error.message);
+  return data;
 }
 
-/* -------------------------------------------------------------------------- */
-/*                       ETHICAL MEMORY PIPELINE WRAPPER                       */
-/* -------------------------------------------------------------------------- */
+/* ---------------------------------------------------------
+   6. BUILD MEMORY PACK (FACTS + IDENTITY + VALUES + INSIGHTS + EPISODES)
+--------------------------------------------------------- */
 
-export async function evaluateAndClassifyMemory(
+export async function buildMemoryPack(
   user_key: string,
-  content: string
+  query: string | null,
+  opts: { factsLimit: number; episodesLimit: number }
 ) {
+  const { data: rows, error } = await supabase
+    .from("user_memories")
+    .select("*")
+    .eq("user_key", user_key)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (error || !rows) return { facts: [], identity: [], values: [], insights: [], episodes: [] };
+
+  const ranked = rankMemories(rows);
+
+  const facts = ranked.filter(r => r.kind === "fact").slice(0, opts.factsLimit);
+  const identity = ranked.filter(r => r.kind === "identity").slice(0, 10);
+  const values = ranked.filter(r => r.kind === "value").slice(0, 10);
+  const insights = ranked.filter(r => r.kind === "insight").slice(0, 20);
+  const episodes = ranked.filter(r => r.kind === "episode").slice(0, opts.episodesLimit);
+
+  // If query present → include matches
+  let queryMatches: any[] = [];
+  if (query) {
+    const q = query.toLowerCase();
+    queryMatches = ranked.filter(
+      m =>
+        (m.content || "").toLowerCase().includes(q) ||
+        (m.title || "").toLowerCase().includes(q)
+    );
+  }
+
+  return {
+    facts,
+    identity,
+    values,
+    insights,
+    episodes,
+    queryMatches,
+  };
+}
+
+/* ---------------------------------------------------------
+   7. MEMORY DECISION ENGINE
+   (classification → lifecycle → oversight)
+--------------------------------------------------------- */
+
+export function evaluateNewMemory(content: string) {
   const classification = classifyMemory(content);
   const lifecycle = evaluateMemoryLifecycle(content);
+  const oversight = ethicalOversight(classification, lifecycle);
 
-  const decision = ethicalOversight(classification, lifecycle);
-  const drift = null; // drift detection with context can be added when comparing against last row
-
-  return { classification, lifecycle, decision, drift };
+  return {
+    classification,
+    lifecycle,
+    oversight,
+  };
 }
