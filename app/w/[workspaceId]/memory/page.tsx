@@ -1,9 +1,10 @@
 // app/w/[workspaceId]/memory/page.tsx
-export const runtime = "nodejs";
+
+export const runtime = "nodejs";       // <- MUST BE FIRST
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { supabaseNode } from "@/lib/supabase/node";
+import { supabaseNode } from "@/lib/supabase/node";   // <- MUST USE NODE CLIENT
 import MemoryComposer from "@/components/MemoryComposer";
 import MemoryList from "@/components/MemoryList";
 
