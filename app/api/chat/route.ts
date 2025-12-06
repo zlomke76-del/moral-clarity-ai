@@ -10,28 +10,22 @@ export const runtime = "edge";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { message, history = [], userKey = "guest", workspaceId = null } = body;
+    const { message, history = [], userKey = "guest", workspaceId = null } =
+      await req.json();
 
     if (!message || typeof message !== "string") {
       return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
-    // 1. Build context (persona + memories + news + research)
     const context = await assembleContext(userKey, workspaceId, message);
 
-    // 2. Build flattened prompt block for Responses API
     const inputBlocks = assemblePrompt(context, history, message);
 
-    // 3. Run model
     const replyText = await runModel(inputBlocks);
 
-    // 4. Write memory (hybrid mode)
     await writeMemory(userKey, message, replyText);
 
-    // 5. Return to frontend
     return NextResponse.json({ text: replyText });
-
   } catch (err: any) {
     console.error("[chat route] fatal error", err);
     return NextResponse.json(
@@ -40,5 +34,6 @@ export async function POST(req: Request) {
     );
   }
 }
+
 
 
