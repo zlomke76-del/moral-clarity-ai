@@ -3,13 +3,23 @@
 import { getMemoryPack } from "@/lib/memory";
 import { getNewsDigest } from "@/lib/news";
 import { runDeepResearch } from "@/lib/research";
-import { FACTS_LIMIT, EPISODES_LIMIT, ENABLE_NEWS, ENABLE_RESEARCH } from "./constants";
 
-export async function assembleContext(userKey: string, workspaceId: string | null, query: string) {
+import {
+  FACTS_LIMIT,
+  EPISODES_LIMIT,
+  ENABLE_NEWS,
+  ENABLE_RESEARCH,
+} from "./constants";
+
+export async function assembleContext(
+  userKey: string,
+  workspaceId: string | null,
+  query: string
+) {
   const context: any = {
+    persona: "Solace",
     userKey,
     workspaceId,
-    persona: "Solace",
   };
 
   // Memory Pack
@@ -18,15 +28,13 @@ export async function assembleContext(userKey: string, workspaceId: string | nul
     episodesLimit: EPISODES_LIMIT,
   });
 
-  // News (if allowed)
-  if (ENABLE_NEWS) {
-    context.newsDigest = await getNewsDigest();
-  }
+  // Optional News
+  context.newsDigest = ENABLE_NEWS ? await getNewsDigest() : null;
 
-  // Deep research (if allowed)
-  if (ENABLE_RESEARCH) {
-    context.researchContext = await runDeepResearch(query);
-  }
+  // Optional Research
+  context.researchContext = ENABLE_RESEARCH
+    ? await runDeepResearch(query)
+    : null;
 
   return context;
 }
