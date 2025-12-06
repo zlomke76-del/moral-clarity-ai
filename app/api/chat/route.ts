@@ -7,6 +7,7 @@ import { runModel } from "./modules/model-router";
 import { writeMemory } from "./modules/memory-writer";
 
 export const runtime = "edge";
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
