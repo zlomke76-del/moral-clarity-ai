@@ -1,9 +1,8 @@
-// components/AuthProvider.tsx
 'use client';
 
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
-import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { getSupabaseBrowser } from "@/lib/supabaseBrowser";   // <-- FIXED IMPORT
 
 type RetryState = {
   tries: number;
@@ -11,7 +10,7 @@ type RetryState = {
 };
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
-  const supabase = supabaseBrowser();
+  const supabase = getSupabaseBrowser();   // <-- FIXED CALL
   const retryRef = useRef<RetryState>({ tries: 0 });
 
   useEffect(() => {
