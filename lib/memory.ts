@@ -1,14 +1,10 @@
 // lib/memory.ts
-// Deterministic memory interface between Supabase and the Memory Intelligence Engine.
+// Phase 4 — Ethical Memory Engine Integration
 
 import { createClient } from "@supabase/supabase-js";
-
 import {
-  consolidateMemory,
-  buildMemoryPack,
-  storeEpisode,
-  searchMemoryIndex,
-  evaluateNewMemory,
+  analyzeMemoryWrite,
+  rankMemories,
 } from "./memory-intelligence";
 
 const supabase = createClient(
@@ -18,142 +14,161 @@ const supabase = createClient(
 );
 
 export type MemoryPurpose =
-  | "fact"
   | "identity"
   | "value"
   | "insight"
+  | "fact"
+  | "preference"
   | "context"
-  | "note"
-  | "episode";
+  | "episode"
+  | "note";
 
-/* ---------------------------------------------------------
-   BASE STORE FUNCTION (called after ethics + consolidation)
---------------------------------------------------------- */
+/* ============================================================
+   HELPER — Fetch recent memories (for drift & consolidation)
+   ============================================================ */
+async function fetchRecentMemories(user_key: string, limit = 20) {
+  const { data } = await supabase
+    .from("user_memories")
+    .select("*")
+    .eq("user_key", user_key)
+    .order("created_at", { ascending: false })
+    .limit(limit);
 
-export async function storeMemoryRow({
+  return data || [];
+}
+
+/* ============================================================
+   WRITE MEMORY — Full Ethical Pipeline
+   ============================================================ */
+
+export async function remember({
   user_key,
   content,
-  title,
-  kind,
-  workspace_id,
-  importance,
+  title = null,
+  workspace_id = null,
 }: {
   user_key: string;
   content: string;
   title?: string | null;
-  kind: MemoryPurpose;
   workspace_id?: string | null;
-  importance: number;
 }) {
+  // 1. Get recent memories for drift & context analysis
+  const recent = await fetchRecentMemories(user_key, 20);
+
+  // 2. Full multi-stage intelligence evaluation
+  const evaluation = await analyzeMemoryWrite(content, recent);
+
+  const {
+    classification,
+    lifecycle,
+    oversight,
+  } = evaluation;
+
+  // 3. If not allowed, do not store
+  if (!oversight.allowed || !oversight.store) {
+    return {
+      stored: false,
+      reason: "blocked_by_oversight",
+      classification,
+    };
+  }
+
+  // 4. Determine final "kind"
+  const finalKind: MemoryPurpose = oversight.finalKind as MemoryPurpose;
+
+  // 5. Insert memory
   const { data, error } = await supabase
     .from("user_memories")
     .insert({
       user_key,
-      content,
       title,
-      kind,
-      importance,
+      content,
+      kind: finalKind,
+      importance: lifecycle.promoteToFact ? 5 : 3,
+      emotional_weight: classification.emotional,
+      sensitivity_score: classification.sensitivity,
       workspace_id,
     })
     .select()
     .single();
 
   if (error) throw new Error(error.message);
-  return data;
+
+  return {
+    stored: true,
+    memory: data,
+    classification,
+    lifecycle,
+    oversight,
+  };
 }
 
-/* ---------------------------------------------------------
-   PUBLIC: REMEMBER()
-   The main entrypoint for storing new memory.
---------------------------------------------------------- */
-
-export async function remember({
-  user_key,
-  content,
-  title,
-  purpose,
-  workspace_id,
-}: {
-  user_key: string;
-  content: string;
-  title?: string | null;
-  purpose?: MemoryPurpose | null;
-  workspace_id?: string | null;
-}) {
-  // 1. Ethical + lifecycle evaluation
-  const evalResult = evaluateNewMemory(content);
-  const { oversight } = evalResult;
-
-  if (!oversight.allowed) {
-    return { blocked: true, reason: "ethical_restriction" };
-  }
-
-  // 2. Merge logic
-  const merge = await consolidateMemory(user_key, content);
-  if (merge?.mergedInto) return { mergedInto: merge.mergedInto };
-
-  // 3. Final kind chosen by ethics engine
-  const finalKind = oversight.finalKind as MemoryPurpose;
-
-  // 4. Compute importance based on hierarchy
-  const importance =
-    finalKind === "fact"
-      ? 1
-      : finalKind === "identity"
-      ? 2
-      : finalKind === "value"
-      ? 3
-      : finalKind === "insight"
-      ? 3
-      : finalKind === "context"
-      ? 4
-      : 5;
-
-  // 5. Store
-  const row = await storeMemoryRow({
-    user_key,
-    content,
-    title,
-    kind: finalKind,
-    importance,
-    workspace_id,
-  });
-
-  return row;
-}
-
-/* ---------------------------------------------------------
-   PUBLIC: SEARCH
---------------------------------------------------------- */
-
+/* ============================================================
+   SEARCH — Keyword + Ranked Recall
+   ============================================================ */
 export async function searchMemories(user_key: string, query: string) {
-  return await searchMemoryIndex(user_key, query);
+  const { data, error } = await supabase
+    .from("user_memories")
+    .select("*")
+    .eq("user_key", user_key);
+
+  if (error || !data) return [];
+
+  const matches = data.filter(m =>
+    m.content.toLowerCase().includes(query.toLowerCase())
+  );
+
+  return rankMemories(matches);
 }
 
-/* ---------------------------------------------------------
-   PUBLIC: MEMORY PACK (for Solace system prompt)
---------------------------------------------------------- */
+/* ============================================================
+   MEMORY PACK — For Solace system prompt
+   ============================================================ */
 
 export async function getMemoryPack(
   user_key: string,
   query: string,
   opts: { factsLimit: number; episodesLimit: number }
 ) {
-  return await buildMemoryPack(user_key, query, opts);
+  const { data } = await supabase
+    .from("user_memories")
+    .select("*")
+    .eq("user_key", user_key);
+
+  if (!data) return { facts: [], episodes: [] };
+
+  const ranked = rankMemories(data);
+
+  const facts = ranked
+    .filter(m => m.kind === "fact" || m.kind === "identity" || m.kind === "value")
+    .slice(0, opts.factsLimit);
+
+  const episodes = ranked
+    .filter(m => m.kind === "episode")
+    .slice(0, opts.episodesLimit);
+
+  return { facts, episodes };
 }
 
-/* ---------------------------------------------------------
-   PUBLIC: EPISODE STORAGE
---------------------------------------------------------- */
-
+/* ============================================================
+   OPTIONAL — Store episode (chat transcript bundle)
+   ============================================================ */
 export async function maybeStoreEpisode(
   user_key: string,
   content: string,
-  shouldStore: boolean,
-  workspace_id?: string | null
+  shouldStore: boolean
 ) {
   if (!shouldStore) return;
-  return await storeEpisode(user_key, content, workspace_id);
+
+  await supabase.from("user_memories").insert({
+    user_key,
+    title: "Chat Episode",
+    content,
+    kind: "episode",
+    importance: 2,
+    emotional_weight: 0,
+    sensitivity_score: 1,
+  });
 }
 
 
