@@ -1,78 +1,51 @@
 "use client";
 
-import { useState } from "react";
-import type React from "react";
-import { uploadFromInput, uploadFromPasteEvent } from "@/lib/uploads/client";
+export function useSolaceAttachments({ onInfoMessage }: { onInfoMessage: (msg: string) => void }) {
+  const pendingFiles: any[] = [];
 
-export type Attachment = { name: string; url: string; type: string };
+  function push(file: any) {
+    pendingFiles.push(file);
+  }
 
-type UseSolaceAttachmentsArgs = {
-  onInfoMessage: (content: string) => void;
-};
-
-export function useSolaceAttachments({ onInfoMessage }: UseSolaceAttachmentsArgs) {
-  const [pendingFiles, setPendingFiles] = useState<Attachment[]>([]);
-
-  async function handleFiles(
-    fileList: FileList | null,
-    opts?: { prefix?: string }
-  ) {
-    const { attachments, errors } = await uploadFromInput(fileList, opts);
-
-    if (errors.length) {
-      onInfoMessage(
-        "⚠️ Some uploads failed: " +
-          errors.map((e) => `${e.fileName} (${e.message})`).join("; ")
-      );
-    }
-
-    if (attachments.length) {
-      const mapped: Attachment[] = attachments.map((a) => ({
-        name: a.name,
-        url: a.url,
-        type: a.type,
-      }));
-
-      setPendingFiles((prev) => [...prev, ...mapped]);
-      onInfoMessage(
-        `Attached ${mapped.length} file${
-          mapped.length > 1 ? "s" : ""
-        }. They will be included in your next message.`
-      );
+  function handleFiles(fileList: FileList | null, { prefix }: { prefix: string }) {
+    if (!fileList) return;
+    for (const file of Array.from(fileList)) {
+      push({
+        name: file.name,
+        type: file.type,
+        mime: file.type,
+        url: URL.createObjectURL(file),
+      });
     }
   }
 
-  function handlePaste(
-    e: React.ClipboardEvent<HTMLDivElement>,
-    opts?: { prefix?: string }
-  ) {
-    uploadFromPasteEvent(e.nativeEvent, opts).then(({ attachments, errors }) => {
-      if (errors.length) {
-        onInfoMessage(
-          "⚠️ Some pasted items failed: " +
-            errors.map((er) => `${er.fileName} (${er.message})`).join("; ")
-        );
+  function handlePaste(e: React.ClipboardEvent, { prefix }: { prefix: string }) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.kind === "file") {
+        const file = item.getAsFile();
+        if (file) {
+          push({
+            name: file.name,
+            type: file.type,
+            mime: file.type,
+            url: URL.createObjectURL(file),
+          });
+        }
       }
-      if (attachments.length) {
-        const mapped: Attachment[] = attachments.map((a) => ({
-          name: a.name,
-          url: a.url,
-          type: a.type,
-        }));
-        setPendingFiles((prev) => [...prev, ...mapped]);
-        onInfoMessage(
-          `Attached ${mapped.length} pasted item${
-            mapped.length > 1 ? "s" : ""
-          }. They will be included in your next message.`
-        );
-      }
-    });
+    }
   }
 
   function clearPending() {
-    setPendingFiles([]);
+    pendingFiles.splice(0, pendingFiles.length);
   }
 
-  return { pendingFiles, handleFiles, handlePaste, clearPending };
+  return {
+    pendingFiles,
+    handleFiles,
+    handlePaste,
+    clearPending,
+  };
 }
 
