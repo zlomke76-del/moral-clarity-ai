@@ -102,15 +102,22 @@ export async function getMemoryPack(
 }
 
 /* ============================================================
-   EPISODIC STORAGE
+   EPISODIC STORAGE — updated to match chat/route usage
    ============================================================ */
 
 export async function maybeStoreEpisode(
   user_key: string,
-  content: string,
-  shouldStore: boolean
+  workspace_id: string,
+  messages: { role: string; content: string }[]
 ) {
-  if (!shouldStore) return;
+  // Chat passes an array; if empty, nothing to store
+  if (!messages || !Array.isArray(messages) || messages.length === 0) return;
+
+  // Build consolidated episode text
+  const content = messages
+    .map((m) => `${m.role.toUpperCase()}: ${m.content}`)
+    .join("\n\n");
+
+  // Store it as an episode
   await storeEpisode(user_key, content);
 }
-
