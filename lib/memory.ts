@@ -45,11 +45,13 @@ export async function remember({
   user_key,
   content,
   title = null,
+  purpose = null,
   workspace_id = null,
 }: {
   user_key: string;
   content: string;
   title?: string | null;
+  purpose?: string | null;       // <-- Added
   workspace_id?: string | null;
 }) {
   // 1. Get recent memories for drift & context analysis
@@ -64,7 +66,7 @@ export async function remember({
     oversight,
   } = evaluation;
 
-  // 3. If not allowed, do not store
+  // 3. If oversight blocks storage
   if (!oversight.allowed || !oversight.store) {
     return {
       stored: false,
@@ -74,16 +76,17 @@ export async function remember({
   }
 
   // 4. Determine final "kind"
-  const finalKind: MemoryPurpose = oversight.finalKind as MemoryPurpose;
+  const finalKind: MemoryPurpose =
+    (purpose as MemoryPurpose) || (oversight.finalKind as MemoryPurpose);
 
-  // 5. Insert memory
+  // 5. Insert memory into DB
   const { data, error } = await supabase
     .from("user_memories")
     .insert({
       user_key,
       title,
       content,
-      kind: finalKind,
+      kind: finalKind,                     // <-- stores final purpose
       importance: lifecycle.promoteToFact ? 5 : 3,
       emotional_weight: classification.emotional,
       sensitivity_score: classification.sensitivity,
@@ -124,7 +127,6 @@ export async function searchMemories(user_key: string, query: string) {
 /* ============================================================
    MEMORY PACK — For Solace system prompt
    ============================================================ */
-
 export async function getMemoryPack(
   user_key: string,
   query: string,
