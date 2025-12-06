@@ -6,11 +6,14 @@ import { assemblePrompt } from "./modules/assemble";
 import { runModel } from "./modules/model-router";
 import { writeMemory } from "./modules/memory-writer";
 
-// REQUIRED: prevents Next.js from pre-rendering this route
-export const dynamic = "force-dynamic";
-
-// REQUIRED: ensures proper execution environment
+// Required for ANY Supabase key usage inside Route Handlers
 export const runtime = "edge";
+
+// Required to stop Next from evaluating this during the build
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
+export const preferredRegion = "auto";
 
 export async function POST(req: Request) {
   try {
@@ -24,7 +27,7 @@ export async function POST(req: Request) {
     // 1. Build context
     const context = await assembleContext(userKey, workspaceId, message);
 
-    // 2. Build prompt
+    // 2. Build Responses API input blocks
     const inputBlocks = assemblePrompt(context, history, message);
 
     // 3. Run model
@@ -33,7 +36,7 @@ export async function POST(req: Request) {
     // 4. Hybrid memory write
     await writeMemory(userKey, message, replyText);
 
-    // 5. Return response
+    // 5. Return
     return NextResponse.json({ text: replyText });
 
   } catch (err: any) {
@@ -44,6 +47,5 @@ export async function POST(req: Request) {
     );
   }
 }
-
 
 
