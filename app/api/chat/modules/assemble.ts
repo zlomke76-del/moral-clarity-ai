@@ -1,47 +1,40 @@
 // modules/assemble.ts
 
 /**
- * Safely stringify memory, news, research, or history.
- * If the data cannot be stringified, produce a readable fallback.
+ * Safely format a block of text with a label.
  */
-function safeBlock(label: string, data: any) {
-  if (!data) return `\n[${label}]: none\n`;
-  try {
-    return `\n[${label}]: ${JSON.stringify(data, null, 2)}\n`;
-  } catch {
-    return `\n[${label}]: [unserializable]\n`;
-  }
+function block(label: string, text: string | null | undefined) {
+  if (!text) return `\n[${label}]: none\n`;
+  return `\n[${label}]:\n${text.trim()}\n`;
 }
 
 /**
  * FINAL Responses-API prompt builder.
  *
- * - Flatten everything into text.
- * - Use ONLY "input_text" as required by the Responses API.
- * - Solace receives persona + memory + news + research + history + user message.
+ * Everything is flattened into a **single input_text block**
+ * which the Responses API requires.
  */
 export function assemblePrompt(
   context: any,
   history: any[],
   userMessage: string
 ) {
-  // --- Build the FULL flattened text prompt -------------------------------
   let fullText = "";
 
   // Persona
   fullText += `You are ${context.persona}, a stable, empathetic, neutral, memory-aware guide.\n`;
 
-  // Memory
-  fullText += safeBlock("Relevant memory", context.memoryPack);
+  // Memory (already summarized text)
+  fullText += block("Relevant memory", context.memoryPack);
 
-  // News digest
-  fullText += safeBlock("News digest", context.newsDigest);
+  // News digest (already summarized upstream)
+  fullText += block("News digest", context.newsDigest);
 
   // Research context
-  fullText += safeBlock("Research context", context.researchContext);
+  fullText += block("Research context", context.researchContext);
 
   // Chat history
-  if (history && Array.isArray(history) && history.length > 0) {
+  if (history?.length > 0) {
     fullText += `\n[Chat history]:\n`;
     for (const msg of history) {
       if (!msg?.role || !msg?.content) continue;
@@ -54,13 +47,13 @@ export function assemblePrompt(
   // Current user message
   fullText += `\n[User message]: ${userMessage}\n`;
 
-  // --- Return the SINGLE Responses-API input block ------------------------
+  // Return Responses API-compatible input
   return [
     {
       role: "user",
       content: [
         {
-          type: "input_text",   // ✅ Correct API type
+          type: "input_text",
           text: fullText,
         },
       ],
