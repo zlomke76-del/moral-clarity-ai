@@ -1,30 +1,28 @@
 // app/w/[workspaceId]/memory/page.tsx
 
-export const runtime = "nodejs";       // <- MUST BE FIRST
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { supabaseNode } from "@/lib/supabase/node";   // <- MUST USE NODE CLIENT
+import { supabaseNode } from "@/lib/supabase/node";
 import MemoryComposer from "@/components/MemoryComposer";
 import MemoryList from "@/components/MemoryList";
 
-type PageProps = {
+type Props = {
   params: {
     workspaceId: string;
   };
 };
 
-export default async function WorkspaceMemoryPage({ params }: PageProps) {
+export default async function WorkspaceMemoryPage({ params }: Props) {
   const workspaceId = decodeURIComponent(params.workspaceId);
 
-  const { data, error } = await supabaseNode
+  const { data } = await supabaseNode
     .from("user_memories")
     .select("id, title, created_at, workspace_id")
     .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: false })
     .limit(50);
-
-  const rows = Array.isArray(data) ? data : [];
 
   return (
     <section className="space-y-8 p-6">
@@ -49,12 +47,11 @@ export default async function WorkspaceMemoryPage({ params }: PageProps) {
 
       <div className="space-y-6">
         <MemoryComposer workspaceId={workspaceId} />
-        <MemoryList items={rows} emptyHint="No memories yet." />
+        <MemoryList items={Array.isArray(data) ? data : []} />
       </div>
     </section>
   );
 }
-
 
 
 
