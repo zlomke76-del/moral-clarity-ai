@@ -13,9 +13,10 @@ export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
 import { assembleContext } from "./modules/assembleContext";
-import { assemblePrompt, buildSystemBlock } from "./modules/assemble";
+import { assemblePrompt } from "./modules/assemble";
 import { runHybridPipeline } from "./modules/orchestrator";
 import { writeMemory } from "./modules/memory-writer";
+import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
 
 /**
  * Mode → Solace domain mapping
@@ -73,8 +74,17 @@ export async function POST(req: Request) {
       ? "Ministry mode active — apply Scripture sparingly when relevant."
       : "";
 
-    // SYSTEM block ALWAYS applied
-    const systemBlock = buildSystemBlock(domain, extras);
+    // Build full Solace system persona block
+    const systemText = buildSolaceSystemPrompt(domain as any, extras);
+    const systemBlock = {
+      role: "system",
+      content: [
+        {
+          type: "input_text",
+          text: systemText,
+        },
+      ],
+    };
 
     // USER block from assemble.ts
     const userBlocks = assemblePrompt(context, history, message);
