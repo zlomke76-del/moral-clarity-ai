@@ -1,81 +1,67 @@
 // app/api/chat/modules/model-router.ts
-// -------------------------------------------------------------
-// MODEL ROUTER — Solace Multi-Agent Pipeline
-// (All OpenAI today; plug-in ready for other LLMs)
-// -------------------------------------------------------------
+// --------------------------------------------------------------
+// Multi-model router for Solace Hybrid Pipeline
+// Supports OpenAI models today + placeholders for future LLMs
+// --------------------------------------------------------------
 
 import OpenAI from "openai";
 
-// -------------------------------------------------------------
-// OPENAI CLIENT (Edge compatible)
-// -------------------------------------------------------------
-export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
-
-// -------------------------------------------------------------
-// MODEL MAP (swap these later per domain if needed)
-// -------------------------------------------------------------
+// ALL models are OpenAI today — placeholders allow future expansion
 export const MODELS = {
   OPTIMIST: "gpt-4.1",
   SKEPTIC: "gpt-4.1",
   ARBITER: "gpt-4.1",
-  FOUNDER: "gpt-4.1", // can later use o3-mini-highconf or a custom LLM
+  FOUNDER: "gpt-4.1"
 } as const;
 
-export type SolaceModelKey = keyof typeof MODELS;
+// FIXED: A model is simply a string (OpenAI model name)
+export type SolaceModel = string;
 
-// -------------------------------------------------------------
-// RESPONSE EXTRACTOR — consistent for all LLM calls
-// -------------------------------------------------------------
-export function extractText(res: any): string {
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!
+});
+
+/**
+ * callModel()
+ * Unified wrapper for OpenAI Responses API
+ * Accepts:
+ *   - model: string (e.g., "gpt-4.1")
+ *   - prompt: inputBlocks array
+ */
+export async function callModel(model: SolaceModel, inputBlocks: any[]) {
   try {
-    const block = res?.output?.[0];
-    const content = block?.content?.[0];
-    return content?.text || "";
-  } catch {
-    return "";
-  }
-}
-
-// -------------------------------------------------------------
-// callModel() — unified wrapper
-// Handles:
-// • Responses API calls
-// • Error logging
-// • Clean extraction
-// -------------------------------------------------------------
-export async function callModel(
-  modelKey: SolaceModelKey,
-  promptBlocks: any[]
-): Promise<string> {
-  const model = MODELS[modelKey];
-
-  try {
-    const response = await openai.responses.create({
+    const response = await client.responses.create({
       model,
-      input: promptBlocks,
+      input: inputBlocks
     });
 
-    return extractText(response) || "[empty reply]";
-  } catch (err: any) {
-    console.error(`[Solace ModelRouter] ${modelKey} failed:`, err);
-    return `[${modelKey} error]`;
+    return extract(response);
+  } catch (err) {
+    console.error("[callModel] primary model failed:", err);
+    return "[Model failure]";
   }
 }
 
-// -------------------------------------------------------------
-// FUTURE: LLM OVERRIDES (Anthropic / Gemini / Custom models)
-// (Not active today — documented placeholders)
-// -------------------------------------------------------------
-export function canUseExternalLLM(): boolean {
-  // you’ll enable this once we add provider-level switches
-  return false;
-}
+/**
+ * extract()
+ * Safely extracts output_text from OpenAI Responses API
+ */
+function extract(res: any): string | null {
+  try {
+    if (!res) return null;
 
-export async function callExternalLLM(): Promise<string> {
-  // stub — no-op today
-  return "[external LLM not enabled]";
+    // Responses API shape:
+    // res.output: [ { content: [ { type: "text", text: "..." } ] } ]
+    const block = res.output?.[0];
+    if (!block) return null;
+
+    const content = block.content?.[0];
+    if (!content) return null;
+
+    return content.text ?? null;
+  } catch {
+    return null;
+  }
 }
 
 
