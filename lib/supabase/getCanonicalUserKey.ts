@@ -1,26 +1,22 @@
 // lib/supabase/getCanonicalUserKey.ts
 // -------------------------------------------------------------
-// Returns the canonical user identity for ALL memory operations.
-// Email is the single source of truth.
-// Falls back safely for unauthenticated sessions (guest mode).
+// Resolves a stable per-user identity for memory lookup.
+// Canonical key = email (preferred) → user_id → "guest"
 // -------------------------------------------------------------
 
-export type CanonicalUser = {
-  canonicalKey: string;   // always an email or "guest"
-  email: string | null;
-  userId: string | null;
+import { supabaseEdge } from "./edge";
+
+export type CanonicalUserIdentity = {
+  canonicalKey: string;  // always string
+  email: string | null;  // nullable
+  userId: string | null; // nullable
 };
 
-export async function getCanonicalUserKey(): Promise<CanonicalUser> {
+export async function getCanonicalUserKey(
+  req: Request
+): Promise<CanonicalUserIdentity> {
   try {
-    // Browser environment — Supabase auth client handles session
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
-    const { data, error } = await supabase.auth.getUser();
+    const { data, error } = await supabaseEdge.auth.getUser();
 
     if (error || !data?.user) {
       return {
@@ -30,15 +26,22 @@ export async function getCanonicalUserKey(): Promise<CanonicalUser> {
       };
     }
 
-    const email = data.user.email;
+    const email = data.user.email ?? null;          // NEVER undefined
+    const userId = data.user.id ?? null;            // NEVER undefined
+
+    // canonicalKey rules:
+    // 1. email (best)
+    // 2. userId (fallback)
+    // 3. "guest"
+    const canonicalKey = email || userId || "guest";
 
     return {
-      canonicalKey: email || "guest",
+      canonicalKey,
       email,
-      userId: data.user.id,
+      userId,
     };
   } catch (err) {
-    console.error("[getCanonicalUserKey] FAILED:", err);
+    console.error("[getCanonicalUserKey] failure:", err);
     return {
       canonicalKey: "guest",
       email: null,
@@ -46,3 +49,4 @@ export async function getCanonicalUserKey(): Promise<CanonicalUser> {
     };
   }
 }
+
