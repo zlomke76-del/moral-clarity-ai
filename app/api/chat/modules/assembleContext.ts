@@ -1,10 +1,12 @@
 // app/api/chat/modules/assembleContext.ts
 // -------------------------------------------------------------
-// Context assembly: persona + memories + news + research
-// Memory identity (canonical email) is handled in route.ts
+// Solace Context Assembler
+// Canonical user identity → memory pack → persona identity (code only)
 // -------------------------------------------------------------
 
 import { supabaseEdge } from "@/lib/supabase/edge";
+import { getCanonicalUserKey } from "@/lib/supabase/getCanonicalUserKey";
+
 import {
   FACTS_LIMIT,
   EPISODES_LIMIT,
@@ -13,21 +15,25 @@ import {
 } from "./constants";
 
 // -------------------------------------------------------------
-// UTILITIES
+// SAFE ARRAY HELPER
 // -------------------------------------------------------------
 function safe<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
 }
 
+// -------------------------------------------------------------
+// MEMORY TRIGGERS
+// -------------------------------------------------------------
 function needsEpisodic(message: string): boolean {
   return [
     "remember when",
     "last time",
     "earlier you said",
-    "episode",
-    "story",
-    "continue",
+    "continue the story",
+    "what happened yesterday",
     "recap",
+    "episode",
+    "thread",
   ].some((k) => message.toLowerCase().includes(k));
 }
 
@@ -36,34 +42,22 @@ function needsAutobio(message: string): boolean {
     "my past",
     "my childhood",
     "life story",
-    "who am i",
-    "identity",
+    "my history",
     "journey",
     "autobiography",
+    "who am i",
+    "identity",
   ].some((k) => message.toLowerCase().includes(k));
 }
 
 // -------------------------------------------------------------
-// PERSONA
+// LOAD USER MEMORIES
 // -------------------------------------------------------------
-async function loadPersona(): Promise<string> {
-  const { data } = await supabaseEdge
-    .from("personas")
-    .select("name")
-    .eq("is_default", true)
-    .maybeSingle();
-
-  return data?.name || "Solace";
-}
-
-// -------------------------------------------------------------
-// USER MEMORIES (always loaded)
-// -------------------------------------------------------------
-async function loadUserMemories(userKey: string) {
+async function loadUserFacts(canonicalKey: string) {
   const { data } = await supabaseEdge
     .from("user_memories")
     .select("*")
-    .eq("user_key", userKey)
+    .eq("canonical_user_key", canonicalKey)
     .order("created_at", { ascending: false })
     .limit(FACTS_LIMIT);
 
@@ -71,15 +65,15 @@ async function loadUserMemories(userKey: string) {
 }
 
 // -------------------------------------------------------------
-// EPISODIC MEMORY (conditional)
+// EPISODIC MEMORY
 // -------------------------------------------------------------
-async function loadEpisodic(userKey: string, enable: boolean) {
+async function loadEpisodic(canonicalKey: string, enable: boolean) {
   if (!enable) return [];
 
   const { data: episodes } = await supabaseEdge
     .from("episodic_memories")
     .select("*")
-    .eq("user_key", userKey)
+    .eq("canonical_user_key", canonicalKey)
     .order("created_at", { ascending: false })
     .limit(EPISODES_LIMIT);
 
@@ -104,9 +98,9 @@ async function loadEpisodic(userKey: string, enable: boolean) {
 }
 
 // -------------------------------------------------------------
-// AUTOBIOGRAPHY (conditional)
+// AUTOBIOGRAPHY
 // -------------------------------------------------------------
-async function loadAutobiography(userKey: string, enable: boolean) {
+async function loadAutobiography(canonicalKey: string, enable: boolean) {
   if (!enable) {
     return { chapters: [], entries: [] };
   }
@@ -114,13 +108,13 @@ async function loadAutobiography(userKey: string, enable: boolean) {
   const { data: chapters } = await supabaseEdge
     .from("user_autobio_chapters")
     .select("*")
-    .eq("user_key", userKey)
+    .eq("canonical_user_key", canonicalKey)
     .order("start_year", { ascending: true });
 
   const { data: entries } = await supabaseEdge
     .from("user_autobiography")
     .select("*")
-    .eq("user_key", userKey)
+    .eq("canonical_user_key", canonicalKey)
     .order("year", { ascending: true });
 
   return {
@@ -132,13 +126,13 @@ async function loadAutobiography(userKey: string, enable: boolean) {
 // -------------------------------------------------------------
 // NEWS DIGEST
 // -------------------------------------------------------------
-async function loadNewsDigest(userKey: string) {
+async function loadNewsDigest(canonicalKey: string) {
   if (!ENABLE_NEWS) return [];
 
   const { data } = await supabaseEdge
     .from("vw_solace_news_digest")
     .select("*")
-    .eq("user_key", userKey)
+    .eq("canonical_user_key", canonicalKey)
     .order("scored_at", { ascending: false })
     .limit(15);
 
@@ -146,15 +140,15 @@ async function loadNewsDigest(userKey: string) {
 }
 
 // -------------------------------------------------------------
-// RESEARCH CONTEXT
+// RESEARCH FACTS
 // -------------------------------------------------------------
-async function loadResearch(userKey: string) {
+async function loadResearchFacts(canonicalKey: string) {
   if (!ENABLE_RESEARCH) return [];
 
   const { data } = await supabaseEdge
     .from("truth_facts")
     .select("*")
-    .eq("user_key", userKey)
+    .eq("canonical_user_key", canonicalKey)
     .order("created_at", { ascending: false })
     .limit(10);
 
@@ -162,25 +156,43 @@ async function loadResearch(userKey: string) {
 }
 
 // -------------------------------------------------------------
-// MAIN EXPORT
+// MAIN ASSEMBLER
 // -------------------------------------------------------------
 export async function assembleContext(
-  userKey: string,           // ← canonicalKey passed in from route.ts
+  overrideUserKey: string | null,
   workspaceId: string | null,
   userMessage: string
 ) {
+  // ----------------------------
+  // CANONICAL USER IDENTITY
+  // ----------------------------
+  const authIdentity = await getCanonicalUserKey();
+  const canonicalKey = overrideUserKey || authIdentity.canonicalKey;
+
   const episodicNeeded = needsEpisodic(userMessage);
   const autobioNeeded = needsAutobio(userMessage);
 
-  const persona = await loadPersona();
-  const userMemories = await loadUserMemories(userKey);
-  const episodicMemories = await loadEpisodic(userKey, episodicNeeded);
-  const autobiography = await loadAutobiography(userKey, autobioNeeded);
-  const newsDigest = await loadNewsDigest(userKey);
-  const researchContext = await loadResearch(userKey);
+  console.log("[Solace Context] Load decisions:", {
+    canonicalUserKey: canonicalKey,
+    episodicNeeded,
+    autobioNeeded,
+    workspaceId,
+  });
 
+  // ----------------------------
+  // LOAD ALL MEMORY COMPONENTS
+  // ----------------------------
+  const userMemories = await loadUserFacts(canonicalKey);
+  const episodicMemories = await loadEpisodic(canonicalKey, episodicNeeded);
+  const autobiography = await loadAutobiography(canonicalKey, autobioNeeded);
+  const newsDigest = await loadNewsDigest(canonicalKey);
+  const researchContext = await loadResearchFacts(canonicalKey);
+
+  // ----------------------------
+  // FINAL CONTEXT (persona comes from code, not DB)
+  // ----------------------------
   return {
-    persona,
+    canonicalUserKey: canonicalKey,
     memoryPack: {
       userMemories,
       episodicMemories,
@@ -188,6 +200,7 @@ export async function assembleContext(
     },
     newsDigest,
     researchContext,
+    persona: "Solace", // locked identity — code only
   };
 }
 
