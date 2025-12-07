@@ -1,7 +1,9 @@
 // app/api/chat/modules/assembleContext.ts
 // ------------------------------------------------------------
 // Solace Context Loader (FINAL VERSION)
-// Reads ALL memory via mv_unified_memory using canonical_user_key
+// Reads ALL memory exclusively from mv_unified_memory
+// Episodic + chunks reconstructed from materialized view
+// Autobio extracted from unified memory as well
 // ------------------------------------------------------------
 
 import { supabaseEdge } from "@/lib/supabase/edge";
@@ -18,18 +20,26 @@ export type SolaceContextBundle = {
   researchContext: any[];
 };
 
+// ------------------------------------------------------------
+// UTIL
+// ------------------------------------------------------------
 function safe<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
 }
 
+// Persona is static
 const STATIC_PERSONA_NAME = "Solace";
 
+// ------------------------------------------------------------
+// MEMORY LOADERS — unified view (keyed by mv_unified_memory.user_key)
+// ------------------------------------------------------------
+
 // FACTS -------------------------------------------------------
-async function loadFacts(canonicalKey: string) {
+async function loadFacts(userKey: string) {
   const { data, error } = await supabaseEdge
     .from("mv_unified_memory")
     .select("*")
-    .eq("canonical_user_key", canonicalKey)
+    .eq("user_key", userKey)
     .eq("memory_type", "fact")
     .order("created_at", { ascending: false })
     .limit(FACTS_LIMIT);
@@ -43,12 +53,12 @@ async function loadFacts(canonicalKey: string) {
 }
 
 // EPISODIC ----------------------------------------------------
-async function loadEpisodic(canonicalKey: string) {
+async function loadEpisodic(userKey: string) {
   const { data, error } = await supabaseEdge
     .from("mv_unified_memory")
     .select("*")
-    .eq("canonical_user_key", canonicalKey)
-    .eq("memory_type", "episode")
+    .eq("user_key", userKey)
+    .eq("memory_type", "episodic")
     .order("created_at", { ascending: false })
     .limit(EPISODES_LIMIT);
 
@@ -60,36 +70,36 @@ async function loadEpisodic(canonicalKey: string) {
   const episodes = safe(data);
   if (episodes.length === 0) return [];
 
-  const episodeIds = episodes.map(e => e.id);
+  const episodeIds = episodes.map((e: any) => e.id);
 
   const { data: chunkRows, error: chunkErr } = await supabaseEdge
     .from("mv_unified_memory")
     .select("*")
-    .eq("canonical_user_key", canonicalKey)
+    .eq("user_key", userKey)
     .eq("memory_type", "chunk")
     .in("episode_id", episodeIds)
     .order("seq", { ascending: true });
 
   if (chunkErr) {
-    console.error("[assembleContext] chunk error:", chunkErr);
-    return episodes.map(e => ({ ...e, chunks: [] }));
+    console.error("[assembleContext] episodic chunk error:", chunkErr);
+    return episodes.map((e: any) => ({ ...e, chunks: [] }));
   }
 
   const chunks = safe(chunkRows);
 
-  return episodes.map(ep => ({
+  return episodes.map((ep: any) => ({
     ...ep,
-    chunks: chunks.filter(c => c.episode_id === ep.id),
+    chunks: chunks.filter((c: any) => c.episode_id === ep.id),
   }));
 }
 
 // AUTOBIO -----------------------------------------------------
-async function loadAutobio(canonicalKey: string) {
+async function loadAutobio(userKey: string) {
   const { data, error } = await supabaseEdge
     .from("mv_unified_memory")
     .select("*")
-    .eq("canonical_user_key", canonicalKey)
-    .eq("memory_type", "autobio")
+    .eq("user_key", userKey)
+    .eq("memory_type", "autobio_entry")
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -100,52 +110,75 @@ async function loadAutobio(canonicalKey: string) {
   return safe(data);
 }
 
-// NEWS --------------------------------------------------------
-async function loadNewsDigest(canonicalKey: string) {
-  const { data } = await supabaseEdge
+// NEWS DIGEST -------------------------------------------------
+async function loadNewsDigest(userKey: string) {
+  const { data, error } = await supabaseEdge
     .from("vw_solace_news_digest")
     .select("*")
-    .eq("canonical_user_key", canonicalKey)
+    .eq("user_key", userKey)
     .order("scored_at", { ascending: false })
     .limit(15);
 
+  if (error) {
+    console.error("[assembleContext] news digest error:", error);
+    return [];
+  }
+
   return safe(data);
 }
 
-// RESEARCH ----------------------------------------------------
-async function loadResearch(canonicalKey: string) {
-  const { data } = await supabaseEdge
+// RESEARCH CONTEXT --------------------------------------------
+async function loadResearch(userKey: string) {
+  const { data, error } = await supabaseEdge
     .from("truth_facts")
     .select("*")
-    .eq("canonical_user_key", canonicalKey)
+    .eq("user_key", userKey)
     .order("created_at", { ascending: false })
     .limit(10);
 
+  if (error) {
+    console.error("[assembleContext] research error:", error);
+    return [];
+  }
+
   return safe(data);
 }
 
-// MAIN --------------------------------------------------------
+// ------------------------------------------------------------
+// MAIN EXPORT — assembleContext()
+// ------------------------------------------------------------
 export async function assembleContext(
   canonicalUserKey: string,
   workspaceId: string | null,
   userMessage: string
 ): Promise<SolaceContextBundle> {
+  // For reads, we allow "guest" as a key for non-authenticated usage.
+  // All *personal* memories are keyed by email; "guest" will simply return none.
+  const userKey = canonicalUserKey || "guest";
+
   console.log("[Solace Context] Load with canonical key:", {
-    canonicalUserKey,
+    canonicalUserKey: userKey,
     workspaceId,
   });
 
   const persona = STATIC_PERSONA_NAME;
 
-  const facts = await loadFacts(canonicalUserKey);
-  const episodic = await loadEpisodic(canonicalUserKey);
-  const autobiography = await loadAutobio(canonicalUserKey);
-  const newsDigest = await loadNewsDigest(canonicalUserKey);
-  const researchContext = await loadResearch(canonicalUserKey);
+  const [facts, episodic, autobiography, newsDigest, researchContext] =
+    await Promise.all([
+      loadFacts(userKey),
+      loadEpisodic(userKey),
+      loadAutobio(userKey),
+      loadNewsDigest(userKey),
+      loadResearch(userKey),
+    ]);
 
   return {
     persona,
-    memoryPack: { facts, episodic, autobiography },
+    memoryPack: {
+      facts,
+      episodic,
+      autobiography,
+    },
     newsDigest,
     researchContext,
   };
