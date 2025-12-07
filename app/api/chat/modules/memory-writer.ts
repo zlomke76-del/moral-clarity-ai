@@ -1,42 +1,46 @@
 // app/api/chat/modules/memory-writer.ts
 // ------------------------------------------------------------
 // Unified FACT memory writer for MCAI
-// Uses canonical_user_key exclusively.
-// Never logs personal identifiers unless needed for debugging.
+// Uses canonical_user_key AND user_key = email.
+// - Never writes if not signed in (canonicalUserKey is null).
+// - No "guest" facts, no "tim" aliases.
 // ------------------------------------------------------------
 
 import { supabaseEdge } from "@/lib/supabase/edge";
 
 export async function writeMemory(
-  canonicalUserKey: string,
+  canonicalUserKey: string | null,
   userMessage: string,
   assistantReply: string
 ) {
   try {
-    // Safety check — Solace must never write without a canonical identity
+    // If there is no canonical user (not signed in) → do NOT write memory
     if (!canonicalUserKey) {
-      console.warn("[writeMemory] Skipped: canonicalUserKey missing.");
+      console.warn(
+        "[writeMemory] Skipped FACT memory write — no canonicalUserKey (not signed in)."
+      );
       return;
     }
 
-    // Prepare memory content
+    const nowIso = new Date().toISOString();
+
     const memoryContent = JSON.stringify({
       user: userMessage,
       assistant: assistantReply,
-      ts: new Date().toISOString(),
+      ts: nowIso,
     });
 
-    // FINAL payload (clean, canonical)
+    // We populate BOTH user_key and canonical_user_key with the email
     const insertPayload = {
-      canonical_user_key: canonicalUserKey,  // ✔ Correct field
+      canonical_user_key: canonicalUserKey, // new canonical column
+      user_key: canonicalUserKey,          // keeps mv_unified_memory working
       kind: "fact",
       content: memoryContent,
       weight: 1.0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: nowIso,
+      updated_at: nowIso,
     };
 
-    // Insert into Supabase
     const { error } = await supabaseEdge
       .from("user_memories")
       .insert(insertPayload);
@@ -48,8 +52,10 @@ export async function writeMemory(
       return;
     }
 
-    // Clean, non-identifying success message
-    console.log("[writeMemory] FACT memory stored successfully.");
+    console.log(
+      "[writeMemory] FACT memory stored for canonical user:",
+      canonicalUserKey
+    );
   } catch (err) {
     console.error("[writeMemory] Unexpected failure:", err);
   }
