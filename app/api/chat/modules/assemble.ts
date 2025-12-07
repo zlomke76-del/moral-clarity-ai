@@ -1,12 +1,7 @@
 // app/api/chat/modules/assemble.ts
-// ALWAYS include Solace persona, Abrahamic Code, and domain identity
 
 import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
 
-/**
- * safeBlock()
- * Ensures memory blocks are safely embedded into prompts.
- */
 function safeBlock(label: string, data: any) {
   if (!data) return `\n[${label}]: none\n`;
   try {
@@ -17,35 +12,68 @@ function safeBlock(label: string, data: any) {
 }
 
 /**
- * assemblePrompt()
- * Returns USER content only.
- * SYSTEM block is now ALWAYS injected higher in route.ts.
+ * assemblePrompt
+ *
+ * This is the "simple" / neutral path used when we are NOT
+ * running the full Optimist → Skeptic → Arbiter hybrid pipeline.
+ *
+ * It still gets:
+ * - the unified Solace persona (Abrahamic Code, etc.)
+ * - userMemories, episodicMemories, autobiography
+ * - newsDigest and researchContext
+ * - chat history + current user message
  */
-export function assemblePrompt(context: any, history: any[], userMessage: string) {
+export function assemblePrompt(
+  context: any,
+  history: any[],
+  userMessage: string
+) {
   let fullText = "";
 
-  // Memory Packs
-  fullText += safeBlock("Facts", context.memoryPack.userMemories);
-  fullText += safeBlock("Episodes", context.memoryPack.episodicMemories);
-  fullText += safeBlock("Autobiography", context.memoryPack.autobiography);
+  // 1) Canonical Solace persona (Abrahamic Code spine)
+  fullText += buildSolaceSystemPrompt(
+    "core",
+    `
+You are operating in the general chat route.
 
-  // News + Research
-  fullText += safeBlock("NewsDigest", context.newsDigest);
-  fullText += safeBlock("Research", context.researchContext);
+Use the structured blocks below as your only external context:
+- [UserMemories]
+- [EpisodicMemories]
+- [Autobiography]
+- [NewsDigest]
+- [ResearchContext]
 
-  // Chat history
+Do not invent facts outside of these plus your base training.
+When in doubt, be honest about uncertainty.
+    `.trim()
+  );
+
+  // 2) Memory + context blocks (aligned with assembleContext.ts)
+  const mp = context?.memoryPack || {};
+
+  fullText += safeBlock("UserMemories", mp.userMemories);
+  fullText += safeBlock("EpisodicMemories", mp.episodicMemories);
+  fullText += safeBlock("Autobiography", mp.autobiography);
+
+  fullText += safeBlock("NewsDigest", context?.newsDigest);
+  fullText += safeBlock("ResearchContext", context?.researchContext);
+
+  // 3) Chat history
   if (history?.length) {
     fullText += `\n[ChatHistory]:\n`;
     for (const msg of history) {
-      fullText += `${msg.role.toUpperCase()}: ${msg.content}\n`;
+      fullText += `${String(msg.role || "").toUpperCase()}: ${
+        msg.content ?? ""
+      }\n`;
     }
   } else {
     fullText += `\n[ChatHistory]: none\n`;
   }
 
-  // User message
+  // 4) Current user message (anchor)
   fullText += `\n[UserMessage]: ${userMessage}\n`;
 
+  // Responses API input shape
   return [
     {
       role: "user",
@@ -57,17 +85,5 @@ export function assemblePrompt(context: any, history: any[], userMessage: string
       ],
     },
   ];
-}
-
-/**
- * buildSystemBlock()
- * Used by route.ts to inject the correct persona settings.
- */
-export function buildSystemBlock(domain: string, extras?: string) {
-  const sys = buildSolaceSystemPrompt(domain as any, extras);
-  return {
-    role: "system",
-    content: [{ type: "input_text", text: sys }],
-  };
 }
 
