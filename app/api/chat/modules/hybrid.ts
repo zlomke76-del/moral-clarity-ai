@@ -11,7 +11,9 @@ export type HybridInputs = {
   ministryMode: boolean;
   modeHint: string;
   founderMode: boolean;
-  canonicalUserKey: string;
+
+  // 🔥 FIX: must allow null so orchestrator can pass through canonicalUserKey
+  canonicalUserKey: string | null;
 };
 
 const OAI_URL = "https://api.openai.com/v1/responses";
