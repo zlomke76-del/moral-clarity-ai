@@ -23,7 +23,7 @@ export async function orchestrateSolaceResponse(inputs: any): Promise<string> {
   if (hybridAllowed) {
     console.log("[ORCHESTRATOR] Running HYBRID pipeline…");
 
-    const finalAnswer = await runHybridPipeline({
+    const hybrid = await runHybridPipeline({
       userMessage,
       context,
       history,
@@ -33,12 +33,13 @@ export async function orchestrateSolaceResponse(inputs: any): Promise<string> {
       canonicalUserKey,
     });
 
-    return finalAnswer || "[arbiter produced no text]";
+    // FIX: runHybridPipeline returns an object, not a string
+    const finalText = hybrid?.finalAnswer ?? "[arbiter produced no text]";
+    return finalText;
   }
 
   console.log("[ORCHESTRATOR] Running NEUTRAL mode…");
 
-  // Your existing neutral model call
   const blocks = (context as any).systemPromptBlocks || [];
   const res = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
@@ -56,4 +57,3 @@ export async function orchestrateSolaceResponse(inputs: any): Promise<string> {
   const block = json.output?.[0]?.content?.[0];
   return block?.text ?? "[No reply]";
 }
-
