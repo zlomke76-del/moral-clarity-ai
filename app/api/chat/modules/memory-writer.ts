@@ -1,28 +1,34 @@
 // app/api/chat/modules/memory-writer.ts
-//--------------------------------------------------------------
+// -------------------------------------------------------------
+// Writes memories using the canonical user key only.
+// No variant identities. No drift. Ever.
+// -------------------------------------------------------------
 
-import { supabaseEdge } from "@/lib/supabase/edge";
+import { createClient } from "@supabase/supabase-js";
+import { getCanonicalUserKey } from "@/lib/supabase/getCanonicalUserKey";
 
 export async function writeMemory(
-  userKey: string | null,
+  _userKey: string,
   userMessage: string,
   assistantMessage: string
 ) {
-  if (!userKey) {
-    console.warn("[memory-writer] No userKey → skipping persistence.");
-    return;
-  }
-
   try {
-    const { error } = await supabaseEdge.from("user_memories").insert({
-      user_key: userKey,
-      user_message: userMessage,
-      assistant_message: assistantMessage,
-    });
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
-    if (error) console.error("[memory-writer] insert failed", error);
+    const { canonicalKey } = await getCanonicalUserKey();
+
+    await supabase.from("user_memories").insert({
+      canonical_user_key: canonicalKey,
+      user_key: canonicalKey,
+      kind: "fact",
+      content: assistantMessage,
+      weight: 1,
+      source: "chat",
+    });
   } catch (err) {
-    console.error("[memory-writer] fatal error", err);
+    console.error("[writeMemory] FAILED:", err);
   }
 }
-
