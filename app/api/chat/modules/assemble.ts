@@ -1,10 +1,12 @@
 // app/api/chat/modules/assemble.ts
-// ---------------------------------------------------------------
-// Assembles the USER block only.
-// System persona is injected by buildSolaceSystemPrompt() in
-// orchestrator.ts or in the neutral path of route.ts.
-// ---------------------------------------------------------------
+// ALWAYS include Solace persona, Abrahamic Code, and domain identity
 
+import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
+
+/**
+ * safeBlock()
+ * Ensures memory blocks are safely embedded into prompts.
+ */
 function safeBlock(label: string, data: any) {
   if (!data) return `\n[${label}]: none\n`;
   try {
@@ -14,36 +16,35 @@ function safeBlock(label: string, data: any) {
   }
 }
 
+/**
+ * assemblePrompt()
+ * Returns USER content only.
+ * SYSTEM block is now ALWAYS injected higher in route.ts.
+ */
 export function assemblePrompt(context: any, history: any[], userMessage: string) {
   let fullText = "";
 
-  // ❌ Removed the persona override line:
-  // "You are ${context.persona}, a stable empathetic guide..."
-  // Persona now comes EXCLUSIVELY from buildSolaceSystemPrompt().
-
+  // Memory Packs
   fullText += safeBlock("Facts", context.memoryPack.userMemories);
   fullText += safeBlock("Episodes", context.memoryPack.episodicMemories);
   fullText += safeBlock("Autobiography", context.memoryPack.autobiography);
 
-  if (context.newsDigest) {
-    fullText += safeBlock("News Digest", context.newsDigest);
-  }
+  // News + Research
+  fullText += safeBlock("NewsDigest", context.newsDigest);
+  fullText += safeBlock("Research", context.researchContext);
 
-  if (context.researchContext) {
-    fullText += safeBlock("Research", context.researchContext);
-  }
-
-  // --- Chat History -------------------------------------------
+  // Chat history
   if (history?.length) {
-    fullText += `\n[Chat history]:\n`;
+    fullText += `\n[ChatHistory]:\n`;
     for (const msg of history) {
       fullText += `${msg.role.toUpperCase()}: ${msg.content}\n`;
     }
   } else {
-    fullText += `\n[Chat history]: none\n`;
+    fullText += `\n[ChatHistory]: none\n`;
   }
 
-  fullText += `\n[User message]: ${userMessage}\n`;
+  // User message
+  fullText += `\n[UserMessage]: ${userMessage}\n`;
 
   return [
     {
@@ -56,5 +57,17 @@ export function assemblePrompt(context: any, history: any[], userMessage: string
       ],
     },
   ];
+}
+
+/**
+ * buildSystemBlock()
+ * Used by route.ts to inject the correct persona settings.
+ */
+export function buildSystemBlock(domain: string, extras?: string) {
+  const sys = buildSolaceSystemPrompt(domain as any, extras);
+  return {
+    role: "system",
+    content: [{ type: "input_text", text: sys }],
+  };
 }
 
