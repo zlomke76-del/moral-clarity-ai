@@ -9,10 +9,6 @@ const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 /**
  * Browser Supabase client.
  * Safe in client components and hooks.
- * IMPORTANT:
- *  - persistSession MUST be true
- *  - storage MUST be 'cookie'
- *  - cookies must be enabled for Edge to read sb-access-token
  */
 export function supabaseBrowser(): SupabaseClient {
   if (!URL || !ANON) {
@@ -23,28 +19,21 @@ export function supabaseBrowser(): SupabaseClient {
 
   return createClient(URL, ANON, {
     auth: {
-      persistSession: true,
+      persistSession: true,     // enables Supabase cookie storage
       autoRefreshToken: true,
-
-      // THIS is the critical fix:
-      // store session tokens in cookies so Edge routes can read them
-      storage: "cookie",
-
-      // Let Supabase manage cookie names & expiration
-      cookieOptions: {
-        domain: ".moralclarity.ai",
-        path: "/",
-        sameSite: "none",
-        secure: true,
-      },
+      detectSessionInUrl: true,
     },
   });
 }
 
-// Backwards compat
+/**
+ * Backwards-compat alias for older code.
+ */
 export function createSupabaseBrowser(): SupabaseClient {
   return supabaseBrowser();
 }
+
+export type { SupabaseClient };
 
 export type { SupabaseClient };
 
