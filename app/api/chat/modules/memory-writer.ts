@@ -1,69 +1,81 @@
 // app/api/chat/modules/memory-writer.ts
+// -------------------------------------------------------------
+// Writes long-term factual memories for Solace
+// Canonical user identity (email) is required
+// -------------------------------------------------------------
 
 import { supabaseEdge } from "@/lib/supabase/edge";
 
-function shouldRemember(userMsg: string, assistantReply: string): boolean {
-  const msg = userMsg.toLowerCase();
+// -------------------------------------------------------------
+// CLEANING UTILITIES
+// -------------------------------------------------------------
 
-  if (
-    msg.includes("remember this") ||
-    msg.includes("save this") ||
-    msg.includes("don't forget") ||
-    msg.includes("you should remember") ||
-    msg.includes("store this")
-  ) {
-    return true;
+// Remove system-y garbage, hallucinated wrappers, XML, boilerplate, etc.
+function clean(text: string): string {
+  if (!text) return "";
+
+  return text
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/^(assistant|system):\s*/i, "")
+    .replace(/^\[.*?\]\s*/g, "")
+    .replace(/<\/*analysis>/gi, "")
+    .replace(/<\/*thinking>/gi, "")
+    .replace(/\*\*/g, "")
+    .trim();
+}
+
+// Summarize the assistant reply into a single stable “memory fact”
+function distillFact(userMsg: string, assistantReply: string): string {
+  const msg = clean(userMsg);
+  const rep = clean(assistantReply);
+
+  if (!msg || !rep) return "";
+
+  // Simple summarization strategy for memory:
+  // Capture what the assistant *learned about the user*.
+  // Not a summary of the whole reply.
+  if (/my name/i.test(msg)) {
+    const m = rep.match(/name\s+is\s+([A-Za-z0-9 ._-]+)/i);
+    if (m) return `User's name is ${m[1]}.`;
+    return "User shared their name.";
   }
 
-  const implicitPatterns = [
-    /my name is/i,
-    /i prefer/i,
-    /i like/i,
-    /i love/i,
-    /i don’t like/i,
-    /my birthday/i,
-    /my goal/i,
-    /my wife/i,
-    /my husband/i,
-    /my kids/i,
-    /i work at/i,
-    /i live in/i,
-  ];
-
-  return implicitPatterns.some((p) => p.test(userMsg));
+  // Generic fallback:
+  return `User said: "${msg}". Assistant responded: "${rep.slice(0, 180)}..."`;
 }
 
-function summarizeForMemory(userMsg: string, assistantReply: string): string {
-  return (
-    `User said: ${userMsg.trim()}\n` +
-    `Solace responded: ${assistantReply.trim()}\n` +
-    `Summary: This exchange included personally meaningful information that may help future conversations.`
-  );
-}
-
+// -------------------------------------------------------------
+// WRITE MEMORY
+// -------------------------------------------------------------
 export async function writeMemory(
   userKey: string,
-  userMsg: string,
+  userMessage: string,
   assistantReply: string
 ) {
-  if (!userKey) return;
-  if (!shouldRemember(userMsg, assistantReply)) return;
+  try {
+    if (!userKey || userKey === "guest") {
+      // Guests do not write memory
+      return;
+    }
 
-  const content = summarizeForMemory(userMsg, assistantReply);
+    const fact = distillFact(userMessage, assistantReply);
 
-  const { error } = await supabaseEdge.from("user_memories").insert({
-    user_key: userKey,
-    kind: "fact",
-    content,
-    weight: 1,
-    title: "User memory",
-    tags: [],
-    importance: 1,
-    source_channel: "conversation",
-  });
+    if (!fact || fact.length < 6) {
+      console.warn("[memory-writer] Skipped (too small):", fact);
+      return;
+    }
 
-  if (error) {
-    console.error("[memory-writer] failed insert:", error);
+    const { error } = await supabaseEdge.from("user_memories").insert({
+      user_key: userKey,
+      content: fact,
+    });
+
+    if (error) {
+      console.error("[memory-writer] insert error:", error);
+    }
+  } catch (err) {
+    console.error("[memory-writer] fatal:", err);
   }
 }
 
