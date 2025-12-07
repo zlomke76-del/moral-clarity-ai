@@ -1,47 +1,62 @@
 // lib/supabase/getCanonicalUserKey.ts
-// -------------------------------------------------------------
-// Resolves a stable per-user identity for memory lookup.
-// Canonical key = email (preferred) → user_id → "guest"
-// -------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Derives the *canonical user identity* for memory purposes.
+//
+// This works on Vercel Edge Runtime by decoding the Supabase JWT manually.
+// We DO NOT use "@supabase/auth-helpers-remix" or any Node APIs.
+// -----------------------------------------------------------------------------
 
 import { supabaseEdge } from "./edge";
 
-export type CanonicalUserIdentity = {
-  canonicalKey: string;  // always string
-  email: string | null;  // nullable
-  userId: string | null; // nullable
-};
-
-export async function getCanonicalUserKey(
-  req: Request
-): Promise<CanonicalUserIdentity> {
+export async function getCanonicalUserKey(req?: Request) {
   try {
-    const { data, error } = await supabaseEdge.auth.getUser();
+    // ---------------------------------------------------------
+    // 1. Extract the session token from cookies (Edge safe)
+    // ---------------------------------------------------------
+    const cookieHeader = req?.headers.get("cookie") || "";
 
-    if (error || !data?.user) {
-      return {
-        canonicalKey: "guest",
-        email: null,
-        userId: null,
-      };
+    let accessToken: string | null = null;
+
+    // Supabase stores the auth token in this cookie key:
+    //   sb-access-token=<jwt>
+    // The cookie may contain several values → parse manually.
+    for (const c of cookieHeader.split(";")) {
+      const trimmed = c.trim();
+      if (trimmed.startsWith("sb-access-token=")) {
+        accessToken = trimmed.replace("sb-access-token=", "");
+        break;
+      }
     }
 
-    const email = data.user.email ?? null;          // NEVER undefined
-    const userId = data.user.id ?? null;            // NEVER undefined
+    // ---------------------------------------------------------
+    // 2. Decode user from token using Supabase (Edge client)
+    // ---------------------------------------------------------
+    if (accessToken) {
+      const { data, error } = await supabaseEdge.auth.getUser(accessToken);
 
-    // canonicalKey rules:
-    // 1. email (best)
-    // 2. userId (fallback)
-    // 3. "guest"
-    const canonicalKey = email || userId || "guest";
+      if (!error && data?.user?.email) {
+        const email = data.user.email.toLowerCase().trim();
 
+        return {
+          canonicalKey: email,
+          email,
+          userId: data.user.id,
+        };
+      }
+    }
+
+    // ---------------------------------------------------------
+    // 3. FALLBACK (unauthenticated, or guest mode)
+    // ---------------------------------------------------------
     return {
-      canonicalKey,
-      email,
-      userId,
+      canonicalKey: "guest",
+      email: null,
+      userId: null,
     };
+
   } catch (err) {
-    console.error("[getCanonicalUserKey] failure:", err);
+    console.error("[getCanonicalUserKey] fatal:", err);
+
     return {
       canonicalKey: "guest",
       email: null,
