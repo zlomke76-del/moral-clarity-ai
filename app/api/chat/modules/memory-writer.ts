@@ -1,7 +1,8 @@
 // app/api/chat/modules/memory-writer.ts
 // ------------------------------------------------------------
-// Writes FACT memories into user_memories
-// canonicalUserKey = normalized email (single source of truth)
+// Unified FACT memory writer for MCAI
+// Uses canonical_user_key exclusively.
+// Never logs personal identifiers unless needed for debugging.
 // ------------------------------------------------------------
 
 import { supabaseEdge } from "@/lib/supabase/edge";
@@ -12,21 +13,22 @@ export async function writeMemory(
   assistantReply: string
 ) {
   try {
+    // Safety check — Solace must never write without a canonical identity
     if (!canonicalUserKey) {
-      console.warn("[writeMemory] Missing canonicalUserKey — skipping write.");
+      console.warn("[writeMemory] Skipped: canonicalUserKey missing.");
       return;
     }
 
-    // Combine user + assistant exchange into a memory entry
+    // Prepare memory content
     const memoryContent = JSON.stringify({
       user: userMessage,
       assistant: assistantReply,
       ts: new Date().toISOString(),
     });
 
-    // IMPORTANT: Must match Supabase schema exactly
+    // FINAL payload (clean, canonical)
     const insertPayload = {
-      canonical_user_key: canonicalUserKey,   // ✅ FIXED COLUMN NAME
+      canonical_user_key: canonicalUserKey,  // ✔ Correct field
       kind: "fact",
       content: memoryContent,
       weight: 1.0,
@@ -34,19 +36,21 @@ export async function writeMemory(
       updated_at: new Date().toISOString(),
     };
 
+    // Insert into Supabase
     const { error } = await supabaseEdge
       .from("user_memories")
       .insert(insertPayload);
 
     if (error) {
-      console.error("[writeMemory] Supabase insert error:", error, {
+      console.error("[writeMemory] Insert failed:", error, {
         attemptedPayload: insertPayload,
       });
-    } else {
-      console.log("[writeMemory] FACT memory saved for:", canonicalUserKey);
+      return;
     }
+
+    // Clean, non-identifying success message
+    console.log("[writeMemory] FACT memory stored successfully.");
   } catch (err) {
-    console.error("[writeMemory] unexpected failure:", err);
+    console.error("[writeMemory] Unexpected failure:", err);
   }
 }
-
