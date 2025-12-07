@@ -27,6 +27,7 @@ export async function runHybridPipeline({
   ministryMode,
   modeHint,
   founderMode,
+  canonicalUserKey,
 }: {
   userMessage: string;
   context: any;
@@ -34,7 +35,9 @@ export async function runHybridPipeline({
   ministryMode: boolean;
   modeHint: string;
   founderMode: boolean;
+  canonicalUserKey: string; // NEW
 }) {
+
   // -------------------------------------------------------------
   // BASE CONTEXT FOR ALL AGENTS
   // -------------------------------------------------------------
