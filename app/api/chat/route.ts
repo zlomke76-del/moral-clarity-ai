@@ -92,17 +92,18 @@ export async function POST(req: Request) {
       // ---------------------------------------------------------
       // NEW: Unified Hybrid Pipeline Entry Point
       // ---------------------------------------------------------
-      const finalAnswer = await orchestrateSolaceResponse({
-        userMessage: message,
-        context,
-        history,
-        ministryMode,
-        modeHint,
-        founderMode,
-        canonicalUserKey: effectiveUserKey,
-      });
+const finalAnswer = await orchestrateSolaceResponse({
+  userMessage: message,
+  context,
+  history,
+  ministryMode,
+  modeHint,
+  founderMode,
+  canonicalUserKey: effectiveUserKey,
+});
 
-      finalText = finalAnswer || "[No arbiter answer]";
+finalText = finalAnswer || "[No arbiter answer]";
+
     } else {
       // Neutral mode — single model call
       const res = await fetch("https://api.openai.com/v1/responses", {
