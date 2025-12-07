@@ -1,9 +1,29 @@
+// app/api/chat/modules/orchestrator.ts
+//---------------------------------------------------------------
+// Solace Orchestration Layer
+// HYBRID pipeline only (Optimist → Skeptic → Arbiter)
+// This is called *only* when hybrid modes are active.
+//---------------------------------------------------------------
+
+import type { SolaceContextBundle } from "./assembleContext";
 import { runHybridPipeline } from "./hybrid";
+
+type OrchestratorInputs = {
+  userMessage: string;
+  context: SolaceContextBundle;
+  history: any[];
+  ministryMode: boolean;
+  modeHint: string;
+  founderMode: boolean;
+  canonicalUserKey: string | null;
+};
 
 //---------------------------------------------------------------
 // MAIN ORCHESTRATION FUNCTION (FINAL — RETURNS STRING ONLY)
 //---------------------------------------------------------------
-export async function orchestrateSolaceResponse(inputs: any): Promise<string> {
+export async function orchestrateSolaceResponse(
+  inputs: OrchestratorInputs
+): Promise<string> {
   const {
     userMessage,
     context,
@@ -20,10 +40,18 @@ export async function orchestrateSolaceResponse(inputs: any): Promise<string> {
     modeHint === "Next Steps" ||
     founderMode;
 
+  console.log("[ORCHESTRATOR] incoming:", {
+    message: userMessage,
+    modeHint,
+    founderMode,
+    ministryMode,
+    canonicalUserKey,
+  });
+
   if (hybridAllowed) {
     console.log("[ORCHESTRATOR] Running HYBRID pipeline…");
 
-    const hybrid = await runHybridPipeline({
+    const result = await runHybridPipeline({
       userMessage,
       context,
       history,
@@ -33,27 +61,25 @@ export async function orchestrateSolaceResponse(inputs: any): Promise<string> {
       canonicalUserKey,
     });
 
-    // FIX: runHybridPipeline returns an object, not a string
-    const finalText = hybrid?.finalAnswer ?? "[arbiter produced no text]";
-    return finalText;
+    // runHybridPipeline currently returns an object, e.g.:
+    // { finalAnswer, optimist, skeptic } or similar.
+    if (typeof result === "string") {
+      return result || "[arbiter produced no text]";
+    }
+
+    if (result && typeof result === "object" && "finalAnswer" in result) {
+      const finalAnswer = (result as any).finalAnswer as string | null;
+      return finalAnswer && finalAnswer.trim().length > 0
+        ? finalAnswer
+        : "[arbiter produced no text]";
+    }
+
+    return "[arbiter produced no text]";
   }
 
-  console.log("[ORCHESTRATOR] Running NEUTRAL mode…");
-
-  const blocks = (context as any).systemPromptBlocks || [];
-  const res = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4.1",
-      input: blocks,
-    }),
-  });
-
-  const json = await res.json();
-  const block = json.output?.[0]?.content?.[0];
-  return block?.text ?? "[No reply]";
+  // Route should never call this when hybrid is disabled, but we must
+  // satisfy TypeScript return requirements.
+  console.log("[ORCHESTRATOR] Hybrid not allowed for this mode.");
+  return "[hybrid pipeline is disabled for this mode]";
 }
+
