@@ -1,19 +1,37 @@
 // lib/supabase/edge-user.ts
 // -------------------------------------------------------------
-// SAFE USER EXTRACTION FOR EDGE FUNCTIONS
-// Returns: { email, id } or null
+// Extract authenticated Supabase user inside an Edge Function
+// Works with Next.js middleware + magic link cookies
 // -------------------------------------------------------------
 
-import { createServerClient } from "@supabase/auth-helpers-remix";
+import { createClient } from "@supabase/supabase-js";
 
 export async function getEdgeUser(req: Request) {
   try {
-    const supabase = createServerClient(
+    const cookieHeader = req.headers.get("cookie") || "";
+    const cookies = Object.fromEntries(
+      cookieHeader
+        .split(";")
+        .map((c) => c.trim().split("="))
+        .map(([k, ...v]) => [k, v.join("=")])
+    );
+
+    const accessToken = cookies["sb-access-token"] ?? null;
+    const refreshToken = cookies["sb-refresh-token"] ?? null;
+
+    if (!accessToken) {
+      return null; // Not logged in
+    }
+
+    const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!, // needed for edge auth introspection
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, // NOT service key!
       {
-        request: req,
-        response: new Response(),
+        global: {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
       }
     );
 
@@ -26,7 +44,7 @@ export async function getEdgeUser(req: Request) {
       id: data.user.id ?? null,
     };
   } catch (err) {
-    console.error("[edge-user] extraction failed:", err);
+    console.error("[edge-user] failed:", err);
     return null;
   }
 }
