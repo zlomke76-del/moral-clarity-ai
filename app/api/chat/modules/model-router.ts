@@ -1,66 +1,60 @@
 // app/api/chat/modules/model-router.ts
+// ------------------------------------------------------------
+// MODEL ROUTER — MULTI-AGENT PIPELINE SUPPORT
+// Optimist | Skeptic | Arbiter | Founder
+// OpenAI-only today, extensible for future providers
+// ------------------------------------------------------------
 
 import OpenAI from "openai";
 
-/**
- * MODEL REGISTRY
- *
- * All three agents (Optimist, Skeptic, Arbiter) currently use OpenAI models.
- * These keys allow future swap-outs (Anthropic, Mistral, local inference, etc.)
- * WITHOUT touching orchestrator.ts.
- */
-export const MODELS = {
-  OPTIMIST: "gpt-4.1",
-  SKEPTIC: "gpt-4.1",
-  ARBITER: "gpt-4.1",
-  FOUNDER: "gpt-4.1",   // <-- add this
-};
-
-/**
- * OpenAI Client
- * (Responses API – required for structured multimodal input blocks)
- */
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-/**
- * callModel(modelId, inputBlocks)
- *
- * Runs a model via the Responses API with automatic output extraction.
- * No temp/top_p/max_tokens allowed — Responses API controls these internally.
- */
-export async function callModel(
-  modelId: string,
-  inputBlocks: any[]
-): Promise<string> {
+// ------------------------------------------------------------
+// MODEL MAP
+// These keys MUST match orchestrator.ts expectations.
+// Later you can plug in Anthropic, Gemini, Groq, etc.
+// ------------------------------------------------------------
+export const MODELS = {
+  OPTIMIST: "gpt-4.1",   // Create mode
+  SKEPTIC: "gpt-4.1",    // Red Team
+  ARBITER: "gpt-4.1",    // Next Steps integrator
+  FOUNDER: "gpt-4.1",    // Founder override
+} as const;
+
+// ------------------------------------------------------------
+// callModel()
+// Routes ALL agent calls to OpenAI Responses API.
+// Returns clean `string` text output.
+// ------------------------------------------------------------
+export async function callModel(model: string, inputBlocks: any[]) {
   try {
     const res = await client.responses.create({
-      model: modelId,
+      model,
       input: inputBlocks,
     });
 
-    return extract(res) ?? "[no output]";
+    return extractText(res);
   } catch (err) {
-    console.error(`[callModel] failure for ${modelId}:`, err);
-    return `[model ${modelId} failed]`;
+    console.error(`[model-router] Error calling ${model}:`, err);
+    return "[model error]";
   }
 }
 
-/**
- * extract()
- * Standardized extraction for Responses API return shape.
- */
-function extract(res: any): string | null {
+// ------------------------------------------------------------
+// extractText()
+// Stable extractor for the Responses API output shape.
+// ------------------------------------------------------------
+function extractText(res: any): string {
   try {
-    const block = res.output?.[0];
-    if (!block) return null;
-
-    const content = block.content?.[0];
-    if (!content) return null;
-
-    return content.text ?? null;
-  } catch {
-    return null;
+    const block = res?.output?.[0];
+    const first = block?.content?.[0];
+    const text = first?.text;
+    return text || "[no reply]";
+  } catch (err) {
+    console.error("[model-router] extractText error:", err);
+    return "[parse error]";
   }
 }
+
