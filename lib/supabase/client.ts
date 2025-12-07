@@ -34,6 +34,3 @@ export function createSupabaseBrowser(): SupabaseClient {
 }
 
 export type { SupabaseClient };
-
-export type { SupabaseClient };
-
