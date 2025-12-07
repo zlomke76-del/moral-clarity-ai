@@ -1,41 +1,97 @@
 // app/api/chat/route.ts
-//--------------------------------------------------------------
+// -------------------------------------------------------------
+// Solace Chat Route — Persona ALWAYS active
+// Hybrid Pipeline (Optimist → Skeptic → Arbiter) OR Neutral Mode
+// Memory, Persona, and Domain Logic integrated
+// Email is single source of truth for user identity
+// -------------------------------------------------------------
 
 export const runtime = "edge";
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
-import { getEdgeUser } from "@/lib/supabase/edge-user";
 import { assembleContext } from "./modules/assembleContext";
 import { assemblePrompt } from "./modules/assemble";
 import { runHybridPipeline } from "./modules/orchestrator";
 import { writeMemory } from "./modules/memory-writer";
+import { getEdgeUser } from "@/lib/supabase/edge-user";
 
+// -------------------------------------------------------------
+// Mode → Solace Domain Mapping
+// -------------------------------------------------------------
+function mapModeHintToDomain(modeHint: string): string {
+  switch (modeHint) {
+    case "Create":
+      return "optimist";
+    case "Red Team":
+      return "skeptic";
+    case "Next Steps":
+      return "arbiter";
+    default:
+      return "guidance";
+  }
+}
+
+// -------------------------------------------------------------
+// POST Handler
+// -------------------------------------------------------------
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { message, history = [], workspaceId = null, ministryMode = false, founderMode = false, modeHint = "Neutral" } =
-      body;
+
+    const {
+      message,
+      history = [],
+      workspaceId = null,
+
+      // UI toggles from SolaceDock
+      ministryMode = false,
+      founderMode = false,
+      modeHint = "Neutral",
+    } = body;
 
     if (!message || typeof message !== "string") {
       return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
-    // 🔥 REAL user identity from Supabase
-    const authUser = await getEdgeUser(req);
-    const userKey = authUser?.email ?? null;
+    // ---------------------------------------------------------
+    // 1) AUTH — Identify user via email (canonical identity)
+    // ---------------------------------------------------------
+    const edgeUser = await getEdgeUser(req);
+    const userKey = edgeUser?.email ?? "guest";
 
-    const context = await assembleContext(userKey ?? "guest", workspaceId, message);
+    // ---------------------------------------------------------
+    // 2) CONTEXT — Memory, Persona, News, Research
+    // ---------------------------------------------------------
+    const context = await assembleContext(userKey, workspaceId, message);
 
-    const usingHybrid =
-      founderMode ||
+    // Determine domain based on UI mode
+    let domain = mapModeHintToDomain(modeHint);
+
+    // Founder overrides everything
+    if (founderMode) {
+      domain = "founder";
+    } else if (ministryMode) {
+      domain = "ministry";
+    }
+
+    // Build user prompt blocks (system prompt added later)
+    const userBlocks = assemblePrompt(context, history, message);
+
+    // ---------------------------------------------------------
+    // 3) HYBRID SUPER-AI PIPELINE
+    // ---------------------------------------------------------
+    const hybridAllowed =
       modeHint === "Create" ||
       modeHint === "Red Team" ||
-      modeHint === "Next Steps";
+      modeHint === "Next Steps" ||
+      founderMode;
 
-    let responseText: string;
+    let finalText: string;
 
-    if (usingHybrid) {
+    if (hybridAllowed) {
       const { finalAnswer } = await runHybridPipeline({
         userMessage: message,
         context,
@@ -43,12 +99,14 @@ export async function POST(req: Request) {
         ministryMode,
         modeHint,
         founderMode,
+        userKey, // ensures memory continuity across pipeline
       });
 
-      responseText = finalAnswer || "[No arbiter answer]";
+      finalText = finalAnswer || "[No arbiter answer]";
     } else {
-      const inputBlocks = assemblePrompt(context, history, message);
-
+      // ---------------------------------------------------------
+      // 4) Neutral Mode — single-model prompt
+      // ---------------------------------------------------------
       const res = await fetch("https://api.openai.com/v1/responses", {
         method: "POST",
         headers: {
@@ -57,25 +115,31 @@ export async function POST(req: Request) {
         },
         body: JSON.stringify({
           model: "gpt-4.1",
-          input: inputBlocks,
+          input: userBlocks,
         }),
       });
 
       const json = await res.json();
-      responseText = json.output?.[0]?.content?.[0]?.text ?? "[No reply]";
+      const block = json.output?.[0]?.content?.[0];
+      finalText = block?.text ?? "[No reply]";
     }
 
-    // Write memory only if authenticated
-    await writeMemory(userKey, message, responseText);
+    // ---------------------------------------------------------
+    // 5) MEMORY WRITE (AFTER successful response)
+    // ---------------------------------------------------------
+    try {
+      await writeMemory(userKey, message, finalText);
+    } catch (err) {
+      console.error("[memory-writer] failed:", err);
+    }
 
-    return NextResponse.json({ text: responseText });
+    return NextResponse.json({ text: finalText });
   } catch (err: any) {
-    console.error("[chat route] error:", err);
+    console.error("[chat route] fatal error", err);
     return NextResponse.json(
       { error: err?.message || "Chat route failed" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
-
 
