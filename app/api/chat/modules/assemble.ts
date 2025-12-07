@@ -14,10 +14,12 @@ export function assemblePrompt(context: any, history: any[], userMessage: string
 
   fullText += `You are ${context.persona}, a stable, empathetic, neutral, memory-aware guide.\n`;
 
-  fullText += safeBlock("Facts", context.memoryPack.facts);
-  fullText += safeBlock("Episodes", context.memoryPack.episodes);
+  fullText += safeBlock("Facts", context.memoryPack.userMemories);
+  fullText += safeBlock("Episodes", context.memoryPack.episodicMemories);
+  fullText += safeBlock("Autobiography", context.memoryPack.autobiography);
+  fullText += safeBlock("NewsDigest", context.newsDigest);
+  fullText += safeBlock("ResearchContext", context.researchContext);
 
-  // Chat history
   if (history?.length) {
     fullText += `\n[Chat history]:\n`;
     for (const msg of history) {
@@ -35,10 +37,10 @@ export function assemblePrompt(context: any, history: any[], userMessage: string
       content: [
         {
           type: "input_text",
-          text: fullText,
-        },
-      ],
-    },
+          text: fullText
+        }
+      ]
+    }
   ];
 }
 
