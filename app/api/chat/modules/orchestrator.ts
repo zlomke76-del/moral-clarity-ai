@@ -1,22 +1,23 @@
 // app/api/chat/modules/orchestrator.ts
 //---------------------------------------------------------------
-// Solace Orchestration Engine
-// Hybrid Pipeline (Optimist → Skeptic → Arbiter) + Neutral Mode
-// Updated for Unified Memory Model (facts / episodic / autobio)
+// Solace Orchestration Layer
+// Chooses between:
+//   - Hybrid Pipeline (Optimist → Skeptic → Arbiter)
+//   - Single-model neutral inference
+//
+// This module is the conductor called by route.ts
 //---------------------------------------------------------------
 
-import { runHybridPipeline } from "./hybrid";
 import type { SolaceContextBundle } from "./assembleContext";
+import { runHybridPipeline } from "./hybrid"; // NEW unified pipeline
 
-export async function orchestrateSolaceResponse({
-  userMessage,
-  context,
-  history,
-  ministryMode,
-  modeHint,
-  founderMode,
-  canonicalUserKey,
-}: {
+const OAI_URL = "https://api.openai.com/v1/responses";
+const OAI_KEY = process.env.OPENAI_API_KEY;
+
+//---------------------------------------------------------------
+// Types
+//---------------------------------------------------------------
+export type OrchestratorInputs = {
   userMessage: string;
   context: SolaceContextBundle;
   history: any[];
@@ -24,36 +25,69 @@ export async function orchestrateSolaceResponse({
   modeHint: string;
   founderMode: boolean;
   canonicalUserKey: string;
-}) {
-  //-------------------------------------------------------------
-  // LOGGING — MINIMAL (Option A)
-  //-------------------------------------------------------------
-  try {
-    console.log("[Solace Context Snapshot]", {
-      user: canonicalUserKey,
-      facts_count: context.memoryPack.facts?.length ?? 0,
-      episodic_count: context.memoryPack.episodic?.length ?? 0,
-      autobio_count: context.memoryPack.autobiography?.length ?? 0,
-      news_count: context.newsDigest?.length ?? 0,
-      research_count: context.researchContext?.length ?? 0,
-    });
-  } catch (err) {
-    console.warn("[orchestrator logging failed]", err);
-  }
+};
+
+//---------------------------------------------------------------
+// Helper for neutral mode call
+//---------------------------------------------------------------
+async function callNeutralModel(blocks: any[]): Promise<string> {
+  const res = await fetch(OAI_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${OAI_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-4.1",
+      input: blocks,
+    }),
+  });
+
+  const json = await res.json();
+  const block = json?.output?.[0]?.content?.[0];
+  return block?.text || "[No reply]";
+}
+
+//---------------------------------------------------------------
+// MAIN ORCHESTRATION FUNCTION
+//---------------------------------------------------------------
+export async function orchestrateSolaceResponse(inputs: OrchestratorInputs) {
+  const {
+    userMessage,
+    context,
+    history,
+    ministryMode,
+    modeHint,
+    founderMode,
+    canonicalUserKey,
+  } = inputs;
 
   //-------------------------------------------------------------
-  // DETERMINE DOMAIN
+  // Determine if hybrid mode should run
   //-------------------------------------------------------------
   const hybridAllowed =
-    founderMode ||
     modeHint === "Create" ||
     modeHint === "Red Team" ||
-    modeHint === "Next Steps";
+    modeHint === "Next Steps" ||
+    founderMode;
 
   //-------------------------------------------------------------
-  // HYBRID PIPELINE MODE
+  // DEBUGGING (safe — logs only)
+  //-------------------------------------------------------------
+  console.log("[ORCHESTRATOR] incoming:", {
+    message: userMessage,
+    modeHint,
+    founderMode,
+    ministryMode,
+    canonicalUserKey,
+  });
+
+  //-------------------------------------------------------------
+  // HYBRID MODE
   //-------------------------------------------------------------
   if (hybridAllowed) {
+    console.log("[ORCHESTRATOR] Running HYBRID pipeline…");
+
     const { finalAnswer } = await runHybridPipeline({
       userMessage,
       context,
@@ -64,43 +98,19 @@ export async function orchestrateSolaceResponse({
       canonicalUserKey,
     });
 
-    return (
-      finalAnswer ||
-      "[No arbiter answer produced. Hybrid pipeline reached empty output.]"
-    );
+    return finalAnswer || "[arbiter produced no text]";
   }
 
   //-------------------------------------------------------------
-  // NEUTRAL MODE — Single step inference
+  // NEUTRAL MODE (single-model)
   //-------------------------------------------------------------
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4.1",
-      input: [
-        {
-          role: "system",
-          content: [
-            {
-              type: "text",
-              text: "Solace — Neutral Guidance Mode. Provide accurate, grounded, concise support.",
-            },
-          ],
-        },
-        {
-          role: "user",
-          content: [{ type: "text", text: userMessage }],
-        },
-      ],
-    }),
-  });
+  console.log("[ORCHESTRATOR] Running NEUTRAL mode…");
 
-  const json = await response.json();
-  const block = json.output?.[0]?.content?.[0];
-  return block?.text ?? "[No reply produced in neutral mode]";
+  // The route.ts caller is responsible for building fullBlocks (system + user)
+  // We accept blocks passed through orchestrator call
+  const blocks = (context as any).systemPromptBlocks || [];
+
+  const neutralText = await callNeutralModel(blocks);
+  return neutralText;
 }
 
