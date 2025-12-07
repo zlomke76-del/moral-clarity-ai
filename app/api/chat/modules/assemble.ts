@@ -1,82 +1,76 @@
 // app/api/chat/modules/assemble.ts
 // -------------------------------------------------------------
-// This module builds the Solace SYSTEM BLOCK + USER BLOCK.
-// SYSTEM BLOCK = persona + Abrahamic Code + domain mode.
-// USER BLOCK = memory packets + chat history + user message.
+// SYSTEM BLOCK + USER CONTEXT BLOCK ASSEMBLER
+// For Solace Hybrid Pipeline (Optimist → Skeptic → Arbiter)
 // -------------------------------------------------------------
 
 import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
 
 /**
- * Builds the SYSTEM block for the Responses API.
- * This is ALWAYS the first element of the input array.
+ * SYSTEM BLOCK
+ * Builds the persona + domain prompt as a Responses API block.
  */
 export function buildSystemBlock(domain: string, extras?: string) {
-  const text = buildSolaceSystemPrompt(domain as any, extras);
+  const systemText = buildSolaceSystemPrompt(domain as any, extras);
 
   return {
     role: "system",
     content: [
       {
         type: "input_text",
-        text,
+        text: systemText,
       },
     ],
   };
 }
 
 /**
- * Helper: safe stringify blocks
+ * USER CONTEXT ASSEMBLER
+ * Takes:
+ * • context (persona, memories, news, research)
+ * • history (array of {role, content})
+ * • user message
+ *
+ * Produces a single USER block that the LLM will read.
  */
-function safeBlock(label: string, data: any) {
-  if (!data) return `\n[${label}]: none\n`;
-  try {
-    return `\n[${label}]: ${JSON.stringify(data, null, 2)}\n`;
-  } catch {
-    return `\n[${label}]: [unserializable]\n`;
-  }
-}
-
-/**
- * Builds the USER block sequence.
- * This contains:
- *  - memory facts
- *  - episodic memories
- *  - autobiography
- *  - news digest
- *  - research context
- *  - chat history
- *  - user message
- */
-export function assemblePrompt(context: any, history: any[], userMessage: string) {
-  let text = "";
-
-  // Persona name is optional but included for transparency
-  text += `You are ${context.persona || "Solace"}.\n`;
-
-  // Memory Blocks ------------------------------------------------
-  const m = context.memoryPack || {};
-
-  text += safeBlock("User Memories", m.userMemories);
-  text += safeBlock("Episodic Memories", m.episodicMemories);
-  text += safeBlock("Autobiography", m.autobiography);
-
-  // News + Research ---------------------------------------------
-  text += safeBlock("News Digest", context.newsDigest);
-  text += safeBlock("Research Context", context.researchContext);
-
-  // History ------------------------------------------------------
-  if (history?.length) {
-    text += `\n[Chat History]:\n`;
-    for (const msg of history) {
-      text += `${msg.role.toUpperCase()}: ${msg.content}\n`;
+export function assemblePrompt(
+  context: any,
+  history: any[],
+  userMessage: string
+) {
+  const safeJson = (obj: any) => {
+    try {
+      return JSON.stringify(obj, null, 2);
+    } catch {
+      return "[]";
     }
-  } else {
-    text += `\n[Chat History]: none\n`;
-  }
+  };
 
-  // User message -------------------------------------------------
-  text += `\n[User Message]: ${userMessage}\n`;
+  const blockText = `
+[User Message]
+${userMessage}
+
+[Persona]
+${context.persona || "Solace"}
+
+[User Memories]
+${safeJson(context.memoryPack.userMemories)}
+
+[Episodic Memories]
+${safeJson(context.memoryPack.episodicMemories)}
+
+[Autobiography]
+${safeJson(context.memoryPack.autobiography)}
+
+[News Digest]
+${safeJson(context.newsDigest)}
+
+[Research Context]
+${safeJson(context.researchContext)}
+
+[Chat History]
+${safeJson(history)}
+  `.trim();
 
   return [
     {
@@ -84,9 +78,10 @@ export function assemblePrompt(context: any, history: any[], userMessage: string
       content: [
         {
           type: "input_text",
-          text,
+          text: blockText,
         },
       ],
     },
   ];
 }
+
