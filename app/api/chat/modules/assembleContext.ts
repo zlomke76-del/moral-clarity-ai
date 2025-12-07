@@ -1,4 +1,11 @@
 // app/api/chat/modules/assembleContext.ts
+// =============================================================
+// Solace — Context Assembly (Persona + Memory + News + Research)
+// Updated for:
+// - Full memory for authenticated users
+// - Graceful guest mode
+// - Hybrid pipeline compatibility
+// =============================================================
 
 import { supabaseEdge } from "@/lib/supabase/edge";
 import {
@@ -8,25 +15,42 @@ import {
   ENABLE_RESEARCH,
 } from "./constants";
 
+// -------------------------------------------------------------
+// UTILITIES
+// -------------------------------------------------------------
 function safe<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
 }
 
-function lightTrigger(message: string): boolean {
-  const m = message.toLowerCase();
-  return (
-    m.includes("remember") ||
-    m.includes("what do you know") ||
-    m.includes("last time") ||
-    m.includes("my past") ||
-    m.includes("autobiography") ||
-    m.includes("life story")
-  );
+function needsEpisodic(message: string): boolean {
+  return [
+    "remember when",
+    "last time",
+    "earlier you said",
+    "continue the story",
+    "what happened yesterday",
+    "recap",
+    "episode",
+    "thread",
+  ].some((k) => message.toLowerCase().includes(k));
 }
 
-// ------------------------------------------------------------
+function needsAutobio(message: string): boolean {
+  return [
+    "my past",
+    "my childhood",
+    "life story",
+    "my history",
+    "journey",
+    "autobiography",
+    "who am i",
+    "identity",
+  ].some((k) => message.toLowerCase().includes(k));
+}
+
+// -------------------------------------------------------------
 // PERSONA
-// ------------------------------------------------------------
+// -------------------------------------------------------------
 async function loadPersona(): Promise<string> {
   const { data } = await supabaseEdge
     .from("personas")
@@ -37,10 +61,10 @@ async function loadPersona(): Promise<string> {
   return data?.name || "Solace";
 }
 
-// ------------------------------------------------------------
-// USER FACTUAL MEMORIES (ALWAYS LOADED)
-// ------------------------------------------------------------
-async function loadFacts(userKey: string) {
+// -------------------------------------------------------------
+// USER MEMORY (facts)
+// -------------------------------------------------------------
+async function loadUserMemories(userKey: string) {
   const { data } = await supabaseEdge
     .from("user_memories")
     .select("*")
@@ -51,10 +75,12 @@ async function loadFacts(userKey: string) {
   return safe(data);
 }
 
-// ------------------------------------------------------------
+// -------------------------------------------------------------
 // EPISODIC MEMORY
-// ------------------------------------------------------------
-async function loadEpisodic(userKey: string) {
+// -------------------------------------------------------------
+async function loadEpisodic(userKey: string, enable: boolean) {
+  if (!enable) return [];
+
   const { data: episodes } = await supabaseEdge
     .from("episodic_memories")
     .select("*")
@@ -82,10 +108,14 @@ async function loadEpisodic(userKey: string) {
   }));
 }
 
-// ------------------------------------------------------------
-// AUTOBIO
-// ------------------------------------------------------------
-async function loadAutobiography(userKey: string) {
+// -------------------------------------------------------------
+// AUTOBIOGRAPHY
+// -------------------------------------------------------------
+async function loadAutobiography(userKey: string, enable: boolean) {
+  if (!enable) {
+    return { chapters: [], entries: [] };
+  }
+
   const { data: chapters } = await supabaseEdge
     .from("user_autobio_chapters")
     .select("*")
@@ -104,9 +134,9 @@ async function loadAutobiography(userKey: string) {
   };
 }
 
-// ------------------------------------------------------------
-// NEWS
-// ------------------------------------------------------------
+// -------------------------------------------------------------
+// NEWS DIGEST
+// -------------------------------------------------------------
 async function loadNewsDigest(userKey: string) {
   if (!ENABLE_NEWS) return [];
 
@@ -120,9 +150,9 @@ async function loadNewsDigest(userKey: string) {
   return safe(data);
 }
 
-// ------------------------------------------------------------
-// RESEARCH
-// ------------------------------------------------------------
+// -------------------------------------------------------------
+// RESEARCH CONTEXT
+// -------------------------------------------------------------
 async function loadResearch(userKey: string) {
   if (!ENABLE_RESEARCH) return [];
 
@@ -136,35 +166,58 @@ async function loadResearch(userKey: string) {
   return safe(data);
 }
 
-// ------------------------------------------------------------
+// -------------------------------------------------------------
 // MAIN CONTEXT ASSEMBLY
-// ------------------------------------------------------------
+// -------------------------------------------------------------
 export async function assembleContext(
   userKey: string,
   workspaceId: string | null,
   userMessage: string
 ) {
+  const episodicNeeded = needsEpisodic(userMessage);
+  const autobioNeeded = needsAutobio(userMessage);
+
+  console.log("[Solace Context] Load decisions:", {
+    episodicNeeded,
+    autobioNeeded,
+    workspaceId,
+    userKey,
+  });
+
   const persona = await loadPersona();
 
-  // Always load factual memory
-  const facts = await loadFacts(userKey);
+  // ---------------------------------------------------------
+  // GUEST MODE — NO DATABASE MEMORY
+  // ---------------------------------------------------------
+  if (!userKey || userKey === "guest") {
+    return {
+      persona,
+      guest: true, // Orchestrator + SolaceDock use this
+      memoryPack: {
+        userMemories: [],
+        episodicMemories: [],
+        autobiography: { chapters: [], entries: [] },
+      },
+      newsDigest: [],
+      researchContext: [],
+    };
+  }
 
-  // Light heuristic: episodic + autobio load only when needed
-  const deepMemoryNeeded = lightTrigger(userMessage);
-
-  const episodes = deepMemoryNeeded ? await loadEpisodic(userKey) : [];
-  const autobiography = deepMemoryNeeded
-    ? await loadAutobiography(userKey)
-    : { chapters: [], entries: [] };
-
+  // ---------------------------------------------------------
+  // AUTHENTICATED USER → FULL MEMORY PIPELINE
+  // ---------------------------------------------------------
+  const userMemories = await loadUserMemories(userKey);
+  const episodicMemories = await loadEpisodic(userKey, episodicNeeded);
+  const autobiography = await loadAutobiography(userKey, autobioNeeded);
   const newsDigest = await loadNewsDigest(userKey);
   const researchContext = await loadResearch(userKey);
 
   return {
     persona,
+    guest: false,
     memoryPack: {
-      facts,
-      episodes,
+      userMemories,
+      episodicMemories,
       autobiography,
     },
     newsDigest,
