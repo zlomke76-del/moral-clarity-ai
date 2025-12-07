@@ -1,172 +1,106 @@
 // app/api/chat/modules/orchestrator.ts
-// -----------------------------------------------------------
-// Solace Hybrid Pipeline
-// Optimist → Skeptic → Arbiter
-// Founder + Ministry overrides supported
-// -----------------------------------------------------------
+//---------------------------------------------------------------
+// Solace Orchestration Engine
+// Hybrid Pipeline (Optimist → Skeptic → Arbiter) + Neutral Mode
+// Updated for Unified Memory Model (facts / episodic / autobio)
+//---------------------------------------------------------------
 
+import { runHybridPipeline } from "./hybrid";
 import type { SolaceContextBundle } from "./assembleContext";
-import { callModel, MODELS } from "./model-router";
-import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
 
-export interface HybridArgs {
+export async function orchestrateSolaceResponse({
+  userMessage,
+  context,
+  history,
+  ministryMode,
+  modeHint,
+  founderMode,
+  canonicalUserKey,
+}: {
   userMessage: string;
   context: SolaceContextBundle;
   history: any[];
   ministryMode: boolean;
   modeHint: string;
   founderMode: boolean;
-}
+  canonicalUserKey: string;
+}) {
+  //-------------------------------------------------------------
+  // LOGGING — MINIMAL (Option A)
+  //-------------------------------------------------------------
+  try {
+    console.log("[Solace Context Snapshot]", {
+      user: canonicalUserKey,
+      facts_count: context.memoryPack.facts?.length ?? 0,
+      episodic_count: context.memoryPack.episodic?.length ?? 0,
+      autobio_count: context.memoryPack.autobiography?.length ?? 0,
+      news_count: context.newsDigest?.length ?? 0,
+      research_count: context.researchContext?.length ?? 0,
+    });
+  } catch (err) {
+    console.warn("[orchestrator logging failed]", err);
+  }
 
-export interface HybridResult {
-  optimist: string | null;
-  skeptic: string | null;
-  finalAnswer: string;
-}
+  //-------------------------------------------------------------
+  // DETERMINE DOMAIN
+  //-------------------------------------------------------------
+  const hybridAllowed =
+    founderMode ||
+    modeHint === "Create" ||
+    modeHint === "Red Team" ||
+    modeHint === "Next Steps";
 
-// -----------------------------------------------------------
-// INTERNAL — Build base context block for all 3 agents
-// -----------------------------------------------------------
-function buildBaseContext(userMessage: string, context: SolaceContextBundle, history: any[]) {
-  return `
-[User Message]: ${userMessage}
+  //-------------------------------------------------------------
+  // HYBRID PIPELINE MODE
+  //-------------------------------------------------------------
+  if (hybridAllowed) {
+    const { finalAnswer } = await runHybridPipeline({
+      userMessage,
+      context,
+      history,
+      ministryMode,
+      modeHint,
+      founderMode,
+      canonicalUserKey,
+    });
 
-[User Memories]: ${JSON.stringify(context.memoryPack.userMemories || [], null, 2)}
+    return (
+      finalAnswer ||
+      "[No arbiter answer produced. Hybrid pipeline reached empty output.]"
+    );
+  }
 
-[Episodic Memories]: ${JSON.stringify(
-    context.memoryPack.episodicMemories || [],
-    null,
-    2
-  )}
-
-[Autobiography]: ${JSON.stringify(context.memoryPack.autobiography || {}, null, 2)}
-
-[News Digest]: ${JSON.stringify(context.newsDigest || [], null, 2)}
-
-[Research Context]: ${JSON.stringify(context.researchContext || [], null, 2)}
-
-[Chat History]: ${JSON.stringify(history || [], null, 2)}
-  `;
-}
-
-// -----------------------------------------------------------
-// HYBRID PIPELINE EXECUTION
-// -----------------------------------------------------------
-export async function runHybridPipeline(args: HybridArgs): Promise<HybridResult> {
-  const { userMessage, context, history, ministryMode, modeHint, founderMode } = args;
-
-  const baseContext = buildBaseContext(userMessage, context, history);
-
-  const ministryExtra = ministryMode
-    ? "Ministry mode active — integrate Scripture sparingly and respectfully when relevant."
-    : "";
-
-  // ---------------------------------------------------------
-  // 1. OPTIMIST — Create Mode
-  // ---------------------------------------------------------
-  const optimistSystem = buildSolaceSystemPrompt(
-    "optimist",
-    `
-You are SOLACE_OPTIMIST.
-Creative, expansive, generative.
-Your job: explore possibilities without violating the Abrahamic Code.
-${ministryExtra}
-`
-  );
-
-  const optimistPrompt = [
-    {
-      role: "system",
-      content: [{ type: "input_text", text: optimistSystem }],
+  //-------------------------------------------------------------
+  // NEUTRAL MODE — Single step inference
+  //-------------------------------------------------------------
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
     },
-    {
-      role: "user",
-      content: [{ type: "input_text", text: baseContext }],
-    },
-  ];
-
-  const optimist = await callModel(MODELS.OPTIMIST, optimistPrompt);
-
-  // ---------------------------------------------------------
-  // 2. SKEPTIC — Red Team Mode
-  // ---------------------------------------------------------
-  const skepticSystem = buildSolaceSystemPrompt(
-    "skeptic",
-    `
-You are SOLACE_SKEPTIC.
-Critical evaluator. Identify flaws, risks, blind spots.
-Challenge optimist ideas constructively.
-${ministryExtra}
-`
-  );
-
-  const skepticPrompt = [
-    {
-      role: "system",
-      content: [{ type: "input_text", text: skepticSystem }],
-    },
-    {
-      role: "user",
-      content: [
+    body: JSON.stringify({
+      model: "gpt-4.1",
+      input: [
         {
-          type: "input_text",
-          text: `${baseContext}
-
-[Optimist Proposal]:
-${optimist}
-          `,
+          role: "system",
+          content: [
+            {
+              type: "text",
+              text: "Solace — Neutral Guidance Mode. Provide accurate, grounded, concise support.",
+            },
+          ],
+        },
+        {
+          role: "user",
+          content: [{ type: "text", text: userMessage }],
         },
       ],
-    },
-  ];
+    }),
+  });
 
-  const skeptic = await callModel(MODELS.SKEPTIC, skepticPrompt);
-
-  // ---------------------------------------------------------
-  // 3. ARBITER — Final Next Steps
-  // ---------------------------------------------------------
-  const arbiterSystem = buildSolaceSystemPrompt(
-    "arbiter",
-    `
-You are SOLACE_ARBITER.
-You synthesize Optimist + Skeptic.
-Founder mode: if enabled, be maximally direct, precise, architecture-oriented.
-${founderMode ? "Founder Mode ON — apply maximum clarity and decisiveness." : ""}
-${ministryExtra}
-`
-  );
-
-  const arbiterPrompt = [
-    {
-      role: "system",
-      content: [{ type: "input_text", text: arbiterSystem }],
-    },
-    {
-      role: "user",
-      content: [
-        {
-          type: "input_text",
-          text: `${baseContext}
-
-[Optimist]:
-${optimist}
-
-[Skeptic]:
-${skeptic}
-
-Produce the final integrated ruling with clarity and stewardship.
-          `,
-        },
-      ],
-    },
-  ];
-
-  const finalAnswer = await callModel(MODELS.ARBITER, arbiterPrompt);
-
-  return {
-    optimist,
-    skeptic,
-    finalAnswer: finalAnswer ?? "[Arbiter produced no output]",
-  };
+  const json = await response.json();
+  const block = json.output?.[0]?.content?.[0];
+  return block?.text ?? "[No reply produced in neutral mode]";
 }
 
