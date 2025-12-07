@@ -1,60 +1,81 @@
 // app/api/chat/modules/model-router.ts
-// ------------------------------------------------------------
-// MODEL ROUTER — MULTI-AGENT PIPELINE SUPPORT
-// Optimist | Skeptic | Arbiter | Founder
-// OpenAI-only today, extensible for future providers
-// ------------------------------------------------------------
+// -------------------------------------------------------------
+// MODEL ROUTER — Solace Multi-Agent Pipeline
+// (All OpenAI today; plug-in ready for other LLMs)
+// -------------------------------------------------------------
 
 import OpenAI from "openai";
 
-const client = new OpenAI({
+// -------------------------------------------------------------
+// OPENAI CLIENT (Edge compatible)
+// -------------------------------------------------------------
+export const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-// ------------------------------------------------------------
-// MODEL MAP
-// These keys MUST match orchestrator.ts expectations.
-// Later you can plug in Anthropic, Gemini, Groq, etc.
-// ------------------------------------------------------------
+// -------------------------------------------------------------
+// MODEL MAP (swap these later per domain if needed)
+// -------------------------------------------------------------
 export const MODELS = {
-  OPTIMIST: "gpt-4.1",   // Create mode
-  SKEPTIC: "gpt-4.1",    // Red Team
-  ARBITER: "gpt-4.1",    // Next Steps integrator
-  FOUNDER: "gpt-4.1",    // Founder override
+  OPTIMIST: "gpt-4.1",
+  SKEPTIC: "gpt-4.1",
+  ARBITER: "gpt-4.1",
+  FOUNDER: "gpt-4.1", // can later use o3-mini-highconf or a custom LLM
 } as const;
 
-// ------------------------------------------------------------
-// callModel()
-// Routes ALL agent calls to OpenAI Responses API.
-// Returns clean `string` text output.
-// ------------------------------------------------------------
-export async function callModel(model: string, inputBlocks: any[]) {
-  try {
-    const res = await client.responses.create({
-      model,
-      input: inputBlocks,
-    });
+export type SolaceModelKey = keyof typeof MODELS;
 
-    return extractText(res);
-  } catch (err) {
-    console.error(`[model-router] Error calling ${model}:`, err);
-    return "[model error]";
-  }
-}
-
-// ------------------------------------------------------------
-// extractText()
-// Stable extractor for the Responses API output shape.
-// ------------------------------------------------------------
-function extractText(res: any): string {
+// -------------------------------------------------------------
+// RESPONSE EXTRACTOR — consistent for all LLM calls
+// -------------------------------------------------------------
+export function extractText(res: any): string {
   try {
     const block = res?.output?.[0];
-    const first = block?.content?.[0];
-    const text = first?.text;
-    return text || "[no reply]";
-  } catch (err) {
-    console.error("[model-router] extractText error:", err);
-    return "[parse error]";
+    const content = block?.content?.[0];
+    return content?.text || "";
+  } catch {
+    return "";
   }
 }
+
+// -------------------------------------------------------------
+// callModel() — unified wrapper
+// Handles:
+// • Responses API calls
+// • Error logging
+// • Clean extraction
+// -------------------------------------------------------------
+export async function callModel(
+  modelKey: SolaceModelKey,
+  promptBlocks: any[]
+): Promise<string> {
+  const model = MODELS[modelKey];
+
+  try {
+    const response = await openai.responses.create({
+      model,
+      input: promptBlocks,
+    });
+
+    return extractText(response) || "[empty reply]";
+  } catch (err: any) {
+    console.error(`[Solace ModelRouter] ${modelKey} failed:`, err);
+    return `[${modelKey} error]`;
+  }
+}
+
+// -------------------------------------------------------------
+// FUTURE: LLM OVERRIDES (Anthropic / Gemini / Custom models)
+// (Not active today — documented placeholders)
+// -------------------------------------------------------------
+export function canUseExternalLLM(): boolean {
+  // you’ll enable this once we add provider-level switches
+  return false;
+}
+
+export async function callExternalLLM(): Promise<string> {
+  // stub — no-op today
+  return "[external LLM not enabled]";
+}
+
 
