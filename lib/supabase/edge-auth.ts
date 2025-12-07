@@ -1,37 +1,28 @@
 // lib/supabase/edge-auth.ts
-// -------------------------------------------------------
-// Unified identity extractor for Edge Functions
-// Ensures memory is tied to the REAL Supabase user
-// -------------------------------------------------------
+// Unified identity extractor for Edge Functions.
+// Pulls user identity from Supabase cookies.
 
-import { supabaseEdge } from "./edge";
+import { getEdgeUser } from "./edge-user";
 
+/**
+ * Returns full user object, or null if not authenticated.
+ */
 export async function getUserFromRequest(req: Request) {
-  const accessToken =
-    req.headers.get("Authorization")?.replace("Bearer ", "") ?? null;
-
-  if (!accessToken) return null;
-
-  // Validate token & fetch user session
-  const {
-    data: { user },
-    error,
-  } = await supabaseEdge.auth.getUser(accessToken);
-
-  if (error || !user) return null;
-
-  return user;
+  return await getEdgeUser(req);
 }
 
 /**
- * Returns the canonical user identity for all memory operations.
- * If the user is logged in → email
- * If not logged in → "guest"
+ * Returns canonical user identity:
+ *  - Signed-in user: email (lowercase)
+ *  - Not signed in: null
+ *
+ * We DO NOT return "guest" anymore.
+ * "guest" caused all your memory corruption.
  */
-export async function getCanonicalUserKey(req: Request): Promise<string> {
-  const user = await getUserFromRequest(req);
+export async function getCanonicalUserKey(req: Request): Promise<string | null> {
+  const user = await getEdgeUser(req);
 
-  if (!user || !user.email) return "guest";
+  if (!user || !user.email) return null;
 
-  return user.email.toLowerCase();
+  return user.email;
 }
