@@ -105,7 +105,6 @@ export async function POST(req: Request) {
         ministryMode,
         modeHint,
         founderMode,
-        userKey, // NEW — ensure subpipelines use correct user identity
       });
 
       finalText = finalAnswer || "[No arbiter answer]";
