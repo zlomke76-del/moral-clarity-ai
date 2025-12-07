@@ -1,16 +1,11 @@
 // app/api/chat/modules/assembleContext.ts
 // ------------------------------------------------------------
 // Solace Context Loader (FINAL VERSION)
-// Reads ALL memory exclusively from mv_unified_memory
-// Episodic + Chunks reconstructed from materialized view
-// Autobio extracted from unified memory as well
+// Reads ALL memory via mv_unified_memory using canonical_user_key
 // ------------------------------------------------------------
 
 import { supabaseEdge } from "@/lib/supabase/edge";
-import {
-  FACTS_LIMIT,
-  EPISODES_LIMIT,
-} from "./constants";
+import { FACTS_LIMIT, EPISODES_LIMIT } from "./constants";
 
 export type SolaceContextBundle = {
   persona: string;
@@ -23,28 +18,18 @@ export type SolaceContextBundle = {
   researchContext: any[];
 };
 
-// ------------------------------------------------------------
-// UTIL
-// ------------------------------------------------------------
 function safe<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
 }
 
-// ------------------------------------------------------------
-// PERSONA (STATIC — no DB lookup)
-// ------------------------------------------------------------
 const STATIC_PERSONA_NAME = "Solace";
-
-// ------------------------------------------------------------
-// MEMORY LOADERS — unified view
-// ------------------------------------------------------------
 
 // FACTS -------------------------------------------------------
 async function loadFacts(canonicalKey: string) {
   const { data, error } = await supabaseEdge
     .from("mv_unified_memory")
     .select("*")
-    .eq("user_key", canonicalKey)
+    .eq("canonical_user_key", canonicalKey)
     .eq("memory_type", "fact")
     .order("created_at", { ascending: false })
     .limit(FACTS_LIMIT);
@@ -57,12 +42,12 @@ async function loadFacts(canonicalKey: string) {
   return safe(data);
 }
 
-// EPISODIC ---------------------------------------------------
+// EPISODIC ----------------------------------------------------
 async function loadEpisodic(canonicalKey: string) {
   const { data, error } = await supabaseEdge
     .from("mv_unified_memory")
     .select("*")
-    .eq("user_key", canonicalKey)
+    .eq("canonical_user_key", canonicalKey)
     .eq("memory_type", "episode")
     .order("created_at", { ascending: false })
     .limit(EPISODES_LIMIT);
@@ -75,19 +60,18 @@ async function loadEpisodic(canonicalKey: string) {
   const episodes = safe(data);
   if (episodes.length === 0) return [];
 
-  // Now get all chunks for these episodes
   const episodeIds = episodes.map(e => e.id);
 
   const { data: chunkRows, error: chunkErr } = await supabaseEdge
     .from("mv_unified_memory")
     .select("*")
-    .eq("user_key", canonicalKey)
+    .eq("canonical_user_key", canonicalKey)
     .eq("memory_type", "chunk")
     .in("episode_id", episodeIds)
     .order("seq", { ascending: true });
 
   if (chunkErr) {
-    console.error("[assembleContext] episodic chunk error:", chunkErr);
+    console.error("[assembleContext] chunk error:", chunkErr);
     return episodes.map(e => ({ ...e, chunks: [] }));
   }
 
@@ -104,7 +88,7 @@ async function loadAutobio(canonicalKey: string) {
   const { data, error } = await supabaseEdge
     .from("mv_unified_memory")
     .select("*")
-    .eq("user_key", canonicalKey)
+    .eq("canonical_user_key", canonicalKey)
     .eq("memory_type", "autobio")
     .order("created_at", { ascending: true });
 
@@ -116,33 +100,31 @@ async function loadAutobio(canonicalKey: string) {
   return safe(data);
 }
 
-// NEWS DIGEST -------------------------------------------------
+// NEWS --------------------------------------------------------
 async function loadNewsDigest(canonicalKey: string) {
   const { data } = await supabaseEdge
     .from("vw_solace_news_digest")
     .select("*")
-    .eq("user_key", canonicalKey)
+    .eq("canonical_user_key", canonicalKey)
     .order("scored_at", { ascending: false })
     .limit(15);
 
   return safe(data);
 }
 
-// RESEARCH CONTEXT --------------------------------------------
+// RESEARCH ----------------------------------------------------
 async function loadResearch(canonicalKey: string) {
   const { data } = await supabaseEdge
     .from("truth_facts")
     .select("*")
-    .eq("user_key", canonicalKey)
+    .eq("canonical_user_key", canonicalKey)
     .order("created_at", { ascending: false })
     .limit(10);
 
   return safe(data);
 }
 
-// ------------------------------------------------------------
-// MAIN EXPORT — assembleContext()
-// ------------------------------------------------------------
+// MAIN --------------------------------------------------------
 export async function assembleContext(
   canonicalUserKey: string,
   workspaceId: string | null,
@@ -153,25 +135,17 @@ export async function assembleContext(
     workspaceId,
   });
 
-  // persona is static now
   const persona = STATIC_PERSONA_NAME;
 
-  // unified memory loads
   const facts = await loadFacts(canonicalUserKey);
   const episodic = await loadEpisodic(canonicalUserKey);
   const autobiography = await loadAutobio(canonicalUserKey);
-
-  // conditionally available systems
   const newsDigest = await loadNewsDigest(canonicalUserKey);
   const researchContext = await loadResearch(canonicalUserKey);
 
   return {
     persona,
-    memoryPack: {
-      facts,
-      episodic,
-      autobiography,
-    },
+    memoryPack: { facts, episodic, autobiography },
     newsDigest,
     researchContext,
   };
