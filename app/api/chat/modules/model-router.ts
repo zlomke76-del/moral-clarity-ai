@@ -10,10 +10,11 @@ import OpenAI from "openai";
  * WITHOUT touching orchestrator.ts.
  */
 export const MODELS = {
-  OPTIMIST: "gpt-4.1",       // Create Mode → expansive, generative
-  SKEPTIC: "gpt-4.1",        // Red Team → adversarial reasoning
-  ARBITER: "gpt-4.1",        // Next Steps → integrated final ruling
-} as const;
+  OPTIMIST: "gpt-4.1",
+  SKEPTIC: "gpt-4.1",
+  ARBITER: "gpt-4.1",
+  FOUNDER: "gpt-4.1",   // <-- add this
+};
 
 /**
  * OpenAI Client
