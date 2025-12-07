@@ -1,161 +1,227 @@
 // app/api/chat/modules/orchestrator.ts
-// HYBRID PIPELINE — CORRECTED TO USE FULL SOLACE PERSONA
+// =====================================================================
+// HYBRID PIPELINE — Optimist → Skeptic → Arbiter
+// Solace Abrahamic Code + Domain Lenses + Memory Blocks
+// Supports founderMode + ministryMode + modeHint
+// =====================================================================
 
 import { callModel, MODELS } from "./model-router";
 import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
 
-/**
- * MAIN HYBRID PIPELINE
- * Optimist → Skeptic → Arbiter
- * All inherit the full Abrahamic Code + Solace Identity
- */
+// Types --------------------------------------------------------
 
-export async function runHybridPipeline({
-  userMessage,
-  context,
-  history,
-  ministryMode,
-  founderMode,
-  modeHint
-}: {
+export interface HybridPipelineArgs {
   userMessage: string;
   context: any;
   history: any[];
   ministryMode: boolean;
-  founderMode: boolean;
   modeHint: string;
-}) {
-  // ------------------------------------------
-  // Build Memory / Context Block
-  // ------------------------------------------
-  const memoryBlock = `
+  founderMode: boolean;
+}
+
+// Utility: stringify memory safely ------------------------------
+
+function block(label: string, data: any): string {
+  try {
+    return `[${label}]: ${JSON.stringify(data ?? null, null, 2)}\n`;
+  } catch {
+    return `[${label}]: [unserializable]\n`;
+  }
+}
+
+// =====================================================================
+// HYBRID PIPELINE
+// =====================================================================
+
+export async function runHybridPipeline(args: HybridPipelineArgs) {
+  const {
+    userMessage,
+    context,
+    history,
+    ministryMode,
+    modeHint,
+    founderMode,
+  } = args;
+
+  const persona = context.persona || "Solace";
+
+  // -------------------------------------------------------------------
+  // BASE CONTEXT BLOCK (passed to all three agents)
+  // -------------------------------------------------------------------
+  const baseContext = `
+[Persona]: ${persona}
+
 [User Message]: ${userMessage}
 
-[User Memories]: ${JSON.stringify(context.memoryPack.userMemories || [], null, 2)}
-
-[Episodic Memories]: ${JSON.stringify(
-    context.memoryPack.episodicMemories || [],
-    null,
-    2
-  )}
-
-[Autobiography]: ${JSON.stringify(
-    context.memoryPack.autobiography || {},
-    null,
-    2
-  )}
-
-[News Digest]: ${JSON.stringify(context.newsDigest || [], null, 2)}
-
-[Research Context]: ${JSON.stringify(context.researchContext || [], null, 2)}
-
-[Chat History]: ${JSON.stringify(history || [], null, 2)}
-
-[Flags]:
-- Ministry: ${ministryMode}
-- Founder Mode: ${founderMode}
-- Mode Hint: ${modeHint}
+${block("User Memories", context.memoryPack.userMemories)}
+${block("Episodic Memories", context.memoryPack.episodicMemories)}
+${block("Autobiography", context.memoryPack.autobiography)}
+${block("News Digest", context.newsDigest)}
+${block("Research Context", context.researchContext)}
+${block("Chat History", history)}
 `;
 
-  // ============================================================
+  // ===================================================================
+  // 0. FOUNDER MODE SHORT-CIRCUIT
+  // ===================================================================
+  if (founderMode) {
+    const founderPrompt = [
+      {
+        role: "system",
+        content: [
+          {
+            type: "input_text",
+            text: buildSolaceSystemPrompt("founder", `
+You are in FOUNDER MODE.
+Maximum clarity. No hedging. Architectural truth.
+You operate under the Abrahamic Code fully.
+`),
+          },
+        ],
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: `
+${baseContext}
+
+Generate a direct, founder-level answer with no softening.
+          `,
+          },
+        ],
+      },
+    ];
+
+    const founderReply = await callModel(MODELS.ARBITER, founderPrompt);
+
+    return {
+      optimist: null,
+      skeptic: null,
+      finalAnswer: founderReply ?? "[no founder answer]",
+    };
+  }
+
+  // ===================================================================
   // 1. OPTIMIST (Create Mode)
-  // ============================================================
-
-  const optimistSystem = buildSolaceSystemPrompt(
-    "optimist",
-    ministryMode
-      ? "Ministry mode ON: apply scripture gently & only when meaningful."
-      : ""
-  );
-
+  // ===================================================================
   const optimistPrompt = [
     {
       role: "system",
-      content: [{ type: "input_text", text: optimistSystem }]
+      content: [
+        {
+          type: "input_text",
+          text: buildSolaceSystemPrompt("optimist", `
+You are SOLACE_OPTIMIST.
+Expansive. Generative. Opportunity-focused.
+Never violate the Abrahamic Code.
+MinistryMode = ${ministryMode}.
+If ministry mode is active, incorporate spiritual framing gently when relevant.
+        `),
+        },
+      ],
     },
     {
       role: "user",
-      content: [{ type: "input_text", text: memoryBlock }]
-    }
+      content: [
+        {
+          type: "input_text",
+          text: baseContext,
+        },
+      ],
+    },
   ];
 
   const optimist = await callModel(MODELS.OPTIMIST, optimistPrompt);
 
-  // ============================================================
+  // ===================================================================
   // 2. SKEPTIC (Red Team)
-  // ============================================================
-
-  const skepticSystem = buildSolaceSystemPrompt(
-    "skeptic",
-    ministryMode
-      ? "Ministry mode ON: ethical critique allowed where relevant."
-      : ""
-  );
-
+  // ===================================================================
   const skepticPrompt = [
     {
       role: "system",
-      content: [{ type: "input_text", text: skepticSystem }]
+      content: [
+        {
+          type: "input_text",
+          text: buildSolaceSystemPrompt("skeptic", `
+You are SOLACE_SKEPTIC.
+Critical thinker. Identify blind spots, risks, faulty logic.
+Challenge without cruelty.
+Always aligned to Abrahamic Code.
+MinistryMode = ${ministryMode}.
+        `),
+        },
+      ],
     },
     {
       role: "user",
       content: [
         {
           type: "input_text",
-          text: `${memoryBlock}
+          text: `
+${baseContext}
 
-[Optimist Proposal]:
-${optimist}`
-        }
-      ]
-    }
+[Optimist Proposal]
+${optimist}
+          `,
+        },
+      ],
+    },
   ];
 
   const skeptic = await callModel(MODELS.SKEPTIC, skepticPrompt);
 
-  // ============================================================
+  // ===================================================================
   // 3. ARBITER (Next Steps)
-  // ============================================================
-
-  const arbiterSystem = buildSolaceSystemPrompt(
-    "arbiter",
-    ministryMode
-      ? "Ministry mode ON: include scripture only when directly useful."
-      : founderMode
-      ? "Founder mode ON: maximum clarity, direct truth, decisive architecture."
-      : ""
-  );
-
+  // ===================================================================
   const arbiterPrompt = [
     {
       role: "system",
-      content: [{ type: "input_text", text: arbiterSystem }]
+      content: [
+        {
+          type: "input_text",
+          text: buildSolaceSystemPrompt("arbiter", `
+You are SOLACE_ARBITER.
+Final integrator.
+Combine Optimist + Skeptic.
+Provide clear NEXT STEPS based on the Abrahamic Code.
+If ministryMode is ON → include appropriate scripture or spiritual grounding.
+        `),
+        },
+      ],
     },
     {
       role: "user",
       content: [
         {
           type: "input_text",
-          text: `${memoryBlock}
+          text: `
+${baseContext}
 
-[Optimist]:
+[Optimist]
 ${optimist}
 
-[Skeptic]:
+[Skeptic]
 ${skeptic}
 
-Integrate these into a single, clear, morally aligned NEXT STEPS answer.`
-        }
-      ]
-    }
+Generate the integrated ruling.
+        `,
+        },
+      ],
+    },
   ];
 
   const finalAnswer = await callModel(MODELS.ARBITER, arbiterPrompt);
 
+  // ===================================================================
+  // RETURN HYBRID OUTPUTS
+  // ===================================================================
   return {
     optimist,
     skeptic,
-    finalAnswer
+    finalAnswer,
   };
 }
+
 
