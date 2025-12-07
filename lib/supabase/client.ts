@@ -19,16 +19,23 @@ export function supabaseBrowser(): SupabaseClient {
 
   return createClient(URL, ANON, {
     auth: {
-      persistSession: true,     // enables Supabase cookie storage
+      persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
+
+      /** 🔥 REQUIRED FOR COOKIES TO WORK ON studio.moralclarity.ai */
+      storage: "cookie",
+      cookieOptions: {
+        domain: "studio.moralclarity.ai",  // MUST match your subdomain exactly
+        path: "/",
+        sameSite: "lax",                    // Chrome will block "none" here
+        secure: true,
+      },
     },
   });
 }
 
-/**
- * Backwards-compat alias for older code.
- */
+/** Backwards compatibility */
 export function createSupabaseBrowser(): SupabaseClient {
   return supabaseBrowser();
 }
