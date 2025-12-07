@@ -2,7 +2,7 @@
 // -------------------------------------------------------------
 // Solace Chat Route — Persona ALWAYS active
 // Hybrid Pipeline (Optimist → Skeptic → Arbiter) OR Neutral Mode
-// Domain selection: Create / Red Team / Next Steps / Neutral
+// Canonical user identity via Supabase auth
 // Ministry + Founder modes supported
 // -------------------------------------------------------------
 
@@ -13,14 +13,16 @@ export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
 import { assembleContext } from "./modules/assembleContext";
-import { assemblePrompt } from "./modules/assemble";
+import { assemblePrompt, buildSystemBlock } from "./modules/assemble";
 import { runHybridPipeline } from "./modules/orchestrator";
 import { writeMemory } from "./modules/memory-writer";
-import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
 
-/**
- * Mode → Solace domain mapping
- */
+// NEW — canonical identity
+import { getCanonicalUserKey } from "@/lib/supabase/edge-auth";
+
+// -------------------------------------------------------------
+// Mode → Domain mapping
+// -------------------------------------------------------------
 function mapModeHintToDomain(modeHint: string): string {
   switch (modeHint) {
     case "Create":
@@ -34,9 +36,9 @@ function mapModeHintToDomain(modeHint: string): string {
   }
 }
 
-/**
- * Chat Handler
- */
+// -------------------------------------------------------------
+// POST handler
+// -------------------------------------------------------------
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -44,10 +46,9 @@ export async function POST(req: Request) {
     const {
       message,
       history = [],
-      userKey = "guest",
       workspaceId = null,
 
-      // NEW: UI toggles from SolaceDock
+      // from UI toggles
       ministryMode = false,
       founderMode = false,
       modeHint = "Neutral",
@@ -57,13 +58,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
-    // 1) MEMORY + PERSONA CONTEXT
+    // ---------------------------------------------------------
+    // 1) Resolve canonical identity (email or "guest")
+    // ---------------------------------------------------------
+    const userKey = await getCanonicalUserKey(req);
+
+    // ---------------------------------------------------------
+    // 2) Load upstream memory + persona context
+    // ---------------------------------------------------------
     const context = await assembleContext(userKey, workspaceId, message);
 
-    // Determine intended domain
+    // Domain determination
     let domain = mapModeHintToDomain(modeHint);
 
-    // Founder overrides everything
     if (founderMode) {
       domain = "founder";
     } else if (ministryMode) {
@@ -71,27 +78,17 @@ export async function POST(req: Request) {
     }
 
     const extras = ministryMode
-      ? "Ministry mode active — apply Scripture sparingly when relevant."
+      ? "Ministry mode active — integrate Scripture sparingly when relevant."
       : "";
 
-    // Build full Solace system persona block
-    const systemText = buildSolaceSystemPrompt(domain as any, extras);
-    const systemBlock = {
-      role: "system",
-      content: [
-        {
-          type: "input_text",
-          text: systemText,
-        },
-      ],
-    };
-
-    // USER block from assemble.ts
+    // System block
+    const systemBlock = buildSystemBlock(domain, extras);
     const userBlocks = assemblePrompt(context, history, message);
-
     const fullBlocks = [systemBlock, ...userBlocks];
 
-    // 2) HYBRID SUPER-AI PIPELINE
+    // ---------------------------------------------------------
+    // 3) Hybrid pipeline OR single-model inference
+    // ---------------------------------------------------------
     const hybridAllowed =
       modeHint === "Create" ||
       modeHint === "Red Team" ||
@@ -108,11 +105,12 @@ export async function POST(req: Request) {
         ministryMode,
         modeHint,
         founderMode,
+        userKey, // NEW — ensure subpipelines use correct user identity
       });
 
       finalText = finalAnswer || "[No arbiter answer]";
     } else {
-      // 3) NEUTRAL MODE — single-model inference
+      // Neutral single-model execution
       const res = await fetch("https://api.openai.com/v1/responses", {
         method: "POST",
         headers: {
@@ -130,7 +128,9 @@ export async function POST(req: Request) {
       finalText = block?.text ?? "[No reply]";
     }
 
-    // 4) MEMORY WRITE (AFTER arbiter result or neutral reply)
+    // ---------------------------------------------------------
+    // 4) Memory write (final pipeline output only)
+    // ---------------------------------------------------------
     try {
       await writeMemory(userKey, message, finalText);
     } catch (err) {
@@ -146,4 +146,5 @@ export async function POST(req: Request) {
     );
   }
 }
+
 
