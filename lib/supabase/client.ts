@@ -6,36 +6,45 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-// Custom cookie storage to enforce domain=".moralclarity.ai"
-class DomainCookieStorage {
-  getItem(key: string) {
-    return globalThis?.document?.cookie
-      ?.split("; ")
-      ?.find((row) => row.startsWith(key + "="))
-      ?.split("=")[1] ?? null;
-  }
-
-  setItem(key: string, value: string) {
-    document.cookie = `${key}=${value}; Path=/; Domain=.moralclarity.ai; SameSite=None; Secure`;
-  }
-
-  removeItem(key: string) {
-    document.cookie = `${key}=; Path=/; Domain=.moralclarity.ai; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=None; Secure`;
-  }
-}
-
+/**
+ * Browser Supabase client.
+ * Safe in client components and hooks.
+ * IMPORTANT:
+ *  - persistSession MUST be true
+ *  - storage MUST be 'cookie'
+ *  - cookies must be enabled for Edge to read sb-access-token
+ */
 export function supabaseBrowser(): SupabaseClient {
+  if (!URL || !ANON) {
+    if (process.env.NODE_ENV !== "production") {
+      throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
+    }
+  }
+
   return createClient(URL, ANON, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      storage: new DomainCookieStorage(), // <-- THIS IS THE KEY FIX
+
+      // THIS is the critical fix:
+      // store session tokens in cookies so Edge routes can read them
+      storage: "cookie",
+
+      // Let Supabase manage cookie names & expiration
+      cookieOptions: {
+        domain: ".moralclarity.ai",
+        path: "/",
+        sameSite: "none",
+        secure: true,
+      },
     },
   });
 }
 
+// Backwards compat
 export function createSupabaseBrowser(): SupabaseClient {
   return supabaseBrowser();
 }
 
 export type { SupabaseClient };
+
