@@ -1,5 +1,4 @@
-import { runHybridPipeline } from "./hybrid";  // ← REQUIRED
-import { callNeutralModel } from "./neutralModel"; // (Only if this exists — otherwise ignore)
+import { runHybridPipeline } from "./hybrid";
 
 //---------------------------------------------------------------
 // MAIN ORCHESTRATION FUNCTION (FINAL — RETURNS STRING ONLY)
@@ -39,9 +38,22 @@ export async function orchestrateSolaceResponse(inputs: any): Promise<string> {
 
   console.log("[ORCHESTRATOR] Running NEUTRAL mode…");
 
+  // Your existing neutral model call
   const blocks = (context as any).systemPromptBlocks || [];
-  const neutralText = await callNeutralModel(blocks);
+  const res = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-4.1",
+      input: blocks,
+    }),
+  });
 
-  return neutralText;
+  const json = await res.json();
+  const block = json.output?.[0]?.content?.[0];
+  return block?.text ?? "[No reply]";
 }
 
