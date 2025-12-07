@@ -1,34 +1,46 @@
 // app/api/chat/modules/memory-writer.ts
 // -------------------------------------------------------------
-// Writes memories using the canonical user key only.
-// No variant identities. No drift. Ever.
+// Writes memory always using the userKey passed by route.ts
+// No authentication, no canonical lookup here.
 // -------------------------------------------------------------
 
-import { createClient } from "@supabase/supabase-js";
-import { getCanonicalUserKey } from "@/lib/supabase/getCanonicalUserKey";
+import { supabaseEdge } from "@/lib/supabase/edge";
 
 export async function writeMemory(
-  _userKey: string,
+  userKey: string,
   userMessage: string,
-  assistantMessage: string
+  assistantReply: string
 ) {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    if (!userKey) {
+      console.warn("[memory-writer] missing userKey — skipping write");
+      return;
+    }
 
-    const { canonicalKey } = await getCanonicalUserKey();
+    // Basic safety guard
+    if (!userMessage || !assistantReply) {
+      console.warn("[memory-writer] missing message or reply — skipping");
+      return;
+    }
 
-    await supabase.from("user_memories").insert({
-      canonical_user_key: canonicalKey,
-      user_key: canonicalKey,
-      kind: "fact",
-      content: assistantMessage,
-      weight: 1,
-      source: "chat",
+    // Insert memory entry
+    await supabaseEdge.from("user_memories").insert({
+      user_key: userKey,              // FINAL + CORRECT
+      kind: "interaction",
+      content: userMessage,
+      source: "user",
+      created_at: new Date().toISOString(),
+    });
+
+    // Insert assistant memory (optional but symmetrical)
+    await supabaseEdge.from("user_memories").insert({
+      user_key: userKey,
+      kind: "assistant_reply",
+      content: assistantReply,
+      source: "assistant",
+      created_at: new Date().toISOString(),
     });
   } catch (err) {
-    console.error("[writeMemory] FAILED:", err);
+    console.error("[memory-writer] Failed to write memory:", err);
   }
 }
