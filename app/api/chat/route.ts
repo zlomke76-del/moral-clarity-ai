@@ -1,7 +1,9 @@
 // app/api/chat/route.ts
 // -------------------------------------------------------------
 // Solace Chat Route — Persona ALWAYS active
-// Unified Memory • Hybrid Pipeline
+// Hybrid Pipeline (Optimist → Skeptic → Arbiter) OR Neutral Mode
+// Domain selection: Create / Red Team / Next Steps / Neutral
+// Ministry + Founder modes supported
 // -------------------------------------------------------------
 
 export const runtime = "edge";
@@ -12,11 +14,13 @@ export const fetchCache = "force-no-store";
 import { NextResponse } from "next/server";
 import { assembleContext } from "./modules/assembleContext";
 import { assemblePrompt, buildSystemBlock } from "./modules/assemble";
-import { orchestrateSolaceResponse } from "./modules/orchestrator";
+import { runHybridPipeline } from "./modules/orchestrator";
 import { writeMemory } from "./modules/memory-writer";
 import { getCanonicalUserKey } from "@/lib/supabase/getCanonicalUserKey";
 
-// Mode → Solace Domain
+/**
+ * Mode → Solace domain mapping
+ */
 function mapModeHintToDomain(modeHint: string): string {
   switch (modeHint) {
     case "Create":
@@ -30,22 +34,23 @@ function mapModeHintToDomain(modeHint: string): string {
   }
 }
 
-// -------------------------------------------------------------
-// POST handler
-// -------------------------------------------------------------
+/**
+ * Chat Handler
+ */
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+
     const {
       message,
       history = [],
+      userKey: bodyUserKey = null,
       workspaceId = null,
 
-      // From SolaceDock UI
+      // NEW: UI toggles from SolaceDock
       ministryMode = false,
       founderMode = false,
       modeHint = "Neutral",
-      overrideUserKey = null,
     } = body;
 
     if (!message || typeof message !== "string") {
@@ -53,40 +58,46 @@ export async function POST(req: Request) {
     }
 
     // -------------------------------------------------------------
-    // AUTH / CANONICAL USER
+    // CANONICAL USER RESOLUTION — EMAIL IS THE SINGLE SOURCE OF TRUTH
     // -------------------------------------------------------------
-    const auth = await getCanonicalUserKey(req);
-    const canonicalUserKey = overrideUserKey || auth?.canonicalKey || "guest";
+    const identity = await getCanonicalUserKey(req);
+
+    const canonicalUserKey =
+      bodyUserKey || identity.canonicalKey || "guest";
 
     // -------------------------------------------------------------
-    // CONTEXT (memory, persona, news, research…)
+    // 1. MEMORY + PERSONA CONTEXT
     // -------------------------------------------------------------
-    const context = await assembleContext({
-      overrideUserKey: canonicalUserKey,
+    const context = await assembleContext(
+      canonicalUserKey,
       workspaceId,
-      userMessage: message,
-    });
+      message
+    );
 
-    // -------------------------------------------------------------
-    // SYSTEM PROMPT (Persona + Domain)
-    // -------------------------------------------------------------
+    // Determine intended domain
     let domain = mapModeHintToDomain(modeHint);
 
-    // Founder overrides all
-    if (founderMode) domain = "founder";
-    else if (ministryMode) domain = "ministry";
+    // Founder overrides everything
+    if (founderMode) {
+      domain = "founder";
+    } else if (ministryMode) {
+      domain = "ministry";
+    }
 
     const extras = ministryMode
-      ? "Ministry mode active — Scripture allowed sparingly and only when relevant."
+      ? "Ministry mode active — apply Scripture sparingly when relevant."
       : "";
 
+    // SYSTEM block ALWAYS applied
     const systemBlock = buildSystemBlock(domain, extras);
 
+    // USER block from assemble.ts
     const userBlocks = assemblePrompt(context, history, message);
-    const fullPrompt = [systemBlock, ...userBlocks];
+
+    const fullBlocks = [systemBlock, ...userBlocks];
 
     // -------------------------------------------------------------
-    // HYBRID PIPELINE DECISION
+    // 2. HYBRID SUPER-AI PIPELINE
     // -------------------------------------------------------------
     const hybridAllowed =
       modeHint === "Create" ||
@@ -97,18 +108,20 @@ export async function POST(req: Request) {
     let finalText: string;
 
     if (hybridAllowed) {
-      // Use orchestrator wrapper (handles canonicalUserKey)
-      finalText = await orchestrateSolaceResponse({
-        message,
+      const { finalAnswer } = await runHybridPipeline({
+        userMessage: message,
         context,
         history,
         ministryMode,
         modeHint,
         founderMode,
-        canonicalUserKey,
       });
+
+      finalText = finalAnswer || "[No arbiter answer]";
     } else {
-      // NEUTRAL MODE → Single-model run (gpt-4.1)
+      // -----------------------------------------------------------
+      // 3. NEUTRAL MODE — single-model direct inference
+      // -----------------------------------------------------------
       const res = await fetch("https://api.openai.com/v1/responses", {
         method: "POST",
         headers: {
@@ -117,7 +130,7 @@ export async function POST(req: Request) {
         },
         body: JSON.stringify({
           model: "gpt-4.1",
-          input: fullPrompt,
+          input: fullBlocks,
         }),
       });
 
@@ -127,7 +140,7 @@ export async function POST(req: Request) {
     }
 
     // -------------------------------------------------------------
-    // MEMORY WRITE (after Arbiter or Neutral response)
+    // 4. MEMORY WRITE — after final output
     // -------------------------------------------------------------
     try {
       await writeMemory(canonicalUserKey, message, finalText);
@@ -144,5 +157,4 @@ export async function POST(req: Request) {
     );
   }
 }
-
 
