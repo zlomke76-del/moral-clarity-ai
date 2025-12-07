@@ -1,8 +1,9 @@
 // app/api/chat/route.ts
 // -------------------------------------------------------------
-// Solace Chat Route — with canonical identity (email-based),
-// full memory integration, hybrid pipeline, ministry/founder,
-// and correct system block assembly.
+// Solace Chat Route — Persona ALWAYS active
+// Hybrid Pipeline (Optimist → Skeptic → Arbiter) OR Neutral Mode
+// Domain selection: Create / Red Team / Next Steps / Neutral
+// Ministry + Founder modes supported
 // -------------------------------------------------------------
 
 export const runtime = "edge";
@@ -11,16 +12,14 @@ export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
-
 import { assembleContext } from "./modules/assembleContext";
 import { assemblePrompt, buildSystemBlock } from "./modules/assemble";
 import { runHybridPipeline } from "./modules/orchestrator";
 import { writeMemory } from "./modules/memory-writer";
-
 import { getCanonicalUserKey } from "@/lib/supabase/getCanonicalUserKey";
 
 /**
- * Map modeHint → Solace domain
+ * Mode → Solace domain mapping
  */
 function mapModeHintToDomain(modeHint: string): string {
   switch (modeHint) {
@@ -31,12 +30,12 @@ function mapModeHintToDomain(modeHint: string): string {
     case "Next Steps":
       return "arbiter";
     default:
-      return "guidance"; // Neutral mode
+      return "guidance";
   }
 }
 
 /**
- * POST — Chat Handler
+ * Chat Handler
  */
 export async function POST(req: Request) {
   try {
@@ -45,39 +44,35 @@ export async function POST(req: Request) {
     const {
       message,
       history = [],
+      userKey: userKeyOverride = null,
       workspaceId = null,
 
-      // from SolaceDock UI
+      // toggles from SolaceDock
       ministryMode = false,
       founderMode = false,
       modeHint = "Neutral",
     } = body;
 
     if (!message || typeof message !== "string") {
-      return NextResponse.json(
-        { error: "Message required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
-    //--------------------------
-    // 1. Resolve canonical identity
-    //--------------------------
-    const authIdentity = await getCanonicalUserKey();
-    const canonicalKey = authIdentity.canonicalKey; // ALWAYS email or "guest"
+    // -------------------------------------------------------------
+    // 1) Resolve canonical user identity
+    // -------------------------------------------------------------
+    const { canonicalKey } = await getCanonicalUserKey(req);
 
-    //--------------------------
-    // 2. Load memory + context
-    //--------------------------
-    const context = await assembleContext(
-      canonicalKey,
-      workspaceId,
-      message
-    );
+    // override only when explicitly provided
+    const finalUserKey = userKeyOverride || canonicalKey || "guest";
 
-    //--------------------------
-    // 3. Determine model domain
-    //--------------------------
+    // -------------------------------------------------------------
+    // 2) MEMORY + PERSONA CONTEXT (assembleContext expects final userKey)
+    // -------------------------------------------------------------
+    const context = await assembleContext(finalUserKey, workspaceId, message);
+
+    // -------------------------------------------------------------
+    // 3) Determine Solace domain
+    // -------------------------------------------------------------
     let domain = mapModeHintToDomain(modeHint);
 
     if (founderMode) {
@@ -90,23 +85,24 @@ export async function POST(req: Request) {
       ? "Ministry mode active — apply Scripture sparingly when relevant."
       : "";
 
-    //--------------------------
-    // 4. SYSTEM + USER BLOCKS
-    //--------------------------
+    // SYSTEM persona block (Solace identity + Abrahamic Code)
     const systemBlock = buildSystemBlock(domain, extras);
+
+    // USER prompt blocks (facts + episodes + news + research + message)
     const userBlocks = assemblePrompt(context, history, message);
+
     const fullBlocks = [systemBlock, ...userBlocks];
 
-    //--------------------------
-    // 5. HYBRID PIPELINE or NEUTRAL
-    //--------------------------
+    // -------------------------------------------------------------
+    // 4) HYBRID SUPER-AI PIPELINE (Optimist → Skeptic → Arbiter)
+    // -------------------------------------------------------------
     const hybridAllowed =
       modeHint === "Create" ||
       modeHint === "Red Team" ||
       modeHint === "Next Steps" ||
       founderMode;
 
-    let finalText = "";
+    let finalText: string;
 
     if (hybridAllowed) {
       const { finalAnswer } = await runHybridPipeline({
@@ -116,12 +112,13 @@ export async function POST(req: Request) {
         ministryMode,
         modeHint,
         founderMode,
-        canonicalUserKey: canonicalKey, // NEW
       });
 
       finalText = finalAnswer || "[No arbiter answer]";
     } else {
-      // ----- NEUTRAL SINGLE-MODEL -----
+      // -------------------------------------------------------------
+      // 5) NEUTRAL MODE — direct single-model inference
+      // -------------------------------------------------------------
       const res = await fetch("https://api.openai.com/v1/responses", {
         method: "POST",
         headers: {
@@ -135,33 +132,31 @@ export async function POST(req: Request) {
       });
 
       const json = await res.json();
-      finalText =
-        json?.output?.[0]?.content?.[0]?.text ?? "[No reply]";
+      const block = json.output?.[0]?.content?.[0];
+      finalText = block?.text ?? "[No reply]";
     }
 
-    //--------------------------
-    // 6. Memory write AFTER final answer
-    //--------------------------
+    // -------------------------------------------------------------
+    // 6) MEMORY WRITE (AFTER arbiter result or neutral reply)
+    // -------------------------------------------------------------
     try {
-      await writeMemory(
-        canonicalKey,   // ALWAYS email
-        message,
-        finalText
-      );
+      await writeMemory(finalUserKey, message, finalText);
     } catch (err) {
-      console.error("[memory-write] failed", err);
+      console.error("[memory-writer] failed:", err);
     }
 
-    //--------------------------
-    // 7. Return answer
-    //--------------------------
+    // -------------------------------------------------------------
+    // 7) RETURN REPLY
+    // -------------------------------------------------------------
     return NextResponse.json({ text: finalText });
+
   } catch (err: any) {
-    console.error("[chat route] fatal:", err);
+    console.error("[chat route] fatal error", err);
     return NextResponse.json(
       { error: err?.message || "Chat route failed" },
       { status: 500 }
     );
   }
 }
+
 
