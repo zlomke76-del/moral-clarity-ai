@@ -1,46 +1,52 @@
 // app/api/chat/modules/memory-writer.ts
-// -------------------------------------------------------------
-// Writes memory always using the userKey passed by route.ts
-// No authentication, no canonical lookup here.
-// -------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Solace Memory Writer — Unified Canonical Memory System
+// Always writes to canonical_user_key = user's email identity.
+// -----------------------------------------------------------------------------
+
 
 import { supabaseEdge } from "@/lib/supabase/edge";
+import { getCanonicalUserKey } from "@/lib/supabase/getCanonicalUserKey";
 
 export async function writeMemory(
-  userKey: string,
+  _userKey: string,             // ignored — we rely on canonical identity
   userMessage: string,
-  assistantReply: string
+  modelReply: string
 ) {
   try {
-    if (!userKey) {
-      console.warn("[memory-writer] missing userKey — skipping write");
+    // ---------------------------------------------------------
+    // 1) Resolve canonical identity (email-based)
+    // ---------------------------------------------------------
+    const { canonicalKey } = await getCanonicalUserKey();
+
+    if (!canonicalKey || canonicalKey === "guest") {
+      console.warn("[memory-writer] No canonical identity — skipping save");
       return;
     }
 
-    // Basic safety guard
-    if (!userMessage || !assistantReply) {
-      console.warn("[memory-writer] missing message or reply — skipping");
-      return;
-    }
+    // ---------------------------------------------------------
+    // 2) Basic sanity filters
+    // ---------------------------------------------------------
+    if (!userMessage || typeof userMessage !== "string") return;
+    if (!modelReply || typeof modelReply !== "string") return;
 
-    // Insert memory entry
-    await supabaseEdge.from("user_memories").insert({
-      user_key: userKey,              // FINAL + CORRECT
-      kind: "interaction",
+    // ---------------------------------------------------------
+    // 3) Insert into user_memories (fact memory)
+    // ---------------------------------------------------------
+    const { error } = await supabaseEdge.from("user_memories").insert({
+      canonical_user_key: canonicalKey,
+      kind: "fact",
       content: userMessage,
-      source: "user",
+      source: "chat:user",
       created_at: new Date().toISOString(),
     });
 
-    // Insert assistant memory (optional but symmetrical)
-    await supabaseEdge.from("user_memories").insert({
-      user_key: userKey,
-      kind: "assistant_reply",
-      content: assistantReply,
-      source: "assistant",
-      created_at: new Date().toISOString(),
-    });
+    if (error) {
+      console.error("[memory-writer] Insert error:", error);
+    }
+
   } catch (err) {
-    console.error("[memory-writer] Failed to write memory:", err);
+    console.error("[memory-writer] Fatal error:", err);
   }
 }
+
