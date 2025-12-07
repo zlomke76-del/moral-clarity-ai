@@ -14,7 +14,7 @@ export const fetchCache = "force-no-store";
 import { NextResponse } from "next/server";
 import { assembleContext } from "./modules/assembleContext";
 import { assemblePrompt, buildSystemBlock } from "./modules/assemble";
-import { runHybridPipeline } from "./modules/orchestrator";
+import { orchestrateSolaceResponse } from "./modules/orchestrator";
 import { writeMemory } from "./modules/memory-writer";
 import { getCanonicalUserKey } from "@/lib/supabase/getCanonicalUserKey";
 
