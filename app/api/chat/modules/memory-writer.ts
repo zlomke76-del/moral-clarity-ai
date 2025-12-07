@@ -1,6 +1,6 @@
 // app/api/chat/modules/memory-writer.ts
 // ------------------------------------------------------------
-// Writes only FACT memories into user_memories
+// Writes FACT memories into user_memories
 // canonicalUserKey = normalized email (single source of truth)
 // ------------------------------------------------------------
 
@@ -24,8 +24,9 @@ export async function writeMemory(
       ts: new Date().toISOString(),
     });
 
+    // IMPORTANT: Must match Supabase schema exactly
     const insertPayload = {
-      user_key: canonicalUserKey,  // Must match supabase column
+      canonical_user_key: canonicalUserKey,   // ✅ FIXED COLUMN NAME
       kind: "fact",
       content: memoryContent,
       weight: 1.0,
@@ -38,7 +39,9 @@ export async function writeMemory(
       .insert(insertPayload);
 
     if (error) {
-      console.error("[writeMemory] Supabase insert error:", error);
+      console.error("[writeMemory] Supabase insert error:", error, {
+        attemptedPayload: insertPayload,
+      });
     } else {
       console.log("[writeMemory] FACT memory saved for:", canonicalUserKey);
     }
