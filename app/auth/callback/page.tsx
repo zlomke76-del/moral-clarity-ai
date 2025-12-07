@@ -5,17 +5,19 @@ import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabase/client";
 
+// 🚀 CRITICAL: prevent prerendering so useSearchParams is valid
+export const dynamic = "force-dynamic";
+
 export default function AuthCallbackPage() {
   const router = useRouter();
-  const searchParams = useSearchParams(); // TS thinks nullable, but it's always defined
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     const run = async () => {
       const supabase = createSupabaseBrowser();
 
-      // ✅ FIX: explicitly coerce searchParams as non-null
+      // safe — hook always returns an object at runtime
       const params = searchParams!;
-
       const code = params.get("code");
       const next = params.get("next") || "/app";
 
@@ -23,14 +25,14 @@ export default function AuthCallbackPage() {
         return router.replace("/auth/error?err=Missing%20code");
       }
 
-      // 🔥 REQUIRED: exchange magic-link code for a session & cookies
+      // Exchange Supabase magic-link code for session & cookies
       const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (error || !data?.session) {
         return router.replace("/auth/error?err=Failed%20to%20exchange%20code");
       }
 
-      // Cookies now exist: sb-access-token, sb-refresh-token
+      // success → redirect user into Studio
       return router.replace(next);
     };
 
