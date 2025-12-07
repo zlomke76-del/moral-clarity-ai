@@ -1,8 +1,6 @@
 // app/api/chat/modules/orchestrator.ts
 //---------------------------------------------------------------
-// Solace Orchestration Layer
-// HYBRID pipeline only (Optimist → Skeptic → Arbiter)
-// This is called *only* when hybrid modes are active.
+// Solace Orchestration Layer — FINAL FIXED VERSION
 //---------------------------------------------------------------
 
 import type { SolaceContextBundle } from "./assembleContext";
@@ -15,11 +13,9 @@ type OrchestratorInputs = {
   ministryMode: boolean;
   modeHint: string;
   founderMode: boolean;
-  canonicalUserKey: string | null;
+  canonicalUserKey: string | null; // ★ FIXED
 };
 
-//---------------------------------------------------------------
-// MAIN ORCHESTRATION FUNCTION (FINAL — RETURNS STRING ONLY)
 //---------------------------------------------------------------
 export async function orchestrateSolaceResponse(
   inputs: OrchestratorInputs
@@ -58,27 +54,21 @@ export async function orchestrateSolaceResponse(
       ministryMode,
       modeHint,
       founderMode,
-      canonicalUserKey,
+      canonicalUserKey, // now valid type
     });
 
-    // runHybridPipeline currently returns an object, e.g.:
-    // { finalAnswer, optimist, skeptic } or similar.
     if (typeof result === "string") {
       return result || "[arbiter produced no text]";
     }
 
     if (result && typeof result === "object" && "finalAnswer" in result) {
       const finalAnswer = (result as any).finalAnswer as string | null;
-      return finalAnswer && finalAnswer.trim().length > 0
-        ? finalAnswer
-        : "[arbiter produced no text]";
+      return finalAnswer?.trim() ? finalAnswer : "[arbiter produced no text]";
     }
 
     return "[arbiter produced no text]";
   }
 
-  // Route should never call this when hybrid is disabled, but we must
-  // satisfy TypeScript return requirements.
   console.log("[ORCHESTRATOR] Hybrid not allowed for this mode.");
   return "[hybrid pipeline is disabled for this mode]";
 }
