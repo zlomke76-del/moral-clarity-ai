@@ -1,22 +1,13 @@
 // app/api/chat/modules/orchestrator.ts
-// ============================================================
-// HYBRID SUPER-AI PIPELINE
-// (Optimist → Skeptic → Arbiter)
-// Founder Mode = Arbiter with elevated clarity
-// Ministry Mode = Theological layer (controlled)
-// ============================================================
+// -----------------------------------------------------------------------------
+// Solace Hybrid Pipeline (Optimist → Skeptic → Arbiter)
+// Domain-aware, ministry-aware, founder-aware orchestration
+// All models = OpenAI today, but structure supports future multi-LLM routing.
+// -----------------------------------------------------------------------------
 
 import { callModel, MODELS } from "./model-router";
 import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
 
-/**
- * Hybrid pipeline: three-agent reasoning loop
- *
- * NOTE:
- * - NO canonicalUserKey is used here.
- * - Identity is irrelevant inside the cognitive pipeline.
- * - Memory writes happen AFTER the pipeline completes.
- */
 export async function runHybridPipeline({
   userMessage,
   context,
@@ -32,39 +23,69 @@ export async function runHybridPipeline({
   modeHint: string;
   founderMode: boolean;
 }) {
-  // ------------------------------------------------------------
-  // BASE CONTEXT FED INTO ALL SUB-AGENTS
-  // ------------------------------------------------------------
+  // ---------------------------------------------------------
+  // 1. PREPARE CONTEXT BLOCK
+  // ---------------------------------------------------------
   const persona = context.persona || "Solace";
 
   const baseContext = `
 [Persona]: ${persona}
+[User message]: ${userMessage}
 
-[User Message]:
-${userMessage}
+[User Memories]: ${JSON.stringify(context.memoryPack.userMemories || [], null, 2)}
+[Episodic Memories]: ${JSON.stringify(
+    context.memoryPack.episodicMemories || [],
+    null,
+    2
+  )}
+[Autobiography]: ${JSON.stringify(
+    context.memoryPack.autobiography || {},
+    null,
+    2
+  )}
 
-[User Memories]:
-${JSON.stringify(context.memoryPack.userMemories || [], null, 2)}
+[News Digest]: ${JSON.stringify(context.newsDigest || [], null, 2)}
+[Research Context]: ${JSON.stringify(context.researchContext || [], null, 2)}
 
-[Episodic Memories]:
-${JSON.stringify(context.memoryPack.episodicMemories || [], null, 2)}
-
-[Autobiography]:
-${JSON.stringify(context.memoryPack.autobiography || {}, null, 2)}
-
-[News Digest]:
-${JSON.stringify(context.newsDigest || [], null, 2)}
-
-[Research Context]:
-${JSON.stringify(context.researchContext || [], null, 2)}
-
-[Chat History]:
-${JSON.stringify(history || [], null, 2)}
+[Chat History]: ${JSON.stringify(history || [], null, 2)}
 `.trim();
 
-  // ============================================================
-  // 1) OPTIMIST — GENERATIVE / POSSIBILITY LENS
-  // ============================================================
+  // ---------------------------------------------------------
+  // FOUNDER MODE OVERRIDE — Arbiter determines the final truth
+  // ---------------------------------------------------------
+  if (founderMode) {
+    const founderPrompt = [
+      {
+        role: "system",
+        content: [
+          {
+            type: "input_text",
+            text: buildSolaceSystemPrompt("founder", `
+You are in FOUNDER MODE.
+Maximum clarity, architectural truth, no hedging.
+Still governed by the Abrahamic Code.
+          `),
+          },
+        ],
+      },
+      {
+        role: "user",
+        content: [{ type: "input_text", text: baseContext }],
+      },
+    ];
+
+    const founderReply = await callModel(MODELS.ARBITER, founderPrompt);
+
+    return {
+      optimist: null,
+      skeptic: null,
+      finalAnswer: founderReply,
+    };
+  }
+
+  // ---------------------------------------------------------
+  // 2. OPTIMIST (Create Mode)
+  // ---------------------------------------------------------
   const optimistPrompt = [
     {
       role: "system",
@@ -73,11 +94,10 @@ ${JSON.stringify(history || [], null, 2)}
           type: "input_text",
           text: buildSolaceSystemPrompt("optimist", `
 You are SOLACE_OPTIMIST.
-Generative, expansive, opportunity-focused.
-Offer possibilities, directions, and creative paths.
+Expansive, generative, opportunity-focused.
 Never violate the Abrahamic Code.
-Ministry mode: you may apply gentle ethical or scriptural framing if relevant.
-          `),
+Ministry mode: apply theological framing only if relevant.
+        `),
         },
       ],
     },
@@ -89,10 +109,16 @@ Ministry mode: you may apply gentle ethical or scriptural framing if relevant.
 
   const optimist = await callModel(MODELS.OPTIMIST, optimistPrompt);
 
+  // ---------------------------------------------------------
+  // 3. SKEPTIC (Red Team)
+  // ---------------------------------------------------------
+  const skepticCtx = `
+${baseContext}
 
-  // ============================================================
-  // 2) SKEPTIC — RED TEAM / RISK LENS
-  // ============================================================
+[Optimist Proposal]:
+${optimist}
+  `;
+
   const skepticPrompt = [
     {
       role: "system",
@@ -101,62 +127,25 @@ Ministry mode: you may apply gentle ethical or scriptural framing if relevant.
           type: "input_text",
           text: buildSolaceSystemPrompt("skeptic", `
 You are SOLACE_SKEPTIC.
-Expose risks, contradictions, missing assumptions.
-Challenge the Optimist's reasoning with precision and fairness.
-Never be cruel. Never violate the Abrahamic Code.
-Ministry mode: offer ethical critique where appropriate.
-          `),
+Expose risks, flaws, blind spots.
+Challenge without cruelty.
+Never break the Abrahamic Code.
+        `),
         },
       ],
     },
     {
       role: "user",
-      content: [
-        {
-          type: "input_text",
-          text: `
-${baseContext}
-
-[Optimist Proposal]
-${optimist}
-          `,
-        },
-      ],
+      content: [{ type: "input_text", text: skepticCtx }],
     },
   ];
 
   const skeptic = await callModel(MODELS.SKEPTIC, skepticPrompt);
 
-
-  // ============================================================
-  // 3) ARBITER — FINAL INTEGRATION AND NEXT STEPS
-  // ============================================================
-  const arbiterPrompt = [
-    {
-      role: "system",
-      content: [
-        {
-          type: "input_text",
-          text: buildSolaceSystemPrompt("arbiter", `
-You are SOLACE_ARBITER.
-Final judge and integrator.
-Combine:
- • Optimist (Create)
- • Skeptic (Red Team)
-Apply the Abrahamic Code.
-Deliver clear, grounded NEXT STEPS.
-Founder mode: be more decisive, architectural, truth-forward.
-Ministry mode: integrate Scripture sparingly when meaningful.
-          `),
-        },
-      ],
-    },
-    {
-      role: "user",
-      content: [
-        {
-          type: "input_text",
-          text: `
+  // ---------------------------------------------------------
+  // 4. ARBITER (Next Steps)
+  // ---------------------------------------------------------
+  const arbiterCtx = `
 ${baseContext}
 
 [Optimist]:
@@ -165,18 +154,35 @@ ${optimist}
 [Skeptic]:
 ${skeptic}
 
-Produce the final integrated ruling.
-          `,
+Generate the final integrated ruling.
+  `;
+
+  const arbiterPrompt = [
+    {
+      role: "system",
+      content: [
+        {
+          type: "input_text",
+          text: buildSolaceSystemPrompt("arbiter", `
+You are SOLACE_ARBITER.
+Integrate Optimist + Skeptic.
+Deliver the clearest, morally grounded NEXT STEPS.
+Ministry mode: apply Scripture sparingly, respectfully, and only when relevant.
+        `),
         },
       ],
+    },
+    {
+      role: "user",
+      content: [{ type: "input_text", text: arbiterCtx }],
     },
   ];
 
   const finalAnswer = await callModel(MODELS.ARBITER, arbiterPrompt);
 
-  // ============================================================
-  // RETURN ALL SUBOUTPUTS (ARBITER IS AUTHORITATIVE)
-  // ============================================================
+  // ---------------------------------------------------------
+  // 5. RETURN ALL TIERS (for debugging or UI transparency)
+  // ---------------------------------------------------------
   return {
     optimist,
     skeptic,
