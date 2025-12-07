@@ -1,8 +1,6 @@
 // app/api/chat/route.ts
 //---------------------------------------------------------------
 // Solace Chat Route — Persona ALWAYS active
-// Unified Memory + Founder Mode + Ministry Mode
-// Hybrid pipeline now lives in orchestrator.ts (orchestrateSolaceResponse)
 //---------------------------------------------------------------
 
 export const runtime = "edge";
@@ -13,13 +11,10 @@ export const fetchCache = "force-no-store";
 import { NextResponse } from "next/server";
 import { assembleContext } from "./modules/assembleContext";
 import { assemblePrompt, buildSystemBlock } from "./modules/assemble";
-import { orchestrateSolaceResponse } from "./modules/orchestrator";   // ✅ FIXED
+import { orchestrateSolaceResponse } from "./modules/orchestrator";
 import { writeMemory } from "./modules/memory-writer";
 import { getCanonicalUserKey } from "@/lib/supabase/getCanonicalUserKey";
 
-/**
- * Mode → Solace domain mapping
- */
 function mapModeHintToDomain(modeHint: string): string {
   switch (modeHint) {
     case "Create":
@@ -33,9 +28,6 @@ function mapModeHintToDomain(modeHint: string): string {
   }
 }
 
-/**
- * Chat Handler
- */
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -45,7 +37,6 @@ export async function POST(req: Request) {
       history = [],
       userKey = null,
       workspaceId = null,
-
       ministryMode = false,
       founderMode = false,
       modeHint = "Neutral",
@@ -55,33 +46,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
-    // 🔑 Always use canonical user identity
-    const { canonicalKey } = await getCanonicalUserKey();
+    // ✔ Correct: pass req into canonical resolver
+    const { canonicalKey } = await getCanonicalUserKey(req);
+
+    // ✔ UserKey override allowed but email is default
     const effectiveUserKey = userKey || canonicalKey || "guest";
 
     // 1) MEMORY + PERSONA CONTEXT
     const context = await assembleContext(effectiveUserKey, workspaceId, message);
 
-    // Determine intended domain
     let domain = mapModeHintToDomain(modeHint);
+    if (founderMode) domain = "founder";
+    else if (ministryMode) domain = "ministry";
 
-    if (founderMode) {
-      domain = "founder";
-    } else if (ministryMode) {
-      domain = "ministry";
-    }
+    const extras =
+      ministryMode ? "Ministry mode active — apply Scripture sparingly." : "";
 
-    const extras = ministryMode
-      ? "Ministry mode active — apply Scripture sparingly when relevant."
-      : "";
-
-    // System block ALWAYS applied
     const systemBlock = buildSystemBlock(domain, extras);
     const userBlocks = assemblePrompt(context, history, message);
-
     const fullBlocks = [systemBlock, ...userBlocks];
 
-    // Determine if hybrid pipeline is allowed
     const hybridAllowed =
       modeHint === "Create" ||
       modeHint === "Red Team" ||
@@ -91,10 +75,7 @@ export async function POST(req: Request) {
     let finalText: string;
 
     if (hybridAllowed) {
-      // ---------------------------------------------------------
-      // NEW: Unified Hybrid Pipeline Entry Point
-      // ---------------------------------------------------------
-      const { finalAnswer } = await orchestrateSolaceResponse({
+      const finalAnswer = await orchestrateSolaceResponse({
         userMessage: message,
         context,
         history,
@@ -106,7 +87,6 @@ export async function POST(req: Request) {
 
       finalText = finalAnswer || "[No arbiter answer]";
     } else {
-      // Neutral mode — single model call
       const res = await fetch("https://api.openai.com/v1/responses", {
         method: "POST",
         headers: {
@@ -124,12 +104,8 @@ export async function POST(req: Request) {
       finalText = block?.text ?? "[No reply]";
     }
 
-    // MEMORY WRITE — only after final answer
-    try {
-      await writeMemory(effectiveUserKey, message, finalText);
-    } catch (err) {
-      console.error("[memory-writer] failed:", err);
-    }
+    // MEMORY WRITE
+    await writeMemory(effectiveUserKey, message, finalText);
 
     return NextResponse.json({ text: finalText });
   } catch (err: any) {
