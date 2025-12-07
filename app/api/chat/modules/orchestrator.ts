@@ -98,7 +98,10 @@ export async function orchestrateSolaceResponse(inputs: OrchestratorInputs) {
       canonicalUserKey,
     });
 
-    return finalAnswer || "[arbiter produced no text]";
+    // ✅ ALWAYS return an object
+    return {
+      finalAnswer: finalAnswer || "[arbiter produced no text]",
+    };
   }
 
   //-------------------------------------------------------------
@@ -106,11 +109,13 @@ export async function orchestrateSolaceResponse(inputs: OrchestratorInputs) {
   //-------------------------------------------------------------
   console.log("[ORCHESTRATOR] Running NEUTRAL mode…");
 
-  // The route.ts caller is responsible for building fullBlocks (system + user)
-  // We accept blocks passed through orchestrator call
   const blocks = (context as any).systemPromptBlocks || [];
-
   const neutralText = await callNeutralModel(blocks);
-  return neutralText;
+
+  // ✅ ALWAYS return an object
+  return {
+    finalAnswer: neutralText,
+  };
 }
+
 
