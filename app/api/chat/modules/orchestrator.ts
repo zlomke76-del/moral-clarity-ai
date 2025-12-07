@@ -1,15 +1,25 @@
 // app/api/chat/modules/orchestrator.ts
-// ============================================================
-// HYBRID SUPER-AI PIPELINE
-// Optimist  →  Skeptic  →  Arbiter
-// Founder Mode (single-pass, decisive)
-// Ministry overlay supported via system prompt
-// Guest mode gracefully downgraded
-// ============================================================
+// -------------------------------------------------------------
+// Solace Hybrid Pipeline
+// (Optimist → Skeptic → Arbiter)
+// Founder Mode override supported.
+// Ministry Mode supported.
+// -------------------------------------------------------------
 
 import { callModel, MODELS } from "./model-router";
 import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
 
+/**
+ * runHybridPipeline()
+ * Runs 2–3 LLM passes depending on mode:
+ *
+ *  - Optimist  (Create)
+ *  - Skeptic   (Red Team)
+ *  - Arbiter   (Next Steps — final authority)
+ *
+ * Founder Mode → bypasses Optimist/Skeptic
+ * and produces a single decisive founder-grade answer.
+ */
 export async function runHybridPipeline({
   userMessage,
   context,
@@ -25,77 +35,37 @@ export async function runHybridPipeline({
   modeHint: string;
   founderMode: boolean;
 }) {
-  // ------------------------------------------------------------
-  // 0. Guest mode — NO memory, NO hybrid
-  // ------------------------------------------------------------
-  if (context.guest) {
-    const sys = buildSolaceSystemPrompt(
-      "guidance",
-      `
-You are in GUEST MODE.
-Memory features are disabled because the user is not signed in.
-Avoid referencing missing memory. Do not attempt recall.
-
-If the user asks you to remember something:
-Say: "I can only remember things when you are signed in."
-`
-    );
-
-    const prompt = [
-      { role: "system", content: [{ type: "input_text", text: sys }] },
-      {
-        role: "user",
-        content: [{ type: "input_text", text: `[User]: ${userMessage}` }],
-      },
-    ];
-
-    const reply = await callModel(MODELS.ARBITER, prompt);
-    return { optimist: null, skeptic: null, finalAnswer: reply };
-  }
-
-  // ------------------------------------------------------------
-  // 1. Build Base Context Block (used by all agents)
-  // ------------------------------------------------------------
-  const personaName = context.persona || "Solace";
-
+  // -------------------------------------------------------------
+  // BASE CONTEXT FOR ALL AGENTS
+  // -------------------------------------------------------------
   const baseContext = `
-[Persona]: ${personaName}
-[User Message]: ${userMessage}
+[Persona]: ${context.persona || "Solace"}
 
-[User Memories]: ${JSON.stringify(
-    context.memoryPack.userMemories || [],
-    null,
-    2
-  )}
+[User Message]:
+${userMessage}
 
-[Episodic Memories]: ${JSON.stringify(
-    context.memoryPack.episodicMemories || [],
-    null,
-    2
-  )}
+[User Memories]:
+${JSON.stringify(context.memoryPack.userMemories || [], null, 2)}
 
-[Autobiography]: ${JSON.stringify(
-    context.memoryPack.autobiography || {},
-    null,
-    2
-  )}
+[Episodic Memories]:
+${JSON.stringify(context.memoryPack.episodicMemories || [], null, 2)}
 
-[News Digest]: ${JSON.stringify(context.newsDigest || [], null, 2)}
-[Research Context]: ${JSON.stringify(
-    context.researchContext || [],
-    null,
-    2
-  )}
+[Autobiography]:
+${JSON.stringify(context.memoryPack.autobiography || {}, null, 2)}
 
-[Chat History]: ${JSON.stringify(history || [], null, 2)}
+[News Digest]:
+${JSON.stringify(context.newsDigest || [], null, 2)}
 
-[Ministry Mode]: ${ministryMode ? "ON" : "OFF"}
-[Founder Mode]: ${founderMode ? "ON" : "OFF"}
+[Research Context]:
+${JSON.stringify(context.researchContext || [], null, 2)}
+
+[Chat History]:
+${JSON.stringify(history || [], null, 2)}
 `;
 
-  // ------------------------------------------------------------
-  // 2. Founder Mode → Single decisive super-pass
-  // ------------------------------------------------------------
+  // -------------------------------------------------------------
+  // FOUNDER MODE: Single decisive pass
+  // -------------------------------------------------------------
   if (founderMode) {
     const founderPrompt = [
       {
@@ -105,13 +75,7 @@ Say: "I can only remember things when you are signed in."
             type: "input_text",
             text: buildSolaceSystemPrompt(
               "founder",
-              `
-You are SOLACE_FOUNDER.
-Direct, high-clarity reasoning.
-Architect-level thinking.
-No hedging. No soft qualifiers.
-Still under the Abrahamic Code.
-`
+              "Founder mode: Maximum clarity. No hedging. Strategic truth only."
             ),
           },
         ],
@@ -122,8 +86,7 @@ Still under the Abrahamic Code.
       },
     ];
 
-    const founderReply = await callModel(MODELS.ARBITER, founderPrompt);
-
+    const founderReply = await callModel(MODELS.ARBITER, founderPrompt); // arbiter = most decisive
     return {
       optimist: null,
       skeptic: null,
@@ -131,9 +94,9 @@ Still under the Abrahamic Code.
     };
   }
 
-  // ------------------------------------------------------------
-  // 3. OPTIMIST (Create Mode)
-  // ------------------------------------------------------------
+  // =============================================================
+  // 1. OPTIMIST (Create)
+  // =============================================================
   const optimistPrompt = [
     {
       role: "system",
@@ -144,10 +107,9 @@ Still under the Abrahamic Code.
             "optimist",
             `
 You are SOLACE_OPTIMIST.
-Expansive. Generative. Forward-looking.
-Surface opportunities and creative paths.
-Abrahamic Code applies.  
-If ministryMode is ON → theological framing is allowed when *relevant*.
+Expansive, creative, forward-looking.
+Goal: propose viable paths and opportunities.
+${ministryMode ? "MINISTRY ACTIVE: Faith framing permitted." : ""}
 `
           ),
         },
@@ -161,9 +123,9 @@ If ministryMode is ON → theological framing is allowed when *relevant*.
 
   const optimist = await callModel(MODELS.OPTIMIST, optimistPrompt);
 
-  // ------------------------------------------------------------
-  // 4. SKEPTIC (Red Team)
-  // ------------------------------------------------------------
+  // =============================================================
+  // 2. SKEPTIC (Red Team)
+  // =============================================================
   const skepticPrompt = [
     {
       role: "system",
@@ -174,10 +136,10 @@ If ministryMode is ON → theological framing is allowed when *relevant*.
             "skeptic",
             `
 You are SOLACE_SKEPTIC.
-Stress-test the Optimist.
-Expose flaws, blind spots, risks.
-Never be cruel. Never violate the Abrahamic Code.
-If ministryMode ON → moral critique is allowed where relevant.
+Your role: stress test the Optimist’s ideas.
+Identify risks, blind spots, flaws.
+Never cynical. Never cruel.
+${ministryMode ? "MINISTRY ACTIVE: Ethical scrutiny allowed." : ""}
 `
           ),
         },
@@ -191,7 +153,7 @@ If ministryMode ON → moral critique is allowed where relevant.
           text: `
 ${baseContext}
 
-[Optimist Proposal]
+[Optimist Proposal]:
 ${optimist}
 `,
         },
@@ -201,9 +163,9 @@ ${optimist}
 
   const skeptic = await callModel(MODELS.SKEPTIC, skepticPrompt);
 
-  // ------------------------------------------------------------
-  // 5. ARBITER (Next Steps)
-  // ------------------------------------------------------------
+  // =============================================================
+  // 3. ARBITER (Next Steps — FINAL)
+  // =============================================================
   const arbiterPrompt = [
     {
       role: "system",
@@ -214,10 +176,10 @@ ${optimist}
             "arbiter",
             `
 You are SOLACE_ARBITER.
-Final integrator.
-Combine Optimist + Skeptic.
-Deliver the clearest, wisest NEXT STEPS.
-If ministryMode ON → integrate scripture meaningfully but sparingly.
+Goal: Integrate Optimist + Skeptic.
+Produce the clearest NEXT STEPS.
+Final authority.
+${ministryMode ? "MINISTRY ACTIVE: Apply Scripture sparingly when relevant." : ""}
 `
           ),
         },
@@ -231,13 +193,13 @@ If ministryMode ON → integrate scripture meaningfully but sparingly.
           text: `
 ${baseContext}
 
-[Optimist]
+[Optimist]:
 ${optimist}
 
-[Skeptic]
+[Skeptic]:
 ${skeptic}
 
-Provide the final integrated ruling.
+Generate the final integrated ruling.
 `,
         },
       ],
@@ -246,6 +208,7 @@ Provide the final integrated ruling.
 
   const finalAnswer = await callModel(MODELS.ARBITER, arbiterPrompt);
 
+  // Return the 3-agent composite
   return {
     optimist,
     skeptic,
