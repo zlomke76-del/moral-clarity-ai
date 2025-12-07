@@ -6,29 +6,34 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-/**
- * Browser Supabase client.
- * Safe in client components and hooks.
- */
-export function supabaseBrowser(): SupabaseClient {
-  if (!URL || !ANON) {
-    if (process.env.NODE_ENV !== "production") {
-      throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
-    }
+// Custom cookie storage to enforce domain=".moralclarity.ai"
+class DomainCookieStorage {
+  getItem(key: string) {
+    return globalThis?.document?.cookie
+      ?.split("; ")
+      ?.find((row) => row.startsWith(key + "="))
+      ?.split("=")[1] ?? null;
   }
 
+  setItem(key: string, value: string) {
+    document.cookie = `${key}=${value}; Path=/; Domain=.moralclarity.ai; SameSite=None; Secure`;
+  }
+
+  removeItem(key: string) {
+    document.cookie = `${key}=; Path=/; Domain=.moralclarity.ai; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=None; Secure`;
+  }
+}
+
+export function supabaseBrowser(): SupabaseClient {
   return createClient(URL, ANON, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: true,
+      storage: new DomainCookieStorage(), // <-- THIS IS THE KEY FIX
     },
   });
 }
 
-/**
- * Backwards-compat alias for older code.
- */
 export function createSupabaseBrowser(): SupabaseClient {
   return supabaseBrowser();
 }
