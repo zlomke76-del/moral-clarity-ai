@@ -1,3 +1,6 @@
+import { runHybridPipeline } from "./hybrid";  // ← REQUIRED
+import { callNeutralModel } from "./neutralModel"; // (Only if this exists — otherwise ignore)
+
 //---------------------------------------------------------------
 // MAIN ORCHESTRATION FUNCTION (FINAL — RETURNS STRING ONLY)
 //---------------------------------------------------------------
@@ -31,7 +34,6 @@ export async function orchestrateSolaceResponse(inputs: any): Promise<string> {
       canonicalUserKey,
     });
 
-    // runHybridPipeline MUST now return a string
     return finalAnswer || "[arbiter produced no text]";
   }
 
@@ -42,5 +44,4 @@ export async function orchestrateSolaceResponse(inputs: any): Promise<string> {
 
   return neutralText;
 }
-
 
