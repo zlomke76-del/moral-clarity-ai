@@ -1,7 +1,33 @@
 // app/api/chat/modules/assemble.ts
+// -------------------------------------------------------------
+// This module builds the Solace SYSTEM BLOCK + USER BLOCK.
+// SYSTEM BLOCK = persona + Abrahamic Code + domain mode.
+// USER BLOCK = memory packets + chat history + user message.
+// -------------------------------------------------------------
 
 import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
 
+/**
+ * Builds the SYSTEM block for the Responses API.
+ * This is ALWAYS the first element of the input array.
+ */
+export function buildSystemBlock(domain: string, extras?: string) {
+  const text = buildSolaceSystemPrompt(domain as any, extras);
+
+  return {
+    role: "system",
+    content: [
+      {
+        type: "input_text",
+        text,
+      },
+    ],
+  };
+}
+
+/**
+ * Helper: safe stringify blocks
+ */
 function safeBlock(label: string, data: any) {
   if (!data) return `\n[${label}]: none\n`;
   try {
@@ -12,78 +38,55 @@ function safeBlock(label: string, data: any) {
 }
 
 /**
- * assemblePrompt
- *
- * This is the "simple" / neutral path used when we are NOT
- * running the full Optimist → Skeptic → Arbiter hybrid pipeline.
- *
- * It still gets:
- * - the unified Solace persona (Abrahamic Code, etc.)
- * - userMemories, episodicMemories, autobiography
- * - newsDigest and researchContext
- * - chat history + current user message
+ * Builds the USER block sequence.
+ * This contains:
+ *  - memory facts
+ *  - episodic memories
+ *  - autobiography
+ *  - news digest
+ *  - research context
+ *  - chat history
+ *  - user message
  */
-export function assemblePrompt(
-  context: any,
-  history: any[],
-  userMessage: string
-) {
-  let fullText = "";
+export function assemblePrompt(context: any, history: any[], userMessage: string) {
+  let text = "";
 
-  // 1) Canonical Solace persona (Abrahamic Code spine)
-  fullText += buildSolaceSystemPrompt(
-    "core",
-    `
-You are operating in the general chat route.
+  // Persona name is optional but included for transparency
+  text += `You are ${context.persona || "Solace"}.\n`;
 
-Use the structured blocks below as your only external context:
-- [UserMemories]
-- [EpisodicMemories]
-- [Autobiography]
-- [NewsDigest]
-- [ResearchContext]
+  // Memory Blocks ------------------------------------------------
+  const m = context.memoryPack || {};
 
-Do not invent facts outside of these plus your base training.
-When in doubt, be honest about uncertainty.
-    `.trim()
-  );
+  text += safeBlock("User Memories", m.userMemories);
+  text += safeBlock("Episodic Memories", m.episodicMemories);
+  text += safeBlock("Autobiography", m.autobiography);
 
-  // 2) Memory + context blocks (aligned with assembleContext.ts)
-  const mp = context?.memoryPack || {};
+  // News + Research ---------------------------------------------
+  text += safeBlock("News Digest", context.newsDigest);
+  text += safeBlock("Research Context", context.researchContext);
 
-  fullText += safeBlock("UserMemories", mp.userMemories);
-  fullText += safeBlock("EpisodicMemories", mp.episodicMemories);
-  fullText += safeBlock("Autobiography", mp.autobiography);
-
-  fullText += safeBlock("NewsDigest", context?.newsDigest);
-  fullText += safeBlock("ResearchContext", context?.researchContext);
-
-  // 3) Chat history
+  // History ------------------------------------------------------
   if (history?.length) {
-    fullText += `\n[ChatHistory]:\n`;
+    text += `\n[Chat History]:\n`;
     for (const msg of history) {
-      fullText += `${String(msg.role || "").toUpperCase()}: ${
-        msg.content ?? ""
-      }\n`;
+      text += `${msg.role.toUpperCase()}: ${msg.content}\n`;
     }
   } else {
-    fullText += `\n[ChatHistory]: none\n`;
+    text += `\n[Chat History]: none\n`;
   }
 
-  // 4) Current user message (anchor)
-  fullText += `\n[UserMessage]: ${userMessage}\n`;
+  // User message -------------------------------------------------
+  text += `\n[User Message]: ${userMessage}\n`;
 
-  // Responses API input shape
   return [
     {
       role: "user",
       content: [
         {
           type: "input_text",
-          text: fullText,
+          text,
         },
       ],
     },
   ];
 }
-
