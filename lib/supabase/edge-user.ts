@@ -1,14 +1,13 @@
 // lib/supabase/edge-user.ts
-// -------------------------------------------------------------
 // Extract authenticated Supabase user inside an Edge Function
-// Works with Next.js middleware + magic link cookies
-// -------------------------------------------------------------
+// Reads sb-access-token and sb-refresh-token cookies
 
 import { createClient } from "@supabase/supabase-js";
 
 export async function getEdgeUser(req: Request) {
   try {
     const cookieHeader = req.headers.get("cookie") || "";
+
     const cookies = Object.fromEntries(
       cookieHeader
         .split(";")
@@ -17,15 +16,15 @@ export async function getEdgeUser(req: Request) {
     );
 
     const accessToken = cookies["sb-access-token"] ?? null;
-    const refreshToken = cookies["sb-refresh-token"] ?? null;
 
     if (!accessToken) {
-      return null; // Not logged in
+      return null; // not logged in
     }
 
+    // Create a Supabase client whose request already contains the auth token
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, // NOT service key!
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         global: {
           headers: {
@@ -40,7 +39,7 @@ export async function getEdgeUser(req: Request) {
     if (error || !data?.user) return null;
 
     return {
-      email: data.user.email ?? null,
+      email: data.user.email?.toLowerCase() ?? null,
       id: data.user.id ?? null,
     };
   } catch (err) {
