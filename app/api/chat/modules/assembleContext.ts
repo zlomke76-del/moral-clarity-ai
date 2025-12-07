@@ -1,11 +1,8 @@
 // app/api/chat/modules/assembleContext.ts
-// =============================================================
-// Solace — Context Assembly (Persona + Memory + News + Research)
-// Updated for:
-// - Full memory for authenticated users
-// - Graceful guest mode
-// - Hybrid pipeline compatibility
-// =============================================================
+// -------------------------------------------------------------
+// Solace Context Loader — persona + memory + news + research
+// This version FIXES all user_key mismatch problems.
+// -------------------------------------------------------------
 
 import { supabaseEdge } from "@/lib/supabase/edge";
 import {
@@ -28,7 +25,7 @@ function needsEpisodic(message: string): boolean {
     "last time",
     "earlier you said",
     "continue the story",
-    "what happened yesterday",
+    "what happened",
     "recap",
     "episode",
     "thread",
@@ -49,7 +46,7 @@ function needsAutobio(message: string): boolean {
 }
 
 // -------------------------------------------------------------
-// PERSONA
+// PERSONA (default Solace persona from DB)
 // -------------------------------------------------------------
 async function loadPersona(): Promise<string> {
   const { data } = await supabaseEdge
@@ -62,9 +59,11 @@ async function loadPersona(): Promise<string> {
 }
 
 // -------------------------------------------------------------
-// USER MEMORY (facts)
+// USER MEMORY — ALWAYS LOADS
 // -------------------------------------------------------------
 async function loadUserMemories(userKey: string) {
+  if (!userKey || userKey === "guest") return [];
+
   const { data } = await supabaseEdge
     .from("user_memories")
     .select("*")
@@ -79,7 +78,7 @@ async function loadUserMemories(userKey: string) {
 // EPISODIC MEMORY
 // -------------------------------------------------------------
 async function loadEpisodic(userKey: string, enable: boolean) {
-  if (!enable) return [];
+  if (!enable || !userKey || userKey === "guest") return [];
 
   const { data: episodes } = await supabaseEdge
     .from("episodic_memories")
@@ -112,7 +111,7 @@ async function loadEpisodic(userKey: string, enable: boolean) {
 // AUTOBIOGRAPHY
 // -------------------------------------------------------------
 async function loadAutobiography(userKey: string, enable: boolean) {
-  if (!enable) {
+  if (!enable || !userKey || userKey === "guest") {
     return { chapters: [], entries: [] };
   }
 
@@ -138,7 +137,7 @@ async function loadAutobiography(userKey: string, enable: boolean) {
 // NEWS DIGEST
 // -------------------------------------------------------------
 async function loadNewsDigest(userKey: string) {
-  if (!ENABLE_NEWS) return [];
+  if (!ENABLE_NEWS || !userKey || userKey === "guest") return [];
 
   const { data } = await supabaseEdge
     .from("vw_solace_news_digest")
@@ -154,7 +153,7 @@ async function loadNewsDigest(userKey: string) {
 // RESEARCH CONTEXT
 // -------------------------------------------------------------
 async function loadResearch(userKey: string) {
-  if (!ENABLE_RESEARCH) return [];
+  if (!ENABLE_RESEARCH || !userKey || userKey === "guest") return [];
 
   const { data } = await supabaseEdge
     .from("truth_facts")
@@ -167,54 +166,39 @@ async function loadResearch(userKey: string) {
 }
 
 // -------------------------------------------------------------
-// MAIN CONTEXT ASSEMBLY
+// MAIN CONTEXT ASSEMBLY — FIXED VERSION
 // -------------------------------------------------------------
 export async function assembleContext(
   userKey: string,
   workspaceId: string | null,
   userMessage: string
 ) {
+  // The identity used to **load** memory must match the identity used to **write** memory.
+  const canonicalUserKey = userKey && userKey !== "guest" ? userKey : null;
+
   const episodicNeeded = needsEpisodic(userMessage);
   const autobioNeeded = needsAutobio(userMessage);
 
   console.log("[Solace Context] Load decisions:", {
+    canonicalUserKey,
     episodicNeeded,
     autobioNeeded,
     workspaceId,
-    userKey,
   });
 
   const persona = await loadPersona();
 
-  // ---------------------------------------------------------
-  // GUEST MODE — NO DATABASE MEMORY
-  // ---------------------------------------------------------
-  if (!userKey || userKey === "guest") {
-    return {
-      persona,
-      guest: true, // Orchestrator + SolaceDock use this
-      memoryPack: {
-        userMemories: [],
-        episodicMemories: [],
-        autobiography: { chapters: [], entries: [] },
-      },
-      newsDigest: [],
-      researchContext: [],
-    };
-  }
-
-  // ---------------------------------------------------------
-  // AUTHENTICATED USER → FULL MEMORY PIPELINE
-  // ---------------------------------------------------------
-  const userMemories = await loadUserMemories(userKey);
-  const episodicMemories = await loadEpisodic(userKey, episodicNeeded);
-  const autobiography = await loadAutobiography(userKey, autobioNeeded);
-  const newsDigest = await loadNewsDigest(userKey);
-  const researchContext = await loadResearch(userKey);
+  const userMemories = await loadUserMemories(canonicalUserKey!);
+  const episodicMemories = await loadEpisodic(canonicalUserKey!, episodicNeeded);
+  const autobiography = await loadAutobiography(
+    canonicalUserKey!,
+    autobioNeeded
+  );
+  const newsDigest = await loadNewsDigest(canonicalUserKey!);
+  const researchContext = await loadResearch(canonicalUserKey!);
 
   return {
     persona,
-    guest: false,
     memoryPack: {
       userMemories,
       episodicMemories,
@@ -224,5 +208,4 @@ export async function assembleContext(
     researchContext,
   };
 }
-
 
