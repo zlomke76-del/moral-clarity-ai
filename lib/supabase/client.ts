@@ -1,14 +1,18 @@
 // lib/supabase/client.ts
-// Canonical browser-side Supabase client (Next.js 16+)
+// Canonical browser-side Supabase client for Next.js 16 (Edge-safe)
+// Ensures authentication cookies are correctly scoped to the domain
+// and forwarded to Edge Routes, enabling canonical identity + memory.
 
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 /**
- * Browser Supabase client.
- * Safe in client components and hooks.
+ * Browser client used by UI components.
+ * Critical: cookie domain must allow sending sb-access-token
+ * to /api/chat and all Edge routes.
  */
 export function supabaseBrowser(): SupabaseClient {
   if (!URL || !ANON) {
@@ -17,17 +21,20 @@ export function supabaseBrowser(): SupabaseClient {
     }
   }
 
-  return createClient(URL, ANON, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
+  return createBrowserClient(URL, ANON, {
+    cookies: {
+      // Name is managed internally by Supabase (sb-access-token, sb-refresh-token)
+      lifetime: 60 * 60 * 24 * 7, // 7 days
+      domain: ".moralclarity.ai", // *** REQUIRED FOR AUTH TO REACH EDGE ROUTES ***
+      path: "/",
+      sameSite: "none",
+      secure: true,
     },
   });
 }
 
 /**
- * Backwards-compat alias for older code.
+ * Backwards compatibility alias.
  */
 export function createSupabaseBrowser(): SupabaseClient {
   return supabaseBrowser();
