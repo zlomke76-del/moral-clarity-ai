@@ -34,27 +34,25 @@ export async function runHybridPipeline({
   // ============================================================================
   const persona = context.persona || "Solace";
 
-  const baseContext = `
-[Persona]: ${persona]
+const baseContext = `
+[Persona]: ${persona}
 [User message]: ${userMessage}
 
-[User Memories]:
-${JSON.stringify(context.memoryPack.userMemories || [], null, 2)}
+[User Memories]: ${JSON.stringify(context.memoryPack.userMemories || [], null, 2)}
+[Episodic Memories]: ${JSON.stringify(
+  context.memoryPack.episodicMemories || [],
+  null,
+  2
+)}
+[Autobiography]: ${JSON.stringify(
+  context.memoryPack.autobiography || {},
+  null,
+  2
+)}
+[News Digest]: ${JSON.stringify(context.newsDigest || [], null, 2)}
+[Research Context]: ${JSON.stringify(context.researchContext || [], null, 2)}
 
-[Episodic Memories]:
-${JSON.stringify(context.memoryPack.episodicMemories || [], null, 2)}
-
-[Autobiography]:
-${JSON.stringify(context.memoryPack.autobiography || {}, null, 2)}
-
-[News Digest]:
-${JSON.stringify(context.newsDigest || [], null, 2)}
-
-[Research Context]:
-${JSON.stringify(context.researchContext || [], null, 2)}
-
-[Chat History]:
-${JSON.stringify(history || [], null, 2)}
+[Chat History]: ${JSON.stringify(history || [], null, 2)}
 `;
 
   // ============================================================================
