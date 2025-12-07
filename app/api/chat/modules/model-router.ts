@@ -2,36 +2,64 @@
 
 import OpenAI from "openai";
 
+/**
+ * MODEL REGISTRY
+ *
+ * All three agents (Optimist, Skeptic, Arbiter) currently use OpenAI models.
+ * These keys allow future swap-outs (Anthropic, Mistral, local inference, etc.)
+ * WITHOUT touching orchestrator.ts.
+ */
 export const MODELS = {
-  OPTIMIST: "gpt-4.1",
-  SKEPTIC: "gpt-4.1-mini",
-  ARBITER: "gpt-5",
+  OPTIMIST: "gpt-4.1",       // Create Mode → expansive, generative
+  SKEPTIC: "gpt-4.1",        // Red Team → adversarial reasoning
+  ARBITER: "gpt-4.1",        // Next Steps → integrated final ruling
+} as const;
 
-  // Future LLMs (not used yet)
-  FUTURE_OPTIMIST: "placeholder:optimist-llm",
-  FUTURE_SKEPTIC: "placeholder:skeptic-llm",
-  FUTURE_ARBITER: "placeholder:arbiter-llm",
-};
-
+/**
+ * OpenAI Client
+ * (Responses API – required for structured multimodal input blocks)
+ */
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-// Responses API extraction helper
-export function extractText(res: any): string {
+/**
+ * callModel(modelId, inputBlocks)
+ *
+ * Runs a model via the Responses API with automatic output extraction.
+ * No temp/top_p/max_tokens allowed — Responses API controls these internally.
+ */
+export async function callModel(
+  modelId: string,
+  inputBlocks: any[]
+): Promise<string> {
   try {
-    const block = res.output?.[0];
-    const content = block?.content?.[0];
-    return content?.text ?? "";
-  } catch {
-    return "";
+    const res = await client.responses.create({
+      model: modelId,
+      input: inputBlocks,
+    });
+
+    return extract(res) ?? "[no output]";
+  } catch (err) {
+    console.error(`[callModel] failure for ${modelId}:`, err);
+    return `[model ${modelId} failed]`;
   }
 }
 
-export async function callModel(model: string, inputBlocks: any[]) {
-  const res = await client.responses.create({
-    model,
-    input: inputBlocks,
-  });
-  return extractText(res);
+/**
+ * extract()
+ * Standardized extraction for Responses API return shape.
+ */
+function extract(res: any): string | null {
+  try {
+    const block = res.output?.[0];
+    if (!block) return null;
+
+    const content = block.content?.[0];
+    if (!content) return null;
+
+    return content.text ?? null;
+  } catch {
+    return null;
+  }
 }
