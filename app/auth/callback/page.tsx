@@ -7,33 +7,30 @@ import { createSupabaseBrowser } from "@/lib/supabase/client";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams(); // TS thinks nullable, but it's always defined
 
   useEffect(() => {
     const run = async () => {
       const supabase = createSupabaseBrowser();
 
-      const code = searchParams.get("code");
-      const next = searchParams.get("next") || "/app";
+      // ✅ FIX: explicitly coerce searchParams as non-null
+      const params = searchParams!;
+
+      const code = params.get("code");
+      const next = params.get("next") || "/app";
 
       if (!code) {
         return router.replace("/auth/error?err=Missing%20code");
       }
 
-      // 🔥 THE CRITICAL STEP: EXCHANGE THE MAGIC LINK CODE
+      // 🔥 REQUIRED: exchange magic-link code for a session & cookies
       const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (error || !data?.session) {
-        return router.replace(
-          "/auth/error?err=Failed%20to%20exchange%20code"
-        );
+        return router.replace("/auth/error?err=Failed%20to%20exchange%20code");
       }
 
-      // At this point Supabase writes:
-      // - sb-access-token
-      // - sb-refresh-token
-      // correctly via browser client settings
-
+      // Cookies now exist: sb-access-token, sb-refresh-token
       return router.replace(next);
     };
 
