@@ -1,7 +1,7 @@
 //---------------------------------------------------------------
 // MAIN ORCHESTRATION FUNCTION (FINAL — RETURNS STRING ONLY)
 //---------------------------------------------------------------
-export async function orchestrateSolaceResponse(inputs: OrchestratorInputs): Promise<string> {
+export async function orchestrateSolaceResponse(inputs: any): Promise<string> {
   const {
     userMessage,
     context,
