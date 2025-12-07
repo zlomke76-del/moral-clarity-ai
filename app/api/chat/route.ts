@@ -1,7 +1,8 @@
+// app/api/chat/route.ts
 //---------------------------------------------------------------
 // Solace Chat Route — Persona ALWAYS active
 // Unified Memory + Founder Mode + Ministry Mode
-// Hybrid pipeline now lives in orchestrator.ts (orchestrateSolaceResponse)
+// Hybrid pipeline lives in orchestrator.ts (orchestrateSolaceResponse)
 //---------------------------------------------------------------
 
 export const runtime = "edge";
@@ -42,24 +43,27 @@ export async function POST(req: Request) {
     const {
       message,
       history = [],
-      userKey = null,
       workspaceId = null,
-
       ministryMode = false,
       founderMode = false,
       modeHint = "Neutral",
+      // NOTE: userKey from body is intentionally IGNORED for identity.
+      // All canonical identity comes from Supabase auth.
     } = body;
 
     if (!message || typeof message !== "string") {
       return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
-    // 🔑 Always use canonical user identity — MUST PASS req
+    // 🔑 Always use canonical user identity from Supabase (email)
     const { canonicalKey } = await getCanonicalUserKey(req);
-    const effectiveUserKey = userKey || canonicalKey || "guest";
+    const canonicalUserKey: string | null = canonicalKey ?? null;
+
+    // For context reads we can safely fall back to "guest"
+    const contextKey = canonicalUserKey || "guest";
 
     // 1) MEMORY + PERSONA CONTEXT
-    const context = await assembleContext(effectiveUserKey, workspaceId, message);
+    const context = await assembleContext(contextKey, workspaceId, message);
 
     // Determine intended domain
     let domain = mapModeHintToDomain(modeHint);
@@ -90,20 +94,19 @@ export async function POST(req: Request) {
 
     if (hybridAllowed) {
       // ---------------------------------------------------------
-      // NEW: Unified Hybrid Pipeline Entry Point
+      // HYBRID PIPELINE ENTRY POINT
       // ---------------------------------------------------------
-const finalAnswer = await orchestrateSolaceResponse({
-  userMessage: message,
-  context,
-  history,
-  ministryMode,
-  modeHint,
-  founderMode,
-  canonicalUserKey: effectiveUserKey,
-});
+      const finalAnswer = await orchestrateSolaceResponse({
+        userMessage: message,
+        context,
+        history,
+        ministryMode,
+        modeHint,
+        founderMode,
+        canonicalUserKey,
+      });
 
-finalText = finalAnswer || "[No arbiter answer]";
-
+      finalText = finalAnswer || "[No arbiter answer]";
     } else {
       // Neutral mode — single model call
       const res = await fetch("https://api.openai.com/v1/responses", {
@@ -124,14 +127,14 @@ finalText = finalAnswer || "[No arbiter answer]";
     }
 
     // MEMORY WRITE — only after final answer
+    // Uses canonicalUserKey (email). If null → writeMemory no-ops.
     try {
-      await writeMemory(effectiveUserKey, message, finalText);
+      await writeMemory(canonicalUserKey, message, finalText);
     } catch (err) {
       console.error("[memory-writer] failed:", err);
     }
 
     return NextResponse.json({ text: finalText });
-
   } catch (err: any) {
     console.error("[chat route] fatal error", err);
     return NextResponse.json(
@@ -140,5 +143,6 @@ finalText = finalAnswer || "[No arbiter answer]";
     );
   }
 }
+
 
 
