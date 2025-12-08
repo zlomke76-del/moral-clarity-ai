@@ -1,35 +1,85 @@
+// app/auth/exchange/route.ts
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 
 export async function POST(req: Request) {
+  const diag: Record<string, any> = {
+    stage: "start",
+  };
+
   try {
-    const { access_token, refresh_token } = await req.json();
+    const body = await req.json();
+    const access_token = body.access_token;
+    const refresh_token = body.refresh_token;
+
+    diag.incoming = {
+      access_token_present: !!access_token,
+      refresh_token_present: !!refresh_token,
+    };
 
     if (!access_token || !refresh_token) {
-      return NextResponse.json({ error: "MissingTokens" }, { status: 400 });
+      diag.stage = "missing-tokens";
+      return NextResponse.json({ error: "MissingTokens", diag }, { status: 400 });
     }
 
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient({
-      cookies: () => cookieStore,
-    });
+    // Prepare response so we can write cookies into it
+    const response = NextResponse.json({ stage: "pre-exchange" });
+    const cookieStore = await cookies();
 
-    const { error } = await supabase.auth.setSession({
+    // Build writable cookies interface for Supabase
+    const cookieAdapter = {
+      get(name: string) {
+        return cookieStore.get(name)?.value;
+      },
+      set(name: string, value: string, options: any) {
+        response.cookies.set(name, value, options);
+        diag.cookieSet = diag.cookieSet || [];
+        diag.cookieSet.push({ name, valueMasked: value?.slice?.(0, 6) + "...", options });
+      },
+      remove(name: string, options: any) {
+        response.cookies.set(name, "", { ...options, maxAge: 0 });
+        diag.cookieRemoved = diag.cookieRemoved || [];
+        diag.cookieRemoved.push({ name });
+      },
+    };
+
+    diag.stage = "create-client";
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: cookieAdapter,
+      }
+    );
+
+    diag.stage = "set-session";
+    const { data, error } = await supabase.auth.setSession({
       access_token,
       refresh_token,
     });
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+    diag.supabase = {
+      sessionReturned: !!data?.session,
+      error: error ?? null,
+    };
+
+    if (error || !data?.session) {
+      diag.stage = "session-failed";
+      return NextResponse.json({ error: "SetSessionFailed", diag }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true });
+    diag.stage = "success";
+
+    // We return the diagnostics inside the response body
+    // (cookies already attached to this response)
+    return NextResponse.json({ success: true, diag });
   } catch (err: any) {
-    return NextResponse.json(
-      { error: err?.message ?? "ExchangeFailed" },
-      { status: 500 }
-    );
+    diag.stage = "exception";
+    diag.exception = err?.message;
+    return NextResponse.json({ error: "Exception", diag }, { status: 500 });
   }
 }
-
