@@ -1,34 +1,27 @@
 // lib/memory-local.ts
+
 export const runtime = "nodejs";
 
-import { supabaseNode } from "@/lib/supabase/node";
+import { createClientServer } from "@/lib/supabase/server";
 
+/**
+ * Server-side helper to list memories for a workspace.
+ * Runs under Node.js runtime (SSR), not edge.
+ */
 export async function listMemories(workspaceId: string) {
-  const { data, error } = await supabaseNode
+  const supabase = createClientServer();
+
+  const { data, error } = await supabase
     .from("user_memories")
-    .select("id, title, content, created_at, workspace_id")
+    .select("id, title, created_at, workspace_id")
     .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: false })
-    .limit(100);
+    .limit(50);
 
-  return { rows: Array.isArray(data) ? data : [], error };
-}
+  if (error) {
+    console.error("[memory-local] listMemories error:", error);
+    return [];
+  }
 
-export async function getMemory(id: string) {
-  const { data, error } = await supabaseNode
-    .from("user_memories")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-
-  return { row: data ?? null, error };
-}
-
-export async function deleteMemory(id: string) {
-  const { error } = await supabaseNode
-    .from("user_memories")
-    .delete()
-    .eq("id", id);
-
-  return { error };
+  return Array.isArray(data) ? data : [];
 }
