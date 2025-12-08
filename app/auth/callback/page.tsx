@@ -1,16 +1,16 @@
 // app/auth/callback/page.tsx
-export const runtime = "nodejs"; // REQUIRED — cannot run in Edge
+export const runtime = "nodejs"; // Must be "nodejs" in Next 16
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createServerClient } from "@supabase/ssr";
 
 export default async function AuthCallbackPage() {
-  const cookieStore = cookies();
+  // ⬅️ FIX: cookies() returns a Promise in Next 16
+  const cookieStore = await cookies();
 
-  const search = new URLSearchParams(
-    cookieStore.get("auth-callback-search")?.value ?? ""
-  );
+  const raw = cookieStore.get("auth-callback-search")?.value ?? "";
+  const search = new URLSearchParams(raw);
 
   const code = search.get("code");
   const next = search.get("next") || "/app";
@@ -19,7 +19,7 @@ export default async function AuthCallbackPage() {
     redirect("/auth/error?err=Missing%20code");
   }
 
-  // Build the Supabase SSR client for NodeJS runtime
+  // Supabase SSR client for NodeJS runtime
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -29,11 +29,9 @@ export default async function AuthCallbackPage() {
           return cookieStore.get(name)?.value;
         },
         set() {
-          // cookie write handled internally by Supabase
+          /* Supabase sets cookies via headers */
         },
-        remove() {
-          // cookie removal handled internally
-        }
+        remove() {}
       }
     }
   );
@@ -41,9 +39,10 @@ export default async function AuthCallbackPage() {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
-    console.error("Supabase PKCE Error:", error);
+    console.error("PKCE Exchange Error:", error);
     redirect("/auth/error?err=Auth%20session%20failed");
   }
 
   redirect(next);
 }
+
