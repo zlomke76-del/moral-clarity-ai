@@ -1,78 +1,72 @@
-// middleware.ts
-import type { NextRequest } from "next/server";
+// /middleware.ts
 import { NextResponse } from "next/server";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import type { NextRequest } from "next/server";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 
+// ⚠️ Middleware runs at the edge by default.
+// We MUST NOT interfere with the Supabase callback flow.
+
+// Paths that never require auth.
+const PUBLIC_PATHS = [
+  "/",
+  "/auth",
+  "/auth/callback",
+  "/auth/error",
+  "/newsroom",
+  "/newsroom/cabinet",
+  "/favicon.ico",
+  "/logo.png",
+];
+
+// Prefixes that are always public.
+const PUBLIC_PREFIXES = [
+  "/_next",      // Next.js internals
+  "/api/auth",   // Supabase needs these
+  "/images",
+  "/assets",
+];
+
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  // 1. Skip ALL public routes
+  if (
+    PUBLIC_PATHS.includes(pathname) ||
+    PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))
+  ) {
+    return NextResponse.next();
+  }
+
+  // 2. SPECIAL: Never block the callback — MUST pass through untouched.
+  if (pathname.startsWith("/auth/callback")) {
+    return NextResponse.next();
+  }
+
+  // 3. Protect only /app/*
+  const isProtected = pathname.startsWith("/app");
+  if (!isProtected) return NextResponse.next();
+
+  // 4. Check Supabase session safely
+  const supabase = createRouteHandlerClient({ cookies: () => req.cookies });
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  // If no session → redirect to sign-in
+  if (!session) {
+    const redirectUrl = req.nextUrl.clone();
+    redirectUrl.pathname = "/auth/sign-in";
+    redirectUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  return NextResponse.next();
+}
+
+// Middleware applies to ALL routes unless excluded above.
 export const config = {
-  // Do NOT run on /auth/callback — this is critical
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|auth/callback|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico|css|js|txt)).*)",
+    "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };
 
-export async function middleware(req: NextRequest) {
-  const url = new URL(req.url);
-  const { pathname, searchParams } = url;
-
-  // Legacy redirect
-  if (pathname === "/workspace2" || pathname.startsWith("/workspace2/")) {
-    return NextResponse.redirect(new URL("/app", req.url), 308);
-  }
-
-  // Magic-link: forward ?code=XYZ to /auth/callback
-  const code = searchParams.get("code");
-  if (code && pathname !== "/auth/callback") {
-    const redirect = new URL("/auth/callback", req.url);
-    redirect.searchParams.set("code", code);
-    redirect.searchParams.set("next", searchParams.get("next") || "/app");
-    return NextResponse.redirect(redirect, 307);
-  }
-
-  // Normal pass-through
-  const res = NextResponse.next({
-    request: { headers: req.headers }
-  });
-
-  // NEVER GUESS DOMAIN AGAIN — Chrome requires exact match
-  const cookieDomain = "studio.moralclarity.ai";
-
-  // Supabase SSR client for token refresh
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return req.cookies.get(name)?.value;
-        },
-        set(name: string, value: string, options?: CookieOptions) {
-          res.cookies.set({
-            name,
-            value,
-            ...options,
-            domain: cookieDomain,
-            path: "/",
-            secure: true,
-            sameSite: "none",
-          });
-        },
-        remove(name: string, options?: CookieOptions) {
-          res.cookies.set({
-            name,
-            value: "",
-            maxAge: 0,
-            ...options,
-            domain: cookieDomain,
-            path: "/",
-            secure: true,
-            sameSite: "none",
-          });
-        },
-      },
-    }
-  );
-
-  await supabase.auth.getSession(); // refresh tokens if needed
-
-  return res;
-}
