@@ -1,12 +1,16 @@
-// modules/constants.ts
+// app/api/chat/modules/constants.ts
+// --------------------------------------------------------------
+// Solace model constants & tuning parameters
+// --------------------------------------------------------------
 
-// Primary & fallback models for Responses API routing
-export const DEFAULT_MODEL = "gpt-5";          // main Solace model
-export const FALLBACK_MODEL = "gpt-4.1-mini";  // stable backup
+// Primary model (must be real OpenAI API model)
+export const DEFAULT_MODEL = "gpt-4.1";
+
+// Backup model — always safe & available
+export const FALLBACK_MODEL = "gpt-4.1-mini";
 
 // NOTE: Responses API does NOT support temperature/max_tokens.
-// We keep these constants ONLY for internal logic (if needed later)
-// but they must NOT be passed into client.responses.create().
+// These values remain only for internal logic (if needed later).
 export const TEMPERATURE = 0.2;
 export const MAX_TOKENS = 1800;
 
