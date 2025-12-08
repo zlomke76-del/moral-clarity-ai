@@ -1,7 +1,5 @@
 // lib/supabase/server.ts
-// ------------------------------------------------------
-// Supabase SSR client - Next.js 16 compatible (cookies sync)
-// ------------------------------------------------------
+// Fully Next.js 16 compatible — no async cookie conflict.
 
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
@@ -13,40 +11,40 @@ export function createClientServer() {
     {
       cookies: {
         /**
-         * GET COOKIE
-         * Next.js 16 cookies() is synchronous — MUST NOT await.
+         * GET cookie — always call cookies() INSIDE the function
+         * so TS never treats it as a Promise.
          */
         get(name: string) {
-          const store = cookies();              // ✅ sync
-          return store.get(name)?.value;
+          const store = cookies();        // ALWAYS sync
+          const value = store.get(name)?.value;
+          return value;
         },
 
         /**
-         * SET COOKIE
-         * Next.js does allow writing cookies in server components,
-         * but may no-op during SSR render. That’s fine.
+         * SET cookie
          */
         set(name, value, options) {
           try {
-            const store = cookies();            // ✅ sync
+            const store = cookies();       // ALWAYS sync
             store.set(name, value, options);
           } catch (_) {
-            // Silent ignore – Next.js blocks SSR mutation sometimes.
+            // ignored in SSR
           }
         },
 
         /**
-         * REMOVE COOKIE
+         * REMOVE cookie
          */
         remove(name: string, options) {
           try {
-            const store = cookies();            // ✅ sync
+            const store = cookies();       // ALWAYS sync
             store.delete(name, options);
           } catch (_) {
-            // Silent ignore
+            // ignored in SSR
           }
         },
       },
     }
   );
 }
+
