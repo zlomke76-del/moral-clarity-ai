@@ -1,17 +1,19 @@
 // /lib/supabase/client.ts
-"use client";
-
 import { createBrowserClient } from "@supabase/ssr";
 
+/**
+ * Browser Supabase client — persistent session enabled.
+ * Automatically reads/writes auth cookies via the browser.
+ */
 export function createClientBrowser() {
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: {
-        persistSession: true,       // You selected persistent sessions
+        persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true,   // Required for magic link in browser
+        detectSessionInUrl: true,
       },
     }
   );
