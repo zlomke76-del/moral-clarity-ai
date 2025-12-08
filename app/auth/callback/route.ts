@@ -1,4 +1,3 @@
-// app/auth/callback/route.ts
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
@@ -14,10 +13,7 @@ export async function GET(req: Request) {
     return NextResponse.redirect(`${url.origin}/auth/sign-in`);
   }
 
-  // THIS response will hold cookies
   const response = NextResponse.redirect(`${url.origin}/app`);
-
-  // RAW cookie header for SSR
   const cookieHeader = req.headers.get("cookie") ?? "";
 
   const supabase = createServerClient(
@@ -30,7 +26,6 @@ export async function GET(req: Request) {
             .split(";")
             .map((c) => c.trim())
             .find((c) => c.startsWith(name + "="));
-
           return raw ? raw.split("=")[1] : undefined;
         },
         set(name, value, options) {
@@ -43,7 +38,6 @@ export async function GET(req: Request) {
     }
   );
 
-  // ⭐ Sets the Supabase session and writes cookies on FIRST TRY
   const { error } = await supabase.auth.setSession({
     access_token,
     refresh_token,
@@ -55,3 +49,4 @@ export async function GET(req: Request) {
 
   return response;
 }
+
