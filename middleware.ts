@@ -11,15 +11,14 @@ export const config = {
 
 export async function middleware(req: NextRequest) {
   const url = new URL(req.url);
-  const pathname = url.pathname;
-  const searchParams = url.searchParams;
+  const { pathname, searchParams } = url;
 
-  // legacy redirect
+  // Legacy redirect
   if (pathname === "/workspace2" || pathname.startsWith("/workspace2/")) {
     return NextResponse.redirect(new URL("/app", req.url), 308);
   }
 
-  // magic-link reroute
+  // Magic-link reroute
   const code = searchParams.get("code");
   if (code && pathname !== "/auth/callback") {
     const to = new URL("/auth/callback", req.url);
@@ -28,17 +27,19 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(to, 307);
   }
 
-  // preview mode can pass
+  // /app/preview always passes
   if (pathname.startsWith("/app/preview")) {
     return NextResponse.next();
   }
 
-  // MUST create a mutable response for Supabase to write cookies
-  const res = NextResponse.next({
-    request: { headers: req.headers },
-  });
+  // Required for Supabase to refresh cookies
+  const res = NextResponse.next({ request: { headers: req.headers } });
 
-  // ✔ Supabase-approved cookie adapter for SSR
+  // Dynamically set correct cookie domain
+  const hostname = url.hostname;
+  const cookieDomain =
+    hostname === "localhost" ? undefined : hostname; // do NOT use parent domain
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -53,7 +54,7 @@ export async function middleware(req: NextRequest) {
             name,
             value,
             ...options,
-            domain: ".moralclarity.ai",
+            domain: cookieDomain,
             path: "/",
             secure: true,
             sameSite: "none",
@@ -66,7 +67,7 @@ export async function middleware(req: NextRequest) {
             value: "",
             maxAge: 0,
             ...options,
-            domain: ".moralclarity.ai",
+            domain: cookieDomain,
             path: "/",
             secure: true,
             sameSite: "none",
@@ -76,7 +77,6 @@ export async function middleware(req: NextRequest) {
     }
   );
 
-  // touch the session so Supabase refreshes cookies when needed
   await supabase.auth.getSession();
 
   return res;
