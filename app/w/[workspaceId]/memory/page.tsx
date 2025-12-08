@@ -17,8 +17,8 @@ type Props = {
 export default async function WorkspaceMemoryPage({ params }: Props) {
   const workspaceId = decodeURIComponent(params.workspaceId);
 
-  // Create Supabase client for server (SSR) usage
-  const supabase = createClientServer();
+  // Must await — createClientServer is async in Next.js 16
+  const supabase = await createClientServer();
 
   const { data, error } = await supabase
     .from("user_memories")
@@ -59,6 +59,7 @@ export default async function WorkspaceMemoryPage({ params }: Props) {
     </section>
   );
 }
+
 
 
 
