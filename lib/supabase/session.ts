@@ -1,34 +1,25 @@
-// lib/supabase/session.ts
-// Server-side user/session utilities (Next.js 16 compatible)
-
-import type { User } from "@supabase/supabase-js";
-import { supabaseServer } from "./server";
+// /lib/supabase/session.ts
+import { createClientServer } from "./server";
+import { createClientBrowser } from "./client";
 
 /**
- * Get the current authenticated user (server-safe).
- * Works in RSC, layouts, pages, route handlers, and server actions.
+ * Get the session in a server environment.
  */
-export async function getCurrentUser(): Promise<User | null> {
-  // supabaseServer is now the *client*, not a function
-  const supabase = supabaseServer;
-
+export async function getServerSession() {
+  const supabase = await createClientServer();
   const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error) return null;
-  return user;
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session;
 }
 
 /**
- * Get session information (optional helper if needed later)
+ * Get the session in a browser environment.
  */
-export async function getSession() {
-  const supabase = supabaseServer;
-
-  const { data, error } = await supabase.auth.getSession();
-  if (error) return null;
-
-  return data.session ?? null;
+export async function getBrowserSession() {
+  const supabase = createClientBrowser();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session;
 }
