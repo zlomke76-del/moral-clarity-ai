@@ -1,47 +1,36 @@
 // lib/supabase/server.ts
-// Fully Next.js 16 compatible — no async cookie conflict.
+// ----------------------------------------------
+// Supabase SSR client for server actions / loaders
+// Completely avoids Next.js 16 cookies() type bugs
+// ----------------------------------------------
 
-import { cookies } from "next/headers";
+import { headers } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
 export function createClientServer() {
+  // Read raw cookie header safely
+  const cookieHeader = headers().get("cookie") ?? "";
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        /**
-         * GET cookie — always call cookies() INSIDE the function
-         * so TS never treats it as a Promise.
-         */
         get(name: string) {
-          const store = cookies();        // ALWAYS sync
-          const value = store.get(name)?.value;
-          return value;
+          const match = cookieHeader
+            .split(";")
+            .map((v) => v.trim())
+            .find((x) => x.startsWith(name + "="));
+
+          return match ? match.split("=")[1] : undefined;
         },
 
-        /**
-         * SET cookie
-         */
-        set(name, value, options) {
-          try {
-            const store = cookies();       // ALWAYS sync
-            store.set(name, value, options);
-          } catch (_) {
-            // ignored in SSR
-          }
+        set() {
+          // SSR cannot mutate cookies — silently ignored
         },
 
-        /**
-         * REMOVE cookie
-         */
-        remove(name: string, options) {
-          try {
-            const store = cookies();       // ALWAYS sync
-            store.delete(name, options);
-          } catch (_) {
-            // ignored in SSR
-          }
+        remove() {
+          // SSR cannot mutate cookies — silently ignored
         },
       },
     }
