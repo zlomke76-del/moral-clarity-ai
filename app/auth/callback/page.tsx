@@ -1,5 +1,5 @@
 // app/auth/callback/page.tsx
-export const runtime = "node"; // REQUIRED — cannot run in Edge
+export const runtime = "nodejs"; // REQUIRED — cannot run in Edge
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -19,7 +19,7 @@ export default async function AuthCallbackPage() {
     redirect("/auth/error?err=Missing%20code");
   }
 
-  // Build the Supabase SSR client for Node runtime
+  // Build the Supabase SSR client for NodeJS runtime
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -29,16 +29,15 @@ export default async function AuthCallbackPage() {
           return cookieStore.get(name)?.value;
         },
         set() {
-          /* SSR cookie write is handled in `auth.exchangeCodeForSession` */
+          // cookie write handled internally by Supabase
         },
         remove() {
-          /* same as above */
+          // cookie removal handled internally
         }
       }
     }
   );
 
-  // Exchange the PKCE code for a session + cookies
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
@@ -46,6 +45,5 @@ export default async function AuthCallbackPage() {
     redirect("/auth/error?err=Auth%20session%20failed");
   }
 
-  // Success: session cookies written
   redirect(next);
 }
