@@ -1,8 +1,6 @@
-// app/api/chat/route.ts
 //---------------------------------------------------------------
 // Solace Chat Route — Persona ALWAYS active
-// Unified Memory + Founder Mode + Ministry Mode
-// Hybrid pipeline lives in orchestrator.ts (orchestrateSolaceResponse)
+// Edge Runtime • Safe Session Retrieval • Memory Pipeline
 //---------------------------------------------------------------
 
 export const runtime = "edge";
@@ -15,11 +13,43 @@ import { assembleContext } from "./modules/assembleContext";
 import { assemblePrompt, buildSystemBlock } from "./modules/assemble";
 import { orchestrateSolaceResponse } from "./modules/orchestrator";
 import { writeMemory } from "./modules/memory-writer";
-import { getServerSession } from "@/lib/supabase/session";
 
-/**
- * Mode → Solace domain mapping
- */
+import { createClient } from "@supabase/supabase-js";
+
+// -------------------------------------------------------------
+// Edge-safe Supabase user extractor (no cookies(), no headers())
+// -------------------------------------------------------------
+async function getEdgeUser(req: Request) {
+  const cookieHeader = req.headers.get("cookie") ?? "";
+
+  // Extract Supabase auth cookie (single token)
+  const token = cookieHeader
+    .split(";")
+    .map((v) => v.trim())
+    .find((v) => v.startsWith("sb-"))
+    ?.split("=")[1];
+
+  if (!token) return null;
+
+  const sb = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    }
+  );
+
+  const { data, error } = await sb.auth.getUser();
+  if (error || !data?.user) return null;
+
+  return data.user;
+}
+
+// -------------------------------------------------------------
+// Mode → Solace domain mapping
+// -------------------------------------------------------------
 function mapModeHintToDomain(modeHint: string): string {
   switch (modeHint) {
     case "Create":
@@ -33,9 +63,9 @@ function mapModeHintToDomain(modeHint: string): string {
   }
 }
 
-/**
- * Chat Handler
- */
+// -------------------------------------------------------------
+// POST /api/chat
+// -------------------------------------------------------------
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -54,31 +84,26 @@ export async function POST(req: Request) {
     }
 
     // ---------------------------------------------------------
-    // 🔑 CANONICAL USER IDENTITY FROM SUPABASE SESSION
+    // USER SESSION (Edge-safe version)
     // ---------------------------------------------------------
-    const session = await getServerSession();
-    const canonicalUserKey: string | null = session?.user?.id ?? null;
-
-    // Context reader falls back to guest identity if no session
+    const user = await getEdgeUser(req);
+    const canonicalUserKey = user?.id ?? null;
     const contextKey = canonicalUserKey || "guest";
 
-    // 1) MEMORY + PERSONA CONTEXT
+    // ---------------------------------------------------------
+    // MEMORY + PERSONA CONTEXT
+    // ---------------------------------------------------------
     const context = await assembleContext(contextKey, workspaceId, message);
 
-    // Determine Solace domain
+    // Select domain
     let domain = mapModeHintToDomain(modeHint);
-
-    if (founderMode) {
-      domain = "founder";
-    } else if (ministryMode) {
-      domain = "ministry";
-    }
+    if (founderMode) domain = "founder";
+    else if (ministryMode) domain = "ministry";
 
     const extras = ministryMode
       ? "Ministry mode active — apply Scripture sparingly when relevant."
       : "";
 
-    // System + user prompt blocks
     const systemBlock = buildSystemBlock(domain, extras);
     const userBlocks = assemblePrompt(context, history, message);
     const fullBlocks = [systemBlock, ...userBlocks];
@@ -91,10 +116,10 @@ export async function POST(req: Request) {
 
     let finalText: string;
 
+    // ---------------------------------------------------------
+    // HYBRID PIPELINE
+    // ---------------------------------------------------------
     if (hybridAllowed) {
-      //---------------------------------------------------------
-      // HYBRID PIPELINE ENTRY POINT
-      //---------------------------------------------------------
       const finalAnswer = await orchestrateSolaceResponse({
         userMessage: message,
         context,
@@ -107,9 +132,9 @@ export async function POST(req: Request) {
 
       finalText = finalAnswer || "[No arbiter answer]";
     } else {
-      //---------------------------------------------------------
-      // Neutral → single-model pipeline
-      //---------------------------------------------------------
+      // ---------------------------------------------------------
+      // Neutral → Single-model pipeline
+      // ---------------------------------------------------------
       const res = await fetch("https://api.openai.com/v1/responses", {
         method: "POST",
         headers: {
@@ -123,13 +148,12 @@ export async function POST(req: Request) {
       });
 
       const json = await res.json();
-      const block = json.output?.[0]?.content?.[0];
-      finalText = block?.text ?? "[No reply]";
+      finalText = json?.output?.[0]?.content?.[0]?.text ?? "[No reply]";
     }
 
-    //---------------------------------------------------------
-    // MEMORY WRITE — after final answer only
-    //---------------------------------------------------------
+    // ---------------------------------------------------------
+    // MEMORY WRITE (safe, non-blocking)
+    // ---------------------------------------------------------
     try {
       await writeMemory(canonicalUserKey, message, finalText);
     } catch (err) {
@@ -138,7 +162,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ text: finalText });
   } catch (err: any) {
-    console.error("[chat route] fatal error", err);
+    console.error("[chat route] fatal", err);
     return NextResponse.json(
       { error: err?.message || "Chat route failed" },
       { status: 500 }
