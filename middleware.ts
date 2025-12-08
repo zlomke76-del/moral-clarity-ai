@@ -6,30 +6,25 @@ import { createServerClient } from "@supabase/ssr";
 export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
-  // ✅ DO NOT PROTECT CALLBACK ROUTE
+  // ⭐ 1. Allow Supabase magic link callback to bypass middleware
   if (pathname.startsWith("/auth/callback")) {
     return NextResponse.next();
   }
 
   const res = NextResponse.next();
 
+  // 2. Normal middleware logic for protected routes
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return req.cookies.get(name)?.value;
-        },
+        get: (name) => req.cookies.get(name)?.value,
         set(name, value, options) {
-          try {
-            res.cookies.set(name, value, options);
-          } catch {}
+          try { res.cookies.set(name, value, options); } catch {}
         },
-        remove(name, options) {
-          try {
-            res.cookies.delete(name);
-          } catch {}
+        remove(name) {
+          try { res.cookies.delete(name); } catch {}
         },
       },
     }
@@ -39,7 +34,7 @@ export async function middleware(req: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession();
 
-  // Protect app + workspace routes
+  // 3. Protect signed-in areas
   if (!session && (pathname.startsWith("/app") || pathname.startsWith("/w"))) {
     const redirect = new URL(
       `/auth/sign-in?redirectedFrom=${encodeURIComponent(pathname)}`,
@@ -51,8 +46,8 @@ export async function middleware(req: NextRequest) {
   return res;
 }
 
+// 4. Matcher — only protect app & workspace routes
 export const config = {
-  // ❌ Removed "/auth/callback"
   matcher: ["/app/:path*", "/w/:path*"],
 };
 
