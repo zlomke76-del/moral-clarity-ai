@@ -1,5 +1,6 @@
+// app/auth/callback/route.ts
 import { NextResponse } from "next/server";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -10,52 +11,29 @@ export async function GET(req: Request) {
     return NextResponse.redirect(`${url.origin}/auth/error?err=Missing%20code`);
   }
 
-  // Create a response so Supabase can write cookies
-  const res = NextResponse.redirect(`${url.origin}${next}`);
-
+  // Supabase SSR client with cookie adapter
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return req.headers.get("cookie") ?? null;
-        },
-        set(name: string, value: string, options?: CookieOptions) {
-          res.cookies.set({
-            name,
-            value,
-            ...options,
-            domain: ".moralclarity.ai",
-            path: "/",
-            secure: true,
-            sameSite: "none",
-          });
-        },
-        remove(name: string, options?: CookieOptions) {
-          res.cookies.set({
-            name,
-            value: "",
-            maxAge: 0,
-            ...options,
-            domain: ".moralclarity.ai",
-            path: "/",
-            secure: true,
-            sameSite: "none",
-          });
-        },
-      },
+        get: () => undefined, // no cookies available on initial callback
+        set: () => {},
+        remove: () => {},
+      } as any,
     }
   );
 
-  // Exchange code for session AND write cookies
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  // exchange the code for a session
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-  if (error) {
+  if (error || !data?.session) {
     return NextResponse.redirect(
       `${url.origin}/auth/error?err=Auth%20session%20failed`
     );
   }
 
-  return res;
+  // success → user authenticated → redirect to Studio
+  return NextResponse.redirect(`${url.origin}${next}`);
 }
+
