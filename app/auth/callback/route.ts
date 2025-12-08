@@ -13,12 +13,8 @@ export async function GET(req: Request) {
     );
   }
 
-  // Create the outgoing redirect response (Supabase needs this to write cookies)
+  // Response where Supabase will attach cookies
   const res = NextResponse.redirect(`${url.origin}${next}`);
-
-  // Determine cookie domain — MUST match exact hostname
-  const hostname = url.hostname;
-  const cookieDomain = hostname === "localhost" ? undefined : hostname;
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -38,7 +34,8 @@ export async function GET(req: Request) {
             name,
             value,
             ...options,
-            domain: cookieDomain, // ← MATCHES middleware
+            // ❌ DO NOT FORCE DOMAIN
+            // domain: ".moralclarity.ai",
             secure: true,
             httpOnly: true,
             sameSite: "none",
@@ -52,7 +49,7 @@ export async function GET(req: Request) {
             value: "",
             maxAge: 0,
             ...options,
-            domain: cookieDomain,
+            // ❌ DO NOT FORCE DOMAIN
             secure: true,
             httpOnly: true,
             sameSite: "none",
@@ -63,7 +60,6 @@ export async function GET(req: Request) {
     }
   );
 
-  // Exchange magic link code for Supabase session
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !data?.session) {
@@ -72,5 +68,6 @@ export async function GET(req: Request) {
     );
   }
 
-  return res; // cookie now written
+  return res; // session cookie successfully written
 }
+
