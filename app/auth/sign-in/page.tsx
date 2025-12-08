@@ -1,16 +1,7 @@
 // app/auth/sign-in/page.tsx
-import { cookies } from "next/headers";
+// SAFE: No SSR cookie writes
 
-export default async function SignInPage() {
-  const cookieStore = await cookies();
-
-  // Prepare a clean placeholder for the callback to use later
-  cookieStore.set("auth-callback-search", "", {
-    path: "/",
-    httpOnly: true,
-    sameSite: "lax",
-  });
-
+export default function SignInPage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center gap-6">
       <h1 className="text-3xl font-semibold tracking-tight">
@@ -44,6 +35,5 @@ export default async function SignInPage() {
     </main>
   );
 }
-
 
 
