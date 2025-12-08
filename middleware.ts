@@ -3,13 +3,16 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-// ---------------------------------------------
-// Compatible with your installed Supabase version
-// ---------------------------------------------
 export async function middleware(req: NextRequest) {
+  const pathname = req.nextUrl.pathname;
+
+  // ✅ DO NOT PROTECT CALLBACK ROUTE
+  if (pathname.startsWith("/auth/callback")) {
+    return NextResponse.next();
+  }
+
   const res = NextResponse.next();
 
-  // Build supabase client for middleware
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -21,29 +24,22 @@ export async function middleware(req: NextRequest) {
         set(name, value, options) {
           try {
             res.cookies.set(name, value, options);
-          } catch {
-            /* ignore write failures in middleware */
-          }
+          } catch {}
         },
-        remove(name: string, options) {
+        remove(name, options) {
           try {
             res.cookies.delete(name);
-          } catch {
-            /* ignore */
-          }
+          } catch {}
         },
       },
     }
   );
 
-  // Load current session
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
-  const pathname = req.nextUrl.pathname;
-
-  // Protect app routes
+  // Protect app + workspace routes
   if (!session && (pathname.startsWith("/app") || pathname.startsWith("/w"))) {
     const redirect = new URL(
       `/auth/sign-in?redirectedFrom=${encodeURIComponent(pathname)}`,
@@ -56,5 +52,7 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/app/:path*", "/w/:path*", "/auth/callback"],
+  // ❌ Removed "/auth/callback"
+  matcher: ["/app/:path*", "/w/:path*"],
 };
+
