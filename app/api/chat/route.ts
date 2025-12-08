@@ -13,15 +13,13 @@ import { assembleContext } from "./modules/assembleContext";
 import { assemblePrompt, buildSystemBlock } from "./modules/assemble";
 import { orchestrateSolaceResponse } from "./modules/orchestrator";
 import { writeMemory } from "./modules/memory-writer";
-
 import { createServerClient } from "@supabase/ssr";
 
 // -------------------------------------------------------------
-// MAGIC-LINK SAFE SESSION LOADER  (sb- cookies preserved)
+// MAGIC-LINK SAFE SESSION LOADER
 // -------------------------------------------------------------
 async function getEdgeUser(req: Request) {
   const cookieHeader = req.headers.get("cookie") ?? "";
-
   console.log("[DIAG-A1] Incoming cookie header:", cookieHeader);
 
   const supabase = createServerClient(
@@ -47,7 +45,6 @@ async function getEdgeUser(req: Request) {
   );
 
   const { data, error } = await supabase.auth.getUser();
-
   if (error) {
     console.log("[DIAG-A3] getUser ERROR:", error.message);
     return null;
@@ -74,7 +71,7 @@ function mapModeHintToDomain(modeHint: string): string {
 }
 
 // -------------------------------------------------------------
-// OPENAI RETRY WRAPPER (fully instrumented)
+// SAFER OPENAI CALLER — NO JSON SLICING
 // -------------------------------------------------------------
 async function callOpenAIWithRetry(blocks: any[]): Promise<string> {
   const payload = {
@@ -82,7 +79,11 @@ async function callOpenAIWithRetry(blocks: any[]): Promise<string> {
     input: blocks,
   };
 
-  console.log("[DIAG-O1] Calling OpenAI with blocks:", JSON.stringify(blocks).slice(0, 600));
+  // SAFE PREVIEW LOGGING (NO UTF-8 BREAKAGE)
+  console.log("[DIAG-O1] Calling OpenAI — block roles:", blocks.map(b => b.role));
+  console.log("[DIAG-O1] System prompt preview:", 
+    blocks[0]?.content?.[0]?.text?.slice(0, 200)
+  );
 
   for (let attempt = 1; attempt <= 4; attempt++) {
     const res = await fetch("https://api.openai.com/v1/responses", {
@@ -91,30 +92,28 @@ async function callOpenAIWithRetry(blocks: any[]): Promise<string> {
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload), // SAFE — not sliced earlier
     });
 
-    // RATE LIMIT
     if (res.status === 429) {
       const wait = attempt * 350;
-      console.warn(`[OPENAI] 429 rate limit — retrying in ${wait}ms (attempt ${attempt}/4)`);
+      console.warn(`[OPENAI] 429 — retrying in ${wait}ms (attempt ${attempt}/4)`);
       await new Promise((r) => setTimeout(r, wait));
       continue;
     }
 
-    // OTHER ERROR
     if (!res.ok) {
       console.error("[OPENAI] Fatal error:", res.status, await res.text());
       return "[No reply]";
     }
 
     const json = await res.json();
-    console.log("[DIAG-O2] OpenAI response received");
+    console.log("[DIAG-O2] OpenAI response OK");
 
     return json?.output?.[0]?.content?.[0]?.text ?? "[No reply]";
   }
 
-  console.error("[OPENAI] Exhausted retries — using fail-safe.");
+  console.error("[OPENAI] Exhausted retries — fail-safe.");
   return "[No reply]";
 }
 
@@ -124,12 +123,12 @@ async function callOpenAIWithRetry(blocks: any[]): Promise<string> {
 export async function POST(req: Request) {
   try {
     // ---------------------------------------------------------
-    // RAW REQUEST BODY DIAG
+    // RAW REQUEST DIAG
     // ---------------------------------------------------------
     let body;
     try {
       body = await req.json();
-      console.log("[DIAG-B0] Raw request body:", JSON.stringify(body).slice(0, 500));
+      console.log("[DIAG-B0] Raw request body:", body);
     } catch (err) {
       console.error("[DIAG-B0] Failed to parse req.json()", err);
       return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
@@ -145,12 +144,12 @@ export async function POST(req: Request) {
     } = body;
 
     if (!message || typeof message !== "string") {
-      console.error("[DIAG-B1] Missing message in request");
+      console.error("[DIAG-B1] Missing message");
       return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
     // ---------------------------------------------------------
-    // USER SESSION (Magic Link Safe)
+    // USER SESSION
     // ---------------------------------------------------------
     const user = await getEdgeUser(req);
     const canonicalUserKey = user?.id ?? null;
@@ -158,40 +157,34 @@ export async function POST(req: Request) {
     console.log("[DIAG-B2] canonicalUserKey:", canonicalUserKey);
 
     const contextKey = canonicalUserKey || "guest";
-
-    console.log("[Solace Context] Load with canonical key:", {
-      canonicalUserKey: contextKey,
-      workspaceId,
-    });
+    console.log("[Solace Context] Load key:", { contextKey, workspaceId });
 
     // ---------------------------------------------------------
     // MEMORY + CONTEXT LOAD
     // ---------------------------------------------------------
     const context = await assembleContext(contextKey, workspaceId, message);
-
     console.log("[DIAG-C1] Context loaded — keys:", Object.keys(context));
 
     // ---------------------------------------------------------
-    // BUILD PROMPT BLOCKS
+    // BUILD BLOCKS
     // ---------------------------------------------------------
     const systemBlock = buildSystemBlock(mapModeHintToDomain(modeHint), "");
     const userBlocks = assemblePrompt(context, history, message);
     const fullBlocks = [systemBlock, ...userBlocks];
 
-    console.log("[DIAG-P1] systemBlock:", JSON.stringify(systemBlock).slice(0, 400));
-    console.log("[DIAG-P2] userBlocks count:", userBlocks.length);
-    console.log("[DIAG-P3] fullBlocks length:", fullBlocks.length);
+    console.log("[DIAG-P1] systemBlock OK");
+    console.log("[DIAG-P2] userBlocks:", userBlocks.length);
+    console.log("[DIAG-P3] fullBlocks:", fullBlocks.length);
 
     if (fullBlocks.length === 0) {
-      console.error("[DIAG-P4] ERROR — Prompt assembly produced ZERO blocks.");
+      console.error("[DIAG-P4] ERROR — zero blocks.");
       return NextResponse.json({ text: "[Prompt error — no blocks]" });
     }
 
+    // ---------------------------------------------------------
+    // HYBRID PIPELINE
+    // ---------------------------------------------------------
     let finalText: string;
-
-    // ---------------------------------------------------------
-    // HYBRID PIPELINE (Arbiter / Founder / Create / Red Team)
-    // ---------------------------------------------------------
     const hybridAllowed =
       modeHint === "Create" ||
       modeHint === "Red Team" ||
@@ -214,7 +207,7 @@ export async function POST(req: Request) {
       finalText = finalAnswer || "[No arbiter answer]";
     } else {
       // ---------------------------------------------------------
-      // NEUTRAL PATH — Single-model + Retry Logic
+      // NEUTRAL PIPELINE — SINGLE MODEL
       // ---------------------------------------------------------
       console.log("[DIAG-N1] Neutral pipeline active");
       finalText = await callOpenAIWithRetry(fullBlocks);
@@ -232,6 +225,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ text: finalText });
+
   } catch (err: any) {
     console.error("[chat route] fatal error", err);
     return NextResponse.json(
@@ -240,5 +234,4 @@ export async function POST(req: Request) {
     );
   }
 }
-
 
