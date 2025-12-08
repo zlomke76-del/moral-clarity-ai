@@ -1,13 +1,9 @@
-// /lib/supabase/server.ts
-import { cookies } from "next/headers";
+// lib/supabase/server.ts
 import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
-/**
- * Server-side Supabase client for authenticated SSR.
- * MUST be async, because cookies() is async in Next.js 16.
- */
-export async function createClientServer() {
-  const cookieStore = await cookies(); // <-- REQUIRED in Next.js 16
+export function createClientServer() {
+  const cookieStore = cookies(); // NOT async
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,10 +14,10 @@ export async function createClientServer() {
           return cookieStore.get(name)?.value;
         },
         set() {
-          /* Next.js proxy handles cookie write */
+          // Next.js doesn't allow setting cookies here during SSR
         },
         remove() {
-          /* no-op */
+          // Same here
         },
       },
     }
