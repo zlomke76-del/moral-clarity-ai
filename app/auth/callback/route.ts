@@ -8,16 +8,18 @@ export async function GET(req: Request) {
   const next = url.searchParams.get("next") || "/app";
 
   if (!code) {
-    return NextResponse.redirect(`${url.origin}/auth/error?err=Missing%20code`);
+    return NextResponse.redirect(
+      `${url.origin}/auth/error?err=Missing%20code`
+    );
   }
 
-  // The ONLY correct cookie domain for your setup
-  const COOKIE_DOMAIN = "studio.moralclarity.ai";
-
-  // Outgoing response where Supabase will write cookies
+  // Outgoing response (required so Supabase can write cookies)
   const res = NextResponse.redirect(`${url.origin}${next}`);
 
-  // Create Supabase client WITH real, working cookie adapter
+  // Correct cookie domain for production
+  const cookieDomain =
+    url.hostname === "localhost" ? undefined : "studio.moralclarity.ai";
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -36,7 +38,7 @@ export async function GET(req: Request) {
             name,
             value,
             ...options,
-            domain: COOKIE_DOMAIN,
+            domain: cookieDomain,
             secure: true,
             httpOnly: true,
             sameSite: "none",
@@ -50,7 +52,7 @@ export async function GET(req: Request) {
             value: "",
             maxAge: 0,
             ...options,
-            domain: COOKIE_DOMAIN,
+            domain: cookieDomain,
             secure: true,
             httpOnly: true,
             sameSite: "none",
@@ -61,7 +63,7 @@ export async function GET(req: Request) {
     }
   );
 
-  // Exchange Supabase "code" for a session cookie
+  // Exchange magic link code for a session
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !data?.session) {
@@ -70,5 +72,5 @@ export async function GET(req: Request) {
     );
   }
 
-  return res; // <-- Session cookie is now successfully written
+  return res;
 }
