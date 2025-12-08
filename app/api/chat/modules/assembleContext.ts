@@ -1,148 +1,192 @@
-// app/api/chat/route.ts
-//---------------------------------------------------------------
-// Solace Chat Route — Persona ALWAYS active
-// Unified Memory + Founder Mode + Ministry Mode
-// Hybrid pipeline lives in orchestrator.ts (orchestrateSolaceResponse)
-//---------------------------------------------------------------
+// app/api/chat/modules/assembleContext.ts
+// ------------------------------------------------------------
+// Solace Context Loader (FINAL VERSION)
+// Reads ALL memory exclusively from mv_unified_memory
+// Episodic + chunks reconstructed from materialized view
+// Autobio extracted from unified memory as well
+// ------------------------------------------------------------
 
-export const runtime = "edge";
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const fetchCache = "force-no-store";
+import { createClientEdge } from "@/lib/supabase/edge";
+import { FACTS_LIMIT, EPISODES_LIMIT } from "./constants";
 
-import { NextResponse } from "next/server";
-import { assembleContext } from "./modules/assembleContext";
-import { assemblePrompt, buildSystemBlock } from "./modules/assemble";
-import { orchestrateSolaceResponse } from "./modules/orchestrator";
-import { writeMemory } from "./modules/memory-writer";
-import { getServerSession } from "@/lib/supabase/session";
+export type SolaceContextBundle = {
+  persona: string;
+  memoryPack: {
+    facts: any[];
+    episodic: any[];
+    autobiography: any[];
+  };
+  newsDigest: any[];
+  researchContext: any[];
+};
 
-/**
- * Mode → Solace domain mapping
- */
-function mapModeHintToDomain(modeHint: string): string {
-  switch (modeHint) {
-    case "Create":
-      return "optimist";
-    case "Red Team":
-      return "skeptic";
-    case "Next Steps":
-      return "arbiter";
-    default:
-      return "guidance";
-  }
+// ------------------------------------------------------------
+// UTIL
+// ------------------------------------------------------------
+function safe<T>(rows: T[] | null): T[] {
+  return Array.isArray(rows) ? rows : [];
 }
 
-/**
- * Chat Handler
- */
-export async function POST(req: Request) {
-  try {
-    const body = await req.json();
+const STATIC_PERSONA_NAME = "Solace";
 
-    const {
-      message,
-      history = [],
-      workspaceId = null,
-      ministryMode = false,
-      founderMode = false,
-      modeHint = "Neutral",
-    } = body;
+// ------------------------------------------------------------
+// MEMORY LOADERS — each creates its own Edge Supabase client
+// ------------------------------------------------------------
 
-    if (!message || typeof message !== "string") {
-      return NextResponse.json({ error: "Message required" }, { status: 400 });
-    }
+// FACTS -------------------------------------------------------
+async function loadFacts(userKey: string) {
+  const supabase = createClientEdge();
 
-    // ---------------------------------------------------------
-    // 🔑 CANONICAL USER IDENTITY FROM SUPABASE SESSION
-    // ---------------------------------------------------------
-    const session = await getServerSession();
-    const canonicalUserKey: string | null = session?.user?.id ?? null;
+  const { data, error } = await supabase
+    .from("mv_unified_memory")
+    .select("*")
+    .eq("user_key", userKey)
+    .eq("memory_type", "fact")
+    .order("created_at", { ascending: false })
+    .limit(FACTS_LIMIT);
 
-    // Context reader falls back to guest identity if no session
-    const contextKey = canonicalUserKey || "guest";
-
-    // 1) MEMORY + PERSONA CONTEXT
-    const context = await assembleContext(contextKey, workspaceId, message);
-
-    // Determine Solace domain
-    let domain = mapModeHintToDomain(modeHint);
-
-    if (founderMode) {
-      domain = "founder";
-    } else if (ministryMode) {
-      domain = "ministry";
-    }
-
-    const extras = ministryMode
-      ? "Ministry mode active — apply Scripture sparingly when relevant."
-      : "";
-
-    // System + user prompt blocks
-    const systemBlock = buildSystemBlock(domain, extras);
-    const userBlocks = assemblePrompt(context, history, message);
-    const fullBlocks = [systemBlock, ...userBlocks];
-
-    const hybridAllowed =
-      modeHint === "Create" ||
-      modeHint === "Red Team" ||
-      modeHint === "Next Steps" ||
-      founderMode;
-
-    let finalText: string;
-
-    if (hybridAllowed) {
-      //---------------------------------------------------------
-      // HYBRID PIPELINE ENTRY POINT
-      //---------------------------------------------------------
-      const finalAnswer = await orchestrateSolaceResponse({
-        userMessage: message,
-        context,
-        history,
-        ministryMode,
-        modeHint,
-        founderMode,
-        canonicalUserKey,
-      });
-
-      finalText = finalAnswer || "[No arbiter answer]";
-    } else {
-      //---------------------------------------------------------
-      // Neutral → single-model pipeline
-      //---------------------------------------------------------
-      const res = await fetch("https://api.openai.com/v1/responses", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4.1",
-          input: fullBlocks,
-        }),
-      });
-
-      const json = await res.json();
-      const block = json.output?.[0]?.content?.[0];
-      finalText = block?.text ?? "[No reply]";
-    }
-
-    //---------------------------------------------------------
-    // MEMORY WRITE — after final answer only
-    //---------------------------------------------------------
-    try {
-      await writeMemory(canonicalUserKey, message, finalText);
-    } catch (err) {
-      console.error("[memory-writer] failed:", err);
-    }
-
-    return NextResponse.json({ text: finalText });
-  } catch (err: any) {
-    console.error("[chat route] fatal error", err);
-    return NextResponse.json(
-      { error: err?.message || "Chat route failed" },
-      { status: 500 }
-    );
+  if (error) {
+    console.error("[assembleContext] facts error:", error);
+    return [];
   }
+
+  return safe(data);
 }
 
+// EPISODIC ----------------------------------------------------
+async function loadEpisodic(userKey: string) {
+  const supabase = createClientEdge();
+
+  const { data, error } = await supabase
+    .from("mv_unified_memory")
+    .select("*")
+    .eq("user_key", userKey)
+    .eq("memory_type", "episodic")
+    .order("created_at", { ascending: false })
+    .limit(EPISODES_LIMIT);
+
+  if (error) {
+    console.error("[assembleContext] episodic error:", error);
+    return [];
+  }
+
+  const episodes = safe(data);
+  if (episodes.length === 0) return [];
+
+  const episodeIds = episodes.map((e: any) => e.id);
+
+  const { data: chunkRows, error: chunkErr } = await supabase
+    .from("mv_unified_memory")
+    .select("*")
+    .eq("user_key", userKey)
+    .eq("memory_type", "chunk")
+    .in("episode_id", episodeIds)
+    .order("seq", { ascending: true });
+
+  if (chunkErr) {
+    console.error("[assembleContext] episodic chunk error:", chunkErr);
+    return episodes.map((e: any) => ({ ...e, chunks: [] }));
+  }
+
+  const chunks = safe(chunkRows);
+
+  return episodes.map((ep: any) => ({
+    ...ep,
+    chunks: chunks.filter((c: any) => c.episode_id === ep.id),
+  }));
+}
+
+// AUTOBIO -----------------------------------------------------
+async function loadAutobio(userKey: string) {
+  const supabase = createClientEdge();
+
+  const { data, error } = await supabase
+    .from("mv_unified_memory")
+    .select("*")
+    .eq("user_key", userKey)
+    .eq("memory_type", "autobio_entry")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("[assembleContext] autobio error:", error);
+    return [];
+  }
+
+  return safe(data);
+}
+
+// NEWS DIGEST -------------------------------------------------
+async function loadNewsDigest(userKey: string) {
+  const supabase = createClientEdge();
+
+  const { data, error } = await supabase
+    .from("vw_solace_news_digest")
+    .select("*")
+    .eq("user_key", userKey)
+    .order("scored_at", { ascending: false })
+    .limit(15);
+
+  if (error) {
+    console.error("[assembleContext] news digest error:", error);
+    return [];
+  }
+
+  return safe(data);
+}
+
+// RESEARCH CONTEXT --------------------------------------------
+async function loadResearch(userKey: string) {
+  const supabase = createClientEdge();
+
+  const { data, error } = await supabase
+    .from("truth_facts")
+    .select("*")
+    .eq("user_key", userKey)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  if (error) {
+    console.error("[assembleContext] research error:", error);
+    return [];
+  }
+
+  return safe(data);
+}
+
+// ------------------------------------------------------------
+// MAIN EXPORT — assembleContext()
+// ------------------------------------------------------------
+export async function assembleContext(
+  canonicalUserKey: string,
+  workspaceId: string | null,
+  userMessage: string
+): Promise<SolaceContextBundle> {
+  const userKey = canonicalUserKey || "guest";
+
+  console.log("[Solace Context] Load with canonical key:", {
+    canonicalUserKey: userKey,
+    workspaceId,
+  });
+
+  const persona = STATIC_PERSONA_NAME;
+
+  const [facts, episodic, autobiography, newsDigest, researchContext] =
+    await Promise.all([
+      loadFacts(userKey),
+      loadEpisodic(userKey),
+      loadAutobio(userKey),
+      loadNewsDigest(userKey),
+      loadResearch(userKey),
+    ]);
+
+  return {
+    persona,
+    memoryPack: {
+      facts,
+      episodic,
+      autobiography,
+    },
+    newsDigest,
+    researchContext,
+  };
+}
