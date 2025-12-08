@@ -15,7 +15,7 @@ import { assembleContext } from "./modules/assembleContext";
 import { assemblePrompt, buildSystemBlock } from "./modules/assemble";
 import { orchestrateSolaceResponse } from "./modules/orchestrator";
 import { writeMemory } from "./modules/memory-writer";
-import { getCanonicalUserKey } from "@/lib/supabase/getCanonicalUserKey";
+import { getServerSession } from "@/lib/supabase/session";
 
 /**
  * Mode → Solace domain mapping
@@ -47,25 +47,25 @@ export async function POST(req: Request) {
       ministryMode = false,
       founderMode = false,
       modeHint = "Neutral",
-      // NOTE: userKey from body is intentionally IGNORED for identity.
-      // All canonical identity comes from Supabase auth.
     } = body;
 
     if (!message || typeof message !== "string") {
       return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
-    // 🔑 Always use canonical user identity from Supabase (email)
-    const { canonicalKey } = await getCanonicalUserKey(req);
-    const canonicalUserKey: string | null = canonicalKey ?? null;
+    // ---------------------------------------------------------
+    // 🔑 CANONICAL USER IDENTITY FROM SUPABASE SESSION
+    // ---------------------------------------------------------
+    const session = await getServerSession();
+    const canonicalUserKey: string | null = session?.user?.id ?? null;
 
-    // For context reads we can safely fall back to "guest"
+    // Context reader falls back to guest identity if no session
     const contextKey = canonicalUserKey || "guest";
 
     // 1) MEMORY + PERSONA CONTEXT
     const context = await assembleContext(contextKey, workspaceId, message);
 
-    // Determine intended domain
+    // Determine Solace domain
     let domain = mapModeHintToDomain(modeHint);
 
     if (founderMode) {
@@ -78,12 +78,11 @@ export async function POST(req: Request) {
       ? "Ministry mode active — apply Scripture sparingly when relevant."
       : "";
 
-    // System block ALWAYS applied
+    // System + user prompt blocks
     const systemBlock = buildSystemBlock(domain, extras);
     const userBlocks = assemblePrompt(context, history, message);
     const fullBlocks = [systemBlock, ...userBlocks];
 
-    // Determine if hybrid pipeline is allowed
     const hybridAllowed =
       modeHint === "Create" ||
       modeHint === "Red Team" ||
@@ -93,9 +92,9 @@ export async function POST(req: Request) {
     let finalText: string;
 
     if (hybridAllowed) {
-      // ---------------------------------------------------------
+      //---------------------------------------------------------
       // HYBRID PIPELINE ENTRY POINT
-      // ---------------------------------------------------------
+      //---------------------------------------------------------
       const finalAnswer = await orchestrateSolaceResponse({
         userMessage: message,
         context,
@@ -108,7 +107,9 @@ export async function POST(req: Request) {
 
       finalText = finalAnswer || "[No arbiter answer]";
     } else {
-      // Neutral mode — single model call
+      //---------------------------------------------------------
+      // Neutral → single-model pipeline
+      //---------------------------------------------------------
       const res = await fetch("https://api.openai.com/v1/responses", {
         method: "POST",
         headers: {
@@ -126,8 +127,9 @@ export async function POST(req: Request) {
       finalText = block?.text ?? "[No reply]";
     }
 
-    // MEMORY WRITE — only after final answer
-    // Uses canonicalUserKey (email). If null → writeMemory no-ops.
+    //---------------------------------------------------------
+    // MEMORY WRITE — after final answer only
+    //---------------------------------------------------------
     try {
       await writeMemory(canonicalUserKey, message, finalText);
     } catch (err) {
@@ -143,6 +145,5 @@ export async function POST(req: Request) {
     );
   }
 }
-
 
 
