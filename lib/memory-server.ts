@@ -1,10 +1,9 @@
 // lib/memory-server.ts
-// ------------------------------------------------------------
-// Server-side memory access using safe SSR Supabase client.
-// No generics on supabase.from() to avoid TS signature mismatch.
-// ------------------------------------------------------------
+//------------------------------------------------------------
+// Safe SSR memory queries — caller MUST pass cookieHeader.
+// Never call headers() or cookies() directly in here.
+//------------------------------------------------------------
 
-import { headers } from "next/headers";
 import { createClientServer } from "@/lib/supabase/server";
 
 export type MemoryHit = {
@@ -17,21 +16,22 @@ export type MemoryHit = {
 };
 
 /**
- * Fetch recent memories for a workspace.
+ * Fetch recent memories safely in Next.js 16.
+ * The caller MUST pass `cookieHeader`, retrieved via:
+ * 
+ *   const cookieHeader = req.headers.get("cookie") ?? ""
  */
-export async function fetchRecentMemories(workspaceId: string, limit = 50) {
-  // Read raw cookies from headers (Next.js 16-safe)
-  const cookieHeader = headers().get("cookie") ?? "";
-
-  // Create Supabase SSR client
+export async function fetchRecentMemories(
+  workspaceId: string,
+  limit = 50,
+  cookieHeader: string = ""
+) {
   const sb = createClientServer(cookieHeader);
 
   const { data, error } = await sb
     .schema("mca")
     .from("memories")
-    .select(
-      "id, user_key, workspace_id, title, content, created_at"
-    )
+    .select("id, user_key, workspace_id, title, content, created_at")
     .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -45,13 +45,12 @@ export async function fetchRecentMemories(workspaceId: string, limit = 50) {
 }
 
 /**
- * Fetch a single memory by ID.
+ * Fetch one memory by ID, same safe pattern.
  */
-export async function fetchMemoryById(id: string) {
-  // Read raw cookies from headers (Next.js 16-safe)
-  const cookieHeader = headers().get("cookie") ?? "";
-
-  // Create Supabase SSR client
+export async function fetchMemoryById(
+  id: string,
+  cookieHeader: string = ""
+) {
   const sb = createClientServer(cookieHeader);
 
   const { data, error } = await sb
@@ -68,3 +67,4 @@ export async function fetchMemoryById(id: string) {
 
   return data as MemoryHit | null;
 }
+
