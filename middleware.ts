@@ -13,7 +13,12 @@ export async function middleware(req: NextRequest) {
   const url = new URL(req.url);
   const { pathname, searchParams } = url;
 
-  // Magic-link detection
+  // Redirect any legacy workspace URLs
+  if (pathname === "/workspace2" || pathname.startsWith("/workspace2/")) {
+    return NextResponse.redirect(new URL("/app", req.url), 308);
+  }
+
+  // If a ?code= is present, redirect it CLEANLY to the callback
   const code = searchParams.get("code");
   if (code && pathname !== "/auth/callback") {
     const to = new URL("/auth/callback", req.url);
@@ -22,10 +27,18 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(to, 307);
   }
 
-  // Response object where cookies may be updated
-  const res = NextResponse.next({
-    request: { headers: req.headers },
-  });
+  // /app/preview always bypasses auth
+  if (pathname.startsWith("/app/preview")) {
+    return NextResponse.next();
+  }
+
+  // Required for SSR cookie refresh
+  const res = NextResponse.next({ request: { headers: req.headers } });
+
+  // IMPORTANT: Use EXACT domain for cookies
+  const hostname = url.hostname;
+  const cookieDomain =
+    hostname === "localhost" ? undefined : "studio.moralclarity.ai";
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -41,10 +54,10 @@ export async function middleware(req: NextRequest) {
             name,
             value,
             ...options,
-            // ❌ DO NOT FORCE DOMAIN
+            domain: cookieDomain,
+            path: "/",
             secure: true,
             sameSite: "none",
-            path: "/",
           });
         },
 
@@ -54,17 +67,19 @@ export async function middleware(req: NextRequest) {
             value: "",
             maxAge: 0,
             ...options,
-            // ❌ DO NOT FORCE DOMAIN
+            domain: cookieDomain,
+            path: "/",
             secure: true,
             sameSite: "none",
-            path: "/",
           });
         },
       },
     }
   );
 
+  // Trigger cookie refresh logic
   await supabase.auth.getSession();
+
   return res;
 }
 
