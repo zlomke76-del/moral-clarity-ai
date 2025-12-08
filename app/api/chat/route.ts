@@ -14,54 +14,37 @@ import { assemblePrompt, buildSystemBlock } from "./modules/assemble";
 import { orchestrateSolaceResponse } from "./modules/orchestrator";
 import { writeMemory } from "./modules/memory-writer";
 
-import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
 
 // -------------------------------------------------------------
-// Corrected Edge-safe Supabase user extractor
-// (Magic Link safe — properly parses Supabase session cookie)
+// MAGIC-LINK-SAFE USER SESSION EXTRACTOR (SSR + Edge compatible)
 // -------------------------------------------------------------
 async function getEdgeUser(req: Request) {
   const cookieHeader = req.headers.get("cookie") ?? "";
 
-  // Find the Supabase auth cookie (supabase uses sb-* prefix)
-  const rawCookie = cookieHeader
-    .split(";")
-    .map((v) => v.trim())
-    .find((v) => v.startsWith("sb-"));
-
-  if (!rawCookie) return null;
-
-  const rawValue = rawCookie.split("=")[1];
-  if (!rawValue) return null;
-
-  // Supabase auth cookie contains JSON → must parse
-  let parsed: any;
-  try {
-    parsed = JSON.parse(rawValue);
-  } catch {
-    console.warn("[getEdgeUser] Failed to parse Supabase cookie JSON");
-    return null;
-  }
-
-  const accessToken = parsed?.access_token;
-  if (!accessToken) return null;
-
-  // Create authenticated Supabase client using extracted JWT
-  const sb = createClient(
+  // Supabase SSR client — this is the ONLY version
+  // that correctly handles magic link + multi-cookie sessions.
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      global: {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
+      cookies: {
+        get: (name) => {
+          const match = cookieHeader
+            .split(";")
+            .map((c) => c.trim())
+            .find((c) => c.startsWith(`${name}=`));
+
+          return match ? match.split("=")[1] : undefined;
         },
+        set() {},    // Edge runtime: ignore
+        remove() {}, // Edge runtime: ignore
       },
     }
   );
 
-  const { data, error } = await sb.auth.getUser();
+  const { data, error } = await supabase.auth.getUser();
   if (error || !data?.user) return null;
-
   return data.user;
 }
 
@@ -77,7 +60,7 @@ function mapModeHintToDomain(modeHint: string): string {
     case "Next Steps":
       return "arbiter";
     default:
-      return "guidance"; // Neutral
+      return "guidance";
   }
 }
 
@@ -102,7 +85,7 @@ export async function POST(req: Request) {
     }
 
     // ---------------------------------------------------------
-    // USER SESSION (Fixed edge-safe Supabase auth)
+    // USER SESSION (Magic-link compatible)
     // ---------------------------------------------------------
     const user = await getEdgeUser(req);
     const canonicalUserKey = user?.id ?? null;
@@ -113,7 +96,7 @@ export async function POST(req: Request) {
     // ---------------------------------------------------------
     const context = await assembleContext(contextKey, workspaceId, message);
 
-    // Select domain
+    // Select Solace domain
     let domain = mapModeHintToDomain(modeHint);
     if (founderMode) domain = "founder";
     else if (ministryMode) domain = "ministry";
@@ -170,7 +153,7 @@ export async function POST(req: Request) {
     }
 
     // ---------------------------------------------------------
-    // MEMORY WRITE (safe, non-blocking)
+    // MEMORY WRITE (Safe + Non-blocking)
     // ---------------------------------------------------------
     try {
       await writeMemory(canonicalUserKey, message, finalText);
