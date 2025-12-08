@@ -1,18 +1,30 @@
-// lib/supabase/server.ts
-// Edge-safe server Supabase client (Next.js 16+)
+// /lib/supabase/server.ts
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 
-import { createClient } from "@supabase/supabase-js";
+export async function createClientServer() {
+  const cookieStore = await cookies();
 
-/**
- * This exports a *SupabaseClient instance* — NOT a function.
- * This fixes the "Property 'from' does not exist on type '() => SupabaseClient'" error.
- */
-export const supabaseServer = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!,  // service role key - server only
-  {
-    auth: {
-      persistSession: false,
-    },
-  }
-);
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name: string, options: any) {
+          cookieStore.set({
+            name,
+            value: "",
+            maxAge: 0,
+            ...options,
+          });
+        },
+      },
+    }
+  );
+}
