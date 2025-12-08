@@ -30,3 +30,4 @@ export default function CallbackPage() {
 
   return <p>Signing you in…</p>;
 }
+
