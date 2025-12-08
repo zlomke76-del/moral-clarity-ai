@@ -6,7 +6,7 @@
 // - No "guest" facts, no "tim" aliases.
 // ------------------------------------------------------------
 
-import { supabaseEdge } from "@/lib/supabase/edge";
+import { createClientEdge } from "@/lib/supabase/edge";
 
 export async function writeMemory(
   canonicalUserKey: string | null,
@@ -33,7 +33,7 @@ export async function writeMemory(
     // We populate BOTH user_key and canonical_user_key with the email
     const insertPayload = {
       canonical_user_key: canonicalUserKey, // new canonical column
-      user_key: canonicalUserKey,          // keeps mv_unified_memory working
+      user_key: canonicalUserKey, // keeps mv_unified_memory working
       kind: "fact",
       content: memoryContent,
       weight: 1.0,
@@ -41,9 +41,9 @@ export async function writeMemory(
       updated_at: nowIso,
     };
 
-    const { error } = await supabaseEdge
-      .from("user_memories")
-      .insert(insertPayload);
+    const supabase = createClientEdge();
+
+    const { error } = await supabase.from("user_memories").insert(insertPayload);
 
     if (error) {
       console.error("[writeMemory] Insert failed:", error, {
@@ -60,3 +60,4 @@ export async function writeMemory(
     console.error("[writeMemory] Unexpected failure:", err);
   }
 }
+
