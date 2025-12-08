@@ -1,23 +1,37 @@
 // lib/supabase/server.ts
-import { createServerClient } from "@supabase/ssr";
+// ----------------------------------------------
+// Supabase client for SSR (Node runtime)
+// Compatible with Next.js 16 cookie API
+// ----------------------------------------------
+
 import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 
 export function createClientServer() {
-  const cookieStore = cookies(); // NOT async
-
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
+        async get(name: string) {
+          const store = await cookies();          // FIXED: cookies() is async
+          return store.get(name)?.value;
         },
-        set() {
-          // Next.js doesn't allow setting cookies here during SSR
+        async set(name, value, options) {
+          const store = await cookies();          // FIXED
+          try {
+            store.set(name, value, options);
+          } catch (_) {
+            /* SSR cookie writes silently ignored */
+          }
         },
-        remove() {
-          // Same here
+        async remove(name: string, options) {
+          const store = await cookies();          // FIXED
+          try {
+            store.delete(name);
+          } catch (_) {
+            /* ignore */
+          }
         },
       },
     }
