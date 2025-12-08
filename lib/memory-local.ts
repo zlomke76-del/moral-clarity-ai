@@ -9,7 +9,8 @@ import { createClientServer } from "@/lib/supabase/server";
  * Runs under Node.js runtime (SSR), not edge.
  */
 export async function listMemories(workspaceId: string) {
-  const supabase = createClientServer();
+  // Must await — createClientServer is async in Next.js 16
+  const supabase = await createClientServer();
 
   const { data, error } = await supabase
     .from("user_memories")
