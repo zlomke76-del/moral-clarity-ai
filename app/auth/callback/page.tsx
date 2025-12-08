@@ -11,8 +11,7 @@ export default function CallbackPage() {
       return;
     }
 
-    // Convert #access_token=... to object
-    const params = new URLSearchParams(hash.replace("#", ""));
+    const params = new URLSearchParams(hash.substring(1));
     const access_token = params.get("access_token");
     const refresh_token = params.get("refresh_token");
 
@@ -21,14 +20,10 @@ export default function CallbackPage() {
       return;
     }
 
-    // POST tokens to server
     fetch("/auth/exchange", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        access_token,
-        refresh_token,
-      }),
+      body: JSON.stringify({ access_token, refresh_token }),
     })
       .then((res) => res.json())
       .then((out) => {
