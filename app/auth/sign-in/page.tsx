@@ -2,54 +2,55 @@
 "use client";
 
 import { useState } from "react";
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { createSupabaseBrowser } from "@/lib/supabase/client";
 
 export default function SignInPage() {
   const [email, setEmail] = useState("");
+  const [sent, setSent] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  const supabase = createSupabaseBrowser();
+
+  const send = async (e: any) => {
     e.preventDefault();
 
-    const supabase = supabaseBrowser();
-
-    const { error } = await supabase.auth.signInWithOtp({
+    await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${location.origin}/auth/callback`,
+        emailRedirectTo: "https://studio.moralclarity.ai/auth/callback",
       },
     });
 
-    alert(error ? "There was an issue sending your magic link." : "Magic link sent!");
-  }
+    setSent(true);
+  };
 
   return (
-    <>
-      <h1 className="text-3xl font-bold text-white mb-4 text-center">Sign in</h1>
-      <p className="text-neutral-400 text-center mb-6 text-sm">
-        Enter your email to receive a secure magic link.
-      </p>
+    <div className="flex min-h-screen items-center justify-center text-white">
+      <form onSubmit={send} className="space-y-4">
+        <h1 className="text-xl font-semibold">Sign In</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-4 w-full max-w-md mx-auto">
         <input
           type="email"
-          required
+          className="px-3 py-2 rounded text-black"
           placeholder="you@example.com"
-          value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white placeholder-neutral-500 focus:border-blue-500 transition"
         />
 
         <button
           type="submit"
-          className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium shadow-lg hover:scale-[1.02] transition-transform"
+          className="px-4 py-2 bg-blue-600 rounded text-white"
         >
-          Send magic link
+          Send Magic Link
         </button>
+
+        {sent && (
+          <p className="text-green-400">
+            Check your email for a sign-in link.
+          </p>
+        )}
       </form>
-    </>
+    </div>
   );
 }
-
 
 
 
