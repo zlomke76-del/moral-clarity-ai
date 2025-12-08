@@ -1,9 +1,7 @@
-//---------------------------------------------------------------
-// Orchestrator for Solace Hybrid Pipeline (DIAG Enhanced)
-//---------------------------------------------------------------
+// app/api/chat/modules/orchestrator.ts
 
 import { buildSystemBlock, assemblePrompt } from "./assemble";
-import { openAI } from "./openai"; // ← whatever your wrapper is
+// import { openAI } from "./openai";  // ❌ REMOVE — no such file
 // If no wrapper exists, we’ll DIAG directly around fetch()
 
 type OrchestratorArgs = {
