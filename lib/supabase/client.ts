@@ -1,22 +1,18 @@
-// lib/supabase/client.ts
-// Browser-side Supabase client (PKCE + cookies)
+// /lib/supabase/client.ts
+"use client";
 
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 
-const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-export function supabaseBrowser(): SupabaseClient {
-  return createClient(URL, ANON, {
-    auth: {
-      flowType: "pkce",
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    },
-  });
+export function createClientBrowser() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        persistSession: true,       // You selected persistent sessions
+        autoRefreshToken: true,
+        detectSessionInUrl: true,   // Required for magic link in browser
+      },
+    }
+  );
 }
-
-export const createSupabaseBrowser = supabaseBrowser;
-
-export type { SupabaseClient };
