@@ -1,35 +1,47 @@
 // lib/supabase/server.ts
-// ----------------------------------------------
-// Supabase client for SSR (Node runtime)
-// Compatible with Next.js 16 cookie API
-// ----------------------------------------------
+// ------------------------------------------------------
+// Supabase SSR client - Next.js 16 compatible (cookies sync)
+// ------------------------------------------------------
 
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
 export function createClientServer() {
-  const cookieStore = cookies(); // ✅ synchronous
-
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
+        /**
+         * GET COOKIE
+         * Next.js 16 cookies() is synchronous — MUST NOT await.
+         */
         get(name: string) {
-          return cookieStore.get(name)?.value; // ⬅️ No await
+          const store = cookies();              // ✅ sync
+          return store.get(name)?.value;
         },
 
+        /**
+         * SET COOKIE
+         * Next.js does allow writing cookies in server components,
+         * but may no-op during SSR render. That’s fine.
+         */
         set(name, value, options) {
           try {
-            cookieStore.set(name, value, options);
+            const store = cookies();            // ✅ sync
+            store.set(name, value, options);
           } catch (_) {
-            // SSR cannot always set cookies — safe to ignore
+            // Silent ignore – Next.js blocks SSR mutation sometimes.
           }
         },
 
+        /**
+         * REMOVE COOKIE
+         */
         remove(name: string, options) {
           try {
-            cookieStore.delete(name, options);
+            const store = cookies();            // ✅ sync
+            store.delete(name, options);
           } catch (_) {
             // Silent ignore
           }
@@ -38,4 +50,3 @@ export function createClientServer() {
     }
   );
 }
-
