@@ -2,8 +2,13 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
-export async function createClientServer() {
-  const cookieStore = await cookies();
+/**
+ * Server-side Supabase client for authenticated SSR.
+ *
+ * MUST NOT be async — it must return the client directly.
+ */
+export function createClientServer() {
+  const cookieStore = cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,16 +18,11 @@ export async function createClientServer() {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
-        set(name: string, value: string, options: any) {
-          cookieStore.set({ name, value, ...options });
+        set() {
+          /* Next.js middleware/proxy will handle */
         },
-        remove(name: string, options: any) {
-          cookieStore.set({
-            name,
-            value: "",
-            maxAge: 0,
-            ...options,
-          });
+        remove() {
+          /* no-op */
         },
       },
     }
