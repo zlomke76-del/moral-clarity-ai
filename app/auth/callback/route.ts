@@ -8,12 +8,15 @@ export async function GET(req: Request) {
   const next = url.searchParams.get("next") || "/app";
 
   if (!code) {
-    return NextResponse.redirect(`${url.origin}/auth/error?err=Missing%20code`);
+    return NextResponse.redirect(
+      `${url.origin}/auth/error?err=Missing%20code`
+    );
   }
 
-  // MUST create a mutable response so Supabase can write cookies
+  // --- Create an outgoing response (Supabase needs this to write cookies)
   const res = NextResponse.redirect(`${url.origin}${next}`);
 
+  // --- REAL cookie adapter (required!)
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -23,21 +26,23 @@ export async function GET(req: Request) {
           return req.headers
             .get("cookie")
             ?.split("; ")
-            ?.find((c) => c.startsWith(name + "="))
+            .find((c) => c.startsWith(`${name}=`))
             ?.split("=")[1];
         },
+
         set(name: string, value: string, options?: CookieOptions) {
           res.cookies.set({
             name,
             value,
             ...options,
             domain: ".moralclarity.ai",
-            path: "/",
             secure: true,
             httpOnly: true,
-            sameSite: "lax",
+            sameSite: "none",
+            path: "/",
           });
         },
+
         remove(name: string, options?: CookieOptions) {
           res.cookies.set({
             name,
@@ -45,17 +50,17 @@ export async function GET(req: Request) {
             maxAge: 0,
             ...options,
             domain: ".moralclarity.ai",
-            path: "/",
             secure: true,
             httpOnly: true,
-            sameSite: "lax",
+            sameSite: "none",
+            path: "/",
           });
         },
       },
     }
   );
 
-  // Exchange the code for a session (and write cookies!)
+  // --- Exchange the magiclink code for a session
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !data?.session) {
@@ -64,5 +69,5 @@ export async function GET(req: Request) {
     );
   }
 
-  return res;
+  return res; // session cookie IS NOW WRITTEN
 }
