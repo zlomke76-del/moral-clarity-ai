@@ -13,12 +13,7 @@ export async function middleware(req: NextRequest) {
   const url = new URL(req.url);
   const { pathname, searchParams } = url;
 
-  // Legacy redirect
-  if (pathname === "/workspace2" || pathname.startsWith("/workspace2/")) {
-    return NextResponse.redirect(new URL("/app", req.url), 308);
-  }
-
-  // Intercept magic link codes and send to callback
+  // Magic-link detection
   const code = searchParams.get("code");
   if (code && pathname !== "/auth/callback") {
     const to = new URL("/auth/callback", req.url);
@@ -27,17 +22,10 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(to, 307);
   }
 
-  // Pass through for previews
-  if (pathname.startsWith("/app/preview")) {
-    return NextResponse.next();
-  }
-
-  // Required for Supabase to refresh tokens
-  const res = NextResponse.next({ request: { headers: req.headers } });
-
-  // Domain MUST match callback.ts
-  const hostname = url.hostname;
-  const cookieDomain = hostname === "localhost" ? undefined : hostname;
+  // Response object where cookies may be updated
+  const res = NextResponse.next({
+    request: { headers: req.headers },
+  });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -53,10 +41,10 @@ export async function middleware(req: NextRequest) {
             name,
             value,
             ...options,
-            domain: cookieDomain, // ← matches callback.ts
-            path: "/",
+            // ❌ DO NOT FORCE DOMAIN
             secure: true,
             sameSite: "none",
+            path: "/",
           });
         },
 
@@ -66,10 +54,10 @@ export async function middleware(req: NextRequest) {
             value: "",
             maxAge: 0,
             ...options,
-            domain: cookieDomain,
-            path: "/",
+            // ❌ DO NOT FORCE DOMAIN
             secure: true,
             sameSite: "none",
+            path: "/",
           });
         },
       },
@@ -77,6 +65,6 @@ export async function middleware(req: NextRequest) {
   );
 
   await supabase.auth.getSession();
-
   return res;
 }
+
