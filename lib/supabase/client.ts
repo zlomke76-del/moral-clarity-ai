@@ -6,15 +6,17 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+/**
+ * Browser Supabase client.
+ * Forces PKCE (no hash tokens), ensures cookie-based sessions.
+ */
 export function supabaseBrowser(): SupabaseClient {
-  if (!URL || !ANON) {
-    if (process.env.NODE_ENV !== "production") {
-      throw new Error("Missing NEXT_PUBLIC_SUPABASE_* env vars");
-    }
-  }
-
   return createClient(URL, ANON, {
     auth: {
+      // Forces Supabase to use PKCE instead of implicit flow
+      flowType: "pkce",
+
+      // Ensures the session gets stored using cookies
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
@@ -27,3 +29,4 @@ export function createSupabaseBrowser(): SupabaseClient {
 }
 
 export type { SupabaseClient };
+
