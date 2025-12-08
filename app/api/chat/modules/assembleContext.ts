@@ -1,9 +1,8 @@
 // app/api/chat/modules/assembleContext.ts
 // ------------------------------------------------------------
-// Solace Context Loader (FINAL VERSION)
-// Reads ALL memory exclusively from mv_unified_memory
-// Episodic + chunks reconstructed from materialized view
-// Autobio extracted from unified memory as well
+// Solace Context Loader (CLEAN FIX VERSION)
+// Only loads: facts, episodic, autobio
+// NewsDigest + Research are DISABLED unless explicitly requested.
 // ------------------------------------------------------------
 
 import { createClientEdge } from "@/lib/supabase/edge";
@@ -30,7 +29,7 @@ function safe<T>(rows: T[] | null): T[] {
 const STATIC_PERSONA_NAME = "Solace";
 
 // ------------------------------------------------------------
-// MEMORY LOADERS — each creates its own Edge Supabase client
+// MEMORY LOADERS (facts, episodic, autobio)
 // ------------------------------------------------------------
 
 // FACTS -------------------------------------------------------
@@ -115,42 +114,18 @@ async function loadAutobio(userKey: string) {
   return safe(data);
 }
 
-// NEWS DIGEST -------------------------------------------------
-async function loadNewsDigest(userKey: string) {
-  const supabase = createClientEdge();
+// ------------------------------------------------------------
+// *** NEWS + TRUTH DISABLED BY DEFAULT ***
+// These should ONLY be enabled in Newsroom routes.
+// Returning [] prevents call errors + prevents unnecessary loads.
+// ------------------------------------------------------------
 
-  const { data, error } = await supabase
-    .from("vw_solace_news_digest")
-    .select("*")
-    .eq("user_key", userKey)
-    .order("scored_at", { ascending: false })
-    .limit(15);
-
-  if (error) {
-    console.error("[assembleContext] news digest error:", error);
-    return [];
-  }
-
-  return safe(data);
+async function loadNewsDigest(_: string) {
+  return [];
 }
 
-// RESEARCH CONTEXT --------------------------------------------
-async function loadResearch(userKey: string) {
-  const supabase = createClientEdge();
-
-  const { data, error } = await supabase
-    .from("truth_facts")
-    .select("*")
-    .eq("user_key", userKey)
-    .order("created_at", { ascending: false })
-    .limit(10);
-
-  if (error) {
-    console.error("[assembleContext] research error:", error);
-    return [];
-  }
-
-  return safe(data);
+async function loadResearch(_: string) {
+  return [];
 }
 
 // ------------------------------------------------------------
@@ -170,14 +145,12 @@ export async function assembleContext(
 
   const persona = STATIC_PERSONA_NAME;
 
-  const [facts, episodic, autobiography, newsDigest, researchContext] =
-    await Promise.all([
-      loadFacts(userKey),
-      loadEpisodic(userKey),
-      loadAutobio(userKey),
-      loadNewsDigest(userKey),
-      loadResearch(userKey),
-    ]);
+  // NEWS + TRUTH REMOVED FROM DEFAULT CHAT CONTEXT
+  const [facts, episodic, autobiography] = await Promise.all([
+    loadFacts(userKey),
+    loadEpisodic(userKey),
+    loadAutobio(userKey),
+  ]);
 
   return {
     persona,
@@ -186,7 +159,8 @@ export async function assembleContext(
       episodic,
       autobiography,
     },
-    newsDigest,
-    researchContext,
+    newsDigest: [],       // intentionally disabled
+    researchContext: [],  // intentionally disabled
   };
 }
+
