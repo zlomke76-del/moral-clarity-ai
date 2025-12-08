@@ -8,32 +8,34 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
 export function createClientServer() {
+  const cookieStore = cookies(); // ✅ synchronous
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        async get(name: string) {
-          const store = await cookies();          // FIXED: cookies() is async
-          return store.get(name)?.value;
+        get(name: string) {
+          return cookieStore.get(name)?.value; // ⬅️ No await
         },
-        async set(name, value, options) {
-          const store = await cookies();          // FIXED
+
+        set(name, value, options) {
           try {
-            store.set(name, value, options);
+            cookieStore.set(name, value, options);
           } catch (_) {
-            /* SSR cookie writes silently ignored */
+            // SSR cannot always set cookies — safe to ignore
           }
         },
-        async remove(name: string, options) {
-          const store = await cookies();          // FIXED
+
+        remove(name: string, options) {
           try {
-            store.delete(name);
+            cookieStore.delete(name, options);
           } catch (_) {
-            /* ignore */
+            // Silent ignore
           }
         },
       },
     }
   );
 }
+
