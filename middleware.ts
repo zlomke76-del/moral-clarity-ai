@@ -1,6 +1,5 @@
 // middleware.ts
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 export const config = {
@@ -13,32 +12,33 @@ export async function middleware(req: NextRequest) {
   const url = new URL(req.url);
   const { pathname, searchParams } = url;
 
-  // Redirect any legacy workspace URLs
+  // reroute PKCE callback
+  const code = searchParams.get("code");
+  if (code && pathname !== "/auth/callback") {
+    const redirect = new URL("/auth/callback", req.url);
+    redirect.searchParams.set("code", code);
+    redirect.searchParams.set("next", searchParams.get("next") || "/app");
+    return NextResponse.redirect(redirect, 307);
+  }
+
+  // workspace2 legacy
   if (pathname === "/workspace2" || pathname.startsWith("/workspace2/")) {
     return NextResponse.redirect(new URL("/app", req.url), 308);
   }
 
-  // If a ?code= is present, redirect it CLEANLY to the callback
-  const code = searchParams.get("code");
-  if (code && pathname !== "/auth/callback") {
-    const to = new URL("/auth/callback", req.url);
-    to.searchParams.set("code", code);
-    to.searchParams.set("next", searchParams.get("next") || "/app");
-    return NextResponse.redirect(to, 307);
-  }
-
-  // /app/preview always bypasses auth
+  // ALWAYS allow /app/preview to pass
   if (pathname.startsWith("/app/preview")) {
     return NextResponse.next();
   }
 
-  // Required for SSR cookie refresh
-  const res = NextResponse.next({ request: { headers: req.headers } });
+  // Prepare response (Supabase needs modifiable response)
+  const res = NextResponse.next({
+    request: { headers: req.headers },
+  });
 
-  // IMPORTANT: Use EXACT domain for cookies
-  const hostname = url.hostname;
+  // Correct cookie domain handling
   const cookieDomain =
-    hostname === "localhost" ? undefined : "studio.moralclarity.ai";
+    url.hostname === "localhost" ? undefined : "studio.moralclarity.ai";
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -50,6 +50,8 @@ export async function middleware(req: NextRequest) {
         },
 
         set(name: string, value: string, options?: CookieOptions) {
+          // IMPORTANT:
+          // middleware must NOT overwrite freshly set cookies during login
           res.cookies.set({
             name,
             value,
@@ -77,9 +79,8 @@ export async function middleware(req: NextRequest) {
     }
   );
 
-  // Trigger cookie refresh logic
+  // This causes Supabase to refresh session if needed WITHOUT overwriting during login
   await supabase.auth.getSession();
 
   return res;
 }
-
