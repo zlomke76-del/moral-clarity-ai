@@ -17,35 +17,45 @@ import { writeMemory } from "./modules/memory-writer";
 import { createServerClient } from "@supabase/ssr";
 
 // -------------------------------------------------------------
-// MAGIC-LINK-SAFE USER SESSION EXTRACTOR (SSR + Edge compatible)
+// MAGIC-LINK-SAFE USER SESSION EXTRACTOR  + DIAGNOSTICS
 // -------------------------------------------------------------
 async function getEdgeUser(req: Request) {
   const cookieHeader = req.headers.get("cookie") ?? "";
 
-  // Supabase SSR client — this is the ONLY version
-  // that correctly handles magic link + multi-cookie sessions.
+  // 🔍 DIAGNOSTIC: Raw cookie header
+  console.log("[DIAG] Incoming cookie header:", cookieHeader);
+
+  // Supabase SSR client — absolutely required for Magic Link
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: (name) => {
+        get: (name: string) => {
           const match = cookieHeader
             .split(";")
             .map((c) => c.trim())
             .find((c) => c.startsWith(`${name}=`));
 
+          // 🔍 DIAGNOSTIC: Report whether cookie exists
+          if (match) console.log(`[DIAG] Supabase cookie found: ${name}`);
+          else console.warn(`[DIAG] Supabase cookie MISSING: ${name}`);
+
           return match ? match.split("=")[1] : undefined;
         },
-        set() {},    // Edge runtime: ignore
-        remove() {}, // Edge runtime: ignore
+        set() {},
+        remove() {},
       },
     }
   );
 
   const { data, error } = await supabase.auth.getUser();
-  if (error || !data?.user) return null;
-  return data.user;
+
+  // 🔍 DIAGNOSTIC: Post-Supabase session status
+  if (error) console.error("[DIAG] supabase.auth.getUser() error:", error);
+  console.log("[DIAG] Supabase user resolved:", data?.user?.id ?? null);
+
+  return data?.user ?? null;
 }
 
 // -------------------------------------------------------------
@@ -90,6 +100,10 @@ export async function POST(req: Request) {
     const user = await getEdgeUser(req);
     const canonicalUserKey = user?.id ?? null;
     const contextKey = canonicalUserKey || "guest";
+
+    // 🔍 DIAGNOSTIC: Final identity result
+    console.log("[DIAG] Using canonicalUserKey:", canonicalUserKey);
+    console.log("[DIAG] ContextKey (fallback guest):", contextKey);
 
     // ---------------------------------------------------------
     // MEMORY + PERSONA CONTEXT
@@ -170,4 +184,3 @@ export async function POST(req: Request) {
     );
   }
 }
-
