@@ -1,3 +1,4 @@
+// app/auth/exchange/route.ts
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -26,19 +27,18 @@ export async function POST(req: Request) {
     }
 
     // ------------------------------------------------------------
-    // ⭐ RAW COOKIE HEADER — required in Next 16
-    // Supabase MUST parse the incoming cookie header itself.
+    // ⭐ RAW COOKIE HEADER (Next.js 16 requirement)
     // ------------------------------------------------------------
     const cookieHeader = req.headers.get("cookie") ?? "";
     diag.cookieHeader = cookieHeader;
 
     // ------------------------------------------------------------
-    // ⭐ PREPARE RESPONSE (cookies will be attached here)
+    // ⭐ THIS RESPONSE is where Supabase will write cookies
     // ------------------------------------------------------------
-    const response = NextResponse.json({ stage: "pre-exchange" });
+    const response = NextResponse.json({ stage: "exchanging-session" });
 
     // ------------------------------------------------------------
-    // ⭐ SUPABASE SERVER CLIENT — with full manual cookie adapter
+    // ⭐ CREATE SUPABASE CLIENT with MANUAL COOKIE ADAPTER
     // ------------------------------------------------------------
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -50,10 +50,8 @@ export async function POST(req: Request) {
               .split(";")
               .map((x) => x.trim())
               .find((x) => x.startsWith(name + "="));
-
             return raw ? raw.split("=")[1] : undefined;
           },
-
           set(name, value, options) {
             response.cookies.set(name, value, options);
             (diag.setCookies ||= []).push({
@@ -62,7 +60,6 @@ export async function POST(req: Request) {
               options,
             });
           },
-
           remove(name, options) {
             response.cookies.set(name, "", { ...options, maxAge: 0 });
             (diag.removedCookies ||= []).push({ name });
@@ -74,7 +71,7 @@ export async function POST(req: Request) {
     diag.stage = "set-session";
 
     // ------------------------------------------------------------
-    // ⭐ SET SESSION — this is the handshake
+    // ⭐ SUPER IMPORTANT — THIS HANDSHAKE SETS YOUR SESSION
     // ------------------------------------------------------------
     const { data, error } = await supabase.auth.setSession({
       access_token,
@@ -82,25 +79,34 @@ export async function POST(req: Request) {
     });
 
     diag.supabase = {
-      receivedSession: !!data?.session,
+      sessionCreated: !!data?.session,
       error,
     };
 
     if (error || !data?.session) {
       diag.stage = "session-failed";
-      response.headers.set("x-mc-diag", JSON.stringify(diag));
-      return NextResponse.json({ error: "SetSessionFailed", diag }, { status: 400 });
+      const failResponse = NextResponse.json(
+        { error: "SetSessionFailed", diag },
+        { status: 400 }
+      );
+      return failResponse;
     }
 
     // ------------------------------------------------------------
-    // SUCCESS — attach full diag to body
+    // ⭐ SUCCESS — RETURN THE SAME RESPONSE WITH COOKIES ATTACHED
     // ------------------------------------------------------------
     diag.stage = "success";
-    return NextResponse.json({ success: true, diag }, { status: 200 });
+    response.headers.set("x-mc-diag", JSON.stringify(diag));
+
+    return response;
   } catch (err: any) {
     diag.stage = "exception";
     diag.error = err?.message;
-    return NextResponse.json({ error: "Exception", diag }, { status: 500 });
+
+    return NextResponse.json(
+      { error: "Exception", diag },
+      { status: 500 }
+    );
   }
 }
 
