@@ -4,7 +4,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { supabaseNode } from "@/lib/supabase/node";
+import { createClientServer } from "@/lib/supabase/server";
 import MemoryComposer from "@/components/MemoryComposer";
 import MemoryList from "@/components/MemoryList";
 
@@ -17,12 +17,19 @@ type Props = {
 export default async function WorkspaceMemoryPage({ params }: Props) {
   const workspaceId = decodeURIComponent(params.workspaceId);
 
-  const { data } = await supabaseNode
+  // Create Supabase client for server (SSR) usage
+  const supabase = createClientServer();
+
+  const { data, error } = await supabase
     .from("user_memories")
     .select("id, title, created_at, workspace_id")
     .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: false })
     .limit(50);
+
+  if (error) {
+    console.error("[workspace memory] Load error:", error);
+  }
 
   return (
     <section className="space-y-8 p-6">
