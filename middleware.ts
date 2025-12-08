@@ -1,72 +1,52 @@
-// /middleware.ts
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+// middleware.ts
+import { NextResponse, type NextRequest } from "next/server";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 
-// ⚠️ Middleware runs at the edge by default.
-// We MUST NOT interfere with the Supabase callback flow.
-
-// Paths that never require auth.
-const PUBLIC_PATHS = [
-  "/",
-  "/auth",
-  "/auth/callback",
-  "/auth/error",
-  "/newsroom",
-  "/newsroom/cabinet",
-  "/favicon.ico",
-  "/logo.png",
-];
-
-// Prefixes that are always public.
-const PUBLIC_PREFIXES = [
-  "/_next",      // Next.js internals
-  "/api/auth",   // Supabase needs these
-  "/images",
-  "/assets",
-];
+// Opt-in to the edge runtime (required for middleware)
+export const config = {
+  matcher: [
+    "/app/:path*",
+    "/w/:path*",
+    "/memories/:path*",
+    "/newsroom/:path*",
+  ],
+};
 
 export async function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+  const url = req.nextUrl.clone();
 
-  // 1. Skip ALL public routes
+  // 1. Allow the magic link callback to pass through unmodified
+  if (url.pathname.startsWith("/auth/callback")) {
+    return NextResponse.next();
+  }
+
+  // 2. Allow public routes
   if (
-    PUBLIC_PATHS.includes(pathname) ||
-    PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))
+    url.pathname.startsWith("/auth/") ||
+    url.pathname.startsWith("/sign-in") ||
+    url.pathname.startsWith("/login")
   ) {
     return NextResponse.next();
   }
 
-  // 2. SPECIAL: Never block the callback — MUST pass through untouched.
-  if (pathname.startsWith("/auth/callback")) {
-    return NextResponse.next();
-  }
+  // 3. Create Supabase client (Next.js 16 requires async cookie getter)
+  const supabase = createRouteHandlerClient({
+    cookies: async () => req.cookies,  // FIXED: must return Promise<ReadonlyRequestCookies>
+  });
 
-  // 3. Protect only /app/*
-  const isProtected = pathname.startsWith("/app");
-  if (!isProtected) return NextResponse.next();
-
-  // 4. Check Supabase session safely
-  const supabase = createRouteHandlerClient({ cookies: () => req.cookies });
+  // 4. Safely get the current session
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
-  // If no session → redirect to sign-in
+  // 5. If no session → redirect to sign-in
   if (!session) {
-    const redirectUrl = req.nextUrl.clone();
-    redirectUrl.pathname = "/auth/sign-in";
-    redirectUrl.searchParams.set("next", pathname);
+    const redirectUrl = new URL("/auth/sign-in", req.url);
+    redirectUrl.searchParams.set("redirectedFrom", req.nextUrl.pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
+  // 6. Otherwise continue
   return NextResponse.next();
 }
-
-// Middleware applies to ALL routes unless excluded above.
-export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico).*)",
-  ],
-};
 
