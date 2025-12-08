@@ -1,50 +1,64 @@
 // app/api/chat/modules/model-router.ts
 // --------------------------------------------------------------
 // Multi-model router for Solace Hybrid Pipeline
-// Supports OpenAI models today + placeholders for future LLMs
+// Supports OpenAI models today + placeholder-ready architecture
 // --------------------------------------------------------------
 
 import OpenAI from "openai";
+import { DEFAULT_MODEL, FALLBACK_MODEL } from "../../constants";
 
-// ALL models are OpenAI today — placeholders allow future expansion
+// ALL active models are OpenAI today — clean and unified
 export const MODELS = {
-  OPTIMIST: "gpt-4.1",
-  SKEPTIC: "gpt-4.1",
-  ARBITER: "gpt-4.1",
-  FOUNDER: "gpt-4.1"
+  OPTIMIST: DEFAULT_MODEL,
+  SKEPTIC: DEFAULT_MODEL,
+  ARBITER: DEFAULT_MODEL,
+  FOUNDER: DEFAULT_MODEL,
 } as const;
 
-// FIXED: A model is simply a string (OpenAI model name)
 export type SolaceModel = string;
 
+// Initialize OpenAI client
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!
+  apiKey: process.env.OPENAI_API_KEY!,
 });
 
 /**
  * callModel()
  * Unified wrapper for OpenAI Responses API
- * Accepts:
- *   - model: string (e.g., "gpt-4.1")
- *   - prompt: inputBlocks array
+ * - model: string (e.g. "gpt-4.1")
+ * - inputBlocks: array of structured blocks
  */
 export async function callModel(model: SolaceModel, inputBlocks: any[]) {
   try {
+    // Primary model call
     const response = await client.responses.create({
       model,
-      input: inputBlocks
+      input: inputBlocks,
     });
 
     return extract(response);
+
   } catch (err) {
-    console.error("[callModel] primary model failed:", err);
-    return "[Model failure]";
+    console.error("[callModel] Primary model failed:", err);
+
+    // Fallback model call
+    try {
+      const fallbackResponse = await client.responses.create({
+        model: FALLBACK_MODEL,
+        input: inputBlocks,
+      });
+
+      return extract(fallbackResponse);
+    } catch (err2) {
+      console.error("[callModel] Fallback model also failed:", err2);
+      return "[Model failure]";
+    }
   }
 }
 
 /**
  * extract()
- * Safely extracts output_text from OpenAI Responses API
+ * Safely extracts text output from OpenAI Responses API
  */
 function extract(res: any): string | null {
   try {
