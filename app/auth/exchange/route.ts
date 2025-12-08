@@ -2,7 +2,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
 export async function POST(req: Request) {
@@ -26,40 +25,41 @@ export async function POST(req: Request) {
       );
     }
 
-    // Prepare the JSON response where we will attach cookies.
+    // ------------------------------------------------------------
+    // ⭐ IMPORTANT:
+    // Extract raw cookie header DIRECTLY from req.
+    // This avoids Next.js 16's broken cookies() behavior.
+    // ------------------------------------------------------------
+    const cookieHeader = req.headers.get("cookie") ?? "";
+
+    // Prepare response where cookies will be written
     const response = NextResponse.json({ stage: "pre-exchange" });
-
-    // 🚫 FIX: cookies() must NOT be awaited — keep it synchronous
-    const cookieStore = cookies();
-
-    // Writable cookie adapter for Supabase
-    const cookieAdapter = {
-      get(name: string) {
-        return cookieStore.get(name)?.value;
-      },
-      set(name: string, value: string, options: any) {
-        response.cookies.set(name, value, options);
-        diag.cookieSet = diag.cookieSet || [];
-        diag.cookieSet.push({
-          name,
-          valueMasked: value?.slice?.(0, 6) + "...",
-          options,
-        });
-      },
-      remove(name: string, options: any) {
-        response.cookies.set(name, "", { ...options, maxAge: 0 });
-        diag.cookieRemoved = diag.cookieRemoved || [];
-        diag.cookieRemoved.push({ name });
-      },
-    };
-
-    diag.stage = "create-client";
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
-        cookies: cookieAdapter,
+        cookies: {
+          get(name) {
+            return cookieHeader
+              .split(";")
+              .map((x) => x.trim())
+              .find((x) => x.startsWith(name + "="))
+              ?.split("=")[1];
+          },
+          set(name, value, options) {
+            response.cookies.set(name, value, options);
+            diag.cookieSet = diag.cookieSet || [];
+            diag.cookieSet.push({
+              name,
+              valueMasked: value?.slice?.(0, 6) + "...",
+              options,
+            });
+          },
+          remove(name, options) {
+            response.cookies.set(name, "", { ...options, maxAge: 0 });
+          },
+        },
       }
     );
 
@@ -84,11 +84,11 @@ export async function POST(req: Request) {
     }
 
     diag.stage = "success";
-    return NextResponse.json({ success: true, diag }, response);
+    return response;
   } catch (err: any) {
     diag.stage = "exception";
     diag.exception = err?.message;
-
     return NextResponse.json({ error: "Exception", diag }, { status: 500 });
   }
 }
+
