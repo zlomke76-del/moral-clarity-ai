@@ -13,12 +13,12 @@ export async function middleware(req: NextRequest) {
   const url = new URL(req.url);
   const { pathname, searchParams } = url;
 
-  // Legacy redirect
+  // --- Legacy redirect handling
   if (pathname === "/workspace2" || pathname.startsWith("/workspace2/")) {
     return NextResponse.redirect(new URL("/app", req.url), 308);
   }
 
-  // Magic-link reroute
+  // --- Magic-link rerouting
   const code = searchParams.get("code");
   if (code && pathname !== "/auth/callback") {
     const to = new URL("/auth/callback", req.url);
@@ -27,18 +27,25 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(to, 307);
   }
 
-  // /app/preview always passes
+  // --- Allow /auth/callback to pass through WITHOUT interference
+  //     (This is the critical fix — allows Set-Cookie from callback)
+  if (pathname.startsWith("/auth/callback")) {
+    return NextResponse.next();
+  }
+
+  // --- Allow preview routes
   if (pathname.startsWith("/app/preview")) {
     return NextResponse.next();
   }
 
-  // Required for Supabase to refresh cookies
-  const res = NextResponse.next({ request: { headers: req.headers } });
+  // --- Normal middleware path for all other routes
+  const res = NextResponse.next({
+    request: { headers: req.headers },
+  });
 
-  // Dynamically set correct cookie domain
   const hostname = url.hostname;
   const cookieDomain =
-    hostname === "localhost" ? undefined : hostname; // do NOT use parent domain
+    hostname === "localhost" ? undefined : hostname;
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -48,7 +55,6 @@ export async function middleware(req: NextRequest) {
         get(name: string) {
           return req.cookies.get(name)?.value;
         },
-
         set(name: string, value: string, options?: CookieOptions) {
           res.cookies.set({
             name,
@@ -60,7 +66,6 @@ export async function middleware(req: NextRequest) {
             sameSite: "none",
           });
         },
-
         remove(name: string, options?: CookieOptions) {
           res.cookies.set({
             name,
@@ -78,6 +83,5 @@ export async function middleware(req: NextRequest) {
   );
 
   await supabase.auth.getSession();
-
   return res;
 }
