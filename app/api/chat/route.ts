@@ -1,6 +1,6 @@
 //---------------------------------------------------------------
 // Solace Chat Route — Persona ALWAYS active
-// Edge Runtime • Magic-Link Safe Session Retrieval • Memory Pipeline
+// Edge Runtime • Magic-link SAFE • Retry Logic Added
 //---------------------------------------------------------------
 
 export const runtime = "edge";
@@ -17,35 +17,43 @@ import { writeMemory } from "./modules/memory-writer";
 import { createServerClient } from "@supabase/ssr";
 
 // -------------------------------------------------------------
-// MAGIC-LINK-SAFE USER SESSION EXTRACTOR (SSR + Edge compatible)
+// MAGIC-LINK SAFE SESSION LOADER (works with sb- cookies)
 // -------------------------------------------------------------
 async function getEdgeUser(req: Request) {
   const cookieHeader = req.headers.get("cookie") ?? "";
 
-  // Use Supabase SSR client — the ONLY correct decoder for the sb-*-auth-token bundle
+  console.log("[DIAG-A1] Incoming cookie header:", cookieHeader);
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name) {
+        get: (name) => {
           const match = cookieHeader
             .split(";")
             .map((c) => c.trim())
-            .find((c) => c.startsWith(`${name}=`));
+            .find((c) => c.startsWith(name + "="));
 
-          return match ? match.split("=")[1] : undefined;
+          const value = match ? match.split("=")[1] : undefined;
+
+          console.log(`[DIAG-A2] Cookie get(${name}) →`, value?.slice(0, 12));
+          return value;
         },
-        set() {},    // Edge runtime: no-op
-        remove() {}, // Edge runtime: no-op
+        set() {},
+        remove() {},
       },
     }
   );
 
   const { data, error } = await supabase.auth.getUser();
-  if (error || !data?.user) return null;
+  if (error) {
+    console.log("[DIAG-A3] Supabase getUser error:", error.message);
+    return null;
+  }
 
-  return data.user;
+  console.log("[DIAG-A4] Supabase user:", data?.user?.id);
+  return data?.user ?? null;
 }
 
 // -------------------------------------------------------------
@@ -65,12 +73,53 @@ function mapModeHintToDomain(modeHint: string): string {
 }
 
 // -------------------------------------------------------------
+// OPENAI RETRY WRAPPER — fixes silent "[No reply]" issue
+// -------------------------------------------------------------
+async function callOpenAIWithRetry(blocks: any[]): Promise<string> {
+  const payload = {
+    model: "gpt-4.1",
+    input: blocks,
+  };
+
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    const res = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    // RATE LIMIT
+    if (res.status === 429) {
+      const wait = attempt * 350;
+      console.warn(`[OPENAI] 429 rate limit — retrying in ${wait}ms (attempt ${attempt}/4)`);
+      await new Promise((r) => setTimeout(r, wait));
+      continue;
+    }
+
+    // OTHER ERROR
+    if (!res.ok) {
+      console.error("[OPENAI] Fatal error:", res.status, await res.text());
+      return "[No reply]";
+    }
+
+    const json = await res.json();
+    return json?.output?.[0]?.content?.[0]?.text ?? "[No reply]";
+  }
+
+  // All retries failed:
+  console.error("[OPENAI] Exhausted retries — using fail-safe.");
+  return "[No reply]";
+}
+
+// -------------------------------------------------------------
 // POST /api/chat
 // -------------------------------------------------------------
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-
     const {
       message,
       history = [],
@@ -85,18 +134,25 @@ export async function POST(req: Request) {
     }
 
     // ---------------------------------------------------------
-    // USER SESSION (Magic-link compatible)
+    // USER SESSION (Magic Link Safe)
     // ---------------------------------------------------------
     const user = await getEdgeUser(req);
     const canonicalUserKey = user?.id ?? null;
     const contextKey = canonicalUserKey || "guest";
+
+    console.log("[Solace Context] Load with canonical key:", {
+      canonicalUserKey: contextKey,
+      workspaceId,
+    });
 
     // ---------------------------------------------------------
     // MEMORY + PERSONA CONTEXT
     // ---------------------------------------------------------
     const context = await assembleContext(contextKey, workspaceId, message);
 
-    // Select Solace persona domain
+    // ---------------------------------------------------------
+    // Select Solace Domain
+    // ---------------------------------------------------------
     let domain = mapModeHintToDomain(modeHint);
     if (founderMode) domain = "founder";
     else if (ministryMode) domain = "ministry";
@@ -109,17 +165,17 @@ export async function POST(req: Request) {
     const userBlocks = assemblePrompt(context, history, message);
     const fullBlocks = [systemBlock, ...userBlocks];
 
+    let finalText: string;
+
+    // ---------------------------------------------------------
+    // HYBRID PIPELINE
+    // ---------------------------------------------------------
     const hybridAllowed =
       modeHint === "Create" ||
       modeHint === "Red Team" ||
       modeHint === "Next Steps" ||
       founderMode;
 
-    let finalText: string;
-
-    // ---------------------------------------------------------
-    // HYBRID PIPELINE (Founder, Create, Red Team, Next Steps)
-    // ---------------------------------------------------------
     if (hybridAllowed) {
       const finalAnswer = await orchestrateSolaceResponse({
         userMessage: message,
@@ -134,26 +190,13 @@ export async function POST(req: Request) {
       finalText = finalAnswer || "[No arbiter answer]";
     } else {
       // ---------------------------------------------------------
-      // Neutral → Single-model pipeline
+      // NEUTRAL → SINGLE-MODEL PIPELINE w/ retry logic
       // ---------------------------------------------------------
-      const res = await fetch("https://api.openai.com/v1/responses", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4.1",
-          input: fullBlocks,
-        }),
-      });
-
-      const json = await res.json();
-      finalText = json?.output?.[0]?.content?.[0]?.text ?? "[No reply]";
+      finalText = await callOpenAIWithRetry(fullBlocks);
     }
 
     // ---------------------------------------------------------
-    // MEMORY WRITE — safe, non-blocking
+    // MEMORY WRITE
     // ---------------------------------------------------------
     try {
       await writeMemory(canonicalUserKey, message, finalText);
@@ -163,10 +206,11 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ text: finalText });
   } catch (err: any) {
-    console.error("[chat route] fatal", err);
+    console.error("[chat route] fatal error", err);
     return NextResponse.json(
       { error: err?.message || "Chat route failed" },
       { status: 500 }
     );
   }
 }
+
