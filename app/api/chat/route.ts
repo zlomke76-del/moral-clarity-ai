@@ -17,26 +17,44 @@ import { writeMemory } from "./modules/memory-writer";
 import { createClient } from "@supabase/supabase-js";
 
 // -------------------------------------------------------------
-// Edge-safe Supabase user extractor (no cookies(), no headers())
+// Corrected Edge-safe Supabase user extractor
+// (Magic Link safe — properly parses Supabase session cookie)
 // -------------------------------------------------------------
 async function getEdgeUser(req: Request) {
   const cookieHeader = req.headers.get("cookie") ?? "";
 
-  // Extract Supabase auth cookie (single token)
-  const token = cookieHeader
+  // Find the Supabase auth cookie (supabase uses sb-* prefix)
+  const rawCookie = cookieHeader
     .split(";")
     .map((v) => v.trim())
-    .find((v) => v.startsWith("sb-"))
-    ?.split("=")[1];
+    .find((v) => v.startsWith("sb-"));
 
-  if (!token) return null;
+  if (!rawCookie) return null;
 
+  const rawValue = rawCookie.split("=")[1];
+  if (!rawValue) return null;
+
+  // Supabase auth cookie contains JSON → must parse
+  let parsed: any;
+  try {
+    parsed = JSON.parse(rawValue);
+  } catch {
+    console.warn("[getEdgeUser] Failed to parse Supabase cookie JSON");
+    return null;
+  }
+
+  const accessToken = parsed?.access_token;
+  if (!accessToken) return null;
+
+  // Create authenticated Supabase client using extracted JWT
   const sb = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       global: {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
       },
     }
   );
@@ -59,7 +77,7 @@ function mapModeHintToDomain(modeHint: string): string {
     case "Next Steps":
       return "arbiter";
     default:
-      return "guidance";
+      return "guidance"; // Neutral
   }
 }
 
@@ -84,7 +102,7 @@ export async function POST(req: Request) {
     }
 
     // ---------------------------------------------------------
-    // USER SESSION (Edge-safe version)
+    // USER SESSION (Fixed edge-safe Supabase auth)
     // ---------------------------------------------------------
     const user = await getEdgeUser(req);
     const canonicalUserKey = user?.id ?? null;
@@ -169,5 +187,4 @@ export async function POST(req: Request) {
     );
   }
 }
-
 
