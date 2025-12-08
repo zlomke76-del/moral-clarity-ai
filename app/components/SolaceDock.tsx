@@ -269,19 +269,17 @@ export default function SolaceDock() {
   async function sendToChat(userMsg: string, prevHistory: Message[]) {
     const res = await fetch("/api/chat", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-User-Key": userKey,
-      },
-      body: JSON.stringify({
-        message: userMsg,
-        history: prevHistory, // CLEAN history — FIXED
-        userKey,
-        workspaceId: MCA_WORKSPACE_ID,
-        ministryMode: ministryOn,
-        modeHint,
-        founderMode,
-      }),
+     headers: {
+  "Content-Type": "application/json",
+},
+body: JSON.stringify({
+  message: userMsg,
+  history: prevHistory,
+  workspaceId: MCA_WORKSPACE_ID,
+  ministryMode: ministryOn,
+  modeHint,
+  founderMode,
+}),
     });
 
     if (!res.ok) {
