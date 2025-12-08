@@ -1,46 +1,32 @@
+// app/auth/callback/page.tsx (client)
 "use client";
-
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function CallbackPage() {
+  const router = useRouter();
+
   useEffect(() => {
-    const hash = window.location.hash;
+    const hash = window.location.hash.substring(1);
+    const params = new URLSearchParams(hash);
 
-    if (!hash) {
-      window.location.href = "/auth/error?err=MissingTokens";
-      return;
-    }
-
-    const params = new URLSearchParams(hash.substring(1));
     const access_token = params.get("access_token");
     const refresh_token = params.get("refresh_token");
 
     if (!access_token || !refresh_token) {
-      window.location.href = "/auth/error?err=InvalidTokens";
+      router.replace("/auth/sign-in");
       return;
     }
 
+    // POST to /auth/exchange
     fetch("/auth/exchange", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ access_token, refresh_token }),
-    })
-      .then((res) => res.json())
-      .then((out) => {
-        if (out.error) {
-          window.location.href = `/auth/error?err=${out.error}`;
-        } else {
-          window.location.href = "/app";
-        }
-      })
-      .catch(() => {
-        window.location.href = "/auth/error?err=ExchangeFailed";
-      });
+    }).then(() => {
+      router.replace("/app");   // ⭐ ALWAYS redirect to /app
+    });
   }, []);
 
-  return (
-    <div className="text-white p-10 text-center">
-      Finishing sign-in…
-    </div>
-  );
+  return <p>Signing you in…</p>;
 }
