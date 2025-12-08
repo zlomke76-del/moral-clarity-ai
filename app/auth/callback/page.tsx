@@ -1,32 +1,51 @@
 // app/auth/callback/page.tsx
-import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
-export default async function Callback({
-  searchParams,
-}: {
-  searchParams: { code?: string; next?: string };
-}) {
-  const code = searchParams.code;
-  const next = searchParams.next || "/app";
+export default async function AuthCallbackPage() {
+  const cookieStore = cookies();
+  const search = new URLSearchParams(cookieStore.get("auth-callback-search")?.value ?? "");
+  const code = search.get("code");
+  const next = search.get("next") || "/app";
 
   if (!code) {
-    redirect("/auth/error?err=MissingCode");
+    redirect(`/auth/error?err=Missing%20code`);
   }
 
-  // Server-side Supabase client, cookie-aware
+  // ✔ REQUIRED: 3rd argument — cookie adapter
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options?: CookieOptions) {
+          cookieStore.set({
+            name,
+            value,
+            ...options,
+          });
+        },
+        remove(name: string, options?: CookieOptions) {
+          cookieStore.set({
+            name,
+            value: "",
+            maxAge: 0,
+            ...options,
+          });
+        },
+      },
+    }
   );
 
-  // Exchange the PKCE code for a session
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-  if (error) {
-    redirect("/auth/error?err=ExchangeFailed");
+  if (error || !data?.session) {
+    redirect(`/auth/error?err=Auth%20session%20failed`);
   }
 
-  // Supabase automatically wrote sb-access-token + sb-refresh-token cookies
   redirect(next);
 }
