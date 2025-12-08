@@ -5,9 +5,9 @@
 // --------------------------------------------------------------
 
 import OpenAI from "openai";
-import { DEFAULT_MODEL, FALLBACK_MODEL } from "../../constants";
+import { DEFAULT_MODEL, FALLBACK_MODEL } from "./constants";
 
-// ALL active models are OpenAI today — clean and unified
+// Centralized model definitions (all valid OpenAI models)
 export const MODELS = {
   OPTIMIST: DEFAULT_MODEL,
   SKEPTIC: DEFAULT_MODEL,
@@ -26,11 +26,11 @@ const client = new OpenAI({
  * callModel()
  * Unified wrapper for OpenAI Responses API
  * - model: string (e.g. "gpt-4.1")
- * - inputBlocks: array of structured blocks
+ * - inputBlocks: structured prompt blocks
  */
 export async function callModel(model: SolaceModel, inputBlocks: any[]) {
   try {
-    // Primary model call
+    // Primary model execution
     const response = await client.responses.create({
       model,
       input: inputBlocks,
@@ -41,7 +41,7 @@ export async function callModel(model: SolaceModel, inputBlocks: any[]) {
   } catch (err) {
     console.error("[callModel] Primary model failed:", err);
 
-    // Fallback model call
+    // Fallback execution
     try {
       const fallbackResponse = await client.responses.create({
         model: FALLBACK_MODEL,
@@ -49,6 +49,7 @@ export async function callModel(model: SolaceModel, inputBlocks: any[]) {
       });
 
       return extract(fallbackResponse);
+
     } catch (err2) {
       console.error("[callModel] Fallback model also failed:", err2);
       return "[Model failure]";
@@ -58,14 +59,16 @@ export async function callModel(model: SolaceModel, inputBlocks: any[]) {
 
 /**
  * extract()
- * Safely extracts text output from OpenAI Responses API
+ * Safely extracts text output from the OpenAI Responses API
  */
 function extract(res: any): string | null {
   try {
     if (!res) return null;
 
-    // Responses API shape:
-    // res.output: [ { content: [ { type: "text", text: "..." } ] } ]
+    // Expected Responses API structure:
+    // res.output: [
+    //   { content: [ { type: "text", text: "..." } ] }
+    // ]
     const block = res.output?.[0];
     if (!block) return null;
 
@@ -77,5 +80,6 @@ function extract(res: any): string | null {
     return null;
   }
 }
+
 
 
