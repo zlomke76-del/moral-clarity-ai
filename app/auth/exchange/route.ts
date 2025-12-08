@@ -11,10 +11,11 @@ export async function POST(req: Request) {
     }
 
     const cookieStore = cookies();
+    const supabase = createRouteHandlerClient({
+      cookies: () => cookieStore,
+    });
 
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
-
-    const { data, error } = await supabase.auth.setSession({
+    const { error } = await supabase.auth.setSession({
       access_token,
       refresh_token,
     });
@@ -31,3 +32,4 @@ export async function POST(req: Request) {
     );
   }
 }
+
