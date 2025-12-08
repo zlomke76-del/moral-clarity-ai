@@ -1,42 +1,46 @@
+// /lib/supabase/session.ts
 // ------------------------------------------------------------
-// Unified Supabase Session Helpers
-// Next.js 16 safe — NO implicit cookies() or headers() here.
-// Caller MUST provide cookieHeader when on server/edge.
+// Centralized session resolver for both server + client.
+// This version is fully compatible with Next.js 16 and with the
+// new cookieHeader-based createClientServer() implementation.
 // ------------------------------------------------------------
 
+import { headers } from "next/headers";
 import { createClientServer } from "./server";
 import { createClientBrowser } from "./client";
 
 /**
- * SERVER / EDGE SAFE SESSION READER
- * Caller must pass cookieHeader from:
- *   - req.headers.get("cookie") (Edge routes)
- *   - headers().get("cookie") (SSR pages)
+ * Get the authenticated Supabase session in a SERVER environment.
+ * IMPORTANT:
+ *   - We must pass the raw cookie header into createClientServer()
+ *     because Next.js 16 no longer exposes valid cookie objects for SSR.
+ *   - This ensures API routes (/api/chat, orchestrator, memory reads)
+ *     correctly receive the logged-in user identity.
  */
-export async function getServerSession(cookieHeader: string | null = "") {
-  const sb = createClientServer(cookieHeader ?? "");
+export async function getServerSession() {
+  // Read raw cookie header safely
+  const cookieHeader = headers().get("cookie") ?? "";
 
-  const { data, error } = await sb.auth.getSession();
-  if (error) {
-    console.warn("[getServerSession] error:", error);
-    return null;
-  }
+  // Create SSR supabase client with correct cookie state
+  const supabase = createClientServer(cookieHeader);
 
-  return data.session ?? null;
+  // Retrieve session
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  return session;
 }
 
 /**
- * BROWSER SESSION READER
- * Works normally using local storage + auto refresh.
+ * Get the session in a browser environment.
+ * The browser client manages cookies + refresh automatically.
  */
 export async function getBrowserSession() {
-  const sb = createClientBrowser();
-
-  const { data, error } = await sb.auth.getSession();
-  if (error) {
-    console.warn("[getBrowserSession] error:", error);
-    return null;
-  }
-
-  return data.session ?? null;
+  const supabase = createClientBrowser();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session;
 }
+
