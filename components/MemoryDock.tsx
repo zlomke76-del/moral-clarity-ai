@@ -1,101 +1,74 @@
 // components/MemoryDock.tsx
-'use client';
 
-import { useState, useEffect } from 'react';
-import { supabaseBrowser } from '@/lib/supabase/client';
-import { toast } from '@/lib/toast';
+"use client";
+
+import { useState, useEffect } from "react";
+import { createClientBrowser } from "@/lib/supabase/client";
+import { toast } from "@/lib/toast";
 
 interface MemoryDockProps {
-  workspaceId: string;
+  workspaceId: string | null;
 }
 
 export default function MemoryDock({ workspaceId }: MemoryDockProps) {
-  const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [saving, setSaving] = useState(false);
+  const supabase = createClientBrowser();
+  const [memories, setMemories] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  async function saveMemory() {
-    const t = title.trim();
-    const c = content.trim();
-    if (!t && !c) return;
-
-    setSaving(true);
+  async function loadMemories() {
     try {
-      const supabase = supabaseBrowser(); // ← get a client instance
+      setLoading(true);
 
-      const { error } = await supabase
-        .schema('mca')
-        .from('memories')
-        .insert([{ workspace_id: workspaceId, title: t || null, content: c }]);
+      if (!workspaceId) {
+        setMemories([]);
+        return;
+      }
 
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from("user_memories")
+        .select("id, title, created_at, workspace_id")
+        .eq("workspace_id", workspaceId)
+        .order("created_at", { ascending: false })
+        .limit(50);
 
-      toast('Saved ✅');
-      setTitle('');
-      setContent('');
-      setOpen(false);
-    } catch (err: any) {
-      console.error(err);
-      toast('Save failed ❌');
+      if (error) {
+        console.error("[MemoryDock] load error:", error);
+        toast("Failed to load memories");
+        return;
+      }
+
+      setMemories(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("[MemoryDock] exception:", err);
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   }
 
-  // Keyboard shortcut: ⌘/Ctrl + M to toggle dock
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'm') {
-        setOpen((o) => !o);
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
+    loadMemories();
+  }, [workspaceId]);
 
   return (
-    <div
-      className={`fixed bottom-0 left-0 w-full bg-neutral-900/90 backdrop-blur-lg border-t border-neutral-800 transition-transform duration-300 ${
-        open ? 'translate-y-0' : 'translate-y-full'
-      }`}
-    >
-      <div className="mx-auto max-w-3xl px-4 py-4 space-y-2">
-        <div className="flex justify-between items-center">
-          <h2 className="text-sm font-semibold text-neutral-300">New Memory</h2>
-          <button
-            className="text-xs text-neutral-400 hover:text-neutral-200"
-            onClick={() => setOpen(false)}
-          >
-            Close
-          </button>
-        </div>
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold">Recent Workspace Memories</h2>
 
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Title"
-          className="w-full bg-neutral-800 rounded-lg px-3 py-2 text-sm text-neutral-100 outline-none"
-        />
-
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Write your thoughts…"
-          rows={4}
-          className="w-full bg-neutral-800 rounded-lg px-3 py-2 text-sm text-neutral-100 outline-none"
-        />
-
-        <div className="flex justify-end">
-          <button
-            onClick={saveMemory}
-            disabled={saving}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
-          >
-            {saving ? 'Saving…' : 'Save'}
-          </button>
-        </div>
-      </div>
+      {loading ? (
+        <p className="text-neutral-400 text-sm">Loading…</p>
+      ) : memories.length === 0 ? (
+        <p className="text-neutral-500 text-sm">No memories found.</p>
+      ) : (
+        <ul className="space-y-2">
+          {memories.map((m) => (
+            <li key={m.id} className="text-neutral-300 text-sm">
+              {m.title || "(untitled)"}{" "}
+              <span className="text-neutral-500 text-xs">
+                — {new Date(m.created_at).toLocaleString()}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
