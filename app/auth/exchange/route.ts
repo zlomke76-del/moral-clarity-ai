@@ -26,38 +26,46 @@ export async function POST(req: Request) {
     }
 
     // ------------------------------------------------------------
-    // ⭐ IMPORTANT:
-    // Extract raw cookie header DIRECTLY from req.
-    // This avoids Next.js 16's broken cookies() behavior.
+    // ⭐ RAW COOKIE HEADER — required in Next 16
+    // Supabase MUST parse the incoming cookie header itself.
     // ------------------------------------------------------------
     const cookieHeader = req.headers.get("cookie") ?? "";
+    diag.cookieHeader = cookieHeader;
 
-    // Prepare response where cookies will be written
+    // ------------------------------------------------------------
+    // ⭐ PREPARE RESPONSE (cookies will be attached here)
+    // ------------------------------------------------------------
     const response = NextResponse.json({ stage: "pre-exchange" });
 
+    // ------------------------------------------------------------
+    // ⭐ SUPABASE SERVER CLIENT — with full manual cookie adapter
+    // ------------------------------------------------------------
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           get(name) {
-            return cookieHeader
+            const raw = cookieHeader
               .split(";")
               .map((x) => x.trim())
-              .find((x) => x.startsWith(name + "="))
-              ?.split("=")[1];
+              .find((x) => x.startsWith(name + "="));
+
+            return raw ? raw.split("=")[1] : undefined;
           },
+
           set(name, value, options) {
             response.cookies.set(name, value, options);
-            diag.cookieSet = diag.cookieSet || [];
-            diag.cookieSet.push({
+            (diag.setCookies ||= []).push({
               name,
               valueMasked: value?.slice?.(0, 6) + "...",
               options,
             });
           },
+
           remove(name, options) {
             response.cookies.set(name, "", { ...options, maxAge: 0 });
+            (diag.removedCookies ||= []).push({ name });
           },
         },
       }
@@ -65,29 +73,33 @@ export async function POST(req: Request) {
 
     diag.stage = "set-session";
 
+    // ------------------------------------------------------------
+    // ⭐ SET SESSION — this is the handshake
+    // ------------------------------------------------------------
     const { data, error } = await supabase.auth.setSession({
       access_token,
       refresh_token,
     });
 
     diag.supabase = {
-      sessionReturned: !!data?.session,
-      error: error ?? null,
+      receivedSession: !!data?.session,
+      error,
     };
 
     if (error || !data?.session) {
       diag.stage = "session-failed";
-      return NextResponse.json(
-        { error: "SetSessionFailed", diag },
-        { status: 400 }
-      );
+      response.headers.set("x-mc-diag", JSON.stringify(diag));
+      return NextResponse.json({ error: "SetSessionFailed", diag }, { status: 400 });
     }
 
+    // ------------------------------------------------------------
+    // SUCCESS — attach full diag to body
+    // ------------------------------------------------------------
     diag.stage = "success";
-    return response;
+    return NextResponse.json({ success: true, diag }, { status: 200 });
   } catch (err: any) {
     diag.stage = "exception";
-    diag.exception = err?.message;
+    diag.error = err?.message;
     return NextResponse.json({ error: "Exception", diag }, { status: 500 });
   }
 }
