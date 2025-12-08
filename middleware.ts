@@ -1,33 +1,26 @@
 // middleware.ts
+// bump: v3  <-- 🔥 Forces Vercel to rebuild the Edge Function bundle
+
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 export async function middleware(req: NextRequest) {
+  const res = NextResponse.next();
   const pathname = req.nextUrl.pathname;
 
-  // ⚠️ NEVER interfere with magic-link auth endpoints
-  const AUTH_SAFE = [
-    "/auth/callback",
-    "/auth/exchange",
-  ];
-
-  if (AUTH_SAFE.some((p) => pathname.startsWith(p))) {
-    // Pass through untouched — magic link must run without redirects
-    return NextResponse.next();
-  }
-
-  const res = NextResponse.next();
-
-  // Build Supabase client using incoming cookies
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get: (name) => req.cookies.get(name)?.value,
-        set: () => {},
-        remove: () => {},
+        set: (name, value, options) => {
+          try { res.cookies.set(name, value, options); } catch {}
+        },
+        remove: (name, options) => {
+          try { res.cookies.delete(name); } catch {}
+        },
       },
     }
   );
@@ -36,29 +29,21 @@ export async function middleware(req: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession();
 
-  // ------------------------------------------------------------
-  // AUTH LOGIC (applies ONLY to protected pages, never auth routes)
-  // ------------------------------------------------------------
+  // 🟢 LOGGED IN → block access to auth pages
+  if (session && pathname.startsWith("/auth")) {
+    return NextResponse.redirect(new URL("/app", req.url));
+  }
 
-  // 1. If user is NOT logged in and accessing protected areas
+  // 🔴 NOT LOGGED IN → protect /app and /w
   if (!session && (pathname.startsWith("/app") || pathname.startsWith("/w"))) {
     return NextResponse.redirect(
       new URL(`/auth/sign-in?redirectedFrom=${pathname}`, req.url)
     );
   }
 
-  // 2. If user IS logged in and visits sign-in page → redirect to /app
-  if (session && pathname === "/auth/sign-in") {
-    return NextResponse.redirect(new URL("/app", req.url));
-  }
-
   return res;
 }
 
 export const config = {
-  matcher: [
-    "/app/:path*",
-    "/w/:path*",
-    "/auth/:path*",  // safe routes filtered above
-  ],
+  matcher: ["/app/:path*", "/w/:path*", "/auth/:path*"], // unchanged
 };
