@@ -1,78 +1,54 @@
-// /app/auth/callback/route.ts
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
+"use client";
 
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+import { useEffect } from "react";
 
-export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const debug = url.searchParams.get("debug") === "1";
+export default function CallbackPage() {
 
-  // Diagnostics object (returned only when debug=1)
-  const diag: Record<string, any> = { stage: "start" };
+  useEffect(() => {
+    const hash = window.location.hash;
 
-  try {
-    const cookieStore = await cookies();
-
-    // Extract search params directly from URL — NOT from temp cookie
-    const code = url.searchParams.get("code");
-    const next = url.searchParams.get("next") || "/app";
-
-    diag.code = code;
-    diag.next = next;
-
-    if (!code) {
-      diag.error = "Missing code";
-      if (debug) return NextResponse.json(diag);
-      return NextResponse.redirect(`${url.origin}/auth/error?err=Missing%20code`);
+    if (!hash) {
+      window.location.href = "/auth/error?err=MissingTokens";
+      return;
     }
 
-    diag.stage = "create-supabase";
+    // Convert #access_token=...&refresh_token=... into an object
+    const params = new URLSearchParams(hash.replace("#", ""));
+    const access_token = params.get("access_token");
+    const refresh_token = params.get("refresh_token");
 
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get: (name) => cookieStore.get(name)?.value,
-          set: (name, value, options) => {
-            // Set cookie during callback flow
-            cookieStore.set({ name, value, ...options });
-          },
-          remove: (name, options) => {
-            cookieStore.set({ name, value: "", maxAge: 0, ...options });
-          },
-        },
-      }
-    );
-
-    diag.stage = "exchange";
-
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-
-    diag.exchangeError = error ?? null;
-    diag.sessionReturned = !!data?.session;
-
-    if (error || !data?.session) {
-      diag.stage = "failed";
-      if (debug) return NextResponse.json(diag);
-      return NextResponse.redirect(
-        `${url.origin}/auth/error?err=Auth%20session%20failed`
-      );
+    if (!access_token || !refresh_token) {
+      window.location.href = "/auth/error?err=InvalidTokens";
+      return;
     }
 
-    diag.stage = "success";
-    if (debug) return NextResponse.json(diag);
+    // Send tokens to our server route to establish session cookies
+    fetch("/auth/exchange", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        access_token,
+        refresh_token,
+      }),
+    })
+      .then((res) => res.json())
+      .then((out) => {
+        if (out.error) {
+          window.location.href = `/auth/error?err=${out.error}`;
+        } else {
+          window.location.href = "/app"; // SUCCESS
+        }
+      })
+      .catch(() => {
+        window.location.href = "/auth/error?err=ServerExchangeFailed";
+      });
 
-    // Successful login → redirect to /app
-    return NextResponse.redirect(`${url.origin}${next}`);
-  } catch (err: any) {
-    diag.stage = "exception";
-    diag.exception = err?.message;
-    return NextResponse.json(diag, { status: 500 });
-  }
+  }, []);
+
+  return (
+    <div className="text-white p-10 text-center">
+      Finishing sign-in…
+    </div>
+  );
 }
 
