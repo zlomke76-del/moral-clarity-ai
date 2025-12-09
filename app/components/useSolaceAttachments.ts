@@ -1,32 +1,54 @@
 "use client";
 
-export function useSolaceAttachments({ onInfoMessage }: { onInfoMessage: (msg: string) => void }) {
-  const pendingFiles: any[] = [];
+import { useState } from "react";
+
+export function useSolaceAttachments({
+  onInfoMessage,
+}: {
+  onInfoMessage: (msg: string) => void;
+}) {
+  const [pendingFiles, setPendingFiles] = useState<any[]>([]);
 
   function push(file: any) {
-    pendingFiles.push(file);
+    setPendingFiles((prev) => [...prev, file]);
   }
 
-  function handleFiles(fileList: FileList | null, { prefix }: { prefix: string }) {
+  function handleFiles(
+    fileList: FileList | null,
+    { prefix }: { prefix: string }
+  ) {
     if (!fileList) return;
+
+    const added: any[] = [];
+
     for (const file of Array.from(fileList)) {
-      push({
+      added.push({
         name: file.name,
         type: file.type,
         mime: file.type,
         url: URL.createObjectURL(file),
       });
     }
+
+    if (added.length > 0) {
+      setPendingFiles((prev) => [...prev, ...added]);
+    }
   }
 
-  function handlePaste(e: React.ClipboardEvent, { prefix }: { prefix: string }) {
+  function handlePaste(
+    e: React.ClipboardEvent,
+    { prefix }: { prefix: string }
+  ) {
     const items = e.clipboardData?.items;
     if (!items) return;
+
+    const added: any[] = [];
+
     for (const item of items) {
       if (item.kind === "file") {
         const file = item.getAsFile();
         if (file) {
-          push({
+          added.push({
             name: file.name,
             type: file.type,
             mime: file.type,
@@ -35,10 +57,14 @@ export function useSolaceAttachments({ onInfoMessage }: { onInfoMessage: (msg: s
         }
       }
     }
+
+    if (added.length > 0) {
+      setPendingFiles((prev) => [...prev, ...added]);
+    }
   }
 
   function clearPending() {
-    pendingFiles.splice(0, pendingFiles.length);
+    setPendingFiles([]);
   }
 
   return {
