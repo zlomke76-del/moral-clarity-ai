@@ -22,8 +22,8 @@ function sanitizeASCII(input: string): string {
   if (!input) return "";
 
   const replacements: Record<string, string> = {
-    "—": "-",   // em dash
-    "–": "-",   // en dash
+    "—": "-",
+    "–": "-",
     "•": "*",
     "“": "\"",
     "”": "\"",
@@ -51,19 +51,14 @@ function sanitizeASCII(input: string): string {
 function sanitizeBlock(block: any) {
   if (!block) return block;
 
-  // Content array
+  // Array content
   if (Array.isArray(block.content)) {
     block.content = block.content.map((piece: any) => {
       if (typeof piece === "string") return sanitizeASCII(piece);
 
-      if (piece?.text)
-        piece.text = sanitizeASCII(piece.text);
-
-      if (piece?.input_text)
-        piece.input_text = sanitizeASCII(piece.input_text);
-
-      if (piece?.output_text)
-        piece.output_text = sanitizeASCII(piece.output_text);
+      if (piece?.text) piece.text = sanitizeASCII(piece.text);
+      if (piece?.input_text) piece.input_text = sanitizeASCII(piece.input_text);
+      if (piece?.output_text) piece.output_text = sanitizeASCII(piece.output_text);
 
       return piece;
     });
@@ -93,6 +88,7 @@ async function getNodeUser(req: Request) {
             .split(";")
             .map((c) => c.trim())
             .find((c) => c.startsWith(name + "="));
+
           return match ? match.split("=")[1] : undefined;
         },
         set() {},
@@ -166,7 +162,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
-    // Sanitize user message
     const message = sanitizeASCII(body.message);
 
     //----------------------------------------------------------
@@ -182,53 +177,50 @@ export async function POST(req: Request) {
     } = body;
 
     //----------------------------------------------------------
-    // STEP 1 — SHALLOW SANITIZATION (content as string)
+    // SHALLOW CLEAN
     //----------------------------------------------------------
     const cleanHistory = Array.isArray(history)
       ? history.map((h: any) => ({
           ...h,
-          content: h.content, // deep cleaned in next step
+          content: h.content,
         }))
       : [];
 
     //----------------------------------------------------------
-    // STEP 2 — DEEP SANITIZATION
+    // DEEP SANITIZATION
     //----------------------------------------------------------
     const sanitizedHistory = cleanHistory.map((h: any) => {
-      // Case: array content [{text: "..."}]
       if (Array.isArray(h.content)) {
         return {
           ...h,
           content: h.content.map((c: any) => {
             if (typeof c === "string") return sanitizeASCII(c);
-            if (typeof c?.text === "string")
-              return { ...c, text: sanitizeASCII(c.text) };
+            if (typeof c?.text === "string") return { ...c, text: sanitizeASCII(c.text) };
             return c;
           }),
         };
       }
 
-      // Case: simple string content
-      return {
-        ...h,
-        content: sanitizeASCII(h.content || ""),
-      };
+      return { ...h, content: sanitizeASCII(h.content || "") };
     });
 
     //----------------------------------------------------------
-    // Resolve user identity
+    // USER IDENTITY
     //----------------------------------------------------------
     const user = await getNodeUser(req);
     const canonicalUserKey = user?.id ?? explicitClientKey ?? "guest";
     diag.user = canonicalUserKey;
 
     //----------------------------------------------------------
-    // Load Solace context
+    // CONTEXT LOAD
     //----------------------------------------------------------
-    const context = await assembleContext(canonicalUserKey, workspaceId, message);
+    let context = await assembleContext(canonicalUserKey, workspaceId, message);
+
+    // ⭐ CRITICAL FIX — sanitize context to prevent Unicode failures
+    context = JSON.parse(sanitizeASCII(JSON.stringify(context)));
 
     //----------------------------------------------------------
-    // Build system + user blocks
+    // SYSTEM + USER BLOCKS
     //----------------------------------------------------------
     const domain =
       modeHint === "Create"
@@ -241,17 +233,14 @@ export async function POST(req: Request) {
 
     const systemBlock = sanitizeBlock(buildSystemBlock(domain, ""));
 
-    const userBlocks = assemblePrompt(
-      context,
-      sanitizedHistory,
-      message
-    ).map((b: any) => sanitizeBlock(b));
+    const userBlocks = assemblePrompt(context, sanitizedHistory, message)
+      .map((b: any) => sanitizeBlock(b));
 
     const fullBlocks = [systemBlock, ...userBlocks];
     diag.blocks = { userCount: userBlocks.length };
 
     //----------------------------------------------------------
-    // Select pipeline: hybrid or direct model
+    // PIPELINE SELECTOR
     //----------------------------------------------------------
     const hybridAllowed =
       modeHint === "Create" ||
@@ -277,16 +266,20 @@ export async function POST(req: Request) {
     }
 
     //----------------------------------------------------------
-    // MEMORY WRITE
+    // MEMORY
     //----------------------------------------------------------
     try {
-      await writeMemory(canonicalUserKey, message, sanitizeASCII(finalText));
+      await writeMemory(
+        canonicalUserKey,
+        message,
+        sanitizeASCII(finalText)
+      );
     } catch (err) {
       console.error("[MEMORY] failed:", err);
     }
 
     //----------------------------------------------------------
-    // Return final response
+    // RETURN
     //----------------------------------------------------------
     const res = NextResponse.json({ text: finalText });
     res.headers.set("x-solace-diag", JSON.stringify(diag).slice(0, 1000));
