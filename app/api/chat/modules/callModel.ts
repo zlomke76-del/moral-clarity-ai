@@ -4,9 +4,6 @@
 // FULL ASCII-SAFE VERSION — Prevents ALL ByteString Errors
 //--------------------------------------------------------------
 
-/**
- * Replace all non-ASCII chars with safe equivalents or '?'
- */
 function sanitizeASCII(input: string): string {
   if (!input) return "";
 
@@ -27,6 +24,7 @@ function sanitizeASCII(input: string): string {
     out = out.split(bad).join(replacements[bad]);
   }
 
+  // Replace any non-ASCII (>255)
   return out
     .split("")
     .map((c) => (c.charCodeAt(0) > 255 ? "?" : c))
@@ -36,7 +34,7 @@ function sanitizeASCII(input: string): string {
 export async function callModel(model: string, payload: any) {
   try {
     //----------------------------------------------------------
-    // 1. Convert payload to a JSON string (may contain Unicode)
+    // 1. Convert payload to JSON string
     //----------------------------------------------------------
     let raw = "";
 
@@ -47,12 +45,12 @@ export async function callModel(model: string, payload: any) {
     }
 
     //----------------------------------------------------------
-    // 2. SANITIZE TEXT COMPLETELY
+    // 2. SANITIZE the entire payload string
     //----------------------------------------------------------
     const safeText = sanitizeASCII(raw);
 
     //----------------------------------------------------------
-    // 3. Build sanitized request body
+    // 3. Build sanitized request
     //----------------------------------------------------------
     const requestBody = {
       model,
@@ -70,7 +68,7 @@ export async function callModel(model: string, payload: any) {
     };
 
     //----------------------------------------------------------
-    // 4. Send to OpenAI Responses API
+    // 4. Call OpenAI Responses API
     //----------------------------------------------------------
     const res = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -91,15 +89,16 @@ export async function callModel(model: string, payload: any) {
     }
 
     //----------------------------------------------------------
-    // 5. Parse + sanitize model output before returning it
+    // 5. Parse and sanitize model output
     //----------------------------------------------------------
     const json = await res.json();
-    const text =
+    const out =
       json?.output?.[0]?.content?.[0]?.text ?? "[EMPTY MODEL OUTPUT]";
 
-    return sanitizeASCII(text);
+    return sanitizeASCII(out);
   } catch (err) {
     console.error("[callModel] exception:", err);
     return "[EXCEPTION]";
   }
 }
+
