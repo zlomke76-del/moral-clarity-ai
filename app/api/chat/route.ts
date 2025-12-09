@@ -1,41 +1,36 @@
-// app/api/chat/route.ts
-//---------------------------------------------------------------
-// Solace Chat Route — Persona ALWAYS active
-// Edge Runtime • Magic-link SAFE • Full DIAG Instrumentation
-//---------------------------------------------------------------
+// --------------------------------------------------------------
+// SOLACE CHAT ROUTE — NODE RUNTIME (STABLE)
+// Next.js 16 • Supabase SSR • OpenAI Responses API
+// --------------------------------------------------------------
 
-export const runtime = "edge";
+export const runtime = "nodejs";       // ✔ FIX: Edge runtime caused hangs
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+
 import { assembleContext } from "./modules/assembleContext";
 import { assemblePrompt, buildSystemBlock } from "./modules/assemble";
 import { orchestrateSolaceResponse } from "./modules/orchestrator";
 import { writeMemory } from "./modules/memory-writer";
-import { createServerClient } from "@supabase/ssr";
 
-// -------------------------------------------------------------
-// MAGIC-LINK SAFE SESSION LOADER
-// -------------------------------------------------------------
-async function getEdgeUser(req: Request) {
+// --------------------------------------------------------------
+// LOAD USER SESSION (Node runtime version)
+// --------------------------------------------------------------
+async function getNodeUser(req: Request) {
   const cookieHeader = req.headers.get("cookie") ?? "";
-  console.log("[DIAG-A1] Incoming cookie header:", cookieHeader);
-
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name) {
-          const raw = cookieHeader
+        get: (name) => {
+          const match = cookieHeader
             .split(";")
-            .map((x) => x.trim())
-            .find((x) => x.startsWith(name + "="));
-          const v = raw ? raw.split("=")[1] : undefined;
-          console.log(`[DIAG-A2] Cookie get(${name}) →`, v?.slice(0, 14));
-          return v;
+            .map((c) => c.trim())
+            .find((c) => c.startsWith(name + "="));
+          return match ? match.split("=")[1] : undefined;
         },
         set() {},
         remove() {},
@@ -46,119 +41,74 @@ async function getEdgeUser(req: Request) {
   const { data, error } = await supabase.auth.getUser();
 
   if (error) {
-    console.log("[DIAG-A3] getUser ERROR:", error.message);
+    console.log("[AUTH] getUser error:", error.message);
     return null;
   }
-
-  console.log("[DIAG-A4] getUser SUCCESS — user id:", data?.user?.id);
   return data?.user ?? null;
 }
 
-// -------------------------------------------------------------
-// Mode → Domain mapping
-// -------------------------------------------------------------
-function mapModeHintToDomain(modeHint: string): string {
-  switch (modeHint) {
-    case "Create":
-      return "optimist";
-    case "Red Team":
-      return "skeptic";
-    case "Next Steps":
-      return "arbiter";
-    default:
-      return "guidance";
-  }
-}
-
-// -------------------------------------------------------------
-// FIXED OPENAI CALL — gpt-4.1-mini
-// -------------------------------------------------------------
-async function callOpenAIWithRetry(blocks: any[]): Promise<string> {
+// --------------------------------------------------------------
+// OPENAI ROUTER (Single model w/ retry)
+// --------------------------------------------------------------
+async function callOpenAI(fullBlocks: any[]): Promise<string> {
   const payload = {
-    model: "gpt-4.1-mini",
-    input: blocks,
+    model: "gpt-4.1",
+    input: fullBlocks,
   };
 
-  console.log(
-    "[DIAG-O1] Calling OpenAI with blocks:",
-    JSON.stringify(blocks).slice(0, 600)
-  );
+  console.log("[OPENAI] Payload:", JSON.stringify(payload).slice(0, 300));
 
   for (let attempt = 1; attempt <= 4; attempt++) {
-    const res = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (res.status === 429) {
-      const wait = attempt * 350;
-      console.warn(
-        `[OPENAI] 429 rate limit — retrying in ${wait}ms (attempt ${attempt}/4)`
-      );
-      await new Promise((r) => setTimeout(r, wait));
-      continue;
-    }
-
-    if (!res.ok) {
-      console.error("[OPENAI] Fatal error:", res.status, await res.text());
-      return "[No reply]";
-    }
-
-    const json = await res.json();
-    console.log("[DIAG-O2] OpenAI response received");
-
-    // Flexible response parser — WORKS FOR ALL BLOCK SHAPES
-    let out = "";
-
     try {
-      const o = json?.output?.[0];
+      const res = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify(payload),
+      });
 
-      if (!o) return "[No reply]";
-
-      if (typeof o.content === "string") {
-        out = o.content;
-      } else if (Array.isArray(o.content)) {
-        // Handle block content arrays
-        out =
-          o.content
-            .map((c: any) => c?.text || c?.content || "")
-            .join(" ")
-            .trim() || "";
-      } else {
-        out = JSON.stringify(o);
+      if (res.status === 429) {
+        const wait = attempt * 350;
+        console.warn(`[OPENAI] 429 — retrying in ${wait}ms`);
+        await new Promise((r) => setTimeout(r, wait));
+        continue;
       }
-    } catch (err) {
-      console.error("[DIAG-O3] Parse error:", err);
-      return "[No reply]";
-    }
 
-    return out || "[No reply]";
+      if (!res.ok) {
+        console.error("[OPENAI] fatal:", res.status, await res.text());
+        return "[No reply]";
+      }
+
+      const json = await res.json();
+      return json?.output?.[0]?.content?.[0]?.text ?? "[No reply]";
+    } catch (err) {
+      console.error(`[OPENAI] error on attempt ${attempt}`, err);
+    }
   }
 
-  console.error("[OPENAI] Exhausted retries — fail-safe.");
+  console.error("[OPENAI] exhausted retries");
   return "[No reply]";
 }
 
-// -------------------------------------------------------------
+// --------------------------------------------------------------
 // POST /api/chat
-// -------------------------------------------------------------
+// --------------------------------------------------------------
 export async function POST(req: Request) {
+  const diag = { stage: "start" } as any;
+
   try {
-    // Raw body
-    let body;
-    try {
-      body = await req.json();
-      console.log(
-        "[DIAG-B0] Raw request body:",
-        JSON.stringify(body).slice(0, 500)
+    // ----------------------------------------------------------
+    // Parse Request Body
+    // ----------------------------------------------------------
+    const body = await req.json().catch(() => null);
+
+    if (!body || typeof body.message !== "string") {
+      return NextResponse.json(
+        { error: "Message required" },
+        { status: 400 }
       );
-    } catch (err) {
-      console.error("[DIAG-B0] Failed to parse req.json()", err);
-      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
     }
 
     const {
@@ -168,56 +118,62 @@ export async function POST(req: Request) {
       ministryMode = false,
       founderMode = false,
       modeHint = "Neutral",
+      userKey: explicitClientKey,    // ← FROM HEADER/BODY IF PROVIDED
     } = body;
 
-    if (!message || typeof message !== "string") {
-      console.error("[DIAG-B1] Missing message in request");
-      return NextResponse.json({ error: "Message required" }, { status: 400 });
-    }
+    diag.body = body;
 
-    // User session
-    const user = await getEdgeUser(req);
-    const canonicalUserKey = user?.id ?? null;
+    // ----------------------------------------------------------
+    // Resolve User Identity
+    // ----------------------------------------------------------
+    const user = await getNodeUser(req);
+    const canonicalUserKey = user?.id ?? explicitClientKey ?? "guest";
 
-    console.log("[DIAG-B2] canonicalUserKey:", canonicalUserKey);
+    diag.user = canonicalUserKey;
 
-    const contextKey = canonicalUserKey || "guest";
-
-    console.log("[Solace Context] Load key:", {
-      contextKey,
+    // ----------------------------------------------------------
+    // Load Context
+    // ----------------------------------------------------------
+    const context = await assembleContext(
+      canonicalUserKey,
       workspaceId,
-    });
+      message
+    );
 
-    // Context load
-    const context = await assembleContext(contextKey, workspaceId, message);
-    console.log("[DIAG-C1] Context loaded — keys:", Object.keys(context));
+    // ----------------------------------------------------------
+    // System + User Prompt Blocks
+    // ----------------------------------------------------------
+    const domain =
+      modeHint === "Create"
+        ? "optimist"
+        : modeHint === "Red Team"
+        ? "skeptic"
+        : modeHint === "Next Steps"
+        ? "arbiter"
+        : "guidance";
 
-    // Prompt blocks
-    const systemBlock = buildSystemBlock(mapModeHintToDomain(modeHint), "");
+    const systemBlock = buildSystemBlock(domain, "");
     const userBlocks = assemblePrompt(context, history, message);
     const fullBlocks = [systemBlock, ...userBlocks];
 
-    console.log("[DIAG-P1] systemBlock:", JSON.stringify(systemBlock).slice(0, 400));
-    console.log("[DIAG-P2] userBlocks count:", userBlocks.length);
-    console.log("[DIAG-P3] fullBlocks length:", fullBlocks.length);
+    diag.blocks = {
+      system: JSON.stringify(systemBlock).slice(0, 300),
+      userCount: userBlocks.length,
+    };
 
-    if (fullBlocks.length === 0) {
-      console.error("[DIAG-P4] ERROR — Prompt assembly produced ZERO blocks.");
-      return NextResponse.json({ text: "[Prompt error — no blocks]" });
-    }
-
-    let finalText: string;
-
-    // Hybrid pipeline
+    // ----------------------------------------------------------
+    // HYBRID PIPELINE OR SINGLE MODEL
+    // ----------------------------------------------------------
     const hybridAllowed =
       modeHint === "Create" ||
       modeHint === "Red Team" ||
       modeHint === "Next Steps" ||
       founderMode;
 
-    if (hybridAllowed) {
-      console.log("[DIAG-H1] Hybrid pipeline active");
+    let finalText = "";
 
+    if (hybridAllowed) {
+      console.log("[HYBRID] pipeline active");
       finalText =
         (await orchestrateSolaceResponse({
           userMessage: message,
@@ -227,29 +183,35 @@ export async function POST(req: Request) {
           modeHint,
           founderMode,
           canonicalUserKey,
-        })) || "[No reply]";
+        })) || "[No arbiter answer]";
     } else {
-      console.log("[DIAG-N1] Neutral pipeline active");
-      finalText = await callOpenAIWithRetry(fullBlocks);
+      console.log("[NEUTRAL] single-model pipeline active");
+      finalText = await callOpenAI(fullBlocks);
     }
 
-    console.log("[DIAG-R1] Final answer:", finalText.slice(0, 200));
+    diag.finalPreview = finalText.slice(0, 200);
 
-    // Memory storage
+    // ----------------------------------------------------------
+    // MEMORY WRITE
+    // ----------------------------------------------------------
     try {
       await writeMemory(canonicalUserKey, message, finalText);
     } catch (err) {
-      console.error("[memory-writer] failed:", err);
+      console.error("[MEMORY] write failed", err);
     }
 
-    return NextResponse.json({ text: finalText });
+    // ----------------------------------------------------------
+    // Return Response
+    // ----------------------------------------------------------
+    const res = NextResponse.json({ text: finalText });
+    res.headers.set("x-solace-diag", JSON.stringify(diag).slice(0, 1000));
+    return res;
   } catch (err: any) {
-    console.error("[chat route] fatal error", err);
+    console.error("[CHAT ROUTE] fatal", err);
     return NextResponse.json(
-      { error: err?.message || "Chat route failed" },
+      { error: err?.message ?? "ChatRouteError", diag },
       { status: 500 }
     );
   }
 }
-
 
