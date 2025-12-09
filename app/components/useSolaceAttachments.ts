@@ -1,77 +1,97 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
+
+export interface SolaceFile {
+  name: string;
+  mime: string;
+  url: string;
+  size?: number;
+  original?: File;
+}
 
 export function useSolaceAttachments({
   onInfoMessage,
 }: {
   onInfoMessage: (msg: string) => void;
 }) {
-  const [pendingFiles, setPendingFiles] = useState<any[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<SolaceFile[]>([]);
 
-  function push(file: any) {
-    setPendingFiles((prev) => [...prev, file]);
-  }
+  /** Cleanup object URLs on unmount */
+  useEffect(() => {
+    return () => {
+      pendingFiles.forEach((f) => URL.revokeObjectURL(f.url));
+    };
+  }, [pendingFiles]);
 
-  function handleFiles(
-    fileList: FileList | null,
-    { prefix }: { prefix: string }
-  ) {
-    if (!fileList) return;
+  /** Convert a File object into our internal Solace file */
+  const fileToSolace = useCallback((file: File): SolaceFile => {
+    return {
+      name: file.name,
+      mime: file.type || "application/octet-stream",
+      url: URL.createObjectURL(file),
+      size: file.size,
+      original: file,
+    };
+  }, []);
 
-    const added: any[] = [];
+  /** Handle input[type=file] */
+  const handleFiles = useCallback(
+    (fileList: FileList | null, { prefix }: { prefix: string }) => {
+      if (!fileList) return;
 
-    for (const file of Array.from(fileList)) {
-      added.push({
-        name: file.name,
-        type: file.type,
-        mime: file.type,
-        url: URL.createObjectURL(file),
-      });
-    }
+      const newFiles: SolaceFile[] = [];
+      for (const file of Array.from(fileList)) {
+        newFiles.push(fileToSolace(file));
+      }
 
-    if (added.length > 0) {
-      setPendingFiles((prev) => [...prev, ...added]);
-    }
-  }
+      setPendingFiles((prev) => [...prev, ...newFiles]);
+      onInfoMessage(`${newFiles.length} file(s) attached.`);
+    },
+    [fileToSolace, onInfoMessage]
+  );
 
-  function handlePaste(
-    e: React.ClipboardEvent,
-    { prefix }: { prefix: string }
-  ) {
-    const items = e.clipboardData?.items;
-    if (!items) return;
+  /** Handle paste event */
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent, { prefix }: { prefix: string }) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
 
-    const added: any[] = [];
+      const newFiles: SolaceFile[] = [];
 
-    for (const item of items) {
-      if (item.kind === "file") {
-        const file = item.getAsFile();
-        if (file) {
-          added.push({
-            name: file.name,
-            type: file.type,
-            mime: file.type,
-            url: URL.createObjectURL(file),
-          });
+      for (const item of items) {
+        if (item.kind === "file") {
+          const file = item.getAsFile();
+          if (file) {
+            newFiles.push(fileToSolace(file));
+          }
         }
       }
-    }
 
-    if (added.length > 0) {
-      setPendingFiles((prev) => [...prev, ...added]);
-    }
-  }
+      if (newFiles.length > 0) {
+        setPendingFiles((prev) => [...prev, ...newFiles]);
+        onInfoMessage(`${newFiles.length} pasted file(s) attached.`);
+      }
+    },
+    [fileToSolace, onInfoMessage]
+  );
 
-  function clearPending() {
+  /** Clear attachments */
+  const clearPending = useCallback(() => {
+    pendingFiles.forEach((f) => URL.revokeObjectURL(f.url));
     setPendingFiles([]);
-  }
+  }, [pendingFiles]);
+
+  /** Helper for SolaceDock UI */
+  const getAttachmentUrl = useCallback((f: SolaceFile) => f.url, []);
 
   return {
     pendingFiles,
     handleFiles,
     handlePaste,
     clearPending,
+    getAttachmentUrl,
   };
 }
+
 
