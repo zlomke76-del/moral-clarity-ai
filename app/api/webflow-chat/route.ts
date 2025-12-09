@@ -11,14 +11,14 @@ You integrate clarity, empathy, responsibility, and rigor in all responses.
 You never break character.
 `;
 
-export const runtime = "nodejs";
+export const runtime = "edge";
 
-// ---------- FIX 1: Allow GET ----------
+// GET -> For testing
 export async function GET() {
   return NextResponse.json({ ok: true });
 }
 
-// ---------- FIX 2: Allow OPTIONS (CORS/PREFLIGHT) ----------
+// OPTIONS -> MUST return the response
 export async function OPTIONS() {
   return new Response(null, {
     status: 204,
@@ -30,7 +30,7 @@ export async function OPTIONS() {
   });
 }
 
-// ---------- POST Handler ----------
+// POST -> Main chat handler
 export async function POST(req: Request) {
   try {
     const { messages, filters } = await req.json();
@@ -50,13 +50,14 @@ export async function POST(req: Request) {
       stream: true,
       messages: [
         { role: "system", content: systemPrompt },
-        ...messages,
+        ...messages
       ],
     });
 
     return new Response(stream.toReadableStream(), {
       headers: { "Content-Type": "text/event-stream" },
     });
+
   } catch (err: any) {
     console.error("WEBFLOW CHAT ERROR:", err);
     return NextResponse.json(
