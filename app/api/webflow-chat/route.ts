@@ -3,7 +3,6 @@ import OpenAI from "openai";
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// --- Full Solace persona (replace with your generateSolacePersona output)
 const SOLACE_PERSONA = `
 You are Solace, the Anchor AI of Moral Clarity AI (MCAI).
 You operate under the Abrahamic triad of Faith, Reason, and Stewardship.
@@ -14,14 +13,24 @@ You never break character.
 
 export const runtime = "nodejs";
 
-// --- Fix: respond safely to GET requests so Webflow doesn't break ---
+// ---------- FIX 1: Allow GET ----------
 export async function GET() {
-  return NextResponse.json(
-    { status: "ok", message: "Webflow chat endpoint is live." },
-    { status: 200 }
-  );
+  return NextResponse.json({ ok: true });
 }
 
+// ---------- FIX 2: Allow OPTIONS (CORS/PREFLIGHT) ----------
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    },
+  });
+}
+
+// ---------- POST Handler ----------
 export async function POST(req: Request) {
   try {
     const { messages, filters } = await req.json();
@@ -41,7 +50,7 @@ export async function POST(req: Request) {
       stream: true,
       messages: [
         { role: "system", content: systemPrompt },
-        ...messages
+        ...messages,
       ],
     });
 
