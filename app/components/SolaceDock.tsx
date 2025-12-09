@@ -540,47 +540,100 @@ export default function SolaceDock() {
         {/* --------------------------------------------
             INPUT ROW (bigger box + Enter-to-send)
         -------------------------------------------- */}
-        <div style={{ display: "flex", gap: 8 }}>
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                send();
-              }
-            }}
-            style={{
-              flex: "1 1 auto",
-              minHeight: 70,            // larger
-              maxHeight: 180,
-              resize: "none",
-              padding: "12px 14px",     // larger padding
-              borderRadius: UI.radiusLg,
-              border: UI.border,
-              background: UI.surface1,
-              color: UI.text,
-              fontSize: 16,             // larger text
-              lineHeight: 1.45,
-              outline: "none"
-            }}
-          />
+<div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+  
+  {/* 📎 FILE BUTTON */}
+  <label
+    style={{
+      cursor: "pointer",
+      padding: "10px 12px",
+      borderRadius: UI.radiusLg,
+      border: UI.border,
+      background: UI.surface1,
+      color: UI.text,
+      fontSize: 18,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      height: 44,
+      width: 44,
+      userSelect: "none"
+    }}
+  >
+    📎
+    <input
+      type="file"
+      multiple
+      style={{ display: "none" }}
+      onChange={(e) => handleFiles(e.target.files)}
+    />
+  </label>
 
-          <button
-            onClick={send}
-            style={{
-              padding: "10px 16px",
-              borderRadius: UI.radiusLg,
-              border: UI.border,
-              background: "#1c2a3a",
-              color: UI.text,
-              fontSize: 15,
-              cursor: "pointer"
-            }}
-          >
-            Ask
-          </button>
-        </div>
+  {/* 🎤 MIC BUTTON */}
+  <button
+    onClick={toggleMic}
+    style={{
+      padding: "10px 12px",
+      borderRadius: UI.radiusLg,
+      border: UI.border,
+      background: listening ? "#2d4d2d" : UI.surface1,
+      color: UI.text,
+      fontSize: 18,
+      height: 44,
+      width: 44,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "pointer"
+    }}
+  >
+    🎤
+  </button>
+
+  {/* TEXTAREA */}
+  <textarea
+    value={input}
+    onChange={(e) => setInput(e.target.value)}
+    onKeyDown={(e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        send();
+      }
+    }}
+    style={{
+      flex: "1 1 auto",
+      minHeight: 80,
+      maxHeight: 200,
+      resize: "none",
+      padding: "14px 16px",
+      borderRadius: UI.radiusLg,
+      border: UI.border,
+      background: UI.surface1,
+      color: UI.text,
+      fontSize: 17,
+      lineHeight: 1.45,
+      outline: "none"
+    }}
+  />
+
+  {/* ASK BUTTON */}
+  <button
+    onClick={send}
+    style={{
+      padding: "12px 18px",
+      borderRadius: UI.radiusLg,
+      border: UI.border,
+      background: "#1c2a3a",
+      color: UI.text,
+      fontSize: 15,
+      height: 44,
+      cursor: "pointer"
+    }}
+  >
+    Ask
+  </button>
+</div>
+
 
         <div
           style={{
