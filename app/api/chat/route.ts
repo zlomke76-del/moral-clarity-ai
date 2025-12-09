@@ -22,9 +22,9 @@ function sanitizeASCII(input: string): string {
   if (!input) return "";
 
   const replacements: Record<string, string> = {
-    "—": "-",   // em dash
-    "–": "-",   // en dash
-    "•": "*",   // bullets
+    "—": "-", // em dash
+    "–": "-", // en dash
+    "•": "*",
     "“": "\"",
     "”": "\"",
     "‘": "'",
@@ -45,6 +45,35 @@ function sanitizeASCII(input: string): string {
     .join("");
 
   return out;
+}
+
+//--------------------------------------------------------------
+// UNIVERSAL BLOCK SANITIZER — NEW
+//--------------------------------------------------------------
+function sanitizeBlock(block: any) {
+  if (!block) return block;
+
+  // Content array (Responses API standard)
+  if (Array.isArray(block.content)) {
+    block.content = block.content.map((piece: any) => {
+      if (typeof piece === "string") return sanitizeASCII(piece);
+
+      if (piece?.text) piece.text = sanitizeASCII(piece.text);
+      if (piece?.input_text) piece.input_text = sanitizeASCII(piece.input_text);
+      if (piece?.output_text) piece.output_text = sanitizeASCII(piece.output_text);
+
+      return piece;
+    });
+  }
+
+  // Direct text fields
+  if (typeof block.text === "string") block.text = sanitizeASCII(block.text);
+  if (typeof block.input_text === "string")
+    block.input_text = sanitizeASCII(block.input_text);
+  if (typeof block.output_text === "string")
+    block.output_text = sanitizeASCII(block.output_text);
+
+  return block;
 }
 
 //--------------------------------------------------------------
@@ -79,16 +108,8 @@ async function getNodeUser(req: Request) {
 // OPENAI CALL — SINGLE MODEL + RETRY
 //--------------------------------------------------------------
 async function callOpenAI(fullBlocks: any[]): Promise<string> {
-  // Sanitize EVERYTHING before hitting Responses API
-  const safeBlocks = JSON.parse(JSON.stringify(fullBlocks));
-
-  for (const block of safeBlocks) {
-    if (block.content) {
-      for (const c of block.content) {
-        if (c.text) c.text = sanitizeASCII(c.text);
-      }
-    }
-  }
+  // Deep clone + sanitize to ensure ASCII-safe before OpenAI
+  const safeBlocks = fullBlocks.map((b) => sanitizeBlock(JSON.parse(JSON.stringify(b))));
 
   const payload = {
     model: "gpt-4.1",
@@ -140,13 +161,10 @@ export async function POST(req: Request) {
     diag.body = body;
 
     if (!body?.message) {
-      return NextResponse.json(
-        { error: "Message required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
-    // Sanitize incoming message too
+    // Sanitize incoming message
     const message = sanitizeASCII(body.message);
 
     const {
@@ -168,11 +186,7 @@ export async function POST(req: Request) {
     //----------------------------------------------
     // Load memory + context
     //----------------------------------------------
-    const context = await assembleContext(
-      canonicalUserKey,
-      workspaceId,
-      message
-    );
+    const context = await assembleContext(canonicalUserKey, workspaceId, message);
 
     //----------------------------------------------
     // Build prompt blocks
@@ -188,23 +202,17 @@ export async function POST(req: Request) {
 
     const systemBlock = buildSystemBlock(domain, "");
 
-    // Sanitize system prompt
-    if (systemBlock?.content) {
-      for (const c of systemBlock.content) {
-        if (c.text) c.text = sanitizeASCII(c.text);
-      }
-    }
+    sanitizeBlock(systemBlock);
 
-    const userBlocks = assemblePrompt(context, history, message).map((b: any) => {
-      if (b?.content) {
-        for (const c of b.content) {
-          if (c.text) c.text = sanitizeASCII(c.text);
-        }
-      }
-      return b;
-    });
+    //----------------------------------------------
+    // Build user + history blocks
+    //----------------------------------------------
+    const userBlocks = assemblePrompt(context, history, message).map((b: any) =>
+      sanitizeBlock(b)
+    );
 
     const fullBlocks = [systemBlock, ...userBlocks];
+
     diag.blocks = { userCount: userBlocks.length };
 
     //----------------------------------------------
@@ -237,7 +245,7 @@ export async function POST(req: Request) {
     // MEMORY WRITE
     //----------------------------------------------
     try {
-      await writeMemory(canonicalUserKey, message, finalText);
+      await writeMemory(canonicalUserKey, message, sanitizeASCII(finalText));
     } catch (err) {
       console.error("[MEMORY] failed:", err);
     }
