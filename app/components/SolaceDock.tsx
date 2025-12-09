@@ -7,6 +7,10 @@ import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
 import { useSolaceMemory } from "./useSolaceMemory";
 import { useSolaceAttachments } from "./useSolaceAttachments";
 
+import { UI } from "./dock-ui";
+import { Skins } from "./dock-skins";
+import SolaceDockHeader from "./dock-header";
+
 declare global {
   interface Window {
     __solaceDockMounted?: boolean;
@@ -23,30 +27,16 @@ const MINISTRY_KEY = "solace:ministry";
 const FOUNDER_KEY = "solace:founder";
 const PAD = 12;
 
-const ui = {
-  panelBg:
-    "radial-gradient(140% 160% at 50% -60%, rgba(26,35,53,0.85) 0%, rgba(14,21,34,0.88) 60%)",
-  border: "1px solid var(--mc-border)",
-  edge: "1px solid rgba(255,255,255,.06)",
-  text: "var(--mc-text)",
-  sub: "var(--mc-muted)",
-  surface2: "rgba(12,19,30,.85)",
-  glowOn:
-    "0 0 0 1px rgba(251,191,36,.25) inset, 0 0 90px rgba(251,191,36,.14), 0 22px 70px rgba(0,0,0,.55)",
-  shadow: "0 14px 44px rgba(0,0,0,.45)",
-};
-
 /* ---------------------------------------------------------
-   Attachments: utilities
+   Attachments helpers
 --------------------------------------------------------- */
 function isImageAttachment(f: any): boolean {
   if (!f) return false;
-  const mime = (f.mime || f.type || "") as string;
-  if (mime && mime.startsWith("image/")) return true;
+  const mime = f.mime || f.type || "";
+  if (mime.startsWith("image/")) return true;
   const name = f.name || "";
   return /\.(png|jpe?g|gif|webp|bmp|heic)$/i.test(name);
 }
-
 function getAttachmentUrl(f: any): string | null {
   if (!f) return null;
   return f.url || f.publicUrl || f.path || null;
@@ -57,16 +47,20 @@ function getAttachmentUrl(f: any): string | null {
 --------------------------------------------------------- */
 export default function SolaceDock() {
   const [canRender, setCanRender] = useState(false);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.__solaceDockMounted) return;
     window.__solaceDockMounted = true;
+
     setCanRender(true);
+
     return () => {
       window.__solaceDockMounted = false;
     };
   }, []);
 
+  // Store
   const {
     visible,
     setVisible,
@@ -101,6 +95,7 @@ export default function SolaceDock() {
   const [dragging, setDragging] = useState(false);
   const [offset, setOffset] = useState({ dx: 0, dy: 0 });
   const [posReady, setPosReady] = useState(false);
+
   const [panelH, setPanelH] = useState(0);
   const [panelW, setPanelW] = useState(0);
 
@@ -111,7 +106,7 @@ export default function SolaceDock() {
   const [listening, setListening] = useState(false);
   const recogRef = useRef<any>(null);
 
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed] = useState(false);
   const transcriptRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -264,22 +259,22 @@ export default function SolaceDock() {
   }, [input]);
 
   /* ---------------------------------------------------------
-     BACKEND CALL — FIXED (no duplicated messages)
+     BACKEND CALL — corrected for no duplication
   --------------------------------------------------------- */
   async function sendToChat(userMsg: string, prevHistory: Message[]) {
     const res = await fetch("/api/chat", {
       method: "POST",
-     headers: {
-  "Content-Type": "application/json",
-},
-body: JSON.stringify({
-  message: userMsg,
-  history: prevHistory,
-  workspaceId: MCA_WORKSPACE_ID,
-  ministryMode: ministryOn,
-  modeHint,
-  founderMode,
-}),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: userMsg,
+        history: prevHistory,
+        workspaceId: MCA_WORKSPACE_ID,
+        ministryMode: ministryOn,
+        modeHint,
+        founderMode,
+      }),
     });
 
     if (!res.ok) {
@@ -320,52 +315,47 @@ body: JSON.stringify({
   }
 
   /* ---------------------------------------------------------
-     SEND (Fully Corrected — no duplication)
+     SEND — FIXED ORDER (user first, reply after)
   --------------------------------------------------------- */
-async function send() {
-  const text = input.trim();
-  const hasAttachments = pendingFiles.length > 0;
-  const hasImage = pendingFiles.some(isImageAttachment);
+  async function send() {
+    const text = input.trim();
+    const hasAttachments = pendingFiles.length > 0;
+    const hasImage = pendingFiles.some(isImageAttachment);
 
-  if (!text && !hasAttachments) return;
-  if (streaming) return;
+    if (!text && !hasAttachments) return;
+    if (streaming) return;
 
-  const userMsg = text || (hasAttachments ? "Attachments:" : "");
-  setInput(""); 
-  setStreaming(true);
+    const userMsg = text || (hasAttachments ? "Attachments:" : "");
+    setInput("");
+    setStreaming(true);
 
-  // ⭐ Immediately render user message in the transcript
-  setMessages((prev) => [
-    ...prev,
-    { role: "user", content: userMsg },
-  ]);
+    // ⭐ Show user message immediately
+    setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
 
-  try {
-    // Give the backend the full history INCLUDING the new message
-    const historyForBackend = [
-      ...messages,
-      { role: "user", content: userMsg },
-    ];
+    try {
+      const historyForBackend = [
+        ...messages,
+        { role: "user", content: userMsg },
+      ];
 
-    let reply;
+      let reply;
 
-    if (hasImage) {
-      reply = await sendToVision(userMsg, historyForBackend);
-    } else {
-      reply = await sendToChat(userMsg, historyForBackend);
+      if (hasImage) {
+        reply = await sendToVision(userMsg, historyForBackend);
+      } else {
+        reply = await sendToChat(userMsg, historyForBackend);
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: reply },
+      ]);
+    } catch (err: any) {
+      appendInfo(`⚠️ ${err?.message || "Error"}`);
+    } finally {
+      setStreaming(false);
     }
-
-    // ⭐ Append Solace's response AFTER receiving it
-    setMessages((prev) => [
-      ...prev,
-      { role: "assistant", content: reply },
-    ]);
-  } catch (err: any) {
-    appendInfo(`⚠️ ${err?.message || "Error"}`);
-  } finally {
-    setStreaming(false);
   }
-}
 
   /* ---------------------------------------------------------
      MODE toggles
@@ -469,57 +459,8 @@ async function send() {
   const ty = Math.min(Math.max(0, y - PAD), maxY);
   const invisible = !posReady;
 
-  /* ---------------- Helpers ---------------- */
-  const modeChip = (label: ModeHint) => (
-    <button
-      onClick={() => setModeHint(label)}
-      style={{
-        borderRadius: 8,
-        padding: "7px 10px",
-        font: "600 12px system-ui",
-        background: modeHint === label ? "#d1d4db" : "#0e1726",
-        color: modeHint === label ? "#000" : ui.text,
-        border: `1px solid var(--mc-border)`,
-        cursor: "pointer",
-      }}
-    >
-      {label}
-    </button>
-  );
-
-  const ministryButton = (
-    <button
-      onClick={toggleMinistry}
-      style={{
-        borderRadius: 8,
-        padding: "7px 10px",
-        font: "700 12px system-ui",
-        background: ministryOn ? "#f6c453" : "#0e1726",
-        color: ministryOn ? "#000" : ui.text,
-        border: ministryOn ? "1px solid #f4cf72" : ui.edge,
-        cursor: "pointer",
-      }}
-    >
-      Ministry
-    </button>
-  );
-
-  const founderButton = (
-    <button
-      onClick={toggleFounder}
-      style={{
-        borderRadius: 8,
-        padding: "7px 10px",
-        font: "700 12px system-ui",
-        background: founderMode ? "#9ae6b4" : "#0e1726",
-        color: founderMode ? "#000" : ui.text,
-        border: founderMode ? "1px solid #81e6d9" : ui.edge,
-        cursor: "pointer",
-      }}
-    >
-      Founder
-    </button>
-  );
+  /* ---------------- Active skin (default always for A) ---------------- */
+  const skin = Skins.default;
 
   /* ---------------- Panel styles ---------------- */
   const panelStyle: React.CSSProperties = {
@@ -528,10 +469,10 @@ async function send() {
     top: PAD,
     width: "clamp(560px, 56vw, 980px)",
     height: "clamp(460px, 62vh, 820px)",
-    background: ui.panelBg,
-    borderRadius: 20,
-    border: ui.border,
-    boxShadow: ministryOn ? ui.glowOn : ui.shadow,
+    background: skin.panelBg,
+    borderRadius: UI.radiusLg,
+    border: skin.border,
+    boxShadow: ministryOn ? UI.glowOn : UI.shadow,
     backdropFilter: "blur(8px)",
     display: "flex",
     flexDirection: "column",
@@ -547,91 +488,31 @@ async function send() {
     flex: "1 1 auto",
     overflow: "auto",
     padding: "14px 16px",
-    color: ui.text,
+    color: UI.text,
     background:
       "linear-gradient(180deg, rgba(12,19,30,.9), rgba(10,17,28,.92))",
   };
 
   const composerWrapStyle: React.CSSProperties = {
-    borderTop: ui.edge,
-    background: ui.surface2,
+    borderTop: UI.edge,
+    background: UI.surface2,
     padding: 10,
   };
 
   /* ---------------- Render Panel ---------------- */
   const panel = (
     <section ref={containerRef} style={panelStyle}>
-      {/* HEADER */}
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          padding: "10px 14px",
-          borderBottom: ui.edge,
-          cursor: "move",
-          userSelect: "none",
-        }}
-        onMouseDown={onHeaderMouseDown}
-      >
-        <span
-          style={{
-            width: 22,
-            height: 22,
-            borderRadius: "50%",
-            background:
-              "radial-gradient(62% 62% at 50% 42%, rgba(251,191,36,1) 0%, rgba(251,191,36,.65) 38%, rgba(251,191,36,.22) 72%, rgba(251,191,36,.12) 100%)",
-            boxShadow: "0 0 38px rgba(251,191,36,.55)",
-          }}
-        />
-        <span style={{ font: "600 13px system-ui" }}>Solace</span>
-        <span style={{ font: "12px system-ui", color: ui.sub }}>
-          Create with moral clarity
-        </span>
-
-        {/* Memory indicator */}
-        <span
-          title={memReady ? "Memory ready" : "Loading memory…"}
-          style={{
-            marginLeft: 8,
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            background: memReady ? "#34d399" : "#f59e0b",
-            boxShadow: memReady ? "0 0 8px #34d399aa" : "none",
-          }}
-        />
-
-        {/* Modes */}
-        <div style={{ display: "flex", gap: 8, marginLeft: 12 }}>
-          {modeChip("Create")}
-          {modeChip("Red Team")}
-          {modeChip("Next Steps")}
-          {modeChip("Neutral")}
-        </div>
-
-        {/* Right-side */}
-        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-          {ministryButton}
-          {founderButton}
-
-          {/* Minimize */}
-          <button
-            onClick={() => setMinimized(true)}
-            style={{
-              borderRadius: 6,
-              padding: "4px 8px",
-              font: "600 12px system-ui",
-              border: ui.edge,
-              background: "#0e1726",
-              color: ui.sub,
-              cursor: "pointer",
-            }}
-          >
-            –
-          </button>
-        </div>
-      </header>
+      <SolaceDockHeader
+        ministryOn={ministryOn}
+        founderMode={founderMode}
+        modeHint={modeHint}
+        memReady={memReady}
+        onToggleMinistry={toggleMinistry}
+        onToggleFounder={toggleFounder}
+        onMinimize={() => setMinimized(true)}
+        setModeHint={setModeHint}
+        onDragStart={onHeaderMouseDown}
+      />
 
       {/* TRANSCRIPT */}
       <div ref={transcriptRef} style={transcriptStyle}>
@@ -639,7 +520,7 @@ async function send() {
           <div
             key={i}
             style={{
-              borderRadius: 12,
+              borderRadius: UI.radiusLg,
               padding: "10px 12px",
               margin: "6px 0",
               background:
@@ -678,7 +559,7 @@ async function send() {
                 style={{
                   padding: "4px 8px",
                   borderRadius: 8,
-                  border: "1px solid var(--mc-border)",
+                  border: UI.border,
                   background: "#0e1726",
                 }}
               >
@@ -693,16 +574,18 @@ async function send() {
           <div style={{ display: "flex", gap: 6 }}>
             <button
               onClick={() =>
-                document.querySelector<HTMLInputElement>("#solace-file-input")?.click()
+                document
+                  .querySelector<HTMLInputElement>("#solace-file-input")
+                  ?.click()
               }
               title="Attach files"
               style={{
                 width: 40,
                 height: 40,
-                borderRadius: 12,
-                border: "1px solid var(--mc-border)",
+                borderRadius: UI.radiusLg,
+                border: UI.border,
                 background: "#0e1726",
-                color: ui.text,
+                color: UI.text,
                 cursor: "pointer",
               }}
             >
@@ -722,10 +605,10 @@ async function send() {
               style={{
                 width: 40,
                 height: 40,
-                borderRadius: 12,
-                border: "1px solid var(--mc-border)",
+                borderRadius: UI.radiusLg,
+                border: UI.border,
                 background: listening ? "#244a1f" : "#0e1726",
-                color: ui.text,
+                color: UI.text,
                 cursor: "pointer",
               }}
             >
@@ -749,10 +632,10 @@ async function send() {
               flex: "1 1 auto",
               minHeight: 60,
               maxHeight: 240,
-              borderRadius: 12,
-              border: "1px solid var(--mc-border)",
+              borderRadius: UI.radiusLg,
+              border: UI.border,
               background: "#0e1726",
-              color: ui.text,
+              color: UI.text,
               padding: "10px 12px",
               resize: "none",
             }}
@@ -765,7 +648,7 @@ async function send() {
             style={{
               minWidth: 80,
               height: 40,
-              borderRadius: 12,
+              borderRadius: UI.radiusLg,
               background: "#6e8aff",
               color: "#fff",
               font: "600 13px system-ui",
@@ -785,7 +668,7 @@ async function send() {
             display: "flex",
             justifyContent: "space-between",
             font: "12px system-ui",
-            color: ui.sub,
+            color: UI.sub,
           }}
         >
           <span>
