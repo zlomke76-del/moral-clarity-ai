@@ -1,64 +1,31 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
-const SIZE_KEY = "solace:size:v1";
+import React from "react";
 
 export function useDockSize() {
-  const [dockW, setDockW] = useState(760);
-  const [dockH, setDockH] = useState(560);
+  const DEFAULT_W = 720;
+  const DEFAULT_H = 540;
 
-  // Load saved size
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(SIZE_KEY);
-      if (!raw) return;
-      const s = JSON.parse(raw);
-      if (s?.w && s?.h) {
-        setDockW(s.w);
-        setDockH(s.h);
-      }
-    } catch {}
-  }, []);
+  const [dockW, setDockW] = React.useState(() => {
+    if (typeof window === "undefined") return DEFAULT_W;
+    return Number(localStorage.getItem("solace:dockW")) || DEFAULT_W;
+  });
 
-  // Persist on change
-  useEffect(() => {
+  const [dockH, setDockH] = React.useState(() => {
+    if (typeof window === "undefined") return DEFAULT_H;
+    return Number(localStorage.getItem("solace:dockH")) || DEFAULT_H;
+  });
+
+  React.useEffect(() => {
     try {
-      localStorage.setItem(SIZE_KEY, JSON.stringify({ w: dockW, h: dockH }));
+      localStorage.setItem("solace:dockW", String(dockW));
+      localStorage.setItem("solace:dockH", String(dockH));
     } catch {}
   }, [dockW, dockH]);
 
   return { dockW, dockH, setDockW, setDockH };
 }
 
-/* ---------------------------------------------------------
-   Resize handle component
---------------------------------------------------------- */
-export function ResizeHandle({
-  onResizeStart,
-}: {
-  onResizeStart: (e: React.MouseEvent) => void;
-}) {
-  return (
-    <div
-      onMouseDown={onResizeStart}
-      style={{
-        position: "absolute",
-        right: 0,
-        bottom: 0,
-        width: 18,
-        height: 18,
-        cursor: "nwse-resize",
-        background: "transparent",
-        zIndex: 9999,
-      }}
-    />
-  );
-}
-
-/* ---------------------------------------------------------
-   Creates the mousemove resizing logic for the parent
---------------------------------------------------------- */
 export function createResizeController(
   dockW: number,
   dockH: number,
@@ -75,7 +42,7 @@ export function createResizeController(
 
     function onMove(ev: MouseEvent) {
       const newW = Math.max(480, startW + (ev.clientX - startX));
-      const newH = Math.max(380, startH + (ev.clientY - startY));
+      const newH = Math.max(360, startH + (ev.clientY - startY));
       setDockW(newW);
       setDockH(newH);
     }
@@ -88,4 +55,26 @@ export function createResizeController(
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
   };
+}
+
+export function ResizeHandle({
+  onResizeStart,
+}: {
+  onResizeStart: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <div
+      onMouseDown={onResizeStart}
+      style={{
+        position: "absolute",
+        right: 0,
+        bottom: 0,
+        width: 18,
+        height: 18,
+        cursor: "nwse-resize",
+        background:
+          "linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.25) 90%)",
+      }}
+    />
+  );
 }
