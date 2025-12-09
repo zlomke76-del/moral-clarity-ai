@@ -12,7 +12,7 @@ You integrate clarity, empathy, responsibility, and rigor in all responses.
 You never break character.
 `;
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
