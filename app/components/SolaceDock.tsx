@@ -333,10 +333,10 @@ export default function SolaceDock() {
     setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
 
     try {
-      const historyForBackend = [
-        ...messages,
-        { role: "user", content: userMsg },
-      ];
+      const historyForBackend: Message[] = messages.map(m => ({
+  role: m.role as "user" | "assistant",
+  content: m.content,
+}));
 
       let reply;
 
