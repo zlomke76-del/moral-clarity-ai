@@ -322,39 +322,50 @@ body: JSON.stringify({
   /* ---------------------------------------------------------
      SEND (Fully Corrected — no duplication)
   --------------------------------------------------------- */
-  async function send() {
-    const text = input.trim();
-    const hasAttachments = pendingFiles.length > 0;
-    const hasImage = pendingFiles.some(isImageAttachment);
+async function send() {
+  const text = input.trim();
+  const hasAttachments = pendingFiles.length > 0;
+  const hasImage = pendingFiles.some(isImageAttachment);
 
-    if (!text && !hasAttachments) return;
-    if (streaming) return;
+  if (!text && !hasAttachments) return;
+  if (streaming) return;
 
-    const userMsg = text || (hasAttachments ? "Attachments:" : "");
-    setInput(""); // clear input immediately
-    setStreaming(true);
+  const userMsg = text || (hasAttachments ? "Attachments:" : "");
+  setInput(""); 
+  setStreaming(true);
 
-    try {
-      let reply;
+  // ⭐ Immediately render user message in the transcript
+  setMessages((prev) => [
+    ...prev,
+    { role: "user", content: userMsg },
+  ]);
 
-      if (hasImage) {
-        reply = await sendToVision(userMsg, messages);
-      } else {
-        reply = await sendToChat(userMsg, messages);
-      }
+  try {
+    // Give the backend the full history INCLUDING the new message
+    const historyForBackend = [
+      ...messages,
+      { role: "user", content: userMsg },
+    ];
 
-      // *** FIXED — UI updates only AFTER backend succeeds ***
-      setMessages((prev) => [
-        ...prev,
-        { role: "user", content: userMsg },
-        { role: "assistant", content: reply },
-      ]);
-    } catch (err: any) {
-      appendInfo(`⚠️ ${err?.message || "Error"}`);
-    } finally {
-      setStreaming(false);
+    let reply;
+
+    if (hasImage) {
+      reply = await sendToVision(userMsg, historyForBackend);
+    } else {
+      reply = await sendToChat(userMsg, historyForBackend);
     }
+
+    // ⭐ Append Solace's response AFTER receiving it
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", content: reply },
+    ]);
+  } catch (err: any) {
+    appendInfo(`⚠️ ${err?.message || "Error"}`);
+  } finally {
+    setStreaming(false);
   }
+}
 
   /* ---------------------------------------------------------
      MODE toggles
