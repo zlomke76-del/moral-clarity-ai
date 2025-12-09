@@ -1,12 +1,10 @@
 // app/api/chat/modules/memory-writer.ts
 // ------------------------------------------------------------
 // Unified FACT memory writer for MCAI
-// Uses canonical_user_key AND user_key = email.
-// - Never writes if not signed in (canonicalUserKey is null).
-// - No "guest" facts, no "tim" aliases.
+// Node-runtime safe version — avoids Edge ByteString limits
 // ------------------------------------------------------------
 
-import { createClientEdge } from "@/lib/supabase/edge";
+import { createServerClient } from "@supabase/ssr";
 
 export async function writeMemory(
   canonicalUserKey: string | null,
@@ -14,11 +12,8 @@ export async function writeMemory(
   assistantReply: string
 ) {
   try {
-    // If there is no canonical user (not signed in) → do NOT write memory
     if (!canonicalUserKey) {
-      console.warn(
-        "[writeMemory] Skipped FACT memory write — no canonicalUserKey (not signed in)."
-      );
+      console.warn("[writeMemory] Skipped — no canonicalUserKey.");
       return;
     }
 
@@ -30,32 +25,39 @@ export async function writeMemory(
       ts: nowIso,
     });
 
-    // We populate BOTH user_key and canonical_user_key with the email
+    // ⭐ Node-safe Supabase client (NOT Edge!)
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get() {},
+          set() {},
+          remove() {},
+        },
+      }
+    );
+
     const insertPayload = {
-      canonical_user_key: canonicalUserKey, // new canonical column
-      user_key: canonicalUserKey, // keeps mv_unified_memory working
+      canonical_user_key: canonicalUserKey,
+      user_key: canonicalUserKey,
       kind: "fact",
-      content: memoryContent,
+      content: memoryContent, // full unicode safe
       weight: 1.0,
       created_at: nowIso,
       updated_at: nowIso,
     };
 
-    const supabase = createClientEdge();
-
-    const { error } = await supabase.from("user_memories").insert(insertPayload);
+    const { error } = await supabase
+      .from("user_memories")
+      .insert(insertPayload);
 
     if (error) {
-      console.error("[writeMemory] Insert failed:", error, {
-        attemptedPayload: insertPayload,
-      });
+      console.error("[writeMemory] Insert failed:", error);
       return;
     }
 
-    console.log(
-      "[writeMemory] FACT memory stored for canonical user:",
-      canonicalUserKey
-    );
+    console.log("[writeMemory] FACT memory stored for:", canonicalUserKey);
   } catch (err) {
     console.error("[writeMemory] Unexpected failure:", err);
   }
