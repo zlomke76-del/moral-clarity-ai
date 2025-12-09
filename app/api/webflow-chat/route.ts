@@ -14,6 +14,14 @@ You never break character.
 
 export const runtime = "nodejs";
 
+// --- Fix: respond safely to GET requests so Webflow doesn't break ---
+export async function GET() {
+  return NextResponse.json(
+    { status: "ok", message: "Webflow chat endpoint is live." },
+    { status: 200 }
+  );
+}
+
 export async function POST(req: Request) {
   try {
     const { messages, filters } = await req.json();
@@ -48,3 +56,4 @@ export async function POST(req: Request) {
     );
   }
 }
+
