@@ -7,7 +7,7 @@ import OpenAI from "openai";
 import { DEFAULT_MODEL, FALLBACK_MODEL } from "./constants";
 
 // --------------------------------------------------------------
-// ASCII SANITIZER — Matches callModel.ts for consistency
+// ASCII SANITIZER
 // --------------------------------------------------------------
 function sanitizeASCII(input: string): string {
   if (!input) return "";
@@ -24,7 +24,7 @@ function sanitizeASCII(input: string): string {
   };
 
   let out = input;
-  for (const bad of Object.keys(replacements)) {
+  for (const bad in replacements) {
     out = out.split(bad).join(replacements[bad]);
   }
 
@@ -35,7 +35,7 @@ function sanitizeASCII(input: string): string {
 }
 
 // --------------------------------------------------------------
-// BLOCK SANITIZER — Ensures structured prompts are ASCII-only
+// BLOCK SANITIZER
 // --------------------------------------------------------------
 function sanitizeBlock(block: any) {
   if (!block) return block;
@@ -68,55 +68,56 @@ export const MODELS = {
 
 export type SolaceModel = string;
 
-// Initialize OpenAI client
+// --------------------------------------------------------------
+// OPENAI CLIENT
+// --------------------------------------------------------------
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-/**
- * callModel()
- * Unified wrapper for OpenAI Responses API
- * Includes: Sanitization, Fallback, Output Cleansing
- */
+// --------------------------------------------------------------
+// callModel() — Primary + Fallback with ASCII safety
+// --------------------------------------------------------------
 export async function callModel(model: SolaceModel, inputBlocks: any[]) {
-  //------------------------------------------------------
-  // 1. Deep-sanitize all blocks (prevents ByteString errors)
-  //------------------------------------------------------
   const safeBlocks = inputBlocks.map((b) =>
     sanitizeBlock(JSON.parse(JSON.stringify(b)))
   );
 
-try {
-  const response = await client.responses.create({
-    model,
-    input: safeBlocks,
-  });
-
-  return sanitizeASCII(extract(response) ?? "");
-
-} catch (err) {
-  console.error("[callModel] Primary model failed:", err);
-
   try {
-    const fallbackResponse = await client.responses.create({
-      model: FALLBACK_MODEL,
+    // ----------------------
+    // PRIMARY MODEL CALL
+    // ----------------------
+    const response = await client.responses.create({
+      model,
       input: safeBlocks,
     });
 
-    return sanitizeASCII(extract(fallbackResponse) ?? "");
+    return sanitizeASCII(extract(response) ?? "");
 
-  } catch (err2) {
-    console.error("[callModel] Fallback model also failed:", err2);
-    return "[Model failure]";
+  } catch (err) {
+    console.error("[callModel] Primary model failed:", err);
+
+    try {
+      // ----------------------
+      // FALLBACK MODEL CALL
+      // ----------------------
+      const fallbackResponse = await client.responses.create({
+        model: FALLBACK_MODEL,
+        input: safeBlocks,
+      });
+
+      return sanitizeASCII(extract(fallbackResponse) ?? "");
+
+    } catch (err2) {
+      console.error("[callModel] Fallback model also failed:", err2);
+      return "[Model failure]";
+    }
   }
 }
 
-
-/**
- * extract()
- * Safely extracts text output from OpenAI Responses API
- * Then sanitizes it to ASCII-safe form
- */
+// --------------------------------------------------------------
+// extract() — Safe wrapper for Response API output
+// --------------------------------------------------------------
 function extract(res: any): string | null {
   try {
     if (!res) return null;
@@ -134,5 +135,4 @@ function extract(res: any): string | null {
     return null;
   }
 }
-
 
