@@ -1,17 +1,46 @@
 // app/api/chat/modules/assemble.ts
 // -------------------------------------------------------------
-// SYSTEM BLOCK + USER CONTEXT BLOCK ASSEMBLER
+// SYSTEM BLOCK + USER CONTEXT BLOCK ASSEMBLER (ASCII-SAFE)
 // For Solace Hybrid Pipeline (Optimist → Skeptic → Arbiter)
 // -------------------------------------------------------------
 
 import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
 
-/**
- * SYSTEM BLOCK
- * Builds the persona + domain prompt as a Responses API block.
- */
+// -------------------------------------------------------------
+// ASCII SANITIZER
+// -------------------------------------------------------------
+function sanitizeASCII(input: string): string {
+  if (!input) return "";
+
+  const replacements: Record<string, string> = {
+    "—": "-",
+    "–": "-",
+    "•": "*",
+    "“": '"',
+    "”": '"',
+    "‘": "'",
+    "’": "'",
+    "…": "...",
+  };
+
+  let out = input;
+  for (const bad in replacements) {
+    out = out.split(bad).join(replacements[bad]);
+  }
+
+  return out
+    .split("")
+    .map((c) => (c.charCodeAt(0) > 255 ? "?" : c))
+    .join("");
+}
+
+// -------------------------------------------------------------
+// SYSTEM BLOCK
+// -------------------------------------------------------------
 export function buildSystemBlock(domain: string, extras?: string) {
-  const systemText = buildSolaceSystemPrompt(domain as any, extras);
+  const systemText = sanitizeASCII(
+    buildSolaceSystemPrompt(domain as any, extras)
+  );
 
   return {
     role: "system",
@@ -24,23 +53,13 @@ export function buildSystemBlock(domain: string, extras?: string) {
   };
 }
 
-/**
- * USER CONTEXT ASSEMBLER
- * Takes:
- * • context (persona, memories, news, research)
- * • history (array of {role, content})
- * • user message
- *
- * Produces a single USER block that the LLM will read.
- */
-export function assemblePrompt(
-  context: any,
-  history: any[],
-  userMessage: string
-) {
+// -------------------------------------------------------------
+// USER CONTEXT ASSEMBLER
+// -------------------------------------------------------------
+export function assemblePrompt(context: any, history: any[], userMessage: string) {
   const safeJson = (obj: any) => {
     try {
-      return JSON.stringify(obj, null, 2);
+      return sanitizeASCII(JSON.stringify(obj, null, 2));
     } catch {
       return "[]";
     }
@@ -48,25 +67,28 @@ export function assemblePrompt(
 
   const blockText = `
 [User Message]
-${userMessage}
+${sanitizeASCII(userMessage)}
 
 [Persona]
-${context.persona || "Solace"}
+${sanitizeASCII(context.persona || "Solace")}
 
-[User Memories]
-${safeJson(context.memoryPack.userMemories)}
+[Facts]
+${safeJson(context.memoryPack?.facts)}
 
 [Episodic Memories]
-${safeJson(context.memoryPack.episodicMemories)}
+${safeJson(context.memoryPack?.episodic)}
 
 [Autobiography]
-${safeJson(context.memoryPack.autobiography)}
+${safeJson(context.memoryPack?.autobiography)}
 
 [News Digest]
 ${safeJson(context.newsDigest)}
 
 [Research Context]
 ${safeJson(context.researchContext)}
+
+[Did Research]
+${context.didResearch ? "yes" : "no"}
 
 [Chat History]
 ${safeJson(history)}
@@ -78,10 +100,11 @@ ${safeJson(history)}
       content: [
         {
           type: "input_text",
-          text: blockText,
+          text: sanitizeASCII(blockText),
         },
       ],
     },
   ];
 }
+
 
