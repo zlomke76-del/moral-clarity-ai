@@ -3,7 +3,7 @@
 // Next.js 16 • Supabase SSR • OpenAI Responses API
 // --------------------------------------------------------------
 
-export const runtime = "nodejs";       // ✔ FIX: Edge runtime caused hangs
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -30,6 +30,7 @@ async function getNodeUser(req: Request) {
             .split(";")
             .map((c) => c.trim())
             .find((c) => c.startsWith(name + "="));
+
           return match ? match.split("=")[1] : undefined;
         },
         set() {},
@@ -39,11 +40,7 @@ async function getNodeUser(req: Request) {
   );
 
   const { data, error } = await supabase.auth.getUser();
-
-  if (error) {
-    console.log("[AUTH] getUser error:", error.message);
-    return null;
-  }
+  if (error) return null;
   return data?.user ?? null;
 }
 
@@ -55,8 +52,6 @@ async function callOpenAI(fullBlocks: any[]): Promise<string> {
     model: "gpt-4.1",
     input: fullBlocks,
   };
-
-  console.log("[OPENAI] Payload:", JSON.stringify(payload).slice(0, 300));
 
   for (let attempt = 1; attempt <= 4; attempt++) {
     try {
@@ -71,7 +66,6 @@ async function callOpenAI(fullBlocks: any[]): Promise<string> {
 
       if (res.status === 429) {
         const wait = attempt * 350;
-        console.warn(`[OPENAI] 429 — retrying in ${wait}ms`);
         await new Promise((r) => setTimeout(r, wait));
         continue;
       }
@@ -88,7 +82,6 @@ async function callOpenAI(fullBlocks: any[]): Promise<string> {
     }
   }
 
-  console.error("[OPENAI] exhausted retries");
   return "[No reply]";
 }
 
@@ -96,14 +89,13 @@ async function callOpenAI(fullBlocks: any[]): Promise<string> {
 // POST /api/chat
 // --------------------------------------------------------------
 export async function POST(req: Request) {
-  const diag = { stage: "start" } as any;
+  const diag: any = { stage: "start" };
 
   try {
     // ----------------------------------------------------------
-    // Parse Request Body
+    // Parse Body
     // ----------------------------------------------------------
     const body = await req.json().catch(() => null);
-
     if (!body || typeof body.message !== "string") {
       return NextResponse.json(
         { error: "Message required" },
@@ -118,17 +110,16 @@ export async function POST(req: Request) {
       ministryMode = false,
       founderMode = false,
       modeHint = "Neutral",
-      userKey: explicitClientKey,    // ← FROM HEADER/BODY IF PROVIDED
+      userKey: explicitClientKey,
     } = body;
 
     diag.body = body;
 
     // ----------------------------------------------------------
-    // Resolve User Identity
+    // Identify User
     // ----------------------------------------------------------
     const user = await getNodeUser(req);
     const canonicalUserKey = user?.id ?? explicitClientKey ?? "guest";
-
     diag.user = canonicalUserKey;
 
     // ----------------------------------------------------------
@@ -141,7 +132,7 @@ export async function POST(req: Request) {
     );
 
     // ----------------------------------------------------------
-    // System + User Prompt Blocks
+    // Determine Solace Domain
     // ----------------------------------------------------------
     const domain =
       modeHint === "Create"
@@ -152,17 +143,44 @@ export async function POST(req: Request) {
         ? "arbiter"
         : "guidance";
 
-    const systemBlock = buildSystemBlock(domain, "");
-    const userBlocks = assemblePrompt(context, history, message);
+    // ----------------------------------------------------------
+    // Build Prompt
+    // ----------------------------------------------------------
+    let systemBlock = buildSystemBlock(domain, "");
+    let userBlocks = assemblePrompt(context, history, message);
+
+    // ----------------------------------------------------------
+    // 🔥 EM-DASH SANITIZATION (Fix for ByteString failures)
+    // ----------------------------------------------------------
+    const sanitize = (str: string) => str.replace(/—/g, "-");
+
+    systemBlock = {
+      ...systemBlock,
+      content: systemBlock.content.map((c: any) =>
+        c.type === "input_text"
+          ? { ...c, text: sanitize(c.text) }
+          : c
+      ),
+    };
+
+    userBlocks = userBlocks.map((b: any) => ({
+      ...b,
+      content: b.content.map((c: any) =>
+        c.type === "input_text"
+          ? { ...c, text: sanitize(c.text) }
+          : c
+      ),
+    }));
+
     const fullBlocks = [systemBlock, ...userBlocks];
 
     diag.blocks = {
-      system: JSON.stringify(systemBlock).slice(0, 300),
+      systemPreview: JSON.stringify(systemBlock).slice(0, 200),
       userCount: userBlocks.length,
     };
 
     // ----------------------------------------------------------
-    // HYBRID PIPELINE OR SINGLE MODEL
+    // Pick Pipeline
     // ----------------------------------------------------------
     const hybridAllowed =
       modeHint === "Create" ||
@@ -173,7 +191,6 @@ export async function POST(req: Request) {
     let finalText = "";
 
     if (hybridAllowed) {
-      console.log("[HYBRID] pipeline active");
       finalText =
         (await orchestrateSolaceResponse({
           userMessage: message,
@@ -185,14 +202,13 @@ export async function POST(req: Request) {
           canonicalUserKey,
         })) || "[No arbiter answer]";
     } else {
-      console.log("[NEUTRAL] single-model pipeline active");
       finalText = await callOpenAI(fullBlocks);
     }
 
     diag.finalPreview = finalText.slice(0, 200);
 
     // ----------------------------------------------------------
-    // MEMORY WRITE
+    // Write Memory (safe)
     // ----------------------------------------------------------
     try {
       await writeMemory(canonicalUserKey, message, finalText);
@@ -201,7 +217,7 @@ export async function POST(req: Request) {
     }
 
     // ----------------------------------------------------------
-    // Return Response
+    // Return
     // ----------------------------------------------------------
     const res = NextResponse.json({ text: finalText });
     res.headers.set("x-solace-diag", JSON.stringify(diag).slice(0, 1000));
@@ -214,4 +230,5 @@ export async function POST(req: Request) {
     );
   }
 }
+
 
