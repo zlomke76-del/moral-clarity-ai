@@ -1,10 +1,10 @@
 // app/api/chat/modules/orchestrator.ts
 //--------------------------------------------------------------
-// Solace Hybrid Pipeline — TRACED VERSION
+// Solace Hybrid Pipeline (Optimist → Skeptic → Arbiter)
+// All three use callModel() which wraps /v1/responses cleanly
 //--------------------------------------------------------------
 
-import { callModel } from "./callModel"; // your internal call helper
-// adjust import if needed
+import { callModel } from "./callModel";
 
 export async function orchestrateSolaceResponse({
   userMessage,
@@ -15,104 +15,59 @@ export async function orchestrateSolaceResponse({
   founderMode,
   canonicalUserKey,
 }: any) {
-  console.log("------------------------------------------------------");
-  console.log("[ARB-0] Orchestrator START");
-  console.log("User:", canonicalUserKey);
-  console.log("ModeHint:", modeHint, "Founder:", founderMode);
-  console.log("------------------------------------------------------");
-
   try {
-    //
-    // 1) OPTIMIST PASS
-    //
-    console.log("[ARB-1] Optimist: BEGIN");
-
-    const optimist = await safeCall(
-      () => callModel("optimist", userMessage, context, history),
-      "[ARB-1] Optimist"
-    );
-
-    console.log("[ARB-1] Optimist: OUTPUT PREVIEW:", preview(optimist));
-
-    //
-    // 2) SKEPTIC PASS
-    //
-    console.log("[ARB-2] Skeptic: BEGIN");
-
-    const skepticInput = {
+    // ------------------------------
+    // 1. OPTIMIST PASS
+    // ------------------------------
+    const optimistPayload = {
+      stage: "optimist",
       userMessage,
       context,
       history,
-      optimist,
+      ministryMode,
+      founderMode,
+      canonicalUserKey,
     };
 
-    const skeptic = await safeCall(
-      () => callModel("skeptic", skepticInput, context, history),
-      "[ARB-2] Skeptic"
-    );
+    const optimistText = await callModel("gpt-4.1-mini", optimistPayload);
 
-    console.log("[ARB-2] Skeptic: OUTPUT PREVIEW:", preview(skeptic));
-
-    //
-    // 3) ARBITER PASS
-    //
-    console.log("[ARB-3] Arbiter: BEGIN");
-
-    const arbiterInput = {
+    // ------------------------------
+    // 2. SKEPTIC PASS
+    // ------------------------------
+    const skepticPayload = {
+      stage: "skeptic",
       userMessage,
       context,
       history,
-      optimist,
-      skeptic,
+      ministryMode,
+      founderMode,
+      canonicalUserKey,
+      optimistText,
     };
 
-    const arbiter = await safeCall(
-      () => callModel("arbiter", arbiterInput, context, history),
-      "[ARB-3] Arbiter"
-    );
+    const skepticText = await callModel("gpt-4.1-mini", skepticPayload);
 
-    console.log("[ARB-3] Arbiter: OUTPUT PREVIEW:", preview(arbiter));
+    // ------------------------------
+    // 3. ARBITER PASS (final integrator)
+    // ------------------------------
+    const arbiterPayload = {
+      stage: "arbiter",
+      userMessage,
+      context,
+      history,
+      ministryMode,
+      founderMode,
+      canonicalUserKey,
+      optimistText,
+      skepticText,
+    };
 
-    console.log("[ARB-OK] Arbiter returned final text.");
-    return arbiter || "[No arbiter answer]";
-  } catch (err: any) {
-    console.error("[ARB-FATAL] Exception in orchestrator:", err);
-    return "[No reply — orchestrator error]";
-  }
-}
+    const finalText = await callModel("gpt-4.1", arbiterPayload);
 
-//--------------------------------------------------------------
-// SAFE CALL WRAPPER — CATCHES EMPTY / NULL / BAD RESPONSES
-//--------------------------------------------------------------
-async function safeCall(fn: () => Promise<any>, label: string) {
-  try {
-    const out = await fn();
-
-    if (!out) {
-      console.warn(`${label} returned EMPTY value`, out);
-      return "[EMPTY RESPONSE]";
-    }
-
-    // non-string responses are a major cause of recursion
-    if (typeof out !== "string") {
-      console.warn(`${label} returned NON-STRING`, typeof out, out);
-      return JSON.stringify(out);
-    }
-
-    return out;
+    return finalText || "[Hybrid pipeline produced no output]";
   } catch (err) {
-    console.error(`${label} threw ERROR:`, err);
-    return "[ERROR RESPONSE]";
+    console.error("[ORCHESTRATOR] failure:", err);
+    return "[Hybrid pipeline error]";
   }
 }
-
-//--------------------------------------------------------------
-// PREVIEW UTILITY — KEEP LOG SAFE
-//--------------------------------------------------------------
-function preview(txt: any) {
-  if (!txt) return "[EMPTY]";
-  const s = typeof txt === "string" ? txt : JSON.stringify(txt);
-  return s.length > 160 ? s.slice(0, 160) + "…" : s;
-}
-
 
