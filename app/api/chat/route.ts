@@ -175,6 +175,15 @@ export async function POST(req: Request) {
       modeHint = "Neutral",
       userKey: explicitClientKey,
     } = body;
+// --------------------------------------------------------------
+// SANITIZE HISTORY — This was the missing piece causing crashes
+// --------------------------------------------------------------
+const cleanHistory = Array.isArray(history)
+  ? history.map((h: any) => ({
+      ...h,
+      content: sanitizeASCII(h.content || "")
+    }))
+  : [];
 
     //----------------------------------------------
     // Resolve user identity
