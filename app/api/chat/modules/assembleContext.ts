@@ -1,8 +1,7 @@
 // ------------------------------------------------------------
-// Solace Context Loader (DIAG VERSION)
-// Reads ALL memory exclusively from mv_unified_memory
-// Episodic + chunks reconstructed from materialized view
-// Autobio extracted from unified memory as well
+// Solace Context Loader (DIAG VERSION, FIXED NEWS DIGEST TABLE)
+// Reads all memory from mv_unified_memory + truth_facts +
+// solace_news_digest
 // ------------------------------------------------------------
 
 import { createClientEdge } from "@/lib/supabase/edge";
@@ -26,7 +25,7 @@ function safe<T>(rows: T[] | null): T[] {
 }
 
 // ------------------------------------------------------------
-// DIAG util
+// DIAG helper
 // ------------------------------------------------------------
 function diag(label: string, value: any) {
   console.log(`[DIAG-CTX] ${label}:`, value);
@@ -105,7 +104,6 @@ async function loadEpisodic(userKey: string) {
   const chunks = safe(chunkRows);
   diag("CHUNKS count", chunks.length);
 
-  // Group chunks under each episodic event
   const merged = episodes.map((ep: any) => ({
     ...ep,
     chunks: chunks.filter((c: any) => c.episode_id === ep.id),
@@ -140,17 +138,17 @@ async function loadAutobio(userKey: string) {
 }
 
 // ------------------------------------------------------------
-// NEWS DIGEST
+// NEWS DIGEST  (FIXED → correct table: solace_news_digest)
 // ------------------------------------------------------------
 async function loadNewsDigest(userKey: string) {
   diag("NEWS DIGEST → start", userKey);
 
   const supabase = createClientEdge();
   const { data, error } = await supabase
-    .from("vw_solace_news_digest")
+    .from("solace_news_digest")
     .select("*")
     .eq("user_key", userKey)
-    .order("scored_at", { ascending: false })
+    .order("created_at", { ascending: false }) // REAL column
     .limit(15);
 
   if (error) {
@@ -165,7 +163,7 @@ async function loadNewsDigest(userKey: string) {
 }
 
 // ------------------------------------------------------------
-// RESEARCH CONTEXT  (truth_facts)
+// RESEARCH CONTEXT (truth_facts)
 // ------------------------------------------------------------
 async function loadResearch(userKey: string) {
   diag("RESEARCH → start", userKey);
@@ -197,7 +195,6 @@ export async function assembleContext(
   workspaceId: string | null,
   userMessage: string
 ): Promise<SolaceContextBundle> {
-  
   diag("CTX → assemble start", {
     canonicalUserKey,
     workspaceId,
@@ -206,7 +203,6 @@ export async function assembleContext(
 
   const userKey = canonicalUserKey || "guest";
 
-  // Load all memory in parallel
   const [
     facts,
     episodic,
@@ -240,4 +236,5 @@ export async function assembleContext(
     researchContext,
   };
 }
+
 
