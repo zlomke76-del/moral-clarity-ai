@@ -1,97 +1,93 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useRef } from "react";
 
-export interface SolaceFile {
+export type SolaceFile = {
   name: string;
+  type: string;
   mime: string;
   url: string;
-  size?: number;
-  original?: File;
-}
+  publicUrl?: string;
+  path?: string;
+};
 
 export function useSolaceAttachments({
   onInfoMessage,
 }: {
   onInfoMessage: (msg: string) => void;
 }) {
-  const [pendingFiles, setPendingFiles] = useState<SolaceFile[]>([]);
+  // ⭐ Stable container for attachments
+  const pendingFilesRef = useRef<SolaceFile[]>([]);
 
-  /** Cleanup object URLs on unmount */
-  useEffect(() => {
-    return () => {
-      pendingFiles.forEach((f) => URL.revokeObjectURL(f.url));
-    };
-  }, [pendingFiles]);
+  function add(file: SolaceFile) {
+    pendingFilesRef.current.push(file);
+  }
 
-  /** Convert a File object into our internal Solace file */
-  const fileToSolace = useCallback((file: File): SolaceFile => {
-    return {
-      name: file.name,
-      mime: file.type || "application/octet-stream",
-      url: URL.createObjectURL(file),
-      size: file.size,
-      original: file,
-    };
-  }, []);
+  /* ----------------------
+     HANDLE FILE INPUT
+  ----------------------- */
+  function handleFiles(
+    fileList: FileList | null,
+    { prefix }: { prefix: string }
+  ) {
+    if (!fileList) return;
 
-  /** Handle input[type=file] */
-  const handleFiles = useCallback(
-    (fileList: FileList | null, { prefix }: { prefix: string }) => {
-      if (!fileList) return;
+    for (const file of Array.from(fileList)) {
+      add({
+        name: file.name,
+        type: file.type,
+        mime: file.type,
+        url: URL.createObjectURL(file),
+      });
+    }
 
-      const newFiles: SolaceFile[] = [];
-      for (const file of Array.from(fileList)) {
-        newFiles.push(fileToSolace(file));
-      }
+    onInfoMessage(`${fileList.length} file(s) attached.`);
+  }
 
-      setPendingFiles((prev) => [...prev, ...newFiles]);
-      onInfoMessage(`${newFiles.length} file(s) attached.`);
-    },
-    [fileToSolace, onInfoMessage]
-  );
+  /* ----------------------
+     HANDLE PASTE INPUT
+  ----------------------- */
+  function handlePaste(
+    e: React.ClipboardEvent,
+    { prefix }: { prefix: string }
+  ) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
 
-  /** Handle paste event */
-  const handlePaste = useCallback(
-    (e: React.ClipboardEvent, { prefix }: { prefix: string }) => {
-      const items = e.clipboardData?.items;
-      if (!items) return;
+    let count = 0;
 
-      const newFiles: SolaceFile[] = [];
-
-      for (const item of items) {
-        if (item.kind === "file") {
-          const file = item.getAsFile();
-          if (file) {
-            newFiles.push(fileToSolace(file));
-          }
+    for (const item of items) {
+      if (item.kind === "file") {
+        const file = item.getAsFile();
+        if (file) {
+          add({
+            name: file.name,
+            type: file.type,
+            mime: file.type,
+            url: URL.createObjectURL(file),
+          });
+          count++;
         }
       }
+    }
 
-      if (newFiles.length > 0) {
-        setPendingFiles((prev) => [...prev, ...newFiles]);
-        onInfoMessage(`${newFiles.length} pasted file(s) attached.`);
-      }
-    },
-    [fileToSolace, onInfoMessage]
-  );
+    if (count > 0) {
+      onInfoMessage(`${count} file(s) pasted.`);
+    }
+  }
 
-  /** Clear attachments */
-  const clearPending = useCallback(() => {
-    pendingFiles.forEach((f) => URL.revokeObjectURL(f.url));
-    setPendingFiles([]);
-  }, [pendingFiles]);
-
-  /** Helper for SolaceDock UI */
-  const getAttachmentUrl = useCallback((f: SolaceFile) => f.url, []);
+  /* ----------------------
+     CLEAR ATTACHMENTS
+  ----------------------- */
+  function clearPending() {
+    pendingFilesRef.current.splice(0, pendingFilesRef.current.length);
+  }
 
   return {
-    pendingFiles,
+    pendingFiles: pendingFilesRef.current,
     handleFiles,
     handlePaste,
     clearPending,
-    getAttachmentUrl,
   };
 }
-
 
