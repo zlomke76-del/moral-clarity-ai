@@ -86,37 +86,31 @@ export async function callModel(model: SolaceModel, inputBlocks: any[]) {
     sanitizeBlock(JSON.parse(JSON.stringify(b)))
   );
 
+try {
+  const response = await client.responses.create({
+    model,
+    input: safeBlocks,
+  });
+
+  return sanitizeASCII(extract(response) ?? "");
+
+} catch (err) {
+  console.error("[callModel] Primary model failed:", err);
+
   try {
-    //------------------------------------------------------
-    // PRIMARY model execution
-    //------------------------------------------------------
-    const response = await client.responses.create({
-      model,
+    const fallbackResponse = await client.responses.create({
+      model: FALLBACK_MODEL,
       input: safeBlocks,
     });
 
-    return sanitizeASCII(extract(response));
+    return sanitizeASCII(extract(fallbackResponse) ?? "");
 
-  } catch (err) {
-    console.error("[callModel] Primary model failed:", err);
-
-    try {
-      //------------------------------------------------------
-      // FALLBACK execution
-      //------------------------------------------------------
-      const fallbackResponse = await client.responses.create({
-        model: FALLBACK_MODEL,
-        input: safeBlocks,
-      });
-
-      return sanitizeASCII(extract(fallbackResponse));
-
-    } catch (err2) {
-      console.error("[callModel] Fallback model also failed:", err2);
-      return "[Model failure]";
-    }
+  } catch (err2) {
+    console.error("[callModel] Fallback model also failed:", err2);
+    return "[Model failure]";
   }
 }
+
 
 /**
  * extract()
