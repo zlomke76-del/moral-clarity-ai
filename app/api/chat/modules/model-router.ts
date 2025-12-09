@@ -1,13 +1,64 @@
 // app/api/chat/modules/model-router.ts
 // --------------------------------------------------------------
-// Multi-model router for Solace Hybrid Pipeline
-// Supports OpenAI models today + placeholder-ready architecture
+// Multi-model router for Solace Hybrid Pipeline (ASCII-SAFE)
 // --------------------------------------------------------------
 
 import OpenAI from "openai";
 import { DEFAULT_MODEL, FALLBACK_MODEL } from "./constants";
 
-// Centralized model definitions (all valid OpenAI models)
+// --------------------------------------------------------------
+// ASCII SANITIZER — Matches callModel.ts for consistency
+// --------------------------------------------------------------
+function sanitizeASCII(input: string): string {
+  if (!input) return "";
+
+  const replacements: Record<string, string> = {
+    "—": "-",
+    "–": "-",
+    "•": "*",
+    "“": '"',
+    "”": '"',
+    "‘": "'",
+    "’": "'",
+    "…": "...",
+  };
+
+  let out = input;
+  for (const bad of Object.keys(replacements)) {
+    out = out.split(bad).join(replacements[bad]);
+  }
+
+  return out
+    .split("")
+    .map((c) => (c.charCodeAt(0) > 255 ? "?" : c))
+    .join("");
+}
+
+// --------------------------------------------------------------
+// BLOCK SANITIZER — Ensures structured prompts are ASCII-only
+// --------------------------------------------------------------
+function sanitizeBlock(block: any) {
+  if (!block) return block;
+
+  if (Array.isArray(block.content)) {
+    block.content = block.content.map((piece: any) => {
+      if (typeof piece === "string") return sanitizeASCII(piece);
+      if (piece?.text) piece.text = sanitizeASCII(piece.text);
+      if (piece?.input_text) piece.input_text = sanitizeASCII(piece.input_text);
+      return piece;
+    });
+  }
+
+  if (typeof block.text === "string") {
+    block.text = sanitizeASCII(block.text);
+  }
+
+  return block;
+}
+
+// --------------------------------------------------------------
+// MODEL REGISTRY
+// --------------------------------------------------------------
 export const MODELS = {
   OPTIMIST: DEFAULT_MODEL,
   SKEPTIC: DEFAULT_MODEL,
@@ -25,30 +76,40 @@ const client = new OpenAI({
 /**
  * callModel()
  * Unified wrapper for OpenAI Responses API
- * - model: string (e.g. "gpt-4.1")
- * - inputBlocks: structured prompt blocks
+ * Includes: Sanitization, Fallback, Output Cleansing
  */
 export async function callModel(model: SolaceModel, inputBlocks: any[]) {
+  //------------------------------------------------------
+  // 1. Deep-sanitize all blocks (prevents ByteString errors)
+  //------------------------------------------------------
+  const safeBlocks = inputBlocks.map((b) =>
+    sanitizeBlock(JSON.parse(JSON.stringify(b)))
+  );
+
   try {
-    // Primary model execution
+    //------------------------------------------------------
+    // PRIMARY model execution
+    //------------------------------------------------------
     const response = await client.responses.create({
       model,
-      input: inputBlocks,
+      input: safeBlocks,
     });
 
-    return extract(response);
+    return sanitizeASCII(extract(response));
 
   } catch (err) {
     console.error("[callModel] Primary model failed:", err);
 
-    // Fallback execution
     try {
+      //------------------------------------------------------
+      // FALLBACK execution
+      //------------------------------------------------------
       const fallbackResponse = await client.responses.create({
         model: FALLBACK_MODEL,
-        input: inputBlocks,
+        input: safeBlocks,
       });
 
-      return extract(fallbackResponse);
+      return sanitizeASCII(extract(fallbackResponse));
 
     } catch (err2) {
       console.error("[callModel] Fallback model also failed:", err2);
@@ -59,27 +120,25 @@ export async function callModel(model: SolaceModel, inputBlocks: any[]) {
 
 /**
  * extract()
- * Safely extracts text output from the OpenAI Responses API
+ * Safely extracts text output from OpenAI Responses API
+ * Then sanitizes it to ASCII-safe form
  */
 function extract(res: any): string | null {
   try {
     if (!res) return null;
 
-    // Expected Responses API structure:
-    // res.output: [
-    //   { content: [ { type: "text", text: "..." } ] }
-    // ]
     const block = res.output?.[0];
     if (!block) return null;
 
     const content = block.content?.[0];
     if (!content) return null;
 
-    return content.text ?? null;
+    const text = content.text ?? null;
+    return text ? sanitizeASCII(text) : null;
+
   } catch {
     return null;
   }
 }
-
 
 
