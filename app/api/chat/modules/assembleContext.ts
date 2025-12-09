@@ -1,15 +1,15 @@
 // ------------------------------------------------------------
-// Solace Context Loader (CONDITIONAL VERSION — FIXED)
-// Only loads NEWS + RESEARCH when enabled in constants.ts
-// and ONLY when mode requires it.
+// Solace Context Loader — STRICT BEHAVIOR VERSION (NO DRIFT)
+// NEWS loads ONLY when user explicitly asks.
+// TRUTH_FACTS permanently disabled.
 // ------------------------------------------------------------
 
 import { createClientEdge } from "@/lib/supabase/edge";
 import {
   FACTS_LIMIT,
   EPISODES_LIMIT,
-  ENABLE_NEWS,
-  ENABLE_RESEARCH,
+  ENABLE_NEWS,       // kept for compatibility (not used for loading)
+  ENABLE_RESEARCH,   // kept for compatibility (not used for loading)
 } from "./constants";
 
 export type SolaceContextBundle = {
@@ -101,14 +101,9 @@ async function loadAutobio(userKey: string) {
 }
 
 // ------------------------------------------------------------
-// NEWS DIGEST — ONLY WHEN ENABLED
+// NEWS DIGEST — ONLY when user explicitly requests news
 // ------------------------------------------------------------
 async function loadNewsDigest(userKey: string) {
-  if (!ENABLE_NEWS) {
-    diag("NEWS DIGEST → disabled", null);
-    return [];
-  }
-
   diag("NEWS DIGEST → start", userKey);
 
   const supabase = createClientEdge();
@@ -128,28 +123,11 @@ async function loadNewsDigest(userKey: string) {
 }
 
 // ------------------------------------------------------------
-// RESEARCH (truth_facts) — ONLY WHEN ENABLED
+// RESEARCH (truth_facts) — PERMANENTLY DISABLED
 // ------------------------------------------------------------
 async function loadResearch(userKey: string) {
-  if (!ENABLE_RESEARCH) {
-    diag("RESEARCH → disabled", null);
-    return [];
-  }
-
-  diag("RESEARCH → start", userKey);
-
-  const supabase = createClientEdge();
-  const { data, error } = await supabase
-    .from("truth_facts")
-    .select("*")
-    .eq("user_key", userKey)
-    .order("created_at", { ascending: false })
-    .limit(10);
-
-  if (error) return [];
-  const rows = safe(data);
-  diag("RESEARCH count", rows.length);
-  return rows;
+  diag("RESEARCH → DISABLED", userKey);
+  return [];
 }
 
 // ------------------------------------------------------------
@@ -168,25 +146,45 @@ export async function assembleContext(
 
   const userKey = canonicalUserKey || "guest";
 
-  // Load baseline only
+  //----------------------------------------------------------
+  // Load baseline context (always)
+  //----------------------------------------------------------
   const [facts, episodic, autobiography] = await Promise.all([
     loadFacts(userKey),
     loadEpisodic(userKey),
     loadAutobio(userKey),
   ]);
 
-  // News + Research loaded only when enabled
-  const newsDigest = ENABLE_NEWS ? await loadNewsDigest(userKey) : [];
-  const researchContext = ENABLE_RESEARCH ? await loadResearch(userKey) : [];
+  //----------------------------------------------------------
+  // Detect EXPLICIT news request
+  //----------------------------------------------------------
+  const wantsNews =
+    /\bnews\b|\bheadline\b|\btoday\b|\breport\b|\bcurrent events\b|\bwhat'?s happening\b/i.test(
+      userMessage
+    );
 
+  // Load ONLY when explicitly requested
+  const newsDigest = wantsNews ? await loadNewsDigest(userKey) : [];
+
+  //----------------------------------------------------------
+  // Research is permanently disabled
+  //----------------------------------------------------------
+  const researchContext = [];
+
+  //----------------------------------------------------------
+  // Diagnostics summary
+  //----------------------------------------------------------
   diag("CTX SUMMARY", {
     facts: facts.length,
     episodic: episodic.length,
     autobiography: autobiography.length,
     newsDigest: newsDigest.length,
-    research: researchContext.length,
+    research: 0,
   });
 
+  //----------------------------------------------------------
+  // Final bundle
+  //----------------------------------------------------------
   return {
     persona: STATIC_PERSONA_NAME,
     memoryPack: { facts, episodic, autobiography },
@@ -194,4 +192,5 @@ export async function assembleContext(
     researchContext,
   };
 }
+
 
