@@ -1,6 +1,11 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { useSolaceStore } from "@/app/providers/solace-store";
 import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
@@ -10,7 +15,32 @@ import { useSolaceAttachments } from "./useSolaceAttachments";
 import { UI } from "./dock-ui";
 import { Skins } from "./dock-skins";
 import SolaceDockHeader from "./dock-header";
-import { useDockSize, ResizeHandle, createResizeController } from "./dock-resize";
+import {
+  useDockSize,
+  ResizeHandle,
+  createResizeController,
+} from "./dock-resize";
+
+/* ---------------------------------------------------------
+   Attachment URL resolver
+--------------------------------------------------------- */
+function getAttachmentUrl(file: any): string {
+  if (!file) return "#";
+
+  // If uploader included a direct URL, use it.
+  if (file.url) return file.url;
+
+  // Some APIs return publicUrl.
+  if (file.publicUrl) return file.publicUrl;
+
+  // Supabase standard pattern: we store path relative to attachments bucket.
+  if (file.path) {
+    const base = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    return `${base}/storage/v1/object/public/attachments/${file.path}`;
+  }
+
+  return "#";
+}
 
 declare global {
   interface Window {
@@ -31,19 +61,40 @@ const PAD = 12;
 export default function SolaceDock() {
   const [canRender, setCanRender] = useState(false);
 
+  /* ---------------------------------------------------------
+     Prevent double mount
+  --------------------------------------------------------- */
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.__solaceDockMounted) return;
     window.__solaceDockMounted = true;
     setCanRender(true);
+
     return () => {
       window.__solaceDockMounted = false;
     };
   }, []);
 
-  const { visible, setVisible, x, y, setPos, filters, setFilters, founderMode, setFounderMode, modeHint, setModeHint } =
-    useSolaceStore();
+  /* ---------------------------------------------------------
+     Global store state
+  --------------------------------------------------------- */
+  const {
+    visible,
+    setVisible,
+    x,
+    y,
+    setPos,
+    filters,
+    setFilters,
+    founderMode,
+    setFounderMode,
+    modeHint,
+    setModeHint,
+  } = useSolaceStore();
 
+  /* ---------------------------------------------------------
+     Mobile detection
+  --------------------------------------------------------- */
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth <= 768);
@@ -58,21 +109,23 @@ export default function SolaceDock() {
 
   const [minimized, setMinimized] = useState(false);
 
-  // Drag & pos state
+  /* ---------------------------------------------------------
+     Drag logic
+  --------------------------------------------------------- */
   const [dragging, setDragging] = useState(false);
   const [offset, setOffset] = useState({ dx: 0, dy: 0 });
   const [posReady, setPosReady] = useState(false);
-
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Memory & chat state
+  /* ---------------------------------------------------------
+     Chat message state
+  --------------------------------------------------------- */
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
 
   const [listening, setListening] = useState(false);
   const recogRef = useRef<any>(null);
-
   const transcriptRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -80,13 +133,29 @@ export default function SolaceDock() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
+  /* ---------------------------------------------------------
+     Memory + attachment hooks
+  --------------------------------------------------------- */
   const { userKey, memReady } = useSolaceMemory();
-  const { pendingFiles, handleFiles, handlePaste, clearPending } = useSolaceAttachments({ onInfoMessage: (c) => {
-    setMessages((m) => [...m, { role: "assistant", content: c }]);
-  }});
 
-  const ministryOn = useMemo(() => filters.has("abrahamic") && filters.has("ministry"), [filters]);
+  const {
+    pendingFiles,
+    handleFiles,
+    handlePaste,
+    clearPending,
+  } = useSolaceAttachments({
+    onInfoMessage: (txt) =>
+      setMessages((m) => [...m, { role: "assistant", content: txt }]),
+  });
 
+  const ministryOn = useMemo(
+    () => filters.has("abrahamic") && filters.has("ministry"),
+    [filters]
+  );
+
+  /* ---------------------------------------------------------
+     Restore ministry toggle
+  --------------------------------------------------------- */
   useEffect(() => {
     try {
       const saved = localStorage.getItem(MINISTRY_KEY);
@@ -99,6 +168,9 @@ export default function SolaceDock() {
     } catch {}
   }, []);
 
+  /* ---------------------------------------------------------
+     Restore founder mode
+  --------------------------------------------------------- */
   useEffect(() => {
     try {
       const saved = localStorage.getItem(FOUNDER_KEY);
@@ -106,47 +178,67 @@ export default function SolaceDock() {
     } catch {}
   }, []);
 
+  /* ---------------------------------------------------------
+     Initial assistant message
+  --------------------------------------------------------- */
   useEffect(() => {
     if (messages.length === 0) {
       setMessages([{ role: "assistant", content: "Ready when you are." }]);
     }
   }, [messages.length]);
 
-  // Position + drag logic
+  /* ---------------------------------------------------------
+     Measure panel size
+  --------------------------------------------------------- */
   const [panelW, setPanelW] = useState(0);
   const [panelH, setPanelH] = useState(0);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+
     const measure = () => {
       const r = el.getBoundingClientRect();
       setPanelW(r.width);
       setPanelH(r.height);
     };
+
     measure();
+
     const ro = new ResizeObserver(measure);
     ro.observe(el);
+
     window.addEventListener("resize", measure);
+
     return () => {
       ro.disconnect();
       window.removeEventListener("resize", measure);
     };
   }, []);
 
+  /* ---------------------------------------------------------
+     Restore saved position
+  --------------------------------------------------------- */
   useEffect(() => {
     if (!canRender || !visible) return;
+
     const vw = window.innerWidth;
     const vh = window.innerHeight;
+
     if (vw <= 768) {
       setPosReady(true);
       return;
     }
+
     try {
       const raw = localStorage.getItem(POS_KEY);
       if (raw) {
         const saved = JSON.parse(raw);
-        if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+        if (
+          saved &&
+          Number.isFinite(saved.x) &&
+          Number.isFinite(saved.y)
+        ) {
           const sx = Math.max(PAD, Math.min(vw - PAD, saved.x));
           const sy = Math.max(PAD, Math.min(vh - PAD, saved.y));
           setPos(sx, sy);
@@ -155,6 +247,7 @@ export default function SolaceDock() {
         }
       }
     } catch {}
+
     requestAnimationFrame(() => {
       const w = panelW || 760;
       const h = panelH || 560;
@@ -165,6 +258,9 @@ export default function SolaceDock() {
     });
   }, [canRender, visible, panelW, panelH, setPos]);
 
+  /* ---------------------------------------------------------
+     Save position
+  --------------------------------------------------------- */
   useEffect(() => {
     if (!posReady || isMobile) return;
     try {
@@ -172,6 +268,9 @@ export default function SolaceDock() {
     } catch {}
   }, [x, y, posReady, isMobile]);
 
+  /* ---------------------------------------------------------
+     Header drag
+  --------------------------------------------------------- */
   function onHeaderMouseDown(e: React.MouseEvent) {
     if (isMobile) return;
     const rect = containerRef.current?.getBoundingClientRect();
@@ -184,22 +283,33 @@ export default function SolaceDock() {
 
   useEffect(() => {
     if (!dragging) return;
-    const onMove = (e: MouseEvent) => setPos(e.clientX - offset.dx, e.clientY - offset.dy);
+
+    const onMove = (e: MouseEvent) =>
+      setPos(e.clientX - offset.dx, e.clientY - offset.dy);
     const onUp = () => setDragging(false);
+
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
+
     return () => {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
   }, [dragging, offset, setPos]);
 
-  // Dock size (resizable)
+  /* ---------------------------------------------------------
+     Dock resizing
+  --------------------------------------------------------- */
   const { dockW, dockH, setDockW, setDockH } = useDockSize();
-  const startResize = createResizeController(dockW, dockH, setDockW, setDockH);
+  const startResize = createResizeController(
+    dockW,
+    dockH,
+    setDockW,
+    setDockH
+  );
 
   /* ---------------------------------------------------------
-     Send logic (user first, reply after)
+     Chat send logic
   --------------------------------------------------------- */
   async function sendToChat(userMsg: string, prevHistory: Message[]) {
     const res = await fetch("/api/chat", {
@@ -214,31 +324,54 @@ export default function SolaceDock() {
         founderMode,
       }),
     });
+
     if (!res.ok) {
       const t = await res.text().catch(() => "");
       throw new Error(`HTTP ${res.status}: ${t}`);
     }
+
     const data = await res.json();
     return data.text ?? "[No reply]";
   }
 
   async function sendToVision(userMsg: string, prevHistory: Message[]) {
-    const imageAttachment = pendingFiles.find((f) => {
+    const img = pendingFiles.find((f) => {
       const mime = f.mime || f.type || "";
-      return mime.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp|heic)$/i.test(f.name || "");
+      return (
+        mime.startsWith("image/") ||
+        /\.(png|jpe?g|gif|webp|bmp|heic)$/i.test(f.name || "")
+      );
     });
-    const imageUrl = imageAttachment?.url || imageAttachment?.publicUrl || imageAttachment?.path || null;
+
+    const imageUrl =
+      img?.url || img?.publicUrl || img?.path || null;
+
     if (!imageUrl) {
-      setMessages((m) => [...m, { role: "assistant", content: "I see an image attachment, but I don’t have a usable link." }]);
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content:
+            "I see an image attachment, but I don’t have a usable link.",
+        },
+      ]);
       clearPending();
       return "[No reply]";
     }
-    const prompt = userMsg.trim() || "Look at this image and describe what you see, then offer grounded help.";
+
+    const prompt =
+      userMsg.trim() ||
+      "Look at this image and describe what you see.";
+
     const res = await fetch("/api/solace/vision", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-User-Key": userKey },
+      headers: {
+        "Content-Type": "application/json",
+        "X-User-Key": userKey,
+      },
       body: JSON.stringify({ prompt, imageUrl }),
     });
+
     clearPending();
     const data = await res.json();
     return data.answer ?? "[No reply]";
@@ -247,44 +380,64 @@ export default function SolaceDock() {
   async function send() {
     const text = input.trim();
     const hasAttachments = pendingFiles.length > 0;
-    const hasImage = hasAttachments && pendingFiles.some((f) => {
-      const mime = f.mime || f.type || "";
-      return mime.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp|heic)$/i.test(f.name || "");
-    });
+    const hasImage = hasAttachments &&
+      pendingFiles.some((f) => {
+        const mime = f.mime || f.type || "";
+        return (
+          mime.startsWith("image/") ||
+          /\.(png|jpe?g|gif|webp|bmp|heic)$/i.test(f.name || "")
+        );
+      });
 
     if (!text && !hasAttachments) return;
     if (streaming) return;
 
-    const userMsg = text || (hasAttachments ? "Attachments:" : "");
+    const userMsg =
+      text || (hasAttachments ? "Attachments:" : "");
+
     setInput("");
     setStreaming(true);
 
-    // Show user msg immediately
-    setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", content: userMsg },
+    ]);
 
     try {
-      const historyForBackend: Message[] = messages.map((m) => ({
-        role: m.role as "user" | "assistant",
+      const historyForBackend = messages.map((m) => ({
+        role: m.role,
         content: m.content,
       }));
 
-      let reply: string;
-      if (hasImage) {
-        reply = await sendToVision(userMsg, historyForBackend);
-      } else {
-        reply = await sendToChat(userMsg, historyForBackend);
-      }
+      const reply = hasImage
+        ? await sendToVision(userMsg, historyForBackend)
+        : await sendToChat(userMsg, historyForBackend);
 
-      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: reply },
+      ]);
     } catch (err: any) {
-      setMessages((prev) => [...prev, { role: "assistant", content: `⚠️ ${err.message || "Error"}` }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `⚠️ ${
+            err.message || "Unexpected error"
+          }`,
+        },
+      ]);
     } finally {
       setStreaming(false);
     }
   }
 
+  /* ---------------------------------------------------------
+     Toggles
+  --------------------------------------------------------- */
   function toggleMinistry() {
     const next = new Set(filters);
+
     if (ministryOn) {
       next.delete("abrahamic");
       next.delete("ministry");
@@ -298,17 +451,30 @@ export default function SolaceDock() {
   }
 
   function toggleFounder() {
-    const updated = !founderMode;
-    setFounderMode(updated);
-    localStorage.setItem(FOUNDER_KEY, updated ? "1" : "0");
+    const v = !founderMode;
+    setFounderMode(v);
+    localStorage.setItem(FOUNDER_KEY, v ? "1" : "0");
   }
 
+  /* ---------------------------------------------------------
+     Speech-to-text
+  --------------------------------------------------------- */
   function toggleMic() {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SR =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+
     if (!SR) {
-      setMessages((prev) => [...prev, { role: "assistant", content: "🎤 Microphone not supported in this browser." }]);
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content: "🎤 Microphone not supported in this browser.",
+        },
+      ]);
       return;
     }
+
     if (listening) {
       try {
         recogRef.current?.stop();
@@ -316,20 +482,31 @@ export default function SolaceDock() {
       setListening(false);
       return;
     }
+
     const sr = new SR();
     sr.lang = "en-US";
+
     sr.onresult = (e: any) => {
-      const text = Array.from(e.results).map((r: any) => r[0].transcript).join(" ");
+      const text = Array.from(e.results)
+        .map((r: any) => r[0].transcript)
+        .join(" ");
       setInput((p) => (p ? p + " " : "") + text);
     };
+
     sr.onend = () => setListening(false);
     recogRef.current = sr;
     sr.start();
     setListening(true);
   }
 
+  /* ---------------------------------------------------------
+     Early-return if hidden
+  --------------------------------------------------------- */
   if (!canRender || !visible) return null;
 
+  /* ---------------------------------------------------------
+     Minimized orb
+  --------------------------------------------------------- */
   if (minimized) {
     const bubbleStyle: React.CSSProperties = {
       position: "fixed",
@@ -349,24 +526,36 @@ export default function SolaceDock() {
       color: "#000",
       fontWeight: 700,
     };
+
     return createPortal(
-      <button style={bubbleStyle} onClick={() => setMinimized(false)}>
+      <button
+        style={bubbleStyle}
+        onClick={() => setMinimized(false)}
+      >
         S
       </button>,
       document.body
     );
   }
 
+  /* ---------------------------------------------------------
+     Position constraints
+  --------------------------------------------------------- */
   const vw = window.innerWidth;
   const vh = window.innerHeight;
+
   const maxX = Math.max(0, vw - panelW - PAD);
   const maxY = Math.max(0, vh - panelH - PAD);
+
   const tx = Math.min(Math.max(0, x - PAD), maxX);
   const ty = Math.min(Math.max(0, y - PAD), maxY);
-  const invisible = !posReady;
 
+  const invisible = !posReady;
   const skin = Skins.default;
 
+  /* ---------------------------------------------------------
+     Styles
+  --------------------------------------------------------- */
   const panelStyle: React.CSSProperties = {
     position: "fixed",
     left: PAD,
@@ -393,7 +582,8 @@ export default function SolaceDock() {
     overflow: "auto",
     padding: "14px 16px",
     color: UI.text,
-    background: "linear-gradient(180deg, rgba(12,19,30,.9), rgba(10,17,28,.92))",
+    background:
+      "linear-gradient(180deg, rgba(12,19,30,.9), rgba(10,17,28,.92))",
   };
 
   const composerWrapStyle: React.CSSProperties = {
@@ -402,6 +592,9 @@ export default function SolaceDock() {
     padding: 10,
   };
 
+  /* ---------------------------------------------------------
+     Panel structure
+  --------------------------------------------------------- */
   const panel = (
     <section ref={containerRef} style={panelStyle}>
       <SolaceDockHeader
@@ -416,6 +609,7 @@ export default function SolaceDock() {
         onDragStart={onHeaderMouseDown}
       />
 
+      {/* Transcript */}
       <div ref={transcriptRef} style={transcriptStyle}>
         {messages.map((m, i) => (
           <div
@@ -424,7 +618,10 @@ export default function SolaceDock() {
               borderRadius: UI.radiusLg,
               padding: "10px 12px",
               margin: "6px 0",
-              background: m.role === "user" ? "rgba(39,52,74,.6)" : "rgba(28,38,54,.6)",
+              background:
+                m.role === "user"
+                  ? "rgba(39,52,74,.6)"
+                  : "rgba(28,38,54,.6)",
               whiteSpace: "pre-wrap",
             }}
           >
@@ -433,13 +630,26 @@ export default function SolaceDock() {
         ))}
       </div>
 
-      <div style={composerWrapStyle} onPaste={(e) => handlePaste(e, { prefix: "solace" })}>
+      {/* Composer */}
+      <div
+        style={composerWrapStyle}
+        onPaste={(e) => handlePaste(e, { prefix: "solace" })}
+      >
+        {/* Attachment previews */}
         {pendingFiles.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8, font: "12px system-ui" }}>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 6,
+              marginBottom: 8,
+              font: "12px system-ui",
+            }}
+          >
             {pendingFiles.map((f, idx) => (
               <a
                 key={idx}
-                href={getAttachmentUrl(f) || "#"}
+                href={getAttachmentUrl(f)}
                 target="_blank"
                 rel="noreferrer"
                 style={{
@@ -455,12 +665,89 @@ export default function SolaceDock() {
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
-          {/* File + Mic + Textarea + Ask button (same as before) */}
-          {/* ... unchanged ... */}
+        {/* Input row */}
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            alignItems: "flex-end",
+          }}
+        >
+          {/* FILE INPUT BUTTON */}
+          <label
+            style={{
+              cursor: "pointer",
+              fontSize: 20,
+              userSelect: "none",
+            }}
+          >
+            📎
+            <input
+              type="file"
+              multiple
+              style={{ display: "none" }}
+              onChange={(e) =>
+                handleFiles(e.target.files, { prefix: "solace" })
+              }
+            />
+          </label>
+
+          {/* MIC BUTTON */}
+          <button
+            onClick={toggleMic}
+            style={{
+              fontSize: 18,
+              cursor: "pointer",
+            }}
+          >
+            🎤
+          </button>
+
+          {/* TEXTAREA */}
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            rows={1}
+            style={{
+              flex: 1,
+              resize: "none",
+              padding: "8px 10px",
+              borderRadius: UI.radiusMd,
+              border: UI.border,
+              background: UI.surface1,
+              color: UI.text,
+            }}
+            placeholder="Ask Solace…"
+          />
+
+          {/* SEND BUTTON */}
+          <button
+            onClick={send}
+            disabled={streaming}
+            style={{
+              padding: "8px 14px",
+              borderRadius: UI.radiusMd,
+              background: "#4ea1ff",
+              color: "#000",
+              fontWeight: 600,
+              cursor: "pointer",
+              opacity: streaming ? 0.6 : 1,
+            }}
+          >
+            Ask
+          </button>
         </div>
 
-        <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", font: "12px system-ui", color: UI.sub }}>
+        {/* Footer info */}
+        <div
+          style={{
+            marginTop: 6,
+            display: "flex",
+            justifyContent: "space-between",
+            font: "12px system-ui",
+            color: UI.sub,
+          }}
+        >
           <span>
             {founderMode ? "Founder • " : ""}
             {ministryOn ? "Ministry • " : ""}
@@ -475,4 +762,3 @@ export default function SolaceDock() {
 
   return createPortal(panel, document.body);
 }
-
