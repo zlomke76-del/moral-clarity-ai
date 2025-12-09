@@ -1,7 +1,6 @@
 // app/api/chat/modules/memory-writer.ts
 // ------------------------------------------------------------
-// Unified FACT memory writer for MCAI
-// Node-runtime safe version — avoids Edge ByteString limits
+// FACT memory writer — Node-safe version (no Edge byte limits)
 // ------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
@@ -25,15 +24,15 @@ export async function writeMemory(
       ts: nowIso,
     });
 
-    // ⭐ Node-safe Supabase client (NOT Edge!)
+    // ⭐ Node runtime Supabase client with valid cookie methods
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          get() {},
-          set() {},
-          remove() {},
+          get: (_name: string) => undefined,
+          set: (_name: string, _value: string, _options?: any) => {},
+          remove: (_name: string, _options?: any) => {},
         },
       }
     );
@@ -42,7 +41,7 @@ export async function writeMemory(
       canonical_user_key: canonicalUserKey,
       user_key: canonicalUserKey,
       kind: "fact",
-      content: memoryContent, // full unicode safe
+      content: memoryContent,
       weight: 1.0,
       created_at: nowIso,
       updated_at: nowIso,
@@ -53,11 +52,16 @@ export async function writeMemory(
       .insert(insertPayload);
 
     if (error) {
-      console.error("[writeMemory] Insert failed:", error);
+      console.error("[writeMemory] Insert failed:", error, {
+        attemptedPayload: insertPayload,
+      });
       return;
     }
 
-    console.log("[writeMemory] FACT memory stored for:", canonicalUserKey);
+    console.log(
+      "[writeMemory] FACT memory stored for:",
+      canonicalUserKey
+    );
   } catch (err) {
     console.error("[writeMemory] Unexpected failure:", err);
   }
