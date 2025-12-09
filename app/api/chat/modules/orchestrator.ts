@@ -1,186 +1,118 @@
 // app/api/chat/modules/orchestrator.ts
+//--------------------------------------------------------------
+// Solace Hybrid Pipeline — TRACED VERSION
+//--------------------------------------------------------------
 
-import { buildSystemBlock, assemblePrompt } from "./assemble";
-// import { openAI } from "./openai";  // ❌ REMOVE — no such file
-// If no wrapper exists, we’ll DIAG directly around fetch()
+import { callModel } from "./callModel"; // your internal call helper
+// adjust import if needed
 
-type OrchestratorArgs = {
-  userMessage: string;
-  context: any;
-  history: any[];
-  ministryMode: boolean;
-  modeHint: string;
-  founderMode: boolean;
-  canonicalUserKey: string | null;
-};
+export async function orchestrateSolaceResponse({
+  userMessage,
+  context,
+  history,
+  ministryMode,
+  modeHint,
+  founderMode,
+  canonicalUserKey,
+}: any) {
+  console.log("------------------------------------------------------");
+  console.log("[ARB-0] Orchestrator START");
+  console.log("User:", canonicalUserKey);
+  console.log("ModeHint:", modeHint, "Founder:", founderMode);
+  console.log("------------------------------------------------------");
 
-export async function orchestrateSolaceResponse(args: OrchestratorArgs) {
-  const {
-    userMessage,
-    context,
-    history,
-    ministryMode,
-    modeHint,
-    founderMode,
-    canonicalUserKey,
-  } = args;
+  try {
+    //
+    // 1) OPTIMIST PASS
+    //
+    console.log("[ARB-1] Optimist: BEGIN");
 
-  console.log("---------------------------------------------------");
-  console.log("[DIAG-OX] ENTER orchestrator");
-  console.log("[DIAG-OX] modeHint:", modeHint);
-  console.log("[DIAG-OX] founderMode:", founderMode);
-  console.log("[DIAG-OX] ministryMode:", ministryMode);
-  console.log("[DIAG-OX] canonicalUserKey:", canonicalUserKey);
-  console.log("[DIAG-OX] userMessage:", userMessage);
-  console.log("---------------------------------------------------");
+    const optimist = await safeCall(
+      () => callModel("optimist", userMessage, context, history),
+      "[ARB-1] Optimist"
+    );
 
-  // Build system block + user blocks used in multiple branches
-  const systemBlock = buildSystemBlock("arbiter", "");
-  const userBlocks = assemblePrompt(context, history, userMessage);
-  const baseBlocks = [systemBlock, ...userBlocks];
+    console.log("[ARB-1] Optimist: OUTPUT PREVIEW:", preview(optimist));
 
-  console.log("[DIAG-OX] Assembled baseBlocks length:", baseBlocks.length);
+    //
+    // 2) SKEPTIC PASS
+    //
+    console.log("[ARB-2] Skeptic: BEGIN");
 
-  // Utility wrapper to measure and DIAG OpenAI calls
-  async function callWithDiag(label: string, model: string, messages: any[]) {
-    console.log(`\n[DIAG-OA] CALL START → ${label}`);
-    console.log(`[DIAG-OA] Model: ${model}`);
-    console.log(`[DIAG-OA] Blocks count: ${messages.length}`);
+    const skepticInput = {
+      userMessage,
+      context,
+      history,
+      optimist,
+    };
 
-    const started = Date.now();
+    const skeptic = await safeCall(
+      () => callModel("skeptic", skepticInput, context, history),
+      "[ARB-2] Skeptic"
+    );
 
-    try {
-      const res = await fetch("https://api.openai.com/v1/responses", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model,
-          input: messages,
-        }),
-      });
+    console.log("[ARB-2] Skeptic: OUTPUT PREVIEW:", preview(skeptic));
 
-      const ms = Date.now() - started;
-      console.log(`[DIAG-OA] Response time: ${ms}ms`);
+    //
+    // 3) ARBITER PASS
+    //
+    console.log("[ARB-3] Arbiter: BEGIN");
 
-      if (res.status === 429) {
-        console.warn(`[DIAG-OA] 429 RATE LIMIT in ${label}`);
-      }
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error(`[DIAG-OA] ERROR in ${label}:`, res.status, errText);
-        return null;
-      }
+    const arbiterInput = {
+      userMessage,
+      context,
+      history,
+      optimist,
+      skeptic,
+    };
 
-      const json = await res.json();
-      const text =
-        json?.output?.[0]?.content?.[0]?.text ??
-        json?.choices?.[0]?.message?.content ??
-        null;
+    const arbiter = await safeCall(
+      () => callModel("arbiter", arbiterInput, context, history),
+      "[ARB-3] Arbiter"
+    );
 
-      console.log(`[DIAG-OA] Parsed text for ${label}:`, text?.slice(0, 200));
-      return text;
-    } catch (err: any) {
-      console.error(`[DIAG-OA] FETCH FAILURE in ${label}:`, err.message);
-      return null;
-    }
+    console.log("[ARB-3] Arbiter: OUTPUT PREVIEW:", preview(arbiter));
+
+    console.log("[ARB-OK] Arbiter returned final text.");
+    return arbiter || "[No arbiter answer]";
+  } catch (err: any) {
+    console.error("[ARB-FATAL] Exception in orchestrator:", err);
+    return "[No reply — orchestrator error]";
   }
-
-  //-------------------------------------------------------------
-  // BRANCH: FOUNDER MODE — high-context strategy
-  //-------------------------------------------------------------
-  if (founderMode) {
-    console.log("\n[DIAG-OF] Founder mode active.");
-    const label = "Founder Arbiter Reply";
-    const reply = await callWithDiag(label, "gpt-4.1", baseBlocks);
-
-    console.log("[DIAG-OF] Founder reply:", reply);
-    return reply;
-  }
-
-  //-------------------------------------------------------------
-  // BRANCH: CREATE MODE
-  //-------------------------------------------------------------
-  if (modeHint === "Create") {
-    console.log("\n[DIAG-OC] Create mode active.");
-
-    const createBlocks = [
-      ...baseBlocks,
-      {
-        role: "system",
-        content: [
-          {
-            type: "input_text",
-            text: "You are in CREATE mode. Be generative, inventive, but grounded.",
-          },
-        ],
-      },
-    ];
-
-    const reply = await callWithDiag("Create-Primary", "gpt-4.1", createBlocks);
-    console.log("[DIAG-OC] Create reply:", reply);
-    return reply;
-  }
-
-  //-------------------------------------------------------------
-  // BRANCH: RED TEAM MODE
-  //-------------------------------------------------------------
-  if (modeHint === "Red Team") {
-    console.log("\n[DIAG-OR] Red Team mode active.");
-
-    const rtBlocks = [
-      ...baseBlocks,
-      {
-        role: "system",
-        content: [
-          {
-            type: "input_text",
-            text:
-              "You are in RED TEAM mode. Provide adversarial critique, attack assumptions, expose flaws.",
-          },
-        ],
-      },
-    ];
-
-    const reply = await callWithDiag("RedTeam-Primary", "gpt-4.1", rtBlocks);
-    console.log("[DIAG-OR] Red team reply:", reply);
-    return reply;
-  }
-
-  //-------------------------------------------------------------
-  // BRANCH: NEXT STEPS MODE
-  //-------------------------------------------------------------
-  if (modeHint === "Next Steps") {
-    console.log("\n[DIAG-ON] Next Steps mode active.");
-
-    const nsBlocks = [
-      ...baseBlocks,
-      {
-        role: "system",
-        content: [
-          {
-            type: "input_text",
-            text:
-              "You are in NEXT STEPS mode. Provide actionable next steps, prioritization, and clarity.",
-          },
-        ],
-      },
-    ];
-
-    const reply = await callWithDiag("NextSteps-Primary", "gpt-4.1", nsBlocks);
-    console.log("[DIAG-ON] Next Steps reply:", reply);
-    return reply;
-  }
-
-  //-------------------------------------------------------------
-  // DEFAULT FALLBACK (if somehow no mode matched)
-  //-------------------------------------------------------------
-  console.warn("[DIAG-OX] WARNING: Orchestrator reached fallback branch.");
-  const fallback = await callWithDiag("Fallback", "gpt-4.1", baseBlocks);
-
-  console.log("[DIAG-OX] Fallback reply:", fallback);
-  return fallback;
 }
+
+//--------------------------------------------------------------
+// SAFE CALL WRAPPER — CATCHES EMPTY / NULL / BAD RESPONSES
+//--------------------------------------------------------------
+async function safeCall(fn: () => Promise<any>, label: string) {
+  try {
+    const out = await fn();
+
+    if (!out) {
+      console.warn(`${label} returned EMPTY value`, out);
+      return "[EMPTY RESPONSE]";
+    }
+
+    // non-string responses are a major cause of recursion
+    if (typeof out !== "string") {
+      console.warn(`${label} returned NON-STRING`, typeof out, out);
+      return JSON.stringify(out);
+    }
+
+    return out;
+  } catch (err) {
+    console.error(`${label} threw ERROR:`, err);
+    return "[ERROR RESPONSE]";
+  }
+}
+
+//--------------------------------------------------------------
+// PREVIEW UTILITY — KEEP LOG SAFE
+//--------------------------------------------------------------
+function preview(txt: any) {
+  if (!txt) return "[EMPTY]";
+  const s = typeof txt === "string" ? txt : JSON.stringify(txt);
+  return s.length > 160 ? s.slice(0, 160) + "…" : s;
+}
+
 
