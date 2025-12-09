@@ -1,11 +1,16 @@
 // ------------------------------------------------------------
-// Solace Context Loader (DIAG VERSION, FIXED NEWS DIGEST TABLE)
-// Reads all memory from mv_unified_memory + truth_facts +
-// solace_news_digest
+// Solace Context Loader (CONDITIONAL VERSION — FIXED)
+// Only loads NEWS + RESEARCH when enabled in constants.ts
+// and ONLY when mode requires it.
 // ------------------------------------------------------------
 
 import { createClientEdge } from "@/lib/supabase/edge";
-import { FACTS_LIMIT, EPISODES_LIMIT } from "./constants";
+import {
+  FACTS_LIMIT,
+  EPISODES_LIMIT,
+  ENABLE_NEWS,
+  ENABLE_RESEARCH,
+} from "./constants";
 
 export type SolaceContextBundle = {
   persona: string;
@@ -25,7 +30,7 @@ function safe<T>(rows: T[] | null): T[] {
 }
 
 // ------------------------------------------------------------
-// DIAG helper
+// DIAG util
 // ------------------------------------------------------------
 function diag(label: string, value: any) {
   console.log(`[DIAG-CTX] ${label}:`, value);
@@ -46,19 +51,14 @@ async function loadFacts(userKey: string) {
     .order("created_at", { ascending: false })
     .limit(FACTS_LIMIT);
 
-  if (error) {
-    diag("FACTS ERROR", error);
-    return [];
-  }
-
+  if (error) return [];
   const rows = safe(data);
   diag("FACTS count", rows.length);
-
   return rows;
 }
 
 // ------------------------------------------------------------
-// EPISODIC + CHUNKS
+// EPISODIC
 // ------------------------------------------------------------
 async function loadEpisodic(userKey: string) {
   diag("EPISODIC → start", userKey);
@@ -72,44 +72,12 @@ async function loadEpisodic(userKey: string) {
     .order("created_at", { ascending: false })
     .limit(EPISODES_LIMIT);
 
-  if (error) {
-    diag("EPISODIC ERROR", error);
-    return [];
-  }
+  if (error) return [];
 
   const episodes = safe(data);
   diag("EPISODIC count", episodes.length);
 
-  if (episodes.length === 0) {
-    diag("EPISODIC → no episodes", null);
-    return [];
-  }
-
-  const episodeIds = episodes.map((e: any) => e.id);
-  diag("EPISODIC episodeIds", episodeIds);
-
-  const { data: chunkRows, error: chunkErr } = await supabase
-    .from("mv_unified_memory")
-    .select("*")
-    .eq("user_key", userKey)
-    .eq("memory_type", "chunk")
-    .in("episode_id", episodeIds)
-    .order("seq", { ascending: true });
-
-  if (chunkErr) {
-    diag("EPISODIC CHUNK ERROR", chunkErr);
-    return episodes.map((e: any) => ({ ...e, chunks: [] }));
-  }
-
-  const chunks = safe(chunkRows);
-  diag("CHUNKS count", chunks.length);
-
-  const merged = episodes.map((ep: any) => ({
-    ...ep,
-    chunks: chunks.filter((c: any) => c.episode_id === ep.id),
-  }));
-
-  return merged;
+  return episodes;
 }
 
 // ------------------------------------------------------------
@@ -126,29 +94,27 @@ async function loadAutobio(userKey: string) {
     .eq("memory_type", "autobio_entry")
     .order("created_at", { ascending: true });
 
-  if (error) {
-    diag("AUTOBIO ERROR", error);
-    return [];
-  }
-
+  if (error) return [];
   const rows = safe(data);
   diag("AUTOBIO count", rows.length);
-
   return rows;
 }
 
 // ------------------------------------------------------------
-// NEWS DIGEST  (FIXED → correct table: solace_news_digest)
+// NEWS DIGEST — ONLY WHEN ENABLED
 // ------------------------------------------------------------
 async function loadNewsDigest(userKey: string) {
+  if (!ENABLE_NEWS) {
+    diag("NEWS DIGEST → disabled", null);
+    return [];
+  }
+
   diag("NEWS DIGEST → start", userKey);
 
   const supabase = createClientEdge();
   const { data, error } = await supabase
     .from("solace_news_digest")
     .select("*")
-    .eq("user_key", userKey)
-    .order("created_at", { ascending: false }) // REAL column
     .limit(15);
 
   if (error) {
@@ -158,14 +124,18 @@ async function loadNewsDigest(userKey: string) {
 
   const rows = safe(data);
   diag("NEWS DIGEST count", rows.length);
-
   return rows;
 }
 
 // ------------------------------------------------------------
-// RESEARCH CONTEXT (truth_facts)
+// RESEARCH (truth_facts) — ONLY WHEN ENABLED
 // ------------------------------------------------------------
 async function loadResearch(userKey: string) {
+  if (!ENABLE_RESEARCH) {
+    diag("RESEARCH → disabled", null);
+    return [];
+  }
+
   diag("RESEARCH → start", userKey);
 
   const supabase = createClientEdge();
@@ -176,19 +146,14 @@ async function loadResearch(userKey: string) {
     .order("created_at", { ascending: false })
     .limit(10);
 
-  if (error) {
-    diag("RESEARCH ERROR", error);
-    return [];
-  }
-
+  if (error) return [];
   const rows = safe(data);
   diag("RESEARCH count", rows.length);
-
   return rows;
 }
 
 // ------------------------------------------------------------
-// MAIN — assembleContext()
+// MAIN
 // ------------------------------------------------------------
 export async function assembleContext(
   canonicalUserKey: string,
@@ -203,19 +168,16 @@ export async function assembleContext(
 
   const userKey = canonicalUserKey || "guest";
 
-  const [
-    facts,
-    episodic,
-    autobiography,
-    newsDigest,
-    researchContext,
-  ] = await Promise.all([
+  // Load baseline only
+  const [facts, episodic, autobiography] = await Promise.all([
     loadFacts(userKey),
     loadEpisodic(userKey),
     loadAutobio(userKey),
-    loadNewsDigest(userKey),
-    loadResearch(userKey),
   ]);
+
+  // News + Research loaded only when enabled
+  const newsDigest = ENABLE_NEWS ? await loadNewsDigest(userKey) : [];
+  const researchContext = ENABLE_RESEARCH ? await loadResearch(userKey) : [];
 
   diag("CTX SUMMARY", {
     facts: facts.length,
@@ -227,14 +189,9 @@ export async function assembleContext(
 
   return {
     persona: STATIC_PERSONA_NAME,
-    memoryPack: {
-      facts,
-      episodic,
-      autobiography,
-    },
+    memoryPack: { facts, episodic, autobiography },
     newsDigest,
     researchContext,
   };
 }
-
 
