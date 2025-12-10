@@ -12,6 +12,11 @@ import { createServerClient } from "@supabase/ssr";
 
 import { assembleContext } from "./modules/assembleContext";
 import { runHybridPipeline } from "./modules/hybrid";
+
+// NEW — Governor Engine + Icon Formatter integration
+import { updateGovernor } from "@/lib/solace/governor/governor-engine";
+import { applyGovernorFormatting } from "@/lib/solace/governor/governor-icon-format";
+
 import { writeMemory } from "./modules/memory-writer";
 
 // --------------------------------------------------------------
@@ -36,16 +41,12 @@ function sanitizeASCII(input: any): any {
       .join("");
   }
 
-  if (Array.isArray(input)) {
-    return input.map((x) => sanitizeASCII(x));
-  }
-
+  if (Array.isArray(input)) return input.map((x) => sanitizeASCII(x));
   if (typeof input === "object") {
     const clean: any = {};
     for (const k in input) clean[k] = sanitizeASCII(input[k]);
     return clean;
   }
-
   return input;
 }
 
@@ -65,7 +66,6 @@ async function getNodeUser(req: Request) {
             .split(";")
             .map((c) => c.trim())
             .find((c) => c.startsWith(name + "="));
-
           return match ? match.split("=")[1] : undefined;
         },
         set() {},
@@ -95,12 +95,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
-    // Raw → sanitized message
     const rawMessage = String(body.message);
     const message = sanitizeASCII(rawMessage);
     diag.messagePreview = message.slice(0, 240);
 
-    // Extract parameters from body
     let {
       history = [],
       workspaceId = null,
@@ -128,7 +126,7 @@ export async function POST(req: Request) {
     diag.user = canonicalUserKey;
 
     // ----------------------------------------------------------
-    // CONTEXT (memory, news, research)
+    // CONTEXT LOAD
     // ----------------------------------------------------------
     let context = await assembleContext(
       canonicalUserKey,
@@ -136,12 +134,21 @@ export async function POST(req: Request) {
       message
     );
 
-    // Final ASCII purification
     context = sanitizeASCII(context);
     diag.contextLoaded = true;
 
     // ----------------------------------------------------------
-    // GOVERNOR + HYBRID PIPELINE
+    // GOVERNOR — compute pacing level + signals
+    // ----------------------------------------------------------
+    const governorOutput = updateGovernor(message);
+
+    diag.governor = {
+      level: governorOutput.level,
+      signals: governorOutput.signals
+    };
+
+    // ----------------------------------------------------------
+    // HYBRID PIPELINE
     // ----------------------------------------------------------
     const pipelineResult = await runHybridPipeline({
       userMessage: message,
@@ -153,12 +160,17 @@ export async function POST(req: Request) {
       canonicalUserKey
     });
 
-    const finalText = sanitizeASCII(pipelineResult.finalAnswer);
-    diag.pipeline = {
-      governorLevel: pipelineResult.governorLevel,
-      optimist: !!pipelineResult.optimist,
-      skeptic: !!pipelineResult.skeptic
-    };
+    let finalText = sanitizeASCII(pipelineResult.finalAnswer);
+
+    // ----------------------------------------------------------
+    // ICON / PACING FORMATTING
+    // ----------------------------------------------------------
+    finalText = applyGovernorFormatting(finalText, {
+      level: governorOutput.level,
+      isFounder: founderMode === true,
+      emotionalDistress: governorOutput.signals?.emotionalDistress ?? false,
+      decisionContext: governorOutput.signals?.decisionContext ?? false
+    });
 
     // ----------------------------------------------------------
     // MEMORY WRITE
