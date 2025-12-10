@@ -183,12 +183,17 @@ export function buildChatSystemPrompt(opts: {
       ? `\n\nREAL-TIME CONTEXT\n- You DO have recent web-derived context above (WEB CONTEXT, RESEARCH CONTEXT, and/or NEWS CONTEXT). Do NOT say you cannot provide real-time updates or that you lack internet access.\n- Synthesize a brief, accurate answer using that context, and include bracketed refs like [1], [2] or [R1], [R2] or [N1], [N2] when you rely on specific items.`
       : '';
 
-  const system =
-    base + memorySection + newsSection + webSection + researchSection + webAssertion;
+  // Governor extras (passed from route)
+const governorDirections = opts.governorExtras
+  ? `\n\nGOVERNOR_DIRECTIONS:\n${opts.governorExtras}`
+  : "";
 
-  return {
-    system,
-    wantsAbrahamic,
-    forceFirstTurnSeeding,
-  };
-}
+// FINAL SYSTEM PROMPT
+const system =
+  base +
+  memorySection +
+  newsSection +
+  webSection +
+  researchSection +
+  webAssertion +
+  governorDirections;
