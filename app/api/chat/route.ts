@@ -18,7 +18,6 @@ import { updateGovernor } from "@/lib/solace/governor/governor-engine";
 import { applyGovernorFormatting } from "@/lib/solace/governor/governor-icon-format";
 
 import { writeMemory } from "./modules/memory-writer";
-import { buildChatSystemPrompt } from "@/lib/solace/chat-system";
 
 // --------------------------------------------------------------
 // ASCII SANITIZER — universal safety layer
@@ -95,10 +94,7 @@ export async function POST(req: Request) {
     diag.bodyPresent = !!body;
 
     if (!body?.message) {
-      return NextResponse.json(
-        { error: "Message required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
     const rawMessage = String(body.message);
@@ -149,19 +145,6 @@ export async function POST(req: Request) {
     // GOVERNOR
     // ----------------------------------------------------------
     const governorOutput = updateGovernor(message);
-const { system } = buildChatSystemPrompt({
-  filters,
-  userWantsSecular,
-  messages,
-  memorySection,
-  newsSection,
-  webSection,
-  researchSection,
-  hasNewsContext,
-  hasWebContext,
-  hasResearchContext,
-  governorExtras: governor.instructions,   // <-- key line
-});
 
     diag.governor = {
       level: governorOutput.level,
@@ -186,18 +169,13 @@ const { system } = buildChatSystemPrompt({
     // ----------------------------------------------------------
     // ICON + PACING FORMATTING
     // ----------------------------------------------------------
-finalText = applyGovernorFormatting(finalText, {
-  level: governorOutput.level,
-  isFounder: founderMode === true,
-
-  // emotionalDistress derived from emotionalValence (0–1)
-  emotionalDistress:
-    (governorOutput.signals?.emotionalValence ?? 0.5) < 0.35,
-
-  // decisionContext is the correct signal name
-  decisionContext: governorOutput.signals?.decisionPoint ?? false
-});
-
+    finalText = applyGovernorFormatting(finalText, {
+      level: governorOutput.level,
+      isFounder: founderMode === true,
+      emotionalDistress:
+        (governorOutput.signals?.emotionalValence ?? 0.5) < 0.35,
+      decisionContext: governorOutput.signals?.decisionPoint ?? false
+    });
 
     // ----------------------------------------------------------
     // MEMORY WRITE
