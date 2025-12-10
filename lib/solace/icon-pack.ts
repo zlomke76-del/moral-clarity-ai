@@ -1,49 +1,56 @@
 // ------------------------------------------------------------
-// Solace Iconography Pack (SIP v1.0)
-// ASCII-safe, pacing-aware icon system for MCAI / Solace.
+// Solace Iconography Pack (SIP v1.0) — Production Build
+// ------------------------------------------------------------
 //
-// Icons are NOT decorative. They are structural, emotional,
-// and cognitive signaling tools. The Governor decides when
-// they are allowed and at what intensity.
+// Icons are structural tools that influence pacing, clarity,
+// and emotional tone. They must be governed — not decorative.
+// The Governor determines when icons are allowed and how many.
+//
+// This pack contains:
+//  - Level-based icon sets
+//  - ASCII fallbacks
+//  - Safety rules for anchor / compass usage
+//  - Icon usage limits per pacing level
+//
 // ------------------------------------------------------------
 
-export type PacingLevel = 0 | 1 | 2 | 3 | 4 | 5;
+import type { PacingLevel } from "./governor/types";
 
 // ------------------------------------------------------------
 // ICON DEFINITIONS
 // ------------------------------------------------------------
 
-// Level 0 — Sanctuary (almost no icons)
+// Level 0 — Sanctuary (calming, minimal)
 const SANCTUARY_ICONS = {
-  ANCHOR: "⚓",
+  ANCHOR: "⚓",     // grounding
   PAUSE: "…",
   BREATH: "~ ~ ~",
 };
 
-// Level 1 — Warm / Gentle
+// Level 1 — Warm / Gentle guidance
 const WARM_ICONS = {
   DOT: "•",
   SOFT_STAR: "✧",
   SOFT_COMPASS: "⌖",
 };
 
-// Level 2 — Guided Clarity
+// Level 2 — Guided clarity
 const GUIDANCE_ICONS = {
   ARROW: "→",
   BOX: "▣",
   QUESTION: "◆",
 };
 
-// Level 3 — Productive Flow
+// Level 3 — Productive flow (structured synthesis)
 const FLOW_ICONS = {
   DOUBLE_ARROW: "→→",
   STRUCTURE_BAR: "▤",
   OPTION_SET: "▧",
   DECISION_DIAMOND: "◇",
-  COMPASS: "⌘", // branded compass symbol
+  COMPASS: "⌘", // branded internal compass
 };
 
-// Level 4 — Accelerated Execution
+// Level 4 — Accelerated execution
 const ACCEL_ICONS = {
   FAST_ARROW: "⇒",
   CHECK: "✔︎",
@@ -57,13 +64,12 @@ const FOUNDER_ICONS = {
   SIGIL: "⟡",
   ANCHOR: "⚓",
   COMPASS: "🧭",
-  COMPASS_ASCII: "+>", // fallback for safety
+  COMPASS_ASCII: "+>", // fallback when unicode cannot render
 };
 
 // ------------------------------------------------------------
-// GOVERNOR RULES FOR ICON FREQUENCY
+// ICON LIMITS PER PACING LEVEL
 // ------------------------------------------------------------
-// Maximum icons allowed per message, by level.
 
 export const ICON_LIMITS: Record<PacingLevel, number> = {
   0: 1, // almost none
@@ -71,45 +77,31 @@ export const ICON_LIMITS: Record<PacingLevel, number> = {
   2: 2,
   3: 2,
   4: 3,
-  5: 4, // founder mode can have more
+  5: 4, // founder can receive more structured signals
 };
 
 // ------------------------------------------------------------
-// GOVERNOR → ICON PACK MAPPING
+// LEVEL → ICON SET MAPPING
 // ------------------------------------------------------------
 
 export const ICONS_BY_LEVEL: Record<PacingLevel, Record<string, string>> = {
-  0: {
-    ...SANCTUARY_ICONS,
-  },
-  1: {
-    ...WARM_ICONS,
-  },
-  2: {
-    ...GUIDANCE_ICONS,
-  },
-  3: {
-    ...FLOW_ICONS,
-  },
-  4: {
-    ...ACCEL_ICONS,
-  },
+  0: { ...SANCTUARY_ICONS },
+  1: { ...WARM_ICONS },
+  2: { ...GUIDANCE_ICONS },
+  3: { ...FLOW_ICONS },
+  4: { ...ACCEL_ICONS },
   5: {
     ...FLOW_ICONS,
     ...ACCEL_ICONS,
-    ...FOUNDER_ICONS, // only founder can use
+    ...FOUNDER_ICONS,
   },
 };
 
 // ------------------------------------------------------------
-// HIGH-LEVEL API
+// GET ICON SET FOR CURRENT LEVEL
+// (Strips founder-only icons for non-founders)
 // ------------------------------------------------------------
 
-/**
- * getIconsForLevel
- * Returns the allowed icon set for the current pacing level.
- * Ensures Level 5 icons are removed automatically for non-founders.
- */
 export function getIconsForLevel(
   level: PacingLevel,
   isFounder: boolean
@@ -117,20 +109,18 @@ export function getIconsForLevel(
   const base = ICONS_BY_LEVEL[level];
 
   if (level === 5 && !isFounder) {
-    // strip founder-only symbols for non-founders
-    const { STAR, SIGIL, ANCHOR, COMPASS, COMPASS_ASCII, ...rest } =
-      base;
-    return rest;
+    const { STAR, SIGIL, ANCHOR, COMPASS, COMPASS_ASCII, ...rest } = base;
+    return rest; // remove founder-only icons
   }
 
   return base;
 }
 
-/**
- * selectIcon
- * Safely returns a single icon by key if available.
- * Provides an ASCII fallback for any non-renderable symbol.
- */
+// ------------------------------------------------------------
+// SELECT A SPECIFIC ICON BY KEY
+// ASCII fallback for safety
+// ------------------------------------------------------------
+
 export function selectIcon(
   level: PacingLevel,
   key: string,
@@ -141,10 +131,9 @@ export function selectIcon(
 
   if (!icon) return "";
 
-  // ASCII safety check
   const asciiSafe = [...icon].every((c) => c.charCodeAt(0) <= 255);
+
   if (!asciiSafe) {
-    // fallback for founder compass
     if (key === "COMPASS") return FOUNDER_ICONS.COMPASS_ASCII;
   }
 
@@ -152,42 +141,35 @@ export function selectIcon(
 }
 
 // ------------------------------------------------------------
-// SHOULD-USE LOGIC (prevents icon overuse)
+// SHOULD-USE LOGIC
+// Prevents icon overuse within the Governor limit
 // ------------------------------------------------------------
 
-/**
- * shouldUseIcon
- * Decides if Solace is allowed to introduce an icon into the message.
- * This is not a global counter — the Governor enforces the output limit.
- */
 export function shouldUseIcon(
   level: PacingLevel,
   usageCount: number
 ): boolean {
-  const limit = ICON_LIMITS[level];
-  return usageCount < limit;
+  return usageCount < ICON_LIMITS[level];
 }
 
 // ------------------------------------------------------------
-// ANCHOR & COMPASS USAGE RULES
+// ANCHOR RULE
+// Only for grounding emotional distress
 // ------------------------------------------------------------
 
-/**
- * canUseAnchor
- * Anchor only allowed when emotionally grounding user
- */
 export function canUseAnchor(
   level: PacingLevel,
   emotionalDistress: boolean
 ): boolean {
   if (!emotionalDistress) return false;
-  return level <= 1; // only in Level 0–1 unless founder overrides
+  return level <= 1; // Sanctuary + Warm only
 }
 
-/**
- * canUseCompass
- * Compass only allowed in clarity, direction, synthesis, founder decisions.
- */
+// ------------------------------------------------------------
+// COMPASS RULE
+// Only for direction, decision framing, synthesis
+// ------------------------------------------------------------
+
 export function canUseCompass(
   level: PacingLevel,
   isFounder: boolean,
@@ -195,23 +177,16 @@ export function canUseCompass(
 ): boolean {
   if (!decisionContext) return false;
 
-  if (level >= 3) return true; // Arbiter, Flow, Accelerated
-  if (level === 5 && isFounder) return true;
+  if (isFounder && level === 5) return true; // founder override
 
-  return false;
+  return level >= 3; // Flow, Arbiter, Accelerated
 }
 
 // ------------------------------------------------------------
-// HELPERS FOR INTEGRATION WITH GOVERNOR
+// SIMPLE FORMATTER
+// Prefix a line with an icon safely
 // ------------------------------------------------------------
 
-/**
- * formatWithIcon
- * Places an icon at the start of a line, respecting limits.
- */
-export function formatWithIcon(
-  icon: string,
-  text: string
-): string {
+export function formatWithIcon(icon: string, text: string): string {
   return `${icon} ${text}`;
 }
