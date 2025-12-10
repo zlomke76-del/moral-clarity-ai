@@ -12,21 +12,20 @@ import { createServerClient } from "@supabase/ssr";
 
 import { assembleContext } from "./modules/assembleContext";
 import { assemblePrompt, buildSystemBlock } from "./modules/assemble";
-import { orchestrateSolaceResponse } from "./modules/orchestrator";
 import { writeMemory } from "./modules/memory-writer";
 
 //--------------------------------------------------------------
-// ASCII SANITIZER — REPLACES ALL >255 UNICODE CHARACTERS
+// ASCII SANITIZER — replaces all >255 Unicode characters
 //--------------------------------------------------------------
 function sanitizeASCII(input: string): string {
   if (!input) return "";
 
   const replacements: Record<string, string> = {
-    "—": "-",
-    "–": "-",
+    "—": "-", // em dash
+    "–": "-", // en dash
     "•": "*",
-    "“": "\"",
-    "”": "\"",
+    "“": '"',
+    "”": '"',
     "‘": "'",
     "’": "'",
     "…": "...",
@@ -66,8 +65,12 @@ function sanitizeBlock(block: any) {
 
   // Direct primitives
   if (typeof block.text === "string") block.text = sanitizeASCII(block.text);
-  if (typeof block.input_text === "string") block.input_text = sanitizeASCII(block.input_text);
-  if (typeof block.output_text === "string") block.output_text = sanitizeASCII(block.output_text);
+  if (typeof block.input_text === "string") {
+    block.input_text = sanitizeASCII(block.input_text);
+  }
+  if (typeof block.output_text === "string") {
+    block.output_text = sanitizeASCII(block.output_text);
+  }
 
   return block;
 }
@@ -114,7 +117,10 @@ async function callOpenAI(fullBlocks: any[]): Promise<string> {
     input: safeBlocks,
   };
 
-  console.log("[OPENAI] Sanitized payload:", JSON.stringify(payload).slice(0, 350));
+  console.log(
+    "[OPENAI] Sanitized payload:",
+    JSON.stringify(payload).slice(0, 350)
+  );
 
   for (let attempt = 1; attempt <= 4; attempt++) {
     const res = await fetch("https://api.openai.com/v1/responses", {
@@ -156,13 +162,18 @@ export async function POST(req: Request) {
     // Parse request
     //----------------------------------------------------------
     const body = await req.json().catch(() => null);
-    diag.body = body;
+    diag.rawBodyPresent = !!body;
 
     if (!body?.message) {
-      return NextResponse.json({ error: "Message required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Message required" },
+        { status: 400 }
+      );
     }
 
-    const message = sanitizeASCII(body.message);
+    const rawMessage = String(body.message ?? "");
+    const message = sanitizeASCII(rawMessage);
+    diag.messagePreview = sanitizeASCII(rawMessage.slice(0, 240));
 
     //----------------------------------------------------------
     // Extract params
@@ -187,7 +198,7 @@ export async function POST(req: Request) {
       : [];
 
     //----------------------------------------------------------
-    // DEEP SANITIZATION
+    // DEEP SANITIZATION OF HISTORY
     //----------------------------------------------------------
     const sanitizedHistory = cleanHistory.map((h: any) => {
       if (Array.isArray(h.content)) {
@@ -195,7 +206,9 @@ export async function POST(req: Request) {
           ...h,
           content: h.content.map((c: any) => {
             if (typeof c === "string") return sanitizeASCII(c);
-            if (typeof c?.text === "string") return { ...c, text: sanitizeASCII(c.text) };
+            if (typeof c?.text === "string") {
+              return { ...c, text: sanitizeASCII(c.text) };
+            }
             return c;
           }),
         };
@@ -203,6 +216,8 @@ export async function POST(req: Request) {
 
       return { ...h, content: sanitizeASCII(h.content || "") };
     });
+
+    diag.historyCount = sanitizedHistory.length;
 
     //----------------------------------------------------------
     // USER IDENTITY
@@ -212,12 +227,17 @@ export async function POST(req: Request) {
     diag.user = canonicalUserKey;
 
     //----------------------------------------------------------
-    // CONTEXT LOAD
+    // CONTEXT LOAD (sanitized)
     //----------------------------------------------------------
-    let context = await assembleContext(canonicalUserKey, workspaceId, message);
+    let context = await assembleContext(
+      canonicalUserKey,
+      workspaceId,
+      message
+    );
 
-    // ⭐ CRITICAL FIX — sanitize context to prevent Unicode failures
+    // Critical: sanitize context to strip any stray Unicode
     context = JSON.parse(sanitizeASCII(JSON.stringify(context)));
+    diag.contextLoaded = true;
 
     //----------------------------------------------------------
     // SYSTEM + USER BLOCKS
@@ -233,40 +253,22 @@ export async function POST(req: Request) {
 
     const systemBlock = sanitizeBlock(buildSystemBlock(domain, ""));
 
-    const userBlocks = assemblePrompt(context, sanitizedHistory, message)
-      .map((b: any) => sanitizeBlock(b));
+    const userBlocks = assemblePrompt(
+      context,
+      sanitizedHistory,
+      message
+    ).map((b: any) => sanitizeBlock(b));
 
     const fullBlocks = [systemBlock, ...userBlocks];
     diag.blocks = { userCount: userBlocks.length };
 
     //----------------------------------------------------------
-    // PIPELINE SELECTOR
+    // SINGLE PIPELINE (direct Responses API)
     //----------------------------------------------------------
-    const hybridAllowed =
-      modeHint === "Create" ||
-      modeHint === "Red Team" ||
-      modeHint === "Next Steps" ||
-      founderMode;
-
-    let finalText = "";
-
-    if (hybridAllowed) {
-      finalText =
-        (await orchestrateSolaceResponse({
-          userMessage: message,
-          context,
-          history: sanitizedHistory,
-          ministryMode,
-          modeHint,
-          founderMode,
-          canonicalUserKey,
-        })) || "[No reply]";
-    } else {
-      finalText = await callOpenAI(fullBlocks);
-    }
+    const finalText = await callOpenAI(fullBlocks);
 
     //----------------------------------------------------------
-    // MEMORY
+    // MEMORY WRITE
     //----------------------------------------------------------
     try {
       await writeMemory(
@@ -274,23 +276,43 @@ export async function POST(req: Request) {
         message,
         sanitizeASCII(finalText)
       );
+      diag.memoryWrite = "ok";
     } catch (err) {
       console.error("[MEMORY] failed:", err);
+      diag.memoryWrite = "error";
     }
 
     //----------------------------------------------------------
-    // RETURN
+    // RETURN (with sanitized diag header)
     //----------------------------------------------------------
     const res = NextResponse.json({ text: finalText });
-    res.headers.set("x-solace-diag", JSON.stringify(diag).slice(0, 1000));
+
+    const diagHeader = sanitizeASCII(
+      JSON.stringify(diag)
+    ).slice(0, 1000);
+
+    res.headers.set("x-solace-diag", diagHeader);
+
     return res;
   } catch (err: any) {
     console.error("[CHAT ROUTE] fatal", err);
-    return NextResponse.json(
-      { error: err?.message || "ChatRouteError", diag },
+
+    const errDiag = {
+      ...diag,
+      fatal: sanitizeASCII(err?.message || "ChatRouteError"),
+    };
+
+    const res = NextResponse.json(
+      { error: err?.message || "ChatRouteError", diag: errDiag },
       { status: 500 }
     );
+
+    const diagHeader = sanitizeASCII(
+      JSON.stringify(errDiag)
+    ).slice(0, 1000);
+
+    res.headers.set("x-solace-diag", diagHeader);
+
+    return res;
   }
 }
-
-
