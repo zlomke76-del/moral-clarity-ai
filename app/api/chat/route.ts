@@ -148,6 +148,19 @@ export async function POST(req: Request) {
     // GOVERNOR
     // ----------------------------------------------------------
     const governorOutput = updateGovernor(message);
+const { system } = buildChatSystemPrompt({
+  filters,
+  userWantsSecular,
+  messages,
+  memorySection,
+  newsSection,
+  webSection,
+  researchSection,
+  hasNewsContext,
+  hasWebContext,
+  hasResearchContext,
+  governorExtras: governor.instructions,   // <-- key line
+});
 
     diag.governor = {
       level: governorOutput.level,
