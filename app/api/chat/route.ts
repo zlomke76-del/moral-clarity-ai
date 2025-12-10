@@ -18,6 +18,7 @@ import { updateGovernor } from "@/lib/solace/governor/governor-engine";
 import { applyGovernorFormatting } from "@/lib/solace/governor/governor-icon-format";
 
 import { writeMemory } from "./modules/memory-writer";
+import { buildChatSystemPrompt } from "@/lib/solace/chat-system";
 
 // --------------------------------------------------------------
 // ASCII SANITIZER — universal safety layer
