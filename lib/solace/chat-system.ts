@@ -1,8 +1,8 @@
 // lib/solace/chat-system.ts
 
-import { buildSolaceSystemPrompt, type SolaceDomain } from '@/lib/solace/persona';
+import { buildSolaceSystemPrompt, type SolaceDomain } from "@/lib/solace/persona";
 
-const SOLACE_NAME = 'Solace';
+const SOLACE_NAME = "Solace";
 
 /* ========= GUIDELINES / HOUSE RULES / RESPONSE FORMAT ========= */
 
@@ -41,10 +41,10 @@ function scripturePolicyText(opts: {
   forceFirstTurnSeeding: boolean;
   userAskedForSecular: boolean;
 }) {
-  const base =
-    `SCRIPTURE POLICY
+  const base = `SCRIPTURE POLICY
 - Very short references only (e.g., "Exodus 20", "Matthew 5", "Qur'an 4:135"); no long quotes by default.
-- Weave 1–2 references inline only when relevant.\n`;
+- Weave 1–2 references inline only when relevant.
+`;
 
   if (!opts.wantsAbrahamic || opts.userAskedForSecular)
     return base + `- Abrahamic references DISABLED due to secular framing/inactive layer.`;
@@ -56,47 +56,23 @@ function scripturePolicyText(opts: {
 }
 
 function isFirstRealTurn(messages: Array<{ role: string; content: string }>) {
-  const userCount = messages.filter((m) => m.role?.toLowerCase() === 'user').length;
-  const assistantCount = messages.filter((m) => m.role?.toLowerCase() === 'assistant').length;
+  const userCount = messages.filter((m) => m.role?.toLowerCase() === "user").length;
+  const assistantCount = messages.filter((m) => m.role?.toLowerCase() === "assistant").length;
   return userCount <= 1 || messages.length < 3 || assistantCount === 0;
 }
 
 function hasEmotionalOrMoralCue(text: string) {
-  const t = (text || '').toLowerCase();
+  const t = (text || "").toLowerCase();
   const emo = [
-    'hope',
-    'lost',
-    'afraid',
-    'fear',
-    'anxious',
-    'grief',
-    'sad',
-    'sorrow',
-    'depressed',
-    'stress',
-    'overwhelmed',
-    'lonely',
-    'comfort',
-    'forgive',
-    'forgiveness',
-    'guilt',
-    'shame',
-    'purpose',
-    'meaning',
+    "hope", "lost", "afraid", "fear", "anxious", "grief",
+    "sad", "sorrow", "depressed", "stress", "overwhelmed",
+    "lonely", "comfort", "forgive", "forgiveness", "guilt",
+    "shame", "purpose", "meaning"
   ];
   const moral = [
-    'right',
-    'wrong',
-    'unfair',
-    'injustice',
-    'justice',
-    'truth',
-    'honest',
-    'dishonest',
-    'integrity',
-    'mercy',
-    'compassion',
-    'courage',
+    "right", "wrong", "unfair", "injustice", "justice",
+    "truth", "honest", "dishonest", "integrity",
+    "mercy", "compassion", "courage"
   ];
   const hit = (arr: string[]) => arr.some((w) => t.includes(w));
   return hit(emo) || hit(moral);
@@ -113,87 +89,92 @@ export function buildChatSystemPrompt(opts: {
   hasNewsContext?: boolean;
   hasWebContext?: boolean;
   hasResearchContext?: boolean;
+  governorExtras?: string; // <-- added safely
 }) {
   const {
     filters,
     userWantsSecular,
     messages,
-    memorySection = '',
-    newsSection = '',
-    webSection = '',
-    researchSection = '',
+    memorySection = "",
+    newsSection = "",
+    webSection = "",
+    researchSection = "",
     hasNewsContext = false,
     hasWebContext = false,
     hasResearchContext = false,
+    governorExtras = ""
   } = opts;
 
-  const wantsAbrahamic = filters.includes('abrahamic') || filters.includes('ministry');
-  const wantsGuidance = filters.includes('guidance');
+  const wantsAbrahamic = filters.includes("abrahamic") || filters.includes("ministry");
+  const wantsGuidance = filters.includes("guidance");
 
   const lastUserText =
-    [...messages].reverse().find((m) => m.role?.toLowerCase() === 'user')?.content ?? '';
+    [...messages].reverse().find((m) => m.role?.toLowerCase() === "user")?.content ?? "";
   const firstTurn = isFirstRealTurn(messages);
   const forceFirstTurnSeeding =
     wantsAbrahamic && !userWantsSecular && firstTurn && hasEmotionalOrMoralCue(lastUserText);
 
   const today = new Date();
-  const iso = today.toISOString().slice(0, 10); // YYYY-MM-DD
+  const iso = today.toISOString().slice(0, 10);
   const year = iso.slice(0, 4);
 
-  const TIME_ANCHOR = `TIME & CONTEXT
+  const TIME_ANCHOR = `TIME AND CONTEXT
 - Today's date is ${iso} (YYYY-MM-DD). Treat this as "now".
 - If the user asks for the current year, answer with ${year}.
-- If information depends on events after your training cutoff AND no WEB CONTEXT or RESEARCH CONTEXT or NEWS CONTEXT is provided, explicitly say that you do not have up-to-date information and DO NOT guess, invent headlines, or fabricate sources.
-- When a WEB CONTEXT, RESEARCH CONTEXT, or NEWS CONTEXT section is present, rely on it for post-cutoff events.
-- Never state that the current year is earlier than ${year}; that would be drift.`;
+- If information depends on events after your training cutoff AND no WEB CONTEXT or RESEARCH CONTEXT or NEWS CONTEXT is provided, explicitly say that you do not have up-to-date information and DO NOT guess.
+- When WEB CONTEXT, RESEARCH CONTEXT, or NEWS CONTEXT is present, rely on it for post-cutoff events.
+- Never state that the current year is earlier than ${year}.`;
 
   const extrasParts: string[] = [];
 
   extrasParts.push(
-    `IDENTITY / HOUSE RULES\n${HOUSE_RULES}`,
+    `IDENTITY AND HOUSE RULES\n${HOUSE_RULES}`,
     TIME_ANCHOR,
     GUIDELINE_NEUTRAL,
     RESPONSE_FORMAT,
     scripturePolicyText({
       wantsAbrahamic,
       forceFirstTurnSeeding,
-      userAskedForSecular: userWantsSecular,
+      userAskedForSecular: userWantsSecular
     })
   );
 
   if (wantsAbrahamic && !userWantsSecular) extrasParts.push(GUIDELINE_ABRAHAMIC);
   if (wantsGuidance) extrasParts.push(GUIDELINE_GUIDANCE);
 
-  const extras = extrasParts.join('\n\n');
+  const extras = extrasParts.join("\n\n");
 
-  // Choose the Solace domain lens
   const domain: SolaceDomain =
     wantsAbrahamic && !userWantsSecular
-      ? 'ministry'
+      ? "ministry"
       : wantsGuidance
-      ? 'guidance'
-      : 'core';
+      ? "guidance"
+      : "core";
 
-  // Base Solace persona + Abrahamic Code + tone, etc.
   const base = buildSolaceSystemPrompt(domain, extras);
 
-  // REAL-TIME CONTEXT ASSERTION
+  // Governor Directions (silent — never spoken to user)
+  const governorBlock = governorExtras
+    ? `\n\nGOVERNOR_DIRECTIONS_INTERNAL\n${governorExtras}`
+    : "";
+
   const webAssertion =
     hasWebContext || hasResearchContext || hasNewsContext
-      ? `\n\nREAL-TIME CONTEXT\n- You DO have recent web-derived context above (WEB CONTEXT, RESEARCH CONTEXT, and/or NEWS CONTEXT). Do NOT say you cannot provide real-time updates or that you lack internet access.\n- Synthesize a brief, accurate answer using that context, and include bracketed refs like [1], [2] or [R1], [R2] or [N1], [N2] when you rely on specific items.`
-      : '';
+      ? `\n\nREAL-TIME CONTEXT\n- You DO have recent context from WEB, RESEARCH, or NEWS. Do NOT say you cannot access the internet. Synthesize using provided context only.`
+      : "";
 
-  // Governor extras (passed from route)
-const governorDirections = opts.governorExtras
-  ? `\n\nGOVERNOR_DIRECTIONS:\n${opts.governorExtras}`
-  : "";
+  const system =
+    base +
+    memorySection +
+    newsSection +
+    webSection +
+    researchSection +
+    webAssertion +
+    governorBlock;
 
-// FINAL SYSTEM PROMPT
-const system =
-  base +
-  memorySection +
-  newsSection +
-  webSection +
-  researchSection +
-  webAssertion +
-  governorDirections;
+  return {
+    system,
+    wantsAbrahamic,
+    forceFirstTurnSeeding
+  };
+}
