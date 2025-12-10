@@ -1,8 +1,7 @@
-// app/api/chat/route.ts
 // --------------------------------------------------------------
-// SOLACE CHAT ROUTE — GOVERNOR + HYBRID PIPELINE (FINAL)
-// Node runtime, ASCII safe, production stable.
-// Includes DIAG TRACER via x-solace-diag header.
+// SOLACE CHAT ROUTE — GOVERNOR + HYBRID PIPELINE (STABLE EDITION)
+// Safe Unicode Sanitization — preserves icons/emojis
+// Full DIAG TRACER via x-solace-diag header
 // --------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -13,54 +12,45 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 import { assembleContext } from "./modules/assembleContext";
-import { runHybridPipeline } from "./modules/hybrid";
+import { orchestrateSolaceResponse } from "./modules/orchestrator";
 
-// Governor Engine + Icon Formatter
 import { updateGovernor } from "@/lib/solace/governor/governor-engine";
 import { applyGovernorFormatting } from "@/lib/solace/governor/governor-icon-format";
-
 import { writeMemory } from "./modules/memory-writer";
 
 // --------------------------------------------------------------
-// ASCII SANITIZER — universal safety layer
+// SAFE UNICODE SANITIZER — preserves emojis/icons, strips only
+// invalid surrogate pairs or unassigned codepoints.
 // --------------------------------------------------------------
-function sanitizeASCII(input: any): any {
-  if (!input) return input;
+function sanitizeUnicode(text: any): any {
+  if (typeof text !== "string") return text;
 
-  if (typeof input === "string") {
-    const rep: Record<string, string> = {
-      "—": "-",
-      "–": "-",
-      "•": "*",
-      "“": '"',
-      "”": '"',
-      "‘": "'",
-      "’": "'",
-      "…": "...",
-    };
+  // Remove unpaired or invalid surrogate halves.
+  return text.replace(
+    /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|([^\uD800-\uDBFF])[\uDC00-\uDFFF]/g,
+    ""
+  );
+}
 
-    let out = input;
-    for (const k in rep) out = out.split(k).join(rep[k]);
+// Deep sanitize objects without destructing Unicode
+function sanitizeDeep(input: any): any {
+  if (typeof input === "string") return sanitizeUnicode(input);
 
-    return out
-      .split("")
-      .map((c) => (c.charCodeAt(0) > 255 ? "?" : c))
-      .join("");
-  }
+  if (Array.isArray(input)) return input.map((v) => sanitizeDeep(v));
 
-  if (Array.isArray(input)) return input.map((x) => sanitizeASCII(x));
-
-  if (typeof input === "object") {
-    const clean: any = {};
-    for (const k in input) clean[k] = sanitizeASCII(input[k]);
-    return clean;
+  if (input && typeof input === "object") {
+    const out: any = {};
+    for (const k of Object.keys(input)) {
+      out[k] = sanitizeDeep(input[k]);
+    }
+    return out;
   }
 
   return input;
 }
 
 // --------------------------------------------------------------
-// SESSION LOADER
+// USER SESSION LOADER
 // --------------------------------------------------------------
 async function getNodeUser(req: Request) {
   const cookieHeader = req.headers.get("cookie") ?? "";
@@ -70,12 +60,12 @@ async function getNodeUser(req: Request) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: (name) => {
-          const match = cookieHeader
+        get(name) {
+          const found = cookieHeader
             .split(";")
             .map((c) => c.trim())
             .find((c) => c.startsWith(name + "="));
-          return match ? match.split("=")[1] : undefined;
+          return found ? found.split("=")[1] : undefined;
         },
         set() {},
         remove() {},
@@ -91,7 +81,6 @@ async function getNodeUser(req: Request) {
 // POST /api/chat — MAIN ENTRY POINT
 // --------------------------------------------------------------
 export async function POST(req: Request) {
-  // DIAG TRACER OBJECT
   const diag: any = {
     stage: "start",
     ts: new Date().toISOString(),
@@ -99,27 +88,21 @@ export async function POST(req: Request) {
 
   try {
     // ----------------------------------------------------------
-    // Parse body
+    // Parse Request
     // ----------------------------------------------------------
     const body = await req.json().catch(() => null);
     diag.bodyPresent = !!body;
 
     if (!body?.message) {
       diag.error = "Missing message";
-      const res = NextResponse.json(
-        { error: "Message required" },
-        { status: 400 }
-      );
-      res.headers.set(
-        "x-solace-diag",
-        JSON.stringify(sanitizeASCII(diag)).slice(0, 900)
-      );
+      const res = NextResponse.json({ error: "Message required" }, { status: 400 });
+      res.headers.set("x-solace-diag", JSON.stringify(diag).slice(0, 900));
       return res;
     }
 
     const rawMessage = String(body.message);
-    const message = sanitizeASCII(rawMessage);
-    diag.messagePreview = message.slice(0, 240);
+    const message = sanitizeUnicode(rawMessage);
+    diag.messagePreview = message.slice(0, 200);
 
     let {
       history = [],
@@ -130,20 +113,11 @@ export async function POST(req: Request) {
       userKey: explicitClientKey,
     } = body;
 
-    diag.mode = {
-      ministryMode,
-      founderMode,
-      modeHint,
-    };
+    diag.modes = { ministryMode, founderMode, modeHint };
 
-    // ----------------------------------------------------------
-    // Sanitize history
-    // ----------------------------------------------------------
+    // Sanitize history safely
     const sanitizedHistory = Array.isArray(history)
-      ? history.map((h: any) => ({
-          ...h,
-          content: sanitizeASCII(h.content),
-        }))
+      ? history.map((h) => ({ ...h, content: sanitizeUnicode(h.content) }))
       : [];
 
     diag.historyCount = sanitizedHistory.length;
@@ -153,6 +127,7 @@ export async function POST(req: Request) {
     // ----------------------------------------------------------
     const user = await getNodeUser(req);
     const canonicalUserKey = user?.id ?? explicitClientKey ?? "guest";
+
     diag.user = {
       hasSession: !!user,
       explicitClientKey: explicitClientKey ?? null,
@@ -163,34 +138,34 @@ export async function POST(req: Request) {
     // CONTEXT LOAD
     // ----------------------------------------------------------
     diag.stage = "context-load:start";
+
     let context = await assembleContext(canonicalUserKey, workspaceId, message);
-    context = sanitizeASCII(context);
-    diag.stage = "context-load:done";
+    context = sanitizeDeep(context);
 
     diag.context = {
-      persona: context?.persona ?? null,
+      personaLoaded: !!context?.persona,
       facts: context?.memoryPack?.facts?.length ?? 0,
       episodic: context?.memoryPack?.episodic?.length ?? 0,
       autobiography: context?.memoryPack?.autobiography?.length ?? 0,
       newsDigest: context?.newsDigest?.length ?? 0,
-      researchContext: context?.researchContext?.length ?? 0,
-      didResearch: !!context?.didResearch,
+      researchItems: context?.researchContext?.length ?? 0,
     };
+
+    diag.stage = "context-load:done";
 
     // ----------------------------------------------------------
     // GOVERNOR
     // ----------------------------------------------------------
     diag.stage = "governor:start";
+
     const governorOutput = updateGovernor(message);
 
     diag.governor = {
       level: governorOutput.level,
       signals: governorOutput.signals,
-      instructionsPreview: String(governorOutput.instructions || "").slice(
-        0,
-        240
-      ),
+      instructionsPreview: governorOutput.instructions.slice(0, 200),
     };
+
     diag.stage = "governor:done";
 
     // ----------------------------------------------------------
@@ -198,7 +173,7 @@ export async function POST(req: Request) {
     // ----------------------------------------------------------
     diag.stage = "pipeline:start";
 
-    const pipelineResult = await runHybridPipeline({
+    const finalAnswer = await orchestrateSolaceResponse({
       userMessage: message,
       context,
       history: sanitizedHistory,
@@ -210,73 +185,59 @@ export async function POST(req: Request) {
       governorInstructions: governorOutput.instructions,
     });
 
+    let sanitizedFinal = sanitizeUnicode(finalAnswer);
+
     diag.stage = "pipeline:done";
-
-    // The new hybrid pipeline does NOT return optimist/skeptic fields.
-    diag.pipeline = {
-      governorLevel: pipelineResult.governorLevel,
-      finalPreview: String(pipelineResult.finalAnswer || "").slice(0, 240),
-    };
-
-    let finalText = sanitizeASCII(pipelineResult.finalAnswer);
+    diag.finalPreview = sanitizedFinal.slice(0, 200);
 
     // ----------------------------------------------------------
-    // ICON + PACING FORMATTING
+    // GOVERNOR ICON FORMATTING
     // ----------------------------------------------------------
-    diag.stage = "formatting:start";
+    diag.stage = "format:start";
 
-    finalText = applyGovernorFormatting(finalText, {
+    sanitizedFinal = applyGovernorFormatting(sanitizedFinal, {
       level: governorOutput.level,
-      isFounder: founderMode === true,
+      isFounder: !!founderMode,
       emotionalDistress:
         (governorOutput.signals?.emotionalValence ?? 0.5) < 0.35,
       decisionContext: governorOutput.signals?.decisionPoint ?? false,
     });
 
-    diag.stage = "formatting:done";
-    diag.finalPreview = String(finalText || "").slice(0, 240);
+    diag.stage = "format:done";
 
     // ----------------------------------------------------------
     // MEMORY WRITE
     // ----------------------------------------------------------
     diag.stage = "memory:start";
+
     try {
-      await writeMemory(canonicalUserKey, message, finalText);
-      diag.memoryWrite = "ok";
+      await writeMemory(canonicalUserKey, message, sanitizedFinal);
+      diag.memory = "ok";
     } catch (err: any) {
-      console.error("[MEMORY WRITE ERROR]", err);
-      diag.memoryWrite = `error:${err?.message ?? "unknown"}`;
+      diag.memory = "error:" + (err?.message || "unknown");
     }
+
     diag.stage = "memory:done";
 
     // ----------------------------------------------------------
-    // RETURN RESPONSE
+    // FINAL RESPONSE
     // ----------------------------------------------------------
-    diag.stage = "response:success";
+    const res = NextResponse.json({ text: sanitizedFinal });
 
-    const res = NextResponse.json({ text: finalText });
-
-    const diagHeader = JSON.stringify(sanitizeASCII(diag)).slice(0, 900);
-    res.headers.set("x-solace-diag", diagHeader);
+    const diagHeader = JSON.stringify(diag);
+    res.headers.set("x-solace-diag", diagHeader.slice(0, 900));
 
     return res;
   } catch (err: any) {
-    console.error("[CHAT ROUTE FATAL]", err);
-
-    const errDiag = {
-      ...diag,
-      stage: "response:error",
-      fatal: sanitizeASCII(err?.message || "ChatRouteError"),
-    };
+    diag.stage = "fatal";
+    diag.error = err?.message || "ChatRouteError";
 
     const res = NextResponse.json(
-      { error: err?.message ?? "ChatRouteError", diag: errDiag },
+      { error: diag.error, diag },
       { status: 500 }
     );
 
-    const diagHeader = JSON.stringify(sanitizeASCII(errDiag)).slice(0, 900);
-    res.headers.set("x-solace-diag", diagHeader);
-
+    res.headers.set("x-solace-diag", JSON.stringify(diag).slice(0, 900));
     return res;
   }
 }
