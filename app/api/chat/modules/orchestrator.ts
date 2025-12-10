@@ -1,7 +1,7 @@
 // app/api/chat/modules/orchestrator.ts
 //--------------------------------------------------------------
 // Solace Orchestrator (Thin Wrapper)
-// Updated for new unified Hybrid Super-AI Pipeline
+// Updated for unified Hybrid Super-AI Pipeline
 // (Optimist → Skeptic → Arbiter + Governor)
 //--------------------------------------------------------------
 
@@ -10,12 +10,15 @@ import { runHybridPipeline } from "./hybrid";
 /**
  * orchestrateSolaceResponse
  *
- * This is now a lightweight forwarder that hands all control
- * to the unified Hybrid Pipeline. It preserves legacy signature
- * compatibility but no longer performs any internal stage logic.
- *
- * All research-awareness, pacing, governor behavior,
- * and stage synthesis live inside hybrid.ts.
+ * IMPORTANT:
+ * This must return the *entire* pipeline result object
+ * so route.ts can read:
+ *   - finalAnswer
+ *   - governorLevel
+ *   - governorInstructions
+ *   - optimist
+ *   - skeptic
+ *   - arbiter
  */
 export async function orchestrateSolaceResponse({
   userMessage,
@@ -37,9 +40,19 @@ export async function orchestrateSolaceResponse({
       canonicalUserKey,
     });
 
-    return result?.finalAnswer || "[Hybrid pipeline returned empty output]";
+    // Return the full object — DO NOT strip fields
+    return result;
+
   } catch (err) {
     console.error("[ORCHESTRATOR] Pipeline failure:", err);
-    return "[Hybrid pipeline error]";
+
+    return {
+      finalAnswer: "[Hybrid pipeline error]",
+      governorLevel: 0,
+      governorInstructions: "",
+      optimist: "",
+      skeptic: "",
+      arbiter: ""
+    };
   }
 }
