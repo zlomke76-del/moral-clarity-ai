@@ -238,4 +238,3 @@ finalText = applyGovernorFormatting(finalText, {
     return res;
   }
 }
-
