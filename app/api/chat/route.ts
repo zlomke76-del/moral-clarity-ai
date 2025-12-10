@@ -194,7 +194,7 @@ export async function POST(req: Request) {
     diag.stage = "governor:done";
 
     // ----------------------------------------------------------
-    // HYBRID PIPELINE (OPTIMIST → SKEPTIC → ARBITER)
+    // HYBRID PIPELINE
     // ----------------------------------------------------------
     diag.stage = "pipeline:start";
 
@@ -206,17 +206,15 @@ export async function POST(req: Request) {
       modeHint,
       founderMode,
       canonicalUserKey,
-      // governor signals plumbed all the way through
       governorLevel: governorOutput.level,
       governorInstructions: governorOutput.instructions,
     });
 
     diag.stage = "pipeline:done";
 
+    // The new hybrid pipeline does NOT return optimist/skeptic fields.
     diag.pipeline = {
       governorLevel: pipelineResult.governorLevel,
-      hasOptimist: !!pipelineResult.optimist,
-      hasSkeptic: !!pipelineResult.skeptic,
       finalPreview: String(pipelineResult.finalAnswer || "").slice(0, 240),
     };
 
@@ -230,10 +228,8 @@ export async function POST(req: Request) {
     finalText = applyGovernorFormatting(finalText, {
       level: governorOutput.level,
       isFounder: founderMode === true,
-      // emotionalDistress derived from emotionalValence (0–1)
       emotionalDistress:
         (governorOutput.signals?.emotionalValence ?? 0.5) < 0.35,
-      // decisionContext is the correct signal name
       decisionContext: governorOutput.signals?.decisionPoint ?? false,
     });
 
