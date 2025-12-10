@@ -1,6 +1,8 @@
+// app/api/chat/route.ts
 // --------------------------------------------------------------
 // SOLACE CHAT ROUTE — GOVERNOR + HYBRID PIPELINE (FINAL)
 // Node runtime, ASCII safe, production stable.
+// Includes DIAG TRACER via x-solace-diag header.
 // --------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -27,9 +29,14 @@ function sanitizeASCII(input: any): any {
 
   if (typeof input === "string") {
     const rep: Record<string, string> = {
-      "—": "-", "–": "-", "•": "*",
-      "“": "\"", "”": "\"",
-      "‘": "'", "’": "'", "…": "..."
+      "—": "-",
+      "–": "-",
+      "•": "*",
+      "“": '"',
+      "”": '"',
+      "‘": "'",
+      "’": "'",
+      "…": "...",
     };
 
     let out = input;
@@ -71,8 +78,8 @@ async function getNodeUser(req: Request) {
           return match ? match.split("=")[1] : undefined;
         },
         set() {},
-        remove() {}
-      }
+        remove() {},
+      },
     }
   );
 
@@ -84,7 +91,11 @@ async function getNodeUser(req: Request) {
 // POST /api/chat — MAIN ENTRY POINT
 // --------------------------------------------------------------
 export async function POST(req: Request) {
-  const diag: any = { stage: "start" };
+  // DIAG TRACER OBJECT
+  const diag: any = {
+    stage: "start",
+    ts: new Date().toISOString(),
+  };
 
   try {
     // ----------------------------------------------------------
@@ -94,7 +105,16 @@ export async function POST(req: Request) {
     diag.bodyPresent = !!body;
 
     if (!body?.message) {
-      return NextResponse.json({ error: "Message required" }, { status: 400 });
+      diag.error = "Missing message";
+      const res = NextResponse.json(
+        { error: "Message required" },
+        { status: 400 }
+      );
+      res.headers.set(
+        "x-solace-diag",
+        JSON.stringify(sanitizeASCII(diag)).slice(0, 900)
+      );
+      return res;
     }
 
     const rawMessage = String(body.message);
@@ -107,8 +127,14 @@ export async function POST(req: Request) {
       ministryMode = false,
       founderMode = false,
       modeHint = "Neutral",
-      userKey: explicitClientKey
+      userKey: explicitClientKey,
     } = body;
+
+    diag.mode = {
+      ministryMode,
+      founderMode,
+      modeHint,
+    };
 
     // ----------------------------------------------------------
     // Sanitize history
@@ -116,7 +142,7 @@ export async function POST(req: Request) {
     const sanitizedHistory = Array.isArray(history)
       ? history.map((h: any) => ({
           ...h,
-          content: sanitizeASCII(h.content)
+          content: sanitizeASCII(h.content),
         }))
       : [];
 
@@ -127,33 +153,51 @@ export async function POST(req: Request) {
     // ----------------------------------------------------------
     const user = await getNodeUser(req);
     const canonicalUserKey = user?.id ?? explicitClientKey ?? "guest";
-    diag.user = canonicalUserKey;
+    diag.user = {
+      hasSession: !!user,
+      explicitClientKey: explicitClientKey ?? null,
+      canonicalUserKey,
+    };
 
     // ----------------------------------------------------------
     // CONTEXT LOAD
     // ----------------------------------------------------------
-    let context = await assembleContext(
-      canonicalUserKey,
-      workspaceId,
-      message
-    );
-
+    diag.stage = "context-load:start";
+    let context = await assembleContext(canonicalUserKey, workspaceId, message);
     context = sanitizeASCII(context);
-    diag.contextLoaded = true;
+    diag.stage = "context-load:done";
+
+    diag.context = {
+      persona: context?.persona ?? null,
+      facts: context?.memoryPack?.facts?.length ?? 0,
+      episodic: context?.memoryPack?.episodic?.length ?? 0,
+      autobiography: context?.memoryPack?.autobiography?.length ?? 0,
+      newsDigest: context?.newsDigest?.length ?? 0,
+      researchContext: context?.researchContext?.length ?? 0,
+      didResearch: !!context?.didResearch,
+    };
 
     // ----------------------------------------------------------
     // GOVERNOR
     // ----------------------------------------------------------
+    diag.stage = "governor:start";
     const governorOutput = updateGovernor(message);
 
     diag.governor = {
       level: governorOutput.level,
-      signals: governorOutput.signals
+      signals: governorOutput.signals,
+      instructionsPreview: String(governorOutput.instructions || "").slice(
+        0,
+        240
+      ),
     };
+    diag.stage = "governor:done";
 
     // ----------------------------------------------------------
-    // HYBRID PIPELINE
+    // HYBRID PIPELINE (OPTIMIST → SKEPTIC → ARBITER)
     // ----------------------------------------------------------
+    diag.stage = "pipeline:start";
+
     const pipelineResult = await runHybridPipeline({
       userMessage: message,
       context,
@@ -161,36 +205,59 @@ export async function POST(req: Request) {
       ministryMode,
       modeHint,
       founderMode,
-      canonicalUserKey
+      canonicalUserKey,
+      // governor signals plumbed all the way through
+      governorLevel: governorOutput.level,
+      governorInstructions: governorOutput.instructions,
     });
+
+    diag.stage = "pipeline:done";
+
+    diag.pipeline = {
+      governorLevel: pipelineResult.governorLevel,
+      hasOptimist: !!pipelineResult.optimist,
+      hasSkeptic: !!pipelineResult.skeptic,
+      finalPreview: String(pipelineResult.finalAnswer || "").slice(0, 240),
+    };
 
     let finalText = sanitizeASCII(pipelineResult.finalAnswer);
 
     // ----------------------------------------------------------
     // ICON + PACING FORMATTING
     // ----------------------------------------------------------
+    diag.stage = "formatting:start";
+
     finalText = applyGovernorFormatting(finalText, {
       level: governorOutput.level,
       isFounder: founderMode === true,
+      // emotionalDistress derived from emotionalValence (0–1)
       emotionalDistress:
         (governorOutput.signals?.emotionalValence ?? 0.5) < 0.35,
-      decisionContext: governorOutput.signals?.decisionPoint ?? false
+      // decisionContext is the correct signal name
+      decisionContext: governorOutput.signals?.decisionPoint ?? false,
     });
+
+    diag.stage = "formatting:done";
+    diag.finalPreview = String(finalText || "").slice(0, 240);
 
     // ----------------------------------------------------------
     // MEMORY WRITE
     // ----------------------------------------------------------
+    diag.stage = "memory:start";
     try {
       await writeMemory(canonicalUserKey, message, finalText);
       diag.memoryWrite = "ok";
-    } catch (err) {
+    } catch (err: any) {
       console.error("[MEMORY WRITE ERROR]", err);
-      diag.memoryWrite = "error";
+      diag.memoryWrite = `error:${err?.message ?? "unknown"}`;
     }
+    diag.stage = "memory:done";
 
     // ----------------------------------------------------------
     // RETURN RESPONSE
     // ----------------------------------------------------------
+    diag.stage = "response:success";
+
     const res = NextResponse.json({ text: finalText });
 
     const diagHeader = JSON.stringify(sanitizeASCII(diag)).slice(0, 900);
@@ -202,7 +269,8 @@ export async function POST(req: Request) {
 
     const errDiag = {
       ...diag,
-      fatal: sanitizeASCII(err?.message || "ChatRouteError")
+      stage: "response:error",
+      fatal: sanitizeASCII(err?.message || "ChatRouteError"),
     };
 
     const res = NextResponse.json(
