@@ -172,14 +172,18 @@ export async function POST(req: Request) {
     // ----------------------------------------------------------
     // ICON + PACING FORMATTING
     // ----------------------------------------------------------
-    finalText = applyGovernorFormatting(finalText, {
-      level: governorOutput.level,
-      isFounder: founderMode === true,
-      emotionalDistress: governorOutput.signals?.emotionalDistress ?? false,
+finalText = applyGovernorFormatting(finalText, {
+  level: governorOutput.level,
+  isFounder: founderMode === true,
 
-      // 🔥 FIXED NAME
-      decisionContext: governorOutput.signals?.decisionPoint ?? false
-    });
+  // emotionalDistress derived from emotionalValence (0–1)
+  emotionalDistress:
+    (governorOutput.signals?.emotionalValence ?? 0.5) < 0.35,
+
+  // decisionContext is the correct signal name
+  decisionContext: governorOutput.signals?.decisionPoint ?? false
+});
+
 
     // ----------------------------------------------------------
     // MEMORY WRITE
