@@ -13,12 +13,11 @@ import { createServerClient } from "@supabase/ssr";
 import { assembleContext } from "./modules/assembleContext";
 import { runHybridPipeline } from "./modules/hybrid";
 
-// NEW — Governor Engine + Icon Formatter integration
+// Governor Engine + Icon Formatter
 import { updateGovernor } from "@/lib/solace/governor/governor-engine";
 import { applyGovernorFormatting } from "@/lib/solace/governor/governor-icon-format";
 
 import { writeMemory } from "./modules/memory-writer";
-import { PacingLevel } from "@/lib/solace/icon-pack";
 
 // --------------------------------------------------------------
 // ASCII SANITIZER — universal safety layer
@@ -43,11 +42,13 @@ function sanitizeASCII(input: any): any {
   }
 
   if (Array.isArray(input)) return input.map((x) => sanitizeASCII(x));
+
   if (typeof input === "object") {
     const clean: any = {};
     for (const k in input) clean[k] = sanitizeASCII(input[k]);
     return clean;
   }
+
   return input;
 }
 
@@ -93,7 +94,10 @@ export async function POST(req: Request) {
     diag.bodyPresent = !!body;
 
     if (!body?.message) {
-      return NextResponse.json({ error: "Message required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Message required" },
+        { status: 400 }
+      );
     }
 
     const rawMessage = String(body.message);
@@ -109,7 +113,9 @@ export async function POST(req: Request) {
       userKey: explicitClientKey
     } = body;
 
+    // ----------------------------------------------------------
     // Sanitize history
+    // ----------------------------------------------------------
     const sanitizedHistory = Array.isArray(history)
       ? history.map((h: any) => ({
           ...h,
@@ -120,7 +126,7 @@ export async function POST(req: Request) {
     diag.historyCount = sanitizedHistory.length;
 
     // ----------------------------------------------------------
-    // USER ID
+    // USER
     // ----------------------------------------------------------
     const user = await getNodeUser(req);
     const canonicalUserKey = user?.id ?? explicitClientKey ?? "guest";
@@ -139,7 +145,7 @@ export async function POST(req: Request) {
     diag.contextLoaded = true;
 
     // ----------------------------------------------------------
-    // GOVERNOR — compute pacing level + signals
+    // GOVERNOR
     // ----------------------------------------------------------
     const governorOutput = updateGovernor(message);
 
@@ -164,15 +170,16 @@ export async function POST(req: Request) {
     let finalText = sanitizeASCII(pipelineResult.finalAnswer);
 
     // ----------------------------------------------------------
-    // ICON / PACING FORMATTING
+    // ICON + PACING FORMATTING
     // ----------------------------------------------------------
     finalText = applyGovernorFormatting(finalText, {
-  level: governorOutput.level as PacingLevel,
-  isFounder: founderMode === true,
-  emotionalDistress: governorOutput.signals?.emotionalDistress ?? false,
-  decisionContext: governorOutput.signals?.decisionContext ?? false
-});
+      level: governorOutput.level,
+      isFounder: founderMode === true,
+      emotionalDistress: governorOutput.signals?.emotionalDistress ?? false,
 
+      // 🔥 FIXED NAME
+      decisionContext: governorOutput.signals?.decisionPoint ?? false
+    });
 
     // ----------------------------------------------------------
     // MEMORY WRITE
