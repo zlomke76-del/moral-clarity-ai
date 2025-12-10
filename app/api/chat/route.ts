@@ -18,6 +18,7 @@ import { updateGovernor } from "@/lib/solace/governor/governor-engine";
 import { applyGovernorFormatting } from "@/lib/solace/governor/governor-icon-format";
 
 import { writeMemory } from "./modules/memory-writer";
+import { PacingLevel } from "@/lib/solace/icon-pack";
 
 // --------------------------------------------------------------
 // ASCII SANITIZER — universal safety layer
@@ -166,11 +167,12 @@ export async function POST(req: Request) {
     // ICON / PACING FORMATTING
     // ----------------------------------------------------------
     finalText = applyGovernorFormatting(finalText, {
-      level: governorOutput.level,
-      isFounder: founderMode === true,
-      emotionalDistress: governorOutput.signals?.emotionalDistress ?? false,
-      decisionContext: governorOutput.signals?.decisionContext ?? false
-    });
+  level: governorOutput.level as PacingLevel,
+  isFounder: founderMode === true,
+  emotionalDistress: governorOutput.signals?.emotionalDistress ?? false,
+  decisionContext: governorOutput.signals?.decisionContext ?? false
+});
+
 
     // ----------------------------------------------------------
     // MEMORY WRITE
