@@ -69,7 +69,6 @@ Produce ONE final answer only.
 `.trim();
   }
 
-  // The governor block is the only injected behavioral modifier.
   const gov = `
 GOVERNOR:
 ${governorInstructions}
@@ -139,32 +138,40 @@ export async function runHybridPipeline(inputs: HybridInputs) {
     // ---------------------------------------------------------
     // ARBITER (final unified output)
     // ---------------------------------------------------------
-    const arbPrompt = buildInstructionBlock(
-      "ARBITER",
-      inputs,
-      optimist,
-      skeptic
-    );
+    const arbPrompt = buildInstructionBlock("ARBITER", inputs, optimist, skeptic);
 
     const arbiter = await callModel("gpt-4.1", [
       { role: "user", content: [{ type: "input_text", text: arbPrompt }] }
     ]);
 
     // ---------------------------------------------------------
-    // Unified output only — NEVER expose stages
+    // Unified output only — but diagnostics include stages
     // ---------------------------------------------------------
     return {
       finalAnswer: sanitizeASCII(arbiter || "[arbiter failed]"),
+
+      // Governor continuity
       governorLevel: gov.level,
-      governorInstructions: gov.instructions
+      governorInstructions: gov.instructions,
+
+      // Diagnostics only (never shown to user)
+      optimist: sanitizeASCII(optimist || ""),
+      skeptic: sanitizeASCII(skeptic || ""),
+      arbiter: sanitizeASCII(arbiter || "")
     };
 
   } catch (err) {
     console.error("[Hybrid Pipeline Error]", err);
+
     return {
       finalAnswer: "[Hybrid pipeline error]",
       governorLevel: gov.level,
-      governorInstructions: gov.instructions
+      governorInstructions: gov.instructions,
+
+      // Keep diag props defined so route.ts never breaks
+      optimist: "",
+      skeptic: "",
+      arbiter: ""
     };
   }
 }
