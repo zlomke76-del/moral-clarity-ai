@@ -1,131 +1,68 @@
+// app/api/chat/modules/model-router.ts
 // --------------------------------------------------------------
-// MODEL ROUTER — ASCII-SAFE RESPONSE API WRAPPER
-// Used by hybrid.ts for all model calls.
-// Fully sanitized, fallback-safe, deterministic.
+// MODEL ROUTER — Single unified interface for OpenAI model calls
+// Used by hybrid.ts (Optimist → Skeptic → Arbiter)
+// ASCII-safe, deterministic, production stable.
 // --------------------------------------------------------------
 
 import OpenAI from "openai";
 
-// Primary + fallback models
-import { DEFAULT_MODEL, FALLBACK_MODEL } from "./constants";
-
+// Primary client
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || ""
+  apiKey: process.env.OPENAI_API_KEY!,
 });
 
 // --------------------------------------------------------------
-// ASCII Sanitizer — applied BEFORE request and AFTER response
+// ASCII sanitizer — protect against byte >255 crashes
 // --------------------------------------------------------------
-function sanitizeASCII(input: any): any {
-  if (!input) return input;
+function sanitizeASCII(input: string): string {
+  if (!input) return "";
 
-  if (typeof input === "string") {
-    const replacements: Record<string, string> = {
-      "—": "-", "–": "-", "•": "*",
-      "“": "\"", "”": "\"",
-      "‘": "'", "’": "'",
-      "…": "..."
-    };
+  const rep: Record<string, string> = {
+    "—": "-", "–": "-", "•": "*",
+    "“": "\"", "”": "\"",
+    "‘": "'", "’": "'",
+    "…": "..."
+  };
 
-    let out = input;
-    for (const key in replacements) {
-      out = out.split(key).join(replacements[key]);
-    }
+  let out = input;
+  for (const k in rep) out = out.split(k).join(rep[k]);
 
-    // Replace >255 chars with '?'
-    return out
-      .split("")
-      .map((c) => (c.charCodeAt(0) > 255 ? "?" : c))
-      .join("");
-  }
-
-  if (Array.isArray(input)) {
-    return input.map((v) => sanitizeASCII(v));
-  }
-
-  if (typeof input === "object") {
-    const clean: any = {};
-    for (const k in input) clean[k] = sanitizeASCII(input[k]);
-    return clean;
-  }
-
-  return input;
+  return out
+    .split("")
+    .map((c) => (c.charCodeAt(0) > 255 ? "?" : c))
+    .join("");
 }
 
 // --------------------------------------------------------------
-// sanitizeBlock — sanitize an OpenAI request block
-// --------------------------------------------------------------
-function sanitizeBlock(block: any) {
-  if (!block) return block;
-  const cloned = JSON.parse(JSON.stringify(block));
-
-  if (cloned.content && Array.isArray(cloned.content)) {
-    cloned.content = cloned.content.map((piece: any) => {
-      if (typeof piece === "string") return sanitizeASCII(piece);
-      if (piece.text) piece.text = sanitizeASCII(piece.text);
-      if (piece.input_text) piece.input_text = sanitizeASCII(piece.input_text);
-      return piece;
-    });
-  }
-
-  return cloned;
-}
-
-// --------------------------------------------------------------
-// extractText — safe extraction from the new Responses API
-// --------------------------------------------------------------
-function extractText(res: any): string | null {
-  try {
-    const block = res.output?.[0];
-    if (!block) return null;
-
-    const content = block.content?.[0];
-    if (!content) return null;
-
-    const text = content.text;
-    return text ? sanitizeASCII(text) : null;
-  } catch {
-    return null;
-  }
-}
-
-// --------------------------------------------------------------
-// callModel — primary + fallback with full sanitization
+// callModel(model: string, messages: any[]): Promise<string>
+// The ONLY model-calling function allowed in Solace pipeline.
 // --------------------------------------------------------------
 export async function callModel(
   model: string,
-  inputBlocks: any[]
+  messages: Array<{ role: string; content: any }>
 ): Promise<string> {
-  const safeBlocks = inputBlocks.map((b) =>
-    sanitizeBlock(JSON.parse(JSON.stringify(b)))
-  );
-
-  // -----------------------------
-  // Primary attempt
-  // -----------------------------
   try {
+    // Responses API call — unified pipeline
     const response = await client.responses.create({
       model,
-      input: safeBlocks
+      input: messages,
+      reasoning: { effort: "medium" },
     });
 
-    return extractText(response) ?? "";
-  } catch (err) {
-    console.error("[callModel] Primary model failed:", err);
-  }
+    // Extract text safely
+    const text =
+      response.output_text ??
+      response.output?.[0]?.content?.[0]?.text ??
+      "[empty response]";
 
-  // -----------------------------
-  // Fallback attempt
-  // -----------------------------
-  try {
-    const fallbackResponse = await client.responses.create({
-      model: FALLBACK_MODEL,
-      input: safeBlocks
-    });
+    return sanitizeASCII(String(text));
+  } catch (err: any) {
+    console.error("[MODEL ROUTER ERROR]", err?.message || err);
 
-    return extractText(fallbackResponse) ?? "";
-  } catch (err) {
-    console.error("[callModel] Fallback model failed:", err);
-    return "[Model failure]";
+    return (
+      "[model-router error] " +
+      sanitizeASCII(String(err?.message ?? "unknown"))
+    );
   }
 }
