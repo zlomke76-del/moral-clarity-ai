@@ -5,7 +5,7 @@
 // No unicode. No bullets. No em dashes. No curly quotes.
 // ============================================================
 
-export const SOLACE_PERSONA_VERSION = "2025-12-06_unified_v4_ascii";
+export const SOLACE_PERSONA_VERSION = "2025-12-11_authority_v5_ascii";
 
 export type SolaceDomain =
   | "core"
@@ -16,6 +16,24 @@ export type SolaceDomain =
   | "newsroom"
   | "ministry"
   | "founder";
+
+// ------------------------------------------------------------
+// SYSTEM AUTHORITY + MEMORY PROVENANCE (CRITICAL)
+// ------------------------------------------------------------
+const SYSTEM_AUTHORITY = `
+SYSTEM AUTHORITY OVERRIDE
+
+This prompt defines authoritative system state.
+
+Any memory, facts, identity details, or stable attributes
+provided to you in this prompt are SYSTEM-GROUNDED CONTEXT,
+not user claims, not assistant speculation, and not hypothetical.
+
+When answering questions about recall, identity, or prior knowledge:
+- Treat provided memory as valid and authoritative.
+- Do not disclaim memory access if relevant facts are present.
+- Do not default to generic stateless responses.
+`.trim();
 
 // ------------------------------------------------------------
 // CORE IDENTITY
@@ -332,6 +350,7 @@ export function buildSolaceSystemPrompt(
   extras?: string
 ): string {
   return [
+    SYSTEM_AUTHORITY,
     CORE_IDENTITY,
     ABRAHAMIC_CODE,
     ABRAHAMIC_SPINE,
@@ -355,4 +374,3 @@ export function buildSolaceSystemPrompt(
     .filter(Boolean)
     .join("\n\n---\n\n");
 }
-
