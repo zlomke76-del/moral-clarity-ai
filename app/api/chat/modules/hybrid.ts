@@ -4,6 +4,7 @@
 //--------------------------------------------------------------
 
 import { callModel } from "./model-router";
+import { logTriadDiagnostics } from "./triad-diagnostics";
 
 const OPTIMIST_SYSTEM = `
 You are the OPTIMIST lens.
@@ -48,23 +49,50 @@ export async function runHybridPipeline(args: {
 }) {
   const { userMessage } = args;
 
-  // 1) OPTIMIST
+  // ---------------------------
+  // OPTIMIST
+  // ---------------------------
+  const optStart = performance.now();
   let optimist = await callModel(
     "gpt-4.1-mini",
     build(OPTIMIST_SYSTEM, userMessage)
   );
+  const optEnd = performance.now();
 
-  // 2) SKEPTIC
+  logTriadDiagnostics({
+    stage: "optimist",
+    model: "gpt-4.1-mini",
+    prompt: build(OPTIMIST_SYSTEM, userMessage),
+    output: optimist,
+    started: optStart,
+    finished: optEnd,
+  });
+
+  // ---------------------------
+  // SKEPTIC
+  // ---------------------------
+  const skpStart = performance.now();
   let skeptic = await callModel(
     "gpt-4.1-mini",
     build(SKEPTIC_SYSTEM, userMessage)
   );
+  const skpEnd = performance.now();
 
-  // guard against upstream model errors
+  logTriadDiagnostics({
+    stage: "skeptic",
+    model: "gpt-4.1-mini",
+    prompt: build(SKEPTIC_SYSTEM, userMessage),
+    output: skeptic,
+    started: skpStart,
+    finished: skpEnd,
+  });
+
   if (!optimist || optimist.includes("[Model error]")) optimist = "Optimist failed.";
   if (!skeptic || skeptic.includes("[Model error]")) skeptic = "Skeptic failed.";
 
-  // 3) ARBITER
+  // ---------------------------
+  // ARBITER
+  // ---------------------------
   const arbPrompt = `
 ${ARBITER_SYSTEM}
 
@@ -78,7 +106,18 @@ USER MESSAGE:
 ${userMessage}
 `;
 
+  const arbStart = performance.now();
   const arbiter = await callModel("gpt-4.1", arbPrompt);
+  const arbEnd = performance.now();
+
+  logTriadDiagnostics({
+    stage: "arbiter",
+    model: "gpt-4.1",
+    prompt: arbPrompt,
+    output: arbiter,
+    started: arbStart,
+    finished: arbEnd,
+  });
 
   return {
     finalAnswer: arbiter,
