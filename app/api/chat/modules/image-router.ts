@@ -1,7 +1,6 @@
-// app/api/chat/modules/image-router.ts
-//--------------------------------------------------------------
-// TEMP DIAGNOSTIC IMAGE ROUTER – FIND EXACT FAILURE
-//--------------------------------------------------------------
+// --------------------------------------------------------------
+// Unified Solace Image Generator — FINAL WORKING VERSION
+// --------------------------------------------------------------
 
 import OpenAI from "openai";
 
@@ -16,20 +15,20 @@ export async function generateImage(prompt: string) {
       prompt,
       size: "1024x1024",
       n: 1,
-      response_format: "b64_json",
     });
 
-    console.log("[IMAGE ROUTER RAW RESPONSE]", JSON.stringify(res, null, 2));
+    console.log("[IMAGE ROUTER RAW]", res);
 
-    const b64 = res.data?.[0]?.b64_json;
+    const url = res.data?.[0]?.url;
 
-    if (!b64) {
-      console.error("[IMAGE ROUTER] Missing b64_json. Full response:", res);
-      throw new Error("No base64 returned from OpenAI.");
+    if (!url) {
+      console.error("[IMAGE ROUTER] No URL in response:", res);
+      throw new Error("Image generation returned no URL.");
     }
 
-    return `data:image/png;base64,${b64}`;
-  } catch (err: any) {
+    return url;
+
+  } catch (err) {
     console.error("[IMAGE ROUTER ERROR]", err);
     throw err;
   }
