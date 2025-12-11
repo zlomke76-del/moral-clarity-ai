@@ -1,3 +1,4 @@
+// app/api/chat/modules/model-router.ts
 //--------------------------------------------------------------
 // MODEL ROUTER — OPENAI RESPONSES API (CLEAN + FINAL)
 //--------------------------------------------------------------
