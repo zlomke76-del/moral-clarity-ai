@@ -1,11 +1,11 @@
 // ---------------------------------------------------------------
 // HYBRID SUPER-AI PIPELINE (Optimist → Skeptic → Arbiter)
-// Governor Integrated (updateGovernor only)
-// Works with TEXT-ONLY callModel()
+// + Integrated Image Generation Branch
 // ---------------------------------------------------------------
 
 import { updateGovernor } from "@/lib/solace/governor/governor-engine";
 import { callModel } from "./model-router";
+import { generateImage } from "./image-router";
 
 // -----------------------------
 // Types
@@ -33,7 +33,7 @@ function sanitizeASCII(input: string): string {
     "—": "-", "–": "-", "•": "*",
     "“": "\"", "”": "\"",
     "‘": "'", "’": "'",
-    "…": "..."
+    "…": "...",
   };
 
   let out = input;
@@ -46,7 +46,15 @@ function sanitizeASCII(input: string): string {
 }
 
 // -----------------------------
-// Build Stage Prompt
+// Image Intent Detection
+// -----------------------------
+function wantsImage(msg: string): boolean {
+  return /\b(draw|create|generate|image|picture|illustration|render|make me an image|make an image)\b/i
+    .test(msg);
+}
+
+// -----------------------------
+// Build Prompt For Text Pipeline
 // -----------------------------
 function buildStagePrompt(
   stage: "OPTIMIST" | "SKEPTIC" | "ARBITER",
@@ -118,42 +126,62 @@ export async function runHybridPipeline(inputs: HybridInputs) {
 
   try {
     // -----------------------------------------
-    // 1. OPTIMIST (TEXT ONLY)
+    // IMAGE PIPELINE (BYPASS TEXT STAGES)
+    // -----------------------------------------
+    if (wantsImage(inputs.userMessage)) {
+      const imageUrl = await generateImage(inputs.userMessage);
+
+      return {
+        finalAnswer: "",
+        imageUrl,
+        governorLevel: gov.level,
+        governorInstructions: gov.instructions,
+        optimist: "",
+        skeptic: "",
+        arbiter: "",
+      };
+    }
+
+    // -----------------------------------------
+    // 1. OPTIMIST (TEXT)
     // -----------------------------------------
     const promptOptimist = buildStagePrompt("OPTIMIST", inputs);
     const optimist = await callModel("gpt-4.1", promptOptimist);
 
     // -----------------------------------------
-    // 2. SKEPTIC
+    // 2. SKEPTIC (TEXT)
     // -----------------------------------------
     const promptSkeptic = buildStagePrompt("SKEPTIC", inputs, optimist);
     const skeptic = await callModel("gpt-4.1", promptSkeptic);
 
     // -----------------------------------------
-    // 3. ARBITER
+    // 3. ARBITER (TEXT)
     // -----------------------------------------
     const promptArbiter = buildStagePrompt("ARBITER", inputs, optimist, skeptic);
     const arbiter = await callModel("gpt-4.1", promptArbiter);
 
     return {
       finalAnswer: sanitizeASCII(arbiter || "[arbiter failed]"),
+      imageUrl: null,
 
       governorLevel: gov.level,
       governorInstructions: gov.instructions,
 
       optimist: sanitizeASCII(optimist || ""),
       skeptic: sanitizeASCII(skeptic || ""),
-      arbiter: sanitizeASCII(arbiter || "")
+      arbiter: sanitizeASCII(arbiter || ""),
     };
+
   } catch (err) {
     console.error("[HYBRID ERROR]", err);
     return {
       finalAnswer: "[Hybrid pipeline error]",
-      governorLevel: gov.level,
-      governorInstructions: gov.instructions,
+      imageUrl: null,
+      governorLevel: inputs.governorLevel,
+      governorInstructions: inputs.governorInstructions,
       optimist: "",
       skeptic: "",
-      arbiter: ""
+      arbiter: "",
     };
   }
 }
