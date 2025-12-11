@@ -1,6 +1,6 @@
 // --------------------------------------------------------------
-// MODEL ROUTER — FINAL, WORKING WITH NEW OPENAI RESPONSES API
-// TEXT-ONLY PIPELINE (no images, no tool calls)
+// MODEL ROUTER — FINAL, FULLY COMPATIBLE WITH OPENAI RESPONSES API
+// TEXT-ONLY PIPELINE — NO images, NO tools, NO deprecated fields
 // ASCII-SAFE
 // --------------------------------------------------------------
 
@@ -10,9 +10,9 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-// -----------------------------
-// ASCII sanitize
-// -----------------------------
+// --------------------------------------------------------------
+// ASCII SANITIZER
+// --------------------------------------------------------------
 function sanitizeASCII(input: string): string {
   if (!input) return "";
   return input
@@ -21,22 +21,21 @@ function sanitizeASCII(input: string): string {
     .join("");
 }
 
-// -----------------------------
+// --------------------------------------------------------------
 // callModel(model, prompt)
-// -----------------------------
+// - NEW Responses API FORMAT
+// - NO reasoning.effort (REMOVED — unsupported)
+// - ONLY uses response.output_text
+// --------------------------------------------------------------
 export async function callModel(model: string, prompt: string) {
   try {
     const response = await client.responses.create({
       model,
-      input: prompt, // TEXT ONLY
-      reasoning: { effort: "medium" },
+      input: prompt,   // TEXT ONLY
+      // ❌ DO NOT ADD reasoning.effort — not supported by 4.1 or 4.1-mini
     });
 
-    // ---------------------------------------
-    // NEW OpenAI API returns:
-    //   response.output_text (string | null)
-    // Use only this. Do NOT inspect response.output[].
-    // ---------------------------------------
+    // Always use the official text return value
     const text =
       response.output_text ??
       "[empty response]";
