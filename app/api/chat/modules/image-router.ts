@@ -23,3 +23,4 @@ export async function generateImage(prompt: string) {
   return url;
 }
 
+
