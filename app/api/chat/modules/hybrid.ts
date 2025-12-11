@@ -1,7 +1,7 @@
 //--------------------------------------------------------------
 // HYBRID PIPELINE — OPTIMIST → SKEPTIC → ARBITER
 // Persona + Memory injected ONLY into Arbiter
-// Compatible with OpenAI Responses API (string input only)
+// 100% compatible with callModel() STRING-ONLY input
 //--------------------------------------------------------------
 
 import { callModel } from "./model-router";
@@ -68,43 +68,47 @@ export async function runHybridPipeline(args: {
   // ============================================================
   // 1. OPTIMIST (string mode)
   // ============================================================
+  const optPrompt = build(OPTIMIST_SYSTEM, userMessage);
   const optStart = performance.now();
-  let optimist = await callModel("gpt-4.1-mini", build(OPTIMIST_SYSTEM, userMessage));
+  let optimist = await callModel("gpt-4.1-mini", optPrompt);
   const optEnd = performance.now();
 
   logTriadDiagnostics({
     stage: "optimist",
     model: "gpt-4.1-mini",
-    prompt: build(OPTIMIST_SYSTEM, userMessage),
+    prompt: optPrompt,
     output: optimist,
     started: optStart,
     finished: optEnd,
   });
 
-  if (!optimist || optimist.includes("[Model error]"))
+  if (!optimist || optimist.includes("[Model error]")) {
     optimist = "Optimist failed.";
+  }
 
   // ============================================================
   // 2. SKEPTIC (string mode)
   // ============================================================
+  const skpPrompt = build(SKEPTIC_SYSTEM, userMessage);
   const skpStart = performance.now();
-  let skeptic = await callModel("gpt-4.1-mini", build(SKEPTIC_SYSTEM, userMessage));
+  let skeptic = await callModel("gpt-4.1-mini", skpPrompt);
   const skpEnd = performance.now();
 
   logTriadDiagnostics({
     stage: "skeptic",
     model: "gpt-4.1-mini",
-    prompt: build(SKEPTIC_SYSTEM, userMessage),
+    prompt: skpPrompt,
     output: skeptic,
     started: skpStart,
     finished: skpEnd,
   });
 
-  if (!skeptic || skeptic.includes("[Model error]"))
+  if (!skeptic || skeptic.includes("[Model error]")) {
     skeptic = "Skeptic failed.";
+  }
 
   // ============================================================
-  // 3. ARBITER — FULL persona + memory injection
+  // 3. ARBITER — persona + memory injected as ONE BIG STRING
   // ============================================================
 
   const personaSystem = buildSolaceSystemPrompt(
@@ -124,7 +128,9 @@ NewsDigest: ${JSON.stringify(context.newsDigest || [])}
 `
   );
 
-  // Arbiter final prompt — must be ONE string for Responses API
+  // ----------------------------------------------
+  // FLATTEN ARBITER INPUT — ***STRING ONLY***
+  // ----------------------------------------------
   const arbPrompt = `
 ${personaSystem}
 
@@ -147,15 +153,12 @@ ${userMessage}
   logTriadDiagnostics({
     stage: "arbiter",
     model: "gpt-4.1",
-    prompt: arbPrompt.slice(0, 5000),
+    prompt: arbPrompt.slice(0, 5000), // safe logging
     output: arbiter,
     started: arbStart,
     finished: arbEnd,
   });
 
-  // ============================================================
-  // FINAL RESPONSE
-  // ============================================================
   return {
     finalAnswer: arbiter,
     optimist,
