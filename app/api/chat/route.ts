@@ -1,7 +1,6 @@
-// app/api/chat/route.ts
+/app/api/chat/route.ts
 // ------------------------------------------------------------------
 // SOLACE CHAT ROUTE — GOVERNOR + HYBRID PIPELINE + IMAGE SUPPORT
-// Returns JSON: { text, imageUrl }
 // ------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -16,9 +15,7 @@ import { runHybridPipeline } from "./modules/hybrid";
 
 import { updateGovernor } from "@/lib/solace/governor/governor-engine";
 import { applyGovernorFormatting } from "@/lib/solace/governor/governor-icon-format";
-
 import { writeMemory } from "./modules/memory-writer";
-import type { PacingLevel } from "@/lib/solace/governor/types";
 
 import {
   sanitizeForModel,
@@ -26,12 +23,18 @@ import {
   sanitizeObjectDeep,
 } from "@/lib/solace/sanitize";
 
-// Clamp numeric → enum
-function clampToPacingLevel(n: number): PacingLevel {
-  return Math.max(0, Math.min(5, n)) as PacingLevel;
+import type { PacingLevel } from "@/lib/solace/governor/types";
+
+// pacing clamp
+function clamp(n: number): PacingLevel {
+  if (n < 0) return 0;
+  if (n > 5) return 5;
+  return n as PacingLevel;
 }
 
-// Load Supabase user
+// --------------------------------------------------
+// Supabase session loader
+// --------------------------------------------------
 async function getNodeUser(req: Request) {
   const cookieHeader = req.headers.get("cookie") ?? "";
 
@@ -41,11 +44,11 @@ async function getNodeUser(req: Request) {
     {
       cookies: {
         get(name) {
-          const match = cookieHeader
+          const m = cookieHeader
             .split(";")
             .map((c) => c.trim())
             .find((c) => c.startsWith(name + "="));
-          return match ? match.split("=")[1] : undefined;
+          return m ? m.split("=")[1] : undefined;
         },
         set() {},
         remove() {},
@@ -57,19 +60,15 @@ async function getNodeUser(req: Request) {
   return data?.user ?? null;
 }
 
-// -----------------------------------------------------
-// POST — MAIN CHAT ROUTE
-// -----------------------------------------------------
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => null);
-    if (!body?.message) {
+    if (!body?.message)
       return NextResponse.json({ error: "Message required" }, { status: 400 });
-    }
 
-    // USER INPUT CLEANUP → model only
-    const rawMessage = String(body.message);
-    const messageForModel = sanitizeForModel(rawMessage);
+    // sanitize incoming user message
+    const raw = String(body.message);
+    const userMessage = sanitizeForModel(raw);
 
     const {
       history = [],
@@ -83,44 +82,39 @@ export async function POST(req: Request) {
     const user = await getNodeUser(req);
     const canonicalUserKey = user?.id ?? explicitKey ?? "guest";
 
-    // Assemble context → UI-safe deep clean (does NOT remove emojis)
-    let context = await assembleContext(canonicalUserKey, workspaceId, rawMessage);
+    // context
+    let context = await assembleContext(canonicalUserKey, workspaceId, userMessage);
     context = sanitizeObjectDeep(context);
 
-    // Governor signal from *raw user message* (not sanitized output)
-    const governorOutput = updateGovernor(rawMessage);
+    // governor
+    const gov = updateGovernor(userMessage);
 
-    // Run hybrid pipeline → returns raw model text + optional image
+    // run hybrid pipeline
     const result = await runHybridPipeline({
-      userMessage: messageForModel,
+      userMessage,
       context,
       history,
       ministryMode,
       founderMode,
       modeHint,
       canonicalUserKey,
-      governorLevel: governorOutput.level,
-      governorInstructions: governorOutput.instructions,
+      governorLevel: gov.level,
+      governorInstructions: gov.instructions,
     });
 
-    // -------------------------------
-    // THE FIX (Correct pipeline order)
-    // -------------------------------
-    // 1. Governor formatting applied to RAW LLM text
+    // apply governor formatting
     const formatted = applyGovernorFormatting(result.finalAnswer, {
-      level: clampToPacingLevel(governorOutput.level),
-      isFounder: founderMode === true,
-      emotionalDistress:
-        (governorOutput.signals?.emotionalValence ?? 0.5) < 0.35,
-      decisionContext: governorOutput.signals?.decisionPoint ?? false,
+      level: clamp(gov.level),
+      isFounder: !!founderMode,
+      emotionalDistress: (gov.signals?.emotionalValence ?? 0.5) < 0.35,
+      decisionContext: !!gov.signals?.decisionPoint,
     });
 
-    // 2. UI sanitization applied LAST (prevents emoji corruption)
     const uiText = sanitizeForClient(formatted);
 
-    // Memory write from raw → ui text
+    // memory write
     try {
-      await writeMemory(canonicalUserKey, rawMessage, uiText);
+      await writeMemory(canonicalUserKey, raw, uiText);
     } catch {}
 
     return NextResponse.json({
@@ -139,4 +133,3 @@ export async function POST(req: Request) {
     );
   }
 }
-
