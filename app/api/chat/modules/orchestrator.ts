@@ -1,6 +1,5 @@
 //--------------------------------------------------------------
-// SOLACE ORCHESTRATOR — CLEAN PASS-THROUGH
-// Triad → Arbiter → Final Answer
+// Solace Orchestrator — Hybrid Super-AI Pipeline (Final)
 //--------------------------------------------------------------
 
 import { runHybridPipeline } from "./hybrid";
@@ -12,15 +11,13 @@ export async function orchestrateSolaceResponse(args: any) {
     return {
       finalAnswer: result.finalAnswer,
       imageUrl: result.imageUrl ?? null,
-
-      // Expose triad for debugging UI if needed
-      optimist: result.optimist ?? "",
-      skeptic: result.skeptic ?? "",
-      arbiter: result.arbiter ?? "",
+      optimist: result.optimist,
+      skeptic: result.skeptic,
+      arbiter: result.arbiter,
     };
 
   } catch (err) {
-    console.error("[ORCHESTRATOR ERROR]", err);
+    console.error("[ORCHESTRATOR] Pipeline failure:", err);
 
     return {
       finalAnswer: "[Hybrid pipeline error]",
