@@ -1,5 +1,5 @@
 //--------------------------------------------------------------
-// MODEL ROUTER — OPENAI RESPONSES API (FINAL VALID VERSION)
+// MODEL ROUTER — OPENAI RESPONSES API (FINAL SINGLE-STRING VERSION)
 //--------------------------------------------------------------
 
 import OpenAI from "openai";
@@ -10,36 +10,24 @@ const client = new OpenAI({
 });
 
 // --------------------------------------------------------------
-// normalizeInput(prompt): ALWAYS produce valid ResponseInput
+// Force ANY prompt into a single string (required by Responses API)
 // --------------------------------------------------------------
-function normalizeInput(prompt: any) {
-  // CASE 1: simple string
-  if (typeof prompt === "string") {
-    return sanitizeForModel(prompt);
+function toSingleString(input: any): string {
+  if (typeof input === "string") {
+    return sanitizeForModel(input);
   }
 
-  // CASE 2: array of strings
-  if (Array.isArray(prompt) && prompt.every((p) => typeof p === "string")) {
-    return prompt.map((p) => sanitizeForModel(p));
-  }
+  try {
+    // Flatten arrays into newline-joined text
+    if (Array.isArray(input)) {
+      return sanitizeForModel(input.map((x) => String(x)).join("\n"));
+    }
 
-  // CASE 3: array of objects with { role, content }
-  if (
-    Array.isArray(prompt) &&
-    prompt.every((p) => typeof p === "object" && p.role && p.content)
-  ) {
-    return prompt.map((msg) => ({
-      role: msg.role,
-      content: sanitizeForModel(
-        typeof msg.content === "string"
-          ? msg.content
-          : JSON.stringify(msg.content)
-      ),
-    }));
+    // For objects, stringify cleanly
+    return sanitizeForModel(JSON.stringify(input, null, 2));
+  } catch {
+    return sanitizeForModel(String(input));
   }
-
-  // FALLBACK: stringify anything else
-  return sanitizeForModel(String(prompt));
 }
 
 // --------------------------------------------------------------
@@ -47,11 +35,11 @@ function normalizeInput(prompt: any) {
 // --------------------------------------------------------------
 export async function callModel(model: string, prompt: any) {
   try {
-    const cleanInput = normalizeInput(prompt);
+    const textInput = toSingleString(prompt);
 
     const res = await client.responses.create({
       model,
-      input: cleanInput, // MUST be string or valid message block
+      input: textInput, // MUST be ONLY a string
     });
 
     return typeof res.output_text === "string"
