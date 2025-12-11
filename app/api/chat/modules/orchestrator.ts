@@ -1,7 +1,6 @@
-// app/api/chat/modules/orchestrator.ts
 //--------------------------------------------------------------
 // Solace Orchestrator (Thin Wrapper)
-// Hybrid Super-AI Pipeline (Opt → Skep → Arbiter)
+// Clean pass-through to Hybrid Pipeline
 //--------------------------------------------------------------
 
 import { runHybridPipeline } from "./hybrid";
@@ -34,6 +33,7 @@ export async function orchestrateSolaceResponse({
       finalAnswer: result.finalAnswer,
       imageUrl: result.imageUrl ?? null,
 
+      // Triad visibility (debug only; UI uses finalAnswer)
       optimist: result.optimist ?? "",
       skeptic: result.skeptic ?? "",
       arbiter: result.arbiter ?? "",
