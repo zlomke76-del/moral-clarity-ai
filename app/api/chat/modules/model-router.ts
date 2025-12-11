@@ -1,7 +1,8 @@
-// app/api/chat/modules/model-router.ts
 //--------------------------------------------------------------
-// MODEL ROUTER — OPENAI RESPONSES API (MULTI-MESSAGE READY)
-// ASCII SAFE — FINAL VERSION
+// MODEL ROUTER — OPENAI RESPONSES API (HYBRID MODE)
+// Accepts either:
+//   1) string prompt
+//   2) array of { role, text } messages
 //--------------------------------------------------------------
 
 import OpenAI from "openai";
@@ -11,21 +12,33 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-// --------------------------------------------------------------
-// callModel(model, messages[])
-// messages MUST be an array of:
-// { role: "system" | "assistant" | "user", content: string }
-// --------------------------------------------------------------
-export async function callModel(model: string, messages: any[]) {
-  try {
-    const sanitized = messages.map((m) => ({
+// Normalize input to OpenAI Responses API format
+function buildInput(input: string | any[]) {
+  if (typeof input === "string") {
+    return sanitizeForModel(input);
+  }
+
+  // structured message array
+  if (Array.isArray(input)) {
+    return input.map((m) => ({
       role: m.role,
-      content: sanitizeForModel(m.content || "")
+      content: [{ type: "input_text", text: sanitizeForModel(m.text) }],
     }));
+  }
+
+  return "Unsupported input";
+}
+
+// --------------------------------------------------------------
+// callModel(model, promptOrMessages)
+// --------------------------------------------------------------
+export async function callModel(model: string, prompt: any) {
+  try {
+    const formatted = buildInput(prompt);
 
     const res = await client.responses.create({
       model,
-      input: sanitized
+      input: formatted,
     });
 
     const out = res.output_text ?? "";
