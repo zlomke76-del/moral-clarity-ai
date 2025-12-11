@@ -1,4 +1,3 @@
-/app/api/chat/modules/hybrid.ts
 //--------------------------------------------------------------
 // HYBRID PIPELINE — OPTIMIST → SKEPTIC → ARBITER (FINAL ONLY)
 //--------------------------------------------------------------
