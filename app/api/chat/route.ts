@@ -1,5 +1,6 @@
+// app/api/chat/route.ts
 // ------------------------------------------------------------------
-// SOLACE CHAT ROUTE — GOVERNOR + HYBRID PIPELINE + IMAGE SUPPORT
+// SOLACE CHAT ROUTE — GOVERNOR + HYBRID TRIAD + IMAGE SUPPORT
 // Returns JSON: { text, imageUrl }
 // ------------------------------------------------------------------
 
@@ -20,35 +21,29 @@ import { writeMemory } from "./modules/memory-writer";
 import type { PacingLevel } from "@/lib/solace/governor/types";
 
 // -----------------------------------------------------
-// ASCII Sanitize
+// ASCII Sanitize (safe for logs + models)
 // -----------------------------------------------------
 function sanitizeASCII(input: any): any {
   if (!input) return input;
 
   if (typeof input === "string") {
     const rep: Record<string, string> = {
-      "—": "-", "–": "-",
-      "•": "*",
+      "—": "-", "–": "-", "•": "*",
       "“": "\"", "”": "\"",
       "‘": "'", "’": "'",
       "…": "..."
     };
-
     let out = input;
     for (const k in rep) out = out.split(k).join(rep[k]);
-
-    return out
-      .split("")
-      .map((c) => (c.charCodeAt(0) > 255 ? "?" : c))
-      .join("");
+    return out.split("").map(c => (c.charCodeAt(0) > 255 ? "?" : c)).join("");
   }
 
-  if (Array.isArray(input)) return input.map((x) => sanitizeASCII(x));
+  if (Array.isArray(input)) return input.map(x => sanitizeASCII(x));
 
   if (typeof input === "object") {
-    const out: any = {};
-    for (const k in input) out[k] = sanitizeASCII(input[k]);
-    return out;
+    const o: any = {};
+    for (const k in input) o[k] = sanitizeASCII(input[k]);
+    return o;
   }
 
   return input;
@@ -75,13 +70,13 @@ async function getNodeUser(req: Request) {
         get(name) {
           const m = cookieHeader
             .split(";")
-            .map((c) => c.trim())
-            .find((c) => c.startsWith(name + "="));
+            .map(c => c.trim())
+            .find(c => c.startsWith(name + "="));
           return m ? m.split("=")[1] : undefined;
         },
         set() {},
-        remove() {},
-      },
+        remove() {}
+      }
     }
   );
 
@@ -95,32 +90,31 @@ async function getNodeUser(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => null);
-    if (!body?.message)
+    if (!body?.message) {
       return NextResponse.json({ error: "Message required" }, { status: 400 });
+    }
 
-    const raw = String(body.message);
-    const message = sanitizeASCII(raw);
-
+    const message = sanitizeASCII(String(body.message));
     const {
       history = [],
       workspaceId = null,
       ministryMode = false,
       founderMode = false,
       modeHint = "Neutral",
-      userKey: explicitKey,
+      userKey: explicitKey
     } = body;
 
     const user = await getNodeUser(req);
     const canonicalUserKey = user?.id ?? explicitKey ?? "guest";
 
-    // load context
+    // context
     let context = await assembleContext(canonicalUserKey, workspaceId, message);
     context = sanitizeASCII(context);
 
     // governor
     const gov = updateGovernor(message);
 
-    // triad → arbiter
+    // TRIAD pipeline
     const pipeline = await runHybridPipeline({
       userMessage: message,
       context,
@@ -130,25 +124,25 @@ export async function POST(req: Request) {
       modeHint,
       canonicalUserKey,
       governorLevel: gov.level,
-      governorInstructions: gov.instructions,
+      governorInstructions: gov.instructions
     });
 
-    // governor formatting
+    // governor pacing formatting
     const formatted = applyGovernorFormatting(pipeline.finalAnswer, {
       level: clampToPacingLevel(gov.level),
       isFounder: founderMode === true,
-      emotionalDistress:
-        (gov.signals?.emotionalValence ?? 0.5) < 0.35,
-      decisionContext: gov.signals?.decisionPoint ?? false,
+      emotionalDistress: (gov.signals?.emotionalValence ?? 0.5) < 0.35,
+      decisionContext: gov.signals?.decisionPoint ?? false
     });
 
+    // memory write
     try {
-      await writeMemory(canonicalUserKey, raw, formatted);
+      await writeMemory(canonicalUserKey, message, formatted);
     } catch {}
 
     return NextResponse.json({
       text: formatted,
-      imageUrl: pipeline.imageUrl ?? null,
+      imageUrl: pipeline.imageUrl ?? null
     });
 
   } catch (err: any) {
