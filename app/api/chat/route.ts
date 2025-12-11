@@ -2,7 +2,6 @@
 // SOLACE CHAT ROUTE — GOVERNOR + HYBRID PIPELINE + IMAGE SUPPORT
 // ------------------------------------------------------------------
 
-
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -11,30 +10,57 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 import { assembleContext } from "./modules/assembleContext";
-import { runHybridPipeline } from "./modules/hybrid";
+import { orchestrateSolaceResponse } from "./modules/orchestrator";
 
 import { updateGovernor } from "@/lib/solace/governor/governor-engine";
 import { applyGovernorFormatting } from "@/lib/solace/governor/governor-icon-format";
 import { writeMemory } from "./modules/memory-writer";
 
-import {
-  sanitizeForModel,
-  sanitizeForClient,
-  sanitizeObjectDeep,
-} from "@/lib/solace/sanitize";
-
 import type { PacingLevel } from "@/lib/solace/governor/types";
 
+// -----------------------------------------------------
+// ASCII Sanitize
+// -----------------------------------------------------
+function sanitizeASCII(input: any): any {
+  if (!input) return input;
+
+  if (typeof input === "string") {
+    const rep: Record<string, string> = {
+      "—": "-", "–": "-", "•": "*",
+      "“": "\"", "”": "\"",
+      "‘": "'", "’": "'",
+      "…": "..."
+    };
+
+    let out = input;
+    for (const k in rep) out = out.split(k).join(rep[k]);
+
+    return out
+      .split("")
+      .map((c) => (c.charCodeAt(0) > 255 ? "?" : c))
+      .join("");
+  }
+
+  if (Array.isArray(input)) return input.map((x) => sanitizeASCII(x));
+  if (typeof input === "object") {
+    const out: any = {};
+    for (const k in input) out[k] = sanitizeASCII(input[k]);
+    return out;
+  }
+
+  return input;
+}
+
 // pacing clamp
-function clamp(n: number): PacingLevel {
+function clampToPacingLevel(n: number): PacingLevel {
   if (n < 0) return 0;
   if (n > 5) return 5;
   return n as PacingLevel;
 }
 
-// --------------------------------------------------
+// -----------------------------------------------------
 // Supabase session loader
-// --------------------------------------------------
+// -----------------------------------------------------
 async function getNodeUser(req: Request) {
   const cookieHeader = req.headers.get("cookie") ?? "";
 
@@ -60,38 +86,42 @@ async function getNodeUser(req: Request) {
   return data?.user ?? null;
 }
 
+// -----------------------------------------------------
+// POST
+// -----------------------------------------------------
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => null);
     if (!body?.message)
       return NextResponse.json({ error: "Message required" }, { status: 400 });
 
-    // sanitize incoming user message
-    const raw = String(body.message);
-    const userMessage = sanitizeForModel(raw);
-
+    const message = sanitizeASCII(String(body.message));
     const {
       history = [],
       workspaceId = null,
       ministryMode = false,
       founderMode = false,
       modeHint = "Neutral",
-      userKey: explicitKey,
+      userKey: explicitKey
     } = body;
 
     const user = await getNodeUser(req);
     const canonicalUserKey = user?.id ?? explicitKey ?? "guest";
 
     // context
-    let context = await assembleContext(canonicalUserKey, workspaceId, userMessage);
-    context = sanitizeObjectDeep(context);
+    let context = await assembleContext(
+      canonicalUserKey,
+      workspaceId,
+      message
+    );
+    context = sanitizeASCII(context);
 
     // governor
-    const gov = updateGovernor(userMessage);
+    const gov = updateGovernor(message);
 
-    // run hybrid pipeline
-    const result = await runHybridPipeline({
-      userMessage,
+    // orchestrator → hybrid pipeline
+    const pipeline = await orchestrateSolaceResponse({
+      userMessage: message,
       context,
       history,
       ministryMode,
@@ -102,24 +132,22 @@ export async function POST(req: Request) {
       governorInstructions: gov.instructions,
     });
 
-    // apply governor formatting
-    const formatted = applyGovernorFormatting(result.finalAnswer, {
-      level: clamp(gov.level),
+    // apply pacing formatting
+    const formatted = applyGovernorFormatting(pipeline.finalAnswer, {
+      level: clampToPacingLevel(gov.level),
       isFounder: !!founderMode,
       emotionalDistress: (gov.signals?.emotionalValence ?? 0.5) < 0.35,
       decisionContext: !!gov.signals?.decisionPoint,
     });
 
-    const uiText = sanitizeForClient(formatted);
-
     // memory write
     try {
-      await writeMemory(canonicalUserKey, raw, uiText);
+      await writeMemory(canonicalUserKey, message, formatted);
     } catch {}
 
     return NextResponse.json({
-      text: uiText,
-      imageUrl: result.imageUrl ?? null,
+      text: formatted,
+      imageUrl: pipeline.imageUrl ?? null,
     });
   } catch (err: any) {
     console.error("[CHAT ROUTE FATAL]", err);
