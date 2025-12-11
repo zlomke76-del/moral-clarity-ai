@@ -1,7 +1,7 @@
-// app/api/chat/route.ts
 // --------------------------------------------------------------
-// SOLACE CHAT ROUTE — ULTRA-SAFE (ASCII-ONLY)
-// Hybrid Pipeline + Governor + DIAG Tracing
+// SOLACE CHAT ROUTE — ICON-SAFE, BYTESTRING-SAFE, FINAL VERSION
+// Node runtime, production stable.
+// Sanitization happens ONLY at the very end (never upstream).
 // --------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -12,64 +12,41 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 import { assembleContext } from "./modules/assembleContext";
-import { runHybridPipeline } from "./modules/hybrid";
+import { orchestrateSolaceResponse } from "./modules/orchestrator";
 
-// Governor Engine (NO ICONS — TEXT ONLY)
 import { updateGovernor } from "@/lib/solace/governor/governor-engine";
-
-// Output formatting stage (ASCII-safe)
 import { applyGovernorFormatting } from "@/lib/solace/governor/governor-icon-format";
 
-// Memory writer
 import { writeMemory } from "./modules/memory-writer";
 
-
 // --------------------------------------------------------------
-// ASCII SANITIZER — Applied EVERYWHERE (input & output)
+// FINAL SANITIZER — ONLY RUN **AT OUTPUT BOUNDARY**
+// (allows all emoji + unicode except >255 which break ByteString)
 // --------------------------------------------------------------
-function ascii(input: any): any {
-  if (!input) return input;
+function sanitizeForByteString(str: string): string {
+  if (!str) return "";
 
-  if (typeof input === "string") {
-    const rep: Record<string, string> = {
-      "—": "-",
-      "–": "-",
-      "•": "*",
-      "→": "->",
-      "⇒": "=>",
-      "➤": "->",
-      "★": "*",
-      "“": '"',
-      "”": '"',
-      "‘": "'",
-      "’": "'",
-      "…": "...",
-    };
+  return str
+    .normalize("NFC")
+    .split("")
+    .map((c) => {
+      const code = c.codePointAt(0) ?? 0;
 
-    let out = input;
-    for (const k in rep) out = out.split(k).join(rep[k]);
+      // allow everything except raw >255 that break headers
+      if (code > 255) {
+        // keep emoji as-is
+        if (code > 0x1F300) return c;
+        // fallback: replace only dangerous non-emoji
+        return "?";
+      }
 
-    // Hard enforcement: no character >255 survives
-    return out
-      .split("")
-      .map((c) => (c.charCodeAt(0) > 255 ? "?" : c))
-      .join("");
-  }
-
-  if (Array.isArray(input)) return input.map((v) => ascii(v));
-
-  if (typeof input === "object") {
-    const o: any = {};
-    for (const k in input) o[k] = ascii(input[k]);
-    return o;
-  }
-
-  return input;
+      return c;
+    })
+    .join("");
 }
 
-
 // --------------------------------------------------------------
-// SUPABASE SESSION LOOKUP
+// SESSION LOADER
 // --------------------------------------------------------------
 async function getNodeUser(req: Request) {
   const cookieHeader = req.headers.get("cookie") ?? "";
@@ -83,7 +60,7 @@ async function getNodeUser(req: Request) {
           const match = cookieHeader
             .split(";")
             .map((c) => c.trim())
-            .find((x) => x.startsWith(name + "="));
+            .find((c) => c.startsWith(name + "="));
           return match ? match.split("=")[1] : undefined;
         },
         set() {},
@@ -96,31 +73,28 @@ async function getNodeUser(req: Request) {
   return data?.user ?? null;
 }
 
-
 // --------------------------------------------------------------
-// POST /api/chat
+// POST /api/chat — MAIN ENTRY
 // --------------------------------------------------------------
 export async function POST(req: Request) {
-  const diag: any = { stage: "start", ts: Date.now() };
+  const diag: any = {
+    stage: "start",
+    ts: Date.now(),
+  };
 
   try {
-    // ----------------------------------------------------------
-    // BODY PARSE
-    // ----------------------------------------------------------
+    // ------------------ Body ------------------
     const body = await req.json().catch(() => null);
     diag.bodyPresent = !!body;
 
     if (!body?.message) {
-      const res = NextResponse.json(
+      return NextResponse.json(
         { error: "Message required" },
         { status: 400 }
       );
-      res.headers.set("x-solace-diag", JSON.stringify(diag));
-      return res;
     }
 
-    const message = ascii(String(body.message));
-    diag.messagePreview = message.slice(0, 200);
+    const message = String(body.message);
 
     let {
       history = [],
@@ -131,145 +105,117 @@ export async function POST(req: Request) {
       userKey: explicitClientKey,
     } = body;
 
+    diag.mode = { ministryMode, founderMode, modeHint };
 
-    // ----------------------------------------------------------
-    // HISTORY SANITIZATION
-    // ----------------------------------------------------------
-    const safeHistory = Array.isArray(history)
+    // ------------------ Sanitize Incoming History ------------------
+    const sanitizedHistory = Array.isArray(history)
       ? history.map((h: any) => ({
           ...h,
-          content: ascii(h.content),
+          content: String(h.content ?? ""),
         }))
       : [];
 
-    diag.historyCount = safeHistory.length;
+    diag.historyCount = sanitizedHistory.length;
 
-
-    // ----------------------------------------------------------
-    // USER SESSION
-    // ----------------------------------------------------------
+    // ------------------ User Session ------------------
     const user = await getNodeUser(req);
     const canonicalUserKey = user?.id ?? explicitClientKey ?? "guest";
 
     diag.user = {
       hasSession: !!user,
-      key: canonicalUserKey,
+      canonicalUserKey,
     };
 
-
-    // ----------------------------------------------------------
-    // CONTEXT LOADING
-    // ----------------------------------------------------------
-    diag.stage = "context:start";
+    // ------------------ Context ------------------
+    diag.stage = "context-load:start";
     let context = await assembleContext(canonicalUserKey, workspaceId, message);
-    context = ascii(context);
-    diag.stage = "context:done";
+    diag.stage = "context-load:done";
 
     diag.context = {
+      persona: context?.persona ?? null,
       facts: context?.memoryPack?.facts?.length ?? 0,
       episodic: context?.memoryPack?.episodic?.length ?? 0,
       autobiography: context?.memoryPack?.autobiography?.length ?? 0,
-      news: context?.newsDigest?.length ?? 0,
-      research: context?.researchContext?.length ?? 0,
+      newsDigest: context?.newsDigest?.length ?? 0,
+      researchContext: context?.researchContext?.length ?? 0,
+      didResearch: !!context?.didResearch,
     };
 
-
-    // ----------------------------------------------------------
-    // GOVERNOR EXECUTION (ASCII ONLY)
-    // ----------------------------------------------------------
+    // ------------------ Governor ------------------
     diag.stage = "governor:start";
-
     const governorOutput = updateGovernor(message);
-
-    // sanitize instructions to prevent unicode arrows
-    governorOutput.instructions = ascii(governorOutput.instructions);
-
     diag.governor = {
       level: governorOutput.level,
       signals: governorOutput.signals,
-      instr: governorOutput.instructions.slice(0, 200),
+      instructionsPreview: governorOutput.instructions?.slice(0, 240),
     };
-
     diag.stage = "governor:done";
 
-
-    // ----------------------------------------------------------
-    // HYBRID PIPELINE — ALL ASCII
-    // ----------------------------------------------------------
+    // ------------------ PIPELINE ------------------
     diag.stage = "pipeline:start";
-
-    const pipelineResult = await runHybridPipeline({
+    const finalTextRaw = await orchestrateSolaceResponse({
       userMessage: message,
       context,
-      history: safeHistory,
+      history: sanitizedHistory,
       ministryMode,
-      founderMode,
       modeHint,
+      founderMode,
       canonicalUserKey,
-
-      governorLevel: governorOutput.level,
-      governorInstructions: governorOutput.instructions,
     });
-
     diag.stage = "pipeline:done";
 
-    let finalText = ascii(pipelineResult.finalAnswer ?? "");
-
-
-    // ----------------------------------------------------------
-    // GOVERNOR FORMATTING (Pure ASCII)
-    // ----------------------------------------------------------
+    // ------------------ Formatting ------------------
     diag.stage = "formatting:start";
-
-    finalText = applyGovernorFormatting(finalText, {
+    let finalText = applyGovernorFormatting(finalTextRaw, {
       level: governorOutput.level,
       isFounder: founderMode === true,
       emotionalDistress:
         (governorOutput.signals?.emotionalValence ?? 0.5) < 0.35,
       decisionContext: governorOutput.signals?.decisionPoint ?? false,
     });
-
-    finalText = ascii(finalText); // enforce final ASCII safety
-
     diag.stage = "formatting:done";
-    diag.finalPreview = finalText.slice(0, 240);
 
+    // ------------------ FINAL SANITIZATION ------------------
+    const safeFinalText = sanitizeForByteString(finalText);
+    const safeDiagText = sanitizeForByteString(
+      JSON.stringify(diag).slice(0, 900)
+    );
 
-    // ----------------------------------------------------------
-    // MEMORY WRITE
-    // ----------------------------------------------------------
+    // ------------------ Memory Write ------------------
     diag.stage = "memory:start";
     try {
-      await writeMemory(canonicalUserKey, message, finalText);
+      await writeMemory(canonicalUserKey, message, safeFinalText);
       diag.memoryWrite = "ok";
     } catch (err: any) {
       diag.memoryWrite = "error:" + (err?.message ?? "unknown");
     }
     diag.stage = "memory:done";
 
-
-    // ----------------------------------------------------------
-    // RETURN SUCCESS
-    // ----------------------------------------------------------
+    // ------------------ Response ------------------
     diag.stage = "response:success";
 
-    const res = NextResponse.json({ text: finalText });
-    res.headers.set("x-solace-diag", JSON.stringify(ascii(diag)).slice(0, 900));
-
+    const res = NextResponse.json({ text: safeFinalText });
+    res.headers.set("x-solace-diag", safeDiagText);
     return res;
   } catch (err: any) {
-    // ----------------------------------------------------------
-    // FATAL ERROR
-    // ----------------------------------------------------------
-    diag.stage = "response:error";
-    diag.error = ascii(err?.message || "Unknown failure");
+    console.error("[CHAT ROUTE FATAL]", err);
+
+    const safeError = sanitizeForByteString(err?.message || "ChatRouteError");
+
+    const errDiag = sanitizeForByteString(
+      JSON.stringify({
+        ...diag,
+        stage: "response:error",
+        fatal: safeError,
+      }).slice(0, 900)
+    );
 
     const res = NextResponse.json(
-      { error: diag.error, diag },
+      { error: safeError },
       { status: 500 }
     );
 
-    res.headers.set("x-solace-diag", JSON.stringify(ascii(diag)).slice(0, 900));
+    res.headers.set("x-solace-diag", errDiag);
     return res;
   }
 }
