@@ -1,6 +1,7 @@
 // app/api/chat/modules/model-router.ts
 //--------------------------------------------------------------
-// MODEL ROUTER — OPENAI RESPONSES API (FINAL CLEAN VERSION)
+// MODEL ROUTER — OPENAI RESPONSES API (MULTI-MESSAGE READY)
+// ASCII SAFE — FINAL VERSION
 //--------------------------------------------------------------
 
 import OpenAI from "openai";
@@ -11,15 +12,20 @@ const client = new OpenAI({
 });
 
 // --------------------------------------------------------------
-// callModel(model, prompt)
+// callModel(model, messages[])
+// messages MUST be an array of:
+// { role: "system" | "assistant" | "user", content: string }
 // --------------------------------------------------------------
-export async function callModel(model: string, prompt: string) {
-  const clean = sanitizeForModel(prompt);
-
+export async function callModel(model: string, messages: any[]) {
   try {
+    const sanitized = messages.map((m) => ({
+      role: m.role,
+      content: sanitizeForModel(m.content || "")
+    }));
+
     const res = await client.responses.create({
       model,
-      input: clean,
+      input: sanitized
     });
 
     const out = res.output_text ?? "";
