@@ -1,7 +1,7 @@
 //--------------------------------------------------------------
 // HYBRID PIPELINE — OPTIMIST → SKEPTIC → ARBITER
 // Persona + Memory injected ONLY into Arbiter (string mode)
-// Responses API compatible
+// Responses API compatible + deep diagnostics
 //--------------------------------------------------------------
 
 import { callModel } from "./model-router";
@@ -36,6 +36,15 @@ Rules:
 - Never reveal personas or internal steps.
 - Emojis/icons ONLY if the user explicitly asked.
 - You speak as ONE Solace voice.
+
+Memory behavior:
+- You DO have workspace memory provided below.
+- When the facts include the user's name or stable profile details, you are allowed to use them.
+- Do NOT say that you cannot remember the user, that every conversation is stateless,
+  or that you do not retain personal information in this workspace.
+- If the facts clearly contain the user's name and they ask
+  "What is my name?" or "Do you remember my name?",
+  answer using that name with appropriate care and respect.
 `;
 
 // --------------------------------------------------------------
@@ -55,7 +64,6 @@ export async function runHybridPipeline(args: {
   governorLevel: number;
   governorInstructions: string;
 }) {
-
   const {
     userMessage,
     context,
@@ -65,6 +73,9 @@ export async function runHybridPipeline(args: {
     governorLevel,
     governorInstructions,
   } = args;
+
+  // Small helper to avoid undefined explosions in logs
+  const safeArray = (arr: any) => (Array.isArray(arr) ? arr : []);
 
   // ============================================================
   // 1. OPTIMIST (STRING MODE)
@@ -113,33 +124,54 @@ export async function runHybridPipeline(args: {
   }
 
   // ============================================================
-  // 3. ARBITER (STRING MODE — FULL PERSONA + MEMORY)
+  // 3. ARBITER — Persona + MEMORY + GOVERNOR + MODES
   // ============================================================
 
-  const personaSystem = buildSolaceSystemPrompt("core", `
+  // Compact debug view of context actually used
+  try {
+    console.info("[ARB-CONTEXT-SUMMARY]", {
+      factsCount: safeArray(context?.memoryPack?.facts).length,
+      episodicCount: safeArray(context?.memoryPack?.episodic).length,
+      autobioCount: safeArray(context?.memoryPack?.autobiography).length,
+      researchCount: safeArray(context?.researchContext).length,
+      newsCount: safeArray(context?.newsDigest).length,
+    });
+  } catch {
+    // do not crash pipeline on logging failure
+  }
+
+  const personaSystem = buildSolaceSystemPrompt(
+    "core",
+    `
 Governor Level: ${governorLevel}
 Governor Instructions: ${governorInstructions}
 Founder Mode: ${founderMode}
 Ministry Mode: ${ministryMode}
 Mode Hint: ${modeHint}
 
+MEMORY CONTRACT:
+You have access to structured memory for this user and workspace.
+Use the memory blocks below when answering.
+Never claim you lack memory if relevant facts are present.
+
 [FACTS]
-${JSON.stringify(context.memoryPack?.facts || [], null, 2)}
+${JSON.stringify(safeArray(context?.memoryPack?.facts), null, 2)}
 
 [EPISODIC]
-${JSON.stringify(context.memoryPack?.episodic || [], null, 2)}
+${JSON.stringify(safeArray(context?.memoryPack?.episodic), null, 2)}
 
 [AUTOBIOGRAPHY]
-${JSON.stringify(context.memoryPack?.autobiography || [], null, 2)}
+${JSON.stringify(safeArray(context?.memoryPack?.autobiography), null, 2)}
 
 [RESEARCH]
-${JSON.stringify(context.researchContext || [], null, 2)}
+${JSON.stringify(safeArray(context?.researchContext), null, 2)}
 
 [NEWS DIGEST]
-${JSON.stringify(context.newsDigest || [], null, 2)}
-  `);
+${JSON.stringify(safeArray(context?.newsDigest), null, 2)}
+`
+  );
 
-  // HUMAN-READABLE, SINGLE STRING PROMPT
+  // Human-readable SINGLE STRING prompt for the Responses API
   const arbPrompt = `
 ${personaSystem}
 
@@ -164,9 +196,14 @@ USER MESSAGE
 ${userMessage}
   `.trim();
 
-  // Deep Arbiter diagnostics
-  console.info("[ARB-PROMPT-PREVIEW]", arbPrompt.slice(0, 2000));
-  console.info("[ARB-PROMPT-LENGTH]", arbPrompt.length);
+  // Deep Arbiter diagnostics: head + tail + length
+  try {
+    console.info("[ARB-PROMPT-PREVIEW]", arbPrompt.slice(0, 2000));
+    console.info("[ARB-PROMPT-TAIL]", arbPrompt.slice(-2000));
+    console.info("[ARB-PROMPT-LENGTH]", arbPrompt.length);
+  } catch {
+    // again, logging failures must not break responses
+  }
 
   const arbStart = performance.now();
   const arbiter = await callModel("gpt-4.1", arbPrompt);
