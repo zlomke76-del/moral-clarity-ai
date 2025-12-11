@@ -1,17 +1,11 @@
-// app/api/chat/modules/hybrid.ts
-// --------------------------------------------------------------
+// ---------------------------------------------------------------
 // HYBRID SUPER-AI PIPELINE (Optimist → Skeptic → Arbiter)
-// Governor integrated
-// ASCII-safe input to model (sanitizeForModel)
-// Full Unicode output preserved for UI (no stripping emojis)
-// --------------------------------------------------------------
+// Governor Integrated (updateGovernor only)
+// Works with TEXT-ONLY callModel()
+// ---------------------------------------------------------------
 
 import { updateGovernor } from "@/lib/solace/governor/governor-engine";
 import { callModel } from "./model-router";
-import {
-  sanitizeForModel,
-  sanitizeForMemory
-} from "@/lib/solace/sanitize";
 
 // -----------------------------
 // Types
@@ -20,11 +14,9 @@ export type HybridInputs = {
   userMessage: string;
   context: any;
   history: any[];
-
   ministryMode: boolean;
   modeHint: string;
   founderMode: boolean;
-
   canonicalUserKey: string | null;
 
   governorLevel?: number;
@@ -32,43 +24,61 @@ export type HybridInputs = {
 };
 
 // -----------------------------
+// ASCII Sanitize
+// -----------------------------
+function sanitizeASCII(input: string): string {
+  if (!input) return "";
+
+  const rep: Record<string, string> = {
+    "—": "-", "–": "-", "•": "*",
+    "“": "\"", "”": "\"",
+    "‘": "'", "’": "'",
+    "…": "..."
+  };
+
+  let out = input;
+  for (const k in rep) out = out.split(k).join(rep[k]);
+
+  return out
+    .split("")
+    .map((c) => (c.charCodeAt(0) > 255 ? "?" : c))
+    .join("");
+}
+
+// -----------------------------
 // Build Stage Prompt
 // -----------------------------
 function buildStagePrompt(
   stage: "OPTIMIST" | "SKEPTIC" | "ARBITER",
   inputs: HybridInputs,
-  optimistText?: string,
-  skepticText?: string
+  priorOpt?: string,
+  priorSkep?: string
 ) {
   const { userMessage, context, history, governorInstructions } = inputs;
 
-  const memoryJSON = JSON.stringify(context.memoryPack || {}, null, 2);
+  const memory = JSON.stringify(context.memoryPack || {}, null, 2);
 
-  let stageAppend = "";
-
-  if (stage === "SKEPTIC" && optimistText) {
-    stageAppend = `
-Review the Optimist's reasoning:
-${optimistText}
-`;
+  let append = "";
+  if (stage === "SKEPTIC" && priorOpt) {
+    append = `\nReview the optimist's reasoning:\n${priorOpt}\n`;
   }
-
   if (stage === "ARBITER") {
-    stageAppend = `
+    append = `
 SYNTHESIZE:
 Optimist said:
-${optimistText || "[none]"}
+${priorOpt || "[none]"}
 
 Skeptic said:
-${skepticText || "[none]"}
+${priorSkep || "[none]"}
 
-Produce ONLY ONE final answer.
+Produce ONE final answer only.
 `.trim();
   }
 
-  const sys = `
-You are Solace.
+  const gov = `GOVERNOR:\n${governorInstructions}`;
 
+  const prompt = `
+You are Solace.
 Follow the Abrahamic Code:
 - Truth
 - Compassion
@@ -76,112 +86,71 @@ Follow the Abrahamic Code:
 - Stewardship
 
 ROLE: ${stage}
-${stage === "OPTIMIST" ? "* Explore possibilities." : ""}
-${stage === "SKEPTIC" ? "* Challenge assumptions and expose risks." : ""}
-${stage === "ARBITER" ? "* Integrate and resolve." : ""}
 
-GOVERNOR:
-${governorInstructions || ""}
+${gov}
 
 USER MESSAGE:
 "${userMessage}"
 
 MEMORY:
-${memoryJSON}
+${memory}
 
 HISTORY:
 ${JSON.stringify(history || [], null, 2)}
 
-${stageAppend}
+${append}
 
 INSTRUCTIONS:
-Return ONLY the stage output.
-Do not describe your role.
-Do not mention this prompt.
-`.trim();
+Return ONLY the stage-appropriate output.
+No meta. No role references.
+`;
 
-  return sanitizeForModel(sys);
+  return sanitizeASCII(prompt);
 }
 
 // -----------------------------
-// PIPELINE
+// RUN HYBRID PIPELINE
 // -----------------------------
 export async function runHybridPipeline(inputs: HybridInputs) {
-  // Run governor first
   const gov = updateGovernor(inputs.userMessage);
-
   inputs.governorLevel = gov.level;
   inputs.governorInstructions = gov.instructions;
 
   try {
-    // ----------------------------------------------------
-    // 1. OPTIMIST
-    // ----------------------------------------------------
+    // -----------------------------------------
+    // 1. OPTIMIST (TEXT ONLY)
+    // -----------------------------------------
     const promptOptimist = buildStagePrompt("OPTIMIST", inputs);
+    const optimist = await callModel("gpt-4.1", promptOptimist);
 
-    const optimist = await callModel("gpt-4.1", [
-      {
-        role: "user",
-        content: promptOptimist
-      }
-    ]);
-
-    // ----------------------------------------------------
+    // -----------------------------------------
     // 2. SKEPTIC
-    // ----------------------------------------------------
-    const promptSkeptic = buildStagePrompt(
-      "SKEPTIC",
-      inputs,
-      optimist
-    );
+    // -----------------------------------------
+    const promptSkeptic = buildStagePrompt("SKEPTIC", inputs, optimist);
+    const skeptic = await callModel("gpt-4.1", promptSkeptic);
 
-    const skeptic = await callModel("gpt-4.1", [
-      {
-        role: "user",
-        content: promptSkeptic
-      }
-    ]);
-
-    // ----------------------------------------------------
+    // -----------------------------------------
     // 3. ARBITER
-    // ----------------------------------------------------
-    const promptArbiter = buildStagePrompt(
-      "ARBITER",
-      inputs,
-      optimist,
-      skeptic
-    );
+    // -----------------------------------------
+    const promptArbiter = buildStagePrompt("ARBITER", inputs, optimist, skeptic);
+    const arbiter = await callModel("gpt-4.1", promptArbiter);
 
-    const arbiter = await callModel("gpt-4.1", [
-      {
-        role: "user",
-        content: promptArbiter
-      }
-    ]);
-
-    // ----------------------------------------------------
-    // RETURN unified output + diagnostic stages
-    // ----------------------------------------------------
     return {
-      finalAnswer: arbiter || "[arbiter failed]",
+      finalAnswer: sanitizeASCII(arbiter || "[arbiter failed]"),
 
       governorLevel: gov.level,
       governorInstructions: gov.instructions,
 
-      // Diag for route.ts only
-      optimist,
-      skeptic,
-      arbiter
+      optimist: sanitizeASCII(optimist || ""),
+      skeptic: sanitizeASCII(skeptic || ""),
+      arbiter: sanitizeASCII(arbiter || "")
     };
-
   } catch (err) {
-    console.error("[HYBRID PIPELINE ERROR]", err);
-
+    console.error("[HYBRID ERROR]", err);
     return {
       finalAnswer: "[Hybrid pipeline error]",
       governorLevel: gov.level,
       governorInstructions: gov.instructions,
-
       optimist: "",
       skeptic: "",
       arbiter: ""
