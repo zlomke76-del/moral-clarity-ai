@@ -1,10 +1,18 @@
+// app/api/chat/modules/hybrid.ts
 // ---------------------------------------------------------------
 // HYBRID SUPER-AI PIPELINE (Optimist → Skeptic → Arbiter)
-// + Integrated Image Generation Branch
+// ---------------------------------------------------------------
+// Now includes:
+//   • Generous automatic image-request detection
+//   • Direct OpenAI image generation bypass
+//   • Markdown output for inline rendering in SolaceDock
+//   • Complete preservation of hybrid pipeline logic for text mode
 // ---------------------------------------------------------------
 
 import { updateGovernor } from "@/lib/solace/governor/governor-engine";
 import { callModel } from "./model-router";
+
+// *** NEW ***
 import { generateImage } from "./image-router";
 
 // -----------------------------
@@ -28,12 +36,11 @@ export type HybridInputs = {
 // -----------------------------
 function sanitizeASCII(input: string): string {
   if (!input) return "";
-
   const rep: Record<string, string> = {
     "—": "-", "–": "-", "•": "*",
     "“": "\"", "”": "\"",
     "‘": "'", "’": "'",
-    "…": "...",
+    "…": "..."
   };
 
   let out = input;
@@ -45,16 +52,40 @@ function sanitizeASCII(input: string): string {
     .join("");
 }
 
-// -----------------------------
-// Image Intent Detection
-// -----------------------------
-function wantsImage(msg: string): boolean {
-  return /\b(draw|create|generate|image|picture|illustration|render|make me an image|make an image)\b/i
-    .test(msg);
+// ---------------------------------------------------------------
+// Generous Image-Request Detection
+// ---------------------------------------------------------------
+// This MUST match route.ts detection so that both behave identically.
+function isImageRequest(msg: string): boolean {
+  if (!msg) return false;
+  const lower = msg.toLowerCase();
+
+  const triggers = [
+    "make me an image",
+    "generate an image",
+    "make an illustration",
+    "create an illustration",
+    "create an image",
+    "make a picture",
+    "generate a picture",
+    "show me a picture",
+    "show me an image",
+    "draw ",
+    "render ",
+    "create art",
+    "make art",
+    "i want an image",
+    "picture of",
+    "image of",
+    "please draw",
+    "please make an image"
+  ];
+
+  return triggers.some((t) => lower.includes(t));
 }
 
 // -----------------------------
-// Build Prompt For Text Pipeline
+// Build Stage Prompt
 // -----------------------------
 function buildStagePrompt(
   stage: "OPTIMIST" | "SKEPTIC" | "ARBITER",
@@ -80,7 +111,7 @@ Skeptic said:
 ${priorSkep || "[none]"}
 
 Produce ONE final answer only.
-`.trim();
+    `.trim();
   }
 
   const gov = `GOVERNOR:\n${governorInstructions}`;
@@ -116,72 +147,95 @@ No meta. No role references.
   return sanitizeASCII(prompt);
 }
 
-// -----------------------------
+// ---------------------------------------------------------------
 // RUN HYBRID PIPELINE
-// -----------------------------
+// ---------------------------------------------------------------
 export async function runHybridPipeline(inputs: HybridInputs) {
+  // Governor is always updated before pipeline
   const gov = updateGovernor(inputs.userMessage);
   inputs.governorLevel = gov.level;
   inputs.governorInstructions = gov.instructions;
 
-  try {
-    // -----------------------------------------
-    // IMAGE PIPELINE (BYPASS TEXT STAGES)
-    // -----------------------------------------
-    if (wantsImage(inputs.userMessage)) {
-      const imageUrl = await generateImage(inputs.userMessage);
+  // -------------------------------------------------------------
+  // IMAGE MODE — bypass pipeline completely
+  // -------------------------------------------------------------
+  if (isImageRequest(inputs.userMessage)) {
+    try {
+      const url = await generateImage(inputs.userMessage);
+
+      const markdown = sanitizeASCII(
+        `Here you go:\n\n![image](${url})`
+      );
 
       return {
-        finalAnswer: "",
-        imageUrl,
+        finalAnswer: markdown,
         governorLevel: gov.level,
         governorInstructions: gov.instructions,
         optimist: "",
         skeptic: "",
-        arbiter: "",
+        arbiter: markdown
+      };
+    } catch (err: any) {
+      return {
+        finalAnswer: "[Image generation failed]",
+        governorLevel: gov.level,
+        governorInstructions: gov.instructions,
+        optimist: "",
+        skeptic: "",
+        arbiter: ""
       };
     }
+  }
 
+  // -------------------------------------------------------------
+  // NORMAL HYBRID TEXT PIPELINE
+  // -------------------------------------------------------------
+  try {
     // -----------------------------------------
-    // 1. OPTIMIST (TEXT)
+    // 1. OPTIMIST
     // -----------------------------------------
     const promptOptimist = buildStagePrompt("OPTIMIST", inputs);
     const optimist = await callModel("gpt-4.1", promptOptimist);
 
     // -----------------------------------------
-    // 2. SKEPTIC (TEXT)
+    // 2. SKEPTIC
     // -----------------------------------------
     const promptSkeptic = buildStagePrompt("SKEPTIC", inputs, optimist);
     const skeptic = await callModel("gpt-4.1", promptSkeptic);
 
     // -----------------------------------------
-    // 3. ARBITER (TEXT)
+    // 3. ARBITER
     // -----------------------------------------
-    const promptArbiter = buildStagePrompt("ARBITER", inputs, optimist, skeptic);
+    const promptArbiter = buildStagePrompt(
+      "ARBITER",
+      inputs,
+      optimist,
+      skeptic
+    );
+
     const arbiter = await callModel("gpt-4.1", promptArbiter);
 
     return {
       finalAnswer: sanitizeASCII(arbiter || "[arbiter failed]"),
-      imageUrl: null,
 
       governorLevel: gov.level,
       governorInstructions: gov.instructions,
 
       optimist: sanitizeASCII(optimist || ""),
       skeptic: sanitizeASCII(skeptic || ""),
-      arbiter: sanitizeASCII(arbiter || ""),
+      arbiter: sanitizeASCII(arbiter || "")
     };
 
   } catch (err) {
     console.error("[HYBRID ERROR]", err);
+
     return {
       finalAnswer: "[Hybrid pipeline error]",
-      imageUrl: null,
-      governorLevel: inputs.governorLevel,
-      governorInstructions: inputs.governorInstructions,
+      governorLevel: gov.level,
+      governorInstructions: gov.instructions,
       optimist: "",
       skeptic: "",
-      arbiter: "",
+      arbiter: ""
     };
   }
 }
