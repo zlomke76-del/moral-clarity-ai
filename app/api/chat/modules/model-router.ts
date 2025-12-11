@@ -1,6 +1,5 @@
-// app/api/chat/modules/model-router.ts
 //--------------------------------------------------------------
-// MODEL ROUTER — CLEAN STRING ONLY (NO ARRAYS, NO BLOCKS)
+// MODEL ROUTER — RESPONSES API (STRICT STRING MODE)
 //--------------------------------------------------------------
 
 import OpenAI from "openai";
@@ -10,16 +9,17 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
+//--------------------------------------------------------------
+// callModel(model, promptString)
+// ALWAYS expects a STRING. No arrays. No objects.
+//--------------------------------------------------------------
 export async function callModel(model: string, prompt: string) {
-  // Ensure we ALWAYS send a plain string
-  const cleanInput: string = sanitizeForModel(
-    typeof prompt === "string" ? prompt : String(prompt)
-  );
+  const clean: string = sanitizeForModel(String(prompt || ""));
 
   try {
     const res = await client.responses.create({
       model,
-      input: cleanInput,   // MUST be a string
+      input: clean, // STRICT STRING MODE ONLY
     });
 
     return typeof res.output_text === "string"
