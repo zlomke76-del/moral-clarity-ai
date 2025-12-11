@@ -10,9 +10,7 @@ import { runHybridPipeline } from "./hybrid";
 /**
  * orchestrateSolaceResponse
  *
- * IMPORTANT:
- * This must return the *entire* pipeline result object
- * including:
+ * Returns the *entire* pipeline result object:
  *   - finalAnswer
  *   - imageUrl
  *   - governorLevel
@@ -29,6 +27,8 @@ export async function orchestrateSolaceResponse({
   modeHint,
   founderMode,
   canonicalUserKey,
+  governorLevel,          // ✅ REQUIRED
+  governorInstructions,   // ✅ REQUIRED
 }: any) {
   try {
     const result = await runHybridPipeline({
@@ -39,14 +39,16 @@ export async function orchestrateSolaceResponse({
       modeHint,
       founderMode,
       canonicalUserKey,
+      governorLevel,        // ✅ Pass into hybrid pipeline
+      governorInstructions, // ✅ Pass into hybrid pipeline
     });
 
-    // Return the full result object, INCLUDING imageUrl
+    // Return the full structured result
     return {
       finalAnswer: result.finalAnswer,
-      imageUrl: result.imageUrl || null,
-      governorLevel: result.governorLevel ?? 0,
-      governorInstructions: result.governorInstructions ?? "",
+      imageUrl: result.imageUrl ?? null,
+      governorLevel: result.governorLevel ?? governorLevel ?? 0,
+      governorInstructions: result.governorInstructions ?? governorInstructions ?? "",
       optimist: result.optimist ?? "",
       skeptic: result.skeptic ?? "",
       arbiter: result.arbiter ?? "",
@@ -58,11 +60,11 @@ export async function orchestrateSolaceResponse({
     return {
       finalAnswer: "[Hybrid pipeline error]",
       imageUrl: null,
-      governorLevel: 0,
-      governorInstructions: "",
+      governorLevel,
+      governorInstructions,
       optimist: "",
       skeptic: "",
-      arbiter: ""
+      arbiter: "",
     };
   }
 }
