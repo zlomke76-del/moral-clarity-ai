@@ -1,74 +1,76 @@
 //--------------------------------------------------------------
-// HYBRID PIPELINE — OPTIMIST → SKEPTIC → ARBITER (FINAL ONLY)
+// HYBRID PIPELINE — OPTIMIST → SKEPTIC → ARBITER (FINAL OUTPUT)
+// Returns: { finalAnswer, imageUrl, optimist, skeptic, arbiter }
 //--------------------------------------------------------------
 
 import { callModel } from "./model-router";
 
-type PersonaOut = {
-  role: "optimist" | "skeptic" | "arbiter";
-  text: string;
-};
-
 // --------------------------------------------------------------
-// PROMPTS — tightly engineered, no emoji except arbiter if needed
+// SYSTEM PROMPTS (No emojis except Arbiter IF user explicitly asked)
 // --------------------------------------------------------------
 const OPTIMIST_SYSTEM = `
-You are the OPTIMIST lens. 
-Your job: generate the most constructive, opportunity-focused interpretation
+You are the OPTIMIST lens.
+Your job: produce the most constructive, opportunity-focused interpretation
 of the user’s message — grounded, not delusional.
-No icons, no emojis, no formatting flourishes.
+No emojis, no icons, no persona commentary, no theatrics.
 Short, clear, actionable.
 `;
 
 const SKEPTIC_SYSTEM = `
 You are the SKEPTIC lens.
-Your job: challenge assumptions, identify risks, constraints, failure modes.
-Avoid negativity for its own sake. Avoid emojis.
+Your job: identify risks, constraints, weak assumptions, and failure modes.
+Do not be cynical; be rigorous.
+No emojis, no icons.
 Short, sharp, realistic.
 `;
 
 const ARBITER_SYSTEM = `
 You are the ARBITER.
-Your job: read the Optimist + Skeptic outputs and produce a SINGLE synthesis.
-This is the ONLY output that is shown to the user.
+You read the Optimist and Skeptic outputs and create a SINGLE synthesis
+that is shown to the user.
 
 Rules:
-- You weigh opportunity vs. risk.
-- You produce balance, clarity, direction.
-- You may use emojis/icons ONLY IF they match the user’s explicit request.
-- Never reveal personas or internal steps.
-- NEVER output “optimist”, “skeptic”, “arbiter” names.
-- Your answer must read as ONE unified Solace response.
+- Never mention Optimist, Skeptic, or Arbiter by name.
+- Never reveal internal steps.
+- Produce ONE unified Solace response.
+- Balance opportunity with risk.
+- You MAY use emojis/icons ONLY IF the user's message explicitly asked for emojis/icons.
+- Otherwise, no emojis or icons.
+- Maintain calm, clarity, and emotional intelligence.
 `;
 
 // --------------------------------------------------------------
 // Build persona prompt
 // --------------------------------------------------------------
 function buildPrompt(system: string, userMsg: string) {
-  return `${system}\nUser: ${userMsg}`;
+  return `${system}\nUSER MESSAGE:\n${userMsg}`;
 }
 
 // --------------------------------------------------------------
-// Main hybrid function
+// Detect if the user explicitly requested emojis/icons
 // --------------------------------------------------------------
-export async function runHybridPipeline(args: {
-  userMessage: string;
-  context: any;
-  history: any[];
-  ministryMode: boolean;
-  founderMode: boolean;
-  modeHint: string;
-  canonicalUserKey: string;
+function userWantsIcons(msg: string): boolean {
+  const triggers = ["emoji", "emojis", "icon", "icons", "with emojis", "with icons"];
+  const lower = msg.toLowerCase();
+  return triggers.some(t => lower.includes(t));
+}
 
+// --------------------------------------------------------------
+// MAIN RUNNER
+// --------------------------------------------------------------
+export async function runHybridPipeline({
+  userMessage,
+  governorLevel,
+  governorInstructions,
+}: {
+  userMessage: string;
   governorLevel: number;
   governorInstructions: string;
 }) {
-  const { userMessage } = args;
-
   // ----------------------------------------------------------
   // 1) OPTIMIST
   // ----------------------------------------------------------
-  const opt = await callModel(
+  const optimist = await callModel(
     "gpt-5.1-mini",
     buildPrompt(OPTIMIST_SYSTEM, userMessage)
   );
@@ -76,31 +78,47 @@ export async function runHybridPipeline(args: {
   // ----------------------------------------------------------
   // 2) SKEPTIC
   // ----------------------------------------------------------
-  const skp = await callModel(
+  const skeptic = await callModel(
     "gpt-5.1-mini",
     buildPrompt(SKEPTIC_SYSTEM, userMessage)
   );
 
   // ----------------------------------------------------------
-  // 3) ARBITER — ONLY ONE SHOWN TO USER
+  // 3) ARBITER (FINAL OUTPUT SHOWN TO USER)
   // ----------------------------------------------------------
-  const arbInput = `
+  const allowIcons = userWantsIcons(userMessage);
+
+  const arbiterInput = `
 ${ARBITER_SYSTEM}
 
+GOVERNOR LEVEL: ${governorLevel}
+GOVERNOR INSTRUCTIONS:
+${governorInstructions}
+
 --- OPTIMIST VIEW ---
-${opt}
+${optimist}
 
 --- SKEPTIC VIEW ---
-${skp}
+${skeptic}
 
 --- USER MESSAGE ---
 ${userMessage}
+
+THE USER ${allowIcons ? "EXPLICITLY REQUESTED" : "DID NOT REQUEST"} EMOJIS/ICONS.
   `;
 
-  const finalAnswer = await callModel("gpt-5.1", arbInput);
+  const arbiter = await callModel("gpt-5.1", arbiterInput);
+
+  // FINAL OUTPUT SHOWN TO USER
+  const finalAnswer = arbiter;
 
   return {
     finalAnswer,
-    imageUrl: null,
+    imageUrl: null, // Image handled at route-level or later extension
+    optimist,
+    skeptic,
+    arbiter,
+    governorLevel,
+    governorInstructions,
   };
 }
