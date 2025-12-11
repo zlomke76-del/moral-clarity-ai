@@ -1,43 +1,82 @@
+// lib/solace/sanitize.ts
 //--------------------------------------------------------------
 // GLOBAL SANITIZERS — MODEL SAFE + CLIENT SAFE
 //--------------------------------------------------------------
 
-const BAD_ASCII = /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g;
-
-// --------------------------------------------------------------
-// Preserve emojis. Remove ONLY invalid ASCII control chars.
-// --------------------------------------------------------------
-export function sanitizeForModel(input: string): string {
-  if (!input) return "";
-  return input.replace(BAD_ASCII, "");
+// ----------------------------------------------
+// Remove embedded base64 images from user text
+// ----------------------------------------------
+function stripBase64(input: string): string {
+  return input.replace(
+    /data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+/g,
+    "[image removed]"
+  );
 }
 
-// --------------------------------------------------------------
-// Client-facing: preserve emojis, punctuation, icons.
-// Just strip invisible junk.
-// --------------------------------------------------------------
-export function sanitizeForClient(input: string): string {
-  if (!input) return "";
-  return input.replace(BAD_ASCII, "");
+// ----------------------------------------------
+// ASCII clean: convert >255 codepoints → "?"
+// ----------------------------------------------
+function asciiClean(str: string): string {
+  return str
+    .split("")
+    .map((c) => (c.charCodeAt(0) > 255 ? "?" : c))
+    .join("");
 }
 
-// --------------------------------------------------------------
-// Deep object sanitizer (recursively sanitize strings).
-// --------------------------------------------------------------
-export function sanitizeObjectDeep(obj: any): any {
-  if (obj == null) return obj;
+// ----------------------------------------------
+// MODEL SANITIZER — strict
+// ----------------------------------------------
+export function sanitizeForModel(input: any): string {
+  if (typeof input !== "string") return "";
 
-  if (typeof obj === "string") return sanitizeForClient(obj);
+  let out = stripBase64(input);
 
-  if (Array.isArray(obj)) return obj.map((v) => sanitizeObjectDeep(v));
+  // Replace smart punctuation
+  const rep: Record<string, string> = {
+    "—": "-",
+    "–": "-",
+    "•": "*",
+    "“": "\"",
+    "”": "\"",
+    "‘": "'",
+    "’": "'",
+    "…": "...",
+  };
 
-  if (typeof obj === "object") {
+  for (const k in rep) out = out.split(k).join(rep[k]);
+
+  return asciiClean(out);
+}
+
+// ----------------------------------------------
+// CLIENT SANITIZER — safe for display
+// ----------------------------------------------
+export function sanitizeForClient(input: any): string {
+  if (typeof input !== "string") return "";
+
+  // DO NOT strip emojis here — UI can display them
+  const rep: Record<string, string> = {
+    "�": "",
+  };
+
+  let out = input;
+  for (const k in rep) out = out.split(k).join(rep[k]);
+
+  return out;
+}
+
+// ----------------------------------------------
+// Deep sanitizer for context objects
+// ----------------------------------------------
+export function sanitizeObjectDeep(val: any): any {
+  if (typeof val === "string") return sanitizeForClient(val);
+  if (Array.isArray(val)) return val.map((v) => sanitizeObjectDeep(v));
+
+  if (val && typeof val === "object") {
     const out: any = {};
-    for (const k of Object.keys(obj)) {
-      out[k] = sanitizeObjectDeep(obj[k]);
-    }
+    for (const k in val) out[k] = sanitizeObjectDeep(val[k]);
     return out;
   }
 
-  return obj;
+  return val;
 }
