@@ -1,6 +1,6 @@
-// app/api/chat/modules/orchestrator.ts
 //--------------------------------------------------------------
-// Solace Orchestrator — Thin Shell (no persona logic)
+// SOLACE ORCHESTRATOR — CLEAN PASS-THROUGH
+// Triad → Arbiter → Final Answer
 //--------------------------------------------------------------
 
 import { runHybridPipeline } from "./hybrid";
@@ -11,14 +11,17 @@ export async function orchestrateSolaceResponse(args: any) {
 
     return {
       finalAnswer: result.finalAnswer,
-      imageUrl: null,
-      optimist: result.optimist,
-      skeptic: result.skeptic,
-      arbiter: result.arbiter,
+      imageUrl: result.imageUrl ?? null,
+
+      // Expose triad for debugging UI if needed
+      optimist: result.optimist ?? "",
+      skeptic: result.skeptic ?? "",
+      arbiter: result.arbiter ?? "",
     };
 
   } catch (err) {
-    console.error("[ORCHESTRATOR] Pipeline failure:", err);
+    console.error("[ORCHESTRATOR ERROR]", err);
+
     return {
       finalAnswer: "[Hybrid pipeline error]",
       imageUrl: null,
