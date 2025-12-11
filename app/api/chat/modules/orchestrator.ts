@@ -18,7 +18,7 @@ export async function orchestrateSolaceResponse({
   governorInstructions,
 }: any) {
   try {
-    const result = await runHybridPipeline({
+    const result: any = await runHybridPipeline({
       userMessage,
       context,
       history,
@@ -30,22 +30,18 @@ export async function orchestrateSolaceResponse({
       governorInstructions,
     });
 
-    // NOTE:
-    // runHybridPipeline *may or may not* return optimist/skeptic/arbiter.
-    // So we do NOT read them off `result` unless they exist.
-
+    // Casting result as `any` above guarantees TS won't choke
     return {
       finalAnswer: result.finalAnswer,
       imageUrl: result.imageUrl ?? null,
 
-      // These always come from route.ts
       governorLevel,
       governorInstructions,
 
-      // Triad components (if present)
-      optimist: result.optimist || "",
-      skeptic: result.skeptic || "",
-      arbiter: result.arbiter || "",
+      // Triad (safe even if undefined)
+      optimist: result?.optimist ?? "",
+      skeptic: result?.skeptic ?? "",
+      arbiter: result?.arbiter ?? "",
     };
 
   } catch (err) {
@@ -62,3 +58,4 @@ export async function orchestrateSolaceResponse({
     };
   }
 }
+
