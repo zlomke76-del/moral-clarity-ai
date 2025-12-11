@@ -1,7 +1,8 @@
 // app/api/chat/route.ts
-// --------------------------------------------------------------
-// SOLACE CHAT ROUTE — FINAL VERSION W/ CLEAN SANITIZATION
-// --------------------------------------------------------------
+// ------------------------------------------------------------------
+// SOLACE CHAT ROUTE — GOVERNOR + HYBRID PIPELINE + IMAGE SUPPORT
+// Returns JSON: { text, imageUrl }
+// ------------------------------------------------------------------
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,11 +18,17 @@ import { updateGovernor } from "@/lib/solace/governor/governor-engine";
 import { applyGovernorFormatting } from "@/lib/solace/governor/governor-icon-format";
 import { writeMemory } from "./modules/memory-writer";
 
-import { sanitizeForClient, sanitizeForMemory } from "@/lib/solace/sanitize";
 import type { PacingLevel } from "@/lib/solace/governor/types";
 
+// ✅ NEW — GLOBAL SANITIZERS
+import {
+  sanitizeForModel,
+  sanitizeForClient,
+  sanitizeObjectDeep,
+} from "@/lib/solace/sanitize";
+
 // -----------------------------------------------------
-// clamp pacing
+// ASCII clamp for pacing
 // -----------------------------------------------------
 function clampToPacingLevel(n: number): PacingLevel {
   if (n < 0) return 0;
@@ -30,7 +37,7 @@ function clampToPacingLevel(n: number): PacingLevel {
 }
 
 // -----------------------------------------------------
-// Supabase session
+// Supabase session loader
 // -----------------------------------------------------
 async function getNodeUser(req: Request) {
   const cookieHeader = req.headers.get("cookie") ?? "";
@@ -48,8 +55,8 @@ async function getNodeUser(req: Request) {
           return match ? match.split("=")[1] : undefined;
         },
         set() {},
-        remove() {}
-      }
+        remove() {},
+      },
     }
   );
 
@@ -58,7 +65,7 @@ async function getNodeUser(req: Request) {
 }
 
 // -----------------------------------------------------
-// POST
+// POST — MAIN CHAT ROUTE
 // -----------------------------------------------------
 export async function POST(req: Request) {
   try {
@@ -67,7 +74,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
-    const message = body.message; // DO NOT SANITIZE HERE
+    // Incoming user message: sanitize for model input
+    const rawMessage = String(body.message);
+    const message = sanitizeForModel(rawMessage);
 
     const {
       history = [],
@@ -75,20 +84,24 @@ export async function POST(req: Request) {
       ministryMode = false,
       founderMode = false,
       modeHint = "Neutral",
-      userKey: explicitKey
+      userKey: explicitKey,
     } = body;
 
     const user = await getNodeUser(req);
     const canonicalUserKey = user?.id ?? explicitKey ?? "guest";
 
-    // load context
+    // -----------------------------------------------------
+    // Load + sanitize context deeply (UI-safe, emoji-safe)
+    // -----------------------------------------------------
     let context = await assembleContext(canonicalUserKey, workspaceId, message);
     context = sanitizeObjectDeep(context);
 
-    // governor
-    const governor = updateGovernor(message);
+    // Governor
+    const governorOutput = updateGovernor(message);
 
-    // hybrid pipeline
+    // -----------------------------------------------------
+    // Run hybrid pipeline (text or image)
+    // -----------------------------------------------------
     const result = await runHybridPipeline({
       userMessage: message,
       context,
@@ -97,38 +110,46 @@ export async function POST(req: Request) {
       founderMode,
       modeHint,
       canonicalUserKey,
-      governorLevel: governor.level,
-      governorInstructions: governor.instructions
+
+      governorLevel: governorOutput.level,
+      governorInstructions: governorOutput.instructions,
     });
 
-    // format final output (DO NOT SANITIZE AWAY EMOJIS)
-    const formatted = sanitizeForClient(
-      applyGovernorFormatting(result.finalAnswer, {
-        level: clampToPacingLevel(governor.level),
-        isFounder: founderMode,
-        emotionalDistress: false,
-        decisionContext: false
-      })
-    );
+    // -----------------------------------------------------
+    // Format text output with governor pacing + UI sanitizer
+    // -----------------------------------------------------
+    const formatted = applyGovernorFormatting(result.finalAnswer, {
+      level: clampToPacingLevel(governorOutput.level),
+      isFounder: founderMode === true,
+      emotionalDistress:
+        (governorOutput.signals?.emotionalValence ?? 0.5) < 0.35,
+      decisionContext: governorOutput.signals?.decisionPoint ?? false,
+    });
 
-    // store memory safely
+    const uiText = sanitizeForClient(formatted);
+
+    // -----------------------------------------------------
+    // Memory write
+    // -----------------------------------------------------
     try {
-      await writeMemory(
-        canonicalUserKey,
-        sanitizeForMemory(message),
-        sanitizeForMemory(formatted)
-      );
+      await writeMemory(canonicalUserKey, rawMessage, uiText);
     } catch {}
 
+    // -----------------------------------------------------
+    // RETURN PAYLOAD — ALWAYS include text + imageUrl
+    // -----------------------------------------------------
     return NextResponse.json({
-      text: formatted,
-      imageUrl: result.imageUrl ?? null
+      text: uiText,
+      imageUrl: result.imageUrl ?? null,
     });
-
   } catch (err: any) {
     console.error("[CHAT ROUTE FATAL]", err);
     return NextResponse.json(
-      { error: err?.message ?? "ChatRouteError", text: "[error]", imageUrl: null },
+      {
+        error: err?.message ?? "ChatRouteError",
+        text: "[error]",
+        imageUrl: null,
+      },
       { status: 500 }
     );
   }
