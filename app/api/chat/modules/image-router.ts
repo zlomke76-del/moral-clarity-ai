@@ -1,5 +1,5 @@
 // --------------------------------------------------------------
-// Unified Solace Image Generator — FINAL WORKING VERSION
+// Unified Solace Image Generator — BASE64-SAFE FINAL VERSION
 // --------------------------------------------------------------
 
 import OpenAI from "openai";
@@ -19,14 +19,20 @@ export async function generateImage(prompt: string) {
 
     console.log("[IMAGE ROUTER RAW]", res);
 
-    const url = res.data?.[0]?.url;
+    // Prefer URL if returned (some accounts return URLs)
+    const directUrl = res.data?.[0]?.url;
+    if (directUrl) return directUrl;
 
-    if (!url) {
-      console.error("[IMAGE ROUTER] No URL in response:", res);
-      throw new Error("Image generation returned no URL.");
+    // Otherwise extract base64
+    const b64 = res.data?.[0]?.b64_json;
+    if (!b64) {
+      console.error("[IMAGE ROUTER] No b64_json in response:", res);
+      throw new Error("Image generation returned neither URL nor base64.");
     }
 
-    return url;
+    // Convert to data URL for SolaceDock
+    const dataUrl = `data:image/png;base64,${b64}`;
+    return dataUrl;
 
   } catch (err) {
     console.error("[IMAGE ROUTER ERROR]", err);
