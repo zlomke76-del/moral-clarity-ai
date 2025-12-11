@@ -1,5 +1,6 @@
+// app/api/chat/modules/model-router.ts
 //--------------------------------------------------------------
-// MODEL ROUTER — OPENAI RESPONSES API (FINAL SINGLE-STRING VERSION)
+// MODEL ROUTER — CLEAN STRING ONLY (NO ARRAYS, NO BLOCKS)
 //--------------------------------------------------------------
 
 import OpenAI from "openai";
@@ -9,37 +10,16 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-// --------------------------------------------------------------
-// Force ANY prompt into a single string (required by Responses API)
-// --------------------------------------------------------------
-function toSingleString(input: any): string {
-  if (typeof input === "string") {
-    return sanitizeForModel(input);
-  }
+export async function callModel(model: string, prompt: string) {
+  // Ensure we ALWAYS send a plain string
+  const cleanInput: string = sanitizeForModel(
+    typeof prompt === "string" ? prompt : String(prompt)
+  );
 
   try {
-    // Flatten arrays into newline-joined text
-    if (Array.isArray(input)) {
-      return sanitizeForModel(input.map((x) => String(x)).join("\n"));
-    }
-
-    // For objects, stringify cleanly
-    return sanitizeForModel(JSON.stringify(input, null, 2));
-  } catch {
-    return sanitizeForModel(String(input));
-  }
-}
-
-// --------------------------------------------------------------
-// callModel(model, prompt)
-// --------------------------------------------------------------
-export async function callModel(model: string, prompt: any) {
-  try {
-    const textInput = toSingleString(prompt);
-
     const res = await client.responses.create({
       model,
-      input: textInput, // MUST be ONLY a string
+      input: cleanInput,   // MUST be a string
     });
 
     return typeof res.output_text === "string"
