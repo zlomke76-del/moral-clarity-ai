@@ -8,9 +8,9 @@
 import { updateGovernor } from "@/lib/solace/governor/governor-engine";
 import { callModel } from "./model-router";
 
-// -----------------------------
+// ---------------------------------------------------------------
 // Types
-// -----------------------------
+// ---------------------------------------------------------------
 export type HybridInputs = {
   userMessage: string;
   context: any;
@@ -20,25 +20,20 @@ export type HybridInputs = {
   founderMode: boolean;
   canonicalUserKey: string | null;
 
-  // Required for route.ts (diagnostics + formatting)
   governorLevel?: number;
   governorInstructions?: string;
 };
 
-// -----------------------------
-// ASCII Sanitize
-// -----------------------------
+// ---------------------------------------------------------------
+// ASCII Sanitizer — remove >255 Unicode safely
+// ---------------------------------------------------------------
 function sanitizeASCII(input: string): string {
   if (!input) return "";
 
   const rep: Record<string, string> = {
-    "—": "-",
-    "–": "-",
-    "•": "*",
-    "“": "\"",
-    "”": "\"",
-    "‘": "'",
-    "’": "'",
+    "—": "-", "–": "-", "•": "*",
+    "“": "\"", "”": "\"",
+    "‘": "'", "’": "'",
     "…": "..."
   };
 
@@ -51,9 +46,9 @@ function sanitizeASCII(input: string): string {
     .join("");
 }
 
-// -----------------------------
-// Build Stage Block
-// -----------------------------
+// ---------------------------------------------------------------
+// Build a stage block prompt (Optimist / Skeptic / Arbiter)
+// ---------------------------------------------------------------
 function buildStageBlock(
   stage: "OPTIMIST" | "SKEPTIC" | "ARBITER",
   inputs: HybridInputs,
@@ -61,10 +56,10 @@ function buildStageBlock(
   priorSkeptic?: string
 ) {
   const { userMessage, context, history, governorInstructions } = inputs;
+
   const memory = JSON.stringify(context.memoryPack || {}, null, 2);
 
   let append = "";
-
   if (stage === "SKEPTIC" && priorOptimist) {
     append = `\nReview the optimist's reasoning:\n${priorOptimist}\n`;
   }
@@ -121,56 +116,56 @@ No meta. No role references.
   return sanitizeASCII(system);
 }
 
-// -----------------------------
+// ---------------------------------------------------------------
 // RUN HYBRID PIPELINE
-// -----------------------------
+// ---------------------------------------------------------------
 export async function runHybridPipeline(inputs: HybridInputs) {
-  // Governor processes behavioral signals
+  // Governor computes behavioral signals
   const gov = updateGovernor(inputs.userMessage);
 
-  // The pipeline reads these:
   inputs.governorLevel = gov.level;
   inputs.governorInstructions = gov.instructions;
 
   try {
-    // -------------------------
-    // 1. Optimist
-    // -------------------------
+    // ---------------------------------------------------------
+    // 1. OPTIMIST
+    // ---------------------------------------------------------
     const optPrompt = buildStageBlock("OPTIMIST", inputs);
-    const optimist = await callModel("gpt-4.1", [
+    const optimistRaw = await callModel("gpt-4.1", [
       { role: "user", content: [{ type: "input_text", text: optPrompt }] }
     ]);
+    const optimist = sanitizeASCII(optimistRaw || "");
 
-    // -------------------------
-    // 2. Skeptic
-    // -------------------------
+    // ---------------------------------------------------------
+    // 2. SKEPTIC
+    // ---------------------------------------------------------
     const skPrompt = buildStageBlock("SKEPTIC", inputs, optimist);
-    const skeptic = await callModel("gpt-4.1", [
+    const skepticRaw = await callModel("gpt-4.1", [
       { role: "user", content: [{ type: "input_text", text: skPrompt }] }
     ]);
+    const skeptic = sanitizeASCII(skepticRaw || "");
 
-    // -------------------------
-    // 3. Arbiter
-    // -------------------------
+    // ---------------------------------------------------------
+    // 3. ARBITER (final unified output)
+    // ---------------------------------------------------------
     const arbPrompt = buildStageBlock("ARBITER", inputs, optimist, skeptic);
-    const arbiter = await callModel("gpt-4.1", [
+    const arbiterRaw = await callModel("gpt-4.1", [
       { role: "user", content: [{ type: "input_text", text: arbPrompt }] }
     ]);
+    const arbiter = sanitizeASCII(arbiterRaw || "[arbiter failed]");
 
-    // -------------------------
+    // ---------------------------------------------------------
     // FINAL unified output
-    // -------------------------
+    // ---------------------------------------------------------
     return {
-      finalAnswer: sanitizeASCII(arbiter || "[arbiter failed]"),
-
-      // Governor continuity for route.ts
+      finalAnswer: arbiter,
       governorLevel: gov.level,
       governorInstructions: gov.instructions,
 
-      // Diagnostics (never shown to user)
-      optimist: sanitizeASCII(optimist || ""),
-      skeptic: sanitizeASCII(skeptic || ""),
-      arbiter: sanitizeASCII(arbiter || "")
+      // diagnostics (never shown to user, but route.ts may log)
+      optimist,
+      skeptic,
+      arbiter
     };
 
   } catch (err) {
@@ -181,6 +176,7 @@ export async function runHybridPipeline(inputs: HybridInputs) {
       governorLevel: gov.level,
       governorInstructions: gov.instructions,
 
+      // keep diag props defined to avoid route.ts breakage
       optimist: "",
       skeptic: "",
       arbiter: ""
