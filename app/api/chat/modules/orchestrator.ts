@@ -1,8 +1,7 @@
 // app/api/chat/modules/orchestrator.ts
 //--------------------------------------------------------------
 // Solace Orchestrator (Thin Wrapper)
-// Updated for unified Hybrid Super-AI Pipeline
-// (Optimist → Skeptic → Arbiter + Governor + Image Branch)
+// Unified Hybrid Super-AI Pipeline
 //--------------------------------------------------------------
 
 import { runHybridPipeline } from "./hybrid";
@@ -10,14 +9,14 @@ import { runHybridPipeline } from "./hybrid";
 /**
  * orchestrateSolaceResponse
  *
- * Returns the *entire* pipeline result object:
+ * Returns:
  *   - finalAnswer
  *   - imageUrl
- *   - governorLevel
- *   - governorInstructions
  *   - optimist
  *   - skeptic
  *   - arbiter
+ *   - governorLevel       (passed through from route.ts)
+ *   - governorInstructions (passed through from route.ts)
  */
 export async function orchestrateSolaceResponse({
   userMessage,
@@ -27,8 +26,8 @@ export async function orchestrateSolaceResponse({
   modeHint,
   founderMode,
   canonicalUserKey,
-  governorLevel,          // ✅ REQUIRED
-  governorInstructions,   // ✅ REQUIRED
+  governorLevel,
+  governorInstructions,
 }: any) {
   try {
     const result = await runHybridPipeline({
@@ -39,16 +38,18 @@ export async function orchestrateSolaceResponse({
       modeHint,
       founderMode,
       canonicalUserKey,
-      governorLevel,        // ✅ Pass into hybrid pipeline
-      governorInstructions, // ✅ Pass into hybrid pipeline
+      governorLevel,        // pass through
+      governorInstructions, // pass through
     });
 
-    // Return the full structured result
     return {
       finalAnswer: result.finalAnswer,
       imageUrl: result.imageUrl ?? null,
-      governorLevel: result.governorLevel ?? governorLevel ?? 0,
-      governorInstructions: result.governorInstructions ?? governorInstructions ?? "",
+
+      // These do NOT come from result — route controls them
+      governorLevel,
+      governorInstructions,
+
       optimist: result.optimist ?? "",
       skeptic: result.skeptic ?? "",
       arbiter: result.arbiter ?? "",
