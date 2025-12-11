@@ -20,7 +20,7 @@ import { applyGovernorFormatting } from "@/lib/solace/governor/governor-icon-for
 import { writeMemory } from "./modules/memory-writer";
 
 // --------------------------------------------------------------
-// ASCII SANITIZER — universal safety layer
+// UNIVERSAL ASCII SANITIZER
 // --------------------------------------------------------------
 function sanitizeASCII(input: any): any {
   if (!input) return input;
@@ -54,7 +54,7 @@ function sanitizeASCII(input: any): any {
 }
 
 // --------------------------------------------------------------
-// SESSION LOADER
+// LOAD USER SESSION
 // --------------------------------------------------------------
 async function getNodeUser(req: Request) {
   const cookieHeader = req.headers.get("cookie") ?? "";
@@ -72,7 +72,7 @@ async function getNodeUser(req: Request) {
           return match ? match.split("=")[1] : undefined;
         },
         set() {},
-        remove() {},
+        remove() {}
       }
     }
   );
@@ -82,7 +82,7 @@ async function getNodeUser(req: Request) {
 }
 
 // --------------------------------------------------------------
-// POST /api/chat — MAIN ENTRY POINT
+// POST /api/chat — MAIN ENTRYPOINT
 // --------------------------------------------------------------
 export async function POST(req: Request) {
   const diag: any = {
@@ -91,7 +91,7 @@ export async function POST(req: Request) {
   };
 
   try {
-    // ---------- Parse Body ----------
+    // ---------------------------- Parse body ----------------------------
     const body = await req.json().catch(() => null);
     diag.bodyPresent = !!body;
 
@@ -101,10 +101,7 @@ export async function POST(req: Request) {
         { error: "Message required" },
         { status: 400 }
       );
-      res.headers.set(
-        "x-solace-diag",
-        JSON.stringify(sanitizeASCII(diag)).slice(0, 900)
-      );
+      res.headers.set("x-solace-diag", JSON.stringify(sanitizeASCII(diag)).slice(0, 900));
       return res;
     }
 
@@ -123,7 +120,7 @@ export async function POST(req: Request) {
 
     diag.mode = { ministryMode, founderMode, modeHint };
 
-    // ---------- Sanitize History ----------
+    // --------------------------- Sanitize History ------------------------
     const sanitizedHistory = Array.isArray(history)
       ? history.map((h: any) => ({
           ...h,
@@ -133,16 +130,17 @@ export async function POST(req: Request) {
 
     diag.historyCount = sanitizedHistory.length;
 
-    // ---------- USER ----------
+    // --------------------------- USER SESSION ---------------------------
     const user = await getNodeUser(req);
     const canonicalUserKey = user?.id ?? explicitClientKey ?? "guest";
+
     diag.user = {
       hasSession: !!user,
       explicitClientKey: explicitClientKey ?? null,
       canonicalUserKey
     };
 
-    // ---------- CONTEXT ----------
+    // --------------------------- CONTEXT LOAD ---------------------------
     diag.stage = "context-load:start";
     let context = await assembleContext(canonicalUserKey, workspaceId, message);
     context = sanitizeASCII(context);
@@ -158,7 +156,7 @@ export async function POST(req: Request) {
       didResearch: !!context?.didResearch
     };
 
-    // ---------- GOVERNOR ----------
+    // --------------------------- GOVERNOR ---------------------------
     diag.stage = "governor:start";
     const governorOutput = updateGovernor(message);
     diag.governor = {
@@ -168,7 +166,7 @@ export async function POST(req: Request) {
     };
     diag.stage = "governor:done";
 
-    // ---------- HYBRID PIPELINE ----------
+    // --------------------------- HYBRID PIPELINE -----------------------
     diag.stage = "pipeline:start";
 
     const pipelineResult = await runHybridPipeline({
@@ -191,10 +189,9 @@ export async function POST(req: Request) {
       finalPreview: String(pipelineResult.finalAnswer).slice(0, 240)
     };
 
-    // ---------- FORMATTING ----------
+    // --------------------------- FORMATTING ---------------------------
     diag.stage = "formatting:start";
 
-    // FIX: applyGovernorFormatting must receive ONLY the string
     let finalText = applyGovernorFormatting(pipelineResult.finalAnswer, {
       level: governorOutput.level,
       isFounder: founderMode === true,
@@ -206,7 +203,7 @@ export async function POST(req: Request) {
     diag.stage = "formatting:done";
     diag.finalPreview = (finalText || "").slice(0, 240);
 
-    // ---------- MEMORY WRITE ----------
+    // --------------------------- MEMORY WRITE --------------------------
     diag.stage = "memory:start";
     try {
       await writeMemory(canonicalUserKey, message, finalText);
@@ -217,13 +214,14 @@ export async function POST(req: Request) {
     }
     diag.stage = "memory:done";
 
-    // ---------- RETURN ----------
+    // --------------------------- SUCCESS RESPONSE ----------------------
     diag.stage = "response:success";
 
     const res = NextResponse.json({ text: finalText });
-
-    const diagHeader = JSON.stringify(sanitizeASCII(diag)).slice(0, 900);
-    res.headers.set("x-solace-diag", diagHeader);
+    res.headers.set(
+      "x-solace-diag",
+      JSON.stringify(sanitizeASCII(diag)).slice(0, 900)
+    );
 
     return res;
 
@@ -241,8 +239,10 @@ export async function POST(req: Request) {
       { status: 500 }
     );
 
-    const diagHeader = JSON.stringify(sanitizeASCII(errDiag)).slice(0, 900);
-    res.headers.set("x-solace-diag", diagHeader);
+    res.headers.set(
+      "x-solace-diag",
+      JSON.stringify(sanitizeASCII(errDiag)).slice(0, 900)
+    );
 
     return res;
   }
