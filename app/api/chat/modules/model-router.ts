@@ -1,9 +1,5 @@
 //--------------------------------------------------------------
-// MODEL ROUTER — OPENAI RESPONSES API (FINAL, STRICTLY VALID)
-// Accepts:
-//   1) a string
-//   2) an array of strings
-//   3) an array of { role, text } → converted to strings
+// MODEL ROUTER — OPENAI RESPONSES API (FINAL, TYPE-SAFE)
 //--------------------------------------------------------------
 
 import OpenAI from "openai";
@@ -14,45 +10,75 @@ const client = new OpenAI({
 });
 
 // --------------------------------------------------------------
-// normalize input for Responses API
+// normalize(prompt) → ALWAYS produce a valid ResponseInput
 // --------------------------------------------------------------
-function normalizeInput(input: any): string | string[] {
-  // case 1: simple string
-  if (typeof input === "string") {
-    return sanitizeForModel(input);
+function normalizeInput(prompt: any) {
+  // CASE 1: string → wrap into user message
+  if (typeof prompt === "string") {
+    return [
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: sanitizeForModel(prompt),
+          },
+        ],
+      },
+    ];
   }
 
-  // case 2: array of strings
-  if (Array.isArray(input) && typeof input[0] === "string") {
-    return input.map((s) => sanitizeForModel(s));
+  // CASE 2: array of strings → each becomes a user block
+  if (Array.isArray(prompt) && typeof prompt[0] === "string") {
+    return prompt.map((text) => ({
+      role: "user",
+      content: [
+        {
+          type: "input_text",
+          text: sanitizeForModel(text),
+        },
+      ],
+    }));
   }
 
-  // case 3: array of { role, text }
-  if (Array.isArray(input) && typeof input[0] === "object") {
-    return input.map((msg) =>
-      sanitizeForModel(`[${msg.role.toUpperCase()}]\n${msg.text}`)
-    );
+  // CASE 3: already structured messages → sanitize & return
+  if (Array.isArray(prompt) && typeof prompt[0] === "object") {
+    return prompt.map((msg) => ({
+      role: msg.role ?? "user",
+      content: msg.content.map((c: any) => ({
+        type: "input_text",
+        text: sanitizeForModel(c.text ?? ""),
+      })),
+    }));
   }
 
-  // fallback
-  return sanitizeForModel(String(input));
+  // fallback: stringify safely
+  return [
+    {
+      role: "user",
+      content: [
+        {
+          type: "input_text",
+          text: sanitizeForModel(String(prompt)),
+        },
+      ],
+    },
+  ];
 }
 
 // --------------------------------------------------------------
-// callModel(model, promptOrMessages)
+// callModel(model, prompt)
 // --------------------------------------------------------------
 export async function callModel(model: string, prompt: any) {
   try {
-    const cleanInput = normalizeInput(prompt);
+    const input = normalizeInput(prompt);
 
     const res = await client.responses.create({
       model,
-      input: cleanInput,     // ← ALWAYS valid for Responses API
+      input, // <-- ALWAYS a valid ResponseInput now
     });
 
-    return typeof res.output_text === "string"
-      ? res.output_text
-      : String(res.output_text ?? "");
+    return res.output_text ?? "";
 
   } catch (err) {
     console.error("[MODEL ROUTER ERROR]", err);
