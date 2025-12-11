@@ -1,7 +1,6 @@
 // app/api/chat/modules/model-router.ts
 // --------------------------------------------------------------
-// MODEL ROUTER — Responses API (final, stable, build-safe)
-// Produces deterministic text output via output_text only.
+// MODEL ROUTER — Responses API (final, stable, no reasoning.effort)
 // --------------------------------------------------------------
 
 import OpenAI from "openai";
@@ -39,7 +38,6 @@ export async function callModel(
   messages: Array<{ role: string; content: any }>
 ): Promise<string> {
   try {
-    // Extract actual prompt string from the messages array
     const prompt =
       messages?.[0]?.content?.[0]?.text ??
       messages?.[0]?.content?.text ??
@@ -48,20 +46,15 @@ export async function callModel(
 
     const promptStr = String(prompt);
 
+    // ---------- FIXED: removed reasoning.effort ----------
     const response = await client.responses.create({
       model,
-      input: promptStr, // <-- THIS IS THE ONLY VALID INPUT FORMAT
-      reasoning: { effort: "medium" }
+      input: promptStr,
     });
 
-    // ------------------------------------------------------
-    // SAFE TEXT EXTRACTION (Responses API standard)
-    // ------------------------------------------------------
-    const text =
-      response.output_text ??
-      "[no output_text returned]";
-
+    const text = response.output_text ?? "[no output_text returned]";
     return sanitizeASCII(String(text));
+
   } catch (err: any) {
     console.error("[MODEL ROUTER ERROR]", err);
     return "[model-router error] " + sanitizeASCII(String(err?.message ?? "unknown"));
