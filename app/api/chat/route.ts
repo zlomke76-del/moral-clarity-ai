@@ -1,8 +1,7 @@
 // app/api/chat/route.ts
-// ------------------------------------------------------------------
-// SOLACE CHAT ROUTE — GOVERNOR + HYBRID PIPELINE + IMAGE SUPPORT
-// Returns JSON: { text, imageUrl }
-// ------------------------------------------------------------------
+// --------------------------------------------------------------
+// SOLACE CHAT ROUTE — FINAL VERSION W/ CLEAN SANITIZATION
+// --------------------------------------------------------------
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,44 +17,11 @@ import { updateGovernor } from "@/lib/solace/governor/governor-engine";
 import { applyGovernorFormatting } from "@/lib/solace/governor/governor-icon-format";
 import { writeMemory } from "./modules/memory-writer";
 
+import { sanitizeForClient, sanitizeForMemory } from "@/lib/solace/sanitize";
 import type { PacingLevel } from "@/lib/solace/governor/types";
 
 // -----------------------------------------------------
-// ASCII Sanitize
-// -----------------------------------------------------
-function sanitizeASCII(input: any): any {
-  if (!input) return input;
-
-  if (typeof input === "string") {
-    const rep: Record<string, string> = {
-      "—": "-", "–": "-", "•": "*",
-      "“": "\"", "”": "\"",
-      "‘": "'", "’": "'",
-      "…": "..."
-    };
-
-    let out = input;
-    for (const k in rep) out = out.split(k).join(rep[k]);
-
-    return out
-      .split("")
-      .map(c => (c.charCodeAt(0) > 255 ? "?" : c))
-      .join("");
-  }
-
-  if (Array.isArray(input)) return input.map(x => sanitizeASCII(x));
-
-  if (typeof input === "object") {
-    const out: any = {};
-    for (const k in input) out[k] = sanitizeASCII(input[k]);
-    return out;
-  }
-
-  return input;
-}
-
-// -----------------------------------------------------
-// Pacing clamp
+// clamp pacing
 // -----------------------------------------------------
 function clampToPacingLevel(n: number): PacingLevel {
   if (n < 0) return 0;
@@ -64,7 +30,7 @@ function clampToPacingLevel(n: number): PacingLevel {
 }
 
 // -----------------------------------------------------
-// Supabase session loader
+// Supabase session
 // -----------------------------------------------------
 async function getNodeUser(req: Request) {
   const cookieHeader = req.headers.get("cookie") ?? "";
@@ -77,8 +43,8 @@ async function getNodeUser(req: Request) {
         get: (name) => {
           const match = cookieHeader
             .split(";")
-            .map(c => c.trim())
-            .find(c => c.startsWith(name + "="));
+            .map((c) => c.trim())
+            .find((c) => c.startsWith(name + "="));
           return match ? match.split("=")[1] : undefined;
         },
         set() {},
@@ -92,22 +58,17 @@ async function getNodeUser(req: Request) {
 }
 
 // -----------------------------------------------------
-// POST — MAIN ROUTE
+// POST
 // -----------------------------------------------------
 export async function POST(req: Request) {
-  const diag: any = {
-    stage: "start",
-    ts: new Date().toISOString()
-  };
-
   try {
-    // ---------------- Parse Body ----------------
     const body = await req.json().catch(() => null);
     if (!body?.message) {
       return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
-    const message = sanitizeASCII(String(body.message));
+    const message = body.message; // DO NOT SANITIZE HERE
+
     const {
       history = [],
       workspaceId = null,
@@ -117,18 +78,17 @@ export async function POST(req: Request) {
       userKey: explicitKey
     } = body;
 
-    // ---------------- User ----------------
     const user = await getNodeUser(req);
     const canonicalUserKey = user?.id ?? explicitKey ?? "guest";
 
-    // ---------------- Context ----------------
+    // load context
     let context = await assembleContext(canonicalUserKey, workspaceId, message);
-    context = sanitizeASCII(context);
+    context = sanitizeObjectDeep(context);
 
-    // ---------------- Governor ----------------
-    const governorOutput = updateGovernor(message);
+    // governor
+    const governor = updateGovernor(message);
 
-    // ---------------- Hybrid Pipeline ----------------
+    // hybrid pipeline
     const result = await runHybridPipeline({
       userMessage: message,
       context,
@@ -137,41 +97,38 @@ export async function POST(req: Request) {
       founderMode,
       modeHint,
       canonicalUserKey,
-      governorLevel: governorOutput.level,
-      governorInstructions: governorOutput.instructions
+      governorLevel: governor.level,
+      governorInstructions: governor.instructions
     });
 
-    // ---------------- Formatting ----------------
-    const formatted = applyGovernorFormatting(result.finalAnswer, {
-      level: clampToPacingLevel(governorOutput.level),
-      isFounder: founderMode,
-      emotionalDistress:
-        (governorOutput.signals?.emotionalValence ?? 0.5) < 0.35,
-      decisionContext: governorOutput.signals?.decisionPoint ?? false
-    });
+    // format final output (DO NOT SANITIZE AWAY EMOJIS)
+    const formatted = sanitizeForClient(
+      applyGovernorFormatting(result.finalAnswer, {
+        level: clampToPacingLevel(governor.level),
+        isFounder: founderMode,
+        emotionalDistress: false,
+        decisionContext: false
+      })
+    );
 
-    // ---------------- Memory Write ----------------
+    // store memory safely
     try {
-      await writeMemory(canonicalUserKey, message, formatted);
-    } catch (err) {
-      console.error("[MEMORY WRITE FAILED]", err);
-    }
+      await writeMemory(
+        canonicalUserKey,
+        sanitizeForMemory(message),
+        sanitizeForMemory(formatted)
+      );
+    } catch {}
 
-    // ---------------- Return Success ----------------
     return NextResponse.json({
       text: formatted,
-      imageUrl: result.imageUrl ?? null,
+      imageUrl: result.imageUrl ?? null
     });
 
   } catch (err: any) {
     console.error("[CHAT ROUTE FATAL]", err);
-
     return NextResponse.json(
-      {
-        error: err?.message ?? "ChatRouteError",
-        text: "[error]",
-        imageUrl: null
-      },
+      { error: err?.message ?? "ChatRouteError", text: "[error]", imageUrl: null },
       { status: 500 }
     );
   }
