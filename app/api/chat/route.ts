@@ -1,7 +1,7 @@
-/app/api/chat/route.ts
 // ------------------------------------------------------------------
 // SOLACE CHAT ROUTE — GOVERNOR + HYBRID PIPELINE + IMAGE SUPPORT
 // ------------------------------------------------------------------
+
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
