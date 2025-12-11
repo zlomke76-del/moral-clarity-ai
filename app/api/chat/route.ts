@@ -1,8 +1,8 @@
-// -----------------------------------------------------------------------------
-// SOLACE CHAT ROUTE — FINAL V5
-// Governor v3 + Hybrid Pipeline v4 + Model Router v3
-// Fully ASCII-safe — DIAG tracer included — Zero icon leakage
-// -----------------------------------------------------------------------------
+// app/api/chat/route.ts
+// ------------------------------------------------------------------
+// SOLACE CHAT ROUTE — GOVERNOR + HYBRID PIPELINE (FINAL)
+// ASCII-safe, deterministic, with DIAG tracer.
+// ------------------------------------------------------------------
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,18 +18,24 @@ import { updateGovernor } from "@/lib/solace/governor/governor-engine";
 import { applyGovernorFormatting } from "@/lib/solace/governor/governor-icon-format";
 
 import { writeMemory } from "./modules/memory-writer";
+import type { PacingLevel } from "@/lib/solace/governor/types";
 
-// -----------------------------------------------------------------------------
-// ASCII Sanitizer (route-level)
-// -----------------------------------------------------------------------------
+// ------------------------------------------------------------------
+// ASCII SANITIZER — universal safety layer
+// ------------------------------------------------------------------
 function sanitizeASCII(input: any): any {
   if (!input) return input;
 
   if (typeof input === "string") {
     const rep: Record<string, string> = {
-      "—": "-", "–": "-", "•": "*",
-      "“": "\"", "”": "\"",
-      "‘": "'", "’": "'", "…": "..."
+      "—": "-",
+      "–": "-",
+      "•": "*",
+      "“": "\"",
+      "”": "\"",
+      "‘": "'",
+      "’": "'",
+      "…": "..."
     };
 
     let out = input;
@@ -37,24 +43,33 @@ function sanitizeASCII(input: any): any {
 
     return out
       .split("")
-      .map((c) => (c.charCodeAt(0) > 255 ? "?" : c))
+      .map(c => (c.charCodeAt(0) > 255 ? "?" : c))
       .join("");
   }
 
-  if (Array.isArray(input)) return input.map((v) => sanitizeASCII(v));
+  if (Array.isArray(input)) return input.map(x => sanitizeASCII(x));
 
   if (typeof input === "object") {
-    const o: any = {};
-    for (const k in input) o[k] = sanitizeASCII(input[k]);
-    return o;
+    const clean: any = {};
+    for (const k in input) clean[k] = sanitizeASCII(input[k]);
+    return clean;
   }
 
   return input;
 }
 
-// -----------------------------------------------------------------------------
-// Supabase Session Loader
-// -----------------------------------------------------------------------------
+// ------------------------------------------------------------------
+// FIX: Governor level must be narrowed into PacingLevel (0–5)
+// ------------------------------------------------------------------
+function clampToPacingLevel(n: number): PacingLevel {
+  if (n < 0) return 0;
+  if (n > 5) return 5;
+  return n as PacingLevel;
+}
+
+// ------------------------------------------------------------------
+// SESSION LOADER
+// ------------------------------------------------------------------
 async function getNodeUser(req: Request) {
   const cookieHeader = req.headers.get("cookie") ?? "";
 
@@ -63,11 +78,11 @@ async function getNodeUser(req: Request) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name) {
+        get: name => {
           const match = cookieHeader
             .split(";")
-            .map((v) => v.trim())
-            .find((c) => c.startsWith(name + "="));
+            .map(c => c.trim())
+            .find(c => c.startsWith(name + "="));
           return match ? match.split("=")[1] : undefined;
         },
         set() {},
@@ -80,9 +95,9 @@ async function getNodeUser(req: Request) {
   return data?.user ?? null;
 }
 
-// -----------------------------------------------------------------------------
-// POST /api/chat
-// -----------------------------------------------------------------------------
+// ------------------------------------------------------------------
+// POST /api/chat — MAIN ENTRY
+// ------------------------------------------------------------------
 export async function POST(req: Request) {
   const diag: any = {
     stage: "start",
@@ -90,9 +105,7 @@ export async function POST(req: Request) {
   };
 
   try {
-    // -----------------------------
-    // Parse body
-    // -----------------------------
+    // ---------------------- Parse Body ----------------------
     const body = await req.json().catch(() => null);
     diag.bodyPresent = !!body;
 
@@ -103,7 +116,8 @@ export async function POST(req: Request) {
       return res;
     }
 
-    const message = sanitizeASCII(String(body.message));
+    const rawMessage = String(body.message);
+    const message = sanitizeASCII(rawMessage);
     diag.messagePreview = message.slice(0, 240);
 
     let {
@@ -117,32 +131,27 @@ export async function POST(req: Request) {
 
     diag.mode = { ministryMode, founderMode, modeHint };
 
-    // -----------------------------
-    // History sanitize
-    // -----------------------------
+    // ---------------------- Sanitize History ----------------------
     const sanitizedHistory = Array.isArray(history)
       ? history.map((h: any) => ({
           ...h,
           content: sanitizeASCII(h.content)
         }))
       : [];
+
     diag.historyCount = sanitizedHistory.length;
 
-    // -----------------------------
-    // USER
-    // -----------------------------
+    // ---------------------- USER ----------------------
     const user = await getNodeUser(req);
     const canonicalUserKey = user?.id ?? explicitClientKey ?? "guest";
 
     diag.user = {
       hasSession: !!user,
-      explicitClientKey,
+      explicitClientKey: explicitClientKey ?? null,
       canonicalUserKey
     };
 
-    // -----------------------------
-    // CONTEXT
-    // -----------------------------
+    // ---------------------- CONTEXT ----------------------
     diag.stage = "context-load:start";
     let context = await assembleContext(canonicalUserKey, workspaceId, message);
     context = sanitizeASCII(context);
@@ -158,22 +167,20 @@ export async function POST(req: Request) {
       didResearch: !!context?.didResearch
     };
 
-    // -----------------------------
-    // GOVERNOR
-    // -----------------------------
+    // ---------------------- GOVERNOR ----------------------
     diag.stage = "governor:start";
+
     const governorOutput = updateGovernor(message);
 
     diag.governor = {
       level: governorOutput.level,
       signals: governorOutput.signals,
-      instrPreview: String(governorOutput.instructions).slice(0, 240)
+      instructionsPreview: String(governorOutput.instructions).slice(0, 240)
     };
+
     diag.stage = "governor:done";
 
-    // -----------------------------
-    // HYBRID PIPELINE
-    // -----------------------------
+    // ---------------------- HYBRID PIPELINE ----------------------
     diag.stage = "pipeline:start";
 
     const pipelineResult = await runHybridPipeline({
@@ -183,25 +190,27 @@ export async function POST(req: Request) {
       ministryMode,
       modeHint,
       founderMode,
-      canonicalUserKey
+      canonicalUserKey,
+
+      // Passing governor instructions to pipeline
+      governorLevel: governorOutput.level,
+      governorInstructions: governorOutput.instructions
     });
 
     diag.stage = "pipeline:done";
+
     diag.pipeline = {
       governorLevel: pipelineResult.governorLevel,
-      opt: pipelineResult.optimist?.slice(0, 120) ?? "[none]",
-      sk: pipelineResult.skeptic?.slice(0, 120) ?? "[none]",
-      arb: pipelineResult.arbiter?.slice(0, 120) ?? "[none]",
-      finalPreview: pipelineResult.finalAnswer.slice(0, 240)
+      hasOptimist: !!pipelineResult.optimist,
+      hasSkeptic: !!pipelineResult.skeptic,
+      finalPreview: String(pipelineResult.finalAnswer).slice(0, 240)
     };
 
-    // -----------------------------
-    // Formatting
-    // -----------------------------
+    // ---------------------- FORMATTING ----------------------
     diag.stage = "formatting:start";
 
-    let finalText = applyGovernorFormatting(pipelineResult.finalAnswer, {
-      level: governorOutput.level,
+    const finalText = applyGovernorFormatting(pipelineResult.finalAnswer, {
+      level: clampToPacingLevel(governorOutput.level),
       isFounder: founderMode === true,
       emotionalDistress:
         (governorOutput.signals?.emotionalValence ?? 0.5) < 0.35,
@@ -211,28 +220,31 @@ export async function POST(req: Request) {
     diag.stage = "formatting:done";
     diag.finalPreview = finalText.slice(0, 240);
 
-    // -----------------------------
-    // MEMORY WRITE
-    // -----------------------------
+    // ---------------------- MEMORY WRITE ----------------------
     diag.stage = "memory:start";
+
     try {
       await writeMemory(canonicalUserKey, message, finalText);
       diag.memoryWrite = "ok";
     } catch (err: any) {
+      console.error("[MEMORY WRITE ERROR]", err);
       diag.memoryWrite = "error:" + (err?.message ?? "unknown");
     }
+
     diag.stage = "memory:done";
 
-    // -----------------------------
-    // RETURN SUCCESS
-    // -----------------------------
+    // ---------------------- RETURN SUCCESS ----------------------
     diag.stage = "response:success";
 
     const res = NextResponse.json({ text: finalText });
-    res.headers.set("x-solace-diag", JSON.stringify(sanitizeASCII(diag)).slice(0, 900));
+    res.headers.set(
+      "x-solace-diag",
+      JSON.stringify(sanitizeASCII(diag)).slice(0, 900)
+    );
     return res;
+
   } catch (err: any) {
-    console.error("[CHAT ROUTE ERROR]", err);
+    console.error("[CHAT ROUTE FATAL]", err);
 
     const errDiag = {
       ...diag,
@@ -241,10 +253,15 @@ export async function POST(req: Request) {
     };
 
     const res = NextResponse.json(
-      { error: err?.message ?? "ChatRouteError" },
+      { error: err?.message ?? "ChatRouteError", diag: errDiag },
       { status: 500 }
     );
-    res.headers.set("x-solace-diag", JSON.stringify(sanitizeASCII(errDiag)).slice(0, 900));
+
+    res.headers.set(
+      "x-solace-diag",
+      JSON.stringify(sanitizeASCII(errDiag)).slice(0, 900)
+    );
+
     return res;
   }
 }
