@@ -1,5 +1,6 @@
+// app/api/chat/modules/model-router.ts
 // --------------------------------------------------------------
-// MODEL ROUTER — FINAL, OPENAI RESPONSES API, ASCII-SAFE INPUT
+// MODEL ROUTER — FINAL, OPENAI RESPONSES API
 // --------------------------------------------------------------
 
 import OpenAI from "openai";
@@ -9,31 +10,22 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-// --------------------------------------------------------------
+// -----------------------------
 // callModel(model, prompt)
-// Clean ASCII input → OpenAI Responses API → output_text
-// --------------------------------------------------------------
+// -----------------------------
 export async function callModel(model: string, prompt: string) {
-  // Always sanitize before sending to LLM
   const cleanPrompt = sanitizeForModel(prompt);
 
   try {
     const response = await client.responses.create({
       model,
       input: cleanPrompt,
-      // IMPORTANT:
-      // The new Responses API DOES NOT SUPPORT:
-      //   reasoning: { effort: "medium" }
-      //   response_format: "json"
-      //   temperature/top_p on some models
-      //
-      // We keep the call minimal & valid.
+      // removed: reasoning.effort (not supported)
     });
 
-    // Unified field for output text
     const text = response.output_text ?? "";
-
     return typeof text === "string" ? text : String(text);
+
   } catch (err) {
     console.error("[MODEL ROUTER ERROR]", err);
     return "[Model error]";
