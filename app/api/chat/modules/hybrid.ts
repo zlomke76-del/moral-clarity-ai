@@ -1,124 +1,93 @@
 //--------------------------------------------------------------
-// HYBRID PIPELINE — OPTIMIST → SKEPTIC → ARBITER (FINAL OUTPUT)
-// Returns: { finalAnswer, imageUrl, optimist, skeptic, arbiter }
+// HYBRID PIPELINE — OPTIMIST → SKEPTIC → ARBITER
 //--------------------------------------------------------------
 
 import { callModel } from "./model-router";
 
-// --------------------------------------------------------------
-// SYSTEM PROMPTS (No emojis except Arbiter IF user explicitly asked)
-// --------------------------------------------------------------
+// persona system prompts
 const OPTIMIST_SYSTEM = `
 You are the OPTIMIST lens.
-Your job: produce the most constructive, opportunity-focused interpretation
-of the user’s message — grounded, not delusional.
-No emojis, no icons, no persona commentary, no theatrics.
+Your job: generate the strongest constructive interpretation of the user’s message.
+Grounded, realistic, positive, opportunity-focused.
+No emojis. No icons. No persona names. No formatting.
 Short, clear, actionable.
 `;
 
 const SKEPTIC_SYSTEM = `
 You are the SKEPTIC lens.
-Your job: identify risks, constraints, weak assumptions, and failure modes.
-Do not be cynical; be rigorous.
-No emojis, no icons.
-Short, sharp, realistic.
+Your job: identify risks, constraints, failure modes.
+Not negative for its own sake. Not emotional. No emojis.
+Short, sharp, factual.
 `;
 
 const ARBITER_SYSTEM = `
 You are the ARBITER.
-You read the Optimist and Skeptic outputs and create a SINGLE synthesis
-that is shown to the user.
+Your job: synthesize the Optimist + Skeptic into ONE unified answer shown to the user.
 
 Rules:
-- Never mention Optimist, Skeptic, or Arbiter by name.
-- Never reveal internal steps.
-- Produce ONE unified Solace response.
-- Balance opportunity with risk.
-- You MAY use emojis/icons ONLY IF the user's message explicitly asked for emojis/icons.
-- Otherwise, no emojis or icons.
-- Maintain calm, clarity, and emotional intelligence.
+- You weigh opportunity vs. risk objectively.
+- You NEVER reveal personas or internal steps.
+- You ONLY use emojis/icons if the user explicitly asked.
+- You speak as ONE Solace voice: balanced, clear, directed.
 `;
 
-// --------------------------------------------------------------
-// Build persona prompt
-// --------------------------------------------------------------
-function buildPrompt(system: string, userMsg: string) {
-  return `${system}\nUSER MESSAGE:\n${userMsg}`;
+// build prompt helper
+function buildPrompt(system: string, userMsg: string): string {
+  return `${system}\nUser: ${userMsg}`;
 }
 
-// --------------------------------------------------------------
-// Detect if the user explicitly requested emojis/icons
-// --------------------------------------------------------------
-function userWantsIcons(msg: string): boolean {
-  const triggers = ["emoji", "emojis", "icon", "icons", "with emojis", "with icons"];
-  const lower = msg.toLowerCase();
-  return triggers.some(t => lower.includes(t));
-}
-
-// --------------------------------------------------------------
-// MAIN RUNNER
-// --------------------------------------------------------------
-export async function runHybridPipeline({
-  userMessage,
-  governorLevel,
-  governorInstructions,
-}: {
+export async function runHybridPipeline(args: {
   userMessage: string;
+  context: any;
+  history: any[];
+  ministryMode: boolean;
+  founderMode: boolean;
+  modeHint: string;
+  canonicalUserKey: string;
   governorLevel: number;
   governorInstructions: string;
 }) {
-  // ----------------------------------------------------------
+  const { userMessage } = args;
+
+  // ---------------------------
   // 1) OPTIMIST
-  // ----------------------------------------------------------
+  // ---------------------------
   const optimist = await callModel(
     "gpt-5.1-mini",
     buildPrompt(OPTIMIST_SYSTEM, userMessage)
   );
 
-  // ----------------------------------------------------------
+  // ---------------------------
   // 2) SKEPTIC
-  // ----------------------------------------------------------
+  // ---------------------------
   const skeptic = await callModel(
     "gpt-5.1-mini",
     buildPrompt(SKEPTIC_SYSTEM, userMessage)
   );
 
-  // ----------------------------------------------------------
-  // 3) ARBITER (FINAL OUTPUT SHOWN TO USER)
-  // ----------------------------------------------------------
-  const allowIcons = userWantsIcons(userMessage);
-
-  const arbiterInput = `
+  // ---------------------------
+  // 3) ARBITER
+  // ---------------------------
+  const arbPrompt = `
 ${ARBITER_SYSTEM}
 
-GOVERNOR LEVEL: ${governorLevel}
-GOVERNOR INSTRUCTIONS:
-${governorInstructions}
-
---- OPTIMIST VIEW ---
+OPTIMIST VIEW:
 ${optimist}
 
---- SKEPTIC VIEW ---
+SKEPTIC VIEW:
 ${skeptic}
 
---- USER MESSAGE ---
+USER MESSAGE:
 ${userMessage}
+`;
 
-THE USER ${allowIcons ? "EXPLICITLY REQUESTED" : "DID NOT REQUEST"} EMOJIS/ICONS.
-  `;
-
-  const arbiter = await callModel("gpt-5.1", arbiterInput);
-
-  // FINAL OUTPUT SHOWN TO USER
-  const finalAnswer = arbiter;
+  const arbiter = await callModel("gpt-5.1", arbPrompt);
 
   return {
-    finalAnswer,
-    imageUrl: null, // Image handled at route-level or later extension
+    finalAnswer: arbiter,
     optimist,
     skeptic,
     arbiter,
-    governorLevel,
-    governorInstructions,
+    imageUrl: null,
   };
 }
