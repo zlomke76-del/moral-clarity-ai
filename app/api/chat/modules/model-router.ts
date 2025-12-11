@@ -1,62 +1,83 @@
 // app/api/chat/modules/model-router.ts
 // --------------------------------------------------------------
-// MODEL ROUTER — Responses API (final, stable, no reasoning.effort)
+// MODEL ROUTER — Clean, strict, OpenAI Responses API compatible
 // --------------------------------------------------------------
 
 import OpenAI from "openai";
+import {
+  sanitizeForModel,
+  sanitizeForMemory
+} from "@/lib/solace/sanitize";
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
+  apiKey: process.env.OPENAI_API_KEY!
 });
 
-// --------------------------------------------------------------
-// ASCII Sanitize
-// --------------------------------------------------------------
-function sanitizeASCII(input: string): string {
-  if (!input) return "";
-
-  const rep: Record<string, string> = {
-    "—": "-", "–": "-", "•": "*",
-    "“": "\"", "”": "\"",
-    "‘": "'", "’": "'", "…": "..."
-  };
-
-  let out = input;
-  for (const k in rep) out = out.split(k).join(rep[k]);
-
-  return out
-    .split("")
-    .map((c) => (c.charCodeAt(0) > 255 ? "?" : c))
-    .join("");
-}
-
-// --------------------------------------------------------------
-// Correct model invocation for Responses API
-// --------------------------------------------------------------
+/**
+ * callModel(model: string, messages: Array<{ role, content }>)
+ *
+ * All hybrid stages use this router. It accepts a simple
+ * array of { role, content } and returns a plain string.
+ */
 export async function callModel(
   model: string,
-  messages: Array<{ role: string; content: any }>
+  messages: Array<{ role: string; content: string }>
 ): Promise<string> {
   try {
-    const prompt =
-      messages?.[0]?.content?.[0]?.text ??
-      messages?.[0]?.content?.text ??
-      messages?.[0]?.content ??
-      "[empty prompt]";
+    // ----------------------------------------------------------
+    // Convert Solace's internal messages → Responses API input
+    // Responses API wants *string or structured input_text*
+    // ----------------------------------------------------------
 
-    const promptStr = String(prompt);
+    const sanitizedMessages = messages.map((m) => ({
+      role: m.role,
+      content: [
+        {
+          type: "input_text",
+          text: sanitizeForModel(String(m.content || ""))
+        }
+      ]
+    }));
 
-    // ---------- FIXED: removed reasoning.effort ----------
+    // ----------------------------------------------------------
+    // Create the response via OpenAI Responses API
+    // ----------------------------------------------------------
     const response = await client.responses.create({
       model,
-      input: promptStr,
+      input: sanitizedMessages,
+      reasoning: { effort: "medium" }
     });
 
-    const text = response.output_text ?? "[no output_text returned]";
-    return sanitizeASCII(String(text));
+    // ----------------------------------------------------------
+    // Extract text output reliably
+    // Priority:
+    //   1. output_text (easy mode)
+    //   2. output[0].content[0].text (structured mode)
+    // ----------------------------------------------------------
 
-  } catch (err: any) {
+    let text: string | undefined = undefined;
+
+    if (response.output_text) {
+      text = response.output_text;
+    } else if (Array.isArray(response.output)) {
+      const first = response.output[0];
+
+      // output items contain "content" only when type=message
+      if (first && "content" in first && Array.isArray(first.content)) {
+        const c0 = first.content[0];
+        if (c0 && "text" in c0) {
+          text = c0.text;
+        }
+      }
+    }
+
+    if (!text) text = "[empty response]";
+
+    // DO NOT sanitize UI output here — return full unicode
+    return text;
+
+  } catch (err) {
     console.error("[MODEL ROUTER ERROR]", err);
-    return "[model-router error] " + sanitizeASCII(String(err?.message ?? "unknown"));
+    return "[model router failure]";
   }
 }
