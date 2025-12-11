@@ -1,4 +1,3 @@
-// app/api/chat/route.ts
 // ------------------------------------------------------------------
 // SOLACE CHAT ROUTE — GOVERNOR + HYBRID PIPELINE + IMAGE SUPPORT
 // Returns JSON: { text, imageUrl }
@@ -17,11 +16,10 @@ import { runHybridPipeline } from "./modules/hybrid";
 import { updateGovernor } from "@/lib/solace/governor/governor-engine";
 import { applyGovernorFormatting } from "@/lib/solace/governor/governor-icon-format";
 import { writeMemory } from "./modules/memory-writer";
-
 import type { PacingLevel } from "@/lib/solace/governor/types";
 
 // -----------------------------------------------------
-// ASCII Sanitize
+// ASCII Sanitize (lightweight, preserves emojis/icons)
 // -----------------------------------------------------
 function sanitizeASCII(input: any): any {
   if (!input) return input;
@@ -31,19 +29,22 @@ function sanitizeASCII(input: any): any {
       "—": "-", "–": "-", "•": "*",
       "“": "\"", "”": "\"",
       "‘": "'", "’": "'",
-      "…": "..."
+      "…": "...",
     };
     let out = input;
     for (const k in rep) out = out.split(k).join(rep[k]);
-    return out.split("").map((c) => (c.charCodeAt(0) > 255 ? "?" : c)).join("");
+
+    return out
+      .split("")
+      .map((c) => (c.charCodeAt(0) > 255 ? c : c))
+      .join("");
   }
 
-  if (Array.isArray(input)) return input.map((x) => sanitizeASCII(x));
-
+  if (Array.isArray(input)) return input.map(sanitizeASCII);
   if (typeof input === "object") {
-    const out: any = {};
-    for (const k in input) out[k] = sanitizeASCII(input[k]);
-    return out;
+    const o: any = {};
+    for (const k in input) o[k] = sanitizeASCII(input[k]);
+    return o;
   }
 
   return input;
@@ -62,23 +63,23 @@ function clampToPacingLevel(n: number): PacingLevel {
 // Supabase session loader
 // -----------------------------------------------------
 async function getNodeUser(req: Request) {
-  const cookieHeader = req.headers.get("cookie") ?? "";
+  const cookies = req.headers.get("cookie") ?? "";
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: (name) => {
-          const match = cookieHeader
+        get(name) {
+          const match = cookies
             .split(";")
             .map((c) => c.trim())
             .find((c) => c.startsWith(name + "="));
           return match ? match.split("=")[1] : undefined;
         },
         set() {},
-        remove() {}
-      }
+        remove() {},
+      },
     }
   );
 
@@ -96,57 +97,57 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
-    const message = sanitizeASCII(String(body.message));
+    const userMessage = sanitizeASCII(String(body.message));
+
     const {
       history = [],
       workspaceId = null,
       ministryMode = false,
       founderMode = false,
       modeHint = "Neutral",
-      userKey: explicitKey
+      userKey: explicitKey,
     } = body;
 
     const user = await getNodeUser(req);
     const canonicalUserKey = user?.id ?? explicitKey ?? "guest";
 
-    // context
-    let context = await assembleContext(canonicalUserKey, workspaceId, message);
+    let context = await assembleContext(canonicalUserKey, workspaceId, userMessage);
     context = sanitizeASCII(context);
 
-    // run governor
-    const gov = updateGovernor(message);
+    const gov = updateGovernor(userMessage);
 
-    // run triad → arbiter
+    // ------------------------------
+    // Triad → Arbiter Final Answer
+    // ------------------------------
     const pipeline = await runHybridPipeline({
-      userMessage: message,
+      userMessage,
       context,
       history,
       ministryMode,
       founderMode,
       modeHint,
       canonicalUserKey,
+
       governorLevel: gov.level,
-      governorInstructions: gov.instructions
+      governorInstructions: gov.instructions,
     });
 
-    // governor formatting (only modifies final answer)
     const formatted = applyGovernorFormatting(pipeline.finalAnswer, {
       level: clampToPacingLevel(gov.level),
-      isFounder: founderMode === true,
+      isFounder: !!founderMode,
       emotionalDistress: (gov.signals?.emotionalValence ?? 0.5) < 0.35,
-      decisionContext: gov.signals?.decisionPoint ?? false
+      decisionContext: !!gov.signals?.decisionPoint,
     });
 
-    // memory write
+    // Memory write
     try {
-      await writeMemory(canonicalUserKey, message, formatted);
+      await writeMemory(canonicalUserKey, userMessage, formatted);
     } catch {}
 
     return NextResponse.json({
       text: formatted,
-      imageUrl: pipeline.imageUrl ?? null
+      imageUrl: pipeline.imageUrl ?? null,
     });
-
   } catch (err: any) {
     console.error("[CHAT ROUTE FATAL]", err);
     return NextResponse.json(
