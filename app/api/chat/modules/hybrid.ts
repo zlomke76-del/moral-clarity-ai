@@ -1,171 +1,107 @@
-// ---------------------------------------------------------------
-// HYBRID SUPER-AI PIPELINE (Optimist → Skeptic → Arbiter)
-// Image-Request Bypass → Direct generateImage()
-// Text model calls → sanitizeForModel()
-// ---------------------------------------------------------------
+/app/api/chat/modules/hybrid.ts
+//--------------------------------------------------------------
+// HYBRID PIPELINE — OPTIMIST → SKEPTIC → ARBITER (FINAL ONLY)
+//--------------------------------------------------------------
 
-import { updateGovernor } from "@/lib/solace/governor/governor-engine";
-import { sanitizeForModel } from "@/lib/solace/sanitize";
 import { callModel } from "./model-router";
-import { generateImage } from "./image-router";
 
-export type HybridInputs = {
+type PersonaOut = {
+  role: "optimist" | "skeptic" | "arbiter";
+  text: string;
+};
+
+// --------------------------------------------------------------
+// PROMPTS — tightly engineered, no emoji except arbiter if needed
+// --------------------------------------------------------------
+const OPTIMIST_SYSTEM = `
+You are the OPTIMIST lens. 
+Your job: generate the most constructive, opportunity-focused interpretation
+of the user’s message — grounded, not delusional.
+No icons, no emojis, no formatting flourishes.
+Short, clear, actionable.
+`;
+
+const SKEPTIC_SYSTEM = `
+You are the SKEPTIC lens.
+Your job: challenge assumptions, identify risks, constraints, failure modes.
+Avoid negativity for its own sake. Avoid emojis.
+Short, sharp, realistic.
+`;
+
+const ARBITER_SYSTEM = `
+You are the ARBITER.
+Your job: read the Optimist + Skeptic outputs and produce a SINGLE synthesis.
+This is the ONLY output that is shown to the user.
+
+Rules:
+- You weigh opportunity vs. risk.
+- You produce balance, clarity, direction.
+- You may use emojis/icons ONLY IF they match the user’s explicit request.
+- Never reveal personas or internal steps.
+- NEVER output “optimist”, “skeptic”, “arbiter” names.
+- Your answer must read as ONE unified Solace response.
+`;
+
+// --------------------------------------------------------------
+// Build persona prompt
+// --------------------------------------------------------------
+function buildPrompt(system: string, userMsg: string) {
+  return `${system}\nUser: ${userMsg}`;
+}
+
+// --------------------------------------------------------------
+// Main hybrid function
+// --------------------------------------------------------------
+export async function runHybridPipeline(args: {
   userMessage: string;
   context: any;
   history: any[];
   ministryMode: boolean;
-  modeHint: string;
   founderMode: boolean;
-  canonicalUserKey: string | null;
+  modeHint: string;
+  canonicalUserKey: string;
 
-  governorLevel?: number;
-  governorInstructions?: string;
-};
+  governorLevel: number;
+  governorInstructions: string;
+}) {
+  const { userMessage } = args;
 
-// ---------------------------------------------------------------
-// IMAGE-REQUEST DETECTION (same logic as route.ts)
-// ---------------------------------------------------------------
-function isImageRequest(msg: string): boolean {
-  if (!msg) return false;
-  const lower = msg.toLowerCase();
+  // ----------------------------------------------------------
+  // 1) OPTIMIST
+  // ----------------------------------------------------------
+  const opt = await callModel(
+    "gpt-5.1-mini",
+    buildPrompt(OPTIMIST_SYSTEM, userMessage)
+  );
 
-  const triggers = [
-    "generate an image",
-    "make an image",
-    "make me an image",
-    "create an illustration",
-    "create image",
-    "picture of",
-    "image of",
-    "draw ",
-    "render ",
-  ];
+  // ----------------------------------------------------------
+  // 2) SKEPTIC
+  // ----------------------------------------------------------
+  const skp = await callModel(
+    "gpt-5.1-mini",
+    buildPrompt(SKEPTIC_SYSTEM, userMessage)
+  );
 
-  return triggers.some((t) => lower.includes(t));
-}
+  // ----------------------------------------------------------
+  // 3) ARBITER — ONLY ONE SHOWN TO USER
+  // ----------------------------------------------------------
+  const arbInput = `
+${ARBITER_SYSTEM}
 
-// ---------------------------------------------------------------
-// PROMPT BUILDER (sanitized for model)
-// ---------------------------------------------------------------
-function buildStagePrompt(
-  stage: "OPTIMIST" | "SKEPTIC" | "ARBITER",
-  inputs: HybridInputs,
-  priorOpt?: string,
-  priorSkep?: string
-) {
-  const { userMessage, context, history, governorInstructions } = inputs;
+--- OPTIMIST VIEW ---
+${opt}
 
-  const memory = JSON.stringify(context.memoryPack || {}, null, 2);
+--- SKEPTIC VIEW ---
+${skp}
 
-  let append = "";
-  if (stage === "SKEPTIC" && priorOpt) {
-    append = `\nReview optimist:\n${priorOpt}\n`;
-  }
-  if (stage === "ARBITER") {
-    append = `
-SYNTHESIZE:
-Optimist:
-${priorOpt || "[none]"}
-Skeptic:
-${priorSkep || "[none]"}
-Produce ONE final answer.
-`.trim();
-  }
+--- USER MESSAGE ---
+${userMessage}
+  `;
 
-  const prompt = `
-You are Solace.
+  const finalAnswer = await callModel("gpt-5.1", arbInput);
 
-GOVERNOR:
-${governorInstructions}
-
-ROLE: ${stage}
-
-USER MESSAGE:
-"${userMessage}"
-
-MEMORY:
-${memory}
-
-HISTORY:
-${JSON.stringify(history, null, 2)}
-
-${append}
-
-Return ONLY the stage output.
-  `.trim();
-
-  return sanitizeForModel(prompt);
-}
-
-// ---------------------------------------------------------------
-// PIPELINE
-// ---------------------------------------------------------------
-export async function runHybridPipeline(inputs: HybridInputs) {
-  const gov = updateGovernor(inputs.userMessage);
-  inputs.governorLevel = gov.level;
-  inputs.governorInstructions = gov.instructions;
-
-  // -------------------------------------------------------------
-  // IMAGE MODE → bypass LLM entirely
-  // -------------------------------------------------------------
-  if (isImageRequest(inputs.userMessage)) {
-    try {
-      const url = await generateImage(inputs.userMessage); // RAW PROMPT
-
-      return {
-        finalAnswer: `Here you go:\n\n![image](${url})`,
-        imageUrl: url,
-        governorLevel: gov.level,
-        governorInstructions: gov.instructions,
-        optimist: "",
-        skeptic: "",
-        arbiter: "",
-      };
-    } catch (err) {
-      return {
-        finalAnswer: "[Image generation failed]",
-        imageUrl: null,
-        governorLevel: gov.level,
-        governorInstructions: gov.instructions,
-        optimist: "",
-        skeptic: "",
-        arbiter: "",
-      };
-    }
-  }
-
-  // -------------------------------------------------------------
-  // TEXT PIPELINE
-  // -------------------------------------------------------------
-  try {
-    const p1 = buildStagePrompt("OPTIMIST", inputs);
-    const optimist = await callModel("gpt-4.1", p1);
-
-    const p2 = buildStagePrompt("SKEPTIC", inputs, optimist);
-    const skeptic = await callModel("gpt-4.1", p2);
-
-    const p3 = buildStagePrompt("ARBITER", inputs, optimist, skeptic);
-    const arbiter = await callModel("gpt-4.1", p3);
-
-    return {
-      finalAnswer: arbiter || "[arbiter failed]",
-      imageUrl: null,
-      governorLevel: gov.level,
-      governorInstructions: gov.instructions,
-      optimist,
-      skeptic,
-      arbiter,
-    };
-  } catch (err) {
-    console.error("[HYBRID ERROR]", err);
-    return {
-      finalAnswer: "[Hybrid pipeline error]",
-      imageUrl: null,
-      governorLevel: gov.level,
-      governorInstructions: gov.instructions,
-      optimist: "",
-      skeptic: "",
-      arbiter: "",
-    };
-  }
+  return {
+    finalAnswer,
+    imageUrl: null,
+  };
 }
