@@ -1,16 +1,14 @@
-// app/api/chat/modules/hybrid.ts
 // ---------------------------------------------------------------
 // HYBRID SUPER-AI PIPELINE (Optimist → Skeptic → Arbiter)
-// Image mode bypass – returns { finalAnswer, imageUrl }
+// Image-Request Bypass → Direct generateImage()
+// Text model calls → sanitizeForModel()
 // ---------------------------------------------------------------
 
 import { updateGovernor } from "@/lib/solace/governor/governor-engine";
+import { sanitizeForModel } from "@/lib/solace/sanitize";
 import { callModel } from "./model-router";
 import { generateImage } from "./image-router";
 
-// -----------------------------
-// Types
-// -----------------------------
 export type HybridInputs = {
   userMessage: string;
   context: any;
@@ -24,54 +22,31 @@ export type HybridInputs = {
   governorInstructions?: string;
 };
 
-// -----------------------------
-// ASCII Sanitize
-// -----------------------------
-function sanitizeASCII(input: string): string {
-  if (!input) return "";
-  const rep: Record<string, string> = {
-    "—": "-", "–": "-", "•": "*",
-    "“": "\"", "”": "\"",
-    "‘": "'", "’": "'",
-    "…": "..."
-  };
-
-  let out = input;
-  for (const k in rep) out = out.split(k).join(rep[k]);
-
-  return out
-    .split("")
-    .map((c) => (c.charCodeAt(0) > 255 ? "?" : c))
-    .join("");
-}
-
 // ---------------------------------------------------------------
-// Generous Image-Request Detection
+// IMAGE-REQUEST DETECTION (same logic as route.ts)
 // ---------------------------------------------------------------
 function isImageRequest(msg: string): boolean {
   if (!msg) return false;
   const lower = msg.toLowerCase();
 
   const triggers = [
-    "make me an image",
     "generate an image",
-    "create an image",
-    "make a picture",
-    "generate a picture",
-    "show me a picture",
-    "show me an image",
+    "make an image",
+    "make me an image",
+    "create an illustration",
+    "create image",
+    "picture of",
+    "image of",
     "draw ",
     "render ",
-    "picture of",
-    "image of"
   ];
 
   return triggers.some((t) => lower.includes(t));
 }
 
-// -----------------------------
-// Build Stage Prompt
-// -----------------------------
+// ---------------------------------------------------------------
+// PROMPT BUILDER (sanitized for model)
+// ---------------------------------------------------------------
 function buildStagePrompt(
   stage: "OPTIMIST" | "SKEPTIC" | "ARBITER",
   inputs: HybridInputs,
@@ -79,38 +54,31 @@ function buildStagePrompt(
   priorSkep?: string
 ) {
   const { userMessage, context, history, governorInstructions } = inputs;
+
   const memory = JSON.stringify(context.memoryPack || {}, null, 2);
 
   let append = "";
   if (stage === "SKEPTIC" && priorOpt) {
-    append = `\nReview the optimist's reasoning:\n${priorOpt}\n`;
+    append = `\nReview optimist:\n${priorOpt}\n`;
   }
   if (stage === "ARBITER") {
     append = `
 SYNTHESIZE:
-Optimist said:
+Optimist:
 ${priorOpt || "[none]"}
-
-Skeptic said:
+Skeptic:
 ${priorSkep || "[none]"}
-
-Produce ONE final answer only.
+Produce ONE final answer.
 `.trim();
   }
 
-  const gov = `GOVERNOR:\n${governorInstructions}`;
-
   const prompt = `
 You are Solace.
-Follow the Abrahamic Code:
-- Truth
-- Compassion
-- Accountability
-- Stewardship
+
+GOVERNOR:
+${governorInstructions}
 
 ROLE: ${stage}
-
-${gov}
 
 USER MESSAGE:
 "${userMessage}"
@@ -119,19 +87,18 @@ MEMORY:
 ${memory}
 
 HISTORY:
-${JSON.stringify(history || [], null, 2)}
+${JSON.stringify(history, null, 2)}
 
 ${append}
 
-INSTRUCTIONS:
-Return ONLY the stage-appropriate output.
-No meta. No role references.
-`;
-  return sanitizeASCII(prompt);
+Return ONLY the stage output.
+  `.trim();
+
+  return sanitizeForModel(prompt);
 }
 
 // ---------------------------------------------------------------
-// RUN HYBRID PIPELINE
+// PIPELINE
 // ---------------------------------------------------------------
 export async function runHybridPipeline(inputs: HybridInputs) {
   const gov = updateGovernor(inputs.userMessage);
@@ -139,24 +106,22 @@ export async function runHybridPipeline(inputs: HybridInputs) {
   inputs.governorInstructions = gov.instructions;
 
   // -------------------------------------------------------------
-  // IMAGE MODE — bypass text pipeline
+  // IMAGE MODE → bypass LLM entirely
   // -------------------------------------------------------------
   if (isImageRequest(inputs.userMessage)) {
     try {
-      const url = await generateImage(inputs.userMessage);
-
-      const markdown = sanitizeASCII(`Here you go:\n\n![image](${url})`);
+      const url = await generateImage(inputs.userMessage); // RAW PROMPT
 
       return {
-        finalAnswer: markdown,
-        imageUrl: url,              // <- PASSED THROUGH
+        finalAnswer: `Here you go:\n\n![image](${url})`,
+        imageUrl: url,
         governorLevel: gov.level,
         governorInstructions: gov.instructions,
         optimist: "",
         skeptic: "",
-        arbiter: markdown
+        arbiter: "",
       };
-    } catch {
+    } catch (err) {
       return {
         finalAnswer: "[Image generation failed]",
         imageUrl: null,
@@ -164,39 +129,35 @@ export async function runHybridPipeline(inputs: HybridInputs) {
         governorInstructions: gov.instructions,
         optimist: "",
         skeptic: "",
-        arbiter: ""
+        arbiter: "",
       };
     }
   }
 
   // -------------------------------------------------------------
-  // NORMAL TEXT PIPELINE
+  // TEXT PIPELINE
   // -------------------------------------------------------------
   try {
-    const promptOptimist = buildStagePrompt("OPTIMIST", inputs);
-    const optimist = await callModel("gpt-4.1", promptOptimist);
+    const p1 = buildStagePrompt("OPTIMIST", inputs);
+    const optimist = await callModel("gpt-4.1", p1);
 
-    const promptSkeptic = buildStagePrompt("SKEPTIC", inputs, optimist);
-    const skeptic = await callModel("gpt-4.1", promptSkeptic);
+    const p2 = buildStagePrompt("SKEPTIC", inputs, optimist);
+    const skeptic = await callModel("gpt-4.1", p2);
 
-    const promptArbiter = buildStagePrompt(
-      "ARBITER",
-      inputs,
-      optimist,
-      skeptic
-    );
-    const arbiter = await callModel("gpt-4.1", promptArbiter);
+    const p3 = buildStagePrompt("ARBITER", inputs, optimist, skeptic);
+    const arbiter = await callModel("gpt-4.1", p3);
 
     return {
-      finalAnswer: sanitizeASCII(arbiter || "[arbiter failed]"),
-      imageUrl: null, // <- IMPORTANT
+      finalAnswer: arbiter || "[arbiter failed]",
+      imageUrl: null,
       governorLevel: gov.level,
       governorInstructions: gov.instructions,
-      optimist: sanitizeASCII(optimist || ""),
-      skeptic: sanitizeASCII(skeptic || ""),
-      arbiter: sanitizeASCII(arbiter || "")
+      optimist,
+      skeptic,
+      arbiter,
     };
-  } catch {
+  } catch (err) {
+    console.error("[HYBRID ERROR]", err);
     return {
       finalAnswer: "[Hybrid pipeline error]",
       imageUrl: null,
@@ -204,7 +165,7 @@ export async function runHybridPipeline(inputs: HybridInputs) {
       governorInstructions: gov.instructions,
       optimist: "",
       skeptic: "",
-      arbiter: ""
+      arbiter: "",
     };
   }
 }
