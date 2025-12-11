@@ -1,5 +1,5 @@
 //--------------------------------------------------------------
-// MODEL ROUTER — OPENAI RESPONSES API (FINAL, SAFE VERSION)
+// MODEL ROUTER — OPENAI RESPONSES API (FINAL VALID VERSION)
 //--------------------------------------------------------------
 
 import OpenAI from "openai";
@@ -10,84 +10,36 @@ const client = new OpenAI({
 });
 
 // --------------------------------------------------------------
-// normalizeInput(prompt): ALWAYS produce ResponseInput
+// normalizeInput(prompt): ALWAYS produce valid ResponseInput
 // --------------------------------------------------------------
 function normalizeInput(prompt: any) {
-  // CASE 1: simple string → wrap
+  // CASE 1: simple string
   if (typeof prompt === "string") {
-    return [
-      {
-        role: "user",
-        content: [
-          {
-            type: "input_text",
-            text: sanitizeForModel(prompt),
-          },
-        ],
-      },
-    ];
+    return sanitizeForModel(prompt);
   }
 
-  // CASE 2: array of strings → convert all to user messages
+  // CASE 2: array of strings
   if (Array.isArray(prompt) && prompt.every((p) => typeof p === "string")) {
-    return prompt.map((text) => ({
-      role: "user",
-      content: [
-        {
-          type: "input_text",
-          text: sanitizeForModel(text),
-        },
-      ],
+    return prompt.map((p) => sanitizeForModel(p));
+  }
+
+  // CASE 3: array of objects with { role, content }
+  if (
+    Array.isArray(prompt) &&
+    prompt.every((p) => typeof p === "object" && p.role && p.content)
+  ) {
+    return prompt.map((msg) => ({
+      role: msg.role,
+      content: sanitizeForModel(
+        typeof msg.content === "string"
+          ? msg.content
+          : JSON.stringify(msg.content)
+      ),
     }));
   }
 
-  // CASE 3: array of objects (structured messages)
-  if (Array.isArray(prompt) && prompt.every((p) => typeof p === "object")) {
-    return prompt.map((msg) => {
-      const role = msg.role ?? "user";
-      const content = Array.isArray(msg.content)
-        ? msg.content.map((c: any) => ({
-            type: "input_text",
-            text: sanitizeForModel(c?.text ?? ""),
-          }))
-        : [
-            {
-              type: "input_text",
-              text: sanitizeForModel(String(msg?.text ?? "")),
-            },
-          ];
-
-      return { role, content };
-    });
-  }
-
-  // CASE 4: unexpected objects → stringify
-  if (typeof prompt === "object") {
-    return [
-      {
-        role: "user",
-        content: [
-          {
-            type: "input_text",
-            text: sanitizeForModel(JSON.stringify(prompt)),
-          },
-        ],
-      },
-    ];
-  }
-
-  // FALLBACK: everything else → string wrapper
-  return [
-    {
-      role: "user",
-      content: [
-        {
-          type: "input_text",
-          text: sanitizeForModel(String(prompt)),
-        },
-      ],
-    },
-  ];
+  // FALLBACK: stringify anything else
+  return sanitizeForModel(String(prompt));
 }
 
 // --------------------------------------------------------------
@@ -99,7 +51,7 @@ export async function callModel(model: string, prompt: any) {
 
     const res = await client.responses.create({
       model,
-      input: cleanInput,
+      input: cleanInput, // MUST be string or valid message block
     });
 
     return typeof res.output_text === "string"
