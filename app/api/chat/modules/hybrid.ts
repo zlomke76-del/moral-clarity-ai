@@ -1,16 +1,16 @@
 //--------------------------------------------------------------
 // HYBRID PIPELINE — OPTIMIST → SKEPTIC → ARBITER
 // Persona + Memory injected ONLY into Arbiter
-// PURE STRING PROMPTS (Required by Responses API)
+// Uses proper Responses API message format
 //--------------------------------------------------------------
 
 import { callModel } from "./model-router";
 import { logTriadDiagnostics } from "./triad-diagnostics";
 import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
 
-//-----------------------------
-// SYSTEM TEXT FOR TRIAD
-//-----------------------------
+// --------------------------------------------------------------
+// SYSTEM TEXT FOR OPTIMIST + SKEPTIC (STRING MODE ONLY)
+// --------------------------------------------------------------
 const OPTIMIST_SYSTEM = `
 You are the OPTIMIST lens.
 Your job is to produce the strongest constructive interpretation
@@ -38,12 +38,12 @@ Rules:
 - Speak as ONE Solace voice.
 `;
 
-//-----------------------------
-function wrap(system: string, msg: string): string {
-  return `${system}\nUser: ${msg}`;
+// --------------------------------------------------------------
+function build(system: string, userMsg: string): string {
+  return `${system}\nUser: ${userMsg}`;
 }
 
-//--------------------------------------------------------------
+// --------------------------------------------------------------
 export async function runHybridPipeline(args: {
   userMessage: string;
   context: any;
@@ -65,53 +65,54 @@ export async function runHybridPipeline(args: {
     governorInstructions,
   } = args;
 
-  //============================================================
-  // 1. OPTIMIST
-  //============================================================
+  // ============================================================
+  // 1. OPTIMIST (STRING INPUT)
+  // ============================================================
+  const optPrompt = build(OPTIMIST_SYSTEM, userMessage);
+
   const optStart = performance.now();
-  let optimist = await callModel("gpt-4.1-mini", wrap(OPTIMIST_SYSTEM, userMessage));
+  let optimist = await callModel("gpt-4.1-mini", optPrompt);
   const optEnd = performance.now();
 
   logTriadDiagnostics({
     stage: "optimist",
     model: "gpt-4.1-mini",
-    prompt: wrap(OPTIMIST_SYSTEM, userMessage),
+    prompt: optPrompt,
     output: optimist,
     started: optStart,
     finished: optEnd,
   });
 
-  if (!optimist || optimist.includes("[Model error]")) {
+  if (!optimist || optimist.includes("[Model error]"))
     optimist = "Optimist failed.";
-  }
 
-  //============================================================
-  // 2. SKEPTIC
-  //============================================================
+  // ============================================================
+  // 2. SKEPTIC (STRING INPUT)
+  // ============================================================
+  const skpPrompt = build(SKEPTIC_SYSTEM, userMessage);
+
   const skpStart = performance.now();
-  let skeptic = await callModel("gpt-4.1-mini", wrap(SKEPTIC_SYSTEM, userMessage));
+  let skeptic = await callModel("gpt-4.1-mini", skpPrompt);
   const skpEnd = performance.now();
 
   logTriadDiagnostics({
     stage: "skeptic",
     model: "gpt-4.1-mini",
-    prompt: wrap(SKEPTIC_SYSTEM, userMessage),
+    prompt: skpPrompt,
     output: skeptic,
     started: skpStart,
     finished: skpEnd,
   });
 
-  if (!skeptic || skeptic.includes("[Model error]")) {
+  if (!skeptic || skeptic.includes("[Model error]"))
     skeptic = "Skeptic failed.";
-  }
 
-  //============================================================
-  // 3. ARBITER — Persona + Memory + Governor + Triad Inputs
-  //============================================================
+  // ============================================================
+  // 3. ARBITER — STRUCTURED RESPONSES API FORMAT (CRITICAL FIX)
+  // ============================================================
 
-  const personaBlock = buildSolaceSystemPrompt(
-    "core",
-    `
+  // Build Solace persona + memory pack
+  const personaSystem = buildSolaceSystemPrompt("core", `
 Governor Level: ${governorLevel}
 Governor Instructions: ${governorInstructions}
 Founder Mode: ${founderMode}
@@ -123,34 +124,65 @@ Episodic: ${JSON.stringify(context.memoryPack?.episodic || [])}
 Autobiography: ${JSON.stringify(context.memoryPack?.autobiography || [])}
 Research: ${JSON.stringify(context.researchContext || [])}
 NewsDigest: ${JSON.stringify(context.newsDigest || [])}
-`
-  );
+`);
 
-  const arbPrompt = `
-SYSTEM:
-${personaBlock}
-
-OPTIMIST:
-${optimist}
-
-SKEPTIC:
-${skeptic}
-
-ARBITER RULES:
-${ARBITER_RULES}
-
-USER:
-${userMessage}
-`;
+  // Responses API requires: { role, content: [{ type: "input_text", text: "" }] }
+  const arbMessages = [
+    {
+      role: "system",
+      content: [
+        {
+          type: "input_text",
+          text: personaSystem,
+        },
+      ],
+    },
+    {
+      role: "assistant",
+      content: [
+        {
+          type: "input_text",
+          text: `OPTIMIST VIEW:\n${optimist}`,
+        },
+      ],
+    },
+    {
+      role: "assistant",
+      content: [
+        {
+          type: "input_text",
+          text: `SKEPTIC VIEW:\n${skeptic}`,
+        },
+      ],
+    },
+    {
+      role: "assistant",
+      content: [
+        {
+          type: "input_text",
+          text: ARBITER_RULES,
+        },
+      ],
+    },
+    {
+      role: "user",
+      content: [
+        {
+          type: "input_text",
+          text: userMessage,
+        },
+      ],
+    },
+  ];
 
   const arbStart = performance.now();
-  const arbiter = await callModel("gpt-4.1", arbPrompt);
+  const arbiter = await callModel("gpt-4.1", arbMessages);
   const arbEnd = performance.now();
 
   logTriadDiagnostics({
     stage: "arbiter",
     model: "gpt-4.1",
-    prompt: arbPrompt.slice(0, 5000),
+    prompt: JSON.stringify(arbMessages).slice(0, 5000),
     output: arbiter,
     started: arbStart,
     finished: arbEnd,
