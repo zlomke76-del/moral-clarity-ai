@@ -1,17 +1,16 @@
 // lib/solace/sanitize.ts
 // --------------------------------------------------------------
-// CENTRAL SANITIZATION ENGINE FOR SOLACE
-// Model-safe, memory-safe, UI-safe normalization
+// CENTRAL SANITIZATION ENGINE FOR SOLACE (FINAL VERSION)
 // --------------------------------------------------------------
 
 /**
  * sanitizeForModel()
  * ------------------
- * STRICT SANITIZER for prompts sent to OpenAI.
+ * STRICT sanitizer for *model input only*.
  * Converts unsupported Unicode (>255) into "?".
  * Normalizes smart quotes, em-dashes, bullets, ellipses.
  *
- * DO NOT use for model output → that comes in full unicode.
+ * Never use this for model output.
  */
 export function sanitizeForModel(input: any): any {
   if (input == null) return input;
@@ -31,21 +30,19 @@ export function sanitizeForModel(input: any): any {
     let out = input;
     for (const k in rep) out = out.split(k).join(rep[k]);
 
-    // ByteString-safe: OpenAI request cannot exceed byte range
+    // Byte-safe for model input only
     return out
       .split("")
       .map((c) => (c.charCodeAt(0) > 255 ? "?" : c))
       .join("");
   }
 
-  if (Array.isArray(input)) {
-    return input.map((x) => sanitizeForModel(x));
-  }
+  if (Array.isArray(input)) return input.map((x) => sanitizeForModel(x));
 
   if (typeof input === "object") {
-    const obj: any = {};
-    for (const k in input) obj[k] = sanitizeForModel(input[k]);
-    return obj;
+    const o: any = {};
+    for (const k in input) o[k] = sanitizeForModel(input[k]);
+    return o;
   }
 
   return input;
@@ -54,55 +51,48 @@ export function sanitizeForModel(input: any): any {
 /**
  * sanitizeForClient()
  * -------------------
- * UI-friendly sanitizer used when sending output
- * to the browser. Does NOT strip emojis.
- * Only removes invisible control characters + invalid UTF-16.
+ * Final sanitizer for output → UI
+ * ✔ keeps emojis
+ * ✔ keeps Unicode
+ * ✔ removes *only* invisible control characters
  */
 export function sanitizeForClient(text: string): string {
   if (!text) return "";
 
   return text
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "") // invisible controls
-    .replace(/\uFFFD/g, "�"); // replace invalid UTF-16 with replacement char
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
+    .replace(/\uFFFD/g, "�");
 }
 
 /**
  * sanitizeForMemory()
  * -------------------
- * Supabase-safe serialization.
- * Replaces >255 but preserves emojis and intentional symbols.
- *
- * Use ONLY when storing long-term memory entries.
+ * Light sanitizer for Supabase storage.
+ * ✔ keeps emojis
+ * ✔ keeps all Unicode
+ * ✔ removes only invalid control chars
  */
-export function sanitizeForMemory(input: string): string {
-  if (!input) return "";
-
-  // remove only characters that cannot be stored safely
-  return input.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+export function sanitizeForMemory(text: string): string {
+  if (!text) return "";
+  return text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
 }
 
 /**
  * sanitizeObjectDeep()
  * -------------------
- * Deep cleaner for context objects or JSON blobs.
- * DOES NOT strip emojis.
+ * Deep sanitize context objects for UI.
+ * ✔ keeps emojis
+ * ✔ keeps Unicode
  */
 export function sanitizeObjectDeep(input: any): any {
   if (input == null) return input;
 
-  if (typeof input === "string") {
-    return sanitizeForClient(input);
-  }
-
-  if (Array.isArray(input)) {
-    return input.map((x) => sanitizeObjectDeep(x));
-  }
+  if (typeof input === "string") return sanitizeForClient(input);
+  if (Array.isArray(input)) return input.map((x) => sanitizeObjectDeep(x));
 
   if (typeof input === "object") {
     const out: any = {};
-    for (const k in input) {
-      out[k] = sanitizeObjectDeep(input[k]);
-    }
+    for (const k in input) out[k] = sanitizeObjectDeep(input[k]);
     return out;
   }
 
