@@ -43,11 +43,11 @@ function sanitizeASCII(input: any): any {
 
     return out
       .split("")
-      .map(c => (c.charCodeAt(0) > 255 ? "?" : c))
+      .map((c) => (c.charCodeAt(0) > 255 ? "?" : c))
       .join("");
   }
 
-  if (Array.isArray(input)) return input.map(x => sanitizeASCII(x));
+  if (Array.isArray(input)) return input.map((x) => sanitizeASCII(x));
 
   if (typeof input === "object") {
     const clean: any = {};
@@ -78,11 +78,11 @@ async function getNodeUser(req: Request) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: name => {
+        get: (name) => {
           const match = cookieHeader
             .split(";")
-            .map(c => c.trim())
-            .find(c => c.startsWith(name + "="));
+            .map((c) => c.trim())
+            .find((c) => c.startsWith(name + "="));
           return match ? match.split("=")[1] : undefined;
         },
         set() {},
@@ -192,7 +192,6 @@ export async function POST(req: Request) {
       founderMode,
       canonicalUserKey,
 
-      // Passing governor instructions to pipeline
       governorLevel: governorOutput.level,
       governorInstructions: governorOutput.instructions
     });
@@ -203,6 +202,7 @@ export async function POST(req: Request) {
       governorLevel: pipelineResult.governorLevel,
       hasOptimist: !!pipelineResult.optimist,
       hasSkeptic: !!pipelineResult.skeptic,
+      hasImage: !!pipelineResult.imageUrl,
       finalPreview: String(pipelineResult.finalAnswer).slice(0, 240)
     };
 
@@ -236,7 +236,14 @@ export async function POST(req: Request) {
     // ---------------------- RETURN SUCCESS ----------------------
     diag.stage = "response:success";
 
-    const res = NextResponse.json({ text: finalText });
+    const payload: any = { text: finalText };
+
+    // OPTIONAL IMAGE RETURN
+    if (pipelineResult?.imageUrl) {
+      payload.imageUrl = pipelineResult.imageUrl;
+    }
+
+    const res = NextResponse.json(payload);
     res.headers.set(
       "x-solace-diag",
       JSON.stringify(sanitizeASCII(diag)).slice(0, 900)
