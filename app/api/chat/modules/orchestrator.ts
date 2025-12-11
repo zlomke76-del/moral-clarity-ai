@@ -2,7 +2,7 @@
 //--------------------------------------------------------------
 // Solace Orchestrator (Thin Wrapper)
 // Updated for unified Hybrid Super-AI Pipeline
-// (Optimist → Skeptic → Arbiter + Governor)
+// (Optimist → Skeptic → Arbiter + Governor + Image Branch)
 //--------------------------------------------------------------
 
 import { runHybridPipeline } from "./hybrid";
@@ -12,8 +12,9 @@ import { runHybridPipeline } from "./hybrid";
  *
  * IMPORTANT:
  * This must return the *entire* pipeline result object
- * so route.ts can read:
+ * including:
  *   - finalAnswer
+ *   - imageUrl
  *   - governorLevel
  *   - governorInstructions
  *   - optimist
@@ -40,14 +41,23 @@ export async function orchestrateSolaceResponse({
       canonicalUserKey,
     });
 
-    // Return the full object — DO NOT strip fields
-    return result;
+    // Return the full result object, INCLUDING imageUrl
+    return {
+      finalAnswer: result.finalAnswer,
+      imageUrl: result.imageUrl || null,
+      governorLevel: result.governorLevel ?? 0,
+      governorInstructions: result.governorInstructions ?? "",
+      optimist: result.optimist ?? "",
+      skeptic: result.skeptic ?? "",
+      arbiter: result.arbiter ?? "",
+    };
 
   } catch (err) {
     console.error("[ORCHESTRATOR] Pipeline failure:", err);
 
     return {
       finalAnswer: "[Hybrid pipeline error]",
+      imageUrl: null,
       governorLevel: 0,
       governorInstructions: "",
       optimist: "",
