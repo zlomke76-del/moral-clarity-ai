@@ -1,6 +1,5 @@
-// app/api/chat/modules/model-router.ts
 //--------------------------------------------------------------
-// MODEL ROUTER — OPENAI RESPONSES API (CLEAN + FINAL)
+// MODEL ROUTER — OPENAI RESPONSES API (FINAL CLEAN VERSION)
 //--------------------------------------------------------------
 
 import OpenAI from "openai";
@@ -20,6 +19,7 @@ export async function callModel(model: string, prompt: string) {
     const res = await client.responses.create({
       model,
       input: clean,
+      // No reasoning.effort (unsupported)
     });
 
     const out = res.output_text ?? "";
