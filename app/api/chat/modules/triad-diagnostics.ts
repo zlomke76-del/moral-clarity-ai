@@ -1,11 +1,8 @@
-// app/api/chat/modules/triad-diagnostics.ts
 //--------------------------------------------------------------
-// TRIAD DIAGNOSTICS MODULE
-// Logs persona timing, token size, and truncation warnings.
-// Invisible to user. Visible only in server logs.
+// TRIAD DIAGNOSTICS
 //--------------------------------------------------------------
 
-export const TRIAD_DIAGNOSTICS_ENABLED = true;   // toggle ON/OFF
+export const TRIAD_DIAGNOSTICS_ENABLED = true;
 
 type TriadDiagInput = {
   stage: "optimist" | "skeptic" | "arbiter";
@@ -20,17 +17,14 @@ export function logTriadDiagnostics(info: TriadDiagInput) {
   if (!TRIAD_DIAGNOSTICS_ENABLED) return;
 
   const durationMs = info.finished - info.started;
-  const promptLen = info.prompt?.length ?? 0;
-  const outputLen = info.output?.length ?? 0;
-  const truncated = outputLen > 0 && info.output.endsWith("…");
 
   console.info("[TRIAD-DIAG]", {
     stage: info.stage,
     model: info.model,
     durationMs,
-    promptChars: promptLen,
-    outputChars: outputLen,
-    truncated,
+    promptChars: info.prompt?.length ?? 0,
+    outputChars: info.output?.length ?? 0,
+    truncated: info.output?.endsWith("…") ?? false,
     ts: new Date().toISOString(),
   });
 }
