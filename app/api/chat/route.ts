@@ -20,25 +20,21 @@ import { writeMemory } from "./modules/memory-writer";
 
 import type { PacingLevel } from "@/lib/solace/governor/types";
 
-// ✅ NEW — GLOBAL SANITIZERS
+// Global sanitizers
 import {
   sanitizeForModel,
   sanitizeForClient,
   sanitizeObjectDeep,
 } from "@/lib/solace/sanitize";
 
-// -----------------------------------------------------
-// ASCII clamp for pacing
-// -----------------------------------------------------
+// Numeric → enum clamp
 function clampToPacingLevel(n: number): PacingLevel {
   if (n < 0) return 0;
   if (n > 5) return 5;
   return n as PacingLevel;
 }
 
-// -----------------------------------------------------
-// Supabase session loader
-// -----------------------------------------------------
+// Load Supabase session
 async function getNodeUser(req: Request) {
   const cookieHeader = req.headers.get("cookie") ?? "";
 
@@ -47,7 +43,7 @@ async function getNodeUser(req: Request) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: (name) => {
+        get(name) {
           const match = cookieHeader
             .split(";")
             .map((c) => c.trim())
@@ -64,9 +60,6 @@ async function getNodeUser(req: Request) {
   return data?.user ?? null;
 }
 
-// -----------------------------------------------------
-// POST — MAIN CHAT ROUTE
-// -----------------------------------------------------
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => null);
@@ -74,7 +67,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
-    // Incoming user message: sanitize for model input
+    // Incoming message — sanitize for model input ONLY
     const rawMessage = String(body.message);
     const message = sanitizeForModel(rawMessage);
 
@@ -90,18 +83,14 @@ export async function POST(req: Request) {
     const user = await getNodeUser(req);
     const canonicalUserKey = user?.id ?? explicitKey ?? "guest";
 
-    // -----------------------------------------------------
-    // Load + sanitize context deeply (UI-safe, emoji-safe)
-    // -----------------------------------------------------
+    // Load + sanitize context deeply (emoji-safe)
     let context = await assembleContext(canonicalUserKey, workspaceId, message);
     context = sanitizeObjectDeep(context);
 
     // Governor
     const governorOutput = updateGovernor(message);
 
-    // -----------------------------------------------------
-    // Run hybrid pipeline (text or image)
-    // -----------------------------------------------------
+    // Run LLM pipeline
     const result = await runHybridPipeline({
       userMessage: message,
       context,
@@ -110,34 +99,27 @@ export async function POST(req: Request) {
       founderMode,
       modeHint,
       canonicalUserKey,
-
       governorLevel: governorOutput.level,
       governorInstructions: governorOutput.instructions,
     });
 
-    // -----------------------------------------------------
-    // Format text output with governor pacing + UI sanitizer
-    // -----------------------------------------------------
+    // Apply governor formatting
     const formatted = applyGovernorFormatting(result.finalAnswer, {
       level: clampToPacingLevel(governorOutput.level),
-      isFounder: founderMode === true,
+      isFounder: !!founderMode,
       emotionalDistress:
         (governorOutput.signals?.emotionalValence ?? 0.5) < 0.35,
       decisionContext: governorOutput.signals?.decisionPoint ?? false,
     });
 
+    // UI sanitizer (emoji-safe)
     const uiText = sanitizeForClient(formatted);
 
-    // -----------------------------------------------------
     // Memory write
-    // -----------------------------------------------------
     try {
       await writeMemory(canonicalUserKey, rawMessage, uiText);
     } catch {}
 
-    // -----------------------------------------------------
-    // RETURN PAYLOAD — ALWAYS include text + imageUrl
-    // -----------------------------------------------------
     return NextResponse.json({
       text: uiText,
       imageUrl: result.imageUrl ?? null,
