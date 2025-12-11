@@ -1,49 +1,34 @@
 // --------------------------------------------------------------
-// MODEL ROUTER — FINAL, FULLY COMPATIBLE WITH OPENAI RESPONSES API
-// TEXT-ONLY PIPELINE — NO images, NO tools, NO deprecated fields
-// ASCII-SAFE
+// MODEL ROUTER — FINAL, OPENAI RESPONSES API, ASCII-SAFE INPUT
 // --------------------------------------------------------------
 
 import OpenAI from "openai";
+import { sanitizeForModel } from "@/lib/solace/sanitize";
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-// --------------------------------------------------------------
-// ASCII SANITIZER
-// --------------------------------------------------------------
-function sanitizeASCII(input: string): string {
-  if (!input) return "";
-  return input
-    .split("")
-    .map((c) => (c.charCodeAt(0) > 255 ? "?" : c))
-    .join("");
-}
-
-// --------------------------------------------------------------
+// -----------------------------
 // callModel(model, prompt)
-// - NEW Responses API FORMAT
-// - NO reasoning.effort (REMOVED — unsupported)
-// - ONLY uses response.output_text
-// --------------------------------------------------------------
+// -----------------------------
 export async function callModel(model: string, prompt: string) {
+  // ALWAYS sanitize before sending to LLM
+  const cleanPrompt = sanitizeForModel(prompt);
+
   try {
     const response = await client.responses.create({
       model,
-      input: prompt,   // TEXT ONLY
-      // ❌ DO NOT ADD reasoning.effort — not supported by 4.1 or 4.1-mini
+      input: cleanPrompt,
+      reasoning: { effort: "medium" },
     });
 
-    // Always use the official text return value
-    const text =
-      response.output_text ??
-      "[empty response]";
+    // OpenAI Responses API → unified field
+    const text = response.output_text ?? "";
 
-    return sanitizeASCII(String(text));
-
+    return typeof text === "string" ? text : String(text);
   } catch (err) {
     console.error("[MODEL ROUTER ERROR]", err);
-    return "[router-error]";
+    return "[Model error]";
   }
 }
