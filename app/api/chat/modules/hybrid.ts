@@ -1,10 +1,10 @@
+// app/api/chat/modules/hybrid.ts
 //--------------------------------------------------------------
 // HYBRID PIPELINE — OPTIMIST → SKEPTIC → ARBITER
 //--------------------------------------------------------------
 
 import { callModel } from "./model-router";
 
-// persona system prompts
 const OPTIMIST_SYSTEM = `
 You are the OPTIMIST lens.
 Your job: generate the strongest constructive interpretation of the user’s message.
@@ -31,8 +31,7 @@ Rules:
 - You speak as ONE Solace voice: balanced, clear, directed.
 `;
 
-// build prompt helper
-function buildPrompt(system: string, userMsg: string): string {
+function build(system: string, userMsg: string): string {
   return `${system}\nUser: ${userMsg}`;
 }
 
@@ -50,16 +49,20 @@ export async function runHybridPipeline(args: {
   const { userMessage } = args;
 
   // 1) OPTIMIST
-  const optimist = await callModel(
+  let optimist = await callModel(
     "gpt-4.1-mini",
-    buildPrompt(OPTIMIST_SYSTEM, userMessage)
+    build(OPTIMIST_SYSTEM, userMessage)
   );
 
   // 2) SKEPTIC
-  const skeptic = await callModel(
+  let skeptic = await callModel(
     "gpt-4.1-mini",
-    buildPrompt(SKEPTIC_SYSTEM, userMessage)
+    build(SKEPTIC_SYSTEM, userMessage)
   );
+
+  // guard against upstream model errors
+  if (!optimist || optimist.includes("[Model error]")) optimist = "Optimist failed.";
+  if (!skeptic || skeptic.includes("[Model error]")) skeptic = "Skeptic failed.";
 
   // 3) ARBITER
   const arbPrompt = `
