@@ -1,7 +1,8 @@
 //--------------------------------------------------------------
 // HYBRID PIPELINE — OPTIMIST → SKEPTIC → ARBITER
 // Persona + Memory injected ONLY into Arbiter (string mode)
-// Responses API compatible + deep diagnostics
+// Responses API compatible
+// Memory + prompt sanitized to prevent Unicode / emoji corruption
 //--------------------------------------------------------------
 
 import { callModel } from "./model-router";
@@ -9,7 +10,35 @@ import { logTriadDiagnostics } from "./triad-diagnostics";
 import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
 
 // --------------------------------------------------------------
-// SYSTEM BLOCKS FOR OPTIMIST & SKEPTIC (simple text prompts)
+// ASCII SANITIZER — CRITICAL BOUNDARY
+// --------------------------------------------------------------
+function sanitizeASCII(input: string): string {
+  if (!input) return "";
+
+  const replacements: Record<string, string> = {
+    "—": "-",
+    "–": "-",
+    "•": "*",
+    "“": "\"",
+    "”": "\"",
+    "‘": "'",
+    "’": "'",
+    "…": "...",
+  };
+
+  return input
+    .split("")
+    .map((c) => {
+      const code = c.charCodeAt(0);
+      if (replacements[c]) return replacements[c];
+      if (code > 255) return "?"; // HARD STOP for emojis / unicode
+      return c;
+    })
+    .join("");
+}
+
+// --------------------------------------------------------------
+// SYSTEM BLOCKS (PLAIN TEXT ONLY)
 // --------------------------------------------------------------
 const OPTIMIST_SYSTEM = `
 You are the OPTIMIST lens.
@@ -39,12 +68,8 @@ Rules:
 
 Memory behavior:
 - You DO have workspace memory provided below.
-- When the facts include the user's name or stable profile details, you are allowed to use them.
-- Do NOT say that you cannot remember the user, that every conversation is stateless,
-  or that you do not retain personal information in this workspace.
-- If the facts clearly contain the user's name and they ask
-  "What is my name?" or "Do you remember my name?",
-  answer using that name with appropriate care and respect.
+- When facts include the user's name, you may use it.
+- Never claim memory does not exist if facts are present.
 `;
 
 // --------------------------------------------------------------
@@ -74,23 +99,20 @@ export async function runHybridPipeline(args: {
     governorInstructions,
   } = args;
 
-  // Small helper to avoid undefined explosions in logs
-  const safeArray = (arr: any) => (Array.isArray(arr) ? arr : []);
+  const safeArray = (a: any) => (Array.isArray(a) ? a : []);
 
   // ============================================================
-  // 1. OPTIMIST (STRING MODE)
+  // 1. OPTIMIST
   // ============================================================
+  const optPrompt = buildPrompt(OPTIMIST_SYSTEM, userMessage);
   const optStart = performance.now();
-  let optimist = await callModel(
-    "gpt-4.1-mini",
-    buildPrompt(OPTIMIST_SYSTEM, userMessage)
-  );
+  let optimist = await callModel("gpt-4.1-mini", optPrompt);
   const optEnd = performance.now();
 
   logTriadDiagnostics({
     stage: "optimist",
     model: "gpt-4.1-mini",
-    prompt: buildPrompt(OPTIMIST_SYSTEM, userMessage),
+    prompt: optPrompt,
     output: optimist,
     started: optStart,
     finished: optEnd,
@@ -101,19 +123,17 @@ export async function runHybridPipeline(args: {
   }
 
   // ============================================================
-  // 2. SKEPTIC (STRING MODE)
+  // 2. SKEPTIC
   // ============================================================
+  const skpPrompt = buildPrompt(SKEPTIC_SYSTEM, userMessage);
   const skpStart = performance.now();
-  let skeptic = await callModel(
-    "gpt-4.1-mini",
-    buildPrompt(SKEPTIC_SYSTEM, userMessage)
-  );
+  let skeptic = await callModel("gpt-4.1-mini", skpPrompt);
   const skpEnd = performance.now();
 
   logTriadDiagnostics({
     stage: "skeptic",
     model: "gpt-4.1-mini",
-    prompt: buildPrompt(SKEPTIC_SYSTEM, userMessage),
+    prompt: skpPrompt,
     output: skeptic,
     started: skpStart,
     finished: skpEnd,
@@ -124,61 +144,71 @@ export async function runHybridPipeline(args: {
   }
 
   // ============================================================
-  // 3. ARBITER — Persona + MEMORY + GOVERNOR + MODES
+  // 3. ARBITER — MEMORY SANITIZED HERE
   // ============================================================
 
-  // Compact debug view of context actually used
-  try {
-    console.info("[ARB-CONTEXT-SUMMARY]", {
-      factsCount: safeArray(context?.memoryPack?.facts).length,
-      episodicCount: safeArray(context?.memoryPack?.episodic).length,
-      autobioCount: safeArray(context?.memoryPack?.autobiography).length,
-      researchCount: safeArray(context?.researchContext).length,
-      newsCount: safeArray(context?.newsDigest).length,
-    });
-  } catch {
-    // do not crash pipeline on logging failure
-  }
+  const facts = sanitizeASCII(
+    JSON.stringify(safeArray(context?.memoryPack?.facts), null, 2)
+  );
+  const episodic = sanitizeASCII(
+    JSON.stringify(safeArray(context?.memoryPack?.episodic), null, 2)
+  );
+  const autobio = sanitizeASCII(
+    JSON.stringify(safeArray(context?.memoryPack?.autobiography), null, 2)
+  );
+  const research = sanitizeASCII(
+    JSON.stringify(safeArray(context?.researchContext), null, 2)
+  );
+  const news = sanitizeASCII(
+    JSON.stringify(safeArray(context?.newsDigest), null, 2)
+  );
 
-  const personaSystem = buildSolaceSystemPrompt(
-    "core",
-    `
+  // ------------------------------------------------------------
+  // MEMORY SANITIZATION DIAG (PROVES EMOJI IMPACT)
+  // ------------------------------------------------------------
+  console.info("[ARB-MEMORY-SANITIZE]", {
+    factsLen: facts.length,
+    episodicLen: episodic.length,
+    autobioLen: autobio.length,
+    researchLen: research.length,
+    newsLen: news.length,
+  });
+
+  const personaSystem = sanitizeASCII(
+    buildSolaceSystemPrompt(
+      "core",
+      `
 Governor Level: ${governorLevel}
 Governor Instructions: ${governorInstructions}
 Founder Mode: ${founderMode}
 Ministry Mode: ${ministryMode}
 Mode Hint: ${modeHint}
 
-MEMORY CONTRACT:
-You have access to structured memory for this user and workspace.
-Use the memory blocks below when answering.
-Never claim you lack memory if relevant facts are present.
-
 [FACTS]
-${JSON.stringify(safeArray(context?.memoryPack?.facts), null, 2)}
+${facts}
 
 [EPISODIC]
-${JSON.stringify(safeArray(context?.memoryPack?.episodic), null, 2)}
+${episodic}
 
 [AUTOBIOGRAPHY]
-${JSON.stringify(safeArray(context?.memoryPack?.autobiography), null, 2)}
+${autobio}
 
 [RESEARCH]
-${JSON.stringify(safeArray(context?.researchContext), null, 2)}
+${research}
 
 [NEWS DIGEST]
-${JSON.stringify(safeArray(context?.newsDigest), null, 2)}
+${news}
 `
+    )
   );
 
-  // Human-readable SINGLE STRING prompt for the Responses API
-  const arbPrompt = `
+  const arbPrompt = sanitizeASCII(`
 ${personaSystem}
 
 ------------------------------------------------------------
-ARBITER OPERATING RULES
+ARBITER RULES
 ------------------------------------------------------------
-${ARBITER_RULES.trim()}
+${ARBITER_RULES}
 
 ------------------------------------------------------------
 OPTIMIST VIEW
@@ -194,16 +224,17 @@ ${skeptic}
 USER MESSAGE
 ------------------------------------------------------------
 ${userMessage}
-  `.trim();
+`);
 
-  // Deep Arbiter diagnostics: head + tail + length
-  try {
-    console.info("[ARB-PROMPT-PREVIEW]", arbPrompt.slice(0, 2000));
-    console.info("[ARB-PROMPT-TAIL]", arbPrompt.slice(-2000));
-    console.info("[ARB-PROMPT-LENGTH]", arbPrompt.length);
-  } catch {
-    // again, logging failures must not break responses
-  }
+  // ------------------------------------------------------------
+  // FINAL ARBITER PROMPT DIAG (GROUND TRUTH)
+  // ------------------------------------------------------------
+  const nonAscii = [...arbPrompt].filter(c => c.charCodeAt(0) > 255);
+  console.info("[ARB-PROMPT-INTEGRITY]", {
+    length: arbPrompt.length,
+    nonAsciiCount: nonAscii.length,
+    sample: nonAscii.slice(0, 5),
+  });
 
   const arbStart = performance.now();
   const arbiter = await callModel("gpt-4.1", arbPrompt);
