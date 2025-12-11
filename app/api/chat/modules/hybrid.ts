@@ -49,25 +49,25 @@ export async function runHybridPipeline(args: {
 }) {
   const { userMessage } = args;
 
-  // ---------------------------
-  // 1) OPTIMIST
-  // ---------------------------
+  // ----------------------------------------------------
+  // 1) OPTIMIST — fixed model name
+  // ----------------------------------------------------
   const optimist = await callModel(
-    "gpt-5.1-mini",
+    "gpt-4.1-mini",           // <= FIXED
     buildPrompt(OPTIMIST_SYSTEM, userMessage)
   );
 
-  // ---------------------------
-  // 2) SKEPTIC
-  // ---------------------------
+  // ----------------------------------------------------
+  // 2) SKEPTIC — fixed model name
+  // ----------------------------------------------------
   const skeptic = await callModel(
-    "gpt-5.1-mini",
+    "gpt-4.1-mini",           // <= FIXED
     buildPrompt(SKEPTIC_SYSTEM, userMessage)
   );
 
-  // ---------------------------
-  // 3) ARBITER
-  // ---------------------------
+  // ----------------------------------------------------
+  // 3) ARBITER — stays on the high model
+  // ----------------------------------------------------
   const arbPrompt = `
 ${ARBITER_SYSTEM}
 
