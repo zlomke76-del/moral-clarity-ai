@@ -1,7 +1,7 @@
 //--------------------------------------------------------------
 // HYBRID PIPELINE — OPTIMIST → SKEPTIC → ARBITER
 // Persona + Memory injected ONLY into Arbiter
-// Uses Hybrid Router (strings + structured messages)
+// Compatible with OpenAI Responses API (string input only)
 //--------------------------------------------------------------
 
 import { callModel } from "./model-router";
@@ -81,7 +81,8 @@ export async function runHybridPipeline(args: {
     finished: optEnd,
   });
 
-  if (!optimist || optimist.includes("[Model error]")) optimist = "Optimist failed.";
+  if (!optimist || optimist.includes("[Model error]"))
+    optimist = "Optimist failed.";
 
   // ============================================================
   // 2. SKEPTIC (string mode)
@@ -99,13 +100,16 @@ export async function runHybridPipeline(args: {
     finished: skpEnd,
   });
 
-  if (!skeptic || skeptic.includes("[Model error]")) skeptic = "Skeptic failed.";
+  if (!skeptic || skeptic.includes("[Model error]"))
+    skeptic = "Skeptic failed.";
 
   // ============================================================
-  // 3. ARBITER — structured mode (persona + memory)
+  // 3. ARBITER — FULL persona + memory injection
   // ============================================================
 
-  const personaSystem = buildSolaceSystemPrompt("core", `
+  const personaSystem = buildSolaceSystemPrompt(
+    "core",
+    `
 Governor Level: ${governorLevel}
 Governor Instructions: ${governorInstructions}
 Founder Mode: ${founderMode}
@@ -117,29 +121,41 @@ Episodic: ${JSON.stringify(context.memoryPack?.episodic || [])}
 Autobiography: ${JSON.stringify(context.memoryPack?.autobiography || [])}
 Research: ${JSON.stringify(context.researchContext || [])}
 NewsDigest: ${JSON.stringify(context.newsDigest || [])}
-  `);
+`
+  );
 
-  const arbMessages = [
-    { role: "system", text: personaSystem },
-    { role: "assistant", text: `OPTIMIST VIEW:\n${optimist}` },
-    { role: "assistant", text: `SKEPTIC VIEW:\n${skeptic}` },
-    { role: "assistant", text: ARBITER_RULES },
-    { role: "user", text: userMessage },
-  ];
+  // Arbiter final prompt — must be ONE string for Responses API
+  const arbPrompt = `
+${personaSystem}
+
+${ARBITER_RULES}
+
+OPTIMIST VIEW:
+${optimist}
+
+SKEPTIC VIEW:
+${skeptic}
+
+USER MESSAGE:
+${userMessage}
+`;
 
   const arbStart = performance.now();
-  const arbiter = await callModel("gpt-4.1", arbMessages);
+  const arbiter = await callModel("gpt-4.1", arbPrompt);
   const arbEnd = performance.now();
 
   logTriadDiagnostics({
     stage: "arbiter",
     model: "gpt-4.1",
-    prompt: JSON.stringify(arbMessages).slice(0, 5000),
+    prompt: arbPrompt.slice(0, 5000),
     output: arbiter,
     started: arbStart,
     finished: arbEnd,
   });
 
+  // ============================================================
+  // FINAL RESPONSE
+  // ============================================================
   return {
     finalAnswer: arbiter,
     optimist,
