@@ -1,19 +1,18 @@
 // app/api/chat/modules/model-router.ts
 // --------------------------------------------------------------
-// MODEL ROUTER — Single unified interface for OpenAI model calls
-// Used by hybrid.ts (Optimist → Skeptic → Arbiter)
+// MODEL ROUTER — Final corrected version
+// Uses OpenAI Responses API correctly (string input only)
 // ASCII-safe, deterministic, production stable.
 // --------------------------------------------------------------
 
 import OpenAI from "openai";
 
-// Primary client
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
 // --------------------------------------------------------------
-// ASCII sanitizer — protect against byte >255 crashes
+// ASCII Sanitize
 // --------------------------------------------------------------
 function sanitizeASCII(input: string): string {
   if (!input) return "";
@@ -21,8 +20,7 @@ function sanitizeASCII(input: string): string {
   const rep: Record<string, string> = {
     "—": "-", "–": "-", "•": "*",
     "“": "\"", "”": "\"",
-    "‘": "'", "’": "'",
-    "…": "..."
+    "‘": "'", "’": "'", "…": "..."
   };
 
   let out = input;
@@ -36,21 +34,29 @@ function sanitizeASCII(input: string): string {
 
 // --------------------------------------------------------------
 // callModel(model: string, messages: any[]): Promise<string>
-// The ONLY model-calling function allowed in Solace pipeline.
+// Corrected for Responses API: accepts ONLY a string
 // --------------------------------------------------------------
 export async function callModel(
   model: string,
   messages: Array<{ role: string; content: any }>
 ): Promise<string> {
   try {
-    // Responses API call — unified pipeline
+    // Extract the prompt text from messages
+    // Pipeline always sends exactly 1 user message with a text block
+    const extracted =
+      messages?.[0]?.content?.[0]?.text ??
+      messages?.[0]?.content?.text ??
+      messages?.[0]?.content ??
+      "[empty prompt]";
+
+    const prompt = String(extracted);
+
     const response = await client.responses.create({
       model,
-      input: messages,
-      reasoning: { effort: "medium" },
+      input: prompt, // <-- FIXED, now a string not an array
+      reasoning: { effort: "medium" }
     });
 
-    // Extract text safely
     const text =
       response.output_text ??
       response.output?.[0]?.content?.[0]?.text ??
@@ -58,8 +64,7 @@ export async function callModel(
 
     return sanitizeASCII(String(text));
   } catch (err: any) {
-    console.error("[MODEL ROUTER ERROR]", err?.message || err);
-
+    console.error("[MODEL ROUTER ERROR]", err);
     return (
       "[model-router error] " +
       sanitizeASCII(String(err?.message ?? "unknown"))
