@@ -4,7 +4,7 @@
 // --------------------------------------------------------------
 
 import OpenAI from "openai";
-import { sanitizeForModel } from "@/lib/solace/sanitize";
+import { sanitizeForModel, sanitizeForClient } from "@/lib/solace/sanitize";
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
@@ -14,16 +14,23 @@ const client = new OpenAI({
 // callModel(model, prompt)
 // -----------------------------
 export async function callModel(model: string, prompt: string) {
+  // STRICT sanitizer only for outbound request → LLM
   const cleanPrompt = sanitizeForModel(prompt);
 
   try {
     const response = await client.responses.create({
       model,
       input: cleanPrompt,
-      // removed: reasoning.effort (not supported)
+      // reasoning.effort removed
     });
 
-    const text = response.output_text ?? "";
+    // unified field in Responses API
+    let text = response.output_text ?? "";
+
+    // IMPORTANT:
+    // Convert model output into fully safe UI text
+    text = sanitizeForClient(text);
+
     return typeof text === "string" ? text : String(text);
 
   } catch (err) {
