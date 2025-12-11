@@ -1,5 +1,6 @@
+// app/api/chat/modules/orchestrator.ts
 //--------------------------------------------------------------
-// Solace Orchestrator — Thin Wrapper Around Hybrid Pipeline
+// Solace Orchestrator — Thin Wrapper for Hybrid Pipeline
 //--------------------------------------------------------------
 
 import { runHybridPipeline } from "./hybrid";
@@ -9,8 +10,8 @@ export async function orchestrateSolaceResponse({
   context,
   history,
   ministryMode,
-  founderMode,
   modeHint,
+  founderMode,
   canonicalUserKey,
   governorLevel,
   governorInstructions,
@@ -32,14 +33,12 @@ export async function orchestrateSolaceResponse({
       finalAnswer: result.finalAnswer,
       imageUrl: result.imageUrl ?? null,
 
-      // governor passthrough
       governorLevel,
       governorInstructions,
 
-      // triad (safe even if empty)
-      optimist: result.optimist ?? "",
-      skeptic: result.skeptic ?? "",
-      arbiter: result.arbiter ?? "",
+      optimist: result?.optimist ?? "",
+      skeptic: result?.skeptic ?? "",
+      arbiter: result?.arbiter ?? "",
     };
   } catch (err) {
     console.error("[ORCHESTRATOR] Pipeline failure:", err);
