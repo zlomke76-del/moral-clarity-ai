@@ -1,7 +1,8 @@
 // app/api/chat/route.ts
 // ------------------------------------------------------------------
-// SOLACE CHAT ROUTE — GOVERNOR + HYBRID PIPELINE (FINAL)
+// SOLACE CHAT ROUTE — GOVERNOR + HYBRID PIPELINE + IMAGE MODE
 // ASCII-safe, deterministic, with DIAG tracer.
+// Image generation bypasses hybrid pipeline (direct OpenAI call).
 // ------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -19,6 +20,9 @@ import { applyGovernorFormatting } from "@/lib/solace/governor/governor-icon-for
 
 import { writeMemory } from "./modules/memory-writer";
 import type { PacingLevel } from "@/lib/solace/governor/types";
+
+// *** NEW ***
+import { generateImage } from "./modules/image-router";
 
 // ------------------------------------------------------------------
 // ASCII SANITIZER — universal safety layer
@@ -68,7 +72,7 @@ function clampToPacingLevel(n: number): PacingLevel {
 }
 
 // ------------------------------------------------------------------
-// SESSION LOADER
+// SESSION LOADER (Supabase)
 // ------------------------------------------------------------------
 async function getNodeUser(req: Request) {
   const cookieHeader = req.headers.get("cookie") ?? "";
@@ -96,6 +100,38 @@ async function getNodeUser(req: Request) {
 }
 
 // ------------------------------------------------------------------
+// GENEROUS IMAGE-REQUEST DETECTION
+// ------------------------------------------------------------------
+function isImageRequest(text: string): boolean {
+  if (!text) return false;
+
+  const lower = text.toLowerCase();
+
+  const triggers = [
+    "make me an image",
+    "generate an image",
+    "create an image",
+    "make an illustration",
+    "create an illustration",
+    "make a picture",
+    "generate a picture",
+    "draw ",
+    "render ",
+    "create art",
+    "make art",
+    "show me a picture",
+    "show me an image",
+    "i want an image",
+    "please draw",
+    "please make an image",
+    "picture of",
+    "image of"
+  ];
+
+  return triggers.some((t) => lower.includes(t));
+}
+
+// ------------------------------------------------------------------
 // POST /api/chat — MAIN ENTRY
 // ------------------------------------------------------------------
 export async function POST(req: Request) {
@@ -105,7 +141,9 @@ export async function POST(req: Request) {
   };
 
   try {
-    // ---------------------- Parse Body ----------------------
+    // ------------------------------------------------------------
+    // Parse body
+    // ------------------------------------------------------------
     const body = await req.json().catch(() => null);
     diag.bodyPresent = !!body;
 
@@ -131,7 +169,7 @@ export async function POST(req: Request) {
 
     diag.mode = { ministryMode, founderMode, modeHint };
 
-    // ---------------------- Sanitize History ----------------------
+    // Sanitize history
     const sanitizedHistory = Array.isArray(history)
       ? history.map((h: any) => ({
           ...h,
@@ -141,7 +179,9 @@ export async function POST(req: Request) {
 
     diag.historyCount = sanitizedHistory.length;
 
-    // ---------------------- USER ----------------------
+    // ------------------------------------------------------------
+    // User session
+    // ------------------------------------------------------------
     const user = await getNodeUser(req);
     const canonicalUserKey = user?.id ?? explicitClientKey ?? "guest";
 
@@ -151,12 +191,58 @@ export async function POST(req: Request) {
       canonicalUserKey
     };
 
-    // ---------------------- CONTEXT ----------------------
+    // ------------------------------------------------------------
+    // *** NEW: IMAGE MODE (Generous Detection)
+    // This bypasses hybrid pipeline completely.
+    // ------------------------------------------------------------
+    if (isImageRequest(message)) {
+      diag.stage = "image:start";
+
+      try {
+        const url = await generateImage(message);
+
+        diag.stage = "image:done";
+        diag.generatedUrl = url?.slice(0, 180);
+
+        const finalText = `Here you go:\n\n![image](${url})`;
+
+        // Memory write
+        diag.stage = "memory:image:start";
+        try {
+          await writeMemory(canonicalUserKey, message, finalText);
+          diag.memoryWrite = "ok:image";
+        } catch (err: any) {
+          diag.memoryWrite = "error:image:" + (err?.message ?? "unknown");
+        }
+
+        diag.stage = "response:image:success";
+        const res = NextResponse.json({ text: finalText });
+
+        res.headers.set("x-solace-diag", JSON.stringify(sanitizeASCII(diag)).slice(0, 900));
+        return res;
+
+      } catch (err: any) {
+        diag.stage = "image:error";
+        diag.error = err?.message || "ImageError";
+
+        const res = NextResponse.json(
+          { error: "Image generation failed", details: err?.message ?? null },
+          { status: 500 }
+        );
+        res.headers.set("x-solace-diag", JSON.stringify(sanitizeASCII(diag)).slice(0, 900));
+        return res;
+      }
+    }
+
+    // ------------------------------------------------------------
+    // CONTEXT
+    // ------------------------------------------------------------
     diag.stage = "context-load:start";
+
     let context = await assembleContext(canonicalUserKey, workspaceId, message);
     context = sanitizeASCII(context);
-    diag.stage = "context-load:done";
 
+    diag.stage = "context-load:done";
     diag.context = {
       persona: context?.persona ?? null,
       facts: context?.memoryPack?.facts?.length ?? 0,
@@ -167,7 +253,9 @@ export async function POST(req: Request) {
       didResearch: !!context?.didResearch
     };
 
-    // ---------------------- GOVERNOR ----------------------
+    // ------------------------------------------------------------
+    // GOVERNOR
+    // ------------------------------------------------------------
     diag.stage = "governor:start";
 
     const governorOutput = updateGovernor(message);
@@ -180,7 +268,9 @@ export async function POST(req: Request) {
 
     diag.stage = "governor:done";
 
-    // ---------------------- HYBRID PIPELINE ----------------------
+    // ------------------------------------------------------------
+    // HYBRID PIPELINE
+    // ------------------------------------------------------------
     diag.stage = "pipeline:start";
 
     const pipelineResult = await runHybridPipeline({
@@ -192,6 +282,7 @@ export async function POST(req: Request) {
       founderMode,
       canonicalUserKey,
 
+      // Pass governor values
       governorLevel: governorOutput.level,
       governorInstructions: governorOutput.instructions
     });
@@ -202,11 +293,12 @@ export async function POST(req: Request) {
       governorLevel: pipelineResult.governorLevel,
       hasOptimist: !!pipelineResult.optimist,
       hasSkeptic: !!pipelineResult.skeptic,
-      hasImage: !!pipelineResult.imageUrl,
       finalPreview: String(pipelineResult.finalAnswer).slice(0, 240)
     };
 
-    // ---------------------- FORMATTING ----------------------
+    // ------------------------------------------------------------
+    // GOVERNOR FORMATTING
+    // ------------------------------------------------------------
     diag.stage = "formatting:start";
 
     const finalText = applyGovernorFormatting(pipelineResult.finalAnswer, {
@@ -220,30 +312,26 @@ export async function POST(req: Request) {
     diag.stage = "formatting:done";
     diag.finalPreview = finalText.slice(0, 240);
 
-    // ---------------------- MEMORY WRITE ----------------------
+    // ------------------------------------------------------------
+    // MEMORY WRITE
+    // ------------------------------------------------------------
     diag.stage = "memory:start";
 
     try {
       await writeMemory(canonicalUserKey, message, finalText);
       diag.memoryWrite = "ok";
     } catch (err: any) {
-      console.error("[MEMORY WRITE ERROR]", err);
       diag.memoryWrite = "error:" + (err?.message ?? "unknown");
     }
 
     diag.stage = "memory:done";
 
-    // ---------------------- RETURN SUCCESS ----------------------
+    // ------------------------------------------------------------
+    // SUCCESS RESPONSE
+    // ------------------------------------------------------------
     diag.stage = "response:success";
 
-    const payload: any = { text: finalText };
-
-    // OPTIONAL IMAGE RETURN
-    if (pipelineResult?.imageUrl) {
-      payload.imageUrl = pipelineResult.imageUrl;
-    }
-
-    const res = NextResponse.json(payload);
+    const res = NextResponse.json({ text: finalText });
     res.headers.set(
       "x-solace-diag",
       JSON.stringify(sanitizeASCII(diag)).slice(0, 900)
