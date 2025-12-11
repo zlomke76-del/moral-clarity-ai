@@ -1,100 +1,71 @@
-// lib/solace/sanitize.ts
-// --------------------------------------------------------------
-// CENTRAL SANITIZATION ENGINE FOR SOLACE (FINAL VERSION)
-// --------------------------------------------------------------
+// ---------------------------------------------------------
+// Solace Sanitizer — Emoji Safe (UTF-8 Preserving)
+// FINAL VERSION
+// ---------------------------------------------------------
 
-/**
- * sanitizeForModel()
- * ------------------
- * STRICT sanitizer for *model input only*.
- * Converts unsupported Unicode (>255) into "?".
- * Normalizes smart quotes, em-dashes, bullets, ellipses.
- *
- * Never use this for model output.
- */
-export function sanitizeForModel(input: any): any {
-  if (input == null) return input;
+// Allow all normal UTF-8 characters, including emojis.
+// Only remove:
+//   - control chars (0x00–0x1F except tab, LF, CR)
+//   - invalid surrogates
+//   - dangerous HTML/script injection sequences
+// ---------------------------------------------------------
 
-  if (typeof input === "string") {
-    const rep: Record<string, string> = {
-      "—": "-",
-      "–": "-",
-      "•": "*",
-      "“": "\"",
-      "”": "\"",
-      "‘": "'",
-      "’": "'",
-      "…": "..."
-    };
+// Clean text for model input (preserve emojis)
+export function sanitizeForModel(input: string): string {
+  if (!input) return "";
 
-    let out = input;
-    for (const k in rep) out = out.split(k).join(rep[k]);
+  let out = input;
 
-    // Byte-safe for model input only
-    return out
-      .split("")
-      .map((c) => (c.charCodeAt(0) > 255 ? "?" : c))
-      .join("");
+  // Remove disallowed ASCII control chars (keep tab, newline, carriage return)
+  out = out.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
+
+  // Remove invalid UTF-16 surrogate halves
+  out = out.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, "");
+  out = out.replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "");
+
+  // Prevent HTML injection
+  out = out.replace(/<script/gi, "<scri​pt");
+
+  // Trim excessive whitespace
+  return out.trim();
+}
+
+// Clean text for UI rendering
+export function sanitizeForClient(input: string): string {
+  if (!input) return "";
+
+  let out = input;
+
+  // Same UTF checks as model input
+  out = out.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
+  out = out.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, "");
+  out = out.replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "");
+
+  // Escape HTML only where necessary
+  out = out.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  return out;
+}
+
+// Deep sanitize any object before sending to model
+export function sanitizeObjectDeep(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+
+  if (typeof obj === "string") {
+    return sanitizeForModel(obj);
   }
 
-  if (Array.isArray(input)) return input.map((x) => sanitizeForModel(x));
-
-  if (typeof input === "object") {
-    const o: any = {};
-    for (const k in input) o[k] = sanitizeForModel(input[k]);
-    return o;
+  if (Array.isArray(obj)) {
+    return obj.map((v) => sanitizeObjectDeep(v));
   }
 
-  return input;
-}
-
-/**
- * sanitizeForClient()
- * -------------------
- * Final sanitizer for output → UI
- * ✔ keeps emojis
- * ✔ keeps Unicode
- * ✔ removes *only* invisible control characters
- */
-export function sanitizeForClient(text: string): string {
-  if (!text) return "";
-
-  return text
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
-    .replace(/\uFFFD/g, "�");
-}
-
-/**
- * sanitizeForMemory()
- * -------------------
- * Light sanitizer for Supabase storage.
- * ✔ keeps emojis
- * ✔ keeps all Unicode
- * ✔ removes only invalid control chars
- */
-export function sanitizeForMemory(text: string): string {
-  if (!text) return "";
-  return text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
-}
-
-/**
- * sanitizeObjectDeep()
- * -------------------
- * Deep sanitize context objects for UI.
- * ✔ keeps emojis
- * ✔ keeps Unicode
- */
-export function sanitizeObjectDeep(input: any): any {
-  if (input == null) return input;
-
-  if (typeof input === "string") return sanitizeForClient(input);
-  if (Array.isArray(input)) return input.map((x) => sanitizeObjectDeep(x));
-
-  if (typeof input === "object") {
+  if (typeof obj === "object") {
     const out: any = {};
-    for (const k in input) out[k] = sanitizeObjectDeep(input[k]);
+    for (const k of Object.keys(obj)) {
+      out[k] = sanitizeObjectDeep(obj[k]);
+    }
     return out;
   }
 
-  return input;
+  return obj;
 }
