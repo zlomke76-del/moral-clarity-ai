@@ -8,6 +8,14 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 import { useSolaceStore } from "@/app/providers/solace-store";
+declare global {
+  interface Window {
+    __solaceDockMounted?: boolean;
+    webkitSpeechRecognition?: any;
+    SpeechRecognition?: any;
+  }
+}
+
 import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
 
 import { useSolaceMemory } from "./useSolaceMemory";
