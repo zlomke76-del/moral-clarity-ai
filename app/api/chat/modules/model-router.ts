@@ -1,8 +1,7 @@
 // app/api/chat/modules/model-router.ts
 // --------------------------------------------------------------
-// MODEL ROUTER — Final corrected version
-// Uses OpenAI Responses API correctly (string input only)
-// ASCII-safe, deterministic, production stable.
+// MODEL ROUTER — Responses API (final, stable, build-safe)
+// Produces deterministic text output via output_text only.
 // --------------------------------------------------------------
 
 import OpenAI from "openai";
@@ -33,41 +32,38 @@ function sanitizeASCII(input: string): string {
 }
 
 // --------------------------------------------------------------
-// callModel(model: string, messages: any[]): Promise<string>
-// Corrected for Responses API: accepts ONLY a string
+// Correct model invocation for Responses API
 // --------------------------------------------------------------
 export async function callModel(
   model: string,
   messages: Array<{ role: string; content: any }>
 ): Promise<string> {
   try {
-    // Extract the prompt text from messages
-    // Pipeline always sends exactly 1 user message with a text block
-    const extracted =
+    // Extract actual prompt string from the messages array
+    const prompt =
       messages?.[0]?.content?.[0]?.text ??
       messages?.[0]?.content?.text ??
       messages?.[0]?.content ??
       "[empty prompt]";
 
-    const prompt = String(extracted);
+    const promptStr = String(prompt);
 
     const response = await client.responses.create({
       model,
-      input: prompt, // <-- FIXED, now a string not an array
+      input: promptStr, // <-- THIS IS THE ONLY VALID INPUT FORMAT
       reasoning: { effort: "medium" }
     });
 
+    // ------------------------------------------------------
+    // SAFE TEXT EXTRACTION (Responses API standard)
+    // ------------------------------------------------------
     const text =
       response.output_text ??
-      response.output?.[0]?.content?.[0]?.text ??
-      "[empty response]";
+      "[no output_text returned]";
 
     return sanitizeASCII(String(text));
   } catch (err: any) {
     console.error("[MODEL ROUTER ERROR]", err);
-    return (
-      "[model-router error] " +
-      sanitizeASCII(String(err?.message ?? "unknown"))
-    );
+    return "[model-router error] " + sanitizeASCII(String(err?.message ?? "unknown"));
   }
 }
