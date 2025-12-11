@@ -1,6 +1,6 @@
+// app/api/chat/modules/hybrid.ts
 //--------------------------------------------------------------
 // HYBRID PIPELINE — OPTIMIST → SKEPTIC → ARBITER
-// Clean, deterministic, model-specific
 //--------------------------------------------------------------
 
 import { callModel } from "./model-router";
@@ -35,7 +35,7 @@ Rules:
 - You speak as ONE Solace voice: balanced, clear, directed.
 `;
 
-// Prompt builder
+// Helper
 function build(system: string, userMsg: string): string {
   return `${system}\nUser: ${userMsg}`;
 }
@@ -53,9 +53,9 @@ export async function runHybridPipeline(args: {
 }) {
   const { userMessage } = args;
 
-  // ------------------------------
+  //
   // OPTIMIST (always gpt-4.1-mini)
-  ------------------------------
+  //
   const optStart = performance.now();
   let optimist = await callModel(
     "gpt-4.1-mini",
@@ -72,9 +72,9 @@ export async function runHybridPipeline(args: {
     finished: optEnd,
   });
 
-  // ------------------------------
+  //
   // SKEPTIC (always gpt-4.1-mini)
-  ------------------------------
+  //
   const skpStart = performance.now();
   let skeptic = await callModel(
     "gpt-4.1-mini",
@@ -93,12 +93,13 @@ export async function runHybridPipeline(args: {
 
   if (!optimist || optimist.includes("[Model error]"))
     optimist = "Optimist failed.";
+
   if (!skeptic || skeptic.includes("[Model error]"))
     skeptic = "Skeptic failed.";
 
-  // ------------------------------
+  //
   // ARBITER (always gpt-4.1)
-  ------------------------------
+  //
   const arbPrompt = `
 ${ARBITER_SYSTEM}
 
