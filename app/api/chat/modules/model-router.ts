@@ -1,8 +1,9 @@
 //--------------------------------------------------------------
-// MODEL ROUTER — OPENAI RESPONSES API (HYBRID MODE)
-// Accepts either:
-//   1) string prompt
-//   2) array of { role, text } messages
+// MODEL ROUTER — OPENAI RESPONSES API (FINAL, STRICTLY VALID)
+// Accepts:
+//   1) a string
+//   2) an array of strings
+//   3) an array of { role, text } → converted to strings
 //--------------------------------------------------------------
 
 import OpenAI from "openai";
@@ -12,21 +13,29 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-// Normalize input to OpenAI Responses API format
-function buildInput(input: string | any[]) {
+// --------------------------------------------------------------
+// normalize input for Responses API
+// --------------------------------------------------------------
+function normalizeInput(input: any): string | string[] {
+  // case 1: simple string
   if (typeof input === "string") {
     return sanitizeForModel(input);
   }
 
-  // structured message array
-  if (Array.isArray(input)) {
-    return input.map((m) => ({
-      role: m.role,
-      content: [{ type: "input_text", text: sanitizeForModel(m.text) }],
-    }));
+  // case 2: array of strings
+  if (Array.isArray(input) && typeof input[0] === "string") {
+    return input.map((s) => sanitizeForModel(s));
   }
 
-  return "Unsupported input";
+  // case 3: array of { role, text }
+  if (Array.isArray(input) && typeof input[0] === "object") {
+    return input.map((msg) =>
+      sanitizeForModel(`[${msg.role.toUpperCase()}]\n${msg.text}`)
+    );
+  }
+
+  // fallback
+  return sanitizeForModel(String(input));
 }
 
 // --------------------------------------------------------------
@@ -34,15 +43,16 @@ function buildInput(input: string | any[]) {
 // --------------------------------------------------------------
 export async function callModel(model: string, prompt: any) {
   try {
-    const formatted = buildInput(prompt);
+    const cleanInput = normalizeInput(prompt);
 
     const res = await client.responses.create({
       model,
-      input: formatted,
+      input: cleanInput,     // ← ALWAYS valid for Responses API
     });
 
-    const out = res.output_text ?? "";
-    return typeof out === "string" ? out : String(out);
+    return typeof res.output_text === "string"
+      ? res.output_text
+      : String(res.output_text ?? "");
 
   } catch (err) {
     console.error("[MODEL ROUTER ERROR]", err);
