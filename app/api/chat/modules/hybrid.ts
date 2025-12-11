@@ -1,8 +1,7 @@
-// app/api/chat/modules/hybrid.ts
 //--------------------------------------------------------------
 // HYBRID PIPELINE — OPTIMIST → SKEPTIC → ARBITER
-// Persona + Memory injected ONLY into Arbiter (Option A)
-// MULTI-MESSAGE PIPELINE (system + assistant + user)
+// Persona + Memory injected ONLY into Arbiter
+// Uses Hybrid Router (strings + structured messages)
 //--------------------------------------------------------------
 
 import { callModel } from "./model-router";
@@ -10,21 +9,22 @@ import { logTriadDiagnostics } from "./triad-diagnostics";
 import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
 
 // --------------------------------------------------------------
-// LENS SYSTEM TEXT (no persona)
+// SYSTEM TEXT FOR OPTIMIST + SKEPTIC
 // --------------------------------------------------------------
 const OPTIMIST_SYSTEM = `
 You are the OPTIMIST lens.
-Your job: generate the strongest constructive interpretation of the user's message.
-Grounded, realistic, positive, opportunity-focused.
-No emojis. No icons. No persona names. No formatting.
+Your job is to produce the strongest constructive interpretation
+of the user's message. Grounded, realistic, opportunity-focused.
+No emojis. No icons. No formatting.
 Short, clear, actionable.
 `;
 
 const SKEPTIC_SYSTEM = `
 You are the SKEPTIC lens.
-Your job: identify risks, constraints, and failure modes.
-Not negative for its own sake. Not emotional. No emojis.
-Short, sharp, factual.
+Identify risks, constraints, and failure modes.
+Factual, sharp, no negativity for its own sake.
+No emojis. No icons.
+Short, clear, precise.
 `;
 
 const ARBITER_RULES = `
@@ -32,14 +32,29 @@ You are the ARBITER.
 You integrate the Optimist and the Skeptic into ONE unified answer.
 
 Rules:
-- Weigh opportunity vs. risk objectively.
-- NEVER reveal personas, lenses, or internal steps.
-- ONLY use emojis/icons if explicitly requested by the user.
-- Speak as ONE Solace voice: decisive, balanced, grounded.
+- Weigh opportunity vs risk objectively.
+- Never reveal personas or internal steps.
+- Only use emojis/icons if the user asked.
+- Speak as ONE Solace voice.
 `;
 
 // --------------------------------------------------------------
-export async function runHybridPipeline(args: any) {
+function build(system: string, userMsg: string): string {
+  return `${system}\nUser: ${userMsg}`;
+}
+
+// --------------------------------------------------------------
+export async function runHybridPipeline(args: {
+  userMessage: string;
+  context: any;
+  history: any[];
+  ministryMode: boolean;
+  founderMode: boolean;
+  modeHint: string;
+  canonicalUserKey: string;
+  governorLevel: number;
+  governorInstructions: string;
+}) {
   const {
     userMessage,
     context,
@@ -51,75 +66,65 @@ export async function runHybridPipeline(args: any) {
   } = args;
 
   // ============================================================
-  // 1. OPTIMIST (simple call)
+  // 1. OPTIMIST (string mode)
   // ============================================================
   const optStart = performance.now();
-  const optimist = await callModel("gpt-4.1-mini", [
-    { role: "system", content: OPTIMIST_SYSTEM },
-    { role: "user", content: userMessage },
-  ]);
+  let optimist = await callModel("gpt-4.1-mini", build(OPTIMIST_SYSTEM, userMessage));
   const optEnd = performance.now();
 
   logTriadDiagnostics({
     stage: "optimist",
     model: "gpt-4.1-mini",
-    prompt: OPTIMIST_SYSTEM + userMessage,
+    prompt: build(OPTIMIST_SYSTEM, userMessage),
     output: optimist,
     started: optStart,
     finished: optEnd,
   });
 
+  if (!optimist || optimist.includes("[Model error]")) optimist = "Optimist failed.";
+
   // ============================================================
-  // 2. SKEPTIC (simple call)
+  // 2. SKEPTIC (string mode)
   // ============================================================
   const skpStart = performance.now();
-  const skeptic = await callModel("gpt-4.1-mini", [
-    { role: "system", content: SKEPTIC_SYSTEM },
-    { role: "user", content: userMessage },
-  ]);
+  let skeptic = await callModel("gpt-4.1-mini", build(SKEPTIC_SYSTEM, userMessage));
   const skpEnd = performance.now();
 
   logTriadDiagnostics({
     stage: "skeptic",
     model: "gpt-4.1-mini",
-    prompt: SKEPTIC_SYSTEM + userMessage,
+    prompt: build(SKEPTIC_SYSTEM, userMessage),
     output: skeptic,
     started: skpStart,
     finished: skpEnd,
   });
 
+  if (!skeptic || skeptic.includes("[Model error]")) skeptic = "Skeptic failed.";
+
   // ============================================================
-  // 3. ARBITER — with Solace Persona + Memory + Governor
+  // 3. ARBITER — structured mode (persona + memory)
   // ============================================================
-  const personaSystem = buildSolaceSystemPrompt(
-    "core",
-    `
+
+  const personaSystem = buildSolaceSystemPrompt("core", `
 Governor Level: ${governorLevel}
 Governor Instructions: ${governorInstructions}
 Founder Mode: ${founderMode}
 Ministry Mode: ${ministryMode}
 Mode Hint: ${modeHint}
 
-Memory Facts: ${JSON.stringify(context.memoryPack.facts || [])}
-Memory Episodic: ${JSON.stringify(context.memoryPack.episodic || [])}
-Autobiography: ${JSON.stringify(context.memoryPack.autobiography || [])}
-
+Facts: ${JSON.stringify(context.memoryPack?.facts || [])}
+Episodic: ${JSON.stringify(context.memoryPack?.episodic || [])}
+Autobiography: ${JSON.stringify(context.memoryPack?.autobiography || [])}
 Research: ${JSON.stringify(context.researchContext || [])}
-News: ${JSON.stringify(context.newsDigest || [])}
-`
-  );
+NewsDigest: ${JSON.stringify(context.newsDigest || [])}
+  `);
 
   const arbMessages = [
-    // 1. Persona + rules
-    { role: "system", content: personaSystem },
-    { role: "system", content: ARBITER_RULES },
-
-    // 2. Inject lens outputs as assistant messages
-    { role: "assistant", content: `OPTIMIST VIEW:\n${optimist}` },
-    { role: "assistant", content: `SKEPTIC VIEW:\n${skeptic}` },
-
-    // 3. User message
-    { role: "user", content: userMessage }
+    { role: "system", text: personaSystem },
+    { role: "assistant", text: `OPTIMIST VIEW:\n${optimist}` },
+    { role: "assistant", text: `SKEPTIC VIEW:\n${skeptic}` },
+    { role: "assistant", text: ARBITER_RULES },
+    { role: "user", text: userMessage },
   ];
 
   const arbStart = performance.now();
