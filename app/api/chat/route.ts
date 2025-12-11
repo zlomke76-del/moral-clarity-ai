@@ -16,25 +16,22 @@ import { runHybridPipeline } from "./modules/hybrid";
 
 import { updateGovernor } from "@/lib/solace/governor/governor-engine";
 import { applyGovernorFormatting } from "@/lib/solace/governor/governor-icon-format";
-import { writeMemory } from "./modules/memory-writer";
 
+import { writeMemory } from "./modules/memory-writer";
 import type { PacingLevel } from "@/lib/solace/governor/types";
 
-// Global sanitizers
 import {
   sanitizeForModel,
   sanitizeForClient,
   sanitizeObjectDeep,
 } from "@/lib/solace/sanitize";
 
-// Numeric → enum clamp
+// Clamp numeric → enum
 function clampToPacingLevel(n: number): PacingLevel {
-  if (n < 0) return 0;
-  if (n > 5) return 5;
-  return n as PacingLevel;
+  return Math.max(0, Math.min(5, n)) as PacingLevel;
 }
 
-// Load Supabase session
+// Load Supabase user
 async function getNodeUser(req: Request) {
   const cookieHeader = req.headers.get("cookie") ?? "";
 
@@ -60,6 +57,9 @@ async function getNodeUser(req: Request) {
   return data?.user ?? null;
 }
 
+// -----------------------------------------------------
+// POST — MAIN CHAT ROUTE
+// -----------------------------------------------------
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => null);
@@ -67,9 +67,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
-    // Incoming message — sanitize for model input ONLY
+    // USER INPUT CLEANUP → model only
     const rawMessage = String(body.message);
-    const message = sanitizeForModel(rawMessage);
+    const messageForModel = sanitizeForModel(rawMessage);
 
     const {
       history = [],
@@ -83,16 +83,16 @@ export async function POST(req: Request) {
     const user = await getNodeUser(req);
     const canonicalUserKey = user?.id ?? explicitKey ?? "guest";
 
-    // Load + sanitize context deeply (emoji-safe)
-    let context = await assembleContext(canonicalUserKey, workspaceId, message);
+    // Assemble context → UI-safe deep clean (does NOT remove emojis)
+    let context = await assembleContext(canonicalUserKey, workspaceId, rawMessage);
     context = sanitizeObjectDeep(context);
 
-    // Governor
-    const governorOutput = updateGovernor(message);
+    // Governor signal from *raw user message* (not sanitized output)
+    const governorOutput = updateGovernor(rawMessage);
 
-    // Run LLM pipeline
+    // Run hybrid pipeline → returns raw model text + optional image
     const result = await runHybridPipeline({
-      userMessage: message,
+      userMessage: messageForModel,
       context,
       history,
       ministryMode,
@@ -103,19 +103,22 @@ export async function POST(req: Request) {
       governorInstructions: governorOutput.instructions,
     });
 
-    // Apply governor formatting
+    // -------------------------------
+    // THE FIX (Correct pipeline order)
+    // -------------------------------
+    // 1. Governor formatting applied to RAW LLM text
     const formatted = applyGovernorFormatting(result.finalAnswer, {
       level: clampToPacingLevel(governorOutput.level),
-      isFounder: !!founderMode,
+      isFounder: founderMode === true,
       emotionalDistress:
         (governorOutput.signals?.emotionalValence ?? 0.5) < 0.35,
       decisionContext: governorOutput.signals?.decisionPoint ?? false,
     });
 
-    // UI sanitizer (emoji-safe)
+    // 2. UI sanitization applied LAST (prevents emoji corruption)
     const uiText = sanitizeForClient(formatted);
 
-    // Memory write
+    // Memory write from raw → ui text
     try {
       await writeMemory(canonicalUserKey, rawMessage, uiText);
     } catch {}
@@ -136,3 +139,4 @@ export async function POST(req: Request) {
     );
   }
 }
+
