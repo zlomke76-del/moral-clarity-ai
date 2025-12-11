@@ -1,23 +1,11 @@
 // app/api/chat/modules/orchestrator.ts
 //--------------------------------------------------------------
 // Solace Orchestrator (Thin Wrapper)
-// Unified Hybrid Super-AI Pipeline
+// Hybrid Super-AI Pipeline (Opt → Skep → Arbiter)
 //--------------------------------------------------------------
 
 import { runHybridPipeline } from "./hybrid";
 
-/**
- * orchestrateSolaceResponse
- *
- * Returns:
- *   - finalAnswer
- *   - imageUrl
- *   - optimist
- *   - skeptic
- *   - arbiter
- *   - governorLevel       (passed through from route.ts)
- *   - governorInstructions (passed through from route.ts)
- */
 export async function orchestrateSolaceResponse({
   userMessage,
   context,
@@ -38,21 +26,26 @@ export async function orchestrateSolaceResponse({
       modeHint,
       founderMode,
       canonicalUserKey,
-      governorLevel,        // pass through
-      governorInstructions, // pass through
+      governorLevel,
+      governorInstructions,
     });
+
+    // NOTE:
+    // runHybridPipeline *may or may not* return optimist/skeptic/arbiter.
+    // So we do NOT read them off `result` unless they exist.
 
     return {
       finalAnswer: result.finalAnswer,
       imageUrl: result.imageUrl ?? null,
 
-      // These do NOT come from result — route controls them
+      // These always come from route.ts
       governorLevel,
       governorInstructions,
 
-      optimist: result.optimist ?? "",
-      skeptic: result.skeptic ?? "",
-      arbiter: result.arbiter ?? "",
+      // Triad components (if present)
+      optimist: result.optimist || "",
+      skeptic: result.skeptic || "",
+      arbiter: result.arbiter || "",
     };
 
   } catch (err) {
