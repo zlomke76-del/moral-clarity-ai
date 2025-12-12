@@ -96,7 +96,7 @@ export async function writeMemory(input: MemoryWriteInput) {
 
     // Insert into memory.memories (schema-qualified)
     const { error } = await supabase
-      .from("memory.memories")
+      supabase.from("memories", { schema: "memory" })
       .insert({
         user_id: userId,
         email: safeEmail,
