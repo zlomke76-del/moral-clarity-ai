@@ -18,10 +18,11 @@ import { updateGovernor } from "@/lib/solace/governor/governor-engine";
 import { applyGovernorFormatting } from "@/lib/solace/governor/governor-icon-format";
 
 import { writeMemory } from "./modules/memory-writer";
+import type { MemoryWriteInput } from "./modules/memory-writer";
 import type { PacingLevel } from "@/lib/solace/governor/types";
 
 // -----------------------------------------------------
-// ASCII Sanitize (safe for logs + models)
+// ASCII Sanitize
 // -----------------------------------------------------
 function sanitizeASCII(input: any): any {
   if (!input) return input;
@@ -45,7 +46,7 @@ function sanitizeASCII(input: any): any {
       .join("");
   }
 
-  if (Array.isArray(input)) return input.map((x) => sanitizeASCII(x));
+  if (Array.isArray(input)) return input.map(sanitizeASCII);
 
   if (typeof input === "object") {
     const o: any = {};
@@ -94,16 +95,13 @@ async function getNodeUser(req: Request) {
 }
 
 // -----------------------------------------------------
-// POST HANDLER
+// POST
 // -----------------------------------------------------
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => null);
     if (!body?.message) {
-      return NextResponse.json(
-        { error: "Message required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Message required" }, { status: 400 });
     }
 
     const message = sanitizeASCII(String(body.message));
@@ -117,12 +115,11 @@ export async function POST(req: Request) {
     } = body;
 
     const user = await getNodeUser(req);
-
-    // -------------------------------------------------
-    // Assemble context (READ-ONLY)
-    // -------------------------------------------------
     const canonicalUserKey = user?.id ?? "user:anonymous";
 
+    // -------------------------------------------------
+    // Context (READ-ONLY)
+    // -------------------------------------------------
     let context = await assembleContext(
       canonicalUserKey,
       workspaceId,
@@ -131,7 +128,7 @@ export async function POST(req: Request) {
     context = sanitizeASCII(context);
 
     // -------------------------------------------------
-    // Governor + Triad pipeline
+    // Governor + Triad
     // -------------------------------------------------
     const gov = updateGovernor(message);
 
@@ -155,36 +152,32 @@ export async function POST(req: Request) {
     });
 
     // -------------------------------------------------
-    // MEMORY WRITE GATE (EXPLICIT + FOUNDER)
+    // MEMORY WRITE GATE (EXPLICIT ONLY)
     // -------------------------------------------------
     const normalized = message.trim().toLowerCase();
-
     const explicitRemember =
       normalized.startsWith("remember ") ||
       normalized.startsWith("remember that ");
 
-    if (
-      user?.id &&
-      user.email &&
-      (explicitRemember || founderMode === true)
-    ) {
+    if (user?.id && user.email && (explicitRemember || founderMode === true)) {
       console.log("[MEMORY-GATE] write allowed", {
         explicitRemember,
         founderMode,
         userId: user.id,
       });
 
-      await writeMemory(
-        canonicalUserKey,
-        message,
-        formatted
-      );
+      const memoryInput: MemoryWriteInput = {
+        userId: user.id,
+        email: user.email,
+        workspaceId,
+        memoryType: explicitRemember ? "fact" : "identity",
+        source: explicitRemember ? "explicit" : "founder",
+        content: message,
+      };
+
+      await writeMemory(memoryInput);
     } else {
-      console.log("[MEMORY-GATE] write skipped", {
-        hasUser: !!user?.id,
-        explicitRemember,
-        founderMode,
-      });
+      console.log("[MEMORY-GATE] write skipped");
     }
 
     return NextResponse.json({
@@ -194,11 +187,7 @@ export async function POST(req: Request) {
   } catch (err: any) {
     console.error("[CHAT ROUTE FATAL]", err);
     return NextResponse.json(
-      {
-        error: err?.message ?? "ChatRouteError",
-        text: "[error]",
-        imageUrl: null,
-      },
+      { error: err?.message ?? "ChatRouteError", text: "[error]" },
       { status: 500 }
     );
   }
