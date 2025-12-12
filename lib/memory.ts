@@ -58,7 +58,6 @@ export async function remember({
   if (!analysis.oversight.store) {
     return {
       stored: false,
-      reason: "blocked_by_oversight",
       explanation: buildExplanation({
         type: "memory_block",
         summary: "Information was not stored.",
@@ -77,10 +76,14 @@ export async function remember({
      4. Confidence synthesis (learning signal)
      ------------------------------------------------------------ */
 
+  const lifecycleConfidence = analysis.lifecycle.confidence;
+  const semanticConfidence = semantic.confidence;
+  const recentSignal = recent && recent.length > 0 ? 0.7 : 0.3;
+
   const confidence =
-    0.4 * analysis.lifecycle.confidence +
-    0.3 * semantic.confidence +
-    0.3 * (recent && recent.length > 0 ? 0.7 : 0.3);
+    0.4 * lifecycleConfidence +
+    0.3 * semanticConfidence +
+    0.3 * recentSignal;
 
   /* ------------------------------------------------------------
      5. Promotion logic (fact vs reference)
@@ -93,15 +96,16 @@ export async function remember({
     : analysis.oversight.finalKind ?? purpose ?? "note";
 
   /* ------------------------------------------------------------
-     6. Explainability (human-readable)
+     6. Explainability
      ------------------------------------------------------------ */
 
   const explanation = explainMemoryPromotion({
     promoted: promotedToFact,
+    finalKind,
     confidence,
-    reason: promotedToFact
-      ? "Consistent over time with no contradictions detected."
-      : "Insufficient confidence or duration for fact promotion.",
+    lifecycleConfidence,
+    semanticConfidence,
+    recentSignal,
   });
 
   /* ------------------------------------------------------------
@@ -125,7 +129,7 @@ export async function remember({
         semantic,
         lifecycle: analysis.lifecycle,
         drift: analysis.drift,
-        explainability: explanation, // ← STORED, NOT SHOWN
+        explainability: explanation, // stored, not auto-exposed
       },
     })
     .select()
@@ -136,7 +140,7 @@ export async function remember({
   }
 
   /* ------------------------------------------------------------
-     8. Return (explanation optional, caller decides)
+     8. Return (caller decides visibility)
      ------------------------------------------------------------ */
 
   return {
@@ -145,12 +149,12 @@ export async function remember({
     confidence,
     kind: finalKind,
     promotedToFact,
-    explanation, // ← safe to expose on request
+    explanation,
   };
 }
 
 /* ============================================================
-   MEMORY SEARCH — ranked recall (unchanged)
+   MEMORY SEARCH — ranked recall
    ============================================================ */
 
 export async function searchMemories(
