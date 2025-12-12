@@ -1,11 +1,14 @@
 // app/api/chat/modules/assembleContext.ts
 // ------------------------------------------------------------
-// Solace Context Loader — MEMORY-SCHEMA CLEAN
-// Reads ONLY from memory.memories (no legacy fallback)
+// Solace Context Loader — Phase B
+// READS ONLY from memory.memories (RLS enforced)
 // ------------------------------------------------------------
 
 import { createClientEdge } from "@/lib/supabase/edge";
-import { FACTS_LIMIT } from "./constants";
+import {
+  FACTS_LIMIT,
+  EPISODES_LIMIT,
+} from "./constants";
 
 export type SolaceContextBundle = {
   persona: string;
@@ -24,78 +27,85 @@ const STATIC_PERSONA_NAME = "Solace";
 // ------------------------------------------------------------
 // Diagnostics
 // ------------------------------------------------------------
-function diag(label: string, value: any) {
-  console.log(`[DIAG-CTX] ${label}`, value);
+function diag(label: string, payload: any) {
+  console.log(`[DIAG-CTX] ${label}`, payload);
 }
 
 // ------------------------------------------------------------
 // Helpers
 // ------------------------------------------------------------
-function safe<T>(rows: T[] | null): T[] {
+function safeRows<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
 }
 
 // ------------------------------------------------------------
-// Loaders
+// MEMORY LOADERS (schema = memory)
 // ------------------------------------------------------------
-async function loadFacts(userId: string) {
+async function loadMemories(
+  userId: string,
+  memoryType: string,
+  limit: number
+) {
   const supabase = createClientEdge();
 
   const { data, error } = await supabase
-    // ✅ CORRECT schema-qualified read
-    .from("memory.memories")
+    .from("memories", { schema: "memory" })
     .select("id, memory_type, content, created_at")
     .eq("user_id", userId)
-    .eq("memory_type", "fact")
-    .eq("is_active", true)
+    .eq("memory_type", memoryType)
     .order("created_at", { ascending: false })
-    .limit(FACTS_LIMIT);
+    .limit(limit);
 
   if (error) {
-    console.warn("[CTX-FACTS] read error", {
+    console.warn(`[CTX-${memoryType.toUpperCase()}] read error`, {
       code: error.code,
       message: error.message,
-      hint: error.hint,
     });
     return [];
   }
 
-  return safe(data);
+  return safeRows(data);
 }
 
 // ------------------------------------------------------------
-// Main Assembler
+// MAIN ASSEMBLER
 // ------------------------------------------------------------
 export async function assembleContext(
   canonicalUserKey: string,
   workspaceId: string | null,
   userMessage: string
 ): Promise<SolaceContextBundle> {
-  diag("CTX → assemble start", {
+
+  diag("assemble start", {
     canonicalUserKey,
     workspaceId,
-    userMessagePreview: userMessage.slice(0, 80),
+    preview: userMessage.slice(0, 80),
   });
 
-  const userId = canonicalUserKey;
+  // ----------------------------------------------------------
+  // Load memory buckets
+  // ----------------------------------------------------------
+  const [facts, episodic, autobiography] = await Promise.all([
+    loadMemories(canonicalUserKey, "fact", FACTS_LIMIT),
+    loadMemories(canonicalUserKey, "episodic", EPISODES_LIMIT),
+    loadMemories(canonicalUserKey, "identity", 25),
+  ]);
 
-  const facts = await loadFacts(userId);
-
-  diag("CTX SUMMARY", {
+  diag("memory counts", {
     facts: facts.length,
-    episodic: 0,
-    autobiography: 0,
-    newsDigest: 0,
-    research: 0,
-    didResearch: false,
+    episodic: episodic.length,
+    autobiography: autobiography.length,
   });
 
+  // ----------------------------------------------------------
+  // Phase B: No news, no research, no inference
+  // ----------------------------------------------------------
   return {
     persona: STATIC_PERSONA_NAME,
     memoryPack: {
       facts,
-      episodic: [],
-      autobiography: [],
+      episodic,
+      autobiography,
     },
     newsDigest: [],
     researchContext: [],
