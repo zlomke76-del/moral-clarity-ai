@@ -1,11 +1,7 @@
 // lib/memory.ts
-// Phase 4 — Ethical Memory Engine Integration
-
 import { createClient } from "@supabase/supabase-js";
-import {
-  analyzeMemoryWrite,
-  rankMemories,
-} from "./memory-intelligence";
+import { analyzeMemoryWrite } from "./memory-intelligence";
+import { classifyMemoryText } from "./memory-classifier";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -13,56 +9,38 @@ const supabase = createClient(
   { auth: { persistSession: false } }
 );
 
-export type MemoryPurpose =
-  | "identity"
-  | "value"
-  | "insight"
-  | "fact"
-  | "preference"
-  | "context"
-  | "episode"
-  | "note";
-
-async function fetchRecentMemories(user_key: string, limit = 20) {
-  const { data } = await supabase
-    .from("user_memories")
-    .select("*")
-    .eq("user_key", user_key)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  return data || [];
-}
-
 export async function remember({
   user_key,
   content,
   title = null,
-  purpose = null,
   workspace_id = null,
 }: {
   user_key: string;
   content: string;
   title?: string | null;
-  purpose?: string | null;
   workspace_id?: string | null;
 }) {
-  const recent = await fetchRecentMemories(user_key, 20);
+  const { data: recent } = await supabase
+    .from("user_memories")
+    .select("*")
+    .eq("user_key", user_key)
+    .order("created_at", { ascending: false })
+    .limit(10);
 
-  const evaluation = await analyzeMemoryWrite(content, recent);
-  const { classification, lifecycle, oversight } = evaluation;
-
-  if (!oversight.allowed || !oversight.store) {
-    return {
-      stored: false,
-      reason: "blocked_by_oversight",
-      classification,
-    };
+  const analysis = analyzeMemoryWrite(content, recent ?? []);
+  if (!analysis.oversight.store) {
+    return { stored: false, reason: "blocked" };
   }
 
+  const semantic = await classifyMemoryText(content);
+
+  const confidence =
+    0.4 * analysis.lifecycle.confidence +
+    0.3 * semantic.confidence +
+    0.3 * (recent?.length ? 0.7 : 0.3);
+
   const finalKind =
-    (purpose as MemoryPurpose) ||
-    (oversight.finalKind as MemoryPurpose);
+    confidence >= 0.9 ? "fact" : analysis.oversight.finalKind;
 
   const { data, error } = await supabase
     .from("user_memories")
@@ -71,39 +49,18 @@ export async function remember({
       title,
       content,
       kind: finalKind,
-      importance: lifecycle.promoteToFact ? 5 : 3,
-      emotional_weight: classification.emotional,
-      sensitivity_score: classification.sensitivity,
+      importance: finalKind === "fact" ? 5 : 3,
+      confidence,
       workspace_id,
+      metadata: {
+        semantic,
+        lifecycle: analysis.lifecycle,
+      },
     })
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) throw error;
 
-  return {
-    stored: true,
-    memory: data,
-    classification,
-    lifecycle,
-    oversight,
-  };
-}
-
-export async function searchMemories(
-  user_key: string,
-  query: string
-) {
-  const { data } = await supabase
-    .from("user_memories")
-    .select("*")
-    .eq("user_key", user_key);
-
-  if (!data) return [];
-
-  const matches = data.filter((m) =>
-    m.content.toLowerCase().includes(query.toLowerCase())
-  );
-
-  return rankMemories(matches);
+  return { stored: true, memory: data, confidence };
 }
