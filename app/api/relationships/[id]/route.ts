@@ -1,10 +1,10 @@
 // app/api/relationships/[id]/route.ts
 //------------------------------------------------------------
-// Relationship fetch — SSR safe (Next.js 16)
+// Relationship fetch — Next.js 16 + @supabase/ssr (correct)
 //------------------------------------------------------------
 
 import { NextResponse } from "next/server";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
 export async function GET(
@@ -12,22 +12,12 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   const cookieStore = cookies();
-  const headerStore = headers();
 
   const supabase = createServerClient(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_ANON_KEY!,
     {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-      },
-      headers: {
-        get(name: string) {
-          return headerStore.get(name) ?? undefined;
-        },
-      },
+      cookies: cookieStore,
     }
   );
 
@@ -46,3 +36,4 @@ export async function GET(
 
   return NextResponse.json({ relationship });
 }
+
