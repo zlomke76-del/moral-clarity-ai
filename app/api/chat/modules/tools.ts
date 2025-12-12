@@ -14,7 +14,7 @@ export async function executeTool(toolName: string, args: any, userKey: string) 
         user_key: userKey,
         content,
         title: null,
-        purpose: classification.kind,
+        purpose: classification.label,
         workspace_id: null,
       });
 
