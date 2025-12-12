@@ -117,14 +117,15 @@ export async function POST(req: Request) {
       modeHint = "Neutral",
     } = body;
 
-    // Authenticated user required for memory
     const user = await getNodeUser(req);
 
     // -------------------------------------------------
-    // Assemble context (read-only)
+    // Assemble context (READ-ONLY, safe fallback)
     // -------------------------------------------------
+    const contextUserKey = user?.id ?? "user:anonymous";
+
     let context = await assembleContext(
-      user?.id ?? null,
+      contextUserKey,
       workspaceId,
       message
     );
@@ -142,7 +143,7 @@ export async function POST(req: Request) {
       ministryMode,
       founderMode,
       modeHint,
-      canonicalUserKey: user?.id ?? null,
+      canonicalUserKey: contextUserKey,
       governorLevel: gov.level,
       governorInstructions: gov.instructions,
     });
@@ -155,12 +156,7 @@ export async function POST(req: Request) {
     });
 
     // -------------------------------------------------
-    // MEMORY WRITE GATE (EXPLICIT, NO GUESSING)
-    // -------------------------------------------------
-    // Rule:
-    // - Only write memory if user explicitly says "remember"
-    // - OR founderMode is true
-    // - AND user is authenticated with email
+    // MEMORY WRITE GATE (EXPLICIT)
     // -------------------------------------------------
     const normalized = message.trim().toLowerCase();
 
@@ -177,22 +173,14 @@ export async function POST(req: Request) {
         userId: user.id,
         email: user.email,
         workspaceId,
-
-        // Phase A rule:
-        // explicit "remember" → identity
-        // founder mode → fact
         memoryType: explicitRemember ? "identity" : "fact",
         source: explicitRemember ? "explicit" : "founder",
-
         content: message,
       };
 
       await writeMemory(memoryInput);
     }
 
-    // -------------------------------------------------
-    // RESPONSE
-    // -------------------------------------------------
     return NextResponse.json({
       text: formatted,
       imageUrl: pipeline.imageUrl ?? null,
