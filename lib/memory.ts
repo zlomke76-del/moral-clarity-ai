@@ -25,14 +25,16 @@ export async function remember({
   user_key,
   content,
   title = null,
+  purpose = null,          // ← restored as HINT
   workspace_id = null,
 }: {
   user_key: string;
   content: string;
   title?: string | null;
+  purpose?: string | null;
   workspace_id?: string | null;
 }) {
-  // 1. Fetch recent stable memories
+  // 1. Fetch recent memories
   const { data: recent } = await supabase
     .from("user_memories")
     .select("*")
@@ -60,8 +62,11 @@ export async function remember({
     0.3 * (recent && recent.length > 0 ? 0.7 : 0.3);
 
   // 5. Promotion logic
-  const finalKind =
-    confidence >= 0.9 ? "fact" : analysis.oversight.finalKind;
+  const promotedToFact = confidence >= 0.9;
+
+  const finalKind = promotedToFact
+    ? "fact"
+    : analysis.oversight.finalKind ?? purpose ?? "note";
 
   // 6. Persist
   const { data, error } = await supabase
@@ -72,11 +77,12 @@ export async function remember({
       content,
       kind: finalKind,
       confidence,
-      importance: finalKind === "fact" ? 5 : 3,
+      importance: promotedToFact ? 5 : 3,
       emotional_weight: analysis.classification.emotional,
       sensitivity_score: analysis.classification.sensitivity,
       workspace_id,
       metadata: {
+        purpose_hint: purpose,
         semantic,
         lifecycle: analysis.lifecycle,
         drift: analysis.drift,
@@ -94,6 +100,7 @@ export async function remember({
     memory: data,
     confidence,
     kind: finalKind,
+    promotedToFact,
   };
 }
 
@@ -115,12 +122,8 @@ export async function searchMemories(
 
   const q = query.toLowerCase();
 
-  const matches = data.filter((m) =>
-    m.content?.toLowerCase().includes(q)
-  );
-
-  // Simple ranking hook — can be upgraded later
-  return matches
+  return data
+    .filter((m) => m.content?.toLowerCase().includes(q))
     .map((m) => ({
       ...m,
       _score:
