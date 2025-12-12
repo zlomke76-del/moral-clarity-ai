@@ -1,7 +1,7 @@
 // app/api/chat/route.ts
 // ------------------------------------------------------------------
 // SOLACE CHAT ROUTE — GOVERNOR + HYBRID TRIAD
-// Phase A: Explicit, intentional memory writes only
+// Phase 4: Explainable, Memory-Aware, Explicit Writes Only
 // ------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -21,9 +21,11 @@ import { writeMemory } from "./modules/memory-writer";
 import type { MemoryWriteInput } from "./modules/memory-writer";
 import type { PacingLevel } from "@/lib/solace/governor/types";
 
-// -----------------------------------------------------
-// ASCII Sanitize
-// -----------------------------------------------------
+import { recallMemoryEvidence } from "@/lib/memory-recall";
+
+/* -----------------------------------------------------
+   ASCII Sanitizer (defensive, deterministic)
+----------------------------------------------------- */
 function sanitizeASCII(input: any): any {
   if (!input) return input;
 
@@ -38,8 +40,10 @@ function sanitizeASCII(input: any): any {
       "’": "'",
       "…": "...",
     };
+
     let out = input;
     for (const k in rep) out = out.split(k).join(rep[k]);
+
     return out
       .split("")
       .map((c) => (c.charCodeAt(0) > 255 ? "?" : c))
@@ -57,18 +61,18 @@ function sanitizeASCII(input: any): any {
   return input;
 }
 
-// -----------------------------------------------------
-// pacing clamp
-// -----------------------------------------------------
+/* -----------------------------------------------------
+   Governor pacing clamp
+----------------------------------------------------- */
 function clampToPacingLevel(n: number): PacingLevel {
   if (n < 0) return 0;
   if (n > 5) return 5;
   return n as PacingLevel;
 }
 
-// -----------------------------------------------------
-// Supabase session loader (Node-safe)
-// -----------------------------------------------------
+/* -----------------------------------------------------
+   Supabase session loader (Node-safe)
+----------------------------------------------------- */
 async function getNodeUser(req: Request) {
   const cookieHeader = req.headers.get("cookie") ?? "";
 
@@ -94,9 +98,9 @@ async function getNodeUser(req: Request) {
   return data?.user ?? null;
 }
 
-// -----------------------------------------------------
-// POST
-// -----------------------------------------------------
+/* -----------------------------------------------------
+   POST
+----------------------------------------------------- */
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => null);
@@ -117,22 +121,30 @@ export async function POST(req: Request) {
     const user = await getNodeUser(req);
     const canonicalUserKey = user?.id ?? "user:anonymous";
 
-    // ⬇️ ADD THIS
-    const cookieHeader = req.headers.get("cookie") ?? "";
+    /* -------------------------------------------------
+       MEMORY RECALL (READ-ONLY, GOVERNED)
+       ------------------------------------------------- */
+    const recalledMemory = await recallMemoryEvidence({
+      user_key: canonicalUserKey,
+      workspace_id: workspaceId,
+      query: message,
+      limit: 12,
+    });
 
-    // -------------------------------------------------
-    // Context (READ-ONLY)
-    // -------------------------------------------------
-    let context = await assembleContext(
-      canonicalUserKey,
+    /* -------------------------------------------------
+       CONTEXT ASSEMBLY (PURE — NO I/O)
+       ------------------------------------------------- */
+    let context = await assembleContext({
+      userKey: canonicalUserKey,
       workspaceId,
-      message
-    );
+      userMessage: message,
+      recalledMemory,
+    });
     context = sanitizeASCII(context);
 
-    // -------------------------------------------------
-    // Governor + Triad
-    // -------------------------------------------------
+    /* -------------------------------------------------
+       GOVERNOR + HYBRID TRIAD
+       ------------------------------------------------- */
     const gov = updateGovernor(message);
 
     const pipeline = await runHybridPipeline({
@@ -154,21 +166,15 @@ export async function POST(req: Request) {
       decisionContext: gov.signals?.decisionPoint ?? false,
     });
 
-    // -------------------------------------------------
-    // MEMORY WRITE GATE (EXPLICIT ONLY)
-    // -------------------------------------------------
+    /* -------------------------------------------------
+       MEMORY WRITE GATE (EXPLICIT ONLY)
+       ------------------------------------------------- */
     const normalized = message.trim().toLowerCase();
     const explicitRemember =
       normalized.startsWith("remember ") ||
       normalized.startsWith("remember that ");
 
     if (user?.id && user.email && (explicitRemember || founderMode === true)) {
-      console.log("[MEMORY-GATE] write allowed", {
-        explicitRemember,
-        founderMode,
-        userId: user.id,
-      });
-
       const memoryInput: MemoryWriteInput = {
         userId: user.id,
         email: user.email,
@@ -178,10 +184,8 @@ export async function POST(req: Request) {
         content: message,
       };
 
-      // ⬇️ THIS IS THE CRITICAL FIX
+      const cookieHeader = req.headers.get("cookie") ?? "";
       await writeMemory(memoryInput, cookieHeader);
-    } else {
-      console.log("[MEMORY-GATE] write skipped");
     }
 
     return NextResponse.json({
