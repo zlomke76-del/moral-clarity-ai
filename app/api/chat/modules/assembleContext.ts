@@ -1,17 +1,12 @@
-// app/api/chat/modules/assembleContext.ts
 // ------------------------------------------------------------
-// Solace Context Loader — Phase B (FIXED, AUTHORITATIVE)
-// - Reads ONLY from memory.memories
-// - No legacy tables, no views, no fallbacks
-// - Hard diagnostics at every boundary
+// Solace Context Loader — Phase B (AUTH-CORRECT)
+// Reads ONLY from memory.memories using SERVER auth
 // ------------------------------------------------------------
 
-import { createClientEdge } from "@/lib/supabase/edge";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import { FACTS_LIMIT, EPISODES_LIMIT } from "./constants";
 
-// ------------------------------------------------------------
-// Types
-// ------------------------------------------------------------
 export type SolaceContextBundle = {
   persona: string;
   memoryPack: {
@@ -27,29 +22,28 @@ export type SolaceContextBundle = {
 const STATIC_PERSONA_NAME = "Solace";
 
 // ------------------------------------------------------------
-// Diagnostics helper
+// Diagnostics
 // ------------------------------------------------------------
 function diag(label: string, payload: any) {
   console.log(`[DIAG-CTX] ${label}`, payload);
 }
 
 // ------------------------------------------------------------
-// Safe rows helper
+// Safe helper
 // ------------------------------------------------------------
 function safeRows<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
 }
 
 // ------------------------------------------------------------
-// MEMORY LOADER — schema-qualified (Supabase v2 safe)
+// SERVER-AUTH MEMORY LOADER
 // ------------------------------------------------------------
 async function loadMemories(
+  supabase: any,
   userId: string,
-  memoryType: "fact" | "episodic" | "identity",
+  memoryType: string,
   limit: number
 ) {
-  const supabase = createClientEdge();
-
   diag(`load ${memoryType} → query`, {
     schema: "memory",
     table: "memories",
@@ -70,23 +64,20 @@ async function loadMemories(
     console.warn(`[CTX-${memoryType.toUpperCase()}] read error`, {
       code: error.code,
       message: error.message,
-      hint: (error as any).hint,
     });
     return [];
   }
 
-  const rows = safeRows(data);
-
   diag(`load ${memoryType} → result`, {
-    count: rows.length,
-    sampleId: rows[0]?.id ?? null,
+    count: data?.length ?? 0,
+    sampleId: data?.[0]?.id ?? null,
   });
 
-  return rows;
+  return safeRows(data);
 }
 
 // ------------------------------------------------------------
-// MAIN CONTEXT ASSEMBLER
+// MAIN ASSEMBLER (SERVER AUTH)
 // ------------------------------------------------------------
 export async function assembleContext(
   canonicalUserKey: string,
@@ -99,27 +90,40 @@ export async function assembleContext(
     preview: userMessage.slice(0, 80),
   });
 
-  // ----------------------------------------------------------
-  // Load memories in parallel — NO FALLBACKS
-  // ----------------------------------------------------------
+  // ------------------------------------------
+  // SERVER SUPABASE CLIENT (COOKIE-AWARE)
+  // ------------------------------------------
+  const cookieStore = cookies();
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name) {
+          return cookieStore.get(name)?.value;
+        },
+        set() {},
+        remove() {},
+      },
+    }
+  );
+
+  // ------------------------------------------
+  // LOAD MEMORY (AUTHENTICATED)
+  // ------------------------------------------
   const [facts, episodic, autobiography] = await Promise.all([
-    loadMemories(canonicalUserKey, "fact", FACTS_LIMIT),
-    loadMemories(canonicalUserKey, "episodic", EPISODES_LIMIT),
-    loadMemories(canonicalUserKey, "identity", 25),
+    loadMemories(supabase, canonicalUserKey, "fact", FACTS_LIMIT),
+    loadMemories(supabase, canonicalUserKey, "episodic", EPISODES_LIMIT),
+    loadMemories(supabase, canonicalUserKey, "identity", 25),
   ]);
 
-  // ----------------------------------------------------------
-  // Final memory counts (authoritative)
-  // ----------------------------------------------------------
   diag("memory counts", {
     facts: facts.length,
     episodic: episodic.length,
     autobiography: autobiography.length,
   });
 
-  // ----------------------------------------------------------
-  // Return context bundle
-  // ----------------------------------------------------------
   return {
     persona: STATIC_PERSONA_NAME,
     memoryPack: {
