@@ -95,13 +95,14 @@ async function loadNewFacts(userId: string) {
   const supabase = createClientEdge();
 
   const { data, error } = await supabase
-  .from("memories", { schema: "memory" })
+  .from("memory.memories")
   .select("id, memory_type, content, created_at")
   .eq("user_id", userId)
   .eq("memory_type", "fact")
-    .eq("is_active", true)
-    .order("created_at", { ascending: false })
-    .limit(FACTS_LIMIT);
+  .eq("is_active", true)
+  .order("created_at", { ascending: false })
+  .limit(FACTS_LIMIT);
+
 
   if (error) {
     console.warn("[CTX-NEW-FACTS] read error", error);
