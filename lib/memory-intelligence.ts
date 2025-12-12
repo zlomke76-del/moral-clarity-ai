@@ -1,7 +1,8 @@
 // lib/memory-intelligence.ts
-// Phase 4 — Memory Intelligence Core (Oversight + Ranking)
+// Phase 4 — Memory Intelligence Core (Oversight + Classification + Ranking)
 
 import "server-only";
+import { classifyMemoryText } from "./memory-classifier";
 
 /* ============================================================
    Types
@@ -18,14 +19,30 @@ export type MemoryRecord = {
 };
 
 /* ============================================================
-   Oversight + Drift Analysis (existing responsibility)
+   WRITE-TIME CLASSIFICATION (adapter for tools.ts)
+   ============================================================ */
+
+export async function classifyMemoryAtWriteTime(
+  content: string
+) {
+  const semantic = await classifyMemoryText(content);
+
+  return {
+    label: semantic.label,
+    confidence: semantic.confidence,
+    provider: semantic.provider,
+    intent: "memory_write",
+  };
+}
+
+/* ============================================================
+   Oversight + Drift Analysis
    ============================================================ */
 
 export function analyzeMemoryWrite(
   content: string,
   recent: MemoryRecord[]
 ) {
-  // --- Simple guardrails (expand later) ---
   const sensitivity = detectSensitivity(content);
   const emotional = detectEmotion(content);
 
@@ -48,7 +65,7 @@ export function analyzeMemoryWrite(
 }
 
 /* ============================================================
-   Memory Ranking — REQUIRED by state-synthesizer
+   Memory Ranking (used by state-synthesizer)
    ============================================================ */
 
 export function rankMemories(memories: MemoryRecord[]) {
@@ -72,7 +89,7 @@ export function rankMemories(memories: MemoryRecord[]) {
 }
 
 /* ============================================================
-   Internal heuristics (deliberately conservative)
+   Internal heuristics (intentionally conservative)
    ============================================================ */
 
 function detectSensitivity(text: string): number {
