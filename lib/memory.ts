@@ -1,5 +1,5 @@
 // lib/memory.ts
-// Phase 4 — Ethical Memory Engine (Authoritative)
+// Phase 4 — Ethical Memory Engine (Authoritative, Schema-Aligned)
 
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
@@ -22,27 +22,27 @@ const supabase = createClient(
    ============================================================ */
 
 export async function remember({
-  user_key,
+  user_key,              // ← auth.uid() as string
+  email = null,
   content,
-  title = null,
-  purpose = null,          // ← restored as HINT
+  purpose = null,
   workspace_id = null,
 }: {
   user_key: string;
+  email?: string | null;
   content: string;
-  title?: string | null;
   purpose?: string | null;
   workspace_id?: string | null;
 }) {
-  // 1. Fetch recent memories
+  /* 1. Fetch recent memories */
   const { data: recent } = await supabase
-    .from("user_memories")
+    .from("memory.memories")
     .select("*")
-    .eq("user_key", user_key)
+    .eq("user_id", user_key)
     .order("created_at", { ascending: false })
     .limit(10);
 
-  // 2. Epistemic analysis
+  /* 2. Epistemic analysis */
   const analysis = analyzeMemoryWrite(content, recent ?? []);
   if (!analysis.oversight.store) {
     return {
@@ -52,41 +52,35 @@ export async function remember({
     };
   }
 
-  // 3. Semantic classification
+  /* 3. Semantic classification */
   const semantic = await classifyMemoryText(content);
 
-  // 4. Confidence synthesis (learning signal)
+  /* 4. Confidence synthesis */
   const confidence =
     0.4 * analysis.lifecycle.confidence +
     0.3 * semantic.confidence +
     0.3 * (recent && recent.length > 0 ? 0.7 : 0.3);
 
-  // 5. Promotion logic
+  /* 5. Promotion logic */
   const promotedToFact = confidence >= 0.9;
 
-  const finalKind = promotedToFact
-    ? "fact"
-    : analysis.oversight.finalKind ?? purpose ?? "note";
+  const memoryType =
+    promotedToFact
+      ? "fact"
+      : analysis.oversight.finalKind ?? purpose ?? "note";
 
-  // 6. Persist
+  /* 6. Persist (schema-aligned) */
   const { data, error } = await supabase
-    .from("user_memories")
+    .from("memory.memories")
     .insert({
-      user_key,
-      title,
-      content,
-      kind: finalKind,
-      confidence,
-      importance: promotedToFact ? 5 : 3,
-      emotional_weight: analysis.classification.emotional,
-      sensitivity_score: analysis.classification.sensitivity,
+      user_id: user_key,
+      email,
       workspace_id,
-      metadata: {
-        purpose_hint: purpose,
-        semantic,
-        lifecycle: analysis.lifecycle,
-        drift: analysis.drift,
-      },
+      memory_type: memoryType,
+      source: "solace",
+      content,
+      weight: confidence,
+      is_active: true,
     })
     .select()
     .single();
@@ -99,7 +93,7 @@ export async function remember({
     stored: true,
     memory: data,
     confidence,
-    kind: finalKind,
+    kind: memoryType,
     promotedToFact,
   };
 }
@@ -114,9 +108,10 @@ export async function searchMemories(
   limit = 8
 ) {
   const { data, error } = await supabase
-    .from("user_memories")
+    .from("memory.memories")
     .select("*")
-    .eq("user_key", user_key);
+    .eq("user_id", user_key)
+    .eq("is_active", true);
 
   if (error || !data) return [];
 
@@ -126,9 +121,7 @@ export async function searchMemories(
     .filter((m) => m.content?.toLowerCase().includes(q))
     .map((m) => ({
       ...m,
-      _score:
-        (m.importance ?? 0) +
-        (m.confidence ?? 0) * 2,
+      _score: (m.weight ?? 0),
     }))
     .sort((a, b) => b._score - a._score)
     .slice(0, limit);
