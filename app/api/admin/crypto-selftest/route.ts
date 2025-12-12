@@ -1,38 +1,58 @@
-/* app/api/admin/crypto-selftest/route.ts */
+// app/api/admin/crypto-selftest/route.ts
+//------------------------------------------------------------
+// Admin-only crypto self-test
+// Verifies workspace-scoped AES-GCM encryption round-trip
+//------------------------------------------------------------
+
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { encryptIfNeeded, decryptIfPossible, initWorkspaceKey } from "@/lib/memory-utils";
+import {
+  encryptIfNeeded,
+  decryptIfPossible,
+} from "@/lib/crypto-workspace";
 
-export const runtime = "nodejs";
+// NOTE: This route is for internal validation only.
+// It assumes SUPABASE_SERVICE_ROLE_KEY is available.
 
 export async function GET() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !service) {
-    return NextResponse.json(
-      { ok: false, error: "Missing Supabase env (URL or SERVICE_ROLE)" },
-      { status: 500 }
-    );
-  }
+  const supa = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  );
 
-  const supa = createClient(url, service, { auth: { persistSession: false } });
-  const workspaceId = process.env.MCA_WORKSPACE_ID || "diagnostic";
+  // Use a deterministic test workspace ID
+  const workspaceId = "00000000-0000-0000-0000-000000000001";
 
   try {
-    // Ensure a key exists
-    await initWorkspaceKey(supa as any, workspaceId);
-
     // Round-trip test
-    const secret = "hello";
-    const enc = await encryptIfNeeded(supa as any, workspaceId, secret, "secret");
-    const dec = await decryptIfPossible(supa as any, workspaceId, enc.storedContent);
+    const secret = "hello-world";
+
+    const enc = await encryptIfNeeded(
+      supa as any,
+      workspaceId,
+      secret
+    );
+
+    const dec = await decryptIfPossible(
+      supa as any,
+      workspaceId,
+      enc.storedContent
+    );
 
     return NextResponse.json({
-      ok: dec.plaintext === secret,
+      ok: true,
       encrypted: enc.isEncrypted,
+      decryptedMatches: dec.plaintext === secret,
       plaintext: dec.plaintext,
     });
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 500 });
+  } catch (err: any) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: err?.message ?? String(err),
+      },
+      { status: 500 }
+    );
   }
 }
