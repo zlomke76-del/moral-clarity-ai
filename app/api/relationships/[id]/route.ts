@@ -1,6 +1,6 @@
 // app/api/relationships/[id]/route.ts
 //------------------------------------------------------------
-// Relationship fetch — Next.js 16 + @supabase/ssr (correct)
+// Relationship fetch — Next.js 16 + @supabase/ssr (FINAL)
 //------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -11,7 +11,8 @@ export async function GET(
   _req: Request,
   { params }: { params: { id: string } }
 ) {
-  const cookieStore = cookies();
+  // ⬅️ MUST await in Next.js 16
+  const cookieStore = await cookies();
 
   const supabase = createServerClient(
     process.env.SUPABASE_URL!,
