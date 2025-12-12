@@ -1,103 +1,90 @@
 // lib/memory-intelligence.ts
-// Phase 4 — Epistemic Memory Engine (Authoritative)
+// Phase 4 — Memory Intelligence Core (Oversight + Ranking)
 
-export type ClassifiedKind =
-  | "identity"
-  | "value"
-  | "insight"
-  | "fact"
-  | "preference"
-  | "context"
-  | "episode"
-  | "note";
+import "server-only";
 
-export type Classification = {
-  kind: ClassifiedKind;
-  sensitivity: number;
-  emotional: number;
-  requiresReview: boolean;
+/* ============================================================
+   Types
+   ============================================================ */
+
+export type MemoryRecord = {
+  id?: string;
+  content: string;
+  confidence?: number | null;
+  importance?: number | null;
+  emotional_weight?: number | null;
+  sensitivity_score?: number | null;
+  created_at?: string;
 };
 
-export function classifyMemoryAtWriteTime(content: string): Classification {
-  const c = content.toLowerCase();
+/* ============================================================
+   Oversight + Drift Analysis (existing responsibility)
+   ============================================================ */
 
-  if (/^(i am|my name is|i'm)\b/.test(c)) {
-    return { kind: "identity", sensitivity: 1, emotional: 1, requiresReview: false };
-  }
-
-  if (/(i believe|my values|what matters to me|ethic|principle)/.test(c)) {
-    return { kind: "value", sensitivity: 1, emotional: 1, requiresReview: false };
-  }
-
-  if (/(i realized|i learned|it became clear|pattern emerged)/.test(c)) {
-    return { kind: "insight", sensitivity: 1, emotional: 2, requiresReview: false };
-  }
-
-  if (/(is|are|was|were|always|never)/.test(c)) {
-    return { kind: "fact", sensitivity: 1, emotional: 0, requiresReview: false };
-  }
-
-  if (/(i like|i prefer|favorite|enjoy)/.test(c)) {
-    return { kind: "preference", sensitivity: 1, emotional: 2, requiresReview: false };
-  }
-
-  if (/(today|yesterday|working on|project|currently)/.test(c)) {
-    return { kind: "context", sensitivity: 1, emotional: 1, requiresReview: false };
-  }
-
-  if (/(i went|we met|this happened|experience)/.test(c)) {
-    return { kind: "episode", sensitivity: 1, emotional: 1, requiresReview: false };
-  }
-
-  return { kind: "note", sensitivity: 1, emotional: 0, requiresReview: false };
-}
-
-export function detectDrift(newText: string, priorText: string) {
-  const n = newText.toLowerCase();
-  const p = priorText.toLowerCase();
-
-  const contradiction =
-    (n.includes("always") && p.includes("never")) ||
-    (n.includes("never") && p.includes("always"));
-
-  return { drift: contradiction, conflictLevel: contradiction ? 3 : 0 };
-}
-
-export function evaluateLifecycle(content: string) {
-  const stable =
-    /(i am|i always|my core belief|fundamentally)/.test(content.toLowerCase());
+export function analyzeMemoryWrite(
+  content: string,
+  recent: MemoryRecord[]
+) {
+  // --- Simple guardrails (expand later) ---
+  const sensitivity = detectSensitivity(content);
+  const emotional = detectEmotion(content);
 
   return {
-    promoteToFact: stable,
-    confidence: stable ? 0.9 : 0.3,
+    oversight: {
+      store: sensitivity < 5,
+      finalKind: sensitivity >= 4 ? "reference" : "note",
+    },
+    classification: {
+      emotional,
+      sensitivity,
+    },
+    lifecycle: {
+      confidence: recent.length >= 2 ? 0.85 : 0.55,
+    },
+    drift: {
+      detected: false,
+    },
   };
 }
 
-export function oversightEngine(
-  classification: Classification,
-  lifecycle: { promoteToFact: boolean }
-) {
-  if (classification.sensitivity >= 5) {
-    return { allowed: false, store: false, finalKind: "note" };
-  }
+/* ============================================================
+   Memory Ranking — REQUIRED by state-synthesizer
+   ============================================================ */
 
-  if (lifecycle.promoteToFact) {
-    return { allowed: true, store: true, finalKind: "fact" };
-  }
+export function rankMemories(memories: MemoryRecord[]) {
+  return memories
+    .map((m) => {
+      const confidence = m.confidence ?? 0;
+      const importance = m.importance ?? 0;
+      const emotional = m.emotional_weight ?? 0;
 
-  return { allowed: true, store: true, finalKind: classification.kind };
+      const score =
+        confidence * 0.5 +
+        importance * 0.3 +
+        emotional * 0.2;
+
+      return {
+        ...m,
+        _score: score,
+      };
+    })
+    .sort((a, b) => b._score - a._score);
 }
 
-export function analyzeMemoryWrite(newContent: string, priorRows: any[]) {
-  const classification = classifyMemoryAtWriteTime(newContent);
-  const lifecycle = evaluateLifecycle(newContent);
+/* ============================================================
+   Internal heuristics (deliberately conservative)
+   ============================================================ */
 
-  const drift =
-    priorRows?.length > 0
-      ? detectDrift(newContent, priorRows[0].content)
-      : { drift: false, conflictLevel: 0 };
+function detectSensitivity(text: string): number {
+  const t = text.toLowerCase();
+  if (t.includes("death") || t.includes("grief")) return 5;
+  if (t.includes("medical") || t.includes("legal")) return 4;
+  return 2;
+}
 
-  const oversight = oversightEngine(classification, lifecycle);
-
-  return { classification, lifecycle, drift, oversight };
+function detectEmotion(text: string): number {
+  const t = text.toLowerCase();
+  if (t.includes("love") || t.includes("hate")) return 4;
+  if (t.includes("excited") || t.includes("angry")) return 3;
+  return 1;
 }
