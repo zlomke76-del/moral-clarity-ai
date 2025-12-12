@@ -117,6 +117,9 @@ export async function POST(req: Request) {
     const user = await getNodeUser(req);
     const canonicalUserKey = user?.id ?? "user:anonymous";
 
+    // ⬇️ ADD THIS
+    const cookieHeader = req.headers.get("cookie") ?? "";
+
     // -------------------------------------------------
     // Context (READ-ONLY)
     // -------------------------------------------------
@@ -175,7 +178,8 @@ export async function POST(req: Request) {
         content: message,
       };
 
-      await writeMemory(memoryInput);
+      // ⬇️ THIS IS THE CRITICAL FIX
+      await writeMemory(memoryInput, cookieHeader);
     } else {
       console.log("[MEMORY-GATE] write skipped");
     }
