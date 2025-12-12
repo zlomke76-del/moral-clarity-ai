@@ -1,11 +1,14 @@
 // app/api/chat/modules/memory-writer.ts
 // ------------------------------------------------------------
-// FACT memory writer — Fully ASCII-SAFE (Prevents DB Unicode drift)
+// MEMORY WRITER — PHASE A (PLAINTEXT, OPERATIONAL)
+// Writes ONLY intentional, authorized memory to memory.memories
 // ------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
 
-// Same sanitizer used across all Solace modules
+// ------------------------------------------------------------
+// ASCII sanitizer (kept for DB/log safety)
+// ------------------------------------------------------------
 function sanitizeASCII(input: string): string {
   if (!input) return "";
 
@@ -25,47 +28,60 @@ function sanitizeASCII(input: string): string {
     out = out.split(bad).join(replacements[bad]);
   }
 
-  // Replace non-ASCII (>255)
   return out
     .split("")
     .map((c) => (c.charCodeAt(0) > 255 ? "?" : c))
     .join("");
 }
 
-export async function writeMemory(
-  canonicalUserKey: string | null,
-  userMessage: string,
-  assistantReply: string
-) {
+// ------------------------------------------------------------
+// Memory write contract (explicit, no guessing)
+// ------------------------------------------------------------
+export type MemoryWriteInput = {
+  userId: string;        // auth.users.id
+  email: string;         // explicit human anchor
+  workspaceId?: string | null;
+
+  memoryType: "identity" | "fact" | "insight" | "decision";
+  source: "explicit" | "founder" | "system";
+
+  content: string;
+  weight?: number;
+};
+
+// ------------------------------------------------------------
+// Write memory (NO classification, NO encryption yet)
+// ------------------------------------------------------------
+export async function writeMemory(input: MemoryWriteInput) {
   try {
-    if (!canonicalUserKey) {
-      console.warn("[writeMemory] Skipped — no canonicalUserKey.");
+    const {
+      userId,
+      email,
+      workspaceId = null,
+      memoryType,
+      source,
+      content,
+      weight = 1.0,
+    } = input;
+
+    // Hard safety guards
+    if (!userId || !email) {
+      console.warn("[writeMemory] Skipped — missing userId or email.");
+      return;
+    }
+
+    if (!content || !content.trim()) {
+      console.warn("[writeMemory] Skipped — empty content.");
       return;
     }
 
     const nowIso = new Date().toISOString();
 
-    //----------------------------------------------------------
-    // SANITIZE message + reply BEFORE constructing JSON object
-    //----------------------------------------------------------
-    const safeUser = sanitizeASCII(userMessage);
-    const safeAssistant = sanitizeASCII(assistantReply);
+    // Sanitize content explicitly
+    const safeContent = sanitizeASCII(content.trim());
+    const safeEmail = sanitizeASCII(email);
 
-    //----------------------------------------------------------
-    // Build memory JSON and sanitize AGAIN after stringify
-    //----------------------------------------------------------
-    const rawMemory = {
-      user: safeUser,
-      assistant: safeAssistant,
-      ts: nowIso,
-    };
-
-    // JSON.stringify can reintroduce Unicode escapes — sanitize again
-    const memoryContent = sanitizeASCII(JSON.stringify(rawMemory));
-
-    //----------------------------------------------------------
-    // Safe Supabase client (Node runtime)
-    //----------------------------------------------------------
+    // Supabase client (Node runtime)
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -78,36 +94,33 @@ export async function writeMemory(
       }
     );
 
-    //----------------------------------------------------------
-    // Insert sanitized record
-    //----------------------------------------------------------
-    const insertPayload = {
-      canonical_user_key: canonicalUserKey,
-      user_key: canonicalUserKey,
-      kind: "fact",
-      content: memoryContent,
-      weight: 1.0,
-      created_at: nowIso,
-      updated_at: nowIso,
-    };
-
+    // Insert into memory.memories (schema-qualified)
     const { error } = await supabase
-      .from("user_memories")
-      .insert(insertPayload);
+      .from("memory.memories")
+      .insert({
+        user_id: userId,
+        email: safeEmail,
+        workspace_id: workspaceId,
+        memory_type: memoryType,
+        source,
+        content: safeContent,
+        weight,
+        created_at: nowIso,
+        updated_at: nowIso,
+      });
 
     if (error) {
-      console.error("[writeMemory] Insert failed:", error, {
-        attemptedPayload: insertPayload,
-      });
+      console.error("[writeMemory] Insert failed:", error);
       return;
     }
 
     console.log(
-      "[writeMemory] FACT memory stored for:",
-      canonicalUserKey
+      "[writeMemory] Memory stored:",
+      memoryType,
+      source,
+      userId
     );
   } catch (err) {
     console.error("[writeMemory] Unexpected failure:", err);
   }
 }
-
