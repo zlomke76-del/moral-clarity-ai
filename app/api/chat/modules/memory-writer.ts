@@ -1,7 +1,6 @@
 // app/api/chat/modules/memory-writer.ts
 // ------------------------------------------------------------
-// Phase A Memory Writer — EXPLICIT ONLY
-// Writes to schema: memory.memories
+// Phase A Memory Writer — COOKIE-AWARE, RLS-SAFE
 // ------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
@@ -15,7 +14,10 @@ export type MemoryWriteInput = {
   content: string;
 };
 
-export async function writeMemory(input: MemoryWriteInput) {
+export async function writeMemory(
+  input: MemoryWriteInput,
+  cookieHeader: string
+) {
   const {
     userId,
     email,
@@ -30,9 +32,15 @@ export async function writeMemory(input: MemoryWriteInput) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: () => undefined,
-        set: () => {},
-        remove: () => {},
+        get(name) {
+          const m = cookieHeader
+            .split(";")
+            .map((c) => c.trim())
+            .find((c) => c.startsWith(name + "="));
+          return m ? m.split("=")[1] : undefined;
+        },
+        set() {},
+        remove() {},
       },
     }
   );
@@ -47,7 +55,7 @@ export async function writeMemory(input: MemoryWriteInput) {
   });
 
   const { error } = await supabase
-    .schema("memory")               // ✅ THIS IS THE FIX
+    .schema("memory")
     .from("memories")
     .insert({
       user_id: userId,
