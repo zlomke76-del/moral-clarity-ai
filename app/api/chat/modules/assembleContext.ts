@@ -95,10 +95,11 @@ async function loadNewFacts(userId: string) {
   const supabase = createClientEdge();
 
   const { data, error } = await supabase
-    .from("memory.memories")
-    .select("id, memory_type, content, created_at")
-    .eq("user_id", userId)
-    .eq("memory_type", "fact")
+  .from("memories", { schema: "memory" })
+  .select("id, memory_type, content, created_at")
+  .eq("user_id", userId)
+  .eq("memory_type", "fact");
+
     .eq("is_active", true)
     .order("created_at", { ascending: false })
     .limit(FACTS_LIMIT);
