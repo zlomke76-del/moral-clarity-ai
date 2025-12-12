@@ -1,24 +1,8 @@
 // lib/consent.ts
-// Canonical Consent Gate — Phase 4
-// Rule: No named consent, no action.
+// Phase 5 — Consent Engine (Authoritative)
 
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
-
-export type ConsentTier =
-  | "observe"
-  | "acknowledge"
-  | "suggest"
-  | "prepare"
-  | "execute";
-
-export type ConsentCheckParams = {
-  user_id: string;
-  workspace_id?: string | null;
-  scope: string;     // e.g. "reminder.create"
-  domain: string;    // memory | relationship | agent | external
-  tier: ConsentTier;
-};
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -26,53 +10,45 @@ const supabase = createClient(
   { auth: { persistSession: false } }
 );
 
-/**
- * Runtime consent check (authoritative).
- * This function is ALWAYS called immediately before action.
- */
-export async function checkConsent({
-  user_id,
-  workspace_id = null,
-  scope,
-  domain,
-  tier,
-}: ConsentCheckParams): Promise<{
+export type ConsentCheck = {
   allowed: boolean;
-  reason?: string;
-  consent_id?: string;
-}> {
-  const now = new Date().toISOString();
+  reason: string;
+  expires_at?: string | null;
+};
 
-  const { data, error } = await supabase
-    .from("consent_registry")
+export async function checkConsent(params: {
+  user_id: string;
+  workspace_id?: string | null;
+  scope: string;
+}): Promise<ConsentCheck> {
+  const { data } = await supabase
+    .from("memory_consent")
     .select("*")
-    .eq("user_id", user_id)
-    .eq("scope", scope)
-    .eq("domain", domain)
-    .eq("tier", tier)
-    .eq("granted", true)
-    .or(`expires_at.is.null,expires_at.gt.${now}`)
-    .is("revoked_at", null)
+    .eq("user_id", params.user_id)
+    .eq("scope", params.scope)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (error) {
-    return {
-      allowed: false,
-      reason: "consent_query_failed",
-    };
+  if (!data) {
+    return { allowed: false, reason: "no_consent_record" };
   }
 
-  if (!data) {
-    return {
-      allowed: false,
-      reason: "no_matching_consent",
-    };
+  if (data.revoked_at) {
+    return { allowed: false, reason: "consent_revoked" };
+  }
+
+  if (!data.granted) {
+    return { allowed: false, reason: "consent_not_granted" };
+  }
+
+  if (data.expires_at && new Date(data.expires_at) < new Date()) {
+    return { allowed: false, reason: "consent_expired" };
   }
 
   return {
     allowed: true,
-    consent_id: data.id,
+    reason: "consent_valid",
+    expires_at: data.expires_at,
   };
 }
