@@ -98,8 +98,7 @@ async function loadNewFacts(userId: string) {
   .from("memories", { schema: "memory" })
   .select("id, memory_type, content, created_at")
   .eq("user_id", userId)
-  .eq("memory_type", "fact");
-
+  .eq("memory_type", "fact")
     .eq("is_active", true)
     .order("created_at", { ascending: false })
     .limit(FACTS_LIMIT);
