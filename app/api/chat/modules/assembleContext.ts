@@ -1,5 +1,5 @@
 // ------------------------------------------------------------
-// Solace Context Loader — FINAL INTELLIGENCE VERSION
+// Solace Context Loader — FINAL INTELLIGENCE VERSION (SHADOW READ)
 // Implements:
 //  - Explicit news detection
 //  - Explicit + implicit research detection
@@ -8,7 +8,7 @@
 //  - Low-confidence → immediate research (Rule B)
 //  - Creative-intent override
 //  - didResearch boolean return
-//  - Fully compatible with orchestrator R3
+//  - SHADOW READ of new memory schema (NO behavior change)
 // ------------------------------------------------------------
 
 import { createClientEdge } from "@/lib/supabase/edge";
@@ -48,7 +48,7 @@ function diag(label: string, value: any) {
 }
 
 // ------------------------------------------------------------
-// LOADERS
+// LEGACY LOADERS (AUTHORITATIVE FOR NOW)
 // ------------------------------------------------------------
 async function loadFacts(userKey: string) {
   const supabase = createClientEdge();
@@ -88,7 +88,34 @@ async function loadAutobio(userKey: string) {
   return error ? [] : safe(data);
 }
 
-async function loadNewsDigest(userKey: string) {
+// ------------------------------------------------------------
+// NEW MEMORY (SHADOW READ ONLY — NOT YET USED)
+// ------------------------------------------------------------
+async function loadNewFacts(userId: string) {
+  const supabase = createClientEdge();
+
+  const { data, error } = await supabase
+    .from("memory.memories")
+    .select("id, memory_type, content, created_at")
+    .eq("user_id", userId)
+    .eq("memory_type", "fact")
+    .eq("is_active", true)
+    .order("created_at", { ascending: false })
+    .limit(FACTS_LIMIT);
+
+  if (error) {
+    console.warn("[CTX-NEW-FACTS] read error", error);
+    return [];
+  }
+
+  return safe(data);
+}
+
+// ------------------------------------------------------------
+// NEWS + RESEARCH LOADERS
+// ------------------------------------------------------------
+async function loadNewsDigest() {
+  if (!ENABLE_NEWS) return [];
   const supabase = createClientEdge();
   const { data, error } = await supabase
     .from("solace_news_digest")
@@ -114,56 +141,45 @@ async function loadResearch(userKey: string) {
 // ------------------------------------------------------------
 // RESEARCH + NEWS TRIGGERS
 // ------------------------------------------------------------
-
-// Explicit news indicators
 const NEWS_REGEX =
   /\b(news|headlines|current events|breaking|today's news|latest news)\b/i;
 
-// Explicit research indicators
 const EXPLICIT_RESEARCH_REGEX =
   /\b(research|look up|find out|verify|fact[- ]?check|sources?|evidence|prove|data|truth|accurate|accuracy)\b/i;
 
-// Implicit verification indicators
 const IMPLICIT_RESEARCH_REGEX =
   /\b(explain (the evidence|in detail|deeply|the data|the science))\b/i;
 
-// Creative intent indicators (do NOT research)
 const CREATIVE_INTENT_REGEX =
   /\b(write|story|poem|lyrics|fantasy|joke|imagine|pretend)\b/i;
 
-// Common first-name whitelist (FN1)
 const COMMON_FIRST_NAMES = new Set([
-  "John", "James", "Robert", "Michael", "William",
-  "David", "Richard", "Joseph", "Thomas", "Charles",
-  "Mary", "Patricia", "Jennifer", "Linda", "Elizabeth",
-  "Sarah", "Karen", "Nancy", "Lisa", "Margaret",
-  "Daniel", "Christopher", "Anthony", "Matthew", "Mark",
-  "Emma", "Olivia", "Sophia", "Isabella", "Mia"
+  "John","James","Robert","Michael","William",
+  "David","Richard","Joseph","Thomas","Charles",
+  "Mary","Patricia","Jennifer","Linda","Elizabeth",
+  "Sarah","Karen","Nancy","Lisa","Margaret",
+  "Daniel","Christopher","Anthony","Matthew","Mark",
+  "Emma","Olivia","Sophia","Isabella","Mia"
 ]);
 
-// Utility: detect capitalized tokens
 function extractCapitalizedTokens(text: string): string[] {
   return text
     .split(/[^A-Za-z0-9]+/)
     .filter(t => /^[A-Z][a-zA-Z0-9]+$/.test(t));
 }
 
-// Check if token is common/known
 function tokenIsWhitelisted(token: string): boolean {
   return (
     COMMON_FIRST_NAMES.has(token) ||
-    /^[A-Z][a-z]+day$/.test(token) || // Days (Monday...)
-    /^[A-Z][a-z]+(uary|arch|ril|May|June|July|ember)$/.test(token) // Months
+    /^[A-Z][a-z]+day$/.test(token) ||
+    /^[A-Z][a-z]+(uary|arch|ril|May|June|July|ember)$/.test(token)
   );
 }
 
-// Unknown entity detection (UE-A)
 function detectUnknownEntity(userMessage: string): boolean {
   const tokens = extractCapitalizedTokens(userMessage);
   for (const t of tokens) {
-    if (!tokenIsWhitelisted(t)) {
-      return true;
-    }
+    if (!tokenIsWhitelisted(t)) return true;
   }
   return false;
 }
@@ -176,7 +192,7 @@ export async function assembleContext(
   workspaceId: string | null,
   userMessage: string
 ): Promise<SolaceContextBundle> {
-  
+
   diag("CTX → assemble start", {
     canonicalUserKey,
     workspaceId,
@@ -185,53 +201,50 @@ export async function assembleContext(
 
   const userKey = canonicalUserKey || "guest";
 
-  // Load core memories
-  const [facts, episodic, autobiography] = await Promise.all([
+  // ----------------------------------------------------------
+  // LOAD MEMORIES (LEGACY + SHADOW)
+  // ----------------------------------------------------------
+  const [legacyFacts, episodic, autobiography] = await Promise.all([
     loadFacts(userKey),
     loadEpisodic(userKey),
     loadAutobio(userKey),
   ]);
 
-  // ------------------------------------------------------------
-  // DETERMINE NEWS REQUEST
-  // ------------------------------------------------------------
+  const newFacts = await loadNewFacts(userKey);
+
+  diag("CTX-SHADOW-MEMORY", {
+    legacyFacts: legacyFacts.length,
+    newFacts: newFacts.length,
+    legacySample: legacyFacts[0]?.id ?? null,
+    newSample: newFacts[0]?.id ?? null,
+  });
+
+  // ----------------------------------------------------------
+  // NEWS
+  // ----------------------------------------------------------
   const wantsNews = NEWS_REGEX.test(userMessage);
+  const newsDigest = wantsNews ? await loadNewsDigest() : [];
 
-  const newsDigest = wantsNews ? await loadNewsDigest(userKey) : [];
-
-  // ------------------------------------------------------------
-  // DETERMINE RESEARCH REQUEST
-  // ------------------------------------------------------------
-
-  // 1. Explicit research keywords
+  // ----------------------------------------------------------
+  // RESEARCH
+  // ----------------------------------------------------------
   const explicitResearch = EXPLICIT_RESEARCH_REGEX.test(userMessage);
-
-  // 2. Implicit verification triggers
   const implicitResearch = IMPLICIT_RESEARCH_REGEX.test(userMessage);
-
-  // 3. Unknown entity detection (UE-A)
   const hasUnknownEntity = detectUnknownEntity(userMessage);
-
-  // 4. Creative intent override: If creative, do NOT research.
   const isCreative = CREATIVE_INTENT_REGEX.test(userMessage);
 
-  // Final research decision:
   let shouldResearch = false;
-
   if (!isCreative) {
-    if (explicitResearch || implicitResearch) {
-      shouldResearch = true;
-    } else if (hasUnknownEntity) {
-      // Rule B: if internal confidence is low (unknown entity), go straight to research
+    if (explicitResearch || implicitResearch || hasUnknownEntity) {
       shouldResearch = true;
     }
   }
 
-  const researchContext: any[] = shouldResearch ? await loadResearch(userKey) : [];
+  const researchContext = shouldResearch ? await loadResearch(userKey) : [];
   const didResearch = researchContext.length > 0;
 
   diag("CTX SUMMARY", {
-    facts: facts.length,
+    facts: legacyFacts.length,
     episodic: episodic.length,
     autobiography: autobiography.length,
     newsDigest: newsDigest.length,
@@ -239,13 +252,18 @@ export async function assembleContext(
     didResearch,
   });
 
+  // ----------------------------------------------------------
+  // RETURN (LEGACY AUTHORITATIVE — NO CUTOVER YET)
+  // ----------------------------------------------------------
   return {
     persona: STATIC_PERSONA_NAME,
-    memoryPack: { facts, episodic, autobiography },
+    memoryPack: {
+      facts: legacyFacts,
+      episodic,
+      autobiography,
+    },
     newsDigest,
     researchContext,
     didResearch,
   };
 }
-
-
