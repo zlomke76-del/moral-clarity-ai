@@ -2,22 +2,39 @@
 import "server-only";
 import OpenAI from "openai";
 
-export type MemoryLabel =
-  | "ProjectDetail"
-  | "MoralValue"
+export type MemoryClassificationLabel =
   | "Identity"
+  | "Relationship"
+  | "Origin"
   | "Preference"
+  | "Profile"
+  | "Habit"
   | "Emotional"
+  | "Goal"
+  | "Task"
+  | "Note"
+  | "Health"
+  | "Interests"
+  | "Boundary"
+  | "Trigger"
   | "Episodic"
-  | "Business"
+  | "DecisionContext"
+  | "MoralValue"
+  | "ProjectDetail"
+  | "BusinessPartner"
+  | "WorkspaceProfile"
+  | "Financial"
+  | "LocationContext"
   | "Other";
+
 
 export type ClassificationResult = {
   provider: "micro" | "openai" | "system";
   label: MemoryClassificationLabel;
   confidence: number; // 0–1
-  raw?: any;          // ← OPTIONAL diagnostic payload
+  raw?: any;
 };
+
 
 const MICRO_RULES: Record<MemoryLabel, string[]> = {
   ProjectDetail: ["project", "build", "ship", "feature"],
