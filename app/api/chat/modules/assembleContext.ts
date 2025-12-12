@@ -1,12 +1,17 @@
 // app/api/chat/modules/assembleContext.ts
 // ------------------------------------------------------------
-// Solace Context Loader — Phase B (FIXED)
-// Reads ONLY from memory.memories using schema()
+// Solace Context Loader — Phase B (FIXED, AUTHORITATIVE)
+// - Reads ONLY from memory.memories
+// - No legacy tables, no views, no fallbacks
+// - Hard diagnostics at every boundary
 // ------------------------------------------------------------
 
 import { createClientEdge } from "@/lib/supabase/edge";
 import { FACTS_LIMIT, EPISODES_LIMIT } from "./constants";
 
+// ------------------------------------------------------------
+// Types
+// ------------------------------------------------------------
 export type SolaceContextBundle = {
   persona: string;
   memoryPack: {
@@ -22,28 +27,35 @@ export type SolaceContextBundle = {
 const STATIC_PERSONA_NAME = "Solace";
 
 // ------------------------------------------------------------
-// Diagnostics
+// Diagnostics helper
 // ------------------------------------------------------------
 function diag(label: string, payload: any) {
   console.log(`[DIAG-CTX] ${label}`, payload);
 }
 
 // ------------------------------------------------------------
-// Helpers
+// Safe rows helper
 // ------------------------------------------------------------
 function safeRows<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
 }
 
 // ------------------------------------------------------------
-// MEMORY LOADER (schema-safe)
+// MEMORY LOADER — schema-qualified (Supabase v2 safe)
 // ------------------------------------------------------------
 async function loadMemories(
   userId: string,
-  memoryType: string,
+  memoryType: "fact" | "episodic" | "identity",
   limit: number
 ) {
   const supabase = createClientEdge();
+
+  diag(`load ${memoryType} → query`, {
+    schema: "memory",
+    table: "memories",
+    userId,
+    limit,
+  });
 
   const { data, error } = await supabase
     .schema("memory")
@@ -58,15 +70,23 @@ async function loadMemories(
     console.warn(`[CTX-${memoryType.toUpperCase()}] read error`, {
       code: error.code,
       message: error.message,
+      hint: (error as any).hint,
     });
     return [];
   }
 
-  return safeRows(data);
+  const rows = safeRows(data);
+
+  diag(`load ${memoryType} → result`, {
+    count: rows.length,
+    sampleId: rows[0]?.id ?? null,
+  });
+
+  return rows;
 }
 
 // ------------------------------------------------------------
-// MAIN ASSEMBLER
+// MAIN CONTEXT ASSEMBLER
 // ------------------------------------------------------------
 export async function assembleContext(
   canonicalUserKey: string,
@@ -79,18 +99,27 @@ export async function assembleContext(
     preview: userMessage.slice(0, 80),
   });
 
+  // ----------------------------------------------------------
+  // Load memories in parallel — NO FALLBACKS
+  // ----------------------------------------------------------
   const [facts, episodic, autobiography] = await Promise.all([
     loadMemories(canonicalUserKey, "fact", FACTS_LIMIT),
     loadMemories(canonicalUserKey, "episodic", EPISODES_LIMIT),
     loadMemories(canonicalUserKey, "identity", 25),
   ]);
 
+  // ----------------------------------------------------------
+  // Final memory counts (authoritative)
+  // ----------------------------------------------------------
   diag("memory counts", {
     facts: facts.length,
     episodic: episodic.length,
     autobiography: autobiography.length,
   });
 
+  // ----------------------------------------------------------
+  // Return context bundle
+  // ----------------------------------------------------------
   return {
     persona: STATIC_PERSONA_NAME,
     memoryPack: {
