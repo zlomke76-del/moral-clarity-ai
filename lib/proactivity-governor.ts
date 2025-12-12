@@ -1,8 +1,11 @@
 // lib/proactivity-governor.ts
-// Phase 5 — Proactivity Governor (Explainable, Consent-Aware)
+// Phase 5 — Proactivity Governor
+// Enforces consent, posture, sensitivity, and logs every decision.
 
 import "server-only";
+
 import { buildExplanation } from "./explainability";
+import { writeProactivityAudit } from "./proactivity-audit";
 
 /* ============================================================
    Types
@@ -49,25 +52,46 @@ export type ProactivityDecision = {
    Governor
    ============================================================ */
 
-export function evaluateProactivity(
+export async function evaluateProactivity(
   ctx: ProactivityContext
-): ProactivityDecision {
+): Promise<ProactivityDecision> {
   /* ------------------------------------------------------------
      1. Consent gate (absolute)
      ------------------------------------------------------------ */
 
   if (!ctx.consent.granted) {
+    const explanation = buildExplanation({
+      type: "proactivity",
+      summary: "No action taken.",
+      details: [
+        "Required consent was not granted.",
+        "System defaulted to silence.",
+      ],
+    });
+
+    await writeProactivityAudit({
+      user_id: ctx.user_key,
+      workspace_id: ctx.workspace_id ?? null,
+
+      trigger_type: ctx.trigger.type,
+      trigger_ref: ctx.trigger.reference,
+      trigger_date: ctx.trigger.date,
+
+      decision: "blocked",
+      action: "none",
+
+      consent: ctx.consent,
+      sensitivity: ctx.sensitivity,
+      posture: ctx.posture?.mode ?? null,
+
+      explanation: explanation.summary,
+      rationale: explanation,
+    });
+
     return {
       allowed: false,
       action: "silence",
-      explanation: buildExplanation({
-        type: "proactivity",
-        summary: "No action taken.",
-        details: [
-          "Required consent was not granted.",
-          "System defaulted to silence.",
-        ],
-      }),
+      explanation,
     };
   }
 
@@ -76,17 +100,38 @@ export function evaluateProactivity(
      ------------------------------------------------------------ */
 
   if (ctx.sensitivity >= 4) {
+    const explanation = buildExplanation({
+      type: "proactivity",
+      summary: "Action suppressed due to sensitivity.",
+      details: [
+        "Context classified as emotionally or ethically sensitive.",
+        "Silence chosen to preserve dignity.",
+      ],
+    });
+
+    await writeProactivityAudit({
+      user_id: ctx.user_key,
+      workspace_id: ctx.workspace_id ?? null,
+
+      trigger_type: ctx.trigger.type,
+      trigger_ref: ctx.trigger.reference,
+      trigger_date: ctx.trigger.date,
+
+      decision: "silence",
+      action: "none",
+
+      consent: ctx.consent,
+      sensitivity: ctx.sensitivity,
+      posture: ctx.posture?.mode ?? null,
+
+      explanation: explanation.summary,
+      rationale: explanation,
+    });
+
     return {
       allowed: false,
       action: "silence",
-      explanation: buildExplanation({
-        type: "proactivity",
-        summary: "Action suppressed due to sensitivity.",
-        details: [
-          "Context classified as emotionally or ethically sensitive.",
-          "Silence chosen to preserve dignity.",
-        ],
-      }),
+      explanation,
     };
   }
 
@@ -95,17 +140,38 @@ export function evaluateProactivity(
      ------------------------------------------------------------ */
 
   if (ctx.posture?.mode === "quiet") {
+    const explanation = buildExplanation({
+      type: "proactivity",
+      summary: "Action deferred.",
+      details: [
+        "Current posture is set to quiet.",
+        "No proactive engagement permitted in this state.",
+      ],
+    });
+
+    await writeProactivityAudit({
+      user_id: ctx.user_key,
+      workspace_id: ctx.workspace_id ?? null,
+
+      trigger_type: ctx.trigger.type,
+      trigger_ref: ctx.trigger.reference,
+      trigger_date: ctx.trigger.date,
+
+      decision: "defer",
+      action: "none",
+
+      consent: ctx.consent,
+      sensitivity: ctx.sensitivity,
+      posture: ctx.posture.mode,
+
+      explanation: explanation.summary,
+      rationale: explanation,
+    });
+
     return {
       allowed: false,
       action: "silence",
-      explanation: buildExplanation({
-        type: "proactivity",
-        summary: "Action deferred.",
-        details: [
-          "Current posture is set to quiet.",
-          "No proactive engagement permitted in this state.",
-        ],
-      }),
+      explanation,
     };
   }
 
@@ -113,17 +179,38 @@ export function evaluateProactivity(
      4. Allowed — minimal proactive action
      ------------------------------------------------------------ */
 
+  const explanation = buildExplanation({
+    type: "proactivity",
+    summary: "Proactive action permitted.",
+    details: [
+      "Consent verified.",
+      "Sensitivity within acceptable bounds.",
+      "Posture allows engagement.",
+    ],
+  });
+
+  await writeProactivityAudit({
+    user_id: ctx.user_key,
+    workspace_id: ctx.workspace_id ?? null,
+
+    trigger_type: ctx.trigger.type,
+    trigger_ref: ctx.trigger.reference,
+    trigger_date: ctx.trigger.date,
+
+    decision: "act",
+    action: "reminder",
+
+    consent: ctx.consent,
+    sensitivity: ctx.sensitivity,
+    posture: ctx.posture?.mode ?? null,
+
+    explanation: explanation.summary,
+    rationale: explanation,
+  });
+
   return {
     allowed: true,
     action: "reminder",
-    explanation: buildExplanation({
-      type: "proactivity",
-      summary: "Proactive action permitted.",
-      details: [
-        "Consent verified.",
-        "Sensitivity within acceptable bounds.",
-        "Posture allows engagement.",
-      ],
-    }),
+    explanation,
   };
 }
