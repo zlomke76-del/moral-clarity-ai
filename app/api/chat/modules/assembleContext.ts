@@ -1,14 +1,11 @@
 // app/api/chat/modules/assembleContext.ts
 // ------------------------------------------------------------
-// Solace Context Loader — Phase B
-// READS ONLY from memory.memories (RLS enforced)
+// Solace Context Loader — Phase B (FIXED)
+// Reads ONLY from memory.memories using schema()
 // ------------------------------------------------------------
 
 import { createClientEdge } from "@/lib/supabase/edge";
-import {
-  FACTS_LIMIT,
-  EPISODES_LIMIT,
-} from "./constants";
+import { FACTS_LIMIT, EPISODES_LIMIT } from "./constants";
 
 export type SolaceContextBundle = {
   persona: string;
@@ -39,7 +36,7 @@ function safeRows<T>(rows: T[] | null): T[] {
 }
 
 // ------------------------------------------------------------
-// MEMORY LOADERS (schema = memory)
+// MEMORY LOADER (schema-safe)
 // ------------------------------------------------------------
 async function loadMemories(
   userId: string,
@@ -49,7 +46,8 @@ async function loadMemories(
   const supabase = createClientEdge();
 
   const { data, error } = await supabase
-    .from("memories", { schema: "memory" })
+    .schema("memory")
+    .from("memories")
     .select("id, memory_type, content, created_at")
     .eq("user_id", userId)
     .eq("memory_type", memoryType)
@@ -75,16 +73,12 @@ export async function assembleContext(
   workspaceId: string | null,
   userMessage: string
 ): Promise<SolaceContextBundle> {
-
   diag("assemble start", {
     canonicalUserKey,
     workspaceId,
     preview: userMessage.slice(0, 80),
   });
 
-  // ----------------------------------------------------------
-  // Load memory buckets
-  // ----------------------------------------------------------
   const [facts, episodic, autobiography] = await Promise.all([
     loadMemories(canonicalUserKey, "fact", FACTS_LIMIT),
     loadMemories(canonicalUserKey, "episodic", EPISODES_LIMIT),
@@ -97,9 +91,6 @@ export async function assembleContext(
     autobiography: autobiography.length,
   });
 
-  // ----------------------------------------------------------
-  // Phase B: No news, no research, no inference
-  // ----------------------------------------------------------
   return {
     persona: STATIC_PERSONA_NAME,
     memoryPack: {
