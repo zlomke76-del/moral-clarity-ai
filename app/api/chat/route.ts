@@ -119,12 +119,12 @@ export async function POST(req: Request) {
     const user = await getNodeUser(req);
 
     // -------------------------------------------------
-    // Assemble context (READ-ONLY, safe fallback)
+    // Assemble context (READ-ONLY)
     // -------------------------------------------------
-    const contextUserKey = user?.id ?? "user:anonymous";
+    const canonicalUserKey = user?.id ?? "user:anonymous";
 
     let context = await assembleContext(
-      contextUserKey,
+      canonicalUserKey,
       workspaceId,
       message
     );
@@ -142,7 +142,7 @@ export async function POST(req: Request) {
       ministryMode,
       founderMode,
       modeHint,
-      canonicalUserKey: contextUserKey,
+      canonicalUserKey,
       governorLevel: gov.level,
       governorInstructions: gov.instructions,
     });
@@ -155,7 +155,7 @@ export async function POST(req: Request) {
     });
 
     // -------------------------------------------------
-    // MEMORY WRITE GATE (EXPLICIT)
+    // MEMORY WRITE GATE (EXPLICIT + FOUNDER)
     // -------------------------------------------------
     const normalized = message.trim().toLowerCase();
 
@@ -168,16 +168,23 @@ export async function POST(req: Request) {
       user.email &&
       (explicitRemember || founderMode === true)
     ) {
-      const memoryInput: MemoryWriteInput = {
+      console.log("[MEMORY-GATE] write allowed", {
+        explicitRemember,
+        founderMode,
         userId: user.id,
-        email: user.email,
-        workspaceId,
-        memoryType: explicitRemember ? "identity" : "fact",
-        source: explicitRemember ? "explicit" : "founder",
-        content: message,
-      };
+      });
 
-      await writeMemory(memoryInput);
+      await writeMemory(
+        canonicalUserKey,
+        message,
+        formatted
+      );
+    } else {
+      console.log("[MEMORY-GATE] write skipped", {
+        hasUser: !!user?.id,
+        explicitRemember,
+        founderMode,
+      });
     }
 
     return NextResponse.json({
