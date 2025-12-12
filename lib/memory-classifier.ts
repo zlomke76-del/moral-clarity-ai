@@ -36,7 +36,7 @@ export type ClassificationResult = {
 };
 
 
-const MICRO_RULES: Record<MemoryLabel, string[]> = {
+const MICRO_RULES: Record<MemoryClassificationLabel, string[]> = {
   ProjectDetail: ["project", "build", "ship", "feature"],
   MoralValue: ["ethic", "value", "belief", "principle"],
   Identity: ["i am", "my name"],
