@@ -1,5 +1,5 @@
 // ------------------------------------------------------------
-// Solace Context Loader — Phase B (AUTH-CORRECT)
+// Solace Context Loader — Phase B (AUTH-CORRECT, NEXT 16 SAFE)
 // Reads ONLY from memory.memories using SERVER auth
 // ------------------------------------------------------------
 
@@ -93,7 +93,7 @@ export async function assembleContext(
   // ------------------------------------------
   // SERVER SUPABASE CLIENT (COOKIE-AWARE)
   // ------------------------------------------
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
