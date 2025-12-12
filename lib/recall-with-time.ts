@@ -11,9 +11,8 @@ export async function recallWithTime(params: {
   const intent = parseTimeIntent(params.query);
 
   const evidence = await recallMemoryEvidence({
-    user_key: params.user_key,
-    query: params.query,
-  });
+  user_key: params.user_key,
+});
 
   return applyTimeWindow(evidence, intent);
 }
