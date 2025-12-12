@@ -60,7 +60,7 @@ export async function remember({
       stored: false,
       reason: "blocked_by_oversight",
       explanation: buildExplanation({
-        type: "memory_write",
+        type: "memory_block",
         summary: "Information was not stored.",
         details: ["Oversight rules prevented storage."],
       }),
