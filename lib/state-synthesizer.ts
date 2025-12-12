@@ -36,10 +36,10 @@ export function synthesizeState(params: {
         Math.max(1, ranked.length),
     },
     active_threads: ranked.map((m) => ({
-      label: m.kind,
-      status: "active",
-      last_update: m.created_at,
-    })),
+  label: m.content.slice(0, 60), // or a smarter summarizer later
+  status: "active",
+  last_update: m.created_at,
+})),
     explanation_available: true,
   };
 }
