@@ -14,8 +14,9 @@ export type MemoryLabel =
 
 export type ClassificationResult = {
   provider: "micro" | "openai" | "system";
-  label: MemoryLabel;
-  confidence: number;
+  label: MemoryClassificationLabel;
+  confidence: number; // 0–1
+  raw?: any;          // ← OPTIONAL diagnostic payload
 };
 
 const MICRO_RULES: Record<MemoryLabel, string[]> = {
