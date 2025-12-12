@@ -1,9 +1,8 @@
 // lib/proactivity-governor.ts
-// Phase 4 — Proactivity Governor
-// Rule: Proactivity is permissioned, contextual, and explainable.
+// Phase 5 — Proactivity Governor (Explainable, Consent-Aware)
 
 import "server-only";
-import { buildContextSnapshot, ContextSignal } from "./context-engine";
+import { buildExplanation } from "./explainability";
 
 /* ============================================================
    Types
@@ -12,101 +11,119 @@ import { buildContextSnapshot, ContextSignal } from "./context-engine";
 export type ProactiveAction =
   | "reminder"
   | "suggestion"
-  | "draft_message"
-  | "external_action"; // e.g. Amazon, email, calendar
+  | "outreach"
+  | "agent_action"
+  | "silence";
+
+export type ProactivityContext = {
+  user_key: string;
+  workspace_id?: string | null;
+
+  trigger: {
+    type: "temporal" | "relational" | "memory" | "system";
+    reference?: string;
+    date?: string;
+  };
+
+  consent: {
+    granted: boolean;
+    scope?: string;
+    expires_at?: string | null;
+  };
+
+  posture?: {
+    mode: "neutral" | "gentle" | "formal" | "quiet";
+    reason?: string;
+  };
+
+  sensitivity: number; // 1–5
+};
 
 export type ProactivityDecision = {
   allowed: boolean;
-  reason: string;
-  requiredConsent?: string;
-  blockedByContext?: ContextSignal[];
-  explain: string;
-};
-
-/* ============================================================
-   Consent Contract (passed in, not queried here)
-   ============================================================ */
-
-export type ConsentState = {
-  scopes: string[];          // e.g. ["reminders", "drafting"]
-  expires_at?: string | null;
-};
-
-/* ============================================================
-   Governor Logic
-   ============================================================ */
-
-export async function evaluateProactivity({
-  user_id,
-  workspace_id,
-  action,
-  consent,
-}: {
-  user_id: string;
-  workspace_id?: string | null;
   action: ProactiveAction;
-  consent: ConsentState | null;
-}): Promise<ProactivityDecision> {
-  // --------------------------------------------------
-  // 1. Consent Gate — HARD STOP
-  // --------------------------------------------------
+  explanation: ReturnType<typeof buildExplanation>;
+};
 
-  if (!consent || !consent.scopes.includes(action)) {
+/* ============================================================
+   Governor
+   ============================================================ */
+
+export function evaluateProactivity(
+  ctx: ProactivityContext
+): ProactivityDecision {
+  /* ------------------------------------------------------------
+     1. Consent gate (absolute)
+     ------------------------------------------------------------ */
+
+  if (!ctx.consent.granted) {
     return {
       allowed: false,
-      reason: "missing_consent",
-      requiredConsent: action,
-      explain: `No consent on file for proactive action: ${action}`,
+      action: "silence",
+      explanation: buildExplanation({
+        type: "proactivity",
+        summary: "No action taken.",
+        details: [
+          "Required consent was not granted.",
+          "System defaulted to silence.",
+        ],
+      }),
     };
   }
 
-  if (consent.expires_at && new Date(consent.expires_at) < new Date()) {
+  /* ------------------------------------------------------------
+     2. Sensitivity gate
+     ------------------------------------------------------------ */
+
+  if (ctx.sensitivity >= 4) {
     return {
       allowed: false,
-      reason: "consent_expired",
-      requiredConsent: action,
-      explain: `Consent expired for action: ${action}`,
+      action: "silence",
+      explanation: buildExplanation({
+        type: "proactivity",
+        summary: "Action suppressed due to sensitivity.",
+        details: [
+          "Context classified as emotionally or ethically sensitive.",
+          "Silence chosen to preserve dignity.",
+        ],
+      }),
     };
   }
 
-  // --------------------------------------------------
-  // 2. Context Awareness
-  // --------------------------------------------------
+  /* ------------------------------------------------------------
+     3. Posture gate
+     ------------------------------------------------------------ */
 
-  const context = await buildContextSnapshot({
-    user_id,
-    workspace_id,
-  });
-
-  const blockedSignals: ContextSignal[] = [];
-
-  if (context.signals.includes("solemn_day")) {
-    blockedSignals.push("solemn_day");
-  }
-
-  if (
-    action === "external_action" &&
-    context.signals.includes("relationship_sensitive")
-  ) {
-    blockedSignals.push("relationship_sensitive");
-  }
-
-  if (blockedSignals.length > 0) {
+  if (ctx.posture?.mode === "quiet") {
     return {
       allowed: false,
-      reason: "blocked_by_context",
-      blockedByContext: blockedSignals,
-      explain: `Proactivity suppressed due to context: ${blockedSignals.join(", ")}`,
+      action: "silence",
+      explanation: buildExplanation({
+        type: "proactivity",
+        summary: "Action deferred.",
+        details: [
+          "Current posture is set to quiet.",
+          "No proactive engagement permitted in this state.",
+        ],
+      }),
     };
   }
 
-  // --------------------------------------------------
-  // 3. Allow (with explainability)
-  // --------------------------------------------------
+  /* ------------------------------------------------------------
+     4. Allowed — minimal proactive action
+     ------------------------------------------------------------ */
 
   return {
     allowed: true,
-    reason: "cleared",
-    explain: `Action '${action}' permitted by consent and context`,
+    action: "reminder",
+    explanation: buildExplanation({
+      type: "proactivity",
+      summary: "Proactive action permitted.",
+      details: [
+        "Consent verified.",
+        "Sensitivity within acceptable bounds.",
+        "Posture allows engagement.",
+      ],
+    }),
   };
 }
