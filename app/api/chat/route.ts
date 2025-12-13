@@ -2,7 +2,7 @@
 // ------------------------------------------------------------------
 // SOLACE CHAT ROUTE — GOVERNOR + HYBRID TRIAD
 // Phase A: Explicit, intentional memory writes only
-// Phase 5: Explicit Working Memory (SESSION ONLY)
+// Phase 5: Working Memory + Context Health
 // ------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -22,12 +22,20 @@ import { writeMemory } from "./modules/memory-writer";
 import type { MemoryWriteInput } from "./modules/memory-writer";
 import type { PacingLevel } from "@/lib/solace/governor/types";
 
-import {
-  addWorkingMemoryItem,
-} from "./modules/workingMemoryStore";
+import { addWorkingMemoryItem } from "./modules/workingMemoryStore";
 
 // -----------------------------------------------------
-// ASCII Sanitize (defensive, Node-safe)
+// Context Health thresholds (TUNABLE)
+// -----------------------------------------------------
+const HEALTH_THRESHOLDS = {
+  fresh: 6000,
+  dense: 10000,
+};
+
+type ContextHealth = "fresh" | "dense" | "saturated";
+
+// -----------------------------------------------------
+// ASCII Sanitize
 // -----------------------------------------------------
 function sanitizeASCII(input: any): any {
   if (!input) return input;
@@ -74,7 +82,7 @@ function clampToPacingLevel(n: number): PacingLevel {
 }
 
 // -----------------------------------------------------
-// Supabase session loader (Node-safe, no middleware)
+// Supabase session loader
 // -----------------------------------------------------
 async function getNodeUser(req: Request) {
   const cookieHeader = req.headers.get("cookie") ?? "";
@@ -99,6 +107,15 @@ async function getNodeUser(req: Request) {
 
   const { data } = await supabase.auth.getUser().catch(() => ({ data: null }));
   return data?.user ?? null;
+}
+
+// -----------------------------------------------------
+// Context Health Calculator
+// -----------------------------------------------------
+function calculateContextHealth(totalChars: number): ContextHealth {
+  if (totalChars < HEALTH_THRESHOLDS.fresh) return "fresh";
+  if (totalChars < HEALTH_THRESHOLDS.dense) return "dense";
+  return "saturated";
 }
 
 // -----------------------------------------------------
@@ -133,10 +150,9 @@ export async function POST(req: Request) {
         ?.split("=")[1] ?? null;
 
     // -------------------------------------------------
-    // Working Memory — Explicit Command Detection
+    // Working Memory — Explicit Command
     // -------------------------------------------------
     const normalized = message.trim().toLowerCase();
-
     const wmPrefix =
       normalized.startsWith("save to working memory ") ||
       normalized.startsWith("put in working memory ") ||
@@ -156,16 +172,11 @@ export async function POST(req: Request) {
           scope: "project",
           sensitivity: "medium",
         });
-
-        console.log("[WM] item added", {
-          sessionId,
-          length: content.length,
-        });
       }
     }
 
     // -------------------------------------------------
-    // Context (READ-ONLY MEMORY RECALL + WM)
+    // Context Assembly
     // -------------------------------------------------
     let context = await assembleContext(
       canonicalUserKey,
@@ -175,7 +186,17 @@ export async function POST(req: Request) {
     context = sanitizeASCII(context);
 
     // -------------------------------------------------
-    // Governor + Hybrid Triad (Opt / Skeptic / Arb)
+    // Context Health Computation
+    // -------------------------------------------------
+    const totalChars =
+      message.length +
+      JSON.stringify(history).length +
+      JSON.stringify(context).length;
+
+    const contextHealth = calculateContextHealth(totalChars);
+
+    // -------------------------------------------------
+    // Governor + Hybrid Triad
     // -------------------------------------------------
     const gov = updateGovernor(message);
 
@@ -199,19 +220,13 @@ export async function POST(req: Request) {
     });
 
     // -------------------------------------------------
-    // LONG-TERM MEMORY WRITE GATE — EXPLICIT ONLY
+    // Long-Term Memory Gate (unchanged)
     // -------------------------------------------------
     const explicitRemember =
       normalized.startsWith("remember ") ||
       normalized.startsWith("remember that ");
 
     if (user?.id && user.email && (explicitRemember || founderMode === true)) {
-      console.log("[MEMORY-GATE] write allowed", {
-        explicitRemember,
-        founderMode,
-        userId: user.id,
-      });
-
       const memoryInput: MemoryWriteInput = {
         userId: user.id,
         email: user.email,
@@ -222,13 +237,12 @@ export async function POST(req: Request) {
       };
 
       await writeMemory(memoryInput, cookieHeader);
-    } else {
-      console.log("[MEMORY-GATE] write skipped");
     }
 
     return NextResponse.json({
       text: formatted,
       imageUrl: pipeline.imageUrl ?? null,
+      contextHealth,
     });
   } catch (err: any) {
     console.error("[CHAT ROUTE FATAL]", err);
