@@ -474,35 +474,6 @@ const { listening, toggleMic } = useSpeechInput({
       { role: "assistant", content: msg },
     ]),
 });
-  
-// ------------------------------------------------------------------------------------
-// Positioning + Dock Styles (MUST RUN BEFORE ANY CONDITIONAL RETURN)
-// ------------------------------------------------------------------------------------
-const vw = window.innerWidth;
-const vh = window.innerHeight;
-
-const maxX = Math.max(0, vw - panelW - PAD);
-const maxY = Math.max(0, vh - panelH - PAD);
-
-const tx = Math.min(Math.max(0, x - PAD), maxX);
-const ty = Math.min(Math.max(0, y - PAD), maxY);
-
-const invisible = !posReady;
-
-const {
-  panelStyle,
-  transcriptStyle,
-  textareaStyle,
-  composerWrapStyle,
-} = useDockStyles({
-  dockW,
-  dockH,
-  tx,
-  ty,
-  invisible,
-  ministryOn,
-  PAD,
-});
 
   // ------------------------------------------------------------------------------------
   // Minimized bubble
