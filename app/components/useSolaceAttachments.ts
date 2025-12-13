@@ -1,12 +1,16 @@
 "use client";
 
 import { useRef } from "react";
+import {
+  uploadFiles,
+  uploadFromPasteEvent,
+} from "@/lib/uploads/client";
 
 export type SolaceFile = {
   name: string;
   type: string;
   mime: string;
-  url: string;
+  url: string;        // PUBLIC HTTPS URL (server usable)
   publicUrl?: string;
   path?: string;
 };
@@ -16,71 +20,96 @@ export function useSolaceAttachments({
 }: {
   onInfoMessage: (msg: string) => void;
 }) {
-  // ⭐ Stable container for attachments
+  // Stable container (no rerenders required)
   const pendingFilesRef = useRef<SolaceFile[]>([]);
 
-  function add(file: SolaceFile) {
-    pendingFilesRef.current.push(file);
+  function addMany(files: SolaceFile[]) {
+    pendingFilesRef.current.push(...files);
   }
 
-  /* ----------------------
-     HANDLE FILE INPUT
-  ----------------------- */
-  function handleFiles(
+  // --------------------------------------------------
+  // FILE INPUT (📎)
+  // --------------------------------------------------
+  async function handleFiles(
     fileList: FileList | null,
     { prefix }: { prefix: string }
   ) {
-    if (!fileList) return;
+    if (!fileList || fileList.length === 0) return;
 
-    for (const file of Array.from(fileList)) {
-      add({
-        name: file.name,
-        type: file.type,
-        mime: file.type,
-        url: URL.createObjectURL(file),
-      });
+    try {
+      const { attachments, errors } = await uploadFiles(fileList, { prefix });
+
+      if (attachments.length > 0) {
+        addMany(
+          attachments.map((a) => ({
+            name: a.name,
+            type: a.type,
+            mime: a.type,
+            url: a.url, // PUBLIC URL
+            publicUrl: a.url,
+          }))
+        );
+
+        onInfoMessage(`${attachments.length} file(s) attached.`);
+      }
+
+      if (errors.length > 0) {
+        onInfoMessage(
+          `⚠️ ${errors.length} file(s) failed to upload.`
+        );
+      }
+    } catch (err: any) {
+      onInfoMessage(
+        `⚠️ Upload failed: ${err?.message || "unknown error"}`
+      );
     }
-
-    onInfoMessage(`${fileList.length} file(s) attached.`);
   }
 
-  /* ----------------------
-     HANDLE PASTE INPUT
-  ----------------------- */
-  function handlePaste(
+  // --------------------------------------------------
+  // PASTE HANDLER (📋)
+  // --------------------------------------------------
+  async function handlePaste(
     e: React.ClipboardEvent,
     { prefix }: { prefix: string }
   ) {
-    const items = e.clipboardData?.items;
-    if (!items) return;
+    try {
+      const { attachments, errors } =
+        await uploadFromPasteEvent(
+          e.nativeEvent as ClipboardEvent,
+          { prefix }
+        );
 
-    let count = 0;
+      if (attachments.length > 0) {
+        addMany(
+          attachments.map((a) => ({
+            name: a.name,
+            type: a.type,
+            mime: a.type,
+            url: a.url,
+            publicUrl: a.url,
+          }))
+        );
 
-    for (const item of items) {
-      if (item.kind === "file") {
-        const file = item.getAsFile();
-        if (file) {
-          add({
-            name: file.name,
-            type: file.type,
-            mime: file.type,
-            url: URL.createObjectURL(file),
-          });
-          count++;
-        }
+        onInfoMessage(`${attachments.length} file(s) pasted.`);
       }
-    }
 
-    if (count > 0) {
-      onInfoMessage(`${count} file(s) pasted.`);
+      if (errors.length > 0) {
+        onInfoMessage(
+          `⚠️ ${errors.length} pasted file(s) failed to upload.`
+        );
+      }
+    } catch (err: any) {
+      onInfoMessage(
+        `⚠️ Paste upload failed: ${err?.message || "unknown error"}`
+      );
     }
   }
 
-  /* ----------------------
-     CLEAR ATTACHMENTS
-  ----------------------- */
+  // --------------------------------------------------
+  // CLEAR
+  // --------------------------------------------------
   function clearPending() {
-    pendingFilesRef.current.splice(0, pendingFilesRef.current.length);
+    pendingFilesRef.current.length = 0;
   }
 
   return {
@@ -90,4 +119,3 @@ export function useSolaceAttachments({
     clearPending,
   };
 }
-
