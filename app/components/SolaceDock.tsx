@@ -18,7 +18,6 @@ declare global {
 }
 
 import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
-
 import { useSolaceMemory } from "./useSolaceMemory";
 import { useSolaceAttachments } from "./useSolaceAttachments";
 
@@ -31,13 +30,6 @@ import {
   createResizeController,
 } from "./dock-resize";
 
-// ✅ NEW HELPERS
-import { runVision } from "@/lib/solace/vision-helper";
-import {
-  isImageAttachment,
-  getAttachmentUrl,
-} from "@/lib/solace/attachment-utils";
-
 // --------------------------------------------------------------------------------------
 // Types
 // --------------------------------------------------------------------------------------
@@ -47,15 +39,19 @@ type Message = {
   imageUrl?: string | null;
 };
 
-type ModeHint = "Create" | "Red Team" | "Next Steps" | "Neutral";
-
 // --------------------------------------------------------------------------------------
 // Constants
 // --------------------------------------------------------------------------------------
 const POS_KEY = "solace:pos:v4";
 const MINISTRY_KEY = "solace:ministry";
-const FOUNDER_KEY = "solace:founder";
 const PAD = 12;
+
+// --------------------------------------------------------------------------------------
+// Helpers
+// --------------------------------------------------------------------------------------
+function getAttachmentUrl(f: any): string | null {
+  return f?.url || f?.publicUrl || f?.path || null;
+}
 
 // --------------------------------------------------------------------------------------
 // MAIN COMPONENT
@@ -79,7 +75,7 @@ export default function SolaceDock() {
   }, []);
 
   // --------------------------------------------------------------------
-  // Store state
+  // Store state (Founder + Mode UI intentionally unused)
   // --------------------------------------------------------------------
   const {
     visible,
@@ -89,10 +85,6 @@ export default function SolaceDock() {
     setPos,
     filters,
     setFilters,
-    founderMode,
-    setFounderMode,
-    modeHint,
-    setModeHint,
   } = useSolaceStore();
 
   // --------------------------------------------------------------------
@@ -132,8 +124,9 @@ export default function SolaceDock() {
 
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    const el = transcriptRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    transcriptRef.current?.scrollTo({
+      top: transcriptRef.current.scrollHeight,
+    });
   }, [messages]);
 
   // --------------------------------------------------------------------
@@ -152,7 +145,7 @@ export default function SolaceDock() {
   });
 
   // --------------------------------------------------------------------
-  // Ministry toggle hydration
+  // Ministry toggle
   // --------------------------------------------------------------------
   const ministryOn = useMemo(
     () => filters.has("abrahamic") && filters.has("ministry"),
@@ -171,15 +164,19 @@ export default function SolaceDock() {
     } catch {}
   }, []);
 
-  // --------------------------------------------------------------------
-  // Founder toggle hydration
-  // --------------------------------------------------------------------
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(FOUNDER_KEY);
-      if (saved === "1") setFounderMode(true);
-    } catch {}
-  }, []);
+  function toggleMinistry() {
+    const next = new Set(filters);
+    if (ministryOn) {
+      next.delete("abrahamic");
+      next.delete("ministry");
+      localStorage.setItem(MINISTRY_KEY, "0");
+    } else {
+      next.add("abrahamic");
+      next.add("ministry");
+      localStorage.setItem(MINISTRY_KEY, "1");
+    }
+    setFilters(next);
+  }
 
   // --------------------------------------------------------------------
   // Initial assistant message
@@ -209,7 +206,6 @@ export default function SolaceDock() {
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
-
     window.addEventListener("resize", measure);
     return () => {
       ro.disconnect();
@@ -222,6 +218,7 @@ export default function SolaceDock() {
   // --------------------------------------------------------------------
   useEffect(() => {
     if (!canRender || !visible) return;
+
     const vw = window.innerWidth;
     const vh = window.innerHeight;
 
@@ -247,22 +244,12 @@ export default function SolaceDock() {
 
     requestAnimationFrame(() => {
       setPos(
-        Math.max(PAD, Math.round((vw - (panelW || 760)) / 2)),
-        Math.max(PAD, Math.round((vh - (panelH || 560)) / 2))
+        Math.max(PAD, (vw - (panelW || 760)) / 2),
+        Math.max(PAD, (vh - (panelH || 560)) / 2)
       );
       setPosReady(true);
     });
   }, [canRender, visible, panelW, panelH, setPos]);
-
-  // --------------------------------------------------------------------
-  // Save position
-  // --------------------------------------------------------------------
-  useEffect(() => {
-    if (!posReady || isMobile) return;
-    try {
-      localStorage.setItem(POS_KEY, JSON.stringify({ x, y }));
-    } catch {}
-  }, [x, y, posReady, isMobile]);
 
   // --------------------------------------------------------------------
   // Drag logic
@@ -282,7 +269,6 @@ export default function SolaceDock() {
     const onMove = (e: MouseEvent) =>
       setPos(e.clientX - offset.dx, e.clientY - offset.dy);
     const onUp = () => setDragging(false);
-
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
     return () => {
@@ -295,82 +281,45 @@ export default function SolaceDock() {
   // Resize
   // --------------------------------------------------------------------
   const { dockW, dockH, setDockW, setDockH } = useDockSize();
-  const startResize = createResizeController(dockW, dockH, setDockW, setDockH);
+  const startResize = createResizeController(
+    dockW,
+    dockH,
+    setDockW,
+    setDockH
+  );
 
   // --------------------------------------------------------------------
-  // Chat API
-  // --------------------------------------------------------------------
-  async function sendToChat(userMsg: string, history: Message[]) {
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: userMsg,
-        history,
-        workspaceId: MCA_WORKSPACE_ID,
-        ministryMode: ministryOn,
-        modeHint,
-        founderMode,
-        userKey,
-      }),
-    });
-
-    if (!res.ok) {
-      throw new Error(await res.text());
-    }
-
-    const data = await res.json();
-    return { text: data.text ?? "", imageUrl: data.imageUrl ?? null };
-  }
-
-  // --------------------------------------------------------------------
-  // MAIN SEND
+  // Send chat
   // --------------------------------------------------------------------
   async function send() {
-    if (streaming) return;
-
     const text = input.trim();
-    const hasImage = pendingFiles.some(isImageAttachment);
-
-    if (!text && pendingFiles.length === 0) return;
+    if (!text || streaming) return;
 
     setInput("");
     setStreaming(true);
-    setMessages((m) => [...m, { role: "user", content: text || "Attachments:" }]);
+    setMessages((m) => [...m, { role: "user", content: text }]);
 
     try {
-      const history = messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
-
-      let reply;
-
-      if (hasImage) {
-        const image = pendingFiles.find(isImageAttachment);
-        const imageUrl = getAttachmentUrl(image);
-
-        if (!imageUrl) throw new Error("Image has no usable URL");
-
-        reply = await runVision({
-          prompt: text || "Look at this image and describe what you see.",
-          imageUrl,
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: text,
+          workspaceId: MCA_WORKSPACE_ID,
+          ministryMode: ministryOn,
           userKey,
-        });
+        }),
+      });
 
-        clearPending();
-      } else {
-        reply = await sendToChat(text, history);
-      }
-
+      const data = await res.json();
       setMessages((m) => [
         ...m,
-        { role: "assistant", content: reply.text },
+        { role: "assistant", content: data.text ?? "" },
       ]);
-    } catch (err: any) {
+    } catch (e: any) {
       setMessages((m) => [
         ...m,
-        { role: "assistant", content: `⚠️ ${err.message || "Error"}` },
+        { role: "assistant", content: `⚠️ ${e.message}` },
       ]);
     } finally {
       setStreaming(false);
@@ -378,44 +327,7 @@ export default function SolaceDock() {
   }
 
   // --------------------------------------------------------------------
-  // ENTER TO SEND
-  // --------------------------------------------------------------------
-  function onEnterSend(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      send();
-    }
-  }
-
-  // --------------------------------------------------------------------
-  // Microphone
-  // --------------------------------------------------------------------
-  const [listening, setListening] = useState(false);
-  const recogRef = useRef<any>(null);
-
-  function toggleMic() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return;
-
-    if (listening) {
-      recogRef.current?.stop();
-      setListening(false);
-      return;
-    }
-
-    const sr = new SR();
-    sr.lang = "en-US";
-    sr.onresult = (e: any) =>
-      setInput((p) => p + " " + e.results[0][0].transcript);
-    sr.onend = () => setListening(false);
-
-    recogRef.current = sr;
-    sr.start();
-    setListening(true);
-  }
-
-  // --------------------------------------------------------------------
-  // Render guards
+  // Minimized bubble
   // --------------------------------------------------------------------
   if (!canRender || !visible) return null;
 
@@ -431,7 +343,7 @@ export default function SolaceDock() {
           borderRadius: "50%",
           background: "#fbbf24",
           fontWeight: 700,
-          cursor: "pointer",
+          zIndex: 999999,
         }}
         onClick={() => setMinimized(false)}
       >
@@ -442,22 +354,56 @@ export default function SolaceDock() {
   }
 
   // --------------------------------------------------------------------
-  // Panel
+  // Layout
   // --------------------------------------------------------------------
+  const skin = Skins.default;
+
   const panel = (
-    <section ref={containerRef}>
+    <section
+      ref={containerRef}
+      style={{
+        position: "fixed",
+        left: PAD,
+        top: PAD,
+        width: dockW,
+        height: dockH,
+        background: skin.panelBg,
+        borderRadius: UI.radiusLg,
+        border: skin.border,
+        boxShadow: ministryOn ? UI.glowOn : UI.shadow,
+        display: "flex",
+        flexDirection: "column",
+        zIndex: 60,
+        transform: `translate3d(${x}px, ${y}px, 0)`,
+      }}
+    >
       <SolaceDockHeader
         ministryOn={ministryOn}
-        founderMode={founderMode}
-        modeHint={modeHint}
         memReady={memReady}
-        onToggleMinistry={() => {}}
-        onToggleFounder={() => {}}
+        onToggleMinistry={toggleMinistry}
         onMinimize={() => setMinimized(true)}
-        setModeHint={setModeHint}
         onDragStart={onHeaderMouseDown}
       />
-      {/* UI preserved below */}
+
+      <div ref={transcriptRef} style={{ flex: 1, padding: 16, overflow: "auto" }}>
+        {messages.map((m, i) => (
+          <div key={i} style={{ marginBottom: 8 }}>
+            {m.content}
+          </div>
+        ))}
+      </div>
+
+      <div style={{ padding: 10, borderTop: UI.edge }}>
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && send()}
+          placeholder="Ask Solace..."
+          style={{ width: "100%", minHeight: 60 }}
+        />
+      </div>
+
+      <ResizeHandle onResizeStart={startResize} />
     </section>
   );
 
