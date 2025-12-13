@@ -382,7 +382,10 @@ export default function SolaceDock() {
         ))}
       </div>
 
-      <div style={composerWrapStyle} onPaste={handlePaste}>
+      <div
+  style={composerWrapStyle}
+  onPaste={(e) => handlePaste(e, { prefix: "solace" })}
+>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <label
             style={{
