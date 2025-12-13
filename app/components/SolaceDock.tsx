@@ -23,7 +23,7 @@ import { useSolaceAttachments } from "./useSolaceAttachments";
 
 import { UI } from "./dock-ui";
 import { Skins } from "./dock-skins";
-import SolaceDockHeader from "./dock-header";
+import SolaceDockHeaderLite from "./dock-header-lite";
 import {
   useDockSize,
   ResizeHandle,
@@ -642,17 +642,13 @@ export default function SolaceDock() {
   // ------------------------------------------------------------------------------------
   const panel = (
     <section ref={containerRef} style={panelStyle}>
-      <SolaceDockHeader
-        ministryOn={ministryOn}
-        founderMode={founderMode}
-        modeHint={modeHint}
-        memReady={memReady}
-        onToggleMinistry={toggleMinistry}
-        onToggleFounder={toggleFounder}
-        onMinimize={() => setMinimized(true)}
-        setModeHint={setModeHint}
-        onDragStart={onHeaderMouseDown}
-      />
+      <SolaceDockHeaderLite
+  ministryOn={ministryOn}
+  memReady={memReady}
+  onToggleMinistry={toggleMinistry}
+  onMinimize={() => setMinimized(true)}
+  onDragStart={onHeaderMouseDown}
+/>
 
       {/* TRANSCRIPT */}
       <div ref={transcriptRef} style={transcriptStyle}>
