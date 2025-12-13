@@ -4,11 +4,14 @@
 // ------------------------------------------------------------
 // Reads ONLY from memory.memories using SERVER auth
 // Adds SESSION-SCOPED Working Memory (NON-PERSISTENT)
+// Adds READ-ONLY Research Context (Hubble)
 // ------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { FACTS_LIMIT, EPISODES_LIMIT } from "./constants";
+import { getSolaceFeatureFlags } from "@/lib/solace/settings";
+import { readHubbleResearchContext } from "@/lib/research/hubble-reader";
 
 // ------------------------------------------------------------
 // Types
@@ -97,19 +100,12 @@ async function loadMemories(
 // ------------------------------------------------------------
 // WORKING MEMORY LOADER (SESSION-SCOPED, NON-PERSISTENT)
 // ------------------------------------------------------------
-// NOTE:
-// - READ ONLY here
-// - No DB access
-// - Requires active session
-// - If session ends, WM is empty by definition
-// ------------------------------------------------------------
 async function loadWorkingMemory(
   sessionId: string | null
 ): Promise<WorkingMemoryItem[]> {
   if (!sessionId) return [];
 
   try {
-    // Explicit cast: WM store is intentionally untyped at this layer
     const wmStore = (globalThis as any).__SOLACE_WM_STORE__ as
       | Map<string, WorkingMemoryItem[]>
       | undefined;
@@ -122,7 +118,7 @@ async function loadWorkingMemory(
 }
 
 // ------------------------------------------------------------
-// MAIN ASSEMBLER (SERVER AUTH + WM)
+// MAIN ASSEMBLER (SERVER AUTH + WM + RESEARCH)
 // ------------------------------------------------------------
 export async function assembleContext(
   canonicalUserKey: string,
@@ -138,7 +134,7 @@ export async function assembleContext(
   // ------------------------------------------
   // SERVER SUPABASE CLIENT (COOKIE-AWARE)
   // ------------------------------------------
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -181,9 +177,24 @@ export async function assembleContext(
   });
 
   // ------------------------------------------
+  // LOAD RESEARCH CONTEXT (HUBBLE — READ ONLY)
+  // ------------------------------------------
+  const flags = getSolaceFeatureFlags();
+  let researchContext: any[] = [];
+
+  if (flags.hubbleResearchEnabled) {
+    researchContext = await readHubbleResearchContext();
+    diag("research.hubble.loaded", {
+      count: researchContext.length,
+    });
+  } else {
+    diag("research.hubble.disabled", {});
+  }
+
+  // ------------------------------------------
   // FINAL CONTEXT BUNDLE
   // ------------------------------------------
-  return {
+  const bundle: SolaceContextBundle = {
     persona: STATIC_PERSONA_NAME,
     memoryPack: {
       facts,
@@ -195,7 +206,15 @@ export async function assembleContext(
       items: workingMemoryItems,
     },
     newsDigest: [],
-    researchContext: [],
-    didResearch: false,
+    researchContext,
+    didResearch: researchContext.length > 0,
   };
+
+  diag("assemble complete", {
+    facts: facts.length,
+    episodic: episodic.length,
+    research: researchContext.length,
+  });
+
+  return bundle;
 }
