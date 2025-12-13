@@ -40,9 +40,6 @@ type Message = {
   imageUrl?: string | null;
 };
 
-type ModeHint = "Neutral";
-const DEFAULT_MODE: ModeHint = "Neutral";
-
 // --------------------------------------------------------------------------------------
 // Constants
 // --------------------------------------------------------------------------------------
@@ -91,7 +88,7 @@ export default function SolaceDock() {
   setFilters,
 } = useSolaceStore();
 
-const modeHint: ModeHint = "Neutral";
+const modeHint = "Neutral" as const;
 
   // --------------------------------------------------------------------
   // Mobile detection
