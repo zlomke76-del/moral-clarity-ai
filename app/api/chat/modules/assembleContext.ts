@@ -108,10 +108,9 @@ async function loadWorkingMemory(
 ): Promise<WorkingMemoryItem[]> {
   if (!sessionId) return [];
 
-  // Placeholder hook — implementation lives in session/redis layer
-  // This function MUST return [] if no active session-scoped WM exists
   try {
-    const wmStore = globalThis.__SOLACE_WM_STORE__ as
+    // Explicit cast: WM store is intentionally untyped at this layer
+    const wmStore = (globalThis as any).__SOLACE_WM_STORE__ as
       | Map<string, WorkingMemoryItem[]>
       | undefined;
 
