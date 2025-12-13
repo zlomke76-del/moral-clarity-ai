@@ -17,7 +17,7 @@ declare global {
 }
 
 import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
-
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useSolaceMemory } from "./useSolaceMemory";
 import { useSolaceAttachments } from "./useSolaceAttachments";
 
@@ -340,7 +340,7 @@ export default function SolaceDock() {
   }
 
 // ------------------------------------------------------------------------------------
-// SEND TO VISION (PROMOTES IMAGE BEFORE ANALYSIS)
+// SEND TO VISION
 // ------------------------------------------------------------------------------------
 async function sendToVision(userMsg: string, prevHistory: Message[]) {
   const imageAttachment = pendingFiles.find((f) => {
@@ -351,12 +351,61 @@ async function sendToVision(userMsg: string, prevHistory: Message[]) {
     );
   });
 
-  if (!imageAttachment) {
+  const imageUrl = getAttachmentUrl(imageAttachment);
+
+  if (!imageUrl) {
+    setMessages((m) => [
+      ...m,
+      {
+        role: "assistant",
+        content:
+          "I see an image attachment, but I don’t have a usable image reference.",
+      },
+    ]);
     clearPending();
     return { text: "", imageUrl: null };
   }
 
-  let imageUrl = imageAttachment.publicUrl || getAttachmentUrl(imageAttachment);
+  const prompt =
+    userMsg.trim() ||
+    "Describe what you can safely see and offer practical, nonjudgmental help.";
+
+  try {
+    const res = await fetch("/api/solace/vision", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-User-Key": userKey,
+      },
+      body: JSON.stringify({
+        prompt,
+        imageUrl,
+      }),
+    });
+
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      throw new Error(`Vision HTTP ${res.status}: ${t}`);
+    }
+
+    const data = await res.json();
+
+    return {
+      text: data.answer ?? "",
+      imageUrl: null,
+    };
+  } catch (err: any) {
+    return {
+      text:
+        err?.message ||
+        "I had trouble interpreting that image. Please try again.",
+      imageUrl: null,
+    };
+  } finally {
+    clearPending();
+  }
+}
+
 
   // ------------------------------------------------------------------
   // PROMOTION STEP: blob → Supabase → public HTTPS URL
