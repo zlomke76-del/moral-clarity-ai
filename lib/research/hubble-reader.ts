@@ -1,14 +1,20 @@
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
 
-export async function readHubbleEvents(limit = 10) {
+export async function readHubbleEvents(
+  cookieHeader: string,
+  limit = 10
+) {
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name) {
-          return cookies().get(name)?.value;
+        get(name: string) {
+          const match = cookieHeader
+            .split(";")
+            .map(c => c.trim())
+            .find(c => c.startsWith(name + "="));
+          return match ? match.split("=")[1] : undefined;
         },
         set() {},
         remove() {},
@@ -24,7 +30,7 @@ export async function readHubbleEvents(limit = 10) {
     .limit(limit);
 
   if (error) {
-    console.error("[HUBBLE READ ERROR]", error);
+    console.error("[HUBBLE READER ERROR]", error);
     return [];
   }
 
