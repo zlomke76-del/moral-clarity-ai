@@ -111,7 +111,11 @@ export default function SolaceDock() {
   // --------------------------------------------------
   const { userKey, memReady } = useSolaceMemory();
   const { pendingFiles, handleFiles, handlePaste, clearPending } =
-    useSolaceAttachments({});
+  useSolaceAttachments({
+    onInfoMessage: (msg) =>
+      alert(msg),
+  });
+
 
   // --------------------------------------------------
   // Ministry
