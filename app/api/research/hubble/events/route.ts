@@ -1,14 +1,13 @@
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    // ✅ FIX: cookies() is synchronous in Next 16
-    const cookieStore = cookies();
+    // ✅ Stable cookie extraction (no async cookies() API)
+    const cookieHeader = req.headers.get("cookie") ?? "";
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,7 +15,11 @@ export async function GET() {
       {
         cookies: {
           get(name: string) {
-            return cookieStore.get(name)?.value;
+            const match = cookieHeader
+              .split(";")
+              .map(c => c.trim())
+              .find(c => c.startsWith(name + "="));
+            return match ? match.split("=")[1] : undefined;
           },
           set() {},
           remove() {},
@@ -32,8 +35,11 @@ export async function GET() {
       .limit(10);
 
     if (error) {
-      console.error("[HUBBLE EVENTS READ ERROR]", error);
-      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+      console.error("[HUBBLE READ ERROR]", error);
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
@@ -42,7 +48,7 @@ export async function GET() {
       events: data ?? [],
     });
   } catch (err: any) {
-    console.error("[HUBBLE EVENTS ROUTE FATAL]", err);
+    console.error("[HUBBLE EVENTS FATAL]", err);
     return NextResponse.json(
       { ok: false, error: err?.message ?? "Unknown error" },
       { status: 500 }
