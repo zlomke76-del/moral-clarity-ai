@@ -1,11 +1,6 @@
 "use client";
 
-import React, {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSolaceStore } from "@/app/providers/solace-store";
 
@@ -30,38 +25,37 @@ import {
   createResizeController,
 } from "./dock-resize";
 
-// --------------------------------------------------------------------------------------
-// Types
-// --------------------------------------------------------------------------------------
+/* ----------------------------------------------------------------------------
+ * Types
+ * -------------------------------------------------------------------------- */
 type Message = {
   role: "user" | "assistant";
   content: string;
-  imageUrl?: string | null;
 };
 
-// --------------------------------------------------------------------------------------
-// Constants
-// --------------------------------------------------------------------------------------
+/* ----------------------------------------------------------------------------
+ * Constants
+ * -------------------------------------------------------------------------- */
 const POS_KEY = "solace:pos:v4";
 const MINISTRY_KEY = "solace:ministry";
 const PAD = 12;
 
-// --------------------------------------------------------------------------------------
-// Helpers
-// --------------------------------------------------------------------------------------
+/* ----------------------------------------------------------------------------
+ * Helpers
+ * -------------------------------------------------------------------------- */
 function getAttachmentUrl(f: any): string | null {
   return f?.url || f?.publicUrl || f?.path || null;
 }
 
-// --------------------------------------------------------------------------------------
-// MAIN COMPONENT
-// --------------------------------------------------------------------------------------
+/* ----------------------------------------------------------------------------
+ * MAIN COMPONENT
+ * -------------------------------------------------------------------------- */
 export default function SolaceDock() {
   const [canRender, setCanRender] = useState(false);
 
-  // --------------------------------------------------------------------
-  // One-time mount protection
-  // --------------------------------------------------------------------
+  /* ------------------------------------------------------------------------
+   * One-time mount protection
+   * ---------------------------------------------------------------------- */
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.__solaceDockMounted) return;
@@ -74,22 +68,15 @@ export default function SolaceDock() {
     };
   }, []);
 
-  // --------------------------------------------------------------------
-  // Store state (Founder + Mode UI intentionally unused)
-  // --------------------------------------------------------------------
-  const {
-    visible,
-    setVisible,
-    x,
-    y,
-    setPos,
-    filters,
-    setFilters,
-  } = useSolaceStore();
+  /* ------------------------------------------------------------------------
+   * Store state (Founder + Mode intentionally unused)
+   * ---------------------------------------------------------------------- */
+  const { visible, setVisible, x, y, setPos, filters, setFilters } =
+    useSolaceStore();
 
-  // --------------------------------------------------------------------
-  // Mobile detection
-  // --------------------------------------------------------------------
+  /* ------------------------------------------------------------------------
+   * Mobile detection
+   * ---------------------------------------------------------------------- */
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth <= 768);
@@ -102,51 +89,78 @@ export default function SolaceDock() {
     if (canRender && !isMobile && !visible) setVisible(true);
   }, [canRender, isMobile, visible, setVisible]);
 
-  // --------------------------------------------------------------------
-  // Minimized state
-  // --------------------------------------------------------------------
+  /* ------------------------------------------------------------------------
+   * Minimized
+   * ---------------------------------------------------------------------- */
   const [minimized, setMinimized] = useState(false);
 
-  // --------------------------------------------------------------------
-  // Dragging
-  // --------------------------------------------------------------------
+  /* ------------------------------------------------------------------------
+   * Dragging
+   * ---------------------------------------------------------------------- */
   const [dragging, setDragging] = useState(false);
   const [offset, setOffset] = useState({ dx: 0, dy: 0 });
   const [posReady, setPosReady] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // --------------------------------------------------------------------
-  // Messages
-  // --------------------------------------------------------------------
+  function onHeaderMouseDown(e: React.MouseEvent) {
+    if (isMobile) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    setOffset({
+      dx: e.clientX - (rect?.left ?? 0),
+      dy: e.clientY - (rect?.top ?? 0),
+    });
+    setDragging(true);
+  }
+
+  useEffect(() => {
+    if (!dragging) return;
+
+    const onMove = (e: MouseEvent) =>
+      setPos(e.clientX - offset.dx, e.clientY - offset.dy);
+    const onUp = () => setDragging(false);
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [dragging, offset, setPos]);
+
+  /* ------------------------------------------------------------------------
+   * Messages
+   * ---------------------------------------------------------------------- */
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
-
   const transcriptRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     transcriptRef.current?.scrollTo({
       top: transcriptRef.current.scrollHeight,
     });
   }, [messages]);
 
-  // --------------------------------------------------------------------
-  // Memory + attachments
-  // --------------------------------------------------------------------
+  useEffect(() => {
+    if (messages.length === 0) {
+      setMessages([{ role: "assistant", content: "Ready when you are." }]);
+    }
+  }, [messages.length]);
+
+  /* ------------------------------------------------------------------------
+   * Memory + attachments
+   * ---------------------------------------------------------------------- */
   const { userKey, memReady } = useSolaceMemory();
 
-  const {
-    pendingFiles,
-    handleFiles,
-    handlePaste,
-    clearPending,
-  } = useSolaceAttachments({
-    onInfoMessage: (msg) =>
-      setMessages((m) => [...m, { role: "assistant", content: msg }]),
-  });
+  const { pendingFiles, handleFiles, handlePaste, clearPending } =
+    useSolaceAttachments({
+      onInfoMessage: (msg) =>
+        setMessages((m) => [...m, { role: "assistant", content: msg }]),
+    });
 
-  // --------------------------------------------------------------------
-  // Ministry toggle
-  // --------------------------------------------------------------------
+  /* ------------------------------------------------------------------------
+   * Ministry toggle
+   * ---------------------------------------------------------------------- */
   const ministryOn = useMemo(
     () => filters.has("abrahamic") && filters.has("ministry"),
     [filters]
@@ -178,54 +192,14 @@ export default function SolaceDock() {
     setFilters(next);
   }
 
-  // --------------------------------------------------------------------
-  // Initial assistant message
-  // --------------------------------------------------------------------
-  useEffect(() => {
-    if (messages.length === 0) {
-      setMessages([{ role: "assistant", content: "Ready when you are." }]);
-    }
-  }, [messages.length]);
-
-  // --------------------------------------------------------------------
-  // Panel measurement
-  // --------------------------------------------------------------------
-  const [panelW, setPanelW] = useState(0);
-  const [panelH, setPanelH] = useState(0);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const measure = () => {
-      const r = el.getBoundingClientRect();
-      setPanelW(r.width);
-      setPanelH(r.height);
-    };
-
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    window.addEventListener("resize", measure);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, []);
-
-  // --------------------------------------------------------------------
-  // Load saved position
-  // --------------------------------------------------------------------
+  /* ------------------------------------------------------------------------
+   * Position restore
+   * ---------------------------------------------------------------------- */
   useEffect(() => {
     if (!canRender || !visible) return;
 
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-
-    if (vw <= 768) {
-      setPosReady(true);
-      return;
-    }
 
     try {
       const raw = localStorage.getItem(POS_KEY);
@@ -242,44 +216,12 @@ export default function SolaceDock() {
       }
     } catch {}
 
-    requestAnimationFrame(() => {
-      setPos(
-        Math.max(PAD, (vw - (panelW || 760)) / 2),
-        Math.max(PAD, (vh - (panelH || 560)) / 2)
-      );
-      setPosReady(true);
-    });
-  }, [canRender, visible, panelW, panelH, setPos]);
+    setPosReady(true);
+  }, [canRender, visible, setPos]);
 
-  // --------------------------------------------------------------------
-  // Drag logic
-  // --------------------------------------------------------------------
-  function onHeaderMouseDown(e: React.MouseEvent) {
-    if (isMobile) return;
-    const rect = containerRef.current?.getBoundingClientRect();
-    setOffset({
-      dx: e.clientX - (rect?.left ?? 0),
-      dy: e.clientY - (rect?.top ?? 0),
-    });
-    setDragging(true);
-  }
-
-  useEffect(() => {
-    if (!dragging) return;
-    const onMove = (e: MouseEvent) =>
-      setPos(e.clientX - offset.dx, e.clientY - offset.dy);
-    const onUp = () => setDragging(false);
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-  }, [dragging, offset, setPos]);
-
-  // --------------------------------------------------------------------
-  // Resize
-  // --------------------------------------------------------------------
+  /* ------------------------------------------------------------------------
+   * Resize
+   * ---------------------------------------------------------------------- */
   const { dockW, dockH, setDockW, setDockH } = useDockSize();
   const startResize = createResizeController(
     dockW,
@@ -288,9 +230,9 @@ export default function SolaceDock() {
     setDockH
   );
 
-  // --------------------------------------------------------------------
-  // Send chat
-  // --------------------------------------------------------------------
+  /* ------------------------------------------------------------------------
+   * Send
+   * ---------------------------------------------------------------------- */
   async function send() {
     const text = input.trim();
     if (!text || streaming) return;
@@ -326,9 +268,9 @@ export default function SolaceDock() {
     }
   }
 
-  // --------------------------------------------------------------------
-  // Minimized bubble
-  // --------------------------------------------------------------------
+  /* ------------------------------------------------------------------------
+   * Early exits
+   * ---------------------------------------------------------------------- */
   if (!canRender || !visible) return null;
 
   if (minimized) {
@@ -353,9 +295,9 @@ export default function SolaceDock() {
     );
   }
 
-  // --------------------------------------------------------------------
-  // Layout
-  // --------------------------------------------------------------------
+  /* ------------------------------------------------------------------------
+   * Render
+   * ---------------------------------------------------------------------- */
   const skin = Skins.default;
 
   const panel = (
@@ -373,26 +315,26 @@ export default function SolaceDock() {
         boxShadow: ministryOn ? UI.glowOn : UI.shadow,
         display: "flex",
         flexDirection: "column",
-        zIndex: 60,
         transform: `translate3d(${x}px, ${y}px, 0)`,
+        zIndex: 60,
       }}
     >
-     <SolaceDockHeader
-  ministryOn={ministryOn}
-  memReady={memReady}
+      <SolaceDockHeader
+        ministryOn={ministryOn}
+        memReady={memReady}
+        founderMode={false}
+        modeHint="Neutral"
+        onToggleFounder={() => {}}
+        setModeHint={() => {}}
+        onToggleMinistry={toggleMinistry}
+        onMinimize={() => setMinimized(true)}
+        onDragStart={onHeaderMouseDown}
+      />
 
-  /* founder + mode intentionally disabled */
-  founderMode={false}
-  modeHint={"Neutral"}
-  onToggleFounder={() => {}}
-  setModeHint={() => {}}
-
-  onToggleMinistry={toggleMinistry}
-  onMinimize={() => setMinimized(true)}
-  onDragStart={onHeaderMouseDown}
-/>
-
-      <div ref={transcriptRef} style={{ flex: 1, padding: 16, overflow: "auto" }}>
+      <div
+        ref={transcriptRef}
+        style={{ flex: 1, padding: 16, overflow: "auto" }}
+      >
         {messages.map((m, i) => (
           <div key={i} style={{ marginBottom: 8 }}>
             {m.content}
@@ -400,14 +342,37 @@ export default function SolaceDock() {
         ))}
       </div>
 
-      <div style={{ padding: 10, borderTop: UI.edge }}>
+      <div
+        style={{
+          padding: 10,
+          borderTop: UI.edge,
+          display: "flex",
+          gap: 8,
+          alignItems: "center",
+        }}
+        onPaste={(e) => handlePaste(e, { prefix: "solace" })}
+      >
+        <label style={{ cursor: "pointer" }}>
+          📎
+          <input
+            type="file"
+            multiple
+            style={{ display: "none" }}
+            onChange={(e) => handleFiles(e.target.files, { prefix: "solace" })}
+          />
+        </label>
+
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && send()}
+          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
           placeholder="Ask Solace..."
-          style={{ width: "100%", minHeight: 60 }}
+          style={{ flex: 1, minHeight: 40 }}
         />
+
+        <button onClick={send} disabled={streaming}>
+          Ask
+        </button>
       </div>
 
       <ResizeHandle onResizeStart={startResize} />
