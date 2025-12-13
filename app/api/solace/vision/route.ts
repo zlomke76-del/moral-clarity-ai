@@ -6,6 +6,7 @@ import { getOpenAI } from "@/lib/openai";
 import { buildVisionSystemPrompt } from "@/lib/solace/vision-mode";
 import { getSolaceFeatureFlags } from "@/lib/solace/settings";
 
+// Model resolution (kept intentionally flexible)
 const SOLACE_VISION_MODEL =
   process.env.OPENAI_RESPONSE_MODEL ||
   process.env.OPENAI_MODEL ||
@@ -21,6 +22,9 @@ function jsonError(
 
 export async function POST(req: NextRequest) {
   try {
+    // --------------------------------------------------
+    // Feature flag gate
+    // --------------------------------------------------
     const flags = getSolaceFeatureFlags();
     if (!flags.visionEnabled) {
       return jsonError("Vision access for Solace is disabled.", 403, {
@@ -28,6 +32,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // --------------------------------------------------
+    // Parse request body
+    // --------------------------------------------------
     const body = (await req.json().catch(() => null)) as
       | { url?: string; imageUrl?: string; prompt?: string }
       | null;
@@ -43,6 +50,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // --------------------------------------------------
+    // HARD VALIDATION — OpenAI does NOT accept data URLs
+    // --------------------------------------------------
     const isHttpUrl =
       imageUrl.startsWith("http://") || imageUrl.startsWith("https://");
 
@@ -54,8 +64,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const openai = await getOpenAI();
-
+    // --------------------------------------------------
+    // Build system prompt
+    // --------------------------------------------------
     const system = buildVisionSystemPrompt(`
 You must follow Solace's VISION SAFETY & INTERPRETATION PROTOCOL.
 
@@ -71,23 +82,38 @@ Otherwise:
 - Stay calm, kind, and non-shaming.
     `.trim());
 
-    const input = [
-      {
-        role: "system",
-        content: [{ type: "input_text", text: system }],
-      },
-      {
-        role: "user",
-        content: [
-          { type: "input_text", text: userPrompt },
-          { type: "input_image", image_url: imageUrl },
-        ],
-      },
-    ];
+    const openai = await getOpenAI();
 
+    // --------------------------------------------------
+    // OpenAI Responses API call
+    // IMPORTANT: inline `input` to satisfy TS inference
+    // --------------------------------------------------
     const resp = await openai.responses.create({
       model: SOLACE_VISION_MODEL,
-      input,
+      input: [
+        {
+          role: "system",
+          content: [
+            {
+              type: "input_text",
+              text: system,
+            },
+          ],
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "input_text",
+              text: userPrompt,
+            },
+            {
+              type: "input_image",
+              image_url: imageUrl,
+            },
+          ],
+        },
+      ],
       max_output_tokens: 900,
     });
 
