@@ -1,11 +1,25 @@
 // ------------------------------------------------------------
-// Solace Context Loader — Phase B (AUTH-CORRECT, NEXT 16 SAFE)
+// Solace Context Loader — Phase B + Phase 5 (WM-READ-ONLY)
+// AUTH-CORRECT, NEXT 16 SAFE
+// ------------------------------------------------------------
 // Reads ONLY from memory.memories using SERVER auth
+// Adds SESSION-SCOPED Working Memory (NON-PERSISTENT)
 // ------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { FACTS_LIMIT, EPISODES_LIMIT } from "./constants";
+
+// ------------------------------------------------------------
+// Types
+// ------------------------------------------------------------
+export type WorkingMemoryItem = {
+  id: string;
+  content: string;
+  scope: "technical" | "project" | "decision";
+  sensitivity: "low" | "medium" | "high";
+  createdAt: string;
+};
 
 export type SolaceContextBundle = {
   persona: string;
@@ -13,6 +27,10 @@ export type SolaceContextBundle = {
     facts: any[];
     episodic: any[];
     autobiography: any[];
+  };
+  workingMemory: {
+    active: boolean;
+    items: WorkingMemoryItem[];
   };
   newsDigest: any[];
   researchContext: any[];
@@ -36,7 +54,7 @@ function safeRows<T>(rows: T[] | null): T[] {
 }
 
 // ------------------------------------------------------------
-// SERVER-AUTH MEMORY LOADER
+// SERVER-AUTH MEMORY LOADER (LTM ONLY)
 // ------------------------------------------------------------
 async function loadMemories(
   supabase: any,
@@ -77,7 +95,35 @@ async function loadMemories(
 }
 
 // ------------------------------------------------------------
-// MAIN ASSEMBLER (SERVER AUTH)
+// WORKING MEMORY LOADER (SESSION-SCOPED, NON-PERSISTENT)
+// ------------------------------------------------------------
+// NOTE:
+// - READ ONLY here
+// - No DB access
+// - Requires active session
+// - If session ends, WM is empty by definition
+// ------------------------------------------------------------
+async function loadWorkingMemory(
+  sessionId: string | null
+): Promise<WorkingMemoryItem[]> {
+  if (!sessionId) return [];
+
+  // Placeholder hook — implementation lives in session/redis layer
+  // This function MUST return [] if no active session-scoped WM exists
+  try {
+    const wmStore = globalThis.__SOLACE_WM_STORE__ as
+      | Map<string, WorkingMemoryItem[]>
+      | undefined;
+
+    const items = wmStore?.get(sessionId) ?? [];
+    return Array.isArray(items) ? items : [];
+  } catch {
+    return [];
+  }
+}
+
+// ------------------------------------------------------------
+// MAIN ASSEMBLER (SERVER AUTH + WM)
 // ------------------------------------------------------------
 export async function assembleContext(
   canonicalUserKey: string,
@@ -110,7 +156,7 @@ export async function assembleContext(
   );
 
   // ------------------------------------------
-  // LOAD MEMORY (AUTHENTICATED)
+  // LOAD LONG-TERM MEMORY (READ ONLY)
   // ------------------------------------------
   const [facts, episodic, autobiography] = await Promise.all([
     loadMemories(supabase, canonicalUserKey, "fact", FACTS_LIMIT),
@@ -124,12 +170,30 @@ export async function assembleContext(
     autobiography: autobiography.length,
   });
 
+  // ------------------------------------------
+  // LOAD WORKING MEMORY (SESSION-SCOPED)
+  // ------------------------------------------
+  const sessionId = cookieStore.get("solace-session")?.value ?? null;
+  const workingMemoryItems = await loadWorkingMemory(sessionId);
+
+  diag("working memory", {
+    active: workingMemoryItems.length > 0,
+    count: workingMemoryItems.length,
+  });
+
+  // ------------------------------------------
+  // FINAL CONTEXT BUNDLE
+  // ------------------------------------------
   return {
     persona: STATIC_PERSONA_NAME,
     memoryPack: {
       facts,
       episodic,
       autobiography,
+    },
+    workingMemory: {
+      active: workingMemoryItems.length > 0,
+      items: workingMemoryItems,
     },
     newsDigest: [],
     researchContext: [],
