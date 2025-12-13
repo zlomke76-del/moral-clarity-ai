@@ -377,13 +377,20 @@ export default function SolaceDock() {
         transform: `translate3d(${x}px, ${y}px, 0)`,
       }}
     >
-      <SolaceDockHeader
-        ministryOn={ministryOn}
-        memReady={memReady}
-        onToggleMinistry={toggleMinistry}
-        onMinimize={() => setMinimized(true)}
-        onDragStart={onHeaderMouseDown}
-      />
+     <SolaceDockHeader
+  ministryOn={ministryOn}
+  memReady={memReady}
+
+  /* founder + mode intentionally disabled */
+  founderMode={false}
+  modeHint={"Neutral"}
+  onToggleFounder={() => {}}
+  setModeHint={() => {}}
+
+  onToggleMinistry={toggleMinistry}
+  onMinimize={() => setMinimized(true)}
+  onDragStart={onHeaderMouseDown}
+/>
 
       <div ref={transcriptRef} style={{ flex: 1, padding: 16, overflow: "auto" }}>
         {messages.map((m, i) => (
