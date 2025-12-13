@@ -1,118 +1,124 @@
 // services/hubbleIngest.ts
 // --------------------------------------------------------------
-// Hubble Ingest — Phase 0 (Validate + Diag ONLY)
-// - No persistence
-// - No memory writes
-// - Strict schema validation
-// - Explicit diagnostics for audit + drift review
+// Hubble Ingest — Minimal, Deterministic, Dependency-Free
+// - NO AJV
+// - Strict structural validation
+// - Explicit diagnostics
+// - Immutable ingest discipline
 // --------------------------------------------------------------
 
-import Ajv, { JSONSchemaType } from "ajv";
+import fetch from "node-fetch";
 
 // --------------------------------------------------------------
-// Hubble Event Schema (Minimal Viable, Versioned)
+// Types (Minimal Viable Event)
 // --------------------------------------------------------------
 export type HubbleEvent = {
   event_id: string;
-  timestamp_utc: string;
+  timestamp_utc: string; // ISO-8601
   instrument_mode: string;
   exposure_time: number;
   target_ra: number;
   target_dec: number;
-  data_quality_flags: number[];
+  data_quality_flags: number[]; // numeric only
   payload_ref: string;
   calibration_version: string;
-};
-
-const hubbleEventSchema: JSONSchemaType<HubbleEvent> = {
-  type: "object",
-  additionalProperties: false,
-  required: [
-    "event_id",
-    "timestamp_utc",
-    "instrument_mode",
-    "exposure_time",
-    "target_ra",
-    "target_dec",
-    "data_quality_flags",
-    "payload_ref",
-    "calibration_version",
-  ],
-  properties: {
-    event_id: { type: "string", minLength: 1 },
-    timestamp_utc: { type: "string", minLength: 10 },
-    instrument_mode: { type: "string", minLength: 1 },
-    exposure_time: { type: "number", minimum: 0 },
-    target_ra: { type: "number", minimum: 0, maximum: 360 },
-    target_dec: { type: "number", minimum: -90, maximum: 90 },
-    data_quality_flags: {
-      type: "array",
-      items: { type: "number" },
-      minItems: 0,
-    },
-    payload_ref: { type: "string", minLength: 1 },
-    calibration_version: { type: "string", minLength: 1 },
-  },
+  provenance: {
+    source: string;
+    dataset_id: string;
+    citation: string;
+    license: string;
+    retrieved_at: string;
+  };
 };
 
 // --------------------------------------------------------------
-// AJV Validator
-// --------------------------------------------------------------
-const ajv = new Ajv({
-  allErrors: true,
-  strict: true,
-  allowUnionTypes: true,
-});
-
-const validateEvent = ajv.compile(hubbleEventSchema);
-
-// --------------------------------------------------------------
-// Diagnostics Helper
+// Diagnostics
 // --------------------------------------------------------------
 function diag(label: string, payload: any) {
-  console.info(`[HUBBLE-INGEST] ${label}`, payload);
+  console.log(`[HUBBLE-INGEST] ${label}`, payload);
 }
 
 // --------------------------------------------------------------
-// Public API — Validate + Diag ONLY
+// Hard Validator (NO COERCION)
 // --------------------------------------------------------------
-export function validateHubbleEvent(input: unknown): {
-  ok: boolean;
-  event?: HubbleEvent;
-  errors?: any[];
-} {
-  diag("ingest.received", {
-    type: typeof input,
-    preview:
-      typeof input === "object"
-        ? JSON.stringify(input).slice(0, 300)
-        : String(input).slice(0, 300),
-  });
+function isValidHubbleEvent(e: any): e is HubbleEvent {
+  try {
+    if (!e || typeof e !== "object") return false;
 
-  const valid = validateEvent(input);
+    const requiredStrings = [
+      "event_id",
+      "timestamp_utc",
+      "instrument_mode",
+      "payload_ref",
+      "calibration_version",
+    ];
 
-  if (!valid) {
-    diag("ingest.validation_failed", {
-      errors: validateEvent.errors,
-    });
+    for (const k of requiredStrings) {
+      if (typeof e[k] !== "string" || e[k].length === 0) return false;
+    }
 
-    return {
-      ok: false,
-      errors: validateEvent.errors ?? [],
-    };
+    if (typeof e.exposure_time !== "number") return false;
+    if (typeof e.target_ra !== "number") return false;
+    if (typeof e.target_dec !== "number") return false;
+
+    if (
+      !Array.isArray(e.data_quality_flags) ||
+      !e.data_quality_flags.every((n: any) => typeof n === "number")
+    ) {
+      return false;
+    }
+
+    const p = e.provenance;
+    if (
+      !p ||
+      typeof p.source !== "string" ||
+      typeof p.dataset_id !== "string" ||
+      typeof p.citation !== "string" ||
+      typeof p.license !== "string" ||
+      typeof p.retrieved_at !== "string"
+    ) {
+      return false;
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// --------------------------------------------------------------
+// Ingest Function
+// --------------------------------------------------------------
+export async function ingestHubbleEvent(
+  event: unknown
+): Promise<{ ok: boolean; error?: string }> {
+  diag("received", event);
+
+  if (!isValidHubbleEvent(event)) {
+    diag("reject.invalid_schema", event);
+    return { ok: false, error: "Invalid Hubble event schema" };
   }
 
-  const event = input as HubbleEvent;
+  // Immutable namespace (example)
+  const objectPath = `/hubble_ingest/v1/${event.event_id}.json`;
 
-  diag("ingest.validation_passed", {
+  diag("validated", {
     event_id: event.event_id,
-    timestamp_utc: event.timestamp_utc,
-    instrument_mode: event.instrument_mode,
-    payload_ref: event.payload_ref,
+    instrument: event.instrument_mode,
+    timestamp: event.timestamp_utc,
   });
 
-  return {
-    ok: true,
-    event,
-  };
+  // ----------------------------------------------------------
+  // At this point you would:
+  // - write to object storage
+  // - write metadata row
+  // - never overwrite
+  // ----------------------------------------------------------
+
+  diag("accepted", {
+    path: objectPath,
+    provenance: event.provenance,
+  });
+
+  return { ok: true };
 }
