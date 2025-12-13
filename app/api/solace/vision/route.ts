@@ -1,4 +1,3 @@
-// app/api/solace/vision/route.ts
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -7,7 +6,6 @@ import { getOpenAI } from "@/lib/openai";
 import { buildVisionSystemPrompt } from "@/lib/solace/vision-mode";
 import { getSolaceFeatureFlags } from "@/lib/solace/settings";
 
-// Local defaults so we don't depend on lib/mcai/config
 const SOLACE_VISION_MODEL =
   process.env.OPENAI_RESPONSE_MODEL ||
   process.env.OPENAI_MODEL ||
@@ -21,16 +19,6 @@ function jsonError(
   return NextResponse.json({ ok: false, error: message, ...extra }, { status });
 }
 
-/**
- * Expected JSON body (what useSolaceAttachments sends):
- *
- * {
- *   "url": "https://.../image.png" | "data:image/png;base64,...",
- *   "prompt": "optional user instruction"
- * }
- *
- * We pass that URL directly to the OpenAI responses API as an input_image.
- */
 export async function POST(req: NextRequest) {
   try {
     const flags = getSolaceFeatureFlags();
@@ -50,51 +38,49 @@ export async function POST(req: NextRequest) {
       "Describe what you can safely see and offer practical, nonjudgmental help.";
 
     if (!imageUrl) {
-      return jsonError("Missing image URL in body (url or imageUrl).", 400, {
+      return jsonError("Missing image URL in request body.", 400, {
         code: "NO_IMAGE_URL",
       });
     }
 
-    const openai: any = await getOpenAI();
+    const isHttpUrl =
+      imageUrl.startsWith("http://") || imageUrl.startsWith("https://");
+
+    if (!isHttpUrl) {
+      return jsonError(
+        "Image must be a publicly accessible HTTPS URL. Data URLs and local blobs are not supported.",
+        400,
+        { code: "INVALID_IMAGE_URL_FORMAT" }
+      );
+    }
+
+    const openai = await getOpenAI();
 
     const system = buildVisionSystemPrompt(`
 You must follow Solace's VISION SAFETY & INTERPRETATION PROTOCOL.
 
 If the image appears to contain restricted content (nudity, explicit sexual content,
 graphic violence, criminal activity, weapons, drugs, extremist symbolism, or minors
-in unsafe situations), you must respond ONLY with:
+in unsafe situations), respond ONLY with:
 
 "I can’t assist with this image because it contains restricted visual content. If you’d like to describe the situation in words, I can help that way."
 
 Otherwise:
 - Briefly describe what is visible.
-- Offer 2–3 concrete, nonjudgmental suggestions if appropriate (e.g., for a messy room or sparse fridge).
-- Stay practical, kind, and non-shaming.
+- Offer 2–3 practical, nonjudgmental suggestions if appropriate.
+- Stay calm, kind, and non-shaming.
     `.trim());
 
-    // OpenAI responses multimodal input:
-    // NOTE: image_url must be a STRING (URL or data URL), not an object.
-    const input: any = [
+    const input = [
       {
         role: "system",
-        content: [
-          {
-            type: "input_text",
-            text: system,
-          },
-        ],
+        content: [{ type: "input_text", text: system }],
       },
       {
         role: "user",
         content: [
-          {
-            type: "input_text",
-            text: userPrompt,
-          },
-          {
-            type: "input_image",
-            image_url: imageUrl,
-          },
+          { type: "input_text", text: userPrompt },
+          { type: "input_image", image_url: imageUrl },
         ],
       },
     ];
@@ -105,11 +91,9 @@ Otherwise:
       max_output_tokens: 900,
     });
 
-    const answer = (resp as any).output_text as string | undefined;
-
     return NextResponse.json({
       ok: true,
-      answer: answer ?? "",
+      answer: resp.output_text ?? "",
       model: SOLACE_VISION_MODEL,
     });
   } catch (err: any) {
@@ -127,4 +111,3 @@ export async function GET() {
     code: "METHOD_NOT_ALLOWED",
   });
 }
-
