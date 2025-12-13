@@ -15,7 +15,6 @@ declare global {
     SpeechRecognition?: any;
   }
 }
-import { useSpeechInput } from "./useSpeechInput";
 
 import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
 import { useDockStyles } from "./useDockStyles";
@@ -465,6 +464,53 @@ const modeHint = "Neutral" as const;
     setFilters(next);
   }
 
+   // ------------------------------------------------------------------------------------
+  // Microphone
+  // ------------------------------------------------------------------------------------
+  const [listening, setListening] = useState(false);
+  const recogRef = useRef<any>(null);
+
+  function toggleMic() {
+    const SR =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+
+    if (!SR) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content:
+            "🎤 Microphone not supported in this browser.",
+        },
+      ]);
+      return;
+    }
+
+    if (listening) {
+      try {
+        recogRef.current?.stop();
+      } catch {}
+      setListening(false);
+      return;
+    }
+
+    const sr = new SR();
+    sr.lang = "en-US";
+
+    sr.onresult = (e: any) => {
+      const text = Array.from(e.results)
+        .map((r: any) => r[0].transcript)
+        .join(" ");
+      setInput((p) => (p ? p + " " : "") + text);
+    };
+
+    sr.onend = () => setListening(false);
+
+    recogRef.current = sr;
+    sr.start();
+    setListening(true);
+  }
 
   // ------------------------------------------------------------------------------------
   // Minimized bubble
@@ -497,15 +543,6 @@ const modeHint = "Neutral" as const;
       document.body
     );
   }
-const { listening, toggleMic } = useSpeechInput({
-  onText: (text) =>
-    setInput((p) => (p ? p + " " : "") + text),
-  onError: (msg) =>
-    setMessages((m) => [
-      ...m,
-      { role: "assistant", content: msg },
-    ]),
-});
 
   // ------------------------------------------------------------------------------------
   // Positioning
