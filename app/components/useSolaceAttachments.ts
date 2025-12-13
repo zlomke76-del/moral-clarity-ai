@@ -1,97 +1,137 @@
 "use client";
 
 import { useRef } from "react";
-import { uploadFiles } from "@/lib/uploads/client";
+import {
+  uploadFiles,
+  uploadFromPasteEvent,
+} from "@/lib/uploads/client";
 
+/* ------------------------------------------------------------------
+   Types
+------------------------------------------------------------------- */
 export type SolaceFile = {
   name: string;
   type: string;
   mime: string;
-  url: string;
-  publicUrl?: string;
-  path?: string;
+  url: string;          // PUBLIC HTTPS URL (Supabase)
+  size?: number;
 };
 
+/* ------------------------------------------------------------------
+   Hook
+------------------------------------------------------------------- */
 export function useSolaceAttachments({
   onInfoMessage,
 }: {
   onInfoMessage: (msg: string) => void;
 }) {
-  // Stable container for pending attachments
+  // Stable, non-reactive container (intentional)
   const pendingFilesRef = useRef<SolaceFile[]>([]);
 
+  /* ------------------------------------------------------------------
+     INTERNAL ADD
+  ------------------------------------------------------------------- */
   function add(file: SolaceFile) {
     pendingFilesRef.current.push(file);
   }
 
-  /* ----------------------
-     HANDLE FILE INPUT
-  ----------------------- */
+  /* ------------------------------------------------------------------
+     HANDLE FILE INPUT (<input type="file" />)
+  ------------------------------------------------------------------- */
   async function handleFiles(
     fileList: FileList | null,
     { prefix }: { prefix: string }
   ) {
     if (!fileList || fileList.length === 0) return;
 
+    console.info("[ATTACHMENTS] upload start", {
+      count: fileList.length,
+      prefix,
+    });
+
     const { attachments, errors } = await uploadFiles(fileList, { prefix });
 
+    if (errors.length > 0) {
+      console.error("[ATTACHMENTS] upload errors", errors);
+      onInfoMessage(`⚠️ ${errors.length} file(s) failed to upload.`);
+    }
+
     for (const a of attachments) {
+      console.info("[ATTACHMENTS] uploaded", {
+        name: a.name,
+        url: a.url,
+        type: a.type,
+        size: a.size,
+      });
+
       add({
         name: a.name,
         type: a.type,
         mime: a.type,
         url: a.url,
-        publicUrl: a.url,
+        size: a.size,
       });
     }
 
     if (attachments.length > 0) {
-      onInfoMessage(`${attachments.length} file(s) uploaded.`);
-    }
-
-    if (errors.length > 0) {
-      onInfoMessage(`⚠️ ${errors.length} file(s) failed to upload.`);
+      onInfoMessage(`${attachments.length} file(s) attached.`);
     }
   }
 
-  /* ----------------------
-     HANDLE PASTE INPUT
-  ----------------------- */
+  /* ------------------------------------------------------------------
+     HANDLE PASTE (clipboard images/files)
+  ------------------------------------------------------------------- */
   async function handlePaste(
     e: React.ClipboardEvent,
     { prefix }: { prefix: string }
   ) {
-    const files = e.clipboardData?.files;
-    if (!files || files.length === 0) return;
+    console.info("[ATTACHMENTS] paste detected");
 
-    const { attachments, errors } = await uploadFiles(files, { prefix });
+    const { attachments, errors } = await uploadFromPasteEvent(
+      e.nativeEvent,
+      { prefix }
+    );
+
+    if (errors.length > 0) {
+      console.error("[ATTACHMENTS] paste upload errors", errors);
+      onInfoMessage(`⚠️ ${errors.length} pasted item(s) failed.`);
+    }
 
     for (const a of attachments) {
+      console.info("[ATTACHMENTS] pasted upload", {
+        name: a.name,
+        url: a.url,
+        type: a.type,
+        size: a.size,
+      });
+
       add({
         name: a.name,
         type: a.type,
         mime: a.type,
         url: a.url,
-        publicUrl: a.url,
+        size: a.size,
       });
     }
 
     if (attachments.length > 0) {
-      onInfoMessage(`${attachments.length} file(s) uploaded.`);
-    }
-
-    if (errors.length > 0) {
-      onInfoMessage(`⚠️ ${errors.length} file(s) failed to upload.`);
+      onInfoMessage(`${attachments.length} file(s) pasted.`);
     }
   }
 
-  /* ----------------------
-     CLEAR ATTACHMENTS
-  ----------------------- */
+  /* ------------------------------------------------------------------
+     CLEAR
+  ------------------------------------------------------------------- */
   function clearPending() {
+    console.info("[ATTACHMENTS] clearing pending files", {
+      count: pendingFilesRef.current.length,
+    });
     pendingFilesRef.current.splice(0, pendingFilesRef.current.length);
   }
 
+  /* ------------------------------------------------------------------
+     RETURN API
+  ------------------------------------------------------------------- */
   return {
     pendingFiles: pendingFilesRef.current,
     handleFiles,
