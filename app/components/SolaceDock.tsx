@@ -562,6 +562,21 @@ const modeHint: ModeHint = "Neutral";
   const invisible = !posReady;
   const skin = Skins.default;
 
+  const {
+  panelStyle,
+  transcriptStyle,
+  textareaStyle,
+  composerWrapStyle,
+} = useDockStyles({
+  dockW,
+  dockH,
+  tx,
+  ty,
+  invisible,
+  ministryOn,
+  PAD,
+});
+
  
   // ------------------------------------------------------------------------------------
   // Main UI
