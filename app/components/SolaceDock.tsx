@@ -363,7 +363,15 @@ export default function SolaceDock() {
         ? await sendToVision(text)
         : await sendToChat(text, history);
 
-      setMessages((m) => [...m, { role: "assistant", ...reply }]);
+      setMessages((m) => [
+  ...m,
+  {
+    role: "assistant",
+    content: reply.text,
+    imageUrl: reply.imageUrl ?? null,
+  },
+]);
+
     } catch (err: any) {
       setMessages((m) => [
         ...m,
