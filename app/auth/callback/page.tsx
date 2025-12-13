@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
@@ -6,27 +7,52 @@ export default function CallbackPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Supabase sends the session as a URL hash fragment
-    const hash = window.location.hash.substring(1);
-    const params = new URLSearchParams(hash);
+    async function handleCallback() {
+      try {
+        // Supabase sends session data in the URL hash
+        const hash = window.location.hash.startsWith("#")
+          ? window.location.hash.slice(1)
+          : "";
 
-    const access_token = params.get("access_token");
-    const refresh_token = params.get("refresh_token");
+        const params = new URLSearchParams(hash);
+        const access_token = params.get("access_token");
+        const refresh_token = params.get("refresh_token");
 
-    if (!access_token || !refresh_token) {
-      router.replace("/auth/sign-in");
-      return;
+        if (!access_token || !refresh_token) {
+          router.replace("/auth/sign-in");
+          return;
+        }
+
+        // Exchange tokens for httpOnly cookies (server-side)
+        const res = await fetch("/auth/exchange", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            access_token,
+            refresh_token,
+          }),
+        });
+
+        if (!res.ok) {
+          router.replace("/auth/sign-in");
+          return;
+        }
+
+        // At this point cookies are set and observable
+        router.replace("/app");
+      } catch (err) {
+        router.replace("/auth/sign-in");
+      }
     }
 
-    // Send to our server route that sets httpOnly cookies
-    fetch("/auth/exchange", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ access_token, refresh_token }),
-    }).finally(() => {
-      router.replace("/app");
-    });
-  }, []);
+    handleCallback();
+  }, [router]);
 
-  return <p>Signing you in…</p>;
+  return (
+    <main className="min-h-screen flex items-center justify-center">
+      <p className="text-sm text-neutral-500">Signing you in…</p>
+    </main>
+  );
 }
