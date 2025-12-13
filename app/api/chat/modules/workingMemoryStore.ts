@@ -1,0 +1,54 @@
+// ------------------------------------------------------------
+// Working Memory Store — Phase 5
+// SESSION-SCOPED, NON-PERSISTENT
+// ------------------------------------------------------------
+// - In-memory only
+// - Explicit user intent required to modify
+// - Cleared automatically when process restarts
+// ------------------------------------------------------------
+
+import { WorkingMemoryItem } from "./assembleContext";
+
+// ------------------------------------------------------------
+// Global WM Store (INTENTIONAL, EPHEMERAL)
+// ------------------------------------------------------------
+const globalAny = globalThis as any;
+
+if (!globalAny.__SOLACE_WM_STORE__) {
+  globalAny.__SOLACE_WM_STORE__ = new Map<string, WorkingMemoryItem[]>();
+}
+
+const WM_STORE: Map<string, WorkingMemoryItem[]> =
+  globalAny.__SOLACE_WM_STORE__;
+
+// ------------------------------------------------------------
+// Helpers
+// ------------------------------------------------------------
+function nowISO(): string {
+  return new Date().toISOString();
+}
+
+// ------------------------------------------------------------
+// Public API (EXPLICIT ONLY)
+// ------------------------------------------------------------
+export function getWorkingMemory(sessionId: string): WorkingMemoryItem[] {
+  return WM_STORE.get(sessionId) ?? [];
+}
+
+export function addWorkingMemoryItem(
+  sessionId: string,
+  item: Omit<WorkingMemoryItem, "createdAt">
+) {
+  const existing = WM_STORE.get(sessionId) ?? [];
+
+  const next: WorkingMemoryItem = {
+    ...item,
+    createdAt: nowISO(),
+  };
+
+  WM_STORE.set(sessionId, [...existing, next]);
+}
+
+export function clearWorkingMemory(sessionId: string) {
+  WM_STORE.delete(sessionId);
+}
