@@ -17,7 +17,7 @@ declare global {
 }
 
 import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+
 import { useSolaceMemory } from "./useSolaceMemory";
 import { useSolaceAttachments } from "./useSolaceAttachments";
 
@@ -339,150 +339,51 @@ export default function SolaceDock() {
     };
   }
 
-// ------------------------------------------------------------------------------------
-// SEND TO VISION
-// ------------------------------------------------------------------------------------
-async function sendToVision(userMsg: string, prevHistory: Message[]) {
-  const imageAttachment = pendingFiles.find((f) => {
-    const mime = f.mime || f.type || "";
-    return (
-      mime.startsWith("image/") ||
-      /\.(png|jpe?g|gif|webp|bmp|heic)$/i.test(f.name || "")
-    );
-  });
+  // ------------------------------------------------------------------------------------
+  // SEND TO VISION
+  // ------------------------------------------------------------------------------------
+  async function sendToVision(userMsg: string, prevHistory: Message[]) {
+    const imageAttachment = pendingFiles.find((f) => {
+      const mime = f.mime || f.type || "";
+      return (
+        mime.startsWith("image/") ||
+        /\.(png|jpe?g|gif|webp|bmp|heic)$/i.test(f.name || "")
+      );
+    });
 
-  const imageUrl = getAttachmentUrl(imageAttachment);
+    const imageUrl = getAttachmentUrl(imageAttachment);
 
-  if (!imageUrl) {
-    setMessages((m) => [
-      ...m,
-      {
-        role: "assistant",
-        content:
-          "I see an image attachment, but I don’t have a usable image reference.",
-      },
-    ]);
-    clearPending();
-    return { text: "", imageUrl: null };
-  }
+    if (!imageUrl) {
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content:
+            "I see an image attachment, but I don’t have a usable link.",
+        },
+      ]);
+      clearPending();
+      return { text: "", imageUrl: null };
+    }
 
-  const prompt =
-    userMsg.trim() ||
-    "Describe what you can safely see and offer practical, nonjudgmental help.";
+    const prompt =
+      userMsg.trim() ||
+      "Look at this image and describe what you see.";
 
-  try {
     const res = await fetch("/api/solace/vision", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-User-Key": userKey,
       },
-      body: JSON.stringify({
-        prompt,
-        imageUrl,
-      }),
+      body: JSON.stringify({ prompt, imageUrl }),
     });
 
-    if (!res.ok) {
-      const t = await res.text().catch(() => "");
-      throw new Error(`Vision HTTP ${res.status}: ${t}`);
-    }
+    clearPending();
 
     const data = await res.json();
-
-    return {
-      text: data.answer ?? "",
-      imageUrl: null,
-    };
-  } catch (err: any) {
-    return {
-      text:
-        err?.message ||
-        "I had trouble interpreting that image. Please try again.",
-      imageUrl: null,
-    };
-  } finally {
-    clearPending();
+    return { text: data.answer ?? "", imageUrl: null };
   }
-}
-
-
-  // ------------------------------------------------------------------
-  // PROMOTION STEP: blob → Supabase → public HTTPS URL
-  // ------------------------------------------------------------------
-  if (imageUrl && imageUrl.startsWith("blob:")) {
-    try {
-      const blobRes = await fetch(imageUrl);
-      const blob = await blobRes.blob();
-
-      const ext =
-        imageAttachment.name?.split(".").pop() || "png";
-
-      const path = `vision/${crypto.randomUUID()}.${ext}`;
-
-      const { error } = await supabase.storage
-        .from("solace-uploads")
-        .upload(path, blob, {
-          contentType:
-            imageAttachment.mime ||
-            imageAttachment.type ||
-            "image/png",
-          upsert: false,
-        });
-
-      if (error) throw error;
-
-      const { data } = supabase.storage
-        .from("solace-uploads")
-        .getPublicUrl(path);
-
-      imageUrl = data.publicUrl;
-      imageAttachment.publicUrl = imageUrl;
-    } catch (err) {
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          content:
-            "I couldn’t upload the image for analysis. Please try again.",
-        },
-      ]);
-      clearPending();
-      return { text: "", imageUrl: null };
-    }
-  }
-
-  if (!imageUrl || !imageUrl.startsWith("http")) {
-    setMessages((m) => [
-      ...m,
-      {
-        role: "assistant",
-        content:
-          "I see an image attachment, but I don’t have a usable link.",
-      },
-    ]);
-    clearPending();
-    return { text: "", imageUrl: null };
-  }
-
-  const prompt =
-    userMsg.trim() ||
-    "Look at this image and describe what you see.";
-
-  const res = await fetch("/api/solace/vision", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-User-Key": userKey,
-    },
-    body: JSON.stringify({ prompt, imageUrl }),
-  });
-
-  clearPending();
-
-  const data = await res.json();
-  return { text: data.answer ?? "", imageUrl: null };
-}
 
   // ------------------------------------------------------------------------------------
   // MAIN SEND FUNCTION
