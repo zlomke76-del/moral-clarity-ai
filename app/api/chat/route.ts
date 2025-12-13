@@ -2,6 +2,7 @@
 // ------------------------------------------------------------------
 // SOLACE CHAT ROUTE — GOVERNOR + HYBRID TRIAD
 // Phase A: Explicit, intentional memory writes only
+// Phase 5: Explicit Working Memory (SESSION ONLY)
 // ------------------------------------------------------------------
 
 export const runtime = "nodejs";
@@ -20,6 +21,10 @@ import { applyGovernorFormatting } from "@/lib/solace/governor/governor-icon-for
 import { writeMemory } from "./modules/memory-writer";
 import type { MemoryWriteInput } from "./modules/memory-writer";
 import type { PacingLevel } from "@/lib/solace/governor/types";
+
+import {
+  addWorkingMemoryItem,
+} from "./modules/workingMemoryStore";
 
 // -----------------------------------------------------
 // ASCII Sanitize (defensive, Node-safe)
@@ -120,9 +125,47 @@ export async function POST(req: Request) {
     const canonicalUserKey = user?.id ?? "user:anonymous";
 
     const cookieHeader = req.headers.get("cookie") ?? "";
+    const sessionId =
+      cookieHeader
+        .split(";")
+        .map((c) => c.trim())
+        .find((c) => c.startsWith("solace-session="))
+        ?.split("=")[1] ?? null;
 
     // -------------------------------------------------
-    // Context (READ-ONLY MEMORY RECALL)
+    // Working Memory — Explicit Command Detection
+    // -------------------------------------------------
+    const normalized = message.trim().toLowerCase();
+
+    const wmPrefix =
+      normalized.startsWith("save to working memory ") ||
+      normalized.startsWith("put in working memory ") ||
+      normalized.startsWith("keep this for this session ");
+
+    if (wmPrefix && sessionId) {
+      const content = message
+        .replace(/^save to working memory\s+/i, "")
+        .replace(/^put in working memory\s+/i, "")
+        .replace(/^keep this for this session\s+/i, "")
+        .trim();
+
+      if (content.length > 0) {
+        addWorkingMemoryItem(sessionId, {
+          id: crypto.randomUUID(),
+          content,
+          scope: "project",
+          sensitivity: "medium",
+        });
+
+        console.log("[WM] item added", {
+          sessionId,
+          length: content.length,
+        });
+      }
+    }
+
+    // -------------------------------------------------
+    // Context (READ-ONLY MEMORY RECALL + WM)
     // -------------------------------------------------
     let context = await assembleContext(
       canonicalUserKey,
@@ -156,9 +199,8 @@ export async function POST(req: Request) {
     });
 
     // -------------------------------------------------
-    // MEMORY WRITE GATE — EXPLICIT ONLY
+    // LONG-TERM MEMORY WRITE GATE — EXPLICIT ONLY
     // -------------------------------------------------
-    const normalized = message.trim().toLowerCase();
     const explicitRemember =
       normalized.startsWith("remember ") ||
       normalized.startsWith("remember that ");
