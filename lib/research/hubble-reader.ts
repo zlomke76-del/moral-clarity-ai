@@ -2,6 +2,7 @@
 // Hubble Research Reader
 // READ-ONLY, SERVER-SAFE
 // Provides researchContext entries for Solace
+// NEXT 16 SAFE — NO ASYNC COOKIES
 // ------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
@@ -34,13 +35,14 @@ function diag(label: string, payload: any) {
 }
 
 // ------------------------------------------------------------
-// PUBLIC API — THIS IS WHAT assembleContext EXPECTS
+// PUBLIC API — EXPECTED BY assembleContext
 // ------------------------------------------------------------
 export async function readHubbleResearchContext(
   limit = 10
 ): Promise<ResearchContextItem[]> {
   try {
-    const cookieStore = await cookies();
+    // ✅ CORRECT: cookies() is synchronous
+    const cookieStore = cookies();
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
