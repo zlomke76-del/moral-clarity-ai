@@ -46,7 +46,6 @@ type ModeHint = "Create" | "Red Team" | "Next Steps" | "Neutral";
 // --------------------------------------------------------------------------------------
 const POS_KEY = "solace:pos:v4";
 const MINISTRY_KEY = "solace:ministry";
-const FOUNDER_KEY = "solace:founder";
 const PAD = 12;
 
 // --------------------------------------------------------------------------------------
@@ -81,18 +80,16 @@ export default function SolaceDock() {
   // Store state
   // --------------------------------------------------------------------
   const {
-    visible,
-    setVisible,
-    x,
-    y,
-    setPos,
-    filters,
-    setFilters,
-    founderMode,
-    setFounderMode,
-    modeHint,
-    setModeHint,
-  } = useSolaceStore();
+  visible,
+  setVisible,
+  x,
+  y,
+  setPos,
+  filters,
+  setFilters,
+  modeHint,
+  setModeHint,
+} = useSolaceStore();
 
   // --------------------------------------------------------------------
   // Mobile detection
@@ -168,16 +165,6 @@ export default function SolaceDock() {
         next.add("ministry");
         setFilters(next);
       }
-    } catch {}
-  }, []);
-
-  // --------------------------------------------------------------------
-  // Founder toggle hydration
-  // --------------------------------------------------------------------
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(FOUNDER_KEY);
-      if (saved === "1") setFounderMode(true);
     } catch {}
   }, []);
 
@@ -321,7 +308,6 @@ export default function SolaceDock() {
         workspaceId: MCA_WORKSPACE_ID,
         ministryMode: ministryOn,
         modeHint,
-        founderMode,
         userKey,
       }),
     });
@@ -479,16 +465,7 @@ export default function SolaceDock() {
     setFilters(next);
   }
 
-  // ------------------------------------------------------------------------------------
-  // Toggle Founder Mode
-  // ------------------------------------------------------------------------------------
-  function toggleFounder() {
-    const updated = !founderMode;
-    setFounderMode(updated);
-    localStorage.setItem(FOUNDER_KEY, updated ? "1" : "0");
-  }
-
-  // ------------------------------------------------------------------------------------
+   // ------------------------------------------------------------------------------------
   // Microphone
   // ------------------------------------------------------------------------------------
   const [listening, setListening] = useState(false);
@@ -800,8 +777,7 @@ export default function SolaceDock() {
           }}
         >
           <span>
-            {founderMode ? "Founder • " : ""}
-            {ministryOn ? "Ministry • " : ""}
+                {ministryOn ? "Ministry • " : ""}
             {modeHint}
           </span>
         </div>
