@@ -6,7 +6,7 @@ import { getOpenAI } from "@/lib/openai";
 import { buildVisionSystemPrompt } from "@/lib/solace/vision-mode";
 import { getSolaceFeatureFlags } from "@/lib/solace/settings";
 
-// Model resolution (kept intentionally flexible)
+// Resolve model flexibly
 const SOLACE_VISION_MODEL =
   process.env.OPENAI_RESPONSE_MODEL ||
   process.env.OPENAI_MODEL ||
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     }
 
     // --------------------------------------------------
-    // HARD VALIDATION — OpenAI does NOT accept data URLs
+    // HARD VALIDATION — OpenAI requires public HTTP(S)
     // --------------------------------------------------
     const isHttpUrl =
       imageUrl.startsWith("http://") || imageUrl.startsWith("https://");
@@ -86,7 +86,7 @@ Otherwise:
 
     // --------------------------------------------------
     // OpenAI Responses API call
-    // IMPORTANT: inline `input` to satisfy TS inference
+    // NOTE: `detail` is REQUIRED for input_image
     // --------------------------------------------------
     const resp = await openai.responses.create({
       model: SOLACE_VISION_MODEL,
@@ -110,6 +110,7 @@ Otherwise:
             {
               type: "input_image",
               image_url: imageUrl,
+              detail: "auto",
             },
           ],
         },
