@@ -39,7 +39,8 @@ type Message = {
   imageUrl?: string | null;
 };
 
-type ModeHint = "Create" | "Red Team" | "Next Steps" | "Neutral";
+type ModeHint = "Neutral";
+const DEFAULT_MODE: ModeHint = "Neutral";
 
 // --------------------------------------------------------------------------------------
 // Constants
@@ -87,9 +88,9 @@ export default function SolaceDock() {
   setPos,
   filters,
   setFilters,
-  modeHint,
-  setModeHint,
 } = useSolaceStore();
+
+const modeHint: ModeHint = "Neutral";
 
   // --------------------------------------------------------------------
   // Mobile detection
