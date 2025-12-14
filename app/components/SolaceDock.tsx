@@ -84,9 +84,36 @@ export default function SolaceDock() {
   }, [canRender, isMobile, visible, setVisible]);
 
   // ----------------------------------------------------------
-  // Minimized
+  // Dragging
   // ----------------------------------------------------------
-  const [minimized, setMinimized] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const [offset, setOffset] = useState({ dx: 0, dy: 0 });
+
+  function onHeaderMouseDown(e: React.MouseEvent) {
+    if (isMobile) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    setOffset({
+      dx: e.clientX - (rect?.left ?? 0),
+      dy: e.clientY - (rect?.top ?? 0),
+    });
+    setDragging(true);
+  }
+
+  useEffect(() => {
+    if (!dragging) return;
+
+    const onMove = (e: MouseEvent) =>
+      setPos(e.clientX - offset.dx, e.clientY - offset.dy);
+    const onUp = () => setDragging(false);
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [dragging, offset, setPos]);
 
   // ----------------------------------------------------------
   // Chat state
@@ -150,34 +177,6 @@ export default function SolaceDock() {
   }, [messages.length]);
 
   // ----------------------------------------------------------
-  // Panel measurement
-  // ----------------------------------------------------------
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [panelW, setPanelW] = useState(0);
-  const [panelH, setPanelH] = useState(0);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const measure = () => {
-      const r = el.getBoundingClientRect();
-      setPanelW(r.width);
-      setPanelH(r.height);
-    };
-
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    window.addEventListener("resize", measure);
-
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, []);
-
-  // ----------------------------------------------------------
   // Resize
   // ----------------------------------------------------------
   const { dockW, dockH, setDockW, setDockH } = useDockSize();
@@ -194,8 +193,8 @@ export default function SolaceDock() {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
-  const tx = Math.min(Math.max(0, x - PAD), vw - panelW - PAD);
-  const ty = Math.min(Math.max(0, y - PAD), vh - panelH - PAD);
+  const tx = Math.min(Math.max(0, x - PAD), vw - dockW - PAD);
+  const ty = Math.min(Math.max(0, y - PAD), vh - dockH - PAD);
 
   const { panelStyle, transcriptStyle, textareaStyle, composerWrapStyle } =
     useDockStyles({
@@ -211,7 +210,7 @@ export default function SolaceDock() {
   if (!canRender || !visible) return null;
 
   // ----------------------------------------------------------
-  // SEND (FIXED PAYLOAD)
+  // SEND
   // ----------------------------------------------------------
   async function send() {
     if (!input.trim() && pendingFiles.length === 0) return;
@@ -228,16 +227,12 @@ export default function SolaceDock() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: userMsg,
-          canonicalUserKey: userKey, // ✅ FIX
+          canonicalUserKey: userKey,
           workspaceId: MCA_WORKSPACE_ID,
           ministryMode: ministryOn,
           modeHint,
         }),
       });
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
 
       const data = await res.json();
 
@@ -276,8 +271,8 @@ export default function SolaceDock() {
         ministryOn={ministryOn}
         memReady={memReady}
         onToggleMinistry={() => {}}
-        onMinimize={() => setMinimized(true)}
-        onDragStart={() => {}}
+        onMinimize={() => {}}
+        onDragStart={onHeaderMouseDown}
       />
 
       <div ref={transcriptRef} style={transcriptStyle}>
@@ -316,7 +311,6 @@ export default function SolaceDock() {
               border: UI.border,
               background: UI.surface2,
               cursor: "pointer",
-              flexShrink: 0,
             }}
           >
             📎
@@ -333,7 +327,6 @@ export default function SolaceDock() {
           {/* MIC */}
           <button
             onClick={toggleMic}
-            title="Voice input"
             style={{
               width: 38,
               height: 38,
@@ -343,7 +336,6 @@ export default function SolaceDock() {
                 ? "rgba(255,0,0,.45)"
                 : UI.surface2,
               cursor: "pointer",
-              flexShrink: 0,
             }}
           >
             🎤
