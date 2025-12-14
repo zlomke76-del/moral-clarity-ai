@@ -43,27 +43,47 @@ export async function POST(req: Request) {
       );
     }
 
+    // --------------------------------------------------------
     // Assemble context
+    // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
       workspaceId ?? null,
       message
     );
 
+    // --------------------------------------------------------
     // Orchestrate response
-    const responseText = await orchestrateSolaceResponse({
+    // --------------------------------------------------------
+    const rawResponse = await orchestrateSolaceResponse({
       userMessage: message,
       context,
       workspaceId: workspaceId ?? null,
     });
 
-    // HARD GUARANTEE STRING
-    const safeResponse =
-      typeof responseText === "string"
-        ? responseText
-        : JSON.stringify(responseText);
+    // --------------------------------------------------------
+    // Normalize TRIAD output → user-facing answer
+    // --------------------------------------------------------
+    let safeResponse: string;
 
+    if (typeof rawResponse === "string") {
+      safeResponse = rawResponse;
+    } else if (rawResponse && typeof rawResponse === "object") {
+      safeResponse =
+        (rawResponse as any).finalAnswer ??
+        (rawResponse as any).arbiter ??
+        "";
+    } else {
+      safeResponse = "";
+    }
+
+    if (!safeResponse) {
+      throw new Error("Normalized response is empty");
+    }
+
+    // --------------------------------------------------------
     // Return UI-compatible payload
+    // --------------------------------------------------------
     return NextResponse.json({
       ok: true,
       response: safeResponse,
