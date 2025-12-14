@@ -100,31 +100,40 @@ Before answering the user's message, you must:
 // --------------------------------------------------------------
 // HELPERS
 // --------------------------------------------------------------
-function buildPrompt(system: string, userMessage: string) {
+function buildPrompt(system: string, userMessage: string): string {
   return `${system.trim()}\n\nUser: ${userMessage}`;
 }
 
-function normalizeHistory(input: any[]): ChatMsg[] {
+/**
+ * Normalize history while PRESERVING role literal union.
+ * This is the critical fix.
+ */
+function normalizeHistory(input: unknown): ChatMsg[] {
   if (!Array.isArray(input)) return [];
 
-  return input
-    .filter(
-      (m) =>
-        m &&
-        typeof m === "object" &&
-        typeof m.content === "string" &&
-        (m.role === "system" ||
-          m.role === "user" ||
-          m.role === "assistant")
-    )
-    .map((m) => ({
-      role: m.role as ChatMsg["role"],
-      content: m.content,
-    }));
+  const out: ChatMsg[] = [];
+
+  for (const m of input) {
+    if (
+      m &&
+      typeof m === "object" &&
+      typeof (m as any).content === "string"
+    ) {
+      const role = (m as any).role;
+      if (role === "system" || role === "user" || role === "assistant") {
+        out.push({
+          role, // ← stays literal, never widens to string
+          content: (m as any).content,
+        });
+      }
+    }
+  }
+
+  return out;
 }
 
-function tail<T>(arr: T[], limit: number): T[] {
-  if (arr.length <= limit) return arr;
+function tail<T>(arr: readonly T[], limit: number): T[] {
+  if (arr.length <= limit) return [...arr];
   return arr.slice(arr.length - limit);
 }
 
@@ -133,7 +142,7 @@ function tail<T>(arr: T[], limit: number): T[] {
 // --------------------------------------------------------------
 export async function runHybridPipeline(args: {
   userMessage: string;
-  history?: any[];
+  history?: unknown;
   context: any;
   ministryMode?: boolean;
   founderMode?: boolean;
@@ -152,7 +161,7 @@ export async function runHybridPipeline(args: {
     governorInstructions = "",
   } = args;
 
-  const normalizedHistory = tail(
+  const normalizedHistory: ChatMsg[] = tail(
     normalizeHistory(history),
     12 // bounded context window
   );
@@ -167,15 +176,13 @@ export async function runHybridPipeline(args: {
     buildPrompt(OPTIMIST_SYSTEM, userMessage)
   );
 
-  const optimistFinished = Date.now();
-
   logTriadDiagnostics({
     stage: "optimist",
     model: "gpt-4.1-mini",
     prompt: userMessage,
     output: optimist,
     started: optimistStarted,
-    finished: optimistFinished,
+    finished: Date.now(),
   });
 
   // ============================================================
@@ -188,15 +195,13 @@ export async function runHybridPipeline(args: {
     buildPrompt(SKEPTIC_SYSTEM, userMessage)
   );
 
-  const skepticFinished = Date.now();
-
   logTriadDiagnostics({
     stage: "skeptic",
     model: "gpt-4.1-mini",
     prompt: userMessage,
     output: skeptic,
     started: skepticStarted,
-    finished: skepticFinished,
+    finished: Date.now(),
   });
 
   // ============================================================
@@ -255,15 +260,13 @@ ${userMessage}
 
   const arbiter = await callModel("gpt-4.1", arbiterPrompt);
 
-  const arbiterFinished = Date.now();
-
   logTriadDiagnostics({
     stage: "arbiter",
     model: "gpt-4.1",
     prompt: arbiterPrompt.slice(0, 5000),
     output: arbiter,
     started: arbiterStarted,
-    finished: arbiterFinished,
+    finished: Date.now(),
   });
 
   return {
