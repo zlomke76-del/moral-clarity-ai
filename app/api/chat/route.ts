@@ -1,83 +1,134 @@
-//--------------------------------------------------------------
-// NEWSROOM EXECUTOR — SINGLE PASS
-// Strict neutral delivery
-// Uses ONLY solace_news_digest_view.neutral_summary
-//--------------------------------------------------------------
+// ------------------------------------------------------------
+// Solace Chat API Route
+// HARD-ROUTED NEWSROOM vs HYBRID
+// NEXT 16 SAFE — NODE RUNTIME
+// ------------------------------------------------------------
 
-import { callModel } from "./model-router";
-import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
+import { NextResponse } from "next/server";
 
-// --------------------------------------------------------------
-// TYPES
-// --------------------------------------------------------------
-export type NewsDigestItem = {
-  story_title: string;
-  outlet: string;
-  neutral_summary: string;
-  created_at: string;
-};
+import { assembleContext } from "./modules/assembleContext";
+import { runHybridPipeline } from "./modules/hybrid";
+import { runNewsroomExecutor } from "./modules/newsroom-executor";
 
-// --------------------------------------------------------------
-// SYSTEM PROMPT (LOCKED)
-// --------------------------------------------------------------
-function buildNewsroomPrompt(items: NewsDigestItem[]) {
-  const system = buildSolaceSystemPrompt("newsroom", `
-OUTPUT CONTRACT (MANDATORY):
+// ------------------------------------------------------------
+// Runtime configuration
+// ------------------------------------------------------------
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-- Produce EXACTLY three stories.
-- Each story must be between 350 and 450 words.
-- Narrative prose only.
-- One topic per story.
-- No bullet points.
-- No summaries, conclusions, or meta commentary.
-- No trend analysis.
-- No comparisons across stories.
-- No opinion or framing language.
-
-SOURCE RULES:
-
-- Use ONLY the provided neutral summaries.
-- Do NOT infer motive, intent, or moral judgment.
-- Do NOT aggregate multiple stories into one.
-- If there is insufficient material for three full stories, explicitly state that and stop.
-`);
-
-  const digestBlock = items
-    .slice(0, 3)
-    .map(
-      (n, i) => `
-STORY ${i + 1}
-TITLE: ${n.story_title}
-OUTLET: ${n.outlet}
-NEUTRAL SUMMARY:
-${n.neutral_summary}
-`
-    )
-    .join("\n");
-
-  return `
-${system}
-
-------------------------------------------------------------
-TODAY'S NEUTRAL NEWS DIGEST
-------------------------------------------------------------
-${digestBlock}
-`;
+// ------------------------------------------------------------
+// NEWS INTENT DETECTOR (STRICT)
+// ------------------------------------------------------------
+function isNewsRequest(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes("news") ||
+    m.includes("headlines") ||
+    m.includes("what happened today") ||
+    m.includes("today's news") ||
+    m.includes("latest news")
+  );
 }
 
-// --------------------------------------------------------------
-// EXECUTOR
-// --------------------------------------------------------------
-export async function runNewsroomExecutor(
-  newsDigest: NewsDigestItem[]
-): Promise<string> {
-  if (!Array.isArray(newsDigest) || newsDigest.length < 3) {
-    return "There is insufficient verified neutral news content to produce a full daily briefing.";
+// ------------------------------------------------------------
+// POST handler
+// ------------------------------------------------------------
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+
+    const {
+      message,
+      canonicalUserKey,
+      userKey,
+      workspaceId,
+      ministryMode = false,
+      founderMode = false,
+      modeHint = "",
+    } = body ?? {};
+
+    const finalUserKey = canonicalUserKey ?? userKey;
+
+    if (!message || !finalUserKey) {
+      const fallback =
+        "I am here, but I did not receive a valid message or user identity.";
+
+      return NextResponse.json({
+        ok: true,
+        response: fallback,
+        messages: [{ role: "assistant", content: fallback }],
+      });
+    }
+
+    // --------------------------------------------------------
+    // Assemble context ONCE
+    // --------------------------------------------------------
+    const context = await assembleContext(
+      finalUserKey,
+      workspaceId ?? null,
+      message
+    );
+
+    // --------------------------------------------------------
+    // HARD NEWSROOM ROUTE (NO HYBRID)
+    // --------------------------------------------------------
+    if (isNewsRequest(message)) {
+      const newsroomResponse = await runNewsroomExecutor(
+        context.newsDigest
+      );
+
+      return NextResponse.json({
+        ok: true,
+        response: newsroomResponse,
+        messages: [
+          {
+            role: "assistant",
+            content: newsroomResponse,
+          },
+        ],
+        diagnostics: {
+          mode: "newsroom",
+          newsDigestUsed: context.newsDigest.length,
+        },
+      });
+    }
+
+    // --------------------------------------------------------
+    // HYBRID ROUTE (NON-NEWS ONLY)
+    // --------------------------------------------------------
+    const result = await runHybridPipeline({
+      userMessage: message,
+      context,
+      ministryMode,
+      founderMode,
+      modeHint,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      response: result.finalAnswer,
+      messages: [
+        {
+          role: "assistant",
+          content: result.finalAnswer,
+        },
+      ],
+      diagnostics: {
+        mode: "hybrid",
+        didResearch: context.didResearch,
+      },
+    });
+  } catch (err: any) {
+    console.error("[CHAT ROUTE ERROR]", err?.message);
+
+    const fallback =
+      "I encountered an internal error, but I am still here.";
+
+    return NextResponse.json({
+      ok: true,
+      response: fallback,
+      messages: [{ role: "assistant", content: fallback }],
+    });
   }
-
-  const prompt = buildNewsroomPrompt(newsDigest);
-
-  const response = await callModel("gpt-4.1", prompt);
-
-  return response;
 }
