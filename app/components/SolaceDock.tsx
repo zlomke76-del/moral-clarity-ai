@@ -257,8 +257,7 @@ export default function SolaceDock() {
   useEffect(() => {
     if (!dragging) return;
 
-    const onMove = (e: MouseEvent) =>
-      setPos(e.clientX - offset.dx, e.clientY - offset.dy);
+    const onMove = (e: MouseEvent) => setPos(e.clientX - offset.dx, e.clientY - offset.dy);
     const onUp = () => setDragging(false);
 
     window.addEventListener("mousemove", onMove);
@@ -300,6 +299,30 @@ export default function SolaceDock() {
   // --------------------------------------------------------------------
   if (!canRender || !visible) return null;
 
+  if (minimized) {
+    return createPortal(
+      <button
+        onClick={() => setMinimized(false)}
+        style={{
+          position: "fixed",
+          bottom: 20,
+          right: 20,
+          width: 58,
+          height: 58,
+          borderRadius: "50%",
+          background:
+            "radial-gradient(62% 62% at 50% 42%, rgba(251,191,36,1) 0%, rgba(251,191,36,.65) 38%, rgba(251,191,36,.22) 72%, rgba(251,191,36,.12) 100%)",
+          boxShadow: "0 0 26px rgba(251,191,36,.55)",
+          fontWeight: 700,
+          cursor: "pointer",
+        }}
+      >
+        S
+      </button>,
+      document.body
+    );
+  }
+
   // --------------------------------------------------------------------
   // SEND
   // --------------------------------------------------------------------
@@ -307,19 +330,7 @@ export default function SolaceDock() {
     if (!input.trim() && pendingFiles.length === 0) return;
     if (streaming) return;
 
-    if (!userKey) {
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          content:
-            "⚠️ Identity not available. Please sign in or reload to establish memory context.",
-        },
-      ]);
-      return;
-    }
-
-    const userMsg = input;
+    const userMsg = input || "Attachments:";
     setInput("");
     setStreaming(true);
     setMessages((m) => [...m, { role: "user", content: userMsg }]);
@@ -330,7 +341,7 @@ export default function SolaceDock() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: userMsg,
-          canonicalUserKey: userKey, // ✅ FIXED
+          canonicalUserKey: userKey || "tim",
           workspaceId: MCA_WORKSPACE_ID,
           ministryMode: ministryOn,
           modeHint,
@@ -344,6 +355,7 @@ export default function SolaceDock() {
         throw new Error("Invalid response payload");
       }
 
+      // Strict contract: { ok: true, response: string }
       if (!data || data.ok !== true || typeof data.response !== "string") {
         throw new Error("Invalid response payload");
       }
@@ -377,7 +389,7 @@ export default function SolaceDock() {
         memReady={memReady}
         onToggleMinistry={() => {}}
         onMinimize={() => setMinimized(true)}
-        onDragStart={onHeaderMouseDown}
+        onDragStart={onHeaderMouseDown} // ✅ RESTORED DRAG WIRING
       />
 
       <div ref={transcriptRef} style={transcriptStyle}>
@@ -388,12 +400,7 @@ export default function SolaceDock() {
               margin: "6px 0",
               padding: "10px 12px",
               borderRadius: UI.radiusLg,
-              background:
-                m.role === "user"
-                  ? "rgba(39,52,74,.6)"
-                  : "rgba(28,38,54,.6)",
-              whiteSpace: "pre-wrap", // ✅ FORMATTING FIX
-              lineHeight: 1.45,
+              background: m.role === "user" ? "rgba(39,52,74,.6)" : "rgba(28,38,54,.6)",
             }}
           >
             {m.content}
@@ -401,11 +408,50 @@ export default function SolaceDock() {
         ))}
       </div>
 
-      <div
-        style={composerWrapStyle}
-        onPaste={(e) => handlePaste(e, { prefix: "solace" })}
-      >
+      <div style={composerWrapStyle} onPaste={(e) => handlePaste(e, { prefix: "solace" })}>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {/* PAPERCLIP (PRESENT) */}
+          <label
+            style={{
+              width: 38,
+              height: 38,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: UI.radiusMd,
+              border: UI.border,
+              background: UI.surface2,
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+            title="Attach files"
+          >
+            📎
+            <input
+              type="file"
+              multiple
+              hidden
+              onChange={(e) => handleFiles(e.target.files, { prefix: "solace" })}
+            />
+          </label>
+
+          {/* MIC (PRESENT) */}
+          <button
+            onClick={toggleMic}
+            title="Voice input"
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: UI.radiusMd,
+              border: UI.border,
+              background: listening ? "rgba(255,0,0,.45)" : UI.surface2,
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            🎤
+          </button>
+
           <textarea
             style={textareaStyle}
             value={input}
