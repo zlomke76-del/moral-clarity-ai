@@ -1,13 +1,17 @@
 // ------------------------------------------------------------
 // Solace Context Assembler
 // Phase B + Phase 5 (WM-READ-ONLY)
-// NEXT 16 SAFE — SYNC COOKIES ONLY
+// NEXT 16 SAFE — NO ASYNC COOKIES
 // ------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-import { FACTS_LIMIT, EPISODES_LIMIT } from "./constants";
+import {
+  FACTS_LIMIT,
+  EPISODES_LIMIT,
+} from "./modules/context.constants";
+
 import { getSolaceFeatureFlags } from "@/lib/solace/settings";
 import { readHubbleResearchContext } from "@/lib/research/hubble-reader";
 
@@ -40,7 +44,7 @@ function diag(label: string, payload: any) {
 // ------------------------------------------------------------
 // Safe helper
 // ------------------------------------------------------------
-function safeRows<T>(rows: T[] | null | undefined): T[] {
+function safeRows<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
 }
 
@@ -59,7 +63,7 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // NEXT 16: cookies() IS SYNC — NO AWAIT, NO PROMISE
+  // CORRECT COOKIE ACCESS (NO AWAIT)
   // ----------------------------------------------------------
   const cookieStore = cookies();
 
@@ -68,7 +72,7 @@ export async function assembleContext(
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
+        get(name) {
           return cookieStore.get(name)?.value;
         },
         set() {},
@@ -124,12 +128,12 @@ export async function assembleContext(
   const flags = await getSolaceFeatureFlags(workspaceId);
 
   // ----------------------------------------------------------
-  // RESEARCH CONTEXT (HUBBLE — READ ONLY)
+  // RESEARCH CONTEXT (HUBBLE)
   // ----------------------------------------------------------
   let researchContext: any[] = [];
   let didResearch = false;
 
-  if (flags?.enableResearchContext === true) {
+  if (flags?.enableResearchContext) {
     researchContext = await readHubbleResearchContext(10);
     didResearch = researchContext.length > 0;
   }
