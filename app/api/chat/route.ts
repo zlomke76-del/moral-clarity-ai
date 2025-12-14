@@ -63,7 +63,6 @@ export async function POST(req: Request) {
     // Persist memory (best-effort, non-blocking)
     // --------------------------------------------------------
     writeMemory(
-      context,
       {
         userId: canonicalUserKey,
         workspaceId: workspaceId ?? null,
@@ -72,7 +71,8 @@ export async function POST(req: Request) {
           userMessage: message,
           assistantMessage: responseText,
         },
-      }
+      },
+      context
     ).catch(() => {
       // memory must never block response
     });
