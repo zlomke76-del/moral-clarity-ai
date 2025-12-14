@@ -1,114 +1,83 @@
-// ------------------------------------------------------------
-// Solace Chat API Route
-// Authority-aware + News Digest Aware
-// Dual-contract stable
-// NEXT 16 SAFE — NODE RUNTIME
-// ------------------------------------------------------------
+//--------------------------------------------------------------
+// NEWSROOM EXECUTOR — SINGLE PASS
+// Strict neutral delivery
+// Uses ONLY solace_news_digest_view.neutral_summary
+//--------------------------------------------------------------
 
-import { NextResponse } from "next/server";
+import { callModel } from "./model-router";
+import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
 
-import {
-  FACTS_LIMIT,
-  EPISODES_LIMIT,
-} from "./modules/context.constants";
+// --------------------------------------------------------------
+// TYPES
+// --------------------------------------------------------------
+export type NewsDigestItem = {
+  story_title: string;
+  outlet: string;
+  neutral_summary: string;
+  created_at: string;
+};
 
-import { assembleContext } from "./modules/assembleContext";
-import { orchestrateSolaceResponse } from "./modules/orchestrator";
+// --------------------------------------------------------------
+// SYSTEM PROMPT (LOCKED)
+// --------------------------------------------------------------
+function buildNewsroomPrompt(items: NewsDigestItem[]) {
+  const system = buildSolaceSystemPrompt("newsroom", `
+OUTPUT CONTRACT (MANDATORY):
 
-// ------------------------------------------------------------
-// Runtime configuration
-// ------------------------------------------------------------
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+- Produce EXACTLY three stories.
+- Each story must be between 350 and 450 words.
+- Narrative prose only.
+- One topic per story.
+- No bullet points.
+- No summaries, conclusions, or meta commentary.
+- No trend analysis.
+- No comparisons across stories.
+- No opinion or framing language.
 
-// ------------------------------------------------------------
-// POST handler
-// ------------------------------------------------------------
-export async function POST(req: Request) {
-  try {
-    const body = await req.json();
+SOURCE RULES:
 
-    const {
-      message,
-      canonicalUserKey,
-      userKey,
-      workspaceId,
-      ministryMode = false,
-      founderMode = false,
-      modeHint = "",
-    } = body ?? {};
+- Use ONLY the provided neutral summaries.
+- Do NOT infer motive, intent, or moral judgment.
+- Do NOT aggregate multiple stories into one.
+- If there is insufficient material for three full stories, explicitly state that and stop.
+`);
 
-    const finalUserKey = canonicalUserKey ?? userKey;
+  const digestBlock = items
+    .slice(0, 3)
+    .map(
+      (n, i) => `
+STORY ${i + 1}
+TITLE: ${n.story_title}
+OUTLET: ${n.outlet}
+NEUTRAL SUMMARY:
+${n.neutral_summary}
+`
+    )
+    .join("\n");
 
-    if (!message || !finalUserKey) {
-      const fallback =
-        "I am here, but I did not receive a valid message or user identity. Please try again.";
+  return `
+${system}
 
-      return NextResponse.json({
-        ok: true,
-        response: fallback,
-        messages: [{ role: "assistant", content: fallback }],
-      });
-    }
+------------------------------------------------------------
+TODAY'S NEUTRAL NEWS DIGEST
+------------------------------------------------------------
+${digestBlock}
+`;
+}
 
-    // --------------------------------------------------------
-    // Assemble FULL epistemic context
-    // --------------------------------------------------------
-    const context = await assembleContext(
-      finalUserKey,
-      workspaceId ?? null,
-      message
-    );
-
-    // --------------------------------------------------------
-    // Run orchestrated Solace pipeline (Newsroom-safe)
-    // --------------------------------------------------------
-    const result = await orchestrateSolaceResponse({
-      userMessage: message,
-      context,
-      ministryMode,
-      founderMode,
-      modeHint,
-    });
-
-    const safeResponse =
-      typeof result?.finalAnswer === "string" && result.finalAnswer.length > 0
-        ? result.finalAnswer
-        : "I am here and ready. The response pipeline completed, but there was nothing to report yet.";
-
-    return NextResponse.json({
-      ok: true,
-      response: safeResponse,
-      messages: [
-        {
-          role: "assistant",
-          content: safeResponse,
-        },
-      ],
-      diagnostics: {
-        factsUsed: Math.min(
-          context.memoryPack.facts.length,
-          FACTS_LIMIT
-        ),
-        episodicUsed: Math.min(
-          context.memoryPack.episodic.length,
-          EPISODES_LIMIT
-        ),
-        didResearch: context.didResearch,
-        newsDigestUsed: context.newsDigest.length,
-      },
-    });
-  } catch (err: any) {
-    console.error("[CHAT ROUTE ERROR]", err?.message);
-
-    const fallback =
-      "I ran into an internal issue while responding, but I am still here and ready to continue.";
-
-    return NextResponse.json({
-      ok: true,
-      response: fallback,
-      messages: [{ role: "assistant", content: fallback }],
-    });
+// --------------------------------------------------------------
+// EXECUTOR
+// --------------------------------------------------------------
+export async function runNewsroomExecutor(
+  newsDigest: NewsDigestItem[]
+): Promise<string> {
+  if (!Array.isArray(newsDigest) || newsDigest.length < 3) {
+    return "There is insufficient verified neutral news content to produce a full daily briefing.";
   }
+
+  const prompt = buildNewsroomPrompt(newsDigest);
+
+  const response = await callModel("gpt-4.1", prompt);
+
+  return response;
 }
