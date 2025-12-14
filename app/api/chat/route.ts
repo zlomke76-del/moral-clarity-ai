@@ -1,6 +1,7 @@
 // ------------------------------------------------------------
 // Solace Chat API Route
-// Authority-aware (USPTO + FDA), Dual-contract stable
+// Authority-aware (USPTO + FDA + ISO/ASTM)
+// Dual-contract stable
 // NEXT 16 SAFE — NODE RUNTIME
 // ------------------------------------------------------------
 
@@ -22,7 +23,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 // ------------------------------------------------------------
-// Authority heuristics (NON-BINDING HINTS ONLY)
+// Authority heuristics (HINTS ONLY — NON-BINDING)
 // ------------------------------------------------------------
 function requiresUSPTO(message: string): boolean {
   const m = message.toLowerCase();
@@ -45,6 +46,20 @@ function requiresFDA(message: string): boolean {
     m.includes("hospital") ||
     m.includes("ventilator") ||
     m.includes("patient")
+  );
+}
+
+function requiresStandards(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes("standard") ||
+    m.includes("iso") ||
+    m.includes("astm") ||
+    m.includes("quality") ||
+    m.includes("manufacturing") ||
+    m.includes("hvac") ||
+    m.includes("medical") ||
+    m.includes("material")
   );
 }
 
@@ -84,7 +99,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // Assemble base context (memory + research ONLY)
+    // Assemble base context (MEMORY + RESEARCH ONLY)
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
@@ -97,7 +112,9 @@ export async function POST(req: Request) {
     // --------------------------------------------------------
     const authorities: any[] = [];
 
-    // USPTO
+    // --------------------
+    // USPTO (IP authority)
+    // --------------------
     if (requiresUSPTO(message)) {
       try {
         const res = await fetch(
@@ -123,7 +140,9 @@ export async function POST(req: Request) {
       }
     }
 
-    // FDA
+    // --------------------
+    // FDA (regulatory)
+    // --------------------
     if (requiresFDA(message)) {
       try {
         const res = await fetch(
@@ -146,11 +165,36 @@ export async function POST(req: Request) {
       }
     }
 
+    // --------------------
+    // ISO / ASTM (standards)
+    // --------------------
+    if (requiresStandards(message)) {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL}/api/authority/standards`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: message }),
+          }
+        );
+
+        if (res.ok) {
+          const json = await res.json();
+          if (json?.authority) {
+            authorities.push(json.authority);
+          }
+        }
+      } catch (err) {
+        console.error("[STANDARDS AUTHORITY FETCH ERROR]", err);
+      }
+    }
+
     // Attach authorities WITHOUT interpretation
     context.authorities = authorities;
 
     // --------------------------------------------------------
-    // Run hybrid pipeline (ARBITER decides)
+    // Run hybrid pipeline (ARBITER DECIDES)
     // --------------------------------------------------------
     const result = await runHybridPipeline({
       userMessage: message,
