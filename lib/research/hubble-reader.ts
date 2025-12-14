@@ -1,6 +1,6 @@
 // ------------------------------------------------------------
 // Hubble Research Context Reader
-// READ-ONLY — SAFE CONTEXT ENRICHMENT
+// READ-ONLY — DERIVED FROM EXISTING INGEST
 // NEXT 16 COMPATIBLE
 // ------------------------------------------------------------
 
@@ -11,11 +11,11 @@ import { cookies } from "next/headers";
 // Types
 // ------------------------------------------------------------
 export type HubbleResearchItem = {
-  id: string;
-  title?: string;
-  summary?: string;
-  source?: string;
-  created_at?: string;
+  event_id: string;
+  instrument_mode: string;
+  timestamp_utc: string;
+  source: string;
+  summary: string;
 };
 
 // ------------------------------------------------------------
@@ -31,9 +31,6 @@ function safeRows<T>(rows: T[] | null): T[] {
 export async function readHubbleResearchContext(
   limit: number
 ): Promise<HubbleResearchItem[]> {
-  // ----------------------------------------------------------
-  // cookies() IS ASYNC IN NEXT 16
-  // ----------------------------------------------------------
   const cookieStore = await cookies();
 
   const supabase = createServerClient(
@@ -51,14 +48,20 @@ export async function readHubbleResearchContext(
   );
 
   // ----------------------------------------------------------
-  // Read research context (READ ONLY)
-  // SCHEMA MUST BE POSTGREST-EXPOSED
+  // READ DIRECTLY FROM EXISTING INGEST VIEW
   // ----------------------------------------------------------
   const { data, error } = await supabase
-    .schema("mca")
-    .from("hubble_context")
-    .select("id, title, summary, source, created_at")
-    .order("created_at", { ascending: false })
+    .schema("research")
+    .from("hubble_ingest_v1")
+    .select(
+      `
+      event_id,
+      instrument_mode,
+      timestamp_utc,
+      source_provenance
+    `
+    )
+    .order("timestamp_utc", { ascending: false })
     .limit(limit);
 
   if (error) {
@@ -66,5 +69,14 @@ export async function readHubbleResearchContext(
     return [];
   }
 
-  return safeRows(data);
+  // ----------------------------------------------------------
+  // Derive AI-safe context WITHOUT altering DB
+  // ----------------------------------------------------------
+  return safeRows(data).map((row: any) => ({
+    event_id: row.event_id,
+    instrument_mode: row.instrument_mode,
+    timestamp_utc: row.timestamp_utc,
+    source: row.source_provenance?.source ?? "unknown",
+    summary: `Hubble observation (${row.instrument_mode}) recorded at ${row.timestamp_utc}.`,
+  }));
 }
