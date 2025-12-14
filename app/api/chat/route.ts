@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Solace Chat API Route
 // NEXT 16 SAFE — NO ASYNC COOKIES
-// CONTRACT-STABLE FOR SOLACE UI (MESSAGE-WRAPPED)
+// CONTRACT-STABLE FOR SOLACE UI (MESSAGES ARRAY)
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -42,11 +42,13 @@ export async function POST(req: Request) {
     // --------------------------------------------------------
     if (!message || !finalUserKey) {
       return NextResponse.json({
-        message: {
-          role: "assistant",
-          content:
-            "I’m here, but I didn’t receive a valid message or user identity. Please try again.",
-        },
+        messages: [
+          {
+            role: "assistant",
+            content:
+              "I’m here, but I didn’t receive a valid message or user identity. Please try again.",
+          },
+        ],
       });
     }
 
@@ -91,13 +93,15 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // Return UI-compatible assistant message (WRAPPED)
+    // Return UI-compatible assistant message (ARRAY FORM)
     // --------------------------------------------------------
     return NextResponse.json({
-      message: {
-        role: "assistant",
-        content: safeResponse,
-      },
+      messages: [
+        {
+          role: "assistant",
+          content: safeResponse,
+        },
+      ],
       diagnostics: {
         factsUsed: Math.min(
           context.memoryPack.facts.length,
@@ -117,11 +121,13 @@ export async function POST(req: Request) {
     // Even on hard failure, return a valid assistant message
     // --------------------------------------------------------
     return NextResponse.json({
-      message: {
-        role: "assistant",
-        content:
-          "I ran into an internal issue while responding, but I’m still here and ready to continue.",
-      },
+      messages: [
+        {
+          role: "assistant",
+          content:
+            "I ran into an internal issue while responding, but I’m still here and ready to continue.",
+        },
+      ],
     });
   }
 }
