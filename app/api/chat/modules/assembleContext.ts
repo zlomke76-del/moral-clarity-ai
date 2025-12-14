@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Solace Context Assembler
 // Phase B + Phase 5 (WM-READ-ONLY)
-// USPTO-INTEGRATED — NEGATIVE SPACE AWARE
+// AUTHORITY-AGNOSTIC — NEGATIVE SPACE PRESERVED
 // NEXT 16 SAFE — FLAG-CORRECT
 // ------------------------------------------------------------
 
@@ -25,12 +25,13 @@ export type WorkingMemoryItem = {
   created_at?: string;
 };
 
-export type USPTOContext = {
+export type AuthorityContext = {
+  source: string;                 // e.g. "USPTO", "FDA"
   queried: boolean;
   retrievedAt?: string;
-  resultCount?: number;
+  payload?: any;                  // raw authority payload
   negativeSpace?: {
-    noResultsFound: boolean;
+    asserted: boolean;
     confidence: "low" | "medium" | "high";
     reason: string;
   };
@@ -47,9 +48,9 @@ export type SolaceContextBundle = {
     active: boolean;
     items: WorkingMemoryItem[];
   };
-  newsDigest: any[];
   researchContext: any[];
-  uspto?: USPTOContext;
+  authorities: AuthorityContext[];
+  newsDigest: any[];
   didResearch: boolean;
 };
 
@@ -65,21 +66,6 @@ function diag(label: string, payload: any) {
 // ------------------------------------------------------------
 function safeRows<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
-}
-
-function requiresUSPTO(userMessage: string): boolean {
-  const m = userMessage.toLowerCase();
-
-  return (
-    m.includes("novel") ||
-    m.includes("patent") ||
-    m.includes("commercialize") ||
-    m.includes("commercialise") ||
-    m.includes("medical") ||
-    m.includes("device") ||
-    m.includes("filtration") ||
-    m.includes("material")
-  );
 }
 
 // ------------------------------------------------------------
@@ -124,8 +110,8 @@ export async function assembleContext(
   } = await supabase.auth.getUser();
 
   if (!user || authError) {
-    diag("memory skipped", {
-      reason: "no authenticated user",
+    diag("context degraded", {
+      reason: "unauthenticated",
       authError: authError?.message ?? null,
     });
 
@@ -140,8 +126,9 @@ export async function assembleContext(
         active: false,
         items: [],
       },
-      newsDigest: [],
       researchContext: [],
+      authorities: [],
+      newsDigest: [],
       didResearch: false,
     };
   }
@@ -192,7 +179,7 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // RESEARCH CONTEXT
+  // RESEARCH CONTEXT (EXPLORATORY — NON-BINDING)
   // ----------------------------------------------------------
   const researchContext = await readHubbleResearchContext(10);
   const didResearch = researchContext.length > 0;
@@ -200,67 +187,16 @@ export async function assembleContext(
   diag("research context", { count: researchContext.length });
 
   // ----------------------------------------------------------
-  // USPTO CONTEXT (NEGATIVE SPACE AWARE)
+  // AUTHORITY CONTEXT
   // ----------------------------------------------------------
-  let uspto: USPTOContext | undefined;
-
-  if (requiresUSPTO(userMessage)) {
-    diag("USPTO query triggered", { reason: "novelty/safety domain" });
-
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BASE_URL}/api/uspto`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            query: userMessage,
-            size: 5,
-          }),
-        }
-      );
-
-      if (res.ok) {
-        const json = await res.json();
-        const results = json?.data?.results ?? [];
-
-        uspto = {
-          queried: true,
-          retrievedAt: new Date().toISOString(),
-          resultCount: results.length,
-          negativeSpace:
-            results.length === 0
-              ? {
-                  noResultsFound: true,
-                  confidence: "low",
-                  reason:
-                    "No directly matching USPTO records found for the provided description.",
-                }
-              : undefined,
-        };
-      } else {
-        uspto = {
-          queried: true,
-          negativeSpace: {
-            noResultsFound: true,
-            confidence: "low",
-            reason: "USPTO query failed or returned no usable data.",
-          },
-        };
-      }
-    } catch (err) {
-      uspto = {
-        queried: true,
-        negativeSpace: {
-          noResultsFound: true,
-          confidence: "low",
-          reason: "USPTO query exception encountered.",
-        },
-      };
-    }
-
-    diag("USPTO context", uspto);
-  }
+  // IMPORTANT:
+  // - Assembler does NOT decide when authority is required
+  // - Assembler does NOT interpret negative space
+  // - Authority routes populate this independently
+  //
+  // Default: empty
+  // ----------------------------------------------------------
+  const authorities: AuthorityContext[] = [];
 
   // ----------------------------------------------------------
   // FINAL CONTEXT BUNDLE
@@ -276,9 +212,9 @@ export async function assembleContext(
       active: false,
       items: [],
     },
-    newsDigest: [],
     researchContext,
-    uspto,
+    authorities,
+    newsDigest: [],
     didResearch,
   };
 }
