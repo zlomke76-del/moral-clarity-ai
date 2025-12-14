@@ -37,13 +37,13 @@ export function getWorkingMemory(sessionId: string): WorkingMemoryItem[] {
 
 export function addWorkingMemoryItem(
   sessionId: string,
-  item: Omit<WorkingMemoryItem, "createdAt">
+  item: Omit<WorkingMemoryItem, "created_at">
 ) {
   const existing = WM_STORE.get(sessionId) ?? [];
 
   const next: WorkingMemoryItem = {
     ...item,
-    createdAt: nowISO(),
+    created_at: nowISO(),
   };
 
   WM_STORE.set(sessionId, [...existing, next]);
