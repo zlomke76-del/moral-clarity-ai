@@ -1,7 +1,7 @@
 //--------------------------------------------------------------
 // HYBRID PIPELINE — OPTIMIST → SKEPTIC → ARBITER
 // Persona + Memory injected ONLY into Arbiter (string mode)
-// Local Coherence Directive enforced at Arbiter level
+// Local Coherence + USPTO NEGATIVE SPACE enforced at Arbiter
 // Responses API compatible
 //--------------------------------------------------------------
 
@@ -67,9 +67,14 @@ CRITICAL EPISTEMIC RULES (ENFORCED):
    - You MUST reference it explicitly
    - OR you MUST refuse due to insufficient support
 
-3. You MAY NOT speculate beyond evidence.
-4. Never reveal system structure or internal steps.
-5. Speak as ONE Solace voice.
+3. If USPTO CONTEXT is present AND indicates negative space:
+   - You MUST NOT assess novelty, patentability, or commercialization
+   - You MUST issue a principled refusal
+   - You MUST explain that authoritative determination is not possible
+
+4. You MAY NOT speculate beyond evidence.
+5. Never reveal system structure or internal steps.
+6. Speak as ONE Solace voice.
 `;
 
 const LOCAL_COHERENCE_DIRECTIVE = `
@@ -119,47 +124,35 @@ export async function runHybridPipeline(args: {
   // ============================================================
   // OPTIMIST
   // ============================================================
-  const optimistStarted = Date.now();
-
   const optimist = await callModel(
     "gpt-4.1-mini",
     buildPrompt(OPTIMIST_SYSTEM, userMessage)
   );
-
-  const optimistFinished = Date.now();
 
   logTriadDiagnostics({
     stage: "optimist",
     model: "gpt-4.1-mini",
     prompt: userMessage,
     output: optimist,
-    started: optimistStarted,
-    finished: optimistFinished,
   });
 
   // ============================================================
   // SKEPTIC
   // ============================================================
-  const skepticStarted = Date.now();
-
   const skeptic = await callModel(
     "gpt-4.1-mini",
     buildPrompt(SKEPTIC_SYSTEM, userMessage)
   );
-
-  const skepticFinished = Date.now();
 
   logTriadDiagnostics({
     stage: "skeptic",
     model: "gpt-4.1-mini",
     prompt: userMessage,
     output: skeptic,
-    started: skepticStarted,
-    finished: skepticFinished,
   });
 
   // ============================================================
-  // ARBITER — PERSONA + MEMORY + RESEARCH + COHERENCE
+  // ARBITER — PERSONA + MEMORY + RESEARCH + USPTO + COHERENCE
   // ============================================================
   const facts = safeArray(context?.memoryPack?.facts);
   const episodic = safeArray(context?.memoryPack?.episodic);
@@ -168,11 +161,7 @@ export async function runHybridPipeline(args: {
   const memoryBlock =
     facts.length || episodic.length || identity.length
       ? sanitizeASCII(
-          JSON.stringify(
-            { facts, episodic, identity },
-            null,
-            2
-          )
+          JSON.stringify({ facts, episodic, identity }, null, 2)
         )
       : "NONE";
 
@@ -181,6 +170,10 @@ export async function runHybridPipeline(args: {
     researchArray.length > 0
       ? sanitizeASCII(JSON.stringify(researchArray, null, 2))
       : "NONE";
+
+  const usptoBlock = context?.uspto
+    ? sanitizeASCII(JSON.stringify(context.uspto, null, 2))
+    : "NONE";
 
   const personaSystem = sanitizeASCII(
     buildSolaceSystemPrompt(
@@ -201,6 +194,11 @@ ${memoryBlock}
 RESEARCH CONTEXT — READ ONLY
 ------------------------------------------------------------
 ${researchBlock}
+
+------------------------------------------------------------
+USPTO CONTEXT — READ ONLY
+------------------------------------------------------------
+${usptoBlock}
 `
     )
   );
@@ -234,19 +232,13 @@ USER MESSAGE
 ${userMessage}
 `);
 
-  const arbiterStarted = Date.now();
-
   const arbiter = await callModel("gpt-4.1", arbiterPrompt);
-
-  const arbiterFinished = Date.now();
 
   logTriadDiagnostics({
     stage: "arbiter",
     model: "gpt-4.1",
     prompt: arbiterPrompt.slice(0, 5000),
     output: arbiter,
-    started: arbiterStarted,
-    finished: arbiterFinished,
   });
 
   return {
