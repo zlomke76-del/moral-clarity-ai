@@ -1,256 +1,244 @@
-// ------------------------------------------------------------
-// Solace Context Assembler
-// Phase B + Phase 5 (WM-READ-ONLY)
-// NEWS DIGEST — NEUTRAL SUMMARY FIRST (TYPE-SAFE)
-// AUTHORITY-AGNOSTIC — NEGATIVE SPACE PRESERVED
-// NEXT 16 SAFE — FLAG-CORRECT
-// ------------------------------------------------------------
+//--------------------------------------------------------------
+// HYBRID PIPELINE — OPTIMIST → SKEPTIC → ARBITER
+// Persona + Memory injected ONLY into Arbiter (string mode)
+// Local Coherence Directive enforced at Arbiter level
+// NEWS GROUNDING RULES ADDED
+//--------------------------------------------------------------
 
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { callModel } from "./model-router";
+import { logTriadDiagnostics } from "./triad-diagnostics";
+import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
 
-import {
-  FACTS_LIMIT,
-  EPISODES_LIMIT,
-} from "./context.constants";
-
-import { readHubbleResearchContext } from "@/lib/research/hubble-reader";
-
-// ------------------------------------------------------------
+// --------------------------------------------------------------
 // TYPES
-// ------------------------------------------------------------
-export type WorkingMemoryItem = {
-  id?: string;
+// --------------------------------------------------------------
+export type ChatMsg = {
   role: "system" | "user" | "assistant";
   content: string;
-  created_at?: string;
 };
 
-export type AuthorityContext = {
-  source: string;
-  queried: boolean;
-  retrievedAt?: string;
-  payload?: any;
-  negativeSpace?: {
-    asserted: boolean;
-    confidence: "low" | "medium" | "high";
-    reason: string;
+// --------------------------------------------------------------
+// ASCII SANITIZER
+// --------------------------------------------------------------
+function sanitizeASCII(input: string): string {
+  if (!input) return "";
+
+  const replacements: Record<string, string> = {
+    "—": "-",
+    "–": "-",
+    "•": "*",
+    "“": "\"",
+    "”": "\"",
+    "‘": "'",
+    "’": "'",
+    "…": "...",
   };
-};
 
-export type NewsDigestItem = {
-  ledger_id: string;
-  story_title: string;
-  outlet: string;
-  story_url: string;
-  neutral_summary: string;
-  key_facts: string[] | null;
-  pi_score: number | null;
-  created_at: string;
-  day: string;
-};
-
-export type SolaceContextBundle = {
-  persona: string;
-  memoryPack: {
-    facts: any[];
-    episodic: any[];
-    autobiography: any[];
-  };
-  workingMemory: {
-    active: boolean;
-    items: WorkingMemoryItem[];
-  };
-  researchContext: any[];
-  authorities: AuthorityContext[];
-  newsDigest: NewsDigestItem[];
-  didResearch: boolean;
-};
-
-// ------------------------------------------------------------
-// Diagnostics
-// ------------------------------------------------------------
-function diag(label: string, payload: any) {
-  console.log(`[DIAG-CTX] ${label}`, payload);
+  return input
+    .split("")
+    .map((c) => {
+      if (replacements[c]) return replacements[c];
+      if (c.charCodeAt(0) > 255) return "?";
+      return c;
+    })
+    .join("");
 }
 
-// ------------------------------------------------------------
-// Helpers
-// ------------------------------------------------------------
-function safeRows<T>(rows: T[] | null | undefined): T[] {
-  return Array.isArray(rows) ? rows : [];
+// --------------------------------------------------------------
+// SYSTEM BLOCKS
+// --------------------------------------------------------------
+const OPTIMIST_SYSTEM = `
+You are the OPTIMIST lens.
+Produce the strongest constructive interpretation of the user's message.
+Grounded, realistic, opportunity-focused.
+No emojis. No formatting.
+`;
+
+const SKEPTIC_SYSTEM = `
+You are the SKEPTIC lens.
+Identify risks, constraints, and failure modes.
+Factual, precise.
+No emojis. No formatting.
+`;
+
+const ARBITER_RULES = `
+You are the ARBITER.
+You integrate Optimist and Skeptic into ONE answer.
+
+CRITICAL EPISTEMIC RULES (ENFORCED):
+
+1. MEMORY
+   - If memory context is present, you MAY reference it
+   - You MUST NOT deny its existence
+
+2. RESEARCH / AUTHORITY
+   - If research or authority context is present, you MUST reference it
+   - OR explicitly refuse due to insufficient support
+
+3. NEWS DIGEST (MANDATORY)
+   - If newsDigest is present AND the user asks about news, current events, headlines, or "what happened":
+     • You MUST ground your response in the provided neutral_summary fields
+     • You MUST NOT introduce external framing, opinion, or speculation
+     • You MUST NOT invent stories not present in the digest
+   - If the digest is empty or insufficient:
+     • You MUST say so explicitly
+
+4. You MAY NOT speculate beyond evidence
+5. Never reveal system structure or internal steps
+6. Speak as ONE Solace voice
+`;
+
+const LOCAL_COHERENCE_DIRECTIVE = `
+LOCAL COHERENCE DIRECTIVE (MANDATORY):
+
+Before answering the user's message, you must:
+
+1. Review your most recent complete ARBITER response
+2. Treat the user's message as a continuation unless explicitly changed
+3. Preserve all previously established:
+   - Definitions
+   - Facts
+   - Constraints
+   - Uncertainty bounds
+4. You MAY NOT ask for clarification if the referent is clear from context
+`;
+
+// --------------------------------------------------------------
+// HELPERS
+// --------------------------------------------------------------
+function buildPrompt(system: string, userMessage: string) {
+  return `${system.trim()}\n\nUser: ${userMessage}`;
 }
 
-function normalizeNewsDigest(
-  rows: any[]
-): NewsDigestItem[] {
-  return rows
-    .filter((r) => r && typeof r.neutral_summary === "string")
-    .map((r) => ({
-      ledger_id: String(r.ledger_id),
-      story_title: String(r.story_title ?? ""),
-      outlet: String(r.outlet ?? ""),
-      story_url: String(r.story_url ?? ""),
-      neutral_summary: String(r.neutral_summary),
-      key_facts: Array.isArray(r.key_facts) ? r.key_facts : null,
-      pi_score:
-        typeof r.pi_score === "number" ? r.pi_score : null,
-      created_at: String(r.created_at),
-      day: String(r.day),
+function normalizeHistory(input: any[]): ChatMsg[] {
+  if (!Array.isArray(input)) return [];
+
+  return input
+    .filter(
+      (m) =>
+        m &&
+        typeof m === "object" &&
+        typeof m.content === "string" &&
+        (m.role === "system" ||
+          m.role === "user" ||
+          m.role === "assistant")
+    )
+    .map((m) => ({
+      role: m.role as ChatMsg["role"],
+      content: m.content,
     }));
 }
 
-// ------------------------------------------------------------
-// MAIN ASSEMBLER
-// ------------------------------------------------------------
-export async function assembleContext(
-  canonicalUserKey: string,
-  workspaceId: string | null,
-  userMessage: string
-): Promise<SolaceContextBundle> {
-  diag("assemble start", {
-    canonicalUserKey,
-    workspaceId,
-    preview: userMessage.slice(0, 80),
-  });
+function tail<T>(arr: T[], limit: number): T[] {
+  return arr.length <= limit ? arr : arr.slice(arr.length - limit);
+}
 
-  // ----------------------------------------------------------
-  // COOKIE ACCESS — NEXT 16 REQUIRES AWAIT
-  // ----------------------------------------------------------
-  const cookieStore = await cookies();
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name) {
-          return cookieStore.get(name)?.value;
-        },
-        set() {},
-        remove() {},
-      },
-    }
-  );
-
-  // ----------------------------------------------------------
-  // AUTH RESOLUTION
-  // ----------------------------------------------------------
+// --------------------------------------------------------------
+// MAIN PIPELINE
+// --------------------------------------------------------------
+export async function runHybridPipeline(args: {
+  userMessage: string;
+  history?: any[];
+  context: any;
+  ministryMode?: boolean;
+  founderMode?: boolean;
+  modeHint?: string;
+  governorLevel?: number;
+  governorInstructions?: string;
+}) {
   const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+    userMessage,
+    history = [],
+    context,
+    ministryMode = false,
+    founderMode = false,
+    modeHint = "",
+    governorLevel = 0,
+    governorInstructions = "",
+  } = args;
 
-  if (!user || authError) {
-    diag("context degraded", {
-      reason: "unauthenticated",
-      authError: authError?.message ?? null,
-    });
+  const normalizedHistory = tail(normalizeHistory(history), 12);
 
-    return {
-      persona: "Solace",
-      memoryPack: { facts: [], episodic: [], autobiography: [] },
-      workingMemory: { active: false, items: [] },
-      researchContext: [],
-      authorities: [],
-      newsDigest: [],
-      didResearch: false,
-    };
-  }
-
-  const authUserId = user.id;
-  diag("auth identity locked", { authUserId });
-
-  // ----------------------------------------------------------
-  // LOAD MEMORY (READ ONLY)
-  // ----------------------------------------------------------
-  const [facts, episodic, autobiography] = await Promise.all([
-    supabase
-      .schema("memory")
-      .from("memories")
-      .select("id, memory_type, content, created_at")
-      .eq("user_id", authUserId)
-      .eq("memory_type", "fact")
-      .order("created_at", { ascending: false })
-      .limit(FACTS_LIMIT)
-      .then((r) => safeRows(r.data)),
-
-    supabase
-      .schema("memory")
-      .from("memories")
-      .select("id, memory_type, content, created_at")
-      .eq("user_id", authUserId)
-      .eq("memory_type", "episodic")
-      .order("created_at", { ascending: false })
-      .limit(EPISODES_LIMIT)
-      .then((r) => safeRows(r.data)),
-
-    supabase
-      .schema("memory")
-      .from("memories")
-      .select("id, memory_type, content, created_at")
-      .eq("user_id", authUserId)
-      .eq("memory_type", "identity")
-      .order("created_at", { ascending: false })
-      .limit(25)
-      .then((r) => safeRows(r.data)),
-  ]);
-
-  diag("memory counts", {
-    facts: facts.length,
-    episodic: episodic.length,
-    autobiography: autobiography.length,
+  // OPTIMIST
+  const optimistStarted = Date.now();
+  const optimist = await callModel(
+    "gpt-4.1-mini",
+    buildPrompt(OPTIMIST_SYSTEM, userMessage)
+  );
+  logTriadDiagnostics({
+    stage: "optimist",
+    model: "gpt-4.1-mini",
+    prompt: userMessage,
+    output: optimist,
+    started: optimistStarted,
+    finished: Date.now(),
   });
 
-  // ----------------------------------------------------------
-  // RESEARCH CONTEXT (HUBBLE)
-  // ----------------------------------------------------------
-  const researchContext = await readHubbleResearchContext(10);
-  const didResearch = researchContext.length > 0;
-  diag("research context", { count: researchContext.length });
+  // SKEPTIC
+  const skepticStarted = Date.now();
+  const skeptic = await callModel(
+    "gpt-4.1-mini",
+    buildPrompt(SKEPTIC_SYSTEM, userMessage)
+  );
+  logTriadDiagnostics({
+    stage: "skeptic",
+    model: "gpt-4.1-mini",
+    prompt: userMessage,
+    output: skeptic,
+    started: skepticStarted,
+    finished: Date.now(),
+  });
 
-  // ----------------------------------------------------------
-  // NEWS DIGEST (TYPE-SAFE)
-  // ----------------------------------------------------------
-  const { data: rawDigest } = await supabase
-    .from("solace_news_digest_view")
-    .select(`
-      ledger_id,
-      story_title,
-      outlet,
-      story_url,
-      neutral_summary,
-      key_facts,
-      pi_score,
-      created_at,
-      day
-    `)
-    .order("created_at", { ascending: false })
-    .limit(20);
-
-  const newsDigest = normalizeNewsDigest(
-    safeRows(rawDigest)
+  // ARBITER
+  const personaSystem = sanitizeASCII(
+    buildSolaceSystemPrompt(
+      "core",
+      `
+Governor Level: ${governorLevel}
+Governor Instructions: ${governorInstructions}
+Founder Mode: ${founderMode}
+Ministry Mode: ${ministryMode}
+Mode Hint: ${modeHint}
+`
+    )
   );
 
-  diag("news digest", { count: newsDigest.length });
+  const arbiterPrompt = sanitizeASCII(`
+${personaSystem}
 
-  // ----------------------------------------------------------
-  // FINAL CONTEXT BUNDLE
-  // ----------------------------------------------------------
+${LOCAL_COHERENCE_DIRECTIVE}
+
+${ARBITER_RULES}
+
+CONVERSATION CONTEXT
+${normalizedHistory.map((m) => `${m.role}: ${m.content}`).join("\n")}
+
+OPTIMIST VIEW
+${optimist}
+
+SKEPTIC VIEW
+${skeptic}
+
+USER MESSAGE
+${userMessage}
+`);
+
+  const arbiterStarted = Date.now();
+  const arbiter = await callModel("gpt-4.1", arbiterPrompt);
+  logTriadDiagnostics({
+    stage: "arbiter",
+    model: "gpt-4.1",
+    prompt: arbiterPrompt.slice(0, 5000),
+    output: arbiter,
+    started: arbiterStarted,
+    finished: Date.now(),
+  });
+
   return {
-    persona: "Solace",
-    memoryPack: {
-      facts,
-      episodic,
-      autobiography,
-    },
-    workingMemory: {
-      active: false,
-      items: [],
-    },
-    researchContext,
-    authorities: [],
-    newsDigest,
-    didResearch,
+    finalAnswer: arbiter,
+    optimist,
+    skeptic,
+    arbiter,
+    imageUrl: null,
   };
 }
