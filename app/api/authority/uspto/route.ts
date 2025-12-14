@@ -1,18 +1,41 @@
-//--------------------------------------------------------------
-// USPTO AUTHORITY ADAPTER (READ-ONLY)
-// Returns AuthorityContext — no interpretation
-//--------------------------------------------------------------
+// ------------------------------------------------------------
+// USPTO AUTHORITY ROUTE
+// Authoritative Constraint Source (NOT research)
+// Negative-space preserving
+// NEXT 16 SAFE — NODE RUNTIME
+// ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
-import type { AuthorityContext } from "@/app/api/chat/modules/authority.types";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
+// ------------------------------------------------------------
+// Types
+// ------------------------------------------------------------
+type AuthorityContext = {
+  source: "USPTO";
+  queried: boolean;
+  retrievedAt?: string;
+  payload?: any;
+  negativeSpace?: {
+    asserted: boolean;
+    confidence: "low" | "medium" | "high";
+    reason: string;
+  };
+};
+
+// ------------------------------------------------------------
+// POST handler
+// ------------------------------------------------------------
 export async function POST(req: Request) {
-  const body = await req.json();
-  const timestamp = new Date().toISOString();
-
   try {
+    const body = await req.json();
+
+    // --------------------------------------------------------
+    // Forward request to USPTO API
+    // --------------------------------------------------------
     const res = await fetch(
       "https://api.uspto.gov/api/v1/patent/applications/search",
       {
@@ -26,55 +49,72 @@ export async function POST(req: Request) {
       }
     );
 
+    // --------------------------------------------------------
+    // Failure or non-OK response
+    // --------------------------------------------------------
     if (!res.ok) {
-      const negative: AuthorityContext = {
-        authority: "USPTO",
-        scope: "PATENTABILITY",
-        status: "NEGATIVE",
-        confidence: "LOW",
-        reason: "QUERY_FAILED",
-        timestamp,
+      const authority: AuthorityContext = {
+        source: "USPTO",
+        queried: true,
+        negativeSpace: {
+          asserted: true,
+          confidence: "low",
+          reason: "USPTO API returned a non-OK response.",
+        },
       };
 
-      return NextResponse.json({ ok: true, authority: negative });
+      return NextResponse.json({ ok: true, authority });
     }
 
+    // --------------------------------------------------------
+    // Parse USPTO response
+    // --------------------------------------------------------
     const data = await res.json();
+    const results = data?.results ?? [];
 
-    if (!data || !Array.isArray(data.results) || data.results.length === 0) {
-      const negative: AuthorityContext = {
-        authority: "USPTO",
-        scope: "PATENTABILITY",
-        status: "NEGATIVE",
-        confidence: "LOW",
-        reason: "NO_RESULTS",
-        data,
-        timestamp,
-      };
+    // --------------------------------------------------------
+    // Construct authority context
+    // --------------------------------------------------------
+    const authority: AuthorityContext =
+      Array.isArray(results) && results.length > 0
+        ? {
+            source: "USPTO",
+            queried: true,
+            retrievedAt: new Date().toISOString(),
+            payload: {
+              resultCount: results.length,
+              results,
+            },
+          }
+        : {
+            source: "USPTO",
+            queried: true,
+            retrievedAt: new Date().toISOString(),
+            negativeSpace: {
+              asserted: true,
+              confidence: "low",
+              reason:
+                "USPTO query completed successfully but returned no matching records.",
+            },
+          };
 
-      return NextResponse.json({ ok: true, authority: negative });
-    }
-
-    const positive: AuthorityContext = {
-      authority: "USPTO",
-      scope: "PATENTABILITY",
-      status: "POSITIVE",
-      confidence: "MEDIUM",
-      data,
-      timestamp,
-    };
-
-    return NextResponse.json({ ok: true, authority: positive });
+    return NextResponse.json({ ok: true, authority });
   } catch (err: any) {
-    const indeterminate: AuthorityContext = {
-      authority: "USPTO",
-      scope: "PATENTABILITY",
-      status: "INDETERMINATE",
-      confidence: "LOW",
-      reason: "QUERY_EXCEPTION",
-      timestamp,
+    // --------------------------------------------------------
+    // Hard failure / exception
+    // --------------------------------------------------------
+    const authority: AuthorityContext = {
+      source: "USPTO",
+      queried: true,
+      negativeSpace: {
+        asserted: true,
+        confidence: "low",
+        reason: "USPTO query exception encountered.",
+      },
     };
 
-    return NextResponse.json({ ok: true, authority: indeterminate });
+    console.error("[USPTO AUTHORITY ERROR]", err?.message);
+
+    return NextResponse.json({ ok: true, authority });
   }
 }
