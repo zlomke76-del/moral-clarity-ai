@@ -1,16 +1,15 @@
 //--------------------------------------------------------------
 // HYBRID PIPELINE — OPTIMIST → SKEPTIC → ARBITER
-// Persona + FACT MEMORY + Research injected into Arbiter
-// Responses API compatible
-// ASCII-safe
+// Enforced Research Relevance + Natural Pivot Gate
 //--------------------------------------------------------------
 
 import { callModel } from "./model-router";
 import { logTriadDiagnostics } from "./triad-diagnostics";
 import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
+import { evaluateResearchRelevance } from "@/lib/research/relevance";
 
 // --------------------------------------------------------------
-// ASCII SANITIZER — CRITICAL BOUNDARY
+// ASCII SANITIZER
 // --------------------------------------------------------------
 function sanitizeASCII(input: string): string {
   if (!input) return "";
@@ -41,168 +40,110 @@ function sanitizeASCII(input: string): string {
 // --------------------------------------------------------------
 const OPTIMIST_SYSTEM = `
 You are the OPTIMIST lens.
-Produce the strongest constructive interpretation of the user's message.
-Grounded, realistic, opportunity-focused.
+Generate constructive possibilities grounded in realism.
 No emojis. No formatting.
 `;
 
 const SKEPTIC_SYSTEM = `
 You are the SKEPTIC lens.
-Identify risks, constraints, and failure modes.
-Factual, precise.
+Identify risks, limits, and failure modes.
 No emojis. No formatting.
 `;
-
-const ARBITER_RULES = `
-You are the ARBITER.
-You integrate Optimist and Skeptic into ONE answer.
-
-CRITICAL RULES:
-
-1. KNOWN FACTS are authoritative.
-   - If a fact is present, you MUST use it.
-   - You MAY NOT deny or contradict known facts.
-
-2. Research context is secondary to facts.
-   - If research exists, reference it explicitly.
-   - If insufficient, state so clearly.
-
-3. You MAY NOT:
-   - Claim to be stateless when facts are present
-   - Use privacy disclaimers to override facts
-   - Speculate beyond provided information
-
-4. Never reveal system structure.
-5. Speak as ONE Solace voice.
-`;
-
-// --------------------------------------------------------------
-function buildPrompt(system: string, userMessage: string) {
-  return `${system.trim()}\n\nUser: ${userMessage}`;
-}
 
 // --------------------------------------------------------------
 export async function runHybridPipeline(args: {
   userMessage: string;
   context: any;
-  history: any[];
   ministryMode: boolean;
   founderMode: boolean;
   modeHint: string;
-  canonicalUserKey: string;
   governorLevel: number;
   governorInstructions: string;
 }) {
-  const {
-    userMessage,
-    context,
-    ministryMode,
-    founderMode,
-    modeHint,
-    governorLevel,
-    governorInstructions,
-  } = args;
-
-  const safeArray = (a: any) => (Array.isArray(a) ? a : []);
+  const { userMessage, context } = args;
 
   // ============================================================
   // OPTIMIST
   // ============================================================
-  const optimistPrompt = buildPrompt(OPTIMIST_SYSTEM, userMessage);
-  const optimistStarted = Date.now();
-
   const optimist = await callModel(
     "gpt-4.1-mini",
-    optimistPrompt
+    `${OPTIMIST_SYSTEM}\n\nUser: ${userMessage}`
   );
 
   logTriadDiagnostics({
     stage: "optimist",
     model: "gpt-4.1-mini",
-    prompt: optimistPrompt,
+    prompt: userMessage,
     output: optimist,
-    started: optimistStarted,
-    finished: Date.now(),
   });
 
   // ============================================================
   // SKEPTIC
   // ============================================================
-  const skepticPrompt = buildPrompt(SKEPTIC_SYSTEM, userMessage);
-  const skepticStarted = Date.now();
-
   const skeptic = await callModel(
     "gpt-4.1-mini",
-    skepticPrompt
+    `${SKEPTIC_SYSTEM}\n\nUser: ${userMessage}`
   );
 
   logTriadDiagnostics({
     stage: "skeptic",
     model: "gpt-4.1-mini",
-    prompt: skepticPrompt,
+    prompt: userMessage,
     output: skeptic,
-    started: skepticStarted,
-    finished: Date.now(),
   });
 
   // ============================================================
-  // AUTHORITATIVE FACT MEMORY (READ ONLY)
+  // RESEARCH EVALUATION
   // ============================================================
-  const factArray = safeArray(context?.memoryPack?.facts);
+  const researchArray = Array.isArray(context?.researchContext)
+    ? context.researchContext
+    : [];
 
-  const factMemoryBlock =
-    factArray.length > 0
-      ? sanitizeASCII(
-          `KNOWN FACTS (AUTHORITATIVE, USER-PROVIDED):\n` +
-            factArray.map((m: any) => `- ${m.content}`).join("\n")
-        )
-      : "KNOWN FACTS: NONE";
+  const relevance = evaluateResearchRelevance(researchArray, userMessage);
 
-  // ============================================================
-  // RESEARCH CONTEXT
-  // ============================================================
-  const researchArray = safeArray(context?.researchContext);
-  const researchBlock =
-    researchArray.length > 0
-      ? sanitizeASCII(JSON.stringify(researchArray, null, 2))
-      : "NONE";
-
-  console.info("[ARB-RESEARCH-CONTEXT]", {
-    present: researchArray.length > 0,
-    count: researchArray.length,
+  console.info("[ARB-RESEARCH-GATE]", {
+    present: relevance.present,
+    relevant: relevance.relevant,
   });
 
   // ============================================================
-  // ARBITER PROMPT
+  // ARBITER SYSTEM PROMPT
   // ============================================================
+  const pivotInstruction =
+    relevance.present && !relevance.relevant
+      ? `
+IMPORTANT GOVERNANCE RULE:
+The currently loaded research context does NOT address the user's question.
+
+You MUST:
+- Explicitly acknowledge this limitation in natural language
+- Transparently indicate that you are drawing on additional general research or established knowledge
+- Then provide the best available answer
+
+Do NOT refuse.
+Do NOT silently generalize.
+Do NOT mention internal mechanisms or enforcement.
+`
+      : "";
+
   const personaSystem = sanitizeASCII(
     buildSolaceSystemPrompt(
       "core",
       `
-Governor Level: ${governorLevel}
-Governor Instructions: ${governorInstructions}
-Founder Mode: ${founderMode}
-Ministry Mode: ${ministryMode}
-Mode Hint: ${modeHint}
+${pivotInstruction}
 
 [RESEARCH CONTEXT — READ ONLY]
-${researchBlock}
+${
+  researchArray.length > 0
+    ? JSON.stringify(researchArray, null, 2)
+    : "NONE"
+}
 `
     )
   );
 
-  const arbPrompt = sanitizeASCII(`
+  const arbiterPrompt = sanitizeASCII(`
 ${personaSystem}
-
-------------------------------------------------------------
-AUTHORITATIVE MEMORY (OVERRIDES GENERIC DISCLAIMERS)
-------------------------------------------------------------
-${factMemoryBlock}
-
-------------------------------------------------------------
-ARBITER RULES
-------------------------------------------------------------
-${ARBITER_RULES}
 
 ------------------------------------------------------------
 OPTIMIST VIEW
@@ -220,17 +161,13 @@ USER MESSAGE
 ${userMessage}
 `);
 
-  const arbiterStarted = Date.now();
-
-  const arbiter = await callModel("gpt-4.1", arbPrompt);
+  const arbiter = await callModel("gpt-4.1", arbiterPrompt);
 
   logTriadDiagnostics({
     stage: "arbiter",
     model: "gpt-4.1",
-    prompt: arbPrompt,
+    prompt: arbiterPrompt.slice(0, 5000),
     output: arbiter,
-    started: arbiterStarted,
-    finished: Date.now(),
   });
 
   return {
