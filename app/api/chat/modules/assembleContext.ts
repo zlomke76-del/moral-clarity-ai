@@ -1,9 +1,7 @@
 // ------------------------------------------------------------
 // Solace Context Assembler
-// Phase B + Phase 5 (WM-READ-ONLY)
-// NEWS DIGEST — NEUTRAL SUMMARY FIRST (TYPE-SAFE)
-// AUTHORITY-AGNOSTIC — NEGATIVE SPACE PRESERVED
-// NEXT 16 SAFE — FLAG-CORRECT
+// NEWS DIGEST — DAY-SCOPED + NEUTRAL SUMMARY
+// NEXT 16 SAFE
 // ------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
@@ -19,25 +17,6 @@ import { readHubbleResearchContext } from "@/lib/research/hubble-reader";
 // ------------------------------------------------------------
 // TYPES
 // ------------------------------------------------------------
-export type WorkingMemoryItem = {
-  id?: string;
-  role: "system" | "user" | "assistant";
-  content: string;
-  created_at?: string;
-};
-
-export type AuthorityContext = {
-  source: string;
-  queried: boolean;
-  retrievedAt?: string;
-  payload?: any;
-  negativeSpace?: {
-    asserted: boolean;
-    confidence: "low" | "medium" | "high";
-    reason: string;
-  };
-};
-
 export type NewsDigestItem = {
   ledger_id: string;
   story_title: string;
@@ -59,64 +38,67 @@ export type SolaceContextBundle = {
   };
   workingMemory: {
     active: boolean;
-    items: WorkingMemoryItem[];
+    items: any[];
   };
   researchContext: any[];
-  authorities: AuthorityContext[];
+  authorities: any[];
   newsDigest: NewsDigestItem[];
   didResearch: boolean;
 };
 
 // ------------------------------------------------------------
-// Diagnostics
+// HELPERS
 // ------------------------------------------------------------
-function diag(label: string, payload: any) {
-  console.log(`[DIAG-CTX] ${label}`, payload);
-}
-
-// ------------------------------------------------------------
-// Helpers
-// ------------------------------------------------------------
-function safeRows<T>(rows: T[] | null | undefined): T[] {
+function safeRows<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
 }
 
-function normalizeNewsDigest(
-  rows: any[]
+function inferDayScope(message: string): "today" | "yesterday" | "week" | "all" {
+  const m = message.toLowerCase();
+  if (m.includes("today")) return "today";
+  if (m.includes("yesterday")) return "yesterday";
+  if (m.includes("week") || m.includes("7")) return "week";
+  return "all";
+}
+
+function filterByDay(
+  rows: NewsDigestItem[],
+  scope: "today" | "yesterday" | "week" | "all"
 ): NewsDigestItem[] {
-  return rows
-    .filter((r) => r && typeof r.neutral_summary === "string")
-    .map((r) => ({
-      ledger_id: String(r.ledger_id),
-      story_title: String(r.story_title ?? ""),
-      outlet: String(r.outlet ?? ""),
-      story_url: String(r.story_url ?? ""),
-      neutral_summary: String(r.neutral_summary),
-      key_facts: Array.isArray(r.key_facts) ? r.key_facts : null,
-      pi_score:
-        typeof r.pi_score === "number" ? r.pi_score : null,
-      created_at: String(r.created_at),
-      day: String(r.day),
-    }));
+  if (scope === "all") return rows;
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  if (scope === "today") {
+    return rows.filter((r) => r.day === today);
+  }
+
+  if (scope === "yesterday") {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    const y = d.toISOString().slice(0, 10);
+    return rows.filter((r) => r.day === y);
+  }
+
+  if (scope === "week") {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 7);
+    return rows.filter(
+      (r) => new Date(r.created_at) >= cutoff
+    );
+  }
+
+  return rows;
 }
 
 // ------------------------------------------------------------
-// MAIN ASSEMBLER
+// MAIN
 // ------------------------------------------------------------
 export async function assembleContext(
   canonicalUserKey: string,
   workspaceId: string | null,
   userMessage: string
 ): Promise<SolaceContextBundle> {
-  diag("assemble start", {
-    canonicalUserKey,
-    workspaceId,
-    preview: userMessage.slice(0, 80),
-  });
-
-  // ----------------------------------------------------------
-  // COOKIE ACCESS — NEXT 16 REQUIRES AWAIT
-  // ----------------------------------------------------------
   const cookieStore = await cookies();
 
   const supabase = createServerClient(
@@ -133,86 +115,12 @@ export async function assembleContext(
     }
   );
 
-  // ----------------------------------------------------------
-  // AUTH RESOLUTION
-  // ----------------------------------------------------------
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (!user || authError) {
-    diag("context degraded", {
-      reason: "unauthenticated",
-      authError: authError?.message ?? null,
-    });
-
-    return {
-      persona: "Solace",
-      memoryPack: { facts: [], episodic: [], autobiography: [] },
-      workingMemory: { active: false, items: [] },
-      researchContext: [],
-      authorities: [],
-      newsDigest: [],
-      didResearch: false,
-    };
-  }
-
-  const authUserId = user.id;
-  diag("auth identity locked", { authUserId });
-
-  // ----------------------------------------------------------
-  // LOAD MEMORY (READ ONLY)
-  // ----------------------------------------------------------
-  const [facts, episodic, autobiography] = await Promise.all([
-    supabase
-      .schema("memory")
-      .from("memories")
-      .select("id, memory_type, content, created_at")
-      .eq("user_id", authUserId)
-      .eq("memory_type", "fact")
-      .order("created_at", { ascending: false })
-      .limit(FACTS_LIMIT)
-      .then((r) => safeRows(r.data)),
-
-    supabase
-      .schema("memory")
-      .from("memories")
-      .select("id, memory_type, content, created_at")
-      .eq("user_id", authUserId)
-      .eq("memory_type", "episodic")
-      .order("created_at", { ascending: false })
-      .limit(EPISODES_LIMIT)
-      .then((r) => safeRows(r.data)),
-
-    supabase
-      .schema("memory")
-      .from("memories")
-      .select("id, memory_type, content, created_at")
-      .eq("user_id", authUserId)
-      .eq("memory_type", "identity")
-      .order("created_at", { ascending: false })
-      .limit(25)
-      .then((r) => safeRows(r.data)),
-  ]);
-
-  diag("memory counts", {
-    facts: facts.length,
-    episodic: episodic.length,
-    autobiography: autobiography.length,
-  });
-
-  // ----------------------------------------------------------
-  // RESEARCH CONTEXT (HUBBLE)
-  // ----------------------------------------------------------
   const researchContext = await readHubbleResearchContext(10);
   const didResearch = researchContext.length > 0;
-  diag("research context", { count: researchContext.length });
 
-  // ----------------------------------------------------------
-  // NEWS DIGEST (TYPE-SAFE)
-  // ----------------------------------------------------------
-  const { data: rawDigest } = await supabase
+  const scope = inferDayScope(userMessage);
+
+  const { data } = await supabase
     .from("solace_news_digest_view")
     .select(`
       ledger_id,
@@ -226,31 +134,20 @@ export async function assembleContext(
       day
     `)
     .order("created_at", { ascending: false })
-    .limit(20);
+    .limit(50);
 
-  const newsDigest = normalizeNewsDigest(
-    safeRows(rawDigest)
+  const digest = filterByDay(
+    safeRows(data as NewsDigestItem[]),
+    scope
   );
 
-  diag("news digest", { count: newsDigest.length });
-
-  // ----------------------------------------------------------
-  // FINAL CONTEXT BUNDLE
-  // ----------------------------------------------------------
   return {
     persona: "Solace",
-    memoryPack: {
-      facts,
-      episodic,
-      autobiography,
-    },
-    workingMemory: {
-      active: false,
-      items: [],
-    },
+    memoryPack: { facts: [], episodic: [], autobiography: [] },
+    workingMemory: { active: false, items: [] },
     researchContext,
     authorities: [],
-    newsDigest,
+    newsDigest: digest,
     didResearch,
   };
 }
