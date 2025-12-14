@@ -34,42 +34,39 @@ export async function POST(req: Request) {
       workspaceId,
     } = body ?? {};
 
-    // --------------------------------------------------------
-    // Normalize identity (Studio compatibility)
-    // --------------------------------------------------------
     const finalUserKey = canonicalUserKey ?? userKey;
 
     if (!message || !finalUserKey) {
       return NextResponse.json(
-        { error: "Missing message or user identity" },
+        { ok: false, error: "Missing message or user identity" },
         { status: 400 }
       );
     }
 
-    // --------------------------------------------------------
-    // Assemble Solace context (READ-ONLY)
-    // --------------------------------------------------------
+    // Assemble context
     const context = await assembleContext(
       finalUserKey,
       workspaceId ?? null,
       message
     );
 
-    // --------------------------------------------------------
-    // Orchestrate Solace response
-    // --------------------------------------------------------
+    // Orchestrate response
     const responseText = await orchestrateSolaceResponse({
       userMessage: message,
       context,
       workspaceId: workspaceId ?? null,
     });
 
-    // --------------------------------------------------------
-    // Return UI-COMPATIBLE response
-    // --------------------------------------------------------
+    // HARD GUARANTEE STRING
+    const safeResponse =
+      typeof responseText === "string"
+        ? responseText
+        : JSON.stringify(responseText);
+
+    // Return UI-compatible payload
     return NextResponse.json({
-      role: "assistant",
-      content: responseText,
+      ok: true,
+      response: safeResponse,
       diagnostics: {
         factsUsed: Math.min(context.memoryPack.facts.length, FACTS_LIMIT),
         episodicUsed: Math.min(
@@ -83,7 +80,7 @@ export async function POST(req: Request) {
     console.error("[CHAT ROUTE ERROR]", err?.message);
 
     return NextResponse.json(
-      { error: "Internal server error" },
+      { ok: false, error: "Internal server error" },
       { status: 500 }
     );
   }
