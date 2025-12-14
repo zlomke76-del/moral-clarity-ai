@@ -26,10 +26,10 @@ export type WorkingMemoryItem = {
 };
 
 export type AuthorityContext = {
-  source: string;                 // e.g. "USPTO", "FDA"
+  source: string;
   queried: boolean;
   retrievedAt?: string;
-  payload?: any;                  // raw authority payload
+  payload?: any;
   negativeSpace?: {
     asserted: boolean;
     confidence: "low" | "medium" | "high";
@@ -68,11 +68,22 @@ function safeRows<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
 }
 
+function isNewsQuery(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes("news") ||
+    m.includes("headlines") ||
+    m.includes("today") ||
+    m.includes("current events") ||
+    m.includes("what's happening")
+  );
+}
+
 // ------------------------------------------------------------
 // MAIN ASSEMBLER
 // ------------------------------------------------------------
 export async function assembleContext(
-  canonicalUserKey: string, // retained for logging only
+  canonicalUserKey: string,
   workspaceId: string | null,
   userMessage: string
 ): Promise<SolaceContextBundle> {
@@ -134,7 +145,6 @@ export async function assembleContext(
   }
 
   const authUserId = user.id;
-
   diag("auth identity locked", { authUserId });
 
   // ----------------------------------------------------------
@@ -179,7 +189,7 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // RESEARCH CONTEXT (EXPLORATORY — NON-BINDING)
+  // RESEARCH CONTEXT (HUBBLE — NON-BINDING)
   // ----------------------------------------------------------
   const researchContext = await readHubbleResearchContext(10);
   const didResearch = researchContext.length > 0;
@@ -187,16 +197,37 @@ export async function assembleContext(
   diag("research context", { count: researchContext.length });
 
   // ----------------------------------------------------------
-  // AUTHORITY CONTEXT
+  // NEWS DIGEST CONTEXT (SANITIZED — TIME-BOUND)
   // ----------------------------------------------------------
-  // IMPORTANT:
-  // - Assembler does NOT decide when authority is required
-  // - Assembler does NOT interpret negative space
-  // - Authority routes populate this independently
-  //
-  // Default: empty
-  // ----------------------------------------------------------
-  const authorities: AuthorityContext[] = [];
+  let newsDigest: any[] = [];
+
+  if (isNewsQuery(userMessage)) {
+    const todayISO = new Date().toISOString().slice(0, 10);
+
+    const { data } = await supabase
+      .schema("public")
+      .from("solace_news_digest_view")
+      .select(
+        `
+        story_title,
+        story_url,
+        outlet,
+        neutral_summary,
+        key_facts,
+        bias_language_score,
+        bias_source_score,
+        bias_framing_score,
+        bias_context_score,
+        bias_intent_score,
+        pi_score
+        `
+      )
+      .eq("day_iso", todayISO)
+      .order("pi_score", { ascending: false })
+      .limit(8);
+
+    newsDigest = safeRows(data);
+  }
 
   // ----------------------------------------------------------
   // FINAL CONTEXT BUNDLE
@@ -213,8 +244,8 @@ export async function assembleContext(
       items: [],
     },
     researchContext,
-    authorities,
-    newsDigest: [],
+    authorities: [],
+    newsDigest,
     didResearch,
   };
 }
