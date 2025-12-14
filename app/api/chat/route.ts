@@ -1,6 +1,7 @@
 // ------------------------------------------------------------
 // Solace Chat API Route
 // NEXT 16 SAFE — NO ASYNC COOKIES
+// CONTRACT-STABLE FOR SOLACE UI
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -36,11 +37,14 @@ export async function POST(req: Request) {
 
     const finalUserKey = canonicalUserKey ?? userKey;
 
+    // --------------------------------------------------------
+    // Validate minimal inputs
+    // --------------------------------------------------------
     if (!message || !finalUserKey) {
-      return NextResponse.json(
-        { ok: false, error: "Missing message or user identity" },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        role: "assistant",
+        content: "I’m here, but I didn’t receive a valid message or user identity. Please try again.",
+      });
     }
 
     // --------------------------------------------------------
@@ -62,9 +66,9 @@ export async function POST(req: Request) {
     });
 
     // --------------------------------------------------------
-    // Normalize TRIAD output → user-facing answer
+    // Normalize TRIAD output → plain text
     // --------------------------------------------------------
-    let safeResponse: string;
+    let safeResponse = "";
 
     if (typeof rawResponse === "string") {
       safeResponse = rawResponse;
@@ -73,20 +77,22 @@ export async function POST(req: Request) {
         (rawResponse as any).finalAnswer ??
         (rawResponse as any).arbiter ??
         "";
-    } else {
-      safeResponse = "";
-    }
-
-    if (!safeResponse) {
-      throw new Error("Normalized response is empty");
     }
 
     // --------------------------------------------------------
-    // Return UI-compatible payload
+    // Final safety fallback (NEVER throw)
+    // --------------------------------------------------------
+    if (!safeResponse || typeof safeResponse !== "string") {
+      safeResponse =
+        "I’m here and ready. The response pipeline completed, but there was nothing to report yet.";
+    }
+
+    // --------------------------------------------------------
+    // Return UI-compatible assistant message
     // --------------------------------------------------------
     return NextResponse.json({
-      ok: true,
-      response: safeResponse,
+      role: "assistant",
+      content: safeResponse,
       diagnostics: {
         factsUsed: Math.min(context.memoryPack.facts.length, FACTS_LIMIT),
         episodicUsed: Math.min(
@@ -99,9 +105,13 @@ export async function POST(req: Request) {
   } catch (err: any) {
     console.error("[CHAT ROUTE ERROR]", err?.message);
 
-    return NextResponse.json(
-      { ok: false, error: "Internal server error" },
-      { status: 500 }
-    );
+    // --------------------------------------------------------
+    // Even on hard failure, return a valid assistant message
+    // --------------------------------------------------------
+    return NextResponse.json({
+      role: "assistant",
+      content:
+        "I ran into an internal issue while responding, but I’m still here and ready to continue.",
+    });
   }
 }
