@@ -36,6 +36,14 @@ type Message = {
   imageUrl?: string | null;
 };
 
+// Optional evidence block (USPTO / prior art / citations)
+type EvidenceBlock = {
+  id?: string;
+  source?: string;
+  summary?: string;
+  text?: string;
+};
+
 // --------------------------------------------------------------------------------------
 // Constants
 // --------------------------------------------------------------------------------------
@@ -73,7 +81,7 @@ export default function SolaceDock() {
   const modeHint = "Neutral" as const;
 
   // --------------------------------------------------------------------
-  // Viewport (NO window usage during render)
+  // Viewport
   // --------------------------------------------------------------------
   const [viewport, setViewport] = useState({ w: 0, h: 0 });
   useEffect(() => {
@@ -155,7 +163,6 @@ export default function SolaceDock() {
         setFilters(next);
       }
     } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // --------------------------------------------------------------------
@@ -229,7 +236,7 @@ export default function SolaceDock() {
   }, [canRender, visible, viewport.w, viewport.h, setPos]);
 
   // --------------------------------------------------------------------
-  // Persist position on mouse-up (ONLY when dragging ends)
+  // Persist position
   // --------------------------------------------------------------------
   useEffect(() => {
     if (dragging) return;
@@ -326,7 +333,7 @@ export default function SolaceDock() {
   }
 
   // --------------------------------------------------------------------
-  // SEND
+  // SEND (FIXED, SAFE, EXTENDED)
   // --------------------------------------------------------------------
   async function send() {
     if (!input.trim() && pendingFiles.length === 0) return;
@@ -343,8 +350,6 @@ export default function SolaceDock() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: userMsg,
-          // NOTE: do NOT hardcode any name here. If userKey is not ready,
-          // omit canonicalUserKey entirely so server can use auth identity.
           canonicalUserKey: userKey || undefined,
           workspaceId: MCA_WORKSPACE_ID,
           ministryMode: ministryOn,
@@ -352,19 +357,8 @@ export default function SolaceDock() {
         }),
       });
 
-      let data: any = null;
-      try {
-        data = await res.json();
-      } catch {
-        throw new Error("Invalid response payload");
-      }
-
-      // Strict contract: { ok: true, response: string }
-      if (!data || data.ok !== true || typeof data.response !== "string") {
-        throw new Error("Invalid response payload");
-      }
-
-      setMessages((m) => [...m, { role: "assistant", content: data.response }]);
+      const data = await res.json();
+      ingestPayload(data);
     } catch (e: any) {
       setMessages((m) => [
         ...m,
@@ -374,6 +368,51 @@ export default function SolaceDock() {
       setStreaming(false);
       clearPending();
     }
+  }
+
+  // --------------------------------------------------------------------
+  // Payload ingestion (multi-message + evidence safe)
+  // --------------------------------------------------------------------
+  function ingestPayload(data: any) {
+    if (!data) {
+      throw new Error("Empty response payload");
+    }
+
+    // Legacy contract
+    if (data.ok === true && typeof data.response === "string") {
+      setMessages((m) => [...m, { role: "assistant", content: data.response }]);
+      return;
+    }
+
+    // Multi-message
+    if (Array.isArray(data.messages)) {
+      setMessages((m) => [...m, ...data.messages]);
+      return;
+    }
+
+    // Single message object
+    if (data.message?.content) {
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: data.message.content },
+      ]);
+      return;
+    }
+
+    // Evidence blocks (USPTO / prior art)
+    if (Array.isArray(data.evidence)) {
+      const evMsgs: Message[] = data.evidence.map((e: EvidenceBlock) => ({
+        role: "assistant",
+        content:
+          `📄 Evidence` +
+          (e.source ? ` (${e.source})` : "") +
+          `\n\n${e.summary || e.text || "[no content]"}`,
+      }));
+      setMessages((m) => [...m, ...evMsgs]);
+      return;
+    }
+
+    throw new Error("Unrecognized response payload");
   }
 
   function onEnterSend(e: React.KeyboardEvent) {
@@ -393,30 +432,30 @@ export default function SolaceDock() {
         memReady={memReady}
         onToggleMinistry={() => {}}
         onMinimize={() => setMinimized(true)}
-        onDragStart={onHeaderMouseDown} // ✅ RESTORED DRAG WIRING
+        onDragStart={onHeaderMouseDown}
       />
 
       <div ref={transcriptRef} style={transcriptStyle}>
         {messages.map((m, i) => (
-  <div
-    key={i}
-    style={{
-      margin: "6px 0",
-      padding: "10px 12px",
-      borderRadius: UI.radiusLg,
-      background:
-        m.role === "user"
-          ? "rgba(39,52,74,.6)"
-          : "rgba(28,38,54,.6)",
-      whiteSpace: "pre-wrap",
-      overflowWrap: "anywhere",
-      wordBreak: "break-word",
-      lineHeight: 1.35,
-    }}
-  >
-    <MessageRenderer content={m.content} />
-  </div>
-))}
+          <div
+            key={i}
+            style={{
+              margin: "6px 0",
+              padding: "10px 12px",
+              borderRadius: UI.radiusLg,
+              background:
+                m.role === "user"
+                  ? "rgba(39,52,74,.6)"
+                  : "rgba(28,38,54,.6)",
+              whiteSpace: "pre-wrap",
+              overflowWrap: "anywhere",
+              wordBreak: "break-word",
+              lineHeight: 1.35,
+            }}
+          >
+            <MessageRenderer content={m.content} />
+          </div>
+        ))}
       </div>
 
       <div
@@ -424,7 +463,6 @@ export default function SolaceDock() {
         onPaste={(e) => handlePaste(e, { prefix: "solace" })}
       >
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {/* PAPERCLIP (PRESENT) */}
           <label
             style={{
               width: 38,
@@ -445,11 +483,12 @@ export default function SolaceDock() {
               type="file"
               multiple
               hidden
-              onChange={(e) => handleFiles(e.target.files, { prefix: "solace" })}
+              onChange={(e) =>
+                handleFiles(e.target.files, { prefix: "solace" })
+              }
             />
           </label>
 
-          {/* MIC (PRESENT) */}
           <button
             onClick={toggleMic}
             title="Voice input"
