@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Solace Context Assembler
 // Phase B + Phase 5 (WM-READ-ONLY)
-// NEXT 16 SAFE — ASYNC COOKIES REQUIRED
+// NEXT 16 SAFE — NO ASYNC COOKIES
 // ------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
@@ -10,8 +10,6 @@ import { cookies } from "next/headers";
 import {
   FACTS_LIMIT,
   EPISODES_LIMIT,
-  AUTOBIOGRAPHY_LIMIT,
-  RESEARCH_CONTEXT_LIMIT,
 } from "./context.constants";
 
 import { getSolaceFeatureFlags } from "@/lib/solace/settings";
@@ -65,9 +63,9 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // COOKIE ACCESS — NEXT 16 REQUIRES AWAIT
+  // COOKIE ACCESS — NEXT 16 SAFE (SYNC)
   // ----------------------------------------------------------
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -84,7 +82,7 @@ export async function assembleContext(
   );
 
   // ----------------------------------------------------------
-  // LOAD MEMORY (READ ONLY)
+  // LOAD LONG-TERM MEMORY (READ ONLY)
   // ----------------------------------------------------------
   const [facts, episodic, autobiography] = await Promise.all([
     supabase
@@ -114,7 +112,7 @@ export async function assembleContext(
       .eq("user_id", canonicalUserKey)
       .eq("memory_type", "identity")
       .order("created_at", { ascending: false })
-      .limit(AUTOBIOGRAPHY_LIMIT)
+      .limit(25)
       .then((r) => safeRows(r.data)),
   ]);
 
@@ -125,20 +123,18 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // FEATURE FLAGS
+  // FEATURE FLAGS (GLOBAL / ENV-BASED)
   // ----------------------------------------------------------
-  const flags = await getSolaceFeatureFlags(workspaceId);
+  const flags = await getSolaceFeatureFlags();
 
   // ----------------------------------------------------------
-  // RESEARCH CONTEXT (HUBBLE)
+  // RESEARCH CONTEXT (HUBBLE — READ ONLY)
   // ----------------------------------------------------------
   let researchContext: any[] = [];
   let didResearch = false;
 
   if (flags?.enableResearchContext) {
-    researchContext = await readHubbleResearchContext(
-      RESEARCH_CONTEXT_LIMIT
-    );
+    researchContext = await readHubbleResearchContext(10);
     didResearch = researchContext.length > 0;
   }
 
