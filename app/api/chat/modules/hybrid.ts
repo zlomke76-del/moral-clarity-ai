@@ -108,18 +108,44 @@ export async function runHybridPipeline(args: {
   // ============================================================
   // OPTIMIST
   // ============================================================
+  const optimistStarted = Date.now();
+
   const optimist = await callModel(
     "gpt-4.1-mini",
     buildPrompt(OPTIMIST_SYSTEM, userMessage)
   );
 
+  const optimistFinished = Date.now();
+
+  logTriadDiagnostics({
+    stage: "optimist",
+    model: "gpt-4.1-mini",
+    prompt: userMessage.slice(0, 2000),
+    output: optimist,
+    started: optimistStarted,
+    finished: optimistFinished,
+  });
+
   // ============================================================
   // SKEPTIC
   // ============================================================
+  const skepticStarted = Date.now();
+
   const skeptic = await callModel(
     "gpt-4.1-mini",
     buildPrompt(SKEPTIC_SYSTEM, userMessage)
   );
+
+  const skepticFinished = Date.now();
+
+  logTriadDiagnostics({
+    stage: "skeptic",
+    model: "gpt-4.1-mini",
+    prompt: userMessage.slice(0, 2000),
+    output: skeptic,
+    started: skepticStarted,
+    finished: skepticFinished,
+  });
 
   // ============================================================
   // ARBITER — STRICT RESEARCH BINDING
@@ -172,13 +198,19 @@ USER MESSAGE
 ${userMessage}
 `);
 
+  const arbiterStarted = Date.now();
+
   const arbiter = await callModel("gpt-4.1", arbPrompt);
+
+  const arbiterFinished = Date.now();
 
   logTriadDiagnostics({
     stage: "arbiter",
     model: "gpt-4.1",
     prompt: arbPrompt.slice(0, 5000),
     output: arbiter,
+    started: arbiterStarted,
+    finished: arbiterFinished,
   });
 
   return {
