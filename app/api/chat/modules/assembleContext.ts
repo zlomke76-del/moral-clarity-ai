@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Solace Context Assembler
 // Phase B + Phase 5 (WM-READ-ONLY)
-// NEXT 16 SAFE — NO ASYNC COOKIES
+// NEXT 16 SAFE — ASYNC COOKIES (TYPE-CORRECT)
 // ------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
@@ -63,16 +63,16 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // COOKIE ACCESS — NEXT 16 SAFE (SYNC)
+  // COOKIE ACCESS — NEXT 16 TYPE-CORRECT
   // ----------------------------------------------------------
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name) {
+        get(name: string) {
           return cookieStore.get(name)?.value;
         },
         set() {},
@@ -123,12 +123,12 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // FEATURE FLAGS (GLOBAL / ENV-BASED)
+  // FEATURE FLAGS
   // ----------------------------------------------------------
   const flags = await getSolaceFeatureFlags();
 
   // ----------------------------------------------------------
-  // RESEARCH CONTEXT (HUBBLE — READ ONLY)
+  // RESEARCH CONTEXT (HUBBLE)
   // ----------------------------------------------------------
   let researchContext: any[] = [];
   let didResearch = false;
