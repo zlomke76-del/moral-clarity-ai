@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Solace Context Assembler
 // Phase B + Phase 5 (WM-READ-ONLY)
-// AUTHORITY-AGNOSTIC — NEGATIVE SPACE PRESERVED
+// AUTHORITY-AWARE — NEWS DIGEST ELEVATED
 // NEXT 16 SAFE — FLAG-CORRECT
 // ------------------------------------------------------------
 
@@ -37,6 +37,16 @@ export type AuthorityContext = {
   };
 };
 
+export type NewsDigestItem = {
+  story_title: string;
+  story_url: string;
+  outlet: string;
+  neutral_summary: string;
+  key_facts: string[];
+  pi_score: number;
+  day: string;
+};
+
 export type SolaceContextBundle = {
   persona: string;
   memoryPack: {
@@ -50,7 +60,7 @@ export type SolaceContextBundle = {
   };
   researchContext: any[];
   authorities: AuthorityContext[];
-  newsDigest: any[];
+  newsDigest: NewsDigestItem[];
   didResearch: boolean;
 };
 
@@ -66,17 +76,6 @@ function diag(label: string, payload: any) {
 // ------------------------------------------------------------
 function safeRows<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
-}
-
-function isNewsQuery(message: string): boolean {
-  const m = message.toLowerCase();
-  return (
-    m.includes("news") ||
-    m.includes("headlines") ||
-    m.includes("today") ||
-    m.includes("current events") ||
-    m.includes("what's happening")
-  );
 }
 
 // ------------------------------------------------------------
@@ -128,15 +127,8 @@ export async function assembleContext(
 
     return {
       persona: "Solace",
-      memoryPack: {
-        facts: [],
-        episodic: [],
-        autobiography: [],
-      },
-      workingMemory: {
-        active: false,
-        items: [],
-      },
+      memoryPack: { facts: [], episodic: [], autobiography: [] },
+      workingMemory: { active: false, items: [] },
       researchContext: [],
       authorities: [],
       newsDigest: [],
@@ -189,7 +181,7 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // RESEARCH CONTEXT (HUBBLE — NON-BINDING)
+  // RESEARCH CONTEXT (HUBBLE)
   // ----------------------------------------------------------
   const researchContext = await readHubbleResearchContext(10);
   const didResearch = researchContext.length > 0;
@@ -197,37 +189,19 @@ export async function assembleContext(
   diag("research context", { count: researchContext.length });
 
   // ----------------------------------------------------------
-  // NEWS DIGEST CONTEXT (SANITIZED — TIME-BOUND)
+  // NEWS DIGEST (FIRST-CLASS EPISTEMIC SOURCE)
   // ----------------------------------------------------------
-  let newsDigest: any[] = [];
+  const { data: newsRows } = await supabase
+    .from("solace_news_digest_view")
+    .select(
+      "story_title, story_url, outlet, neutral_summary, key_facts, pi_score, day"
+    )
+    .order("created_at", { ascending: false })
+    .limit(20);
 
-  if (isNewsQuery(userMessage)) {
-    const todayISO = new Date().toISOString().slice(0, 10);
+  const newsDigest = safeRows(newsRows);
 
-    const { data } = await supabase
-      .schema("public")
-      .from("solace_news_digest_view")
-      .select(
-        `
-        story_title,
-        story_url,
-        outlet,
-        neutral_summary,
-        key_facts,
-        bias_language_score,
-        bias_source_score,
-        bias_framing_score,
-        bias_context_score,
-        bias_intent_score,
-        pi_score
-        `
-      )
-      .eq("day_iso", todayISO)
-      .order("pi_score", { ascending: false })
-      .limit(8);
-
-    newsDigest = safeRows(data);
-  }
+  diag("news digest", { count: newsDigest.length });
 
   // ----------------------------------------------------------
   // FINAL CONTEXT BUNDLE
@@ -246,6 +220,6 @@ export async function assembleContext(
     researchContext,
     authorities: [],
     newsDigest,
-    didResearch,
+    didResearch: didResearch || newsDigest.length > 0,
   };
 }
