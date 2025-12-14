@@ -1,6 +1,6 @@
 // ------------------------------------------------------------
 // Solace Chat API Route
-// Authority-aware, Dual-contract stable
+// Authority-aware (USPTO + FDA), Dual-contract stable
 // NEXT 16 SAFE — NODE RUNTIME
 // ------------------------------------------------------------
 
@@ -22,7 +22,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 // ------------------------------------------------------------
-// Helpers
+// Authority heuristics (NON-BINDING HINTS ONLY)
 // ------------------------------------------------------------
 function requiresUSPTO(message: string): boolean {
   const m = message.toLowerCase();
@@ -31,10 +31,20 @@ function requiresUSPTO(message: string): boolean {
     m.includes("novel") ||
     m.includes("commercialize") ||
     m.includes("commercialise") ||
-    m.includes("medical") ||
-    m.includes("device") ||
     m.includes("filtration") ||
     m.includes("material")
+  );
+}
+
+function requiresFDA(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes("medical") ||
+    m.includes("device") ||
+    m.includes("clinical") ||
+    m.includes("hospital") ||
+    m.includes("ventilator") ||
+    m.includes("patient")
   );
 }
 
@@ -83,10 +93,11 @@ export async function POST(req: Request) {
     );
 
     // --------------------------------------------------------
-    // Authority injection (USPTO)
+    // Authority injection (RAW, NO INTERPRETATION)
     // --------------------------------------------------------
-    const authorities = [];
+    const authorities: any[] = [];
 
+    // USPTO
     if (requiresUSPTO(message)) {
       try {
         const res = await fetch(
@@ -108,8 +119,30 @@ export async function POST(req: Request) {
           }
         }
       } catch (err) {
-        // Silent by design — Arbiter handles absence
         console.error("[USPTO AUTHORITY FETCH ERROR]", err);
+      }
+    }
+
+    // FDA
+    if (requiresFDA(message)) {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL}/api/authority/fda`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: message }),
+          }
+        );
+
+        if (res.ok) {
+          const json = await res.json();
+          if (json?.authority) {
+            authorities.push(json.authority);
+          }
+        }
+      } catch (err) {
+        console.error("[FDA AUTHORITY FETCH ERROR]", err);
       }
     }
 
@@ -117,7 +150,7 @@ export async function POST(req: Request) {
     context.authorities = authorities;
 
     // --------------------------------------------------------
-    // Run hybrid pipeline (Arbiter decides)
+    // Run hybrid pipeline (ARBITER decides)
     // --------------------------------------------------------
     const result = await runHybridPipeline({
       userMessage: message,
