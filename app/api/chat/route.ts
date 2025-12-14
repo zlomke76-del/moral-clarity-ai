@@ -12,7 +12,6 @@ import {
 
 import { assembleContext } from "./modules/assembleContext";
 import { orchestrateSolaceResponse } from "./modules/orchestrator";
-import { writeMemory } from "./modules/memory-writer";
 
 // ------------------------------------------------------------
 // Runtime configuration
@@ -42,7 +41,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // Assemble Solace context (read-only)
+    // Assemble Solace context (READ-ONLY)
     // --------------------------------------------------------
     const context = await assembleContext(
       canonicalUserKey,
@@ -60,22 +59,11 @@ export async function POST(req: Request) {
     });
 
     // --------------------------------------------------------
-    // Persist memory (best-effort, non-blocking)
+    // IMPORTANT:
+    // Durable memory (fact / identity) is NOT written here.
+    // Conversation data must never pollute long-term memory.
+    // Memory ingestion occurs only via explicit pipelines.
     // --------------------------------------------------------
-    writeMemory(
-      {
-        userId: canonicalUserKey,
-        workspaceId: workspaceId ?? null,
-        memoryType: "conversation",
-        content: {
-          userMessage: message,
-          assistantMessage: responseText,
-        },
-      },
-      context
-    ).catch(() => {
-      // memory must never block response
-    });
 
     // --------------------------------------------------------
     // Return response
