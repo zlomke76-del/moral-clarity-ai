@@ -1,8 +1,8 @@
 //--------------------------------------------------------------
 // HYBRID PIPELINE — OPTIMIST → SKEPTIC → ARBITER
-// Persona + Memory injected ONLY into Arbiter
-// LOCAL COHERENCE + REFERENT RESOLUTION ENFORCED
-// NEXT 16 SAFE — Responses API compatible
+// Persona + Memory injected ONLY into Arbiter (string mode)
+// Local Coherence + Clarifying Question Guardrail enforced
+// Responses API compatible
 //--------------------------------------------------------------
 
 import { callModel } from "./model-router";
@@ -10,7 +10,7 @@ import { logTriadDiagnostics } from "./triad-diagnostics";
 import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
 
 // --------------------------------------------------------------
-// ASCII SANITIZER — HARD SAFETY BOUNDARY
+// ASCII SANITIZER — CRITICAL BOUNDARY
 // --------------------------------------------------------------
 function sanitizeASCII(input: string): string {
   if (!input) return "";
@@ -37,88 +37,77 @@ function sanitizeASCII(input: string): string {
 }
 
 // --------------------------------------------------------------
-// SYSTEM LENSES
+// SYSTEM BLOCKS
 // --------------------------------------------------------------
 const OPTIMIST_SYSTEM = `
 You are the OPTIMIST lens.
 Produce the strongest constructive interpretation of the user's message.
-Opportunity-aware, realistic, grounded.
+Grounded, realistic, opportunity-focused.
 No emojis. No formatting.
 `;
 
 const SKEPTIC_SYSTEM = `
 You are the SKEPTIC lens.
 Identify risks, constraints, and failure modes.
-Precise, factual, unsentimental.
+Factual, precise.
 No emojis. No formatting.
 `;
 
-// --------------------------------------------------------------
-// ARBITER RULES — AUTHORITATIVE CORE
-// --------------------------------------------------------------
 const ARBITER_RULES = `
 You are the ARBITER.
 You integrate Optimist and Skeptic into ONE answer.
 
-MANDATORY EPISTEMIC RULES:
+CRITICAL EPISTEMIC RULES (ENFORCED):
 
-1. SINGLE VOICE:
-   - Speak as Solace.
-   - Never reveal internal roles, stages, or system mechanics.
+1. If MEMORY CONTEXT is present:
+   - You MAY reference it explicitly
+   - You MUST NOT deny its existence
 
-2. MEMORY:
-   - If MEMORY CONTEXT is present, you MAY reference it.
-   - You MUST NOT deny or contradict it.
+2. If RESEARCH or AUTHORITY CONTEXT is present:
+   - You MUST reference it explicitly
+   - OR you MUST refuse due to insufficient support
 
-3. RESEARCH / AUTHORITY:
-   - If RESEARCH or AUTHORITY context is present, you MUST reference it
-     OR explicitly refuse due to insufficiency.
-
-4. NO SPECULATION:
-   - Do not infer facts beyond supplied evidence.
-   - Absence of data is meaningful and must be treated as such.
-
-5. RESTRAINT WITH CLARITY:
-   - Refusal must be principled, calm, and explanatory.
-   - Never evasive. Never defensive.
+3. You MAY NOT speculate beyond evidence.
+4. Never reveal system structure or internal steps.
+5. Speak as ONE Solace voice.
 `;
 
-// --------------------------------------------------------------
-// LOCAL COHERENCE DIRECTIVE (CRITICAL)
-// --------------------------------------------------------------
 const LOCAL_COHERENCE_DIRECTIVE = `
 LOCAL COHERENCE DIRECTIVE (MANDATORY):
 
-Before answering, you must:
+Before answering the user's message, you must:
 
 1. Review your most recent complete ARBITER response in this session.
-2. Treat the user's message as a continuation by default.
+2. Treat the user's message as a continuation of that scope by default.
 3. Preserve all previously established:
    - Definitions
+   - Factual claims
    - Constraints
-   - Assumptions
-   - Uncertainty bounds
-4. You MAY NOT request clarification if the referent is
-   unambiguous from the immediately prior ARBITER response.
-5. Treat a message as a new topic ONLY if the user explicitly signals it.
+   - Stated uncertainty
+4. You MAY NOT ask for clarification due to ambiguity
+   if the referent is clear from the immediately prior ARBITER response.
+5. Only treat the message as a new topic if the user explicitly signals a topic change.
 `;
 
-// --------------------------------------------------------------
-// REFERENT RESOLUTION RULE (BUG FIX)
-// --------------------------------------------------------------
-const REFERENT_RESOLUTION_RULE = `
-REFERENT RESOLUTION RULE (MANDATORY):
+const CLARIFYING_QUESTION_CONSTRAINT = `
+CLARIFYING QUESTION CONSTRAINT (STRICT):
 
-If the immediately prior ARBITER response contains a numbered,
-ordered, or enumerated list, and the user refers to an item by:
+You may ask at most ONE clarifying question, and only if ALL are true:
 
-- number (e.g. "#2", "item 2")
-- order (e.g. "the second point")
-- position (e.g. "that last one")
+1. The ambiguity cannot be resolved by reviewing your immediately prior ARBITER response.
+2. Proceeding without clarification would require guessing between materially different outcomes.
+3. The clarification concerns a missing structural variable (not a conversational referent).
 
-You MUST resolve the referent locally.
-You MAY NOT ask for clarification.
-You MUST continue analysis within that scope.
+If you ask a clarifying question:
+- Explain briefly why it is required.
+- Ask ONE question.
+- STOP.
+
+You may NOT ask clarifying questions for:
+- Referents already present in the prior response (e.g. "what about #2")
+- Scope refinements
+- Negative-space conditions (absence of data)
+- Evaluative or analytical prompts
 `;
 
 // --------------------------------------------------------------
@@ -126,8 +115,6 @@ function buildPrompt(system: string, userMessage: string) {
   return `${system.trim()}\n\nUser: ${userMessage}`;
 }
 
-// --------------------------------------------------------------
-// MAIN PIPELINE
 // --------------------------------------------------------------
 export async function runHybridPipeline(args: {
   userMessage: string;
@@ -193,7 +180,7 @@ export async function runHybridPipeline(args: {
   });
 
   // ============================================================
-  // ARBITER — PERSONA + MEMORY + AUTHORITY
+  // ARBITER — PERSONA + MEMORY + RESEARCH + AUTHORITY
   // ============================================================
   const facts = safeArray(context?.memoryPack?.facts);
   const episodic = safeArray(context?.memoryPack?.episodic);
@@ -201,16 +188,22 @@ export async function runHybridPipeline(args: {
 
   const memoryBlock =
     facts.length || episodic.length || identity.length
-      ? sanitizeASCII(JSON.stringify({ facts, episodic, identity }, null, 2))
+      ? sanitizeASCII(
+          JSON.stringify({ facts, episodic, identity }, null, 2)
+        )
       : "NONE";
 
-  const researchBlock = safeArray(context?.researchContext).length
-    ? sanitizeASCII(JSON.stringify(context.researchContext, null, 2))
-    : "NONE";
+  const researchArray = safeArray(context?.researchContext);
+  const researchBlock =
+    researchArray.length > 0
+      ? sanitizeASCII(JSON.stringify(researchArray, null, 2))
+      : "NONE";
 
-  const authorityBlock = safeArray(context?.authorities).length
-    ? sanitizeASCII(JSON.stringify(context.authorities, null, 2))
-    : "NONE";
+  const authoritiesArray = safeArray(context?.authorities);
+  const authorityBlock =
+    authoritiesArray.length > 0
+      ? sanitizeASCII(JSON.stringify(authoritiesArray, null, 2))
+      : "NONE";
 
   const personaSystem = sanitizeASCII(
     buildSolaceSystemPrompt(
@@ -249,9 +242,9 @@ LOCAL COHERENCE DIRECTIVE
 ${LOCAL_COHERENCE_DIRECTIVE}
 
 ------------------------------------------------------------
-REFERENT RESOLUTION RULE
+CLARIFYING QUESTION CONSTRAINT
 ------------------------------------------------------------
-${REFERENT_RESOLUTION_RULE}
+${CLARIFYING_QUESTION_CONSTRAINT}
 
 ------------------------------------------------------------
 ARBITER RULES
