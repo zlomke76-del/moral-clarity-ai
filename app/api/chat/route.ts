@@ -65,18 +65,11 @@ export async function POST(req: Request) {
     });
 
     // --------------------------------------------------------
-    // IMPORTANT:
-    // Durable memory (fact / identity) is NOT written here.
-    // Conversation data must never pollute long-term memory.
-    // Memory ingestion occurs only via explicit pipelines.
-    // --------------------------------------------------------
-
-    // --------------------------------------------------------
-    // Return response
+    // Return UI-COMPATIBLE response
     // --------------------------------------------------------
     return NextResponse.json({
-      ok: true,
-      response: responseText,
+      role: "assistant",
+      content: responseText,
       diagnostics: {
         factsUsed: Math.min(context.memoryPack.facts.length, FACTS_LIMIT),
         episodicUsed: Math.min(
