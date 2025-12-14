@@ -58,7 +58,7 @@ function safeRows<T>(rows: T[] | null): T[] {
 // MAIN ASSEMBLER
 // ------------------------------------------------------------
 export async function assembleContext(
-  canonicalUserKey: string,
+  canonicalUserKey: string, // retained for logging only
   workspaceId: string | null,
   userMessage: string
 ): Promise<SolaceContextBundle> {
@@ -88,14 +88,51 @@ export async function assembleContext(
   );
 
   // ----------------------------------------------------------
-  // LOAD MEMORY (READ ONLY)
+  // AUTH RESOLUTION — CANONICAL FOR MEMORY
+  // ----------------------------------------------------------
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (!user || authError) {
+    diag("memory skipped", {
+      reason: "no authenticated user",
+      authError: authError?.message ?? null,
+    });
+
+    return {
+      persona: "Solace",
+      memoryPack: {
+        facts: [],
+        episodic: [],
+        autobiography: [],
+      },
+      workingMemory: {
+        active: false,
+        items: [],
+      },
+      newsDigest: [],
+      researchContext: [],
+      didResearch: false,
+    };
+  }
+
+  const authUserId = user.id;
+
+  diag("auth identity locked", {
+    authUserId,
+  });
+
+  // ----------------------------------------------------------
+  // LOAD MEMORY (READ ONLY — UUID KEYED)
   // ----------------------------------------------------------
   const [facts, episodic, autobiography] = await Promise.all([
     supabase
       .schema("memory")
       .from("memories")
       .select("id, memory_type, content, created_at")
-      .eq("user_id", canonicalUserKey)
+      .eq("user_id", authUserId)
       .eq("memory_type", "fact")
       .order("created_at", { ascending: false })
       .limit(FACTS_LIMIT)
@@ -105,7 +142,7 @@ export async function assembleContext(
       .schema("memory")
       .from("memories")
       .select("id, memory_type, content, created_at")
-      .eq("user_id", canonicalUserKey)
+      .eq("user_id", authUserId)
       .eq("memory_type", "episodic")
       .order("created_at", { ascending: false })
       .limit(EPISODES_LIMIT)
@@ -115,7 +152,7 @@ export async function assembleContext(
       .schema("memory")
       .from("memories")
       .select("id, memory_type, content, created_at")
-      .eq("user_id", canonicalUserKey)
+      .eq("user_id", authUserId)
       .eq("memory_type", "identity")
       .order("created_at", { ascending: false })
       .limit(25)
