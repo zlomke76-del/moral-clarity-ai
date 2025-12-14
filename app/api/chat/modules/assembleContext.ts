@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Solace Context Assembler
 // Phase B + Phase 5 (WM-READ-ONLY)
-// NEXT 16 SAFE — NO ASYNC COOKIES
+// NEXT 16 SAFE — ASYNC COOKIES REQUIRED
 // ------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
@@ -65,9 +65,9 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // COOKIE ACCESS (SYNC — NEXT 16 SAFE)
+  // COOKIE ACCESS — NEXT 16 REQUIRES AWAIT
   // ----------------------------------------------------------
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
