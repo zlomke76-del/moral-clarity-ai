@@ -12,7 +12,6 @@ import {
   EPISODES_LIMIT,
 } from "./context.constants";
 
-import { getSolaceFeatureFlags } from "@/lib/solace/settings";
 import { readHubbleResearchContext } from "@/lib/research/hubble-reader";
 
 // ------------------------------------------------------------
@@ -123,23 +122,19 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // FEATURE FLAGS
-  // ----------------------------------------------------------
-  const flags = await getSolaceFeatureFlags();
-
-  // ----------------------------------------------------------
-  // RESEARCH CONTEXT (HUBBLE)
+  // RESEARCH CONTEXT (HUBBLE — READ ONLY, BOUNDED)
   // ----------------------------------------------------------
   let researchContext: any[] = [];
   let didResearch = false;
 
-  if (flags?.enableResearchContext) {
+  try {
     researchContext = await readHubbleResearchContext(10);
     didResearch = researchContext.length > 0;
+  } catch (err) {
+    console.warn("[DIAG-CTX] research skipped", err);
   }
 
   diag("research context", {
-    enabled: flags?.enableResearchContext,
     count: researchContext.length,
   });
 
