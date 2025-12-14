@@ -10,7 +10,9 @@ import { cookies } from "next/headers";
 import {
   FACTS_LIMIT,
   EPISODES_LIMIT,
-} from "./modules/context.constants";
+  AUTOBIOGRAPHY_LIMIT,
+  RESEARCH_CONTEXT_LIMIT,
+} from "./context.constants";
 
 import { getSolaceFeatureFlags } from "@/lib/solace/settings";
 import { readHubbleResearchContext } from "@/lib/research/hubble-reader";
@@ -63,7 +65,7 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // CORRECT COOKIE ACCESS (NO AWAIT)
+  // COOKIE ACCESS (SYNC — NEXT 16 SAFE)
   // ----------------------------------------------------------
   const cookieStore = cookies();
 
@@ -112,7 +114,7 @@ export async function assembleContext(
       .eq("user_id", canonicalUserKey)
       .eq("memory_type", "identity")
       .order("created_at", { ascending: false })
-      .limit(25)
+      .limit(AUTOBIOGRAPHY_LIMIT)
       .then((r) => safeRows(r.data)),
   ]);
 
@@ -134,7 +136,9 @@ export async function assembleContext(
   let didResearch = false;
 
   if (flags?.enableResearchContext) {
-    researchContext = await readHubbleResearchContext(10);
+    researchContext = await readHubbleResearchContext(
+      RESEARCH_CONTEXT_LIMIT
+    );
     didResearch = researchContext.length > 0;
   }
 
