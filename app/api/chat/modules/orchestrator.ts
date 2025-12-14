@@ -1,45 +1,37 @@
-// --------------------------------------------------------------
-// SOLACE ORCHESTRATOR
-// Unified-response contract
-// No lens leakage
-// NEXT 16 SAFE
-// --------------------------------------------------------------
+// ------------------------------------------------------------
+// ORCHESTRATOR
+// Stable contract between API route and hybrid pipeline
+// Newsroom-safe
+// ------------------------------------------------------------
 
 import { runHybridPipeline } from "./hybrid";
 
-// --------------------------------------------------------------
+// ------------------------------------------------------------
 // TYPES
-// --------------------------------------------------------------
-export type OrchestratorResult = {
-  finalAnswer: string;
-  imageUrl: string | null;
-};
-
-// --------------------------------------------------------------
-// ORCHESTRATOR
-// --------------------------------------------------------------
-export async function orchestrateSolaceResponse(args: {
+// ------------------------------------------------------------
+type OrchestratorArgs = {
   userMessage: string;
   context: any;
   ministryMode?: boolean;
   founderMode?: boolean;
   modeHint?: string;
-  governorLevel?: number;
-  governorInstructions?: string;
-}) : Promise<OrchestratorResult> {
+};
 
+// ------------------------------------------------------------
+// MAIN ORCHESTRATOR
+// ------------------------------------------------------------
+export async function orchestrateSolaceResponse(
+  args: OrchestratorArgs
+) {
   const result = await runHybridPipeline({
     userMessage: args.userMessage,
     context: args.context,
     ministryMode: args.ministryMode,
     founderMode: args.founderMode,
     modeHint: args.modeHint,
-    governorLevel: args.governorLevel,
-    governorInstructions: args.governorInstructions,
   });
 
   return {
     finalAnswer: result.finalAnswer,
-    imageUrl: null, // reserved for future multimodal use
   };
 }
