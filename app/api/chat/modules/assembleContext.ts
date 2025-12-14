@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Solace Context Assembler
 // Phase B + Phase 5 (WM-READ-ONLY)
-// NEWS DIGEST EXPLICITLY SUPPORTED (NEUTRAL SUMMARY FIRST)
+// NEWS DIGEST — NEUTRAL SUMMARY FIRST (TYPE-SAFE)
 // AUTHORITY-AGNOSTIC — NEGATIVE SPACE PRESERVED
 // NEXT 16 SAFE — FLAG-CORRECT
 // ------------------------------------------------------------
@@ -44,8 +44,8 @@ export type NewsDigestItem = {
   outlet: string;
   story_url: string;
   neutral_summary: string;
-  key_facts: string[];
-  pi_score: number;
+  key_facts: string[] | null;
+  pi_score: number | null;
   created_at: string;
   day: string;
 };
@@ -77,8 +77,27 @@ function diag(label: string, payload: any) {
 // ------------------------------------------------------------
 // Helpers
 // ------------------------------------------------------------
-function safeRows<T>(rows: T[] | null): T[] {
+function safeRows<T>(rows: T[] | null | undefined): T[] {
   return Array.isArray(rows) ? rows : [];
+}
+
+function normalizeNewsDigest(
+  rows: any[]
+): NewsDigestItem[] {
+  return rows
+    .filter((r) => r && typeof r.neutral_summary === "string")
+    .map((r) => ({
+      ledger_id: String(r.ledger_id),
+      story_title: String(r.story_title ?? ""),
+      outlet: String(r.outlet ?? ""),
+      story_url: String(r.story_url ?? ""),
+      neutral_summary: String(r.neutral_summary),
+      key_facts: Array.isArray(r.key_facts) ? r.key_facts : null,
+      pi_score:
+        typeof r.pi_score === "number" ? r.pi_score : null,
+      created_at: String(r.created_at),
+      day: String(r.day),
+    }));
 }
 
 // ------------------------------------------------------------
@@ -184,19 +203,18 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // RESEARCH CONTEXT (HUBBLE — EXPLORATORY)
+  // RESEARCH CONTEXT (HUBBLE)
   // ----------------------------------------------------------
   const researchContext = await readHubbleResearchContext(10);
   const didResearch = researchContext.length > 0;
   diag("research context", { count: researchContext.length });
 
   // ----------------------------------------------------------
-  // NEWS DIGEST (CURATED — NEUTRAL SUMMARY PRIMARY)
+  // NEWS DIGEST (TYPE-SAFE)
   // ----------------------------------------------------------
-  const newsDigest = await supabase
+  const { data: rawDigest } = await supabase
     .from("solace_news_digest_view")
-    .select(
-      `
+    .select(`
       ledger_id,
       story_title,
       outlet,
@@ -206,11 +224,13 @@ export async function assembleContext(
       pi_score,
       created_at,
       day
-    `
-    )
+    `)
     .order("created_at", { ascending: false })
-    .limit(20)
-    .then((r) => safeRows(r.data as any));
+    .limit(20);
+
+  const newsDigest = normalizeNewsDigest(
+    safeRows(rawDigest)
+  );
 
   diag("news digest", { count: newsDigest.length });
 
