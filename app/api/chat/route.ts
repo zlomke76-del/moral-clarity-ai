@@ -7,7 +7,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-import { FACTS_LIMIT, EPISODES_LIMIT } from "./constants";
+import {
+  FACTS_LIMIT,
+  EPISODES_LIMIT,
+} from "./context.constants";
+
 import { getSolaceFeatureFlags } from "@/lib/solace/settings";
 import { readHubbleResearchContext } from "@/lib/research/hubble-reader";
 
