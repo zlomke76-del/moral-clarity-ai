@@ -1,6 +1,7 @@
 // ------------------------------------------------------------
 // Solace Context Assembler
 // Phase B + Phase 5 (WM-READ-ONLY)
+// USPTO-INTEGRATED — NEGATIVE SPACE AWARE
 // NEXT 16 SAFE — FLAG-CORRECT
 // ------------------------------------------------------------
 
@@ -24,6 +25,17 @@ export type WorkingMemoryItem = {
   created_at?: string;
 };
 
+export type USPTOContext = {
+  queried: boolean;
+  retrievedAt?: string;
+  resultCount?: number;
+  negativeSpace?: {
+    noResultsFound: boolean;
+    confidence: "low" | "medium" | "high";
+    reason: string;
+  };
+};
+
 export type SolaceContextBundle = {
   persona: string;
   memoryPack: {
@@ -37,6 +49,7 @@ export type SolaceContextBundle = {
   };
   newsDigest: any[];
   researchContext: any[];
+  uspto?: USPTOContext;
   didResearch: boolean;
 };
 
@@ -48,10 +61,25 @@ function diag(label: string, payload: any) {
 }
 
 // ------------------------------------------------------------
-// Safe helper
+// Helpers
 // ------------------------------------------------------------
 function safeRows<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
+}
+
+function requiresUSPTO(userMessage: string): boolean {
+  const m = userMessage.toLowerCase();
+
+  return (
+    m.includes("novel") ||
+    m.includes("patent") ||
+    m.includes("commercialize") ||
+    m.includes("commercialise") ||
+    m.includes("medical") ||
+    m.includes("device") ||
+    m.includes("filtration") ||
+    m.includes("material")
+  );
 }
 
 // ------------------------------------------------------------
@@ -88,7 +116,7 @@ export async function assembleContext(
   );
 
   // ----------------------------------------------------------
-  // AUTH RESOLUTION — CANONICAL FOR MEMORY
+  // AUTH RESOLUTION
   // ----------------------------------------------------------
   const {
     data: { user },
@@ -120,12 +148,10 @@ export async function assembleContext(
 
   const authUserId = user.id;
 
-  diag("auth identity locked", {
-    authUserId,
-  });
+  diag("auth identity locked", { authUserId });
 
   // ----------------------------------------------------------
-  // LOAD MEMORY (READ ONLY — UUID KEYED)
+  // LOAD MEMORY (READ ONLY)
   // ----------------------------------------------------------
   const [facts, episodic, autobiography] = await Promise.all([
     supabase
@@ -166,14 +192,75 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // RESEARCH CONTEXT (ALWAYS SAFE, MAY BE EMPTY)
+  // RESEARCH CONTEXT
   // ----------------------------------------------------------
   const researchContext = await readHubbleResearchContext(10);
   const didResearch = researchContext.length > 0;
 
-  diag("research context", {
-    count: researchContext.length,
-  });
+  diag("research context", { count: researchContext.length });
+
+  // ----------------------------------------------------------
+  // USPTO CONTEXT (NEGATIVE SPACE AWARE)
+  // ----------------------------------------------------------
+  let uspto: USPTOContext | undefined;
+
+  if (requiresUSPTO(userMessage)) {
+    diag("USPTO query triggered", { reason: "novelty/safety domain" });
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/api/uspto`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query: userMessage,
+            size: 5,
+          }),
+        }
+      );
+
+      if (res.ok) {
+        const json = await res.json();
+        const results = json?.data?.results ?? [];
+
+        uspto = {
+          queried: true,
+          retrievedAt: new Date().toISOString(),
+          resultCount: results.length,
+          negativeSpace:
+            results.length === 0
+              ? {
+                  noResultsFound: true,
+                  confidence: "low",
+                  reason:
+                    "No directly matching USPTO records found for the provided description.",
+                }
+              : undefined,
+        };
+      } else {
+        uspto = {
+          queried: true,
+          negativeSpace: {
+            noResultsFound: true,
+            confidence: "low",
+            reason: "USPTO query failed or returned no usable data.",
+          },
+        };
+      }
+    } catch (err) {
+      uspto = {
+        queried: true,
+        negativeSpace: {
+          noResultsFound: true,
+          confidence: "low",
+          reason: "USPTO query exception encountered.",
+        },
+      };
+    }
+
+    diag("USPTO context", uspto);
+  }
 
   // ----------------------------------------------------------
   // FINAL CONTEXT BUNDLE
@@ -191,6 +278,7 @@ export async function assembleContext(
     },
     newsDigest: [],
     researchContext,
+    uspto,
     didResearch,
   };
 }
