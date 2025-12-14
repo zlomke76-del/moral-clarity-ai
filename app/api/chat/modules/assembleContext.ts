@@ -1,7 +1,8 @@
 // ------------------------------------------------------------
 // Solace Context Assembler
 // Phase B + Phase 5 (WM-READ-ONLY)
-// AUTHORITY-AWARE — NEWS DIGEST ELEVATED
+// NEWS DIGEST EXPLICITLY SUPPORTED (NEUTRAL SUMMARY FIRST)
+// AUTHORITY-AGNOSTIC — NEGATIVE SPACE PRESERVED
 // NEXT 16 SAFE — FLAG-CORRECT
 // ------------------------------------------------------------
 
@@ -38,12 +39,14 @@ export type AuthorityContext = {
 };
 
 export type NewsDigestItem = {
+  ledger_id: string;
   story_title: string;
-  story_url: string;
   outlet: string;
+  story_url: string;
   neutral_summary: string;
   key_facts: string[];
   pi_score: number;
+  created_at: string;
   day: string;
 };
 
@@ -181,25 +184,33 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // RESEARCH CONTEXT (HUBBLE)
+  // RESEARCH CONTEXT (HUBBLE — EXPLORATORY)
   // ----------------------------------------------------------
   const researchContext = await readHubbleResearchContext(10);
   const didResearch = researchContext.length > 0;
-
   diag("research context", { count: researchContext.length });
 
   // ----------------------------------------------------------
-  // NEWS DIGEST (FIRST-CLASS EPISTEMIC SOURCE)
+  // NEWS DIGEST (CURATED — NEUTRAL SUMMARY PRIMARY)
   // ----------------------------------------------------------
-  const { data: newsRows } = await supabase
+  const newsDigest = await supabase
     .from("solace_news_digest_view")
     .select(
-      "story_title, story_url, outlet, neutral_summary, key_facts, pi_score, day"
+      `
+      ledger_id,
+      story_title,
+      outlet,
+      story_url,
+      neutral_summary,
+      key_facts,
+      pi_score,
+      created_at,
+      day
+    `
     )
     .order("created_at", { ascending: false })
-    .limit(20);
-
-  const newsDigest = safeRows(newsRows);
+    .limit(20)
+    .then((r) => safeRows(r.data as any));
 
   diag("news digest", { count: newsDigest.length });
 
@@ -220,6 +231,6 @@ export async function assembleContext(
     researchContext,
     authorities: [],
     newsDigest,
-    didResearch: didResearch || newsDigest.length > 0,
+    didResearch,
   };
 }
