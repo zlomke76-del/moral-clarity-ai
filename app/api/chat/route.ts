@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 
 import {
   FACTS_LIMIT,
@@ -63,13 +62,15 @@ export async function POST(req: Request) {
     // --------------------------------------------------------
     // Persist memory (best-effort, non-blocking)
     // --------------------------------------------------------
-    writeMemory({
-      canonicalUserKey,
-      workspaceId: workspaceId ?? null,
-      userMessage: message,
-      assistantMessage: responseText,
+    writeMemory(
       context,
-    }).catch(() => {
+      {
+        canonicalUserKey,
+        workspaceId: workspaceId ?? null,
+        userMessage: message,
+        assistantMessage: responseText,
+      }
+    ).catch(() => {
       // intentionally silent — memory must never block response
     });
 
