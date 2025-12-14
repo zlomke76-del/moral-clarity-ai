@@ -1,84 +1,41 @@
-// --------------------------------------------------------------
-// HYBRID PIPELINE — NEWSROOM HARD-ENFORCED
-// Unified Solace Voice
-// 3 x ~400 word neutral stories
-// --------------------------------------------------------------
+//--------------------------------------------------------------
+// HYBRID PIPELINE — REASONING ONLY
+// Optimist + Skeptic are INTERNAL
+// Arbiter emits ONE unified Solace voice
+//--------------------------------------------------------------
 
 import { callModel } from "./model-router";
-import { logTriadDiagnostics } from "./triad-diagnostics";
 import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
 
 // --------------------------------------------------------------
-// TYPES
-// --------------------------------------------------------------
-export type NewsDigestItem = {
-  story_title: string;
-  story_url: string;
-  outlet: string;
-  neutral_summary: string;
-};
-
-// --------------------------------------------------------------
-// ASCII SANITIZER (BOUNDARY SAFETY)
+// ASCII SANITIZER
 // --------------------------------------------------------------
 function sanitizeASCII(input: string): string {
   if (!input) return "";
-  return input
-    .split("")
-    .map((c) => (c.charCodeAt(0) > 255 ? "?" : c))
-    .join("");
+  return input.replace(/[^\x00-\xFF]/g, "?");
 }
 
 // --------------------------------------------------------------
-// NEWSROOM ARBITER PROMPT (HARD CONTRACT)
+// INTERNAL SYSTEMS (NOT USER VISIBLE)
 // --------------------------------------------------------------
-function buildNewsroomPrompt(
-  persona: string,
-  stories: NewsDigestItem[]
-): string {
-  return sanitizeASCII(`
-${persona}
+const OPTIMIST_SYSTEM = `
+Generate constructive possibilities.
+No labels. No meta commentary.
+`;
 
-YOU ARE IN STRICT NEWSROOM MODE.
+const SKEPTIC_SYSTEM = `
+Identify risks and constraints.
+No labels. No meta commentary.
+`;
 
-ABSOLUTE RULES (NON-NEGOTIABLE):
-
-1. Use ONLY the provided neutral summaries.
-2. DO NOT add facts, framing, interpretation, or speculation.
-3. Write EXACTLY THREE STORIES.
-4. EACH STORY MUST BE APPROXIMATELY 400 WORDS.
-   - Minimum: 350 words
-   - Maximum: 450 words
-5. EACH STORY MUST INCLUDE:
-   - Title
-   - Neutral narrative prose
-   - Source citation with full URL
-6. Maintain a SINGLE unified Solace voice.
-7. NO references to internal lenses, models, or reasoning steps.
-
-FAILURE TO FOLLOW THESE RULES IS AN ERROR.
-
-------------------------------------------------------------
-NEUTRAL NEWS DIGEST (AUTHORITATIVE)
-------------------------------------------------------------
-${stories
-  .slice(0, 3)
-  .map(
-    (s, i) => `
-STORY ${i + 1}
-TITLE: ${s.story_title}
-OUTLET: ${s.outlet}
-URL: ${s.story_url}
-NEUTRAL SUMMARY:
-${s.neutral_summary}
-`
-  )
-  .join("\n\n")}
-`);
-}
+const ARBITER_SYSTEM = `
+Integrate perspectives into a single, coherent response.
+Do not reference internal roles or stages.
+Speak only as Solace.
+`;
 
 // --------------------------------------------------------------
-// MAIN PIPELINE
+// PIPELINE
 // --------------------------------------------------------------
 export async function runHybridPipeline(args: {
   userMessage: string;
@@ -87,56 +44,42 @@ export async function runHybridPipeline(args: {
   founderMode?: boolean;
   modeHint?: string;
 }) {
-  const {
-    userMessage,
-    context,
-    ministryMode = false,
-    founderMode = false,
-    modeHint = "",
-  } = args;
+  const { userMessage, ministryMode, founderMode, modeHint } = args;
 
-  const personaSystem = sanitizeASCII(
-    buildSolaceSystemPrompt(
-      "newsroom",
-      `
+  // Optimist (internal)
+  const optimist = await callModel(
+    "gpt-4.1-mini",
+    sanitizeASCII(`${OPTIMIST_SYSTEM}\nUser: ${userMessage}`)
+  );
+
+  // Skeptic (internal)
+  const skeptic = await callModel(
+    "gpt-4.1-mini",
+    sanitizeASCII(`${SKEPTIC_SYSTEM}\nUser: ${userMessage}`)
+  );
+
+  // Arbiter (single voice)
+  const system = buildSolaceSystemPrompt("core", `
 Founder Mode: ${founderMode}
 Ministry Mode: ${ministryMode}
 Mode Hint: ${modeHint}
-`
-    )
-  );
+`);
 
-  // ------------------------------------------------------------
-  // NEWSROOM PATH (ONLY)
-  // ------------------------------------------------------------
-  if (!context.newsDigest || context.newsDigest.length < 3) {
-    return {
-      finalAnswer:
-        "No sufficient neutral news digest is available. I will not speculate.",
-    };
-  }
+  const arbiterPrompt = sanitizeASCII(`
+${system}
 
-  const arbiterPrompt = buildNewsroomPrompt(
-    personaSystem,
-    context.newsDigest as NewsDigestItem[]
-  );
+INTERNAL CONTEXT:
+${optimist}
 
-  const arbiterStarted = Date.now();
+${skeptic}
 
-  const arbiter = await callModel("gpt-4.1", arbiterPrompt);
+USER MESSAGE:
+${userMessage}
+`);
 
-  const arbiterFinished = Date.now();
-
-  logTriadDiagnostics({
-    stage: "arbiter",
-    model: "gpt-4.1",
-    prompt: arbiterPrompt.slice(0, 5000),
-    output: arbiter,
-    started: arbiterStarted,
-    finished: arbiterFinished,
-  });
+  const finalAnswer = await callModel("gpt-4.1", arbiterPrompt);
 
   return {
-    finalAnswer: arbiter,
+    finalAnswer,
   };
 }
