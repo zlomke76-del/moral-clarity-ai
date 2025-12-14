@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Solace Context Assembler
 // Phase B + Phase 5 (WM-READ-ONLY)
-// NEXT 16 SAFE — TYPE CORRECT
+// NEXT 16 SAFE — FLAG-CORRECT
 // ------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
@@ -12,7 +12,6 @@ import {
   EPISODES_LIMIT,
 } from "./context.constants";
 
-import { getSolaceFeatureFlags } from "@/lib/solace/settings";
 import { readHubbleResearchContext } from "@/lib/research/hubble-reader";
 
 // ------------------------------------------------------------
@@ -70,7 +69,7 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // COOKIE ACCESS — MUST AWAIT (NEXT 16 TYPES)
+  // COOKIE ACCESS — NEXT 16 REQUIRES AWAIT
   // ----------------------------------------------------------
   const cookieStore = await cookies();
 
@@ -130,23 +129,12 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // FEATURE FLAGS (NO ARGS)
+  // RESEARCH CONTEXT (ALWAYS SAFE, MAY BE EMPTY)
   // ----------------------------------------------------------
-  const flags = await getSolaceFeatureFlags();
-
-  // ----------------------------------------------------------
-  // RESEARCH CONTEXT (HUBBLE)
-  // ----------------------------------------------------------
-  let researchContext: any[] = [];
-  let didResearch = false;
-
-  if (flags?.enableResearch) {
-    researchContext = await readHubbleResearchContext(10);
-    didResearch = researchContext.length > 0;
-  }
+  const researchContext = await readHubbleResearchContext(10);
+  const didResearch = researchContext.length > 0;
 
   diag("research context", {
-    enabled: flags?.enableResearch,
     count: researchContext.length,
   });
 
