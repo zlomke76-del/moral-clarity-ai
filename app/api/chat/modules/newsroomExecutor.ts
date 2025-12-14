@@ -1,5 +1,5 @@
 //--------------------------------------------------------------
-// NEWSROOM EXECUTOR — SINGLE PASS
+// NEWSROOM EXECUTOR — SINGLE PASS (AUTHORITATIVE)
 // Strict neutral delivery
 // Uses ONLY solace_news_digest_view.neutral_summary
 //--------------------------------------------------------------
@@ -14,14 +14,17 @@ export type NewsDigestItem = {
   story_title: string;
   outlet: string;
   neutral_summary: string;
+  source_url?: string;
   created_at: string;
 };
 
 // --------------------------------------------------------------
-// SYSTEM PROMPT (LOCKED)
+// SYSTEM PROMPT (LOCKED CONTRACT)
 // --------------------------------------------------------------
 function buildNewsroomPrompt(items: NewsDigestItem[]) {
-  const system = buildSolaceSystemPrompt("newsroom", `
+  const system = buildSolaceSystemPrompt(
+    "newsroom",
+    `
 OUTPUT CONTRACT (MANDATORY):
 
 - Produce EXACTLY three stories.
@@ -31,29 +34,30 @@ OUTPUT CONTRACT (MANDATORY):
 - No bullet points.
 - No summaries, conclusions, or meta commentary.
 - No trend analysis.
-- No comparisons across stories.
-- No opinion or framing language.
+- No opinion, framing, or emotional language.
+- Neutral tone only.
 
 SOURCE RULES:
 
 - Use ONLY the provided neutral summaries.
-- Do NOT infer motive, intent, or moral judgment.
-- Do NOT aggregate multiple stories into one.
-- If there is insufficient material for three full stories, explicitly state that and stop.
-`);
+- Do NOT infer intent, motive, or morality.
+- Do NOT merge stories.
+- Each story MUST end with a source citation link.
+- If insufficient material exists, explicitly state that and stop.
+`
+  );
 
-  const digestBlock = items
-    .slice(0, 3)
-    .map(
-      (n, i) => `
+  const digestBlock = items.slice(0, 3).map(
+    (n, i) => `
 STORY ${i + 1}
 TITLE: ${n.story_title}
 OUTLET: ${n.outlet}
+SOURCE URL: ${n.source_url ?? "Unavailable"}
+
 NEUTRAL SUMMARY:
 ${n.neutral_summary}
 `
-    )
-    .join("\n");
+  ).join("\n");
 
   return `
 ${system}
@@ -66,7 +70,7 @@ ${digestBlock}
 }
 
 // --------------------------------------------------------------
-// EXECUTOR
+// EXECUTOR (NO HYBRID, NO TRIAD)
 // --------------------------------------------------------------
 export async function runNewsroomExecutor(
   newsDigest: NewsDigestItem[]
