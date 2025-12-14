@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Solace Chat API Route
-// Authority-aware + News Digest ENFORCED
-// Dual-contract stable
+// Persona-safe + News Digest Enforced
+// Abrahamic Code preserved
 // NEXT 16 SAFE — NODE RUNTIME
 // ------------------------------------------------------------
 
@@ -23,10 +23,27 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 // ------------------------------------------------------------
-// Helpers
+// News intent detection (STRICT)
 // ------------------------------------------------------------
-function isNewsIntent(message: string): boolean {
-  return /news|headlines|today|latest|update/i.test(message);
+function isNewsRequest(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes("news") ||
+    m.includes("headlines") ||
+    m.includes("what is happening") ||
+    m.includes("latest")
+  );
+}
+
+// Optional topic narrowing: "news in AI", "AI news today"
+function extractNewsTopic(message: string): string | null {
+  const m = message.toLowerCase();
+  if (m.includes("ai")) return "ai";
+  if (m.includes("technology")) return "technology";
+  if (m.includes("politics")) return "politics";
+  if (m.includes("economy")) return "economy";
+  if (m.includes("health")) return "health";
+  return null;
 }
 
 // ------------------------------------------------------------
@@ -52,7 +69,7 @@ export async function POST(req: Request) {
 
     if (!message || !finalUserKey) {
       const fallback =
-        "I’m here, but I didn’t receive a valid message or user identity.";
+        "I’m here, but I didn’t receive a valid message or user identity. Please try again.";
 
       return NextResponse.json({
         ok: true,
@@ -63,6 +80,7 @@ export async function POST(req: Request) {
 
     // --------------------------------------------------------
     // Assemble FULL epistemic context
+    // (memory + research + news digest)
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
@@ -70,48 +88,64 @@ export async function POST(req: Request) {
       message
     );
 
-    const wantsNews = isNewsIntent(message);
+    const newsRequested = isNewsRequest(message);
+    const newsTopic = extractNewsTopic(message);
 
     // --------------------------------------------------------
-    // HARD GATE: News requires digest
+    // Enforce NEWSROOM MODE when applicable
     // --------------------------------------------------------
-    if (wantsNews && context.newsDigest.length === 0) {
-      const blocked =
-        "No neutral news digest is available for the requested scope. I will not speculate.";
+    let effectiveModeHint = modeHint;
 
-      return NextResponse.json({
-        ok: true,
-        response: blocked,
-        messages: [{ role: "assistant", content: blocked }],
-        diagnostics: {
-          factsUsed: 0,
-          episodicUsed: 0,
-          didResearch: false,
-          newsDigestUsed: 0,
-          gated: "news_without_digest",
-        },
-      });
+    if (newsRequested) {
+      effectiveModeHint = "newsroom";
+
+      // HARD STOP: no digest = no speculation
+      if (!context.newsDigest || context.newsDigest.length === 0) {
+        const fallback =
+          "No neutral news digest is available for the requested scope. I will not speculate.";
+
+        return NextResponse.json({
+          ok: true,
+          response: fallback,
+          messages: [{ role: "assistant", content: fallback }],
+          diagnostics: {
+            newsDigestUsed: 0,
+            didResearch: false,
+          },
+        });
+      }
+
+      // Optional topic filter
+      if (newsTopic) {
+        context.newsDigest = context.newsDigest.filter((item: any) =>
+          String(item.story_title ?? "")
+            .toLowerCase()
+            .includes(newsTopic)
+        );
+      }
     }
 
     // --------------------------------------------------------
-    // Run hybrid pipeline (NEWSROOM ENFORCED)
+    // Run hybrid pipeline (ARBITER ONLY SPEAKS)
     // --------------------------------------------------------
     const result = await runHybridPipeline({
       userMessage: message,
       context,
       ministryMode,
       founderMode,
-      modeHint,
+      modeHint: effectiveModeHint,
       governorLevel,
       governorInstructions,
-      forceNewsroom: wantsNews,
     });
 
     const safeResponse =
       typeof result?.finalAnswer === "string" && result.finalAnswer.length > 0
         ? result.finalAnswer
-        : "The response pipeline completed, but there was nothing to report.";
+        : "I’m here and ready. The response pipeline completed, but there was nothing to report.";
 
+    // --------------------------------------------------------
+    // Return response
+    // --------------------------------------------------------
     return NextResponse.json({
       ok: true,
       response: safeResponse,
@@ -132,14 +166,14 @@ export async function POST(req: Request) {
         ),
         didResearch: context.didResearch,
         newsDigestUsed: context.newsDigest.length,
-        newsroomEnforced: wantsNews,
+        newsroomMode: newsRequested,
       },
     });
   } catch (err: any) {
     console.error("[CHAT ROUTE ERROR]", err?.message);
 
     const fallback =
-      "I encountered an internal issue, but I’m still here and ready to continue.";
+      "I ran into an internal issue while responding, but I’m still here and ready to continue.";
 
     return NextResponse.json({
       ok: true,
