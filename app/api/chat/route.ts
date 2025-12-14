@@ -72,6 +72,7 @@ export async function POST(req: Request) {
 
     const {
       message,
+      history = [],               // ✅ FIX: conversation history injected
       canonicalUserKey,
       userKey,
       workspaceId,
@@ -132,7 +133,11 @@ export async function POST(req: Request) {
         if (res.ok) {
           const json = await res.json();
           if (json?.authority) {
-            authorities.push(json.authority);
+            authorities.push({
+              source: "USPTO",
+              retrievedAt: new Date().toISOString(),
+              payload: json.authority,
+            });
           }
         }
       } catch (err) {
@@ -157,7 +162,11 @@ export async function POST(req: Request) {
         if (res.ok) {
           const json = await res.json();
           if (json?.authority) {
-            authorities.push(json.authority);
+            authorities.push({
+              source: "FDA",
+              retrievedAt: new Date().toISOString(),
+              payload: json.authority,
+            });
           }
         }
       } catch (err) {
@@ -182,7 +191,11 @@ export async function POST(req: Request) {
         if (res.ok) {
           const json = await res.json();
           if (json?.authority) {
-            authorities.push(json.authority);
+            authorities.push({
+              source: "STANDARDS",
+              retrievedAt: new Date().toISOString(),
+              payload: json.authority,
+            });
           }
         }
       } catch (err) {
@@ -198,6 +211,7 @@ export async function POST(req: Request) {
     // --------------------------------------------------------
     const result = await runHybridPipeline({
       userMessage: message,
+      history,                     // ✅ FIX: passed to Arbiter
       context,
       ministryMode,
       founderMode,
