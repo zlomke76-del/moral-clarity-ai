@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Solace Chat API Route
-// NEXT 16 SAFE — NO ASYNC COOKIES
-// DUAL-CONTRACT STABLE FOR SOLACE UI
+// Authority-aware, Dual-contract stable
+// NEXT 16 SAFE — NODE RUNTIME
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -12,7 +12,7 @@ import {
 } from "./modules/context.constants";
 
 import { assembleContext } from "./modules/assembleContext";
-import { orchestrateSolaceResponse } from "./modules/orchestrator";
+import { runHybridPipeline } from "./modules/hybrid";
 
 // ------------------------------------------------------------
 // Runtime configuration
@@ -20,6 +20,23 @@ import { orchestrateSolaceResponse } from "./modules/orchestrator";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+// ------------------------------------------------------------
+// Helpers
+// ------------------------------------------------------------
+function requiresUSPTO(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes("patent") ||
+    m.includes("novel") ||
+    m.includes("commercialize") ||
+    m.includes("commercialise") ||
+    m.includes("medical") ||
+    m.includes("device") ||
+    m.includes("filtration") ||
+    m.includes("material")
+  );
+}
 
 // ------------------------------------------------------------
 // POST handler
@@ -33,6 +50,11 @@ export async function POST(req: Request) {
       canonicalUserKey,
       userKey,
       workspaceId,
+      ministryMode = false,
+      founderMode = false,
+      modeHint = "",
+      governorLevel = 0,
+      governorInstructions = "",
     } = body ?? {};
 
     const finalUserKey = canonicalUserKey ?? userKey;
@@ -45,22 +67,14 @@ export async function POST(req: Request) {
         "I’m here, but I didn’t receive a valid message or user identity. Please try again.";
 
       return NextResponse.json({
-        // legacy contract
         ok: true,
         response: fallback,
-
-        // new contract
-        messages: [
-          {
-            role: "assistant",
-            content: fallback,
-          },
-        ],
+        messages: [{ role: "assistant", content: fallback }],
       });
     }
 
     // --------------------------------------------------------
-    // Assemble context
+    // Assemble base context (memory + research ONLY)
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
@@ -69,56 +83,69 @@ export async function POST(req: Request) {
     );
 
     // --------------------------------------------------------
-    // Orchestrate response
+    // Authority injection (USPTO)
     // --------------------------------------------------------
-    const rawResponse = await orchestrateSolaceResponse({
+    const authorities = [];
+
+    if (requiresUSPTO(message)) {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL}/api/authority/uspto`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              query: message,
+              size: 5,
+            }),
+          }
+        );
+
+        if (res.ok) {
+          const json = await res.json();
+          if (json?.authority) {
+            authorities.push(json.authority);
+          }
+        }
+      } catch (err) {
+        // Silent by design — Arbiter handles absence
+        console.error("[USPTO AUTHORITY FETCH ERROR]", err);
+      }
+    }
+
+    // Attach authorities WITHOUT interpretation
+    context.authorities = authorities;
+
+    // --------------------------------------------------------
+    // Run hybrid pipeline (Arbiter decides)
+    // --------------------------------------------------------
+    const result = await runHybridPipeline({
       userMessage: message,
       context,
-      workspaceId: workspaceId ?? null,
+      ministryMode,
+      founderMode,
+      modeHint,
+      governorLevel,
+      governorInstructions,
     });
 
-    // --------------------------------------------------------
-    // Normalize TRIAD output → plain text
-    // --------------------------------------------------------
-    let safeResponse = "";
-
-    if (typeof rawResponse === "string") {
-      safeResponse = rawResponse;
-    } else if (rawResponse && typeof rawResponse === "object") {
-      safeResponse =
-        (rawResponse as any).finalAnswer ??
-        (rawResponse as any).arbiter ??
-        "";
-    }
+    const safeResponse =
+      typeof result?.finalAnswer === "string" && result.finalAnswer.length > 0
+        ? result.finalAnswer
+        : "I’m here and ready. The response pipeline completed, but there was nothing to report yet.";
 
     // --------------------------------------------------------
-    // Final safety fallback (NEVER throw)
-    // --------------------------------------------------------
-    if (!safeResponse || typeof safeResponse !== "string") {
-      safeResponse =
-        "I’m here and ready. The response pipeline completed, but there was nothing to report yet.";
-    }
-
-    // --------------------------------------------------------
-    // Return DUAL-CONTRACT response
+    // Return dual-contract response
     // --------------------------------------------------------
     return NextResponse.json({
-      // ------------------------
-      // LEGACY DOCK CONTRACT
-      // ------------------------
       ok: true,
       response: safeResponse,
-
-      // ------------------------
-      // NEW MULTI-MESSAGE CONTRACT
-      // ------------------------
       messages: [
         {
           role: "assistant",
           content: safeResponse,
         },
       ],
-
       diagnostics: {
         factsUsed: Math.min(
           context.memoryPack.facts.length,
@@ -129,6 +156,7 @@ export async function POST(req: Request) {
           EPISODES_LIMIT
         ),
         didResearch: context.didResearch,
+        authoritiesUsed: context.authorities.length,
       },
     });
   } catch (err: any) {
@@ -137,18 +165,10 @@ export async function POST(req: Request) {
     const fallback =
       "I ran into an internal issue while responding, but I’m still here and ready to continue.";
 
-    // --------------------------------------------------------
-    // Hard-failure safe dual response
-    // --------------------------------------------------------
     return NextResponse.json({
       ok: true,
       response: fallback,
-      messages: [
-        {
-          role: "assistant",
-          content: fallback,
-        },
-      ],
+      messages: [{ role: "assistant", content: fallback }],
     });
   }
 }
