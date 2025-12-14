@@ -30,12 +30,18 @@ export async function POST(req: Request) {
     const {
       message,
       canonicalUserKey,
+      userKey,
       workspaceId,
     } = body ?? {};
 
-    if (!message || !canonicalUserKey) {
+    // --------------------------------------------------------
+    // Normalize identity (Studio compatibility)
+    // --------------------------------------------------------
+    const finalUserKey = canonicalUserKey ?? userKey;
+
+    if (!message || !finalUserKey) {
       return NextResponse.json(
-        { error: "Missing message or canonicalUserKey" },
+        { error: "Missing message or user identity" },
         { status: 400 }
       );
     }
@@ -44,7 +50,7 @@ export async function POST(req: Request) {
     // Assemble Solace context (READ-ONLY)
     // --------------------------------------------------------
     const context = await assembleContext(
-      canonicalUserKey,
+      finalUserKey,
       workspaceId ?? null,
       message
     );
