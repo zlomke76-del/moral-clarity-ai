@@ -14,6 +14,7 @@ import {
 
 import { assembleContext } from "./modules/assembleContext";
 import { runHybridPipeline } from "./modules/hybrid";
+import { runNewsroomExecutor } from "./modules/newsroomExecutor";
 
 // ------------------------------------------------------------
 // Runtime configuration
@@ -21,6 +22,23 @@ import { runHybridPipeline } from "./modules/hybrid";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+// ------------------------------------------------------------
+// Helpers
+// ------------------------------------------------------------
+function isNewsRequest(message: string, modeHint?: string): boolean {
+  const m = message.toLowerCase();
+
+  if (modeHint === "newsroom") return true;
+
+  return (
+    m.includes("news today") ||
+    m.includes("what is the news") ||
+    m.includes("today's news") ||
+    m.includes("headlines") ||
+    m.includes("daily briefing")
+  );
+}
 
 // ------------------------------------------------------------
 // POST handler
@@ -43,6 +61,9 @@ export async function POST(req: Request) {
 
     const finalUserKey = canonicalUserKey ?? userKey;
 
+    // --------------------------------------------------------
+    // Validate minimal inputs
+    // --------------------------------------------------------
     if (!message || !finalUserKey) {
       const fallback =
         "I’m here, but I didn’t receive a valid message or user identity. Please try again.";
@@ -64,7 +85,33 @@ export async function POST(req: Request) {
     );
 
     // --------------------------------------------------------
-    // Run hybrid pipeline (ARBITER ENFORCED)
+    // HARD NEWSROOM ROUTE (NO ARBITER, NO TRIAD)
+    // --------------------------------------------------------
+    if (isNewsRequest(message, modeHint)) {
+      const newsroomOutput = await runNewsroomExecutor(
+        context.newsDigest
+      );
+
+      return NextResponse.json({
+        ok: true,
+        response: newsroomOutput,
+        messages: [
+          {
+            role: "assistant",
+            content: newsroomOutput,
+          },
+        ],
+        diagnostics: {
+          mode: "newsroom",
+          storiesReturned: 3,
+          digestRowsAvailable: context.newsDigest.length,
+          source: "solace_news_digest_view.neutral_summary",
+        },
+      });
+    }
+
+    // --------------------------------------------------------
+    // Standard hybrid pipeline (ARBITER ENFORCED)
     // --------------------------------------------------------
     const result = await runHybridPipeline({
       userMessage: message,
@@ -81,6 +128,9 @@ export async function POST(req: Request) {
         ? result.finalAnswer
         : "I’m here and ready. The response pipeline completed, but there was nothing to report yet.";
 
+    // --------------------------------------------------------
+    // Return response
+    // --------------------------------------------------------
     return NextResponse.json({
       ok: true,
       response: safeResponse,
@@ -91,6 +141,7 @@ export async function POST(req: Request) {
         },
       ],
       diagnostics: {
+        mode: "hybrid",
         factsUsed: Math.min(
           context.memoryPack.facts.length,
           FACTS_LIMIT
@@ -100,7 +151,7 @@ export async function POST(req: Request) {
           EPISODES_LIMIT
         ),
         didResearch: context.didResearch,
-        newsDigestUsed: context.newsDigest.length,
+        newsDigestAvailable: context.newsDigest.length,
       },
     });
   } catch (err: any) {
