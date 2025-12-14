@@ -1,7 +1,7 @@
 //--------------------------------------------------------------
 // HYBRID PIPELINE — OPTIMIST → SKEPTIC → ARBITER
 // Persona + Memory injected ONLY into Arbiter (string mode)
-// Local Coherence + Clarifying Question Guardrail enforced
+// Domain-Bounded Adaptive Risk enforced at Arbiter level
 // Responses API compatible
 //--------------------------------------------------------------
 
@@ -63,7 +63,7 @@ CRITICAL EPISTEMIC RULES (ENFORCED):
    - You MAY reference it explicitly
    - You MUST NOT deny its existence
 
-2. If RESEARCH or AUTHORITY CONTEXT is present:
+2. If RESEARCH CONTEXT or AUTHORITY CONTEXT is present:
    - You MUST reference it explicitly
    - OR you MUST refuse due to insufficient support
 
@@ -72,42 +72,33 @@ CRITICAL EPISTEMIC RULES (ENFORCED):
 5. Speak as ONE Solace voice.
 `;
 
-const LOCAL_COHERENCE_DIRECTIVE = `
-LOCAL COHERENCE DIRECTIVE (MANDATORY):
+const ADAPTIVE_RISK_DOMAIN_DIRECTIVE = `
+ADAPTIVE RISK DOMAIN CONSTRAINT (MANDATORY):
 
-Before answering the user's message, you must:
+Before discussing risks related to "adaptive" or "responsive" behavior, you MUST:
 
-1. Review your most recent complete ARBITER response in this session.
-2. Treat the user's message as a continuation of that scope by default.
-3. Preserve all previously established:
-   - Definitions
-   - Factual claims
-   - Constraints
-   - Stated uncertainty
-4. You MAY NOT ask for clarification due to ambiguity
-   if the referent is clear from the immediately prior ARBITER response.
-5. Only treat the message as a new topic if the user explicitly signals a topic change.
-`;
+1. Identify the system class explicitly:
+   - Passive material (e.g., polymers, membranes, coatings)
+   - Active non-learning system (sensors + fixed logic)
+   - Learning / algorithmic system
+   - Human-in-the-loop system
 
-const CLARIFYING_QUESTION_CONSTRAINT = `
-CLARIFYING QUESTION CONSTRAINT (STRICT):
+2. You MAY ONLY describe risks that are causally possible
+   within that system class.
 
-You may ask at most ONE clarifying question, and only if ALL are true:
+3. If the system is a PASSIVE MATERIAL:
+   - Allowed risks: mechanical fatigue, hysteresis, aging,
+     delamination, clogging, chemical degradation, manufacturability.
+   - FORBIDDEN risks: learning drift, biased data, adversarial
+     manipulation, decision instability, feedback exploitation.
 
-1. The ambiguity cannot be resolved by reviewing your immediately prior ARBITER response.
-2. Proceeding without clarification would require guessing between materially different outcomes.
-3. The clarification concerns a missing structural variable (not a conversational referent).
+4. You MUST NOT import risk language that requires cognition,
+   sensing, learning, intent, or data ingestion if those
+   capabilities do not exist in the described system.
 
-If you ask a clarifying question:
-- Explain briefly why it is required.
-- Ask ONE question.
-- STOP.
+5. If a risk does not causally apply, you MUST NOT mention it.
 
-You may NOT ask clarifying questions for:
-- Referents already present in the prior response (e.g. "what about #2")
-- Scope refinements
-- Negative-space conditions (absence of data)
-- Evaluative or analytical prompts
+Violation of this directive is a hard failure.
 `;
 
 // --------------------------------------------------------------
@@ -180,7 +171,7 @@ export async function runHybridPipeline(args: {
   });
 
   // ============================================================
-  // ARBITER — PERSONA + MEMORY + RESEARCH + AUTHORITY
+  // ARBITER — PERSONA + MEMORY + RESEARCH + DOMAIN CONSTRAINT
   // ============================================================
   const facts = safeArray(context?.memoryPack?.facts);
   const episodic = safeArray(context?.memoryPack?.episodic);
@@ -199,10 +190,10 @@ export async function runHybridPipeline(args: {
       ? sanitizeASCII(JSON.stringify(researchArray, null, 2))
       : "NONE";
 
-  const authoritiesArray = safeArray(context?.authorities);
+  const authorities = safeArray(context?.authorities);
   const authorityBlock =
-    authoritiesArray.length > 0
-      ? sanitizeASCII(JSON.stringify(authoritiesArray, null, 2))
+    authorities.length > 0
+      ? sanitizeASCII(JSON.stringify(authorities, null, 2))
       : "NONE";
 
   const personaSystem = sanitizeASCII(
@@ -237,14 +228,9 @@ ${authorityBlock}
 ${personaSystem}
 
 ------------------------------------------------------------
-LOCAL COHERENCE DIRECTIVE
+ADAPTIVE RISK DOMAIN CONSTRAINT
 ------------------------------------------------------------
-${LOCAL_COHERENCE_DIRECTIVE}
-
-------------------------------------------------------------
-CLARIFYING QUESTION CONSTRAINT
-------------------------------------------------------------
-${CLARIFYING_QUESTION_CONSTRAINT}
+${ADAPTIVE_RISK_DOMAIN_DIRECTIVE}
 
 ------------------------------------------------------------
 ARBITER RULES
