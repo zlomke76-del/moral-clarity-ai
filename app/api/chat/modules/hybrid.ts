@@ -108,16 +108,18 @@ export async function runHybridPipeline(args: {
   // ============================================================
   // OPTIMIST
   // ============================================================
+  const optimistPrompt = buildPrompt(OPTIMIST_SYSTEM, userMessage);
   const optimistStarted = Date.now();
 
   const optimist = await callModel(
     "gpt-4.1-mini",
-    buildPrompt(OPTIMIST_SYSTEM, userMessage)
+    optimistPrompt
   );
 
   logTriadDiagnostics({
     stage: "optimist",
     model: "gpt-4.1-mini",
+    prompt: optimistPrompt,
     output: optimist,
     started: optimistStarted,
     finished: Date.now(),
@@ -126,16 +128,18 @@ export async function runHybridPipeline(args: {
   // ============================================================
   // SKEPTIC
   // ============================================================
+  const skepticPrompt = buildPrompt(SKEPTIC_SYSTEM, userMessage);
   const skepticStarted = Date.now();
 
   const skeptic = await callModel(
     "gpt-4.1-mini",
-    buildPrompt(SKEPTIC_SYSTEM, userMessage)
+    skepticPrompt
   );
 
   logTriadDiagnostics({
     stage: "skeptic",
     model: "gpt-4.1-mini",
+    prompt: skepticPrompt,
     output: skeptic,
     started: skepticStarted,
     finished: Date.now(),
@@ -223,6 +227,7 @@ ${userMessage}
   logTriadDiagnostics({
     stage: "arbiter",
     model: "gpt-4.1",
+    prompt: arbPrompt,
     output: arbiter,
     started: arbiterStarted,
     finished: Date.now(),
