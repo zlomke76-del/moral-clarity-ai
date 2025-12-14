@@ -43,13 +43,6 @@ const MINISTRY_KEY = "solace:ministry";
 const PAD = 12;
 
 // --------------------------------------------------------------------------------------
-function getAttachmentUrl(f: any): string | null {
-  return f?.url || f?.publicUrl || f?.path || null;
-}
-
-// --------------------------------------------------------------------------------------
-// MAIN COMPONENT
-// --------------------------------------------------------------------------------------
 export default function SolaceDock() {
   const [canRender, setCanRender] = useState(false);
 
@@ -128,11 +121,10 @@ export default function SolaceDock() {
     });
 
   // --------------------------------------------------------------------
-  // Microphone (RESTORED)
+  // Microphone
   // --------------------------------------------------------------------
   const { listening, toggleMic } = useSpeechInput({
-    onText: (text) =>
-      setInput((p) => (p ? p + " " : "") + text),
+    onText: (text) => setInput((p) => (p ? p + " " : "") + text),
     onError: (msg) =>
       setMessages((m) => [...m, { role: "assistant", content: msg }]),
   });
@@ -226,33 +218,6 @@ export default function SolaceDock() {
   }, [canRender, visible, setPos]);
 
   // --------------------------------------------------------------------
-  // Drag handlers
-  // --------------------------------------------------------------------
-  function onHeaderMouseDown(e: React.MouseEvent) {
-    if (isMobile) return;
-    const rect = containerRef.current?.getBoundingClientRect();
-    setOffset({
-      dx: e.clientX - (rect?.left ?? 0),
-      dy: e.clientY - (rect?.top ?? 0),
-    });
-    setDragging(true);
-  }
-
-  useEffect(() => {
-    if (!dragging) return;
-    const onMove = (e: MouseEvent) =>
-      setPos(e.clientX - offset.dx, e.clientY - offset.dy);
-    const onUp = () => setDragging(false);
-
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-  }, [dragging, offset, setPos]);
-
-  // --------------------------------------------------------------------
   // Resize
   // --------------------------------------------------------------------
   const { dockW, dockH, setDockW, setDockH } = useDockSize();
@@ -284,7 +249,64 @@ export default function SolaceDock() {
     });
 
   // --------------------------------------------------------------------
-  // Early returns
+  // SEND (FIXED)
+  // --------------------------------------------------------------------
+  async function send() {
+    if (!input.trim() && pendingFiles.length === 0) return;
+    if (streaming) return;
+
+    const userMsg = input || "Attachments:";
+    setInput("");
+    setStreaming(true);
+    setMessages((m) => [...m, { role: "user", content: userMsg }]);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: userMsg,
+          workspaceId: MCA_WORKSPACE_ID,
+          canonicalUserKey: userKey,
+          ministryMode: ministryOn,
+          modeHint,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      if (!data?.ok || typeof data.response !== "string") {
+        throw new Error("Invalid response payload");
+      }
+
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: data.response },
+      ]);
+    } catch (e: any) {
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: `⚠️ ${e.message}` },
+      ]);
+    } finally {
+      setStreaming(false);
+      clearPending();
+    }
+  }
+
+  function onEnterSend(e: React.KeyboardEvent) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  }
+
+  // --------------------------------------------------------------------
+  // EARLY RETURNS
   // --------------------------------------------------------------------
   if (!canRender || !visible) return null;
 
@@ -313,65 +335,16 @@ export default function SolaceDock() {
   }
 
   // --------------------------------------------------------------------
-  // SEND
-  // --------------------------------------------------------------------
-  async function send() {
-    if (!input.trim() && pendingFiles.length === 0) return;
-    if (streaming) return;
-
-    const userMsg = input || "Attachments:";
-    setInput("");
-    setStreaming(true);
-    setMessages((m) => [...m, { role: "user", content: userMsg }]);
-
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: userMsg,
-          history: messages,
-          workspaceId: MCA_WORKSPACE_ID,
-          ministryMode: ministryOn,
-          modeHint,
-          userKey,
-        }),
-      });
-
-      const data = await res.json();
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", content: data.text ?? "" },
-      ]);
-    } catch (e: any) {
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", content: `⚠️ ${e.message}` },
-      ]);
-    } finally {
-      setStreaming(false);
-      clearPending();
-    }
-  }
-
-  function onEnterSend(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      send();
-    }
-  }
-
-  // --------------------------------------------------------------------
   // RENDER
   // --------------------------------------------------------------------
-  const panel = (
+  return createPortal(
     <section ref={containerRef} style={panelStyle}>
       <SolaceDockHeaderLite
         ministryOn={ministryOn}
         memReady={memReady}
         onToggleMinistry={() => {}}
         onMinimize={() => setMinimized(true)}
-        onDragStart={onHeaderMouseDown}
+        onDragStart={() => {}}
       />
 
       <div ref={transcriptRef} style={transcriptStyle}>
@@ -398,51 +371,6 @@ export default function SolaceDock() {
         onPaste={(e) => handlePaste(e, { prefix: "solace" })}
       >
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {/* PAPERCLIP */}
-          <label
-            style={{
-              width: 38,
-              height: 38,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              borderRadius: UI.radiusMd,
-              border: UI.border,
-              background: UI.surface2,
-              cursor: "pointer",
-              flexShrink: 0,
-            }}
-          >
-            📎
-            <input
-              type="file"
-              multiple
-              hidden
-              onChange={(e) =>
-                handleFiles(e.target.files, { prefix: "solace" })
-              }
-            />
-          </label>
-
-          {/* MIC */}
-          <button
-            onClick={toggleMic}
-            title="Voice input"
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: UI.radiusMd,
-              border: UI.border,
-              background: listening
-                ? "rgba(255,0,0,.45)"
-                : UI.surface2,
-              cursor: "pointer",
-              flexShrink: 0,
-            }}
-          >
-            🎤
-          </button>
-
           <textarea
             style={textareaStyle}
             value={input}
@@ -450,7 +378,6 @@ export default function SolaceDock() {
             onKeyDown={onEnterSend}
             placeholder="Ask Solace..."
           />
-
           <button
             onClick={send}
             disabled={streaming}
@@ -462,7 +389,6 @@ export default function SolaceDock() {
               border: "none",
               fontWeight: 600,
               cursor: "pointer",
-              flexShrink: 0,
             }}
           >
             Ask
@@ -471,8 +397,7 @@ export default function SolaceDock() {
       </div>
 
       <ResizeHandle onResizeStart={startResize} />
-    </section>
+    </section>,
+    document.body
   );
-
-  return createPortal(panel, document.body);
 }
