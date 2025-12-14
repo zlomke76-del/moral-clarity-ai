@@ -257,7 +257,8 @@ export default function SolaceDock() {
   useEffect(() => {
     if (!dragging) return;
 
-    const onMove = (e: MouseEvent) => setPos(e.clientX - offset.dx, e.clientY - offset.dy);
+    const onMove = (e: MouseEvent) =>
+      setPos(e.clientX - offset.dx, e.clientY - offset.dy);
     const onUp = () => setDragging(false);
 
     window.addEventListener("mousemove", onMove);
@@ -341,7 +342,9 @@ export default function SolaceDock() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: userMsg,
-          canonicalUserKey: userKey || "tim",
+          // NOTE: do NOT hardcode any name here. If userKey is not ready,
+          // omit canonicalUserKey entirely so server can use auth identity.
+          canonicalUserKey: userKey || undefined,
           workspaceId: MCA_WORKSPACE_ID,
           ministryMode: ministryOn,
           modeHint,
@@ -400,7 +403,15 @@ export default function SolaceDock() {
               margin: "6px 0",
               padding: "10px 12px",
               borderRadius: UI.radiusLg,
-              background: m.role === "user" ? "rgba(39,52,74,.6)" : "rgba(28,38,54,.6)",
+              background:
+                m.role === "user"
+                  ? "rgba(39,52,74,.6)"
+                  : "rgba(28,38,54,.6)",
+              // ✅ FORMATTING FIX: preserve newlines/paragraphs exactly
+              whiteSpace: "pre-wrap",
+              overflowWrap: "anywhere",
+              wordBreak: "break-word",
+              lineHeight: 1.35,
             }}
           >
             {m.content}
@@ -408,7 +419,10 @@ export default function SolaceDock() {
         ))}
       </div>
 
-      <div style={composerWrapStyle} onPaste={(e) => handlePaste(e, { prefix: "solace" })}>
+      <div
+        style={composerWrapStyle}
+        onPaste={(e) => handlePaste(e, { prefix: "solace" })}
+      >
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           {/* PAPERCLIP (PRESENT) */}
           <label
