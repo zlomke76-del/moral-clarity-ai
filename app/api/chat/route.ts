@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Solace Chat API Route
 // NEXT 16 SAFE — NO ASYNC COOKIES
-// CONTRACT-STABLE FOR SOLACE UI (MESSAGES ARRAY)
+// DUAL-CONTRACT STABLE FOR SOLACE UI
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -41,12 +41,19 @@ export async function POST(req: Request) {
     // Validate minimal inputs
     // --------------------------------------------------------
     if (!message || !finalUserKey) {
+      const fallback =
+        "I’m here, but I didn’t receive a valid message or user identity. Please try again.";
+
       return NextResponse.json({
+        // legacy contract
+        ok: true,
+        response: fallback,
+
+        // new contract
         messages: [
           {
             role: "assistant",
-            content:
-              "I’m here, but I didn’t receive a valid message or user identity. Please try again.",
+            content: fallback,
           },
         ],
       });
@@ -93,15 +100,25 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // Return UI-compatible assistant message (ARRAY FORM)
+    // Return DUAL-CONTRACT response
     // --------------------------------------------------------
     return NextResponse.json({
+      // ------------------------
+      // LEGACY DOCK CONTRACT
+      // ------------------------
+      ok: true,
+      response: safeResponse,
+
+      // ------------------------
+      // NEW MULTI-MESSAGE CONTRACT
+      // ------------------------
       messages: [
         {
           role: "assistant",
           content: safeResponse,
         },
       ],
+
       diagnostics: {
         factsUsed: Math.min(
           context.memoryPack.facts.length,
@@ -117,15 +134,19 @@ export async function POST(req: Request) {
   } catch (err: any) {
     console.error("[CHAT ROUTE ERROR]", err?.message);
 
+    const fallback =
+      "I ran into an internal issue while responding, but I’m still here and ready to continue.";
+
     // --------------------------------------------------------
-    // Even on hard failure, return a valid assistant message
+    // Hard-failure safe dual response
     // --------------------------------------------------------
     return NextResponse.json({
+      ok: true,
+      response: fallback,
       messages: [
         {
           role: "assistant",
-          content:
-            "I ran into an internal issue while responding, but I’m still here and ready to continue.",
+          content: fallback,
         },
       ],
     });
