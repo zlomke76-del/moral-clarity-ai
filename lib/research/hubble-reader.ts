@@ -32,7 +32,6 @@ export async function readHubbleResearchContext(
   limit: number
 ): Promise<HubbleResearchItem[]> {
   // ----------------------------------------------------------
-  // IMPORTANT:
   // cookies() IS ASYNC IN NEXT 16
   // ----------------------------------------------------------
   const cookieStore = await cookies();
@@ -53,9 +52,10 @@ export async function readHubbleResearchContext(
 
   // ----------------------------------------------------------
   // Read research context (READ ONLY)
+  // SCHEMA MUST BE POSTGREST-EXPOSED
   // ----------------------------------------------------------
   const { data, error } = await supabase
-    .schema("research")
+    .schema("mca")
     .from("hubble_context")
     .select("id, title, summary, source, created_at")
     .order("created_at", { ascending: false })
