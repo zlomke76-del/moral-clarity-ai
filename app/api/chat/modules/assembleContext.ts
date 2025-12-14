@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Solace Context Assembler
 // Phase B + Phase 5 (WM-READ-ONLY)
-// NEXT 16 SAFE — ASYNC COOKIES (TYPE-CORRECT)
+// NEXT 16 SAFE — NO ASYNC COOKIES
 // ------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
@@ -12,11 +12,19 @@ import {
   EPISODES_LIMIT,
 } from "./context.constants";
 
+import { getSolaceFeatureFlags } from "@/lib/solace/settings";
 import { readHubbleResearchContext } from "@/lib/research/hubble-reader";
 
 // ------------------------------------------------------------
-// Types
+// TYPES
 // ------------------------------------------------------------
+export type WorkingMemoryItem = {
+  id?: string;
+  role: "system" | "user" | "assistant";
+  content: string;
+  created_at?: string;
+};
+
 export type SolaceContextBundle = {
   persona: string;
   memoryPack: {
@@ -26,7 +34,7 @@ export type SolaceContextBundle = {
   };
   workingMemory: {
     active: boolean;
-    items: any[];
+    items: WorkingMemoryItem[];
   };
   newsDigest: any[];
   researchContext: any[];
@@ -62,16 +70,16 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // COOKIE ACCESS — NEXT 16 TYPE-CORRECT
+  // COOKIE ACCESS (SYNC — NEXT 16 SAFE)
   // ----------------------------------------------------------
-  const cookieStore = await cookies();
+  const cookieStore = cookies();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
+        get(name) {
           return cookieStore.get(name)?.value;
         },
         set() {},
@@ -81,7 +89,7 @@ export async function assembleContext(
   );
 
   // ----------------------------------------------------------
-  // LOAD LONG-TERM MEMORY (READ ONLY)
+  // LOAD MEMORY (READ ONLY)
   // ----------------------------------------------------------
   const [facts, episodic, autobiography] = await Promise.all([
     supabase
@@ -122,19 +130,23 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // RESEARCH CONTEXT (HUBBLE — READ ONLY, BOUNDED)
+  // FEATURE FLAGS (SAFE, NO ARGS)
+  // ----------------------------------------------------------
+  const flags = await getSolaceFeatureFlags();
+
+  // ----------------------------------------------------------
+  // RESEARCH CONTEXT (HUBBLE)
   // ----------------------------------------------------------
   let researchContext: any[] = [];
   let didResearch = false;
 
-  try {
+  if (flags?.enableResearch) {
     researchContext = await readHubbleResearchContext(10);
     didResearch = researchContext.length > 0;
-  } catch (err) {
-    console.warn("[DIAG-CTX] research skipped", err);
   }
 
   diag("research context", {
+    enabled: flags?.enableResearch,
     count: researchContext.length,
   });
 
