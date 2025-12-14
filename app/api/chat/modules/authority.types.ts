@@ -1,6 +1,5 @@
 //--------------------------------------------------------------
 // AUTHORITY CONTEXT — CANONICAL TYPE
-// Read-only, session-scoped, Arbiter-visible only
 //--------------------------------------------------------------
 
 export type AuthorityStatus =
@@ -14,11 +13,11 @@ export type AuthorityConfidence =
   | "LOW";
 
 export type AuthorityContext = {
-  authority: string;        // "USPTO", "FDA", "ISO"
-  scope: string;            // "PATENTABILITY", "DEVICE_CLASSIFICATION"
+  authority: string;     // "USPTO", "FDA", "ISO"
+  scope: string;         // "PATENTABILITY", "DEVICE_CLASS"
   status: AuthorityStatus;
   confidence: AuthorityConfidence;
-  reason?: string;          // "NO_RESULTS", "QUERY_EXCEPTION", "OUT_OF_SCOPE"
-  data?: any;               // RAW PAYLOAD (read-only)
+  reason?: string;       // "NO_RESULTS", "QUERY_EXCEPTION"
+  data?: any;            // RAW PAYLOAD (read-only)
   timestamp: string;
 };
