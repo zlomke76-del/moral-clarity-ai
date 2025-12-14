@@ -1,24 +1,67 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-// NOTE: MCA_USER_KEY must NOT be used as a runtime identity.
-// It is a build-time constant and will always be truthy.
-// import { MCA_USER_KEY } from "@/lib/mca-config";
+import { createBrowserClient } from "@supabase/ssr";
+
+/*
+IMPORTANT PRINCIPLES (DO NOT VIOLATE):
+
+1. userKey must ONLY come from authenticated identity.
+2. No constants, no defaults, no guessing.
+3. Identity resolution happens explicitly here.
+4. If auth is missing, userKey stays undefined.
+*/
 
 export function useSolaceMemory() {
   const [memReady, setMemReady] = useState(false);
   const memoryCacheRef = useRef<any[]>([]);
 
-  // IMPORTANT:
-  // userKey must be undefined until a real authenticated identity exists.
-  // Do NOT default to any name or constant.
+  // Authenticated user identity (undefined until resolved)
   const [userKey, setUserKey] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    // In the future you can preload memory here.
-    // Identity resolution should happen here as well
-    // (e.g., from auth/session), not from constants.
-    setMemReady(true);
+    let mounted = true;
+
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    async function resolveIdentity() {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!mounted) return;
+
+        if (session?.user?.id) {
+          setUserKey(session.user.id);
+        } else {
+          setUserKey(undefined);
+        }
+      } catch (err) {
+        console.error("[useSolaceMemory] auth resolution failed", err);
+        setUserKey(undefined);
+      } finally {
+        if (mounted) setMemReady(true);
+      }
+    }
+
+    resolveIdentity();
+
+    // Keep identity in sync (login / logout / refresh)
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (!mounted) return;
+        setUserKey(session?.user?.id);
+      }
+    );
+
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   return {
