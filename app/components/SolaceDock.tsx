@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSolaceStore } from "@/app/providers/solace-store";
+import MessageRenderer from "./MessageRenderer";
 
 declare global {
   interface Window {
@@ -397,26 +398,25 @@ export default function SolaceDock() {
 
       <div ref={transcriptRef} style={transcriptStyle}>
         {messages.map((m, i) => (
-          <div
-            key={i}
-            style={{
-              margin: "6px 0",
-              padding: "10px 12px",
-              borderRadius: UI.radiusLg,
-              background:
-                m.role === "user"
-                  ? "rgba(39,52,74,.6)"
-                  : "rgba(28,38,54,.6)",
-              // ✅ FORMATTING FIX: preserve newlines/paragraphs exactly
-              whiteSpace: "pre-wrap",
-              overflowWrap: "anywhere",
-              wordBreak: "break-word",
-              lineHeight: 1.35,
-            }}
-          >
-            {m.content}
-          </div>
-        ))}
+  <div
+    key={i}
+    style={{
+      margin: "6px 0",
+      padding: "10px 12px",
+      borderRadius: UI.radiusLg,
+      background:
+        m.role === "user"
+          ? "rgba(39,52,74,.6)"
+          : "rgba(28,38,54,.6)",
+      whiteSpace: "pre-wrap",
+      overflowWrap: "anywhere",
+      wordBreak: "break-word",
+      lineHeight: 1.35,
+    }}
+  >
+    <MessageRenderer content={m.content} />
+  </div>
+))}
       </div>
 
       <div
