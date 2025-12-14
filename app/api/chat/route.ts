@@ -1,10 +1,16 @@
 // ------------------------------------------------------------
 // Solace Chat API Route
-// HARD-ROUTED NEWSROOM vs HYBRID
+// HARD ROUTING — Newsroom vs Hybrid
+// Authority-aware + Persona-safe
 // NEXT 16 SAFE — NODE RUNTIME
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
+
+import {
+  FACTS_LIMIT,
+  EPISODES_LIMIT,
+} from "./modules/context.constants";
 
 import { assembleContext } from "./modules/assembleContext";
 import { runHybridPipeline } from "./modules/hybrid";
@@ -18,17 +24,10 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 // ------------------------------------------------------------
-// NEWS INTENT DETECTOR (STRICT)
+// Helpers
 // ------------------------------------------------------------
 function isNewsRequest(message: string): boolean {
-  const m = message.toLowerCase();
-  return (
-    m.includes("news") ||
-    m.includes("headlines") ||
-    m.includes("what happened today") ||
-    m.includes("today's news") ||
-    m.includes("latest news")
-  );
+  return /news|headline|headlines|today|latest|briefing|update/i.test(message);
 }
 
 // ------------------------------------------------------------
@@ -46,6 +45,8 @@ export async function POST(req: Request) {
       ministryMode = false,
       founderMode = false,
       modeHint = "",
+      governorLevel = 0,
+      governorInstructions = "",
     } = body ?? {};
 
     const finalUserKey = canonicalUserKey ?? userKey;
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // Assemble context ONCE
+    // Assemble FULL epistemic context (memory, research, digest)
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
@@ -71,9 +72,27 @@ export async function POST(req: Request) {
     );
 
     // --------------------------------------------------------
-    // HARD NEWSROOM ROUTE (NO HYBRID)
+    // HARD NEWSROOM ROUTE (NON-NEGOTIABLE)
     // --------------------------------------------------------
     if (isNewsRequest(message)) {
+      console.log("[DIAG-ROUTE] newsroom engaged");
+
+      if (!Array.isArray(context.newsDigest) || context.newsDigest.length < 3) {
+        const refusal =
+          "There is insufficient verified neutral news content to produce a full daily briefing.";
+
+        return NextResponse.json({
+          ok: true,
+          response: refusal,
+          messages: [{ role: "assistant", content: refusal }],
+          diagnostics: {
+            newsroom: true,
+            reason: "insufficient_digest",
+            digestCount: context.newsDigest?.length ?? 0,
+          },
+        });
+      }
+
       const newsroomResponse = await runNewsroomExecutor(
         context.newsDigest
       );
@@ -88,42 +107,60 @@ export async function POST(req: Request) {
           },
         ],
         diagnostics: {
-          mode: "newsroom",
-          newsDigestUsed: context.newsDigest.length,
+          newsroom: true,
+          storiesReturned: 3,
+          digestUsed: context.newsDigest.length,
         },
       });
     }
 
     // --------------------------------------------------------
-    // HYBRID ROUTE (NON-NEWS ONLY)
+    // DEFAULT: HYBRID PIPELINE (NON-NEWS)
     // --------------------------------------------------------
+    console.log("[DIAG-ROUTE] hybrid engaged");
+
     const result = await runHybridPipeline({
       userMessage: message,
       context,
       ministryMode,
       founderMode,
       modeHint,
+      governorLevel,
+      governorInstructions,
     });
+
+    const safeResponse =
+      typeof result?.finalAnswer === "string" && result.finalAnswer.length > 0
+        ? result.finalAnswer
+        : "I am here and ready. The response pipeline completed, but there was nothing to report yet.";
 
     return NextResponse.json({
       ok: true,
-      response: result.finalAnswer,
+      response: safeResponse,
       messages: [
         {
           role: "assistant",
-          content: result.finalAnswer,
+          content: safeResponse,
         },
       ],
       diagnostics: {
-        mode: "hybrid",
+        factsUsed: Math.min(
+          context.memoryPack.facts.length,
+          FACTS_LIMIT
+        ),
+        episodicUsed: Math.min(
+          context.memoryPack.episodic.length,
+          EPISODES_LIMIT
+        ),
         didResearch: context.didResearch,
+        newsroom: false,
       },
     });
   } catch (err: any) {
     console.error("[CHAT ROUTE ERROR]", err?.message);
 
     const fallback =
-      "I encountered an internal error, but I am still here.";
+      "I ran into an internal issue while responding, but I am still here and ready to continue.";
 
     return NextResponse.json({
       ok: true,
