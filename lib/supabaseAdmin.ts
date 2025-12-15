@@ -1,16 +1,35 @@
 // lib/supabaseAdmin.ts
-import 'server-only';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-/** Factory: returns a fresh Service Role client (bypasses RLS). */
-export function createSupabaseAdmin(): SupabaseClient {
-  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE, {
-    auth: { persistSession: false },
-  });
+if (!SUPABASE_URL) {
+  throw new Error("NEXT_PUBLIC_SUPABASE_URL is missing");
 }
 
-/** Shared instance for simple server routes. Never import into client code. */
-export const supabaseAdmin = createSupabaseAdmin();
+if (!SERVICE_ROLE_KEY) {
+  throw new Error("SUPABASE_SERVICE_ROLE_KEY is missing");
+}
+
+/**
+ * Server-only Supabase admin client.
+ * - Uses SERVICE ROLE KEY only
+ * - No cookies
+ * - No sessions
+ * - No SSR helpers
+ * - No silent fallback
+ */
+export function createSupabaseAdmin() {
+  return createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+    global: {
+      headers: {
+        "X-Client-Info": "moral-clarity-ai-admin",
+      },
+    },
+  });
+}
