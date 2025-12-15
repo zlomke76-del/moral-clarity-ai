@@ -1,6 +1,6 @@
 // ------------------------------------------------------------
 // Solace Chat API Route
-// Authority-aware + Newsroom-aware
+// Authority-aware + News Digest Aware
 // NEXT 16 SAFE — NODE RUNTIME
 // ------------------------------------------------------------
 
@@ -21,6 +21,20 @@ import { runNewsroomExecutor } from "./modules/newsroom-executor";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+// ------------------------------------------------------------
+// Helpers
+// ------------------------------------------------------------
+function isNewsRequest(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes("news") ||
+    m.includes("headlines") ||
+    m.includes("what is happening") ||
+    m.includes("what is going on") ||
+    m.includes("latest")
+  );
+}
 
 // ------------------------------------------------------------
 // POST handler
@@ -53,7 +67,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // Assemble FULL epistemic context
+    // Assemble epistemic context
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
@@ -62,9 +76,13 @@ export async function POST(req: Request) {
     );
 
     // --------------------------------------------------------
-    // NEWSROOM MODE (LOCKED)
+    // NEWSROOM EXECUTION (STRICT, SINGLE-PASS)
     // --------------------------------------------------------
-    if (context.activeMode === "newsroom") {
+    if (
+      isNewsRequest(message) &&
+      Array.isArray(context.newsDigest) &&
+      context.newsDigest.length >= 3
+    ) {
       const newsroomResponse = await runNewsroomExecutor(
         context.newsDigest
       );
@@ -86,7 +104,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // HYBRID MODE (DEFAULT)
+    // HYBRID PIPELINE (DEFAULT)
     // --------------------------------------------------------
     const result = await runHybridPipeline({
       userMessage: message,
