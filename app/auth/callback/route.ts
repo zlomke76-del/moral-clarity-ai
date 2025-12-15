@@ -6,19 +6,19 @@ import { createServerClient } from "@supabase/ssr";
 export async function GET(request: Request) {
   const url = new URL(request.url);
 
-  try {
-    const code = url.searchParams.get("code");
-    if (!code) {
-      return NextResponse.redirect(new URL("/auth/sign-in", url.origin));
-    }
+  const code = url.searchParams.get("code");
+  if (!code) {
+    return NextResponse.redirect(new URL("/auth/sign-in", url.origin));
+  }
 
+  try {
     const cookieStore = cookies();
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
-        cookies: () => ({
+        cookies: {
           get(name: string) {
             return cookieStore.get(name)?.value;
           },
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
           remove(name: string, options: any) {
             cookieStore.set({ name, value: "", ...options });
           },
-        }),
+        },
       }
     );
 
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL("/auth/sign-in", url.origin));
     }
 
-    // ✅ Cookies are now written server-side
+    // ✅ Session cookie is now written (HttpOnly)
     return NextResponse.redirect(new URL("/app", url.origin));
   } catch (err) {
     console.error("[auth/callback] fatal", err);
