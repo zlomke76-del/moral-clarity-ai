@@ -1,41 +1,32 @@
 // lib/supabaseBrowser.ts
 'use client';
 
-import { createBrowserClient } from '@supabase/ssr';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-type SupabaseClientType = ReturnType<typeof createBrowserClient>;
-
-let browserClient: SupabaseClientType | null = null;
+let client: SupabaseClient | null = null;
 
 /**
- * Browser Supabase client using implicit auth flow.
- * - No PKCE exchangeCodeForSession calls.
- * - Supabase auto-detects the session from the magic link URL.
+ * Single browser Supabase client for the App Router.
+ *
+ * IMPORTANT:
+ * - Uses @supabase/auth-helpers-nextjs
+ * - Cookie-backed
+ * - Middleware-compatible
+ * - DO NOT add flowType / implicit / PKCE overrides here
  */
-export function createSupabaseBrowser(): SupabaseClientType {
-  if (!browserClient) {
-    browserClient = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        auth: {
-          // Use implicit flow for magic links so we don't depend on PKCE verifier cookies
-          flowType: 'implicit',
-          detectSessionInUrl: true,
-          persistSession: true,
-          autoRefreshToken: true,
-        },
-      },
-    );
+export function createSupabaseBrowser(): SupabaseClient {
+  if (!client) {
+    client = createClientComponentClient();
   }
 
-  return browserClient;
+  return client;
 }
 
 /**
- * Backwards-compat alias so older code that imports getSupabaseBrowser
- * continues to work without changes.
+ * Backwards-compat alias.
+ * Existing imports continue to work.
  */
-export function getSupabaseBrowser(): SupabaseClientType {
+export function getSupabaseBrowser(): SupabaseClient {
   return createSupabaseBrowser();
 }
