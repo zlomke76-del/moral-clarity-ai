@@ -32,16 +32,6 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
           {children}
         </main>
       )}
-
-      {/* SOLACE ONLY ON NON-AUTH ROUTES */}
-      {!isAuth && (
-        <div className="mc-ui">
-          <Suspense>
-            <SolaceGuard />
-          </Suspense>
-          <SpeedInsights />
-        </div>
-      )}
     </>
   );
 }
