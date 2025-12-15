@@ -130,6 +130,34 @@ export default function SolaceDock() {
   // Memory + attachments
   // --------------------------------------------------------------------
   const { userKey, memReady } = useSolaceMemory();
+// --------------------------------------------------------------------
+// App-level bootstrap (SAFE, idempotent, non-blocking)
+// --------------------------------------------------------------------
+const didBootstrap = useRef(false);
+
+useEffect(() => {
+  if (!memReady) return;          // wait until auth resolution finishes
+  if (!userKey) return;           // only run for authenticated users
+  if (didBootstrap.current) return;
+
+  didBootstrap.current = true;
+
+  const runBootstrap = async () => {
+    try {
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      await supabase.rpc("ensure_user_initialized");
+    } catch (err) {
+      console.error("[bootstrap] ensure_user_initialized failed", err);
+      // IMPORTANT: no redirect, no throw
+    }
+  };
+
+  runBootstrap();
+}, [memReady, userKey]);
 
   const { pendingFiles, handleFiles, handlePaste, clearPending } =
     useSolaceAttachments({
