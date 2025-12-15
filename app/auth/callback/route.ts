@@ -42,10 +42,14 @@ export async function GET(request: Request) {
 
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-  if (error) {
-    console.error("[auth/callback] exchange failed", error);
-    return NextResponse.redirect(`${origin}/auth/sign-in`);
+  // If exchange fails or cookies aren’t set correctly
+  if (error || !cookieStore.get("sb-access-token")) {
+    console.error("[auth/callback] exchange failed or cookies not set", error);
+
+    // Redirect to manual code entry page
+    return NextResponse.redirect(`${origin}/auth/verify?code=${code}`);
   }
 
+  // Success! Redirect to app.
   return NextResponse.redirect(`${origin}/app`);
 }
