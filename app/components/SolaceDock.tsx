@@ -2,8 +2,6 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { createBrowserClient } from "@supabase/ssr";
-
 import { useSolaceStore } from "@/app/providers/solace-store";
 import MessageRenderer from "./solace/MessageRenderer";
 
@@ -38,6 +36,7 @@ type Message = {
   imageUrl?: string | null;
 };
 
+// Optional evidence block (USPTO / prior art / citations)
 type EvidenceBlock = {
   id?: string;
   source?: string;
@@ -93,6 +92,9 @@ export default function SolaceDock() {
     return () => window.removeEventListener("resize", update);
   }, []);
 
+  // --------------------------------------------------------------------
+  // Mobile detection
+  // --------------------------------------------------------------------
   const isMobile = viewport.w > 0 ? viewport.w <= 768 : false;
 
   useEffect(() => {
@@ -125,40 +127,9 @@ export default function SolaceDock() {
   }, [messages]);
 
   // --------------------------------------------------------------------
-  // Memory
+  // Memory + attachments
   // --------------------------------------------------------------------
   const { userKey, memReady } = useSolaceMemory();
-
-  // --------------------------------------------------------------------
-  // App-level bootstrap (SAFE, idempotent, non-blocking)
-  // --------------------------------------------------------------------
-  const didBootstrap = useRef(false);
-
-  useEffect(() => {
-    if (!memReady) return;
-    if (!userKey) return;
-    if (didBootstrap.current) return;
-
-    didBootstrap.current = true;
-
-    const runBootstrap = async () => {
-      try {
-        const supabase = createBrowserClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
-
-        await supabase.rpc("ensure_user_initialized");
-      } catch (err) {
-        console.error(
-          "[bootstrap] ensure_user_initialized failed",
-          err
-        );
-      }
-    };
-
-    runBootstrap();
-  }, [memReady, userKey]);
 
   const { pendingFiles, handleFiles, handlePaste, clearPending } =
     useSolaceAttachments({
@@ -332,7 +303,124 @@ export default function SolaceDock() {
       PAD,
     });
 
+  // --------------------------------------------------------------------
+  // Early returns
+  // --------------------------------------------------------------------
   if (!canRender || !visible) return null;
+
+  if (minimized) {
+    return createPortal(
+      <button
+        onClick={() => setMinimized(false)}
+        style={{
+          position: "fixed",
+          bottom: 20,
+          right: 20,
+          width: 58,
+          height: 58,
+          borderRadius: "50%",
+          background:
+            "radial-gradient(62% 62% at 50% 42%, rgba(251,191,36,1) 0%, rgba(251,191,36,.65) 38%, rgba(251,191,36,.22) 72%, rgba(251,191,36,.12) 100%)",
+          boxShadow: "0 0 26px rgba(251,191,36,.55)",
+          fontWeight: 700,
+          cursor: "pointer",
+        }}
+      >
+        S
+      </button>,
+      document.body
+    );
+  }
+
+  // --------------------------------------------------------------------
+  // SEND (FIXED, SAFE, EXTENDED)
+  // --------------------------------------------------------------------
+  async function send() {
+    if (!input.trim() && pendingFiles.length === 0) return;
+    if (streaming) return;
+
+    const userMsg = input || "Attachments:";
+    setInput("");
+    setStreaming(true);
+    setMessages((m) => [...m, { role: "user", content: userMsg }]);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: userMsg,
+          canonicalUserKey: userKey || undefined,
+          workspaceId: MCA_WORKSPACE_ID,
+          ministryMode: ministryOn,
+          modeHint,
+        }),
+      });
+
+      const data = await res.json();
+      ingestPayload(data);
+    } catch (e: any) {
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: `⚠️ ${e?.message ?? "Request failed"}` },
+      ]);
+    } finally {
+      setStreaming(false);
+      clearPending();
+    }
+  }
+
+  // --------------------------------------------------------------------
+  // Payload ingestion (multi-message + evidence safe)
+  // --------------------------------------------------------------------
+  function ingestPayload(data: any) {
+    if (!data) {
+      throw new Error("Empty response payload");
+    }
+
+    // Legacy contract
+    if (data.ok === true && typeof data.response === "string") {
+      setMessages((m) => [...m, { role: "assistant", content: data.response }]);
+      return;
+    }
+
+    // Multi-message
+    if (Array.isArray(data.messages)) {
+      setMessages((m) => [...m, ...data.messages]);
+      return;
+    }
+
+    // Single message object
+    if (data.message?.content) {
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: data.message.content },
+      ]);
+      return;
+    }
+
+    // Evidence blocks (USPTO / prior art)
+    if (Array.isArray(data.evidence)) {
+      const evMsgs: Message[] = data.evidence.map((e: EvidenceBlock) => ({
+        role: "assistant",
+        content:
+          `📄 Evidence` +
+          (e.source ? ` (${e.source})` : "") +
+          `\n\n${e.summary || e.text || "[no content]"}`,
+      }));
+      setMessages((m) => [...m, ...evMsgs]);
+      return;
+    }
+
+    throw new Error("Unrecognized response payload");
+  }
+
+  function onEnterSend(e: React.KeyboardEvent) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  }
 
   // --------------------------------------------------------------------
   // RENDER
@@ -349,10 +437,99 @@ export default function SolaceDock() {
 
       <div ref={transcriptRef} style={transcriptStyle}>
         {messages.map((m, i) => (
-          <div key={i} style={{ margin: "6px 0" }}>
+          <div
+            key={i}
+            style={{
+              margin: "6px 0",
+              padding: "10px 12px",
+              borderRadius: UI.radiusLg,
+              background:
+                m.role === "user"
+                  ? "rgba(39,52,74,.6)"
+                  : "rgba(28,38,54,.6)",
+              whiteSpace: "pre-wrap",
+              overflowWrap: "anywhere",
+              wordBreak: "break-word",
+              lineHeight: 1.35,
+            }}
+          >
             <MessageRenderer content={m.content} />
           </div>
         ))}
+      </div>
+
+      <div
+        style={composerWrapStyle}
+        onPaste={(e) => handlePaste(e, { prefix: "solace" })}
+      >
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <label
+            style={{
+              width: 38,
+              height: 38,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: UI.radiusMd,
+              border: UI.border,
+              background: UI.surface2,
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+            title="Attach files"
+          >
+            📎
+            <input
+              type="file"
+              multiple
+              hidden
+              onChange={(e) =>
+                handleFiles(e.target.files, { prefix: "solace" })
+              }
+            />
+          </label>
+
+          <button
+            onClick={toggleMic}
+            title="Voice input"
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: UI.radiusMd,
+              border: UI.border,
+              background: listening ? "rgba(255,0,0,.45)" : UI.surface2,
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            🎤
+          </button>
+
+          <textarea
+            style={textareaStyle}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={onEnterSend}
+            placeholder="Ask Solace..."
+          />
+
+          <button
+            onClick={send}
+            disabled={streaming}
+            style={{
+              height: 38,
+              padding: "0 14px",
+              borderRadius: UI.radiusMd,
+              background: "#fbbf24",
+              border: "none",
+              fontWeight: 600,
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            Ask
+          </button>
+        </div>
       </div>
 
       <ResizeHandle onResizeStart={startResize} />
