@@ -1,21 +1,51 @@
 import { NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
-/**
- * Magic-link callback (IMPLICIT FLOW)
- *
- * Supabase JS running in the browser will:
- * - Read the access token from the URL fragment
- * - Persist the session automatically (localStorage)
- *
- * This route exists ONLY to redirect the user into /app.
- * It must NOT attempt cookie access, PKCE exchange, or session mutation.
- */
 export async function GET(request: Request) {
-  const url = new URL(request.url);
+  const { searchParams, origin } = new URL(request.url);
 
-  // Preserve hash fragment (access_token lives there)
-  const redirectUrl = new URL("/app", url.origin);
-  redirectUrl.hash = url.hash;
+  const code = searchParams.get("code");
 
-  return NextResponse.redirect(redirectUrl);
+  if (!code) {
+    return NextResponse.redirect(`${origin}/auth/sign-in`);
+  }
+
+  const cookieStore = cookies();
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          cookieStore.set({
+            name,
+            value,
+            ...options,
+          });
+        },
+        remove(name: string, options: any) {
+          cookieStore.set({
+            name,
+            value: "",
+            ...options,
+            maxAge: 0,
+          });
+        },
+      },
+    }
+  );
+
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+  if (error) {
+    console.error("[auth/callback] exchange failed", error);
+    return NextResponse.redirect(`${origin}/auth/sign-in`);
+  }
+
+  return NextResponse.redirect(`${origin}/app`);
 }
