@@ -10,25 +10,37 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/auth/sign-in`);
   }
 
-  // 🔑 Next.js 16: cookies() IS ASYNC
+  // Next.js 16 cookies API (async)
   const cookieStore = await cookies();
+
+  // 🔥 CRITICAL: purge ALL existing Supabase cookies first
+  for (const c of cookieStore.getAll()) {
+    if (c.name.startsWith("sb-")) {
+      cookieStore.set({
+        name: c.name,
+        value: "",
+        path: "/",
+        maxAge: 0,
+      });
+    }
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
+        get(name) {
           return cookieStore.get(name)?.value;
         },
-        set(name: string, value: string, options: any) {
+        set(name, value, options) {
           cookieStore.set({
             name,
             value,
             ...options,
           });
         },
-        remove(name: string, options: any) {
+        remove(name, options) {
           cookieStore.set({
             name,
             value: "",
@@ -42,14 +54,11 @@ export async function GET(request: Request) {
 
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-  // If exchange fails or cookies aren’t set correctly
-  if (error || !cookieStore.get("sb-access-token")) {
-    console.error("[auth/callback] exchange failed or cookies not set", error);
-
-    // Redirect to manual code entry page
-    return NextResponse.redirect(`${origin}/auth/verify?code=${code}`);
+  if (error) {
+    console.error("[auth/callback] exchange failed", error);
+    return NextResponse.redirect(`${origin}/auth/sign-in`);
   }
 
-  // Success! Redirect to app.
+  // ✅ At this point Supabase has written valid JSON cookies
   return NextResponse.redirect(`${origin}/app`);
 }
