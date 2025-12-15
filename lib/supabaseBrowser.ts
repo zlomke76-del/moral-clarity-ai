@@ -4,28 +4,27 @@
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-let client: SupabaseClient | null = null;
-
 /**
- * Single browser Supabase client for the App Router.
+ * Browser-side Supabase client.
  *
- * IMPORTANT:
- * - Uses @supabase/auth-helpers-nextjs
- * - Cookie-backed
- * - Middleware-compatible
- * - DO NOT add flowType / implicit / PKCE overrides here
+ * Rules:
+ * - Cookie-backed (required for App Router)
+ * - Single instance (prevents auth desync)
+ * - No schema generics (prevents TS incompatibilities)
  */
+let browserClient: SupabaseClient | null = null;
+
 export function createSupabaseBrowser(): SupabaseClient {
-  if (!client) {
-    client = createClientComponentClient();
+  if (!browserClient) {
+    browserClient = createClientComponentClient();
   }
 
-  return client;
+  return browserClient;
 }
 
 /**
  * Backwards-compat alias.
- * Existing imports continue to work.
+ * Keep this so existing imports do not break.
  */
 export function getSupabaseBrowser(): SupabaseClient {
   return createSupabaseBrowser();
