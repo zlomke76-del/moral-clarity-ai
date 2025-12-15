@@ -77,6 +77,17 @@ function safeRows<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
 }
 
+function wantsNews(userMessage: string): boolean {
+  const msg = userMessage.toLowerCase();
+  return (
+    msg.includes("news") ||
+    msg.includes("headlines") ||
+    msg.includes("current events") ||
+    msg.includes("what's happening") ||
+    msg.includes("today's news")
+  );
+}
+
 // ------------------------------------------------------------
 // MAIN ASSEMBLER
 // ------------------------------------------------------------
@@ -182,23 +193,33 @@ export async function assembleContext(
   diag("research context", { count: researchContext.length });
 
   // ------------------------------------------------------------
-  // NEWS DIGEST (NEUTRAL ONLY)
+  // NEWS DIGEST (NEUTRAL — INTENT GATED)
   // ------------------------------------------------------------
-  const { data: newsDigestRaw, error: newsError } = await supabase
-    .from("solace_news_digest_view")
-    .select(
-      "ledger_id, story_title, story_url, outlet, neutral_summary, created_at"
-    )
-    .order("created_at", { ascending: false })
-    .limit(9);
+  let newsDigest: NewsDigestItem[] = [];
 
-  if (newsError) {
-    diag("news digest error", { message: newsError.message });
+  if (wantsNews(userMessage)) {
+    const { data: newsDigestRaw, error: newsError } = await supabase
+      .from("solace_news_digest_view")
+      .select(
+        "ledger_id, story_title, story_url, outlet, neutral_summary, created_at"
+      )
+      .order("created_at", { ascending: false })
+      .limit(9);
+
+    if (newsError) {
+      diag("news digest error", { message: newsError.message });
+    }
+
+    newsDigest = safeRows<NewsDigestItem>(newsDigestRaw);
+
+    diag("news digest loaded", {
+      rowsFetched: newsDigest.length,
+    });
+  } else {
+    diag("news digest skipped", {
+      reason: "no news intent",
+    });
   }
-
-  const newsDigest = safeRows<NewsDigestItem>(newsDigestRaw);
-
-  diag("news digest", { count: newsDigest.length });
 
   // ------------------------------------------------------------
   // FINAL CONTEXT
