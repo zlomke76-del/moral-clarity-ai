@@ -37,6 +37,14 @@ export type AuthorityContext = {
   };
 };
 
+export type NewsDigestItem = {
+  story_title: string;
+  outlet: string;
+  neutral_summary: string;
+  source_url: string;
+  created_at: string;
+};
+
 export type SolaceContextBundle = {
   persona: string;
   memoryPack: {
@@ -50,7 +58,7 @@ export type SolaceContextBundle = {
   };
   researchContext: any[];
   authorities: AuthorityContext[];
-  newsDigest: any[];
+  newsDigest: NewsDigestItem[];
   didResearch: boolean;
 };
 
@@ -98,6 +106,9 @@ export async function assembleContext(
     }
   );
 
+  // ----------------------------------------------------------
+  // AUTH
+  // ----------------------------------------------------------
   const {
     data: { user },
     error: authError,
@@ -121,8 +132,12 @@ export async function assembleContext(
   }
 
   const authUserId = user.id;
+
   diag("auth identity locked", { authUserId });
 
+  // ----------------------------------------------------------
+  // MEMORY
+  // ----------------------------------------------------------
   const [facts, episodic, autobiography] = await Promise.all([
     supabase
       .schema("memory")
@@ -161,9 +176,17 @@ export async function assembleContext(
     autobiography: autobiography.length,
   });
 
-  // ------------------------------------------------------------
-  // NEWS DIGEST (AUTHORITATIVE, PRE-INGESTED)
-  // ------------------------------------------------------------
+  // ----------------------------------------------------------
+  // RESEARCH CONTEXT (OPTIONAL)
+  // ----------------------------------------------------------
+  const researchContext = await readHubbleResearchContext(10);
+  const didResearch = researchContext.length > 0;
+
+  diag("research context", { count: researchContext.length });
+
+  // ----------------------------------------------------------
+  // NEWS DIGEST (AUTHORITATIVE)
+  // ----------------------------------------------------------
   const newsDigest = await supabase
     .from("solace_news_digest_view")
     .select(
@@ -173,16 +196,13 @@ export async function assembleContext(
     .limit(25)
     .then((r) => safeRows(r.data));
 
-  diag("news digest", { count: newsDigest.length });
+  diag("news digest", {
+    count: newsDigest.length,
+  });
 
-  // ------------------------------------------------------------
-  // RESEARCH CONTEXT (OPTIONAL)
-  // ------------------------------------------------------------
-  const researchContext = await readHubbleResearchContext(10);
-  const didResearch = researchContext.length > 0;
-
-  diag("research context", { count: researchContext.length });
-
+  // ----------------------------------------------------------
+  // FINAL CONTEXT BUNDLE
+  // ----------------------------------------------------------
   return {
     persona: "Solace",
     memoryPack: { facts, episodic, autobiography },
