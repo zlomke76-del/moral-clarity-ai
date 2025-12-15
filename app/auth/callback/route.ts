@@ -4,14 +4,14 @@ import { cookies } from "next/headers";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
-
   const code = searchParams.get("code");
 
   if (!code) {
     return NextResponse.redirect(`${origin}/auth/sign-in`);
   }
 
-  const cookieStore = cookies();
+  // 🔑 Next.js 16: cookies() IS ASYNC
+  const cookieStore = await cookies();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
