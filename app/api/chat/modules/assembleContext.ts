@@ -121,7 +121,6 @@ export async function assembleContext(
   }
 
   const authUserId = user.id;
-
   diag("auth identity locked", { authUserId });
 
   const [facts, episodic, autobiography] = await Promise.all([
@@ -162,6 +161,23 @@ export async function assembleContext(
     autobiography: autobiography.length,
   });
 
+  // ------------------------------------------------------------
+  // NEWS DIGEST (AUTHORITATIVE, PRE-INGESTED)
+  // ------------------------------------------------------------
+  const newsDigest = await supabase
+    .from("solace_news_digest_view")
+    .select(
+      "story_title, outlet, neutral_summary, source_url, created_at"
+    )
+    .order("created_at", { ascending: false })
+    .limit(25)
+    .then((r) => safeRows(r.data));
+
+  diag("news digest", { count: newsDigest.length });
+
+  // ------------------------------------------------------------
+  // RESEARCH CONTEXT (OPTIONAL)
+  // ------------------------------------------------------------
   const researchContext = await readHubbleResearchContext(10);
   const didResearch = researchContext.length > 0;
 
@@ -173,7 +189,7 @@ export async function assembleContext(
     workingMemory: { active: false, items: [] },
     researchContext,
     authorities: [],
-    newsDigest: [],
+    newsDigest,
     didResearch,
   };
 }
