@@ -10,20 +10,8 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/auth/sign-in`);
   }
 
-  // Next.js 16 cookies API (async)
+  // Next.js 16 cookies API
   const cookieStore = await cookies();
-
-  // 🔥 CRITICAL: purge ALL existing Supabase cookies first
-  for (const c of cookieStore.getAll()) {
-    if (c.name.startsWith("sb-")) {
-      cookieStore.set({
-        name: c.name,
-        value: "",
-        path: "/",
-        maxAge: 0,
-      });
-    }
-  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -52,6 +40,7 @@ export async function GET(request: Request) {
     }
   );
 
+  // ✅ PKCE exchange — requires intact code_verifier cookie
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
@@ -59,6 +48,21 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/auth/sign-in`);
   }
 
-  // ✅ At this point Supabase has written valid JSON cookies
+  // ✅ OPTIONAL: cleanup malformed legacy cookies AFTER exchange
+  for (const c of cookieStore.getAll()) {
+    if (
+      c.name.startsWith("sb-") &&
+      !c.value.startsWith("{") && // crude but effective JSON guard
+      !c.name.includes("code-verifier")
+    ) {
+      cookieStore.set({
+        name: c.name,
+        value: "",
+        path: "/",
+        maxAge: 0,
+      });
+    }
+  }
+
   return NextResponse.redirect(`${origin}/app`);
 }
