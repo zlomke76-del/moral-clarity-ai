@@ -1,24 +1,23 @@
-// /lib/supabaseClient.ts
+// lib/supabaseClient.ts
 'use client';
 
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import type { SupabaseClient } from '@supabase/supabase-js';
-
-let client: SupabaseClient | null = null;
 
 /**
- * App Router–safe Supabase client.
+ * Browser-side Supabase client.
  *
- * - Cookie-backed
- * - Middleware-compatible
- * - Magic-link safe
- * - Single source of truth
+ * IMPORTANT:
+ * - No SupabaseClient typing
+ * - No schema generics
+ * - Inference only
  */
-export function getSupabaseClient(): SupabaseClient {
+
+let client: ReturnType<typeof createClientComponentClient> | null = null;
+
+export function getSupabaseClient() {
   if (!client) {
     client = createClientComponentClient();
   }
-
   return client;
 }
 
