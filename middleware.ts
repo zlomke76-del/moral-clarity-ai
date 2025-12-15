@@ -1,5 +1,5 @@
 // middleware.ts
-// bump: v3  <-- 🔥 Forces Vercel to rebuild the Edge Function bundle
+// bump: v4  <-- forces Vercel edge rebuild
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -9,6 +9,19 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
   const pathname = req.nextUrl.pathname;
 
+  // --------------------------------------------------
+  // 🔓 ALWAYS allow auth entry + callback routes
+  // --------------------------------------------------
+  if (
+    pathname === "/auth/sign-in" ||
+    pathname === "/auth/callback"
+  ) {
+    return res;
+  }
+
+  // --------------------------------------------------
+  // Supabase SSR client
+  // --------------------------------------------------
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -16,10 +29,14 @@ export async function middleware(req: NextRequest) {
       cookies: {
         get: (name) => req.cookies.get(name)?.value,
         set: (name, value, options) => {
-          try { res.cookies.set(name, value, options); } catch {}
+          try {
+            res.cookies.set(name, value, options);
+          } catch {}
         },
         remove: (name, options) => {
-          try { res.cookies.delete(name); } catch {}
+          try {
+            res.cookies.delete(name);
+          } catch {}
         },
       },
     }
@@ -29,21 +46,28 @@ export async function middleware(req: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession();
 
-  // 🟢 LOGGED IN → block access to auth pages
+  // --------------------------------------------------
+  // 🟢 Logged in → block auth pages
+  // --------------------------------------------------
   if (session && pathname.startsWith("/auth")) {
     return NextResponse.redirect(new URL("/app", req.url));
   }
 
-  // 🔴 NOT LOGGED IN → protect /app and /w
-  if (!session && (pathname.startsWith("/app") || pathname.startsWith("/w"))) {
-    return NextResponse.redirect(
-      new URL(`/auth/sign-in?redirectedFrom=${pathname}`, req.url)
-    );
+  // --------------------------------------------------
+  // 🔴 Not logged in → protect app routes
+  // --------------------------------------------------
+  if (
+    !session &&
+    (pathname.startsWith("/app") || pathname.startsWith("/w"))
+  ) {
+    const signInUrl = new URL("/auth/sign-in", req.url);
+    signInUrl.searchParams.set("redirectedFrom", pathname);
+    return NextResponse.redirect(signInUrl);
   }
 
   return res;
 }
 
 export const config = {
-  matcher: ["/app/:path*", "/w/:path*", "/auth/:path*"], // unchanged
+  matcher: ["/app/:path*", "/w/:path*", "/auth/:path*"],
 };
