@@ -1,5 +1,5 @@
 //--------------------------------------------------------------
-// HYBRID PIPELINE — REASONING ONLY
+// HYBRID PIPELINE — REASONING ONLY (FACT-AWARE)
 // Optimist + Skeptic are INTERNAL
 // Arbiter emits ONE unified Solace voice
 //--------------------------------------------------------------
@@ -28,11 +28,35 @@ Identify risks and constraints.
 No labels. No meta commentary.
 `;
 
-const ARBITER_SYSTEM = `
-Integrate perspectives into a single, coherent response.
-Do not reference internal roles or stages.
-Speak only as Solace.
+// --------------------------------------------------------------
+// MEMORY FORMATTER (AUTHORITATIVE)
+// --------------------------------------------------------------
+function formatPersistentFacts(context: any): string {
+  const facts = context?.memoryPack?.facts ?? [];
+
+  if (!Array.isArray(facts) || facts.length === 0) {
+    return `
+PERSISTENT FACTS:
+None.
+
+MEMORY RULES:
+- No personal facts have been saved.
+- Do not infer traits, preferences, or history.
 `;
+  }
+
+  const lines = facts.map((f: any) => `- ${f.content}`);
+
+  return `
+PERSISTENT FACTS (USER-APPROVED):
+${lines.join("\n")}
+
+MEMORY RULES:
+- Only the above facts persist across sessions.
+- Do not infer additional traits or history.
+- If facts conflict with the user, ask for correction.
+`;
+}
 
 // --------------------------------------------------------------
 // PIPELINE
@@ -44,31 +68,43 @@ export async function runHybridPipeline(args: {
   founderMode?: boolean;
   modeHint?: string;
 }) {
-  const { userMessage, ministryMode, founderMode, modeHint } = args;
+  const { userMessage, context, ministryMode, founderMode, modeHint } = args;
 
-  // Optimist (internal)
+  // Optimist (internal, memory-blind by design)
   const optimist = await callModel(
     "gpt-4.1-mini",
     sanitizeASCII(`${OPTIMIST_SYSTEM}\nUser: ${userMessage}`)
   );
 
-  // Skeptic (internal)
+  // Skeptic (internal, memory-blind by design)
   const skeptic = await callModel(
     "gpt-4.1-mini",
     sanitizeASCII(`${SKEPTIC_SYSTEM}\nUser: ${userMessage}`)
   );
 
-  // Arbiter (single voice)
-  const system = buildSolaceSystemPrompt("core", `
+  // Arbiter (single voice, fact-aware)
+  const system = buildSolaceSystemPrompt(
+    "core",
+    `
 Founder Mode: ${founderMode}
 Ministry Mode: ${ministryMode}
 Mode Hint: ${modeHint}
-`);
+
+When asked about memory or recall:
+- List only persisted facts.
+- If none exist, say so explicitly.
+- Never infer personality, intent, or preferences.
+`
+  );
+
+  const memoryBlock = formatPersistentFacts(context);
 
   const arbiterPrompt = sanitizeASCII(`
 ${system}
 
-INTERNAL CONTEXT:
+${memoryBlock}
+
+INTERNAL REASONING CONTEXT:
 ${optimist}
 
 ${skeptic}
