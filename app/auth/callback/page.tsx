@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createBrowserClient } from "@supabase/ssr";
 
 export default function CallbackPage() {
   const router = useRouter();
@@ -9,30 +10,26 @@ export default function CallbackPage() {
   useEffect(() => {
     async function handleCallback() {
       try {
-        // Supabase sends session data in the URL hash
-        const hash = window.location.hash.startsWith("#")
-          ? window.location.hash.slice(1)
-          : "";
+        const supabase = createBrowserClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
 
-        const params = new URLSearchParams(hash);
-        const access_token = params.get("access_token");
-        const refresh_token = params.get("refresh_token");
+        // 🔑 Let Supabase consume the magic link FIRST
+        const { data, error } = await supabase.auth.getSession();
 
-        if (!access_token || !refresh_token) {
+        if (error || !data.session) {
           router.replace("/auth/sign-in");
           return;
         }
 
-        // Exchange tokens for httpOnly cookies (server-side)
+        const { access_token, refresh_token } = data.session;
+
+        // Optional: exchange for httpOnly cookies
         const res = await fetch("/auth/exchange", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            access_token,
-            refresh_token,
-          }),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ access_token, refresh_token }),
         });
 
         if (!res.ok) {
@@ -40,9 +37,8 @@ export default function CallbackPage() {
           return;
         }
 
-        // At this point cookies are set and observable
         router.replace("/app");
-      } catch (err) {
+      } catch {
         router.replace("/auth/sign-in");
       }
     }
