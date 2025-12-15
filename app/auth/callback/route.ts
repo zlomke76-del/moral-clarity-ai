@@ -1,27 +1,48 @@
 // app/auth/callback/route.ts
 import { NextResponse } from "next/server";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const code = url.searchParams.get("code");
 
-  // If Supabase didn't send a code, bounce cleanly
-  if (!code) {
+  try {
+    const code = url.searchParams.get("code");
+    if (!code) {
+      return NextResponse.redirect(new URL("/auth/sign-in", url.origin));
+    }
+
+    const cookieStore = cookies();
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: () => ({
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+          set(name: string, value: string, options: any) {
+            cookieStore.set({ name, value, ...options });
+          },
+          remove(name: string, options: any) {
+            cookieStore.set({ name, value: "", ...options });
+          },
+        }),
+      }
+    );
+
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (error) {
+      console.error("[auth/callback] exchange failed", error);
+      return NextResponse.redirect(new URL("/auth/sign-in", url.origin));
+    }
+
+    // ✅ Cookies are now written server-side
+    return NextResponse.redirect(new URL("/app", url.origin));
+  } catch (err) {
+    console.error("[auth/callback] fatal", err);
     return NextResponse.redirect(new URL("/auth/sign-in", url.origin));
   }
-
-  const supabase = createRouteHandlerClient({ cookies });
-
-  // 🔑 THIS IS THE ENTIRE POINT OF THE FILE
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-  if (error) {
-    console.error("[auth/callback] exchange failed", error);
-    return NextResponse.redirect(new URL("/auth/sign-in", url.origin));
-  }
-
-  // ✅ Cookies are now written server-side
-  return NextResponse.redirect(new URL("/app", url.origin));
 }
