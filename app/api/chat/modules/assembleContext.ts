@@ -16,7 +16,7 @@ import {
 import { readHubbleResearchContext } from "@/lib/research/hubble-reader";
 
 // ------------------------------------------------------------
-// TYPES (EXPORTED WHERE REQUIRED)
+// TYPES
 // ------------------------------------------------------------
 export type WorkingMemoryItem = {
   id?: string;
@@ -38,10 +38,11 @@ export type AuthorityContext = {
 };
 
 export type NewsDigestItem = {
+  ledger_id: string;
   story_title: string;
+  story_url: string;
   outlet: string;
   neutral_summary: string;
-  source_url: string;
   created_at: string;
 };
 
@@ -106,9 +107,6 @@ export async function assembleContext(
     }
   );
 
-  // ----------------------------------------------------------
-  // AUTH
-  // ----------------------------------------------------------
   const {
     data: { user },
     error: authError,
@@ -132,12 +130,11 @@ export async function assembleContext(
   }
 
   const authUserId = user.id;
-
   diag("auth identity locked", { authUserId });
 
-  // ----------------------------------------------------------
+  // ------------------------------------------------------------
   // MEMORY
-  // ----------------------------------------------------------
+  // ------------------------------------------------------------
   const [facts, episodic, autobiography] = await Promise.all([
     supabase
       .schema("memory")
@@ -176,33 +173,36 @@ export async function assembleContext(
     autobiography: autobiography.length,
   });
 
-  // ----------------------------------------------------------
-  // RESEARCH CONTEXT (OPTIONAL)
-  // ----------------------------------------------------------
+  // ------------------------------------------------------------
+  // RESEARCH (HUBBLE)
+  // ------------------------------------------------------------
   const researchContext = await readHubbleResearchContext(10);
   const didResearch = researchContext.length > 0;
 
   diag("research context", { count: researchContext.length });
 
-  // ----------------------------------------------------------
-  // NEWS DIGEST (AUTHORITATIVE)
-  // ----------------------------------------------------------
-  const newsDigest = await supabase
+  // ------------------------------------------------------------
+  // NEWS DIGEST (NEUTRAL ONLY)
+  // ------------------------------------------------------------
+  const { data: newsDigestRaw, error: newsError } = await supabase
     .from("solace_news_digest_view")
     .select(
-      "story_title, outlet, neutral_summary, source_url, created_at"
+      "ledger_id, story_title, story_url, outlet, neutral_summary, created_at"
     )
     .order("created_at", { ascending: false })
-    .limit(25)
-    .then((r) => safeRows(r.data));
+    .limit(9);
 
-  diag("news digest", {
-    count: newsDigest.length,
-  });
+  if (newsError) {
+    diag("news digest error", { message: newsError.message });
+  }
 
-  // ----------------------------------------------------------
-  // FINAL CONTEXT BUNDLE
-  // ----------------------------------------------------------
+  const newsDigest = safeRows<NewsDigestItem>(newsDigestRaw);
+
+  diag("news digest", { count: newsDigest.length });
+
+  // ------------------------------------------------------------
+  // FINAL CONTEXT
+  // ------------------------------------------------------------
   return {
     persona: "Solace",
     memoryPack: { facts, episodic, autobiography },
