@@ -1,9 +1,25 @@
 // /lib/supabaseClient.ts
-import { createClient } from "@supabase/supabase-js";
+'use client';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-export default supabase;
+let client: SupabaseClient | null = null;
+
+/**
+ * App Router–safe Supabase client.
+ *
+ * - Cookie-backed
+ * - Middleware-compatible
+ * - Magic-link safe
+ * - Single source of truth
+ */
+export function getSupabaseClient(): SupabaseClient {
+  if (!client) {
+    client = createClientComponentClient();
+  }
+
+  return client;
+}
+
+export default getSupabaseClient;
