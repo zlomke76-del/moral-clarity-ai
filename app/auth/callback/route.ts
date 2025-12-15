@@ -12,7 +12,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    const cookieStore = cookies();
+    // 🔴 Next.js 16: cookies() is async
+    const cookieStore = await cookies();
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,7 +40,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL("/auth/sign-in", url.origin));
     }
 
-    // ✅ Session cookie is now written (HttpOnly)
+    // ✅ HttpOnly cookie is now set
     return NextResponse.redirect(new URL("/app", url.origin));
   } catch (err) {
     console.error("[auth/callback] fatal", err);
