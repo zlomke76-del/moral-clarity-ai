@@ -1,19 +1,28 @@
 'use client';
 
-import { getSupabaseBrowser } from '@/lib/supabaseBrowser';
+import { createClientBrowser } from '@/lib/supabase/client';
 
+/**
+ * Default storage bucket.
+ * Ensure this bucket exists in Supabase Storage.
+ * Make it public only if you need public URLs.
+ */
 const DEFAULT_BUCKET =
-  process.env.NEXT_PUBLIC_SUPABASE_BUCKET ||
-  'attachments'; // ensure this bucket exists and is public if you need public URLs
+  process.env.NEXT_PUBLIC_SUPABASE_BUCKET || 'attachments';
 
+/**
+ * Browser-side storage helper.
+ * Uses the single authoritative browser Supabase client.
+ */
 export function bucket(name: string = DEFAULT_BUCKET) {
-  const supabase = getSupabaseBrowser();
+  const supabase = createClientBrowser();
   const storage = supabase.storage.from(name);
 
   return {
     upload: storage.upload.bind(storage),
     getPublicUrl: storage.getPublicUrl.bind(storage),
-    // expose the raw instance if needed:
+
+    // Expose raw instance only if absolutely needed
     _raw: storage,
   };
 }
