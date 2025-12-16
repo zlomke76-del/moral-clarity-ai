@@ -39,6 +39,26 @@ function isNewsRequest(message: string): boolean {
 }
 
 // ------------------------------------------------------------
+// Explicit memory command detection (OPTION 1 — ONLY)
+// ------------------------------------------------------------
+function extractExplicitMemory(message: string): string | null {
+  const patterns = [
+    /^remember this about me:\s*(.+)$/i,
+    /^save this as a memory:\s*(.+)$/i,
+    /^please store this permanently:\s*(.+)$/i,
+  ];
+
+  for (const p of patterns) {
+    const match = message.match(p);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+  }
+
+  return null;
+}
+
+// ------------------------------------------------------------
 // POST handler
 // ------------------------------------------------------------
 export async function POST(req: Request) {
@@ -69,7 +89,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // Assemble FULL epistemic context (authoritative)
+    // Assemble FULL epistemic context (authoritative, read-only)
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
@@ -101,7 +121,6 @@ export async function POST(req: Request) {
         });
       }
 
-      // AUTHORITATIVE NEWSROOM EXECUTION
       const newsroomResponse = await runNewsroomExecutor(
         context.newsDigest
       );
@@ -118,8 +137,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // NON-NEWS → HYBRID PIPELINE
-    // (Includes follow-ups to news stories)
+    // NON-NEWS → HYBRID PIPELINE (LLM reasoning only)
     // --------------------------------------------------------
     const result = await runHybridPipeline({
       userMessage: message,
@@ -129,10 +147,50 @@ export async function POST(req: Request) {
       modeHint,
     });
 
-    const safeResponse =
+    let safeResponse =
       typeof result?.finalAnswer === "string" && result.finalAnswer.length > 0
         ? result.finalAnswer
         : "I’m here and ready to continue.";
+
+    // --------------------------------------------------------
+    // EXPLICIT MEMORY BRIDGE (OPTION 1)
+    // --------------------------------------------------------
+    const explicitMemory = extractExplicitMemory(message);
+
+    if (explicitMemory) {
+      try {
+        const memoryRes = await fetch(
+          `${process.env.NEXT_PUBLIC_SITE_URL}/api/memory`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-user-key": finalUserKey,
+            },
+            body: JSON.stringify({
+              content: explicitMemory,
+              purpose: "autobiographical",
+              workspace_id: workspaceId ?? null,
+            }),
+          }
+        );
+
+        if (memoryRes.ok) {
+          safeResponse =
+            safeResponse +
+            "\n\nI’ve saved that as a personal memory you can rely on going forward.";
+        } else {
+          safeResponse =
+            safeResponse +
+            "\n\nI wasn’t able to save that memory, but we can try again.";
+        }
+      } catch (err) {
+        console.error("[MEMORY BRIDGE ERROR]", err);
+        safeResponse =
+          safeResponse +
+          "\n\nI wasn’t able to save that memory due to a system issue.";
+      }
+    }
 
     return NextResponse.json({
       ok: true,
@@ -150,6 +208,7 @@ export async function POST(req: Request) {
         didResearch: context.didResearch,
         newsDigestUsed: context.newsDigest.length,
         pipeline: "hybrid",
+        explicitMemoryWrite: Boolean(explicitMemory),
       },
     });
   } catch (err: any) {
