@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
-import { getSupabaseBrowser } from "@/lib/supabaseBrowser";   // <-- FIXED IMPORT
+import { createClientBrowser } from '@/lib/supabase/client';
 
 type RetryState = {
   tries: number;
@@ -10,7 +10,7 @@ type RetryState = {
 };
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
-  const supabase = getSupabaseBrowser();   // <-- FIXED CALL
+  const supabase = createClientBrowser();
   const retryRef = useRef<RetryState>({ tries: 0 });
 
   useEffect(() => {
@@ -25,18 +25,24 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     (async () => {
       const { error } = await supabase.auth.getSession();
       if (!alive) return;
-      if (error) console.warn('[AuthProvider] getSession error', error);
+      if (error) {
+        console.warn('[AuthProvider] getSession error', error);
+      }
     })();
 
     const { data: sub } = supabase.auth.onAuthStateChange(
       async (_event: AuthChangeEvent, session: Session | null) => {
         try {
-          // optional: ping a tiny authorized endpoint here if you want
+          // Optional: ping an authenticated endpoint if needed
         } catch (err: any) {
           const status = err?.status ?? err?.response?.status;
           const delay = backoff(status);
+
           if (delay > 0) {
-            if (retryRef.current.timer) clearTimeout(retryRef.current.timer);
+            if (retryRef.current.timer) {
+              clearTimeout(retryRef.current.timer);
+            }
+
             retryRef.current.timer = setTimeout(
               () => supabase.auth.refreshSession(),
               delay,
@@ -45,7 +51,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        // Just reset backoff on non-null session; don't force signOut on null
+        // Reset backoff on successful session
         if (session) {
           retryRef.current.tries = 0;
         }
@@ -55,7 +61,9 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       alive = false;
       sub.subscription.unsubscribe();
-      if (retryRef.current.timer) clearTimeout(retryRef.current.timer);
+      if (retryRef.current.timer) {
+        clearTimeout(retryRef.current.timer);
+      }
     };
   }, [supabase]);
 
