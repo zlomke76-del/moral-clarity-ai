@@ -38,7 +38,7 @@ function isNewsRequest(message: string): boolean {
   );
 }
 
-// Explicit memory intent (STRICT — no inference)
+// Explicit memory intent only (NO inference)
 function isExplicitMemoryIntent(message: string): boolean {
   const m = message.toLowerCase();
   return (
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // Assemble FULL epistemic context (authoritative)
+    // Assemble FULL epistemic context (READ-ONLY)
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
@@ -91,7 +91,7 @@ export async function POST(req: Request) {
     const wantsNews = isNewsRequest(message);
 
     // --------------------------------------------------------
-    // HARD NEWSROOM GATE (NO FALLBACKS)
+    // HARD NEWSROOM GATE
     // --------------------------------------------------------
     if (wantsNews) {
       if (
@@ -128,7 +128,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // NON-NEWS → HYBRID PIPELINE
+    // HYBRID PIPELINE (RESPONSE ONLY)
     // --------------------------------------------------------
     const result = await runHybridPipeline({
       userMessage: message,
@@ -146,21 +146,19 @@ export async function POST(req: Request) {
     // --------------------------------------------------------
     // EXPLICIT MEMORY WRITE (AUTHORITATIVE)
     // --------------------------------------------------------
-    if (
-      isExplicitMemoryIntent(message) &&
-      context?.auth?.userId &&
-      context?.auth?.email
-    ) {
+    if (isExplicitMemoryIntent(message)) {
       const cookieHeader = req.headers.get("cookie") || "";
 
       await writeMemory(
         {
-          userId: context.auth.userId,
-          email: context.auth.email,
+          userId: finalUserKey,
+          email: "", // email is optional for fact memory
           workspaceId: workspaceId ?? null,
           memoryType: "fact",
           source: "explicit",
-          content: message.replace(/^please remember(this about me)?[:\s]*/i, "").trim(),
+          content: message
+            .replace(/^please remember(this about me)?[:\s]*/i, "")
+            .trim(),
         },
         cookieHeader
       );
