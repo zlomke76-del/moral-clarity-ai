@@ -1,59 +1,59 @@
 // /lib/supabase/session.ts
 // ------------------------------------------------------------
-// Centralized session resolver for both server + client.
-// Fully compatible with:
-//   - Next.js 16 async headers()
-//   - Manual cookieHeader-based createClientServer()
-//   - Magic link implicit flow + /auth/exchange
+// SERVER-ONLY session resolver.
+//
+// IMPORTANT ARCHITECTURAL RULE:
+// - Browser auth MUST be handled exclusively by
+//   @supabase/auth-helpers-nextjs via createClientComponentClient()
+// - This file MUST NOT create or access browser-side Supabase clients
+// - This prevents duplicate session recovery, cookie races,
+//   and Supabase v2 JSON parse failures
 // ------------------------------------------------------------
 
 import { headers } from "next/headers";
 import { createClientServer } from "./server";
-import { createClientBrowser } from "./client";
 
 /**
- * Safely load the session in a SERVER environment.
- * This is used by:
- *   - Chat route
+ * Load the session in a SERVER environment.
+ *
+ * Used by:
+ *   - Chat routes
  *   - Assemblers
  *   - Memory reads
  *   - Protected pages
  *   - Middleware identity checks
  *
- * IMPORTANT:
- *   Next.js 16 requires `await headers()`.
- *   Using raw cookieHeader preserves Supabase's magic link session.
+ * Notes:
+ * - Next.js 16 requires `await headers()`
+ * - Raw cookie header is passed through untouched
+ * - Supabase handles PKCE + base64 cookies internally
  */
 export async function getServerSession() {
-  // headers() must be awaited — this is the only important change
   const hdr = await headers();
   const cookieHeader = hdr.get("cookie") ?? "";
 
-  // Build SSR Supabase client with the incoming cookies
   const supabase = createClientServer(cookieHeader);
 
-  // Retrieve auth session
   const {
     data: { session },
+    error,
   } = await supabase.auth.getSession();
+
+  if (error) {
+    // Server code may decide how to handle missing/invalid sessions
+    return null;
+  }
 
   return session;
 }
 
 /**
- * Browser-side session accessor.
- * This remains unchanged — the browser client handles:
- *   - persistSession
- *   - autoRefreshToken
- *   - detectSessionInUrl (for magic link)
+ * 🚫 Browser-side session access has been intentionally removed.
+ *
+ * Browser code MUST use:
+ *   getSupabaseBrowser().auth.getSession()
+ *
+ * This file is SERVER-ONLY by design.
+ * Any attempt to reintroduce browser auth here
+ * will re-create the duplicate session recovery bug.
  */
-export async function getBrowserSession() {
-  const supabase = createClientBrowser();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  return session;
-}
-
-
