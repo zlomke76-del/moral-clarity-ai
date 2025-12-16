@@ -11,8 +11,9 @@ export default function AuthShell() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // ✅ TypeScript-safe resolution
   const redirectTo =
-    searchParams.get("redirect") || "/app";
+    searchParams?.get("redirect") ?? "/app";
 
   const sendMagicLink = useCallback(async () => {
     if (!email) return;
