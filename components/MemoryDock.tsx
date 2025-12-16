@@ -3,15 +3,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClientBrowser } from "@/lib/supabase/client";
 import { toast } from "@/lib/toast";
+import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 
 interface MemoryDockProps {
   workspaceId: string | null;
 }
 
 export default function MemoryDock({ workspaceId }: MemoryDockProps) {
-  const supabase = createClientBrowser();
+  const supabase = getSupabaseBrowser();
+
   const [memories, setMemories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -40,6 +41,7 @@ export default function MemoryDock({ workspaceId }: MemoryDockProps) {
       setMemories(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("[MemoryDock] exception:", err);
+      toast("Unexpected error loading memories");
     } finally {
       setLoading(false);
     }
@@ -47,6 +49,7 @@ export default function MemoryDock({ workspaceId }: MemoryDockProps) {
 
   useEffect(() => {
     loadMemories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId]);
 
   return (
