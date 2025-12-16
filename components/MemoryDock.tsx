@@ -4,14 +4,14 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "@/lib/toast";
-import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
+import { createClientBrowser } from "@/lib/supabase/client";
 
 interface MemoryDockProps {
   workspaceId: string | null;
 }
 
 export default function MemoryDock({ workspaceId }: MemoryDockProps) {
-  const supabase = getSupabaseBrowser();
+  const supabase = createClientBrowser();
 
   const [memories, setMemories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
