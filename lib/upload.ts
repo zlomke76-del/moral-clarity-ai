@@ -1,18 +1,41 @@
 "use client";
-import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 
-/** Uploads a File to the `uploads` bucket under userId/timestamp_filename and returns {key, url}. */
-export async function uploadToUploads(file: File, userId = "anon") {
-  const supabase = createSupabaseBrowser();
-  const safeName = file.name.replace(/[^\w.\-.]+/g, "_");
-  const key = `${userId}/${Date.now()}_${safeName}`; // no leading slash
+import { createClientBrowser } from "@/lib/supabase/client";
 
-  const { error } = await supabase.storage.from("uploads").upload(key, file, {
-    upsert: false,
-    contentType: file.type || "application/octet-stream",
-  });
-  if (error) throw error;
+/**
+ * Uploads a File to the `uploads` bucket under:
+ *   userId/timestamp_filename
+ * and returns { key, url }
+ */
+export async function uploadToUploads(
+  file: File,
+  userId: string = "anon"
+): Promise<{ key: string; url: string }> {
+  const supabase = createClientBrowser();
 
-  const { data: pub } = supabase.storage.from("uploads").getPublicUrl(key);
-  return { key, url: pub.publicUrl, name: file.name, type: file.type };
+  const timestamp = Date.now();
+  const safeName = file.name.replace(/\s+/g, "_");
+  const key = `${userId}/${timestamp}_${safeName}`;
+
+  const { error } = await supabase.storage
+    .from("uploads")
+    .upload(key, file, {
+      upsert: false,
+      cacheControl: "3600",
+      contentType: file.type,
+    });
+
+  if (error) {
+    console.error("[uploadToUploads] upload error:", error);
+    throw error;
+  }
+
+  const { data } = supabase.storage
+    .from("uploads")
+    .getPublicUrl(key);
+
+  return {
+    key,
+    url: data.publicUrl,
+  };
 }
