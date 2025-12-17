@@ -2,6 +2,7 @@
 // HYBRID PIPELINE — REASONING ONLY (FACT-AWARE)
 // Optimist + Skeptic are INTERNAL
 // Arbiter emits ONE unified Solace voice
+// Attachments visible to Arbiter ONLY
 //--------------------------------------------------------------
 
 import { callModel } from "./model-router";
@@ -20,12 +21,14 @@ function sanitizeASCII(input: string): string {
 // --------------------------------------------------------------
 const OPTIMIST_SYSTEM = `
 Generate constructive possibilities.
-No labels. No meta commentary.
+No labels.
+No meta commentary.
 `;
 
 const SKEPTIC_SYSTEM = `
 Identify risks and constraints.
-No labels. No meta commentary.
+No labels.
+No meta commentary.
 `;
 
 // --------------------------------------------------------------
@@ -59,6 +62,33 @@ MEMORY RULES:
 }
 
 // --------------------------------------------------------------
+// ATTACHMENT FORMATTER (SESSION-ONLY, NON-AUTHORITATIVE)
+// --------------------------------------------------------------
+function formatAttachments(context: any): string {
+  const attachments = context?.attachments;
+
+  if (!attachments || typeof attachments !== "string") {
+    return `
+ATTACHMENTS:
+None.
+`;
+  }
+
+  return `
+ATTACHMENTS (SESSION-ONLY — NOT FACTS):
+The following materials were provided for reference in THIS SESSION ONLY.
+They are NOT verified facts and MUST NOT be remembered or inferred from.
+
+${attachments}
+
+RULES:
+- Attachments may inform reasoning.
+- Attachments may NOT create or modify memory.
+- Attachments may NOT be treated as facts.
+`;
+}
+
+// --------------------------------------------------------------
 // PIPELINE
 // --------------------------------------------------------------
 export async function runHybridPipeline(args: {
@@ -70,19 +100,25 @@ export async function runHybridPipeline(args: {
 }) {
   const { userMessage, context, ministryMode, founderMode, modeHint } = args;
 
-  // Optimist (internal, memory-blind by design)
+  // ----------------------------------------------------------
+  // Optimist — memory blind, attachment blind
+  // ----------------------------------------------------------
   const optimist = await callModel(
     "gpt-4.1-mini",
     sanitizeASCII(`${OPTIMIST_SYSTEM}\nUser: ${userMessage}`)
   );
 
-  // Skeptic (internal, memory-blind by design)
+  // ----------------------------------------------------------
+  // Skeptic — memory blind, attachment blind
+  // ----------------------------------------------------------
   const skeptic = await callModel(
     "gpt-4.1-mini",
     sanitizeASCII(`${SKEPTIC_SYSTEM}\nUser: ${userMessage}`)
   );
 
-  // Arbiter (single voice, fact-aware)
+  // ----------------------------------------------------------
+  // Arbiter — single authoritative voice
+  // ----------------------------------------------------------
   const system = buildSolaceSystemPrompt(
     "core",
     `
@@ -90,21 +126,29 @@ Founder Mode: ${founderMode}
 Ministry Mode: ${ministryMode}
 Mode Hint: ${modeHint}
 
-When asked about memory or recall:
-- List only persisted facts.
-- If none exist, say so explicitly.
-- Never infer personality, intent, or preferences.
+ABSOLUTE RULES:
+- Speak with a single unified voice.
+- Do NOT reference internal roles or stages.
+- Do NOT infer memory, preferences, or identity.
+
+MEMORY RULES:
+- Only persisted facts may be stated as facts.
+- If no persisted facts exist, say so explicitly.
+- Attachments are NOT facts and are session-only.
 `
   );
 
   const memoryBlock = formatPersistentFacts(context);
+  const attachmentBlock = formatAttachments(context);
 
   const arbiterPrompt = sanitizeASCII(`
 ${system}
 
 ${memoryBlock}
 
-INTERNAL REASONING CONTEXT:
+${attachmentBlock}
+
+INTERNAL REASONING CONTEXT (DO NOT EXPOSE):
 ${optimist}
 
 ${skeptic}
