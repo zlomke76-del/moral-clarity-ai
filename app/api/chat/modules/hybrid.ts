@@ -138,6 +138,18 @@ MEMORY RULES:
 `
   );
 
+  // ----------------------------------------------------------
+  // PERSONA DIAGNOSTIC (LOG-PROVEN)
+  // ----------------------------------------------------------
+  console.log("[DIAG-PERSONA]", {
+    personaVersion: "2025-12-11_authority_v5_ascii",
+    domain: "core",
+    founderMode,
+    ministryMode,
+    hasSystemPrompt:
+      typeof system === "string" && system.length > 1000,
+  });
+
   const arbiterPrompt = sanitizeASCII(`
 ${system}
 
