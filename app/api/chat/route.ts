@@ -46,13 +46,27 @@ function generateSessionId() {
   return crypto.randomUUID();
 }
 
-// VERY conservative explicit-name detector
-function extractExplicitName(msg: string): string | null {
+// ------------------------------------------------------------
+// EXPLICIT FACT REMEMBER DETECTOR (AUTHORITATIVE)
+// ------------------------------------------------------------
+function extractExplicitFact(msg: string): string | null {
   const m = msg.trim();
+
+  // Explicit, user-directed, fact-only remember
+  // Examples:
+  // "remember that I like coffee"
+  // "remember this: I work nights"
+  // "remember I live in Houston"
   const match = m.match(
-    /^(remember\s+)?my\s+name\s+is\s+([a-zA-Z]+(?:\s+[a-zA-Z]+)+)$/i
+    /^(remember\s+(that\s+)?)(.+)$/i
   );
-  return match ? match[2].trim() : null;
+
+  if (!match) return null;
+
+  const fact = match[3]?.trim();
+  if (!fact || fact.length < 3) return null;
+
+  return fact;
 }
 
 // ------------------------------------------------------------
@@ -126,6 +140,31 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
+    // EXPLICIT FACT MEMORY WRITE (FACTS ONLY)
+    // --------------------------------------------------------
+    const explicitFact = extractExplicitFact(message);
+
+    if (explicitFact && authUserId && user?.email) {
+      console.log("[MEMORY-COMMIT] explicit_fact", {
+        sessionId,
+        authUserId,
+        content: explicitFact,
+      });
+
+      await writeMemory(
+        {
+          userId: authUserId,
+          email: user.email,
+          workspaceId: workspaceId ?? null,
+          memoryType: "fact",
+          source: "explicit",
+          content: explicitFact,
+        },
+        req.headers.get("cookie") ?? ""
+      );
+    }
+
+    // --------------------------------------------------------
     // Assemble context (SESSION-AWARE, READ-ONLY)
     // --------------------------------------------------------
     const context = await assembleContext(
@@ -171,36 +210,6 @@ export async function POST(req: Request) {
           sessionId,
           newsroom: "executed",
         },
-      });
-    }
-
-    // --------------------------------------------------------
-    // MEMORY WRITE — EXPLICIT IDENTITY ONLY
-    // --------------------------------------------------------
-    const explicitName = extractExplicitName(message);
-
-    if (explicitName && authUserId && user?.email) {
-      console.log("[MEMORY-COMMIT] identity intent", {
-        sessionId,
-        authUserId,
-        explicitName,
-      });
-
-      await writeMemory(
-        {
-          userId: authUserId, // ✅ FIX — AUTH USER ID
-          email: user.email,
-          workspaceId: workspaceId ?? null,
-          memoryType: "identity",
-          source: "explicit",
-          content: `Name: ${explicitName}`,
-        },
-        req.headers.get("cookie") ?? ""
-      );
-    } else if (explicitName) {
-      console.warn("[MEMORY-COMMIT] skipped", {
-        sessionId,
-        reason: "no authenticated user",
       });
     }
 
