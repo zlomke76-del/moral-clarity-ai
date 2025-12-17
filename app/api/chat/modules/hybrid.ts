@@ -162,7 +162,7 @@ ${userMessage}
   const finalAnswer = await callModel("gpt-4.1", arbiterPrompt);
 
   // ==========================================================
-  // PHASE C — MEMORY COMMIT (WORKING)
+  // PHASE C — MEMORY COMMIT (FINALLY TYPE-SAFE)
   // ==========================================================
   try {
     const identityFact = detectExplicitIdentity(userMessage);
@@ -179,13 +179,13 @@ ${userMessage}
       await writeMemory(
         {
           userId,
-          email: "", // ← required by type, safe default
+          email: "",
           workspaceId: context?.workspaceId ?? null,
           memoryType: "fact",
           source: "explicit",
           content: identityFact,
         },
-        null
+        "" // ← must be string, empty is fine
       );
     }
   } catch (err: any) {
