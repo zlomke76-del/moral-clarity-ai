@@ -3,12 +3,10 @@
 // Optimist + Skeptic are INTERNAL
 // Arbiter emits ONE unified Solace voice
 // Attachments visible to Arbiter ONLY
-// + PHASE C — EXPLICIT MEMORY COMMIT (RESTORED)
 //--------------------------------------------------------------
 
 import { callModel } from "./model-router";
 import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
-import { writeMemory } from "./memory-writer";
 
 // --------------------------------------------------------------
 // ASCII SANITIZER
@@ -91,39 +89,19 @@ RULES:
 }
 
 // --------------------------------------------------------------
-// EXPLICIT IDENTITY DETECTOR (WORKS WITH REAL INPUT)
-// --------------------------------------------------------------
-function detectExplicitIdentity(message: string): string | null {
-  if (!message) return null;
-
-  const match = message.match(/my name is\s+([a-zA-Z0-9 .'-]{2,100})/i);
-  if (!match) return null;
-
-  return `User's name is ${match[1].trim()}`;
-}
-
-// --------------------------------------------------------------
 // PIPELINE
 // --------------------------------------------------------------
 export async function runHybridPipeline(args: {
   userMessage: string;
   context: any;
-  userKey: string; // ← THIS IS THE FIX
   ministryMode?: boolean;
   founderMode?: boolean;
   modeHint?: string;
 }) {
-  const {
-    userMessage,
-    context,
-    userKey,
-    ministryMode,
-    founderMode,
-    modeHint,
-  } = args;
+  const { userMessage, context, ministryMode, founderMode, modeHint } = args;
 
   // ----------------------------------------------------------
-  // Optimist
+  // Optimist — memory blind, attachment blind
   // ----------------------------------------------------------
   const optimist = await callModel(
     "gpt-4.1-mini",
@@ -131,7 +109,7 @@ export async function runHybridPipeline(args: {
   );
 
   // ----------------------------------------------------------
-  // Skeptic
+  // Skeptic — memory blind, attachment blind
   // ----------------------------------------------------------
   const skeptic = await callModel(
     "gpt-4.1-mini",
@@ -139,7 +117,7 @@ export async function runHybridPipeline(args: {
   );
 
   // ----------------------------------------------------------
-  // Arbiter
+  // Arbiter — single authoritative voice
   // ----------------------------------------------------------
   const system = buildSolaceSystemPrompt(
     "core",
@@ -152,6 +130,11 @@ ABSOLUTE RULES:
 - Speak with a single unified voice.
 - Do NOT reference internal roles or stages.
 - Do NOT infer memory, preferences, or identity.
+
+MEMORY RULES:
+- Only persisted facts may be stated as facts.
+- If no persisted facts exist, say so explicitly.
+- Attachments are NOT facts and are session-only.
 `
   );
 
@@ -173,43 +156,8 @@ ${userMessage}
 
   const finalAnswer = await callModel("gpt-4.1", arbiterPrompt);
 
-  // ==========================================================
-  // PHASE C — MEMORY COMMIT (ACTUALLY WORKS)
-  // ==========================================================
-  try {
-    const identityFact = detectExplicitIdentity(userMessage);
-
-    console.log("[MEMORY-CHECK]", {
-      identityFact,
-      userKey,
-    });
-
-    if (identityFact && userKey) {
-      console.log("[MEMORY-COMMIT] identity_explicit", {
-        userKey,
-        content: identityFact,
-      });
-
-      await writeMemory(
-        {
-          userId: userKey,
-          email: "",
-          workspaceId: context?.workspaceId ?? null,
-          memoryType: "fact",
-          source: "explicit",
-          content: identityFact,
-        },
-        ""
-      );
-    }
-  } catch (err: any) {
-    console.warn("[MEMORY-COMMIT] skipped", {
-      error: err?.message ?? "unknown",
-    });
-  }
-
   // ----------------------------------------------------------
-  // Return
+  // Return (pure)
   // ----------------------------------------------------------
   return {
     finalAnswer,
