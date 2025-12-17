@@ -332,9 +332,8 @@ export default function SolaceDock() {
   }
 
   // ====================================================================
-  // VISION + ATTACHMENTS + IMAGE GENERATION (OPTION A — ADDITIVE)
+  // ADDITIVE: Vision helper (unchanged logic, explicit only)
   // ====================================================================
-
   async function runVisionOnce(imageUrl: string) {
     try {
       const res = await fetch("/api/solace/vision", {
@@ -349,7 +348,7 @@ export default function SolaceDock() {
           { role: "assistant", content: data.answer },
         ]);
       }
-    } catch (e: any) {
+    } catch {
       setMessages((m) => [
         ...m,
         { role: "assistant", content: "⚠️ Vision analysis failed." },
@@ -386,7 +385,6 @@ export default function SolaceDock() {
       const data = await res.json();
       ingestPayload(data);
 
-      // OPTION A: auto vision once for first image attachment
       const firstImage = pendingFiles.find((f) =>
         f.mime?.startsWith("image/")
       );
@@ -481,6 +479,18 @@ export default function SolaceDock() {
               lineHeight: 1.35,
             }}
           >
+            {/* ADDITIVE: inline image rendering */}
+            {m.imageUrl && (
+              <img
+                src={m.imageUrl}
+                alt="Solace visual"
+                style={{
+                  maxWidth: "100%",
+                  borderRadius: 12,
+                  marginBottom: 6,
+                }}
+              />
+            )}
             <MessageRenderer content={m.content} />
           </div>
         ))}
@@ -490,6 +500,49 @@ export default function SolaceDock() {
         style={composerWrapStyle}
         onPaste={(e) => handlePaste(e, { prefix: "solace" })}
       >
+        {/* ADDITIVE: attachment previews */}
+        {pendingFiles.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              paddingBottom: 8,
+              overflowX: "auto",
+            }}
+          >
+            {pendingFiles.map((f, i) => (
+              <div
+                key={i}
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 8,
+                  border: UI.border,
+                  background: UI.surface2,
+                  position: "relative",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {f.mime.startsWith("image/") ? (
+                  <img
+                    src={f.url}
+                    alt={f.name}
+                    style={{
+                      maxWidth: "100%",
+                      maxHeight: "100%",
+                      borderRadius: 6,
+                    }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 18 }}>📄</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <label
             style={{
@@ -504,7 +557,6 @@ export default function SolaceDock() {
               cursor: "pointer",
               flexShrink: 0,
             }}
-            title="Attach files"
           >
             📎
             <input
@@ -519,7 +571,6 @@ export default function SolaceDock() {
 
           <button
             onClick={toggleMic}
-            title="Voice input"
             style={{
               width: 38,
               height: 38,
@@ -527,7 +578,6 @@ export default function SolaceDock() {
               border: UI.border,
               background: listening ? "rgba(255,0,0,.45)" : UI.surface2,
               cursor: "pointer",
-              flexShrink: 0,
             }}
           >
             🎤
@@ -552,7 +602,6 @@ export default function SolaceDock() {
               border: "none",
               fontWeight: 600,
               cursor: "pointer",
-              flexShrink: 0,
             }}
           >
             Ask
