@@ -96,26 +96,10 @@ RULES:
 function detectExplicitIdentity(message: string): string | null {
   if (!message) return null;
 
-  const normalized = message.trim();
+  const m = message.match(/my name is\s+([a-zA-Z0-9 .'-]{2,100})/i);
+  if (!m) return null;
 
-  const patterns = [
-    /(?:^|\b)my name is\s+(.+?)(?:[.!]?$)/i,
-    /(?:^|\b)remember.*my name is\s+(.+?)(?:[.!]?$)/i,
-    /(?:^|\b)i am called\s+(.+?)(?:[.!]?$)/i,
-    /(?:^|\b)i’m called\s+(.+?)(?:[.!]?$)/i,
-  ];
-
-  for (const p of patterns) {
-    const match = normalized.match(p);
-    if (match && match[1]) {
-      const name = match[1].trim();
-      if (name.length >= 2 && name.length <= 100) {
-        return `User's name is ${name}`;
-      }
-    }
-  }
-
-  return null;
+  return `User's name is ${m[1].trim()}`;
 }
 
 // --------------------------------------------------------------
@@ -130,25 +114,16 @@ export async function runHybridPipeline(args: {
 }) {
   const { userMessage, context, ministryMode, founderMode, modeHint } = args;
 
-  // ----------------------------------------------------------
-  // Optimist — memory blind, attachment blind
-  // ----------------------------------------------------------
   const optimist = await callModel(
     "gpt-4.1-mini",
     sanitizeASCII(`${OPTIMIST_SYSTEM}\nUser: ${userMessage}`)
   );
 
-  // ----------------------------------------------------------
-  // Skeptic — memory blind, attachment blind
-  // ----------------------------------------------------------
   const skeptic = await callModel(
     "gpt-4.1-mini",
     sanitizeASCII(`${SKEPTIC_SYSTEM}\nUser: ${userMessage}`)
   );
 
-  // ----------------------------------------------------------
-  // Arbiter — single authoritative voice
-  // ----------------------------------------------------------
   const system = buildSolaceSystemPrompt(
     "core",
     `
@@ -168,15 +143,12 @@ MEMORY RULES:
 `
   );
 
-  const memoryBlock = formatPersistentFacts(context);
-  const attachmentBlock = formatAttachments(context);
-
   const arbiterPrompt = sanitizeASCII(`
 ${system}
 
-${memoryBlock}
+${formatPersistentFacts(context)}
 
-${attachmentBlock}
+${formatAttachments(context)}
 
 INTERNAL REASONING CONTEXT (DO NOT EXPOSE):
 ${optimist}
@@ -190,19 +162,13 @@ ${userMessage}
   const finalAnswer = await callModel("gpt-4.1", arbiterPrompt);
 
   // ==========================================================
-  // PHASE C — MEMORY COMMIT (SIDE-EFFECT ONLY)
+  // PHASE C — MEMORY COMMIT (FIXED)
   // ==========================================================
   try {
     const identityFact = detectExplicitIdentity(userMessage);
-    const userId =
-      context?.canonicalUserKey ??
-      context?.authUserId ??
-      null;
+    const userId = context?.userKey;
 
-    console.log("[MEMORY-CHECK]", {
-      identityFact,
-      userId,
-    });
+    console.log("[MEMORY-CHECK]", { identityFact, userId });
 
     if (identityFact && userId) {
       console.log("[MEMORY-COMMIT] identity_explicit", {
@@ -213,13 +179,13 @@ ${userMessage}
       await writeMemory(
         {
           userId,
-          email: context?.email ?? null,
+          email: null,
           workspaceId: context?.workspaceId ?? null,
           memoryType: "fact",
           source: "explicit",
           content: identityFact,
         },
-        context?.cookieHeader ?? null
+        null
       );
     }
   } catch (err: any) {
@@ -228,10 +194,5 @@ ${userMessage}
     });
   }
 
-  // ----------------------------------------------------------
-  // Return (unchanged)
-  // ----------------------------------------------------------
-  return {
-    finalAnswer,
-  };
+  return { finalAnswer };
 }
