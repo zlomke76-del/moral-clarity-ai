@@ -36,7 +36,6 @@ type Message = {
   imageUrl?: string | null;
 };
 
-// Optional evidence block (USPTO / prior art / citations)
 type EvidenceBlock = {
   id?: string;
   source?: string;
@@ -332,8 +331,34 @@ export default function SolaceDock() {
     );
   }
 
+  // ====================================================================
+  // VISION + ATTACHMENTS + IMAGE GENERATION (OPTION A — ADDITIVE)
+  // ====================================================================
+
+  async function runVisionOnce(imageUrl: string) {
+    try {
+      const res = await fetch("/api/solace/vision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl }),
+      });
+      const data = await res.json();
+      if (data?.answer) {
+        setMessages((m) => [
+          ...m,
+          { role: "assistant", content: data.answer },
+        ]);
+      }
+    } catch (e: any) {
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: "⚠️ Vision analysis failed." },
+      ]);
+    }
+  }
+
   // --------------------------------------------------------------------
-  // SEND (FIXED, SAFE, EXTENDED)
+  // SEND (EXTENDED, SAFE)
   // --------------------------------------------------------------------
   async function send() {
     if (!input.trim() && pendingFiles.length === 0) return;
@@ -354,11 +379,20 @@ export default function SolaceDock() {
           workspaceId: MCA_WORKSPACE_ID,
           ministryMode: ministryOn,
           modeHint,
+          attachments: pendingFiles,
         }),
       });
 
       const data = await res.json();
       ingestPayload(data);
+
+      // OPTION A: auto vision once for first image attachment
+      const firstImage = pendingFiles.find((f) =>
+        f.mime?.startsWith("image/")
+      );
+      if (firstImage?.url) {
+        await runVisionOnce(firstImage.url);
+      }
     } catch (e: any) {
       setMessages((m) => [
         ...m,
@@ -371,26 +405,21 @@ export default function SolaceDock() {
   }
 
   // --------------------------------------------------------------------
-  // Payload ingestion (multi-message + evidence safe)
+  // Payload ingestion (unchanged)
   // --------------------------------------------------------------------
   function ingestPayload(data: any) {
-    if (!data) {
-      throw new Error("Empty response payload");
-    }
+    if (!data) throw new Error("Empty response payload");
 
-    // Legacy contract
     if (data.ok === true && typeof data.response === "string") {
       setMessages((m) => [...m, { role: "assistant", content: data.response }]);
       return;
     }
 
-    // Multi-message
     if (Array.isArray(data.messages)) {
       setMessages((m) => [...m, ...data.messages]);
       return;
     }
 
-    // Single message object
     if (data.message?.content) {
       setMessages((m) => [
         ...m,
@@ -399,7 +428,6 @@ export default function SolaceDock() {
       return;
     }
 
-    // Evidence blocks (USPTO / prior art)
     if (Array.isArray(data.evidence)) {
       const evMsgs: Message[] = data.evidence.map((e: EvidenceBlock) => ({
         role: "assistant",
