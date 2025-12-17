@@ -1,6 +1,6 @@
 // ------------------------------------------------------------
 // Solace Chat API Route (AUTHORITATIVE)
-// Conversation-scoped Working Memory (LOG-PROVEN)
+// Conversation-scoped Working Memory
 // NEXT 16 SAFE — NODE RUNTIME
 // ------------------------------------------------------------
 
@@ -17,6 +17,11 @@ import { assembleContext } from "./modules/assembleContext";
 import { runHybridPipeline } from "./modules/hybrid";
 import { runNewsroomExecutor } from "./modules/newsroom-executor";
 import { writeMemory } from "./modules/memory-writer";
+
+import {
+  addWorkingMemoryItem,
+  getWorkingMemory,
+} from "./modules/working-memory";
 
 // ------------------------------------------------------------
 // Runtime configuration
@@ -45,7 +50,6 @@ function isNewsRequest(message: string): boolean {
 // ------------------------------------------------------------
 function extractExplicitFact(msg: string): string | null {
   const m = msg.trim();
-
   const match = m.match(/^(remember\s+(that\s+)?)(.+)$/i);
   if (!match) return null;
 
@@ -88,9 +92,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // --------------------------------------------------------
-    // SESSION BOUNDARY (CONVERSATION-SCOPED)
-    // --------------------------------------------------------
     if (!conversationId) {
       throw new Error("conversationId is required for session continuity");
     }
@@ -106,7 +107,7 @@ export async function POST(req: Request) {
     });
 
     // --------------------------------------------------------
-    // Supabase auth (AUTHORITATIVE ID SOURCE)
+    // Supabase auth
     // --------------------------------------------------------
     const cookieStore = await cookies();
 
@@ -131,7 +132,7 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
-    // EXPLICIT FACT MEMORY WRITE (FACTS ONLY)
+    // EXPLICIT FACT MEMORY WRITE
     // --------------------------------------------------------
     const explicitFact = extractExplicitFact(message);
 
@@ -156,7 +157,20 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // Assemble context (SESSION-AWARE)
+    // WORKING MEMORY — USER TURN WRITE
+    // --------------------------------------------------------
+    addWorkingMemoryItem(sessionId, {
+      role: "user",
+      content: message,
+    });
+
+    console.log("[WM] turn_append", {
+      sessionId,
+      items: getWorkingMemory(sessionId).length,
+    });
+
+    // --------------------------------------------------------
+    // Assemble context (READ ONLY)
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
@@ -165,30 +179,13 @@ export async function POST(req: Request) {
       { sessionId, sessionStartedAt }
     );
 
-    // --------------------------------------------------------
-    // WORKING MEMORY WRITE — USER TURN (AUTHORITATIVE)
-    // --------------------------------------------------------
-    await context.workingMemory.append({
-      role: "user",
-      content: message,
-    });
-
-    console.log("[DIAG-WM]", {
-      sessionId,
-      wmActive: true,
-      wmItems: context.workingMemory.items.length,
-    });
-
     const wantsNews = isNewsRequest(message);
 
     // --------------------------------------------------------
     // HARD NEWSROOM GATE
     // --------------------------------------------------------
     if (wantsNews) {
-      if (
-        !Array.isArray(context.newsDigest) ||
-        context.newsDigest.length < 3
-      ) {
+      if (!Array.isArray(context.newsDigest) || context.newsDigest.length < 3) {
         const refusal =
           "No verified neutral news digest is available for this request. I will not speculate.";
 
@@ -219,7 +216,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // HYBRID PIPELINE (PURE)
+    // HYBRID PIPELINE
     // --------------------------------------------------------
     const result = await runHybridPipeline({
       userMessage: message,
@@ -235,16 +232,16 @@ export async function POST(req: Request) {
         : "I’m here and ready to continue.";
 
     // --------------------------------------------------------
-    // WORKING MEMORY WRITE — ASSISTANT TURN
+    // WORKING MEMORY — ASSISTANT TURN WRITE
     // --------------------------------------------------------
-    await context.workingMemory.append({
+    addWorkingMemoryItem(sessionId, {
       role: "assistant",
       content: safeResponse,
     });
 
     console.log("[WM] turn_complete", {
       sessionId,
-      reason: "turn_complete",
+      items: getWorkingMemory(sessionId).length,
     });
 
     console.log("[SESSION] active", {
@@ -252,9 +249,6 @@ export async function POST(req: Request) {
       pipeline: "hybrid",
     });
 
-    // --------------------------------------------------------
-    // SESSION END (NO FLUSH)
-    // --------------------------------------------------------
     console.log("[SESSION] end", {
       sessionId,
       durationMs: Date.now() - sessionStartMs,
