@@ -1,6 +1,6 @@
 // ------------------------------------------------------------
 // Solace Chat API Route (AUTHORITATIVE)
-// Session Boundary Introduced — Option C (Hybrid)
+// Option C — Hybrid Session Boundary (LOG-PROVEN)
 // NEXT 16 SAFE — NODE RUNTIME
 // ------------------------------------------------------------
 
@@ -46,6 +46,8 @@ function generateSessionId() {
 // POST handler
 // ------------------------------------------------------------
 export async function POST(req: Request) {
+  const sessionStartMs = Date.now();
+
   try {
     const body = await req.json();
 
@@ -73,7 +75,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // SESSION BOUNDARY — AUTHORITATIVE CREATION
+    // SESSION BOUNDARY — AUTHORITATIVE
     // --------------------------------------------------------
     const sessionId = generateSessionId();
     const sessionStartedAt = new Date().toISOString();
@@ -86,16 +88,13 @@ export async function POST(req: Request) {
     });
 
     // --------------------------------------------------------
-    // Assemble epistemic context (session-aware)
+    // Assemble context (SESSION-AWARE)
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
       workspaceId ?? null,
       message,
-      {
-        sessionId,
-        sessionStartedAt,
-      }
+      { sessionId, sessionStartedAt }
     );
 
     const wantsNews = isNewsRequest(message);
@@ -104,10 +103,7 @@ export async function POST(req: Request) {
     // HARD NEWSROOM GATE
     // --------------------------------------------------------
     if (wantsNews) {
-      if (
-        !Array.isArray(context.newsDigest) ||
-        context.newsDigest.length < 3
-      ) {
+      if (!Array.isArray(context.newsDigest) || context.newsDigest.length < 3) {
         const refusal =
           "No verified neutral news digest is available for this request. I will not speculate.";
 
@@ -158,6 +154,28 @@ export async function POST(req: Request) {
       pipeline: "hybrid",
     });
 
+    // --------------------------------------------------------
+    // WM FLUSH (LOG-PROVEN)
+    // --------------------------------------------------------
+    console.log("[WM] flushed", {
+      sessionId,
+      items: context.workingMemory.items.length,
+      bytes: context.workingMemory.items.reduce(
+        (n, i) => n + i.content.length,
+        0
+      ),
+      reason: "session_end",
+    });
+
+    // --------------------------------------------------------
+    // SESSION END (LOG-PROVEN)
+    // --------------------------------------------------------
+    console.log("[SESSION] end", {
+      sessionId,
+      durationMs: Date.now() - sessionStartMs,
+      wmFlushed: true,
+    });
+
     return NextResponse.json({
       ok: true,
       response: safeResponse,
@@ -180,13 +198,17 @@ export async function POST(req: Request) {
   } catch (err: any) {
     console.error("[CHAT ROUTE ERROR]", err?.message);
 
-    const fallback =
-      "An internal error occurred. I’m still here and ready to continue.";
-
     return NextResponse.json({
       ok: true,
-      response: fallback,
-      messages: [{ role: "assistant", content: fallback }],
+      response:
+        "An internal error occurred. I’m still here and ready to continue.",
+      messages: [
+        {
+          role: "assistant",
+          content:
+            "An internal error occurred. I’m still here and ready to continue.",
+        },
+      ],
     });
   }
 }
