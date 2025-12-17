@@ -1,6 +1,7 @@
 // ------------------------------------------------------------
 // Solace Context Assembler
-// Phase B + Phase 5 (WM-ACTIVE, SESSION-ONLY)
+// Phase B + Phase 5 (WM-READ-ONLY)
+// Option C — Session-Aware
 // ------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
@@ -13,15 +14,14 @@ import {
 
 import { readHubbleResearchContext } from "@/lib/research/hubble-reader";
 
-export type SessionEnvelope = {
-  sessionId: string;
-  sessionStartedAt: string;
-};
-
+// ------------------------------------------------------------
+// TYPES
+// ------------------------------------------------------------
 export type WorkingMemoryItem = {
+  id?: string;
   role: "system" | "user" | "assistant";
   content: string;
-  created_at: string;
+  created_at?: string;
 };
 
 export type SolaceContextBundle = {
@@ -33,42 +33,45 @@ export type SolaceContextBundle = {
   };
   workingMemory: {
     active: boolean;
-    sessionId: string;
     items: WorkingMemoryItem[];
   };
   researchContext: any[];
   authorities: any[];
   newsDigest: any[];
   didResearch: boolean;
-  session: {
-    id: string;
-    verified: boolean;
-  };
 };
 
+// ------------------------------------------------------------
+// Diagnostics
+// ------------------------------------------------------------
 function diag(label: string, payload: any) {
   console.log(`[DIAG-CTX] ${label}`, payload);
 }
 
+// ------------------------------------------------------------
+// Helpers
+// ------------------------------------------------------------
 function safeRows<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
 }
 
+// ------------------------------------------------------------
+// MAIN ASSEMBLER
+// ------------------------------------------------------------
 export async function assembleContext(
   canonicalUserKey: string,
   workspaceId: string | null,
   userMessage: string,
-  session: SessionEnvelope
+  session?: {
+    sessionId: string;
+    sessionStartedAt: string;
+  }
 ): Promise<SolaceContextBundle> {
   diag("assemble start", {
     canonicalUserKey,
     workspaceId,
-    sessionId: session.sessionId,
+    sessionId: session?.sessionId,
   });
-
-  if (!session?.sessionId) {
-    throw new Error("Session ID missing at context boundary");
-  }
 
   const cookieStore = await cookies();
 
@@ -94,25 +97,19 @@ export async function assembleContext(
     return {
       persona: "Solace",
       memoryPack: { facts: [], episodic: [], autobiography: [] },
-      workingMemory: {
-        active: false,
-        sessionId: session.sessionId,
-        items: [],
-      },
+      workingMemory: { active: false, items: [] },
       researchContext: [],
       authorities: [],
       newsDigest: [],
       didResearch: false,
-      session: {
-        id: session.sessionId,
-        verified: false,
-      },
     };
   }
 
   const authUserId = user.id;
 
-  // ---------------- MEMORY (READ ONLY) ----------------
+  // ------------------------------------------------------------
+  // MEMORY (READ-ONLY)
+  // ------------------------------------------------------------
   const [facts, episodic, autobiography] = await Promise.all([
     supabase
       .schema("memory")
@@ -149,40 +146,41 @@ export async function assembleContext(
     facts: facts.length,
     episodic: episodic.length,
     autobiography: autobiography.length,
-    sessionId: session.sessionId,
+    sessionId: session?.sessionId,
   });
 
-  // ---------------- WORKING MEMORY ----------------
+  // ------------------------------------------------------------
+  // WORKING MEMORY (SESSION-ONLY)
+  // ------------------------------------------------------------
   const workingMemory: WorkingMemoryItem[] = [
     {
-      role: "user",
-      content: userMessage,
+      role: "system",
+      content: "Session initialized.",
       created_at: new Date().toISOString(),
     },
   ];
 
   console.log("[WM] initialized", {
-    sessionId: session.sessionId,
+    sessionId: session?.sessionId,
     items: workingMemory.length,
   });
 
+  // ------------------------------------------------------------
+  // RESEARCH
+  // ------------------------------------------------------------
   const researchContext = await readHubbleResearchContext(10);
+  const didResearch = researchContext.length > 0;
 
   return {
     persona: "Solace",
     memoryPack: { facts, episodic, autobiography },
     workingMemory: {
       active: true,
-      sessionId: session.sessionId,
       items: workingMemory,
     },
     researchContext,
     authorities: [],
     newsDigest: [],
-    didResearch: researchContext.length > 0,
-    session: {
-      id: session.sessionId,
-      verified: true,
-    },
+    didResearch,
   };
 }
