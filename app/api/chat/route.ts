@@ -18,11 +18,6 @@ import { runHybridPipeline } from "./modules/hybrid";
 import { runNewsroomExecutor } from "./modules/newsroom-executor";
 import { writeMemory } from "./modules/memory-writer";
 
-import {
-  addWorkingMemoryItem,
-  getWorkingMemory,
-} from "./modules/working-memory";
-
 // ------------------------------------------------------------
 // Runtime configuration
 // ------------------------------------------------------------
@@ -139,9 +134,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // --------------------------------------------------------
-    // SESSION BOUNDARY (conversation-scoped)
-    // --------------------------------------------------------
     if (!conversationId) {
       throw new Error("conversationId is required for session continuity");
     }
@@ -207,20 +199,25 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // WORKING MEMORY — USER TURN
+    // WORKING MEMORY — USER TURN (SUPABASE ONLY)
     // --------------------------------------------------------
-    addWorkingMemoryItem(sessionId, {
-      role: "user",
-      content: message,
-    });
+    if (authUserId) {
+      await supabase.schema("memory").from("working_memory").insert({
+        conversation_id: sessionId,
+        user_id: authUserId,
+        workspace_id: workspaceId,
+        role: "user",
+        content: message,
+      });
 
-    console.log("[WM] turn_append", {
-      sessionId,
-      items: getWorkingMemory(sessionId).length,
-    });
+      console.log("[WM] turn_append", {
+        sessionId,
+        role: "user",
+      });
+    }
 
     // --------------------------------------------------------
-    // Assemble context (AUTHORITATIVE)
+    // Assemble context (AUTHORITATIVE READ)
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
@@ -237,9 +234,6 @@ export async function POST(req: Request) {
 
     const wantsNews = isNewsRequest(message);
 
-    // --------------------------------------------------------
-    // RELIABILITY DIAGNOSTICS (INPUT-SIDE)
-    // --------------------------------------------------------
     emitReliabilityDiag({
       sessionId,
       context,
@@ -294,17 +288,22 @@ export async function POST(req: Request) {
         : "I’m here and ready to continue.";
 
     // --------------------------------------------------------
-    // WORKING MEMORY — ASSISTANT TURN
+    // WORKING MEMORY — ASSISTANT TURN (SUPABASE ONLY)
     // --------------------------------------------------------
-    addWorkingMemoryItem(sessionId, {
-      role: "assistant",
-      content: safeResponse,
-    });
+    if (authUserId) {
+      await supabase.schema("memory").from("working_memory").insert({
+        conversation_id: sessionId,
+        user_id: authUserId,
+        workspace_id: workspaceId,
+        role: "assistant",
+        content: safeResponse,
+      });
 
-    console.log("[WM] turn_complete", {
-      sessionId,
-      items: getWorkingMemory(sessionId).length,
-    });
+      console.log("[WM] turn_complete", {
+        sessionId,
+        role: "assistant",
+      });
+    }
 
     console.log("[SESSION] active", {
       sessionId,
