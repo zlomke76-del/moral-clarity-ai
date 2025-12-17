@@ -5,7 +5,6 @@
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
-import crypto from "crypto";
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
@@ -40,10 +39,6 @@ function isNewsRequest(message: string): boolean {
     m.includes("current events") ||
     m.includes("latest news")
   );
-}
-
-function generateSessionId() {
-  return crypto.randomUUID();
 }
 
 // ------------------------------------------------------------
@@ -83,6 +78,7 @@ export async function POST(req: Request) {
       canonicalUserKey,
       userKey,
       workspaceId,
+      conversationId,
       ministryMode = false,
       founderMode = false,
       modeHint = "",
@@ -102,9 +98,13 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // SESSION BOUNDARY
+    // SESSION BOUNDARY (CONVERSATION-SCOPED)
     // --------------------------------------------------------
-    const sessionId = generateSessionId();
+    if (!conversationId) {
+      throw new Error("conversationId is required for session continuity");
+    }
+
+    const sessionId = conversationId;
     const sessionStartedAt = new Date().toISOString();
 
     console.log("[SESSION] start", {
