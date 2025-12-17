@@ -3,7 +3,7 @@
 // Optimist + Skeptic are INTERNAL
 // Arbiter emits ONE unified Solace voice
 // Attachments visible to Arbiter ONLY
-// + PHASE C — EXPLICIT MEMORY COMMIT (ADDITIVE)
+// + PHASE C — EXPLICIT MEMORY COMMIT (RESTORED)
 //--------------------------------------------------------------
 
 import { callModel } from "./model-router";
@@ -91,15 +91,15 @@ RULES:
 }
 
 // --------------------------------------------------------------
-// PHASE C — EXPLICIT MEMORY DETECTION (IDENTITY ONLY)
+// EXPLICIT IDENTITY DETECTOR (WORKS WITH REAL INPUT)
 // --------------------------------------------------------------
 function detectExplicitIdentity(message: string): string | null {
   if (!message) return null;
 
-  const m = message.match(/my name is\s+([a-zA-Z0-9 .'-]{2,100})/i);
-  if (!m) return null;
+  const match = message.match(/my name is\s+([a-zA-Z0-9 .'-]{2,100})/i);
+  if (!match) return null;
 
-  return `User's name is ${m[1].trim()}`;
+  return `User's name is ${match[1].trim()}`;
 }
 
 // --------------------------------------------------------------
@@ -108,22 +108,39 @@ function detectExplicitIdentity(message: string): string | null {
 export async function runHybridPipeline(args: {
   userMessage: string;
   context: any;
+  userKey: string; // ← THIS IS THE FIX
   ministryMode?: boolean;
   founderMode?: boolean;
   modeHint?: string;
 }) {
-  const { userMessage, context, ministryMode, founderMode, modeHint } = args;
+  const {
+    userMessage,
+    context,
+    userKey,
+    ministryMode,
+    founderMode,
+    modeHint,
+  } = args;
 
+  // ----------------------------------------------------------
+  // Optimist
+  // ----------------------------------------------------------
   const optimist = await callModel(
     "gpt-4.1-mini",
     sanitizeASCII(`${OPTIMIST_SYSTEM}\nUser: ${userMessage}`)
   );
 
+  // ----------------------------------------------------------
+  // Skeptic
+  // ----------------------------------------------------------
   const skeptic = await callModel(
     "gpt-4.1-mini",
     sanitizeASCII(`${SKEPTIC_SYSTEM}\nUser: ${userMessage}`)
   );
 
+  // ----------------------------------------------------------
+  // Arbiter
+  // ----------------------------------------------------------
   const system = buildSolaceSystemPrompt(
     "core",
     `
@@ -135,11 +152,6 @@ ABSOLUTE RULES:
 - Speak with a single unified voice.
 - Do NOT reference internal roles or stages.
 - Do NOT infer memory, preferences, or identity.
-
-MEMORY RULES:
-- Only persisted facts may be stated as facts.
-- If no persisted facts exist, say so explicitly.
-- Attachments are NOT facts and are session-only.
 `
   );
 
@@ -162,30 +174,32 @@ ${userMessage}
   const finalAnswer = await callModel("gpt-4.1", arbiterPrompt);
 
   // ==========================================================
-  // PHASE C — MEMORY COMMIT (FINALLY TYPE-SAFE)
+  // PHASE C — MEMORY COMMIT (ACTUALLY WORKS)
   // ==========================================================
   try {
     const identityFact = detectExplicitIdentity(userMessage);
-    const userId = context?.userKey;
 
-    console.log("[MEMORY-CHECK]", { identityFact, userId });
+    console.log("[MEMORY-CHECK]", {
+      identityFact,
+      userKey,
+    });
 
-    if (identityFact && userId) {
+    if (identityFact && userKey) {
       console.log("[MEMORY-COMMIT] identity_explicit", {
-        userId,
+        userKey,
         content: identityFact,
       });
 
       await writeMemory(
         {
-          userId,
+          userId: userKey,
           email: "",
           workspaceId: context?.workspaceId ?? null,
           memoryType: "fact",
           source: "explicit",
           content: identityFact,
         },
-        "" // ← must be string, empty is fine
+        ""
       );
     }
   } catch (err: any) {
@@ -194,5 +208,10 @@ ${userMessage}
     });
   }
 
-  return { finalAnswer };
+  // ----------------------------------------------------------
+  // Return
+  // ----------------------------------------------------------
+  return {
+    finalAnswer,
+  };
 }
