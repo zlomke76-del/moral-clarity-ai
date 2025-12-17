@@ -373,15 +373,16 @@ const imageFiles = pendingFiles.filter((f) =>
 );
 
 if (imageFiles.length > 0) {
-  setMessages((m) => [
-    ...m,
-    ...imageFiles.map((f) => ({
-      role: "user",
-      content: f.name || "Image",
-      imageUrl: f.url,
-    })),
-  ]);
-}
+  setMessages((m) => {
+  const imageMsgs: Message[] = imageFiles.map((f) => ({
+    role: "user",
+    content: f.name || "Image",
+    imageUrl: f.url,
+  }));
+
+  return [...m, ...imageMsgs];
+});
+
 
     try {
       const res = await fetch("/api/chat", {
