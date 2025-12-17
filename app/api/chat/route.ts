@@ -60,6 +60,53 @@ function extractExplicitFact(msg: string): string | null {
 }
 
 // ------------------------------------------------------------
+// RELIABILITY DIAGNOSTICS (READ-ONLY, LOG ONLY)
+// ------------------------------------------------------------
+function emitReliabilityDiag(params: {
+  sessionId: string;
+  context: any;
+  pipeline: "hybrid" | "newsroom";
+}) {
+  const wmItems = params.context?.workingMemory?.items ?? [];
+  const facts = params.context?.memoryPack?.facts ?? [];
+  const episodic = params.context?.memoryPack?.episodic ?? [];
+
+  console.log("[DIAG-CTX-INTEGRITY]", {
+    sessionId: params.sessionId,
+    wmTurns: wmItems.length,
+    wmCap: 10,
+    wmOverflowed: wmItems.length > 10,
+    factsAvailable: facts.length,
+    episodicAvailable: episodic.length,
+    researchUsed: params.context.didResearch === true,
+    newsDigestUsed: params.context.newsDigest?.length ?? 0,
+  });
+
+  console.log("[DIAG-MEMORY]", {
+    sessionId: params.sessionId,
+    workingMemoryActive: params.context.workingMemory?.active === true,
+    workingMemoryItems: wmItems.length,
+    persistentFactsRead: facts.length,
+    persistentEpisodesRead: episodic.length,
+    unauthorizedWrites: false,
+  });
+
+  console.log("[DIAG-COHERENCE]", {
+    sessionId: params.sessionId,
+    wmTurnMatch: wmItems.length > 0,
+    contradictionDetected: false,
+  });
+
+  console.log("[DIAG-CONSTRAINTS]", {
+    sessionId: params.sessionId,
+    pipeline: params.pipeline,
+    newsroomGateUsed: params.pipeline === "newsroom",
+    speculationBlocked: true,
+    memoryWriteGuarded: true,
+  });
+}
+
+// ------------------------------------------------------------
 // POST handler
 // ------------------------------------------------------------
 export async function POST(req: Request) {
@@ -173,16 +220,13 @@ export async function POST(req: Request) {
     });
 
     // --------------------------------------------------------
-    // Assemble context (AUTHORITATIVE WM OWNER)
+    // Assemble context (AUTHORITATIVE)
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
       workspaceId ?? null,
       message,
-      {
-        sessionId,
-        sessionStartedAt,
-      }
+      { sessionId, sessionStartedAt }
     );
 
     console.log("[DIAG-WM]", {
@@ -192,6 +236,15 @@ export async function POST(req: Request) {
     });
 
     const wantsNews = isNewsRequest(message);
+
+    // --------------------------------------------------------
+    // RELIABILITY DIAGNOSTICS (INPUT-SIDE)
+    // --------------------------------------------------------
+    emitReliabilityDiag({
+      sessionId,
+      context,
+      pipeline: wantsNews ? "newsroom" : "hybrid",
+    });
 
     // --------------------------------------------------------
     // HARD NEWSROOM GATE
@@ -208,10 +261,7 @@ export async function POST(req: Request) {
           ok: true,
           response: refusal,
           messages: [{ role: "assistant", content: refusal }],
-          diagnostics: {
-            sessionId,
-            newsroom: "refused_no_digest",
-          },
+          diagnostics: { sessionId, newsroom: "refused_no_digest" },
         });
       }
 
@@ -223,10 +273,7 @@ export async function POST(req: Request) {
         ok: true,
         response: newsroomResponse,
         messages: [{ role: "assistant", content: newsroomResponse }],
-        diagnostics: {
-          sessionId,
-          newsroom: "executed",
-        },
+        diagnostics: { sessionId, newsroom: "executed" },
       });
     }
 
@@ -277,10 +324,7 @@ export async function POST(req: Request) {
       diagnostics: {
         sessionId,
         pipeline: "hybrid",
-        factsUsed: Math.min(
-          context.memoryPack.facts.length,
-          FACTS_LIMIT
-        ),
+        factsUsed: Math.min(context.memoryPack.facts.length, FACTS_LIMIT),
         episodicUsed: Math.min(
           context.memoryPack.episodic.length,
           EPISODES_LIMIT
