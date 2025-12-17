@@ -17,7 +17,11 @@ import { assembleContext } from "./modules/assembleContext";
 import { runHybridPipeline } from "./modules/hybrid";
 import { runNewsroomExecutor } from "./modules/newsroom-executor";
 import { writeMemory } from "./modules/memory-writer";
-import { WorkingMemory } from "./modules/working-memory";
+
+import {
+  addWorkingMemoryItem,
+  getWorkingMemory,
+} from "./modules/working-memory";
 
 // ------------------------------------------------------------
 // Runtime configuration
@@ -88,6 +92,9 @@ export async function POST(req: Request) {
       });
     }
 
+    // --------------------------------------------------------
+    // SESSION BOUNDARY (conversation-scoped)
+    // --------------------------------------------------------
     if (!conversationId) {
       throw new Error("conversationId is required for session continuity");
     }
@@ -100,14 +107,6 @@ export async function POST(req: Request) {
       userKey: finalUserKey,
       workspaceId,
       startedAt: sessionStartedAt,
-    });
-
-    // --------------------------------------------------------
-    // Initialize Working Memory (CONVERSATION-SCOPED)
-    // --------------------------------------------------------
-    const workingMemory = new WorkingMemory({
-      sessionId,
-      maxItems: 40,
     });
 
     // --------------------------------------------------------
@@ -136,7 +135,7 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
-    // EXPLICIT FACT MEMORY WRITE (PERSISTENT)
+    // EXPLICIT FACT MEMORY WRITE (FACTS ONLY)
     // --------------------------------------------------------
     const explicitFact = extractExplicitFact(message);
 
@@ -163,18 +162,18 @@ export async function POST(req: Request) {
     // --------------------------------------------------------
     // WORKING MEMORY — USER TURN
     // --------------------------------------------------------
-    workingMemory.append({
+    addWorkingMemoryItem(sessionId, {
       role: "user",
       content: message,
     });
 
     console.log("[WM] turn_append", {
       sessionId,
-      items: workingMemory.items.length,
+      items: getWorkingMemory(sessionId).length,
     });
 
     // --------------------------------------------------------
-    // Assemble context (READ-ONLY)
+    // Assemble context (AUTHORITATIVE WM OWNER)
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
@@ -183,9 +182,14 @@ export async function POST(req: Request) {
       {
         sessionId,
         sessionStartedAt,
-        workingMemory,
       }
     );
+
+    console.log("[DIAG-WM]", {
+      sessionId,
+      wmActive: context.workingMemory?.active,
+      wmItems: context.workingMemory?.items.length,
+    });
 
     const wantsNews = isNewsRequest(message);
 
@@ -193,7 +197,10 @@ export async function POST(req: Request) {
     // HARD NEWSROOM GATE
     // --------------------------------------------------------
     if (wantsNews) {
-      if (!Array.isArray(context.newsDigest) || context.newsDigest.length < 3) {
+      if (
+        !Array.isArray(context.newsDigest) ||
+        context.newsDigest.length < 3
+      ) {
         const refusal =
           "No verified neutral news digest is available for this request. I will not speculate.";
 
@@ -242,14 +249,14 @@ export async function POST(req: Request) {
     // --------------------------------------------------------
     // WORKING MEMORY — ASSISTANT TURN
     // --------------------------------------------------------
-    workingMemory.append({
+    addWorkingMemoryItem(sessionId, {
       role: "assistant",
       content: safeResponse,
     });
 
     console.log("[WM] turn_complete", {
       sessionId,
-      items: workingMemory.items.length,
+      items: getWorkingMemory(sessionId).length,
     });
 
     console.log("[SESSION] active", {
