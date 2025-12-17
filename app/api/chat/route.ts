@@ -149,7 +149,7 @@ export async function POST(req: Request) {
     });
 
     // --------------------------------------------------------
-    // Supabase auth
+    // Supabase auth client (USER CONTEXT — ANON KEY)
     // --------------------------------------------------------
     const cookieStore = await cookies();
 
@@ -160,6 +160,23 @@ export async function POST(req: Request) {
         cookies: {
           get(name) {
             return cookieStore.get(name)?.value;
+          },
+          set() {},
+          remove() {},
+        },
+      }
+    );
+
+    // --------------------------------------------------------
+    // Supabase service-role client (SERVER AUTHORITY)
+    // --------------------------------------------------------
+    const supabaseService = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          get() {
+            return undefined;
           },
           set() {},
           remove() {},
@@ -199,20 +216,29 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // WORKING MEMORY — USER TURN (SUPABASE ONLY)
+    // WORKING MEMORY — USER TURN (SERVICE ROLE)
     // --------------------------------------------------------
     if (authUserId) {
-      await supabase.schema("memory").from("working_memory").insert({
-        conversation_id: sessionId,
-        user_id: authUserId,
-        workspace_id: workspaceId,
-        role: "user",
-        content: message,
-      });
+      const { error } = await supabaseService
+        .schema("memory")
+        .from("working_memory")
+        .insert({
+          conversation_id: sessionId,
+          user_id: authUserId,
+          workspace_id: workspaceId,
+          role: "user",
+          content: message,
+        });
 
-      console.log("[WM] turn_append", {
+      if (error) {
+        console.error("[FATAL][WM_WRITE_FAILED]", error);
+        throw new Error("WORKING_MEMORY_WRITE_FAILED");
+      }
+
+      console.log("[WM] write_success", {
         sessionId,
         role: "user",
+        via: "service_role",
       });
     }
 
@@ -288,20 +314,29 @@ export async function POST(req: Request) {
         : "I’m here and ready to continue.";
 
     // --------------------------------------------------------
-    // WORKING MEMORY — ASSISTANT TURN (SUPABASE ONLY)
+    // WORKING MEMORY — ASSISTANT TURN (SERVICE ROLE)
     // --------------------------------------------------------
     if (authUserId) {
-      await supabase.schema("memory").from("working_memory").insert({
-        conversation_id: sessionId,
-        user_id: authUserId,
-        workspace_id: workspaceId,
-        role: "assistant",
-        content: safeResponse,
-      });
+      const { error } = await supabaseService
+        .schema("memory")
+        .from("working_memory")
+        .insert({
+          conversation_id: sessionId,
+          user_id: authUserId,
+          workspace_id: workspaceId,
+          role: "assistant",
+          content: safeResponse,
+        });
 
-      console.log("[WM] turn_complete", {
+      if (error) {
+        console.error("[FATAL][WM_WRITE_FAILED]", error);
+        throw new Error("WORKING_MEMORY_WRITE_FAILED");
+      }
+
+      console.log("[WM] write_success", {
         sessionId,
         role: "assistant",
+        via: "service_role",
       });
     }
 
