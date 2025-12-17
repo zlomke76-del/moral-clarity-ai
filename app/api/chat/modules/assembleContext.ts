@@ -1,8 +1,7 @@
 // ------------------------------------------------------------
 // Solace Context Assembler
 // Phase B + Phase 5 (WM-READ-ONLY)
-// AUTHORITY-AGNOSTIC — NEGATIVE SPACE PRESERVED
-// NEXT 16 SAFE — FLAG-CORRECT
+// SESSION-VERIFIED — Option C
 // ------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
@@ -18,32 +17,9 @@ import { readHubbleResearchContext } from "@/lib/research/hubble-reader";
 // ------------------------------------------------------------
 // TYPES
 // ------------------------------------------------------------
-export type WorkingMemoryItem = {
-  id?: string;
-  role: "system" | "user" | "assistant";
-  content: string;
-  created_at?: string;
-};
-
-export type AuthorityContext = {
-  source: string;
-  queried: boolean;
-  retrievedAt?: string;
-  payload?: any;
-  negativeSpace?: {
-    asserted: boolean;
-    confidence: "low" | "medium" | "high";
-    reason: string;
-  };
-};
-
-export type NewsDigestItem = {
-  ledger_id: string;
-  story_title: string;
-  story_url: string;
-  outlet: string;
-  neutral_summary: string;
-  created_at: string;
+export type SessionEnvelope = {
+  sessionId: string;
+  sessionStartedAt: string;
 };
 
 export type SolaceContextBundle = {
@@ -55,12 +31,16 @@ export type SolaceContextBundle = {
   };
   workingMemory: {
     active: boolean;
-    items: WorkingMemoryItem[];
+    items: any[];
   };
   researchContext: any[];
-  authorities: AuthorityContext[];
-  newsDigest: NewsDigestItem[];
+  authorities: any[];
+  newsDigest: any[];
   didResearch: boolean;
+  session: {
+    id: string;
+    verified: boolean;
+  };
 };
 
 // ------------------------------------------------------------
@@ -70,22 +50,8 @@ function diag(label: string, payload: any) {
   console.log(`[DIAG-CTX] ${label}`, payload);
 }
 
-// ------------------------------------------------------------
-// Helpers
-// ------------------------------------------------------------
 function safeRows<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
-}
-
-function wantsNews(userMessage: string): boolean {
-  const msg = userMessage.toLowerCase();
-  return (
-    msg.includes("news") ||
-    msg.includes("headlines") ||
-    msg.includes("current events") ||
-    msg.includes("what's happening") ||
-    msg.includes("today's news")
-  );
 }
 
 // ------------------------------------------------------------
@@ -94,13 +60,20 @@ function wantsNews(userMessage: string): boolean {
 export async function assembleContext(
   canonicalUserKey: string,
   workspaceId: string | null,
-  userMessage: string
+  userMessage: string,
+  session: SessionEnvelope
 ): Promise<SolaceContextBundle> {
   diag("assemble start", {
     canonicalUserKey,
     workspaceId,
+    sessionId: session?.sessionId,
     preview: userMessage.slice(0, 80),
   });
+
+  if (!session?.sessionId) {
+    diag("session invalid", { reason: "missing_session_id" });
+    throw new Error("Session ID missing at context boundary");
+  }
 
   const cookieStore = await cookies();
 
@@ -127,6 +100,7 @@ export async function assembleContext(
     diag("context degraded", {
       reason: "unauthenticated",
       authError: authError?.message ?? null,
+      sessionId: session.sessionId,
     });
 
     return {
@@ -137,14 +111,23 @@ export async function assembleContext(
       authorities: [],
       newsDigest: [],
       didResearch: false,
+      session: {
+        id: session.sessionId,
+        verified: false,
+      },
     };
   }
 
   const authUserId = user.id;
-  diag("auth identity locked", { authUserId });
+
+  console.log("[SESSION] verified", {
+    sessionId: session.sessionId,
+    authUserId,
+    workspaceId,
+  });
 
   // ------------------------------------------------------------
-  // MEMORY
+  // MEMORY (READ ONLY)
   // ------------------------------------------------------------
   const [facts, episodic, autobiography] = await Promise.all([
     supabase
@@ -182,55 +165,31 @@ export async function assembleContext(
     facts: facts.length,
     episodic: episodic.length,
     autobiography: autobiography.length,
+    sessionId: session.sessionId,
   });
 
   // ------------------------------------------------------------
-  // RESEARCH (HUBBLE)
+  // RESEARCH
   // ------------------------------------------------------------
   const researchContext = await readHubbleResearchContext(10);
   const didResearch = researchContext.length > 0;
 
-  diag("research context", { count: researchContext.length });
+  diag("research context", {
+    count: researchContext.length,
+    sessionId: session.sessionId,
+  });
 
-  // ------------------------------------------------------------
-  // NEWS DIGEST (NEUTRAL — INTENT GATED)
-  // ------------------------------------------------------------
-  let newsDigest: NewsDigestItem[] = [];
-
-  if (wantsNews(userMessage)) {
-    const { data: newsDigestRaw, error: newsError } = await supabase
-      .from("solace_news_digest_view")
-      .select(
-        "ledger_id, story_title, story_url, outlet, neutral_summary, created_at"
-      )
-      .order("created_at", { ascending: false })
-      .limit(9);
-
-    if (newsError) {
-      diag("news digest error", { message: newsError.message });
-    }
-
-    newsDigest = safeRows<NewsDigestItem>(newsDigestRaw);
-
-    diag("news digest loaded", {
-      rowsFetched: newsDigest.length,
-    });
-  } else {
-    diag("news digest skipped", {
-      reason: "no news intent",
-    });
-  }
-
-  // ------------------------------------------------------------
-  // FINAL CONTEXT
-  // ------------------------------------------------------------
   return {
     persona: "Solace",
     memoryPack: { facts, episodic, autobiography },
     workingMemory: { active: false, items: [] },
     researchContext,
     authorities: [],
-    newsDigest,
+    newsDigest: [],
     didResearch,
+    session: {
+      id: session.sessionId,
+      verified: true,
+    },
   };
 }
