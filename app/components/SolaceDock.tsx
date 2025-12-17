@@ -367,6 +367,21 @@ export default function SolaceDock() {
     setInput("");
     setStreaming(true);
     setMessages((m) => [...m, { role: "user", content: userMsg }]);
+// ADDITIVE: promote image attachments into the message stream
+const imageFiles = pendingFiles.filter((f) =>
+  f.mime?.startsWith("image/")
+);
+
+if (imageFiles.length > 0) {
+  setMessages((m) => [
+    ...m,
+    ...imageFiles.map((f) => ({
+      role: "user",
+      content: f.name || "Image",
+      imageUrl: f.url,
+    })),
+  ]);
+}
 
     try {
       const res = await fetch("/api/chat", {
