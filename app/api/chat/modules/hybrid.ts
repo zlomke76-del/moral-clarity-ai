@@ -98,7 +98,6 @@ function detectExplicitIdentity(message: string): string | null {
 
   const normalized = message.trim();
 
-  // Explicit identity statements only (punctuation-safe)
   const patterns = [
     /(?:^|\b)my name is\s+(.+?)(?:[.!]?$)/i,
     /(?:^|\b)remember.*my name is\s+(.+?)(?:[.!]?$)/i,
@@ -218,7 +217,7 @@ ${userMessage}
           email: context.email ?? null,
           workspaceId: context.workspaceId ?? null,
           memoryType: "fact",
-          source: "explicit_identity",
+          source: "explicit",
           content: identityFact,
         },
         context.cookieHeader
