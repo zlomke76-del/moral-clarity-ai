@@ -9,10 +9,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-import {
-  FACTS_LIMIT,
-  EPISODES_LIMIT,
-} from "./modules/context.constants";
+import { FACTS_LIMIT, EPISODES_LIMIT } from "./modules/context.constants";
 
 import { assembleContext } from "./modules/assembleContext";
 import { runHybridPipeline } from "./modules/hybrid";
@@ -46,16 +43,7 @@ function isNewsRequest(message: string): boolean {
 // ------------------------------------------------------------
 function extractExplicitFact(msg: string): string | null {
   const m = msg.trim();
-
-  // Explicit, user-directed, fact-only remember
-  // Examples:
-  // "remember that I like coffee"
-  // "remember this: I work nights"
-  // "remember I live in Houston"
-  const match = m.match(
-    /^(remember\s+(that\s+)?)(.+)$/i
-  );
-
+  const match = m.match(/^(remember\s+(that\s+)?)(.+)$/i);
   if (!match) return null;
 
   const fact = match[3]?.trim();
@@ -79,6 +67,7 @@ export async function POST(req: Request) {
       userKey,
       workspaceId,
       conversationId,
+      endConversation = false,
       ministryMode = false,
       founderMode = false,
       modeHint = "",
@@ -140,6 +129,36 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
+    // OPTIONAL: END CONVERSATION (TRUE WM FLUSH)
+    // --------------------------------------------------------
+    if (endConversation && authUserId) {
+      await supabase
+        .schema("memory")
+        .from("working_memory")
+        .delete()
+        .eq("conversation_id", sessionId)
+        .eq("user_id", authUserId);
+
+      console.log("[WM] flushed", {
+        sessionId,
+        reason: "conversation_end",
+      });
+
+      console.log("[SESSION] end", {
+        sessionId,
+        durationMs: Date.now() - sessionStartMs,
+        wmFlushed: true,
+      });
+
+      return NextResponse.json({
+        ok: true,
+        response: "Conversation ended.",
+        messages: [{ role: "assistant", content: "Conversation ended." }],
+        diagnostics: { sessionId, ended: true },
+      });
+    }
+
+    // --------------------------------------------------------
     // EXPLICIT FACT MEMORY WRITE (FACTS ONLY)
     // --------------------------------------------------------
     const explicitFact = extractExplicitFact(message);
@@ -174,16 +193,19 @@ export async function POST(req: Request) {
       { sessionId, sessionStartedAt }
     );
 
+    console.log("[DIAG-WM]", {
+      sessionId,
+      wmActive: context.workingMemory.active,
+      wmItems: context.workingMemory.items.length,
+    });
+
     const wantsNews = isNewsRequest(message);
 
     // --------------------------------------------------------
     // HARD NEWSROOM GATE
     // --------------------------------------------------------
     if (wantsNews) {
-      if (
-        !Array.isArray(context.newsDigest) ||
-        context.newsDigest.length < 3
-      ) {
+      if (!Array.isArray(context.newsDigest) || context.newsDigest.length < 3) {
         const refusal =
           "No verified neutral news digest is available for this request. I will not speculate.";
 
@@ -198,9 +220,7 @@ export async function POST(req: Request) {
         });
       }
 
-      const newsroomResponse = await runNewsroomExecutor(
-        context.newsDigest
-      );
+      const newsroomResponse = await runNewsroomExecutor(context.newsDigest);
 
       return NextResponse.json({
         ok: true,
@@ -210,6 +230,19 @@ export async function POST(req: Request) {
           sessionId,
           newsroom: "executed",
         },
+      });
+    }
+
+    // --------------------------------------------------------
+    // WORKING MEMORY APPEND (USER TURN)
+    // --------------------------------------------------------
+    if (authUserId) {
+      await supabase.schema("memory").from("working_memory").insert({
+        conversation_id: sessionId,
+        user_id: authUserId,
+        workspace_id: workspaceId ?? null,
+        role: "user",
+        content: message,
       });
     }
 
@@ -229,31 +262,36 @@ export async function POST(req: Request) {
         ? result.finalAnswer
         : "I’m here and ready to continue.";
 
+    // --------------------------------------------------------
+    // WORKING MEMORY APPEND (ASSISTANT TURN)
+    // --------------------------------------------------------
+    if (authUserId) {
+      await supabase.schema("memory").from("working_memory").insert({
+        conversation_id: sessionId,
+        user_id: authUserId,
+        workspace_id: workspaceId ?? null,
+        role: "assistant",
+        content: safeResponse,
+      });
+    }
+
     console.log("[SESSION] active", {
       sessionId,
       pipeline: "hybrid",
     });
 
     // --------------------------------------------------------
-    // WM FLUSH (LOG-PROVEN)
+    // TURN COMPLETE (NOT A FLUSH)
     // --------------------------------------------------------
-    console.log("[WM] flushed", {
+    console.log("[WM] turn_complete", {
       sessionId,
-      items: context.workingMemory.items.length,
-      bytes: context.workingMemory.items.reduce(
-        (n, i) => n + i.content.length,
-        0
-      ),
-      reason: "session_end",
+      reason: "turn_complete",
     });
 
-    // --------------------------------------------------------
-    // SESSION END
-    // --------------------------------------------------------
     console.log("[SESSION] end", {
       sessionId,
       durationMs: Date.now() - sessionStartMs,
-      wmFlushed: true,
+      wmFlushed: false,
     });
 
     return NextResponse.json({
@@ -263,16 +301,11 @@ export async function POST(req: Request) {
       diagnostics: {
         sessionId,
         pipeline: "hybrid",
-        factsUsed: Math.min(
-          context.memoryPack.facts.length,
-          FACTS_LIMIT
-        ),
-        episodicUsed: Math.min(
-          context.memoryPack.episodic.length,
-          EPISODES_LIMIT
-        ),
+        factsUsed: Math.min(context.memoryPack.facts.length, FACTS_LIMIT),
+        episodicUsed: Math.min(context.memoryPack.episodic.length, EPISODES_LIMIT),
         didResearch: context.didResearch,
         newsDigestUsed: context.newsDigest.length,
+        wmItems: context.workingMemory.items.length,
       },
     });
   } catch (err: any) {
@@ -280,13 +313,11 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
-      response:
-        "An internal error occurred. I’m still here and ready to continue.",
+      response: "An internal error occurred. I’m still here and ready to continue.",
       messages: [
         {
           role: "assistant",
-          content:
-            "An internal error occurred. I’m still here and ready to continue.",
+          content: "An internal error occurred. I’m still here and ready to continue.",
         },
       ],
     });
