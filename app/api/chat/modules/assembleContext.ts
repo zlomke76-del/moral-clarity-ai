@@ -1,16 +1,13 @@
 // ------------------------------------------------------------
 // Solace Context Assembler
-// Phase B + Phase 5 (WM-READ-ONLY)
-// Option C — Session-Aware
+// Phase B + Phase 5 (WM-PERSISTENT PER CONVERSATION)
+// Option C — Session-Aware (conversationId/sessionId scoped)
 // ------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-import {
-  FACTS_LIMIT,
-  EPISODES_LIMIT,
-} from "./context.constants";
+import { FACTS_LIMIT, EPISODES_LIMIT } from "./context.constants";
 
 import { readHubbleResearchContext } from "@/lib/research/hubble-reader";
 
@@ -63,7 +60,7 @@ export async function assembleContext(
   workspaceId: string | null,
   userMessage: string,
   session?: {
-    sessionId: string;
+    sessionId: string; // conversation scoped
     sessionStartedAt: string;
   }
 ): Promise<SolaceContextBundle> {
@@ -150,20 +147,63 @@ export async function assembleContext(
   });
 
   // ------------------------------------------------------------
-  // WORKING MEMORY (SESSION-ONLY)
+  // WORKING MEMORY (PERSISTENT PER CONVERSATION)
   // ------------------------------------------------------------
-  const workingMemory: WorkingMemoryItem[] = [
-    {
+  const conversationId = session?.sessionId ?? null;
+
+  let wmItems: WorkingMemoryItem[] = [];
+
+  if (conversationId) {
+    const wmRes = await supabase
+      .schema("memory")
+      .from("working_memory")
+      .select("id, role, content, created_at")
+      .eq("conversation_id", conversationId)
+      .eq("user_id", authUserId)
+      .order("created_at", { ascending: true })
+      .limit(200);
+
+    wmItems = safeRows(wmRes.data) as WorkingMemoryItem[];
+  }
+
+  // Initialize only once per conversation
+  if (conversationId && wmItems.length === 0) {
+    const initItem: WorkingMemoryItem = {
       role: "system",
       content: "Session initialized.",
       created_at: new Date().toISOString(),
-    },
-  ];
+    };
 
-  console.log("[WM] initialized", {
-    sessionId: session?.sessionId,
-    items: workingMemory.length,
-  });
+    await supabase.schema("memory").from("working_memory").insert({
+      conversation_id: conversationId,
+      user_id: authUserId,
+      workspace_id: workspaceId,
+      role: initItem.role,
+      content: initItem.content,
+    });
+
+    // Re-read after init (so caller always gets authoritative rows)
+    const wmRes2 = await supabase
+      .schema("memory")
+      .from("working_memory")
+      .select("id, role, content, created_at")
+      .eq("conversation_id", conversationId)
+      .eq("user_id", authUserId)
+      .order("created_at", { ascending: true })
+      .limit(200);
+
+    wmItems = safeRows(wmRes2.data) as WorkingMemoryItem[];
+
+    console.log("[WM] initialized", {
+      sessionId: conversationId,
+      items: wmItems.length,
+    });
+  } else {
+    console.log("[WM] loaded", {
+      sessionId: conversationId,
+      items: wmItems.length,
+    });
+  }
 
   // ------------------------------------------------------------
   // RESEARCH
@@ -175,8 +215,8 @@ export async function assembleContext(
     persona: "Solace",
     memoryPack: { facts, episodic, autobiography },
     workingMemory: {
-      active: true,
-      items: workingMemory,
+      active: Boolean(conversationId),
+      items: wmItems,
     },
     researchContext,
     authorities: [],
