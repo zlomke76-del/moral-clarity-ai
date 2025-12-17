@@ -1,10 +1,11 @@
 // ------------------------------------------------------------
 // Solace Chat API Route (AUTHORITATIVE)
-// Hard Newsroom Gate + Hybrid Followups
+// Session Boundary Introduced — Option C (Hybrid)
 // NEXT 16 SAFE — NODE RUNTIME
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 
 import {
   FACTS_LIMIT,
@@ -14,7 +15,6 @@ import {
 import { assembleContext } from "./modules/assembleContext";
 import { runHybridPipeline } from "./modules/hybrid";
 import { runNewsroomExecutor } from "./modules/newsroom-executor";
-import { writeMemory } from "./modules/memory-writer";
 
 // ------------------------------------------------------------
 // Runtime configuration
@@ -24,7 +24,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 // ------------------------------------------------------------
-// Simple intent detection (authoritative, conservative)
+// Helpers
 // ------------------------------------------------------------
 function isNewsRequest(message: string): boolean {
   const m = message.toLowerCase();
@@ -38,15 +38,8 @@ function isNewsRequest(message: string): boolean {
   );
 }
 
-// Explicit memory intent only (NO inference)
-function isExplicitMemoryIntent(message: string): boolean {
-  const m = message.toLowerCase();
-  return (
-    m.startsWith("please remember") ||
-    m.startsWith("remember this about me") ||
-    m.startsWith("remember that i") ||
-    m.startsWith("please save this")
-  );
+function generateSessionId() {
+  return crypto.randomUUID();
 }
 
 // ------------------------------------------------------------
@@ -80,12 +73,29 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // Assemble FULL epistemic context (READ-ONLY)
+    // SESSION BOUNDARY — AUTHORITATIVE CREATION
+    // --------------------------------------------------------
+    const sessionId = generateSessionId();
+    const sessionStartedAt = new Date().toISOString();
+
+    console.log("[SESSION] start", {
+      sessionId,
+      userKey: finalUserKey,
+      workspaceId,
+      startedAt: sessionStartedAt,
+    });
+
+    // --------------------------------------------------------
+    // Assemble epistemic context (session-aware)
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
       workspaceId ?? null,
-      message
+      message,
+      {
+        sessionId,
+        sessionStartedAt,
+      }
     );
 
     const wantsNews = isNewsRequest(message);
@@ -106,7 +116,7 @@ export async function POST(req: Request) {
           response: refusal,
           messages: [{ role: "assistant", content: refusal }],
           diagnostics: {
-            newsDigestUsed: context.newsDigest?.length ?? 0,
+            sessionId,
             newsroom: "refused_no_digest",
           },
         });
@@ -121,14 +131,14 @@ export async function POST(req: Request) {
         response: newsroomResponse,
         messages: [{ role: "assistant", content: newsroomResponse }],
         diagnostics: {
-          newsDigestUsed: context.newsDigest.length,
+          sessionId,
           newsroom: "executed",
         },
       });
     }
 
     // --------------------------------------------------------
-    // HYBRID PIPELINE (RESPONSE ONLY)
+    // HYBRID PIPELINE
     // --------------------------------------------------------
     const result = await runHybridPipeline({
       userMessage: message,
@@ -143,32 +153,18 @@ export async function POST(req: Request) {
         ? result.finalAnswer
         : "I’m here and ready to continue.";
 
-    // --------------------------------------------------------
-    // EXPLICIT MEMORY WRITE (AUTHORITATIVE)
-    // --------------------------------------------------------
-    if (isExplicitMemoryIntent(message)) {
-      const cookieHeader = req.headers.get("cookie") || "";
-
-      await writeMemory(
-        {
-          userId: finalUserKey,
-          email: "", // email is optional for fact memory
-          workspaceId: workspaceId ?? null,
-          memoryType: "fact",
-          source: "explicit",
-          content: message
-            .replace(/^please remember(this about me)?[:\s]*/i, "")
-            .trim(),
-        },
-        cookieHeader
-      );
-    }
+    console.log("[SESSION] active", {
+      sessionId,
+      pipeline: "hybrid",
+    });
 
     return NextResponse.json({
       ok: true,
       response: safeResponse,
       messages: [{ role: "assistant", content: safeResponse }],
       diagnostics: {
+        sessionId,
+        pipeline: "hybrid",
         factsUsed: Math.min(
           context.memoryPack.facts.length,
           FACTS_LIMIT
@@ -179,7 +175,6 @@ export async function POST(req: Request) {
         ),
         didResearch: context.didResearch,
         newsDigestUsed: context.newsDigest.length,
-        pipeline: "hybrid",
       },
     });
   } catch (err: any) {
