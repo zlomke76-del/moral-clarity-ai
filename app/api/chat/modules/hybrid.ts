@@ -98,12 +98,12 @@ function detectExplicitIdentity(message: string): string | null {
 
   const normalized = message.trim();
 
-  // Hard, explicit patterns only
+  // Explicit identity statements only (punctuation-safe)
   const patterns = [
-    /^remember my name is (.+)$/i,
-    /^my name is (.+)$/i,
-    /^i am called (.+)$/i,
-    /^i’m called (.+)$/i,
+    /(?:^|\b)my name is\s+(.+?)(?:[.!]?$)/i,
+    /(?:^|\b)remember.*my name is\s+(.+?)(?:[.!]?$)/i,
+    /(?:^|\b)i am called\s+(.+?)(?:[.!]?$)/i,
+    /(?:^|\b)i’m called\s+(.+?)(?:[.!]?$)/i,
   ];
 
   for (const p of patterns) {
@@ -196,10 +196,15 @@ ${userMessage}
   try {
     const identityFact = detectExplicitIdentity(userMessage);
 
+    console.log("[MEMORY-CHECK]", {
+      identityFact,
+      hasAuthUserId: !!context?.authUserId,
+      hasCookieHeader: !!context?.cookieHeader,
+    });
+
     if (
       identityFact &&
       context?.authUserId &&
-      context?.email &&
       context?.cookieHeader
     ) {
       console.log("[MEMORY-COMMIT] identity_explicit", {
@@ -210,10 +215,10 @@ ${userMessage}
       await writeMemory(
         {
           userId: context.authUserId,
-          email: context.email,
+          email: context.email ?? null,
           workspaceId: context.workspaceId ?? null,
-          memoryType: "identity",
-          source: "explicit",
+          memoryType: "fact",
+          source: "explicit_identity",
           content: identityFact,
         },
         context.cookieHeader
