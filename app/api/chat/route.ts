@@ -1,12 +1,13 @@
 // ------------------------------------------------------------
 // Solace Chat API Route (AUTHORITATIVE)
 // Option C — Hybrid Session Boundary (LOG-PROVEN)
-// MEMORY WRITES: EXPLICIT ONLY (ROUTE-LEVEL)
 // NEXT 16 SAFE — NODE RUNTIME
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+
+import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 import {
@@ -45,21 +46,13 @@ function generateSessionId() {
   return crypto.randomUUID();
 }
 
-// VERY STRICT explicit-memory detector
-function extractExplicitIdentity(message: string): string | null {
-  const m = message.trim();
-
-  // Examples:
-  // "remember my name is Joy Zlomke"
-  // "my name is Tim"
-  // "please remember my name is Sarah"
+// VERY conservative explicit-name detector
+function extractExplicitName(msg: string): string | null {
+  const m = msg.trim();
   const match = m.match(
-    /\b(?:remember\s+)?my\s+name\s+is\s+([a-zA-Z][a-zA-Z\s.'-]{1,60})/i
+    /^(remember\s+)?my\s+name\s+is\s+([a-zA-Z]+(?:\s+[a-zA-Z]+)+)$/i
   );
-
-  if (!match) return null;
-
-  return match[1].trim();
+  return match ? match[2].trim() : null;
 }
 
 // ------------------------------------------------------------
@@ -95,7 +88,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // SESSION BOUNDARY — AUTHORITATIVE
+    // SESSION BOUNDARY
     // --------------------------------------------------------
     const sessionId = generateSessionId();
     const sessionStartedAt = new Date().toISOString();
@@ -108,7 +101,32 @@ export async function POST(req: Request) {
     });
 
     // --------------------------------------------------------
-    // Assemble context (READ-ONLY)
+    // Supabase auth (AUTHORITATIVE ID SOURCE)
+    // --------------------------------------------------------
+    const cookieStore = await cookies();
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name) {
+            return cookieStore.get(name)?.value;
+          },
+          set() {},
+          remove() {},
+        },
+      }
+    );
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const authUserId = user?.id ?? null;
+
+    // --------------------------------------------------------
+    // Assemble context (SESSION-AWARE, READ-ONLY)
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
@@ -117,58 +135,16 @@ export async function POST(req: Request) {
       { sessionId, sessionStartedAt }
     );
 
-    // --------------------------------------------------------
-    // AUTH CONTEXT (ROUTE-LEVEL ONLY)
-    // --------------------------------------------------------
-    const cookieStore = await cookies();
-    const cookieHeader = cookieStore
-      .getAll()
-      .map((c) => `${c.name}=${c.value}`)
-      .join("; ");
-
-    // --------------------------------------------------------
-    // EXPLICIT MEMORY COMMIT (IDENTITY ONLY)
-    // --------------------------------------------------------
-    const explicitName = extractExplicitIdentity(message);
-
-    if (explicitName && context?.memoryPack) {
-      try {
-        const supabaseUserId =
-          context.memoryPack?.facts?.[0]?.user_id ??
-          null;
-
-        // We rely on Supabase auth inside writeMemory
-        await writeMemory(
-          {
-            userId: finalUserKey,
-            email: "unknown", // email resolved by Supabase RLS
-            workspaceId: workspaceId ?? null,
-            memoryType: "identity",
-            source: "explicit",
-            content: `Name: ${explicitName}`,
-          },
-          cookieHeader
-        );
-
-        console.log("[MEMORY-COMMIT] identity", {
-          sessionId,
-          value: explicitName,
-        });
-      } catch (err: any) {
-        console.error("[MEMORY-COMMIT] FAILED", {
-          sessionId,
-          error: err?.message,
-        });
-      }
-    }
-
     const wantsNews = isNewsRequest(message);
 
     // --------------------------------------------------------
     // HARD NEWSROOM GATE
     // --------------------------------------------------------
     if (wantsNews) {
-      if (!Array.isArray(context.newsDigest) || context.newsDigest.length < 3) {
+      if (
+        !Array.isArray(context.newsDigest) ||
+        context.newsDigest.length < 3
+      ) {
         const refusal =
           "No verified neutral news digest is available for this request. I will not speculate.";
 
@@ -199,7 +175,37 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // HYBRID PIPELINE (REASONING ONLY)
+    // MEMORY WRITE — EXPLICIT IDENTITY ONLY
+    // --------------------------------------------------------
+    const explicitName = extractExplicitName(message);
+
+    if (explicitName && authUserId && user?.email) {
+      console.log("[MEMORY-COMMIT] identity intent", {
+        sessionId,
+        authUserId,
+        explicitName,
+      });
+
+      await writeMemory(
+        {
+          userId: authUserId, // ✅ FIX — AUTH USER ID
+          email: user.email,
+          workspaceId: workspaceId ?? null,
+          memoryType: "identity",
+          source: "explicit",
+          content: `Name: ${explicitName}`,
+        },
+        req.headers.get("cookie") ?? ""
+      );
+    } else if (explicitName) {
+      console.warn("[MEMORY-COMMIT] skipped", {
+        sessionId,
+        reason: "no authenticated user",
+      });
+    }
+
+    // --------------------------------------------------------
+    // HYBRID PIPELINE
     // --------------------------------------------------------
     const result = await runHybridPipeline({
       userMessage: message,
@@ -233,7 +239,7 @@ export async function POST(req: Request) {
     });
 
     // --------------------------------------------------------
-    // SESSION END (LOG-PROVEN)
+    // SESSION END
     // --------------------------------------------------------
     console.log("[SESSION] end", {
       sessionId,
