@@ -1,7 +1,6 @@
 // ------------------------------------------------------------
 // Solace Context Assembler
-// Phase B + Phase 5 (WM-READ-ONLY)
-// SESSION-VERIFIED — Option C
+// Phase B + Phase 5 (WM-ACTIVE, SESSION-ONLY)
 // ------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
@@ -14,12 +13,15 @@ import {
 
 import { readHubbleResearchContext } from "@/lib/research/hubble-reader";
 
-// ------------------------------------------------------------
-// TYPES
-// ------------------------------------------------------------
 export type SessionEnvelope = {
   sessionId: string;
   sessionStartedAt: string;
+};
+
+export type WorkingMemoryItem = {
+  role: "system" | "user" | "assistant";
+  content: string;
+  created_at: string;
 };
 
 export type SolaceContextBundle = {
@@ -31,7 +33,8 @@ export type SolaceContextBundle = {
   };
   workingMemory: {
     active: boolean;
-    items: any[];
+    sessionId: string;
+    items: WorkingMemoryItem[];
   };
   researchContext: any[];
   authorities: any[];
@@ -43,9 +46,6 @@ export type SolaceContextBundle = {
   };
 };
 
-// ------------------------------------------------------------
-// Diagnostics
-// ------------------------------------------------------------
 function diag(label: string, payload: any) {
   console.log(`[DIAG-CTX] ${label}`, payload);
 }
@@ -54,9 +54,6 @@ function safeRows<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
 }
 
-// ------------------------------------------------------------
-// MAIN ASSEMBLER
-// ------------------------------------------------------------
 export async function assembleContext(
   canonicalUserKey: string,
   workspaceId: string | null,
@@ -66,12 +63,10 @@ export async function assembleContext(
   diag("assemble start", {
     canonicalUserKey,
     workspaceId,
-    sessionId: session?.sessionId,
-    preview: userMessage.slice(0, 80),
+    sessionId: session.sessionId,
   });
 
   if (!session?.sessionId) {
-    diag("session invalid", { reason: "missing_session_id" });
     throw new Error("Session ID missing at context boundary");
   }
 
@@ -93,20 +88,17 @@ export async function assembleContext(
 
   const {
     data: { user },
-    error: authError,
   } = await supabase.auth.getUser();
 
-  if (!user || authError) {
-    diag("context degraded", {
-      reason: "unauthenticated",
-      authError: authError?.message ?? null,
-      sessionId: session.sessionId,
-    });
-
+  if (!user) {
     return {
       persona: "Solace",
       memoryPack: { facts: [], episodic: [], autobiography: [] },
-      workingMemory: { active: false, items: [] },
+      workingMemory: {
+        active: false,
+        sessionId: session.sessionId,
+        items: [],
+      },
       researchContext: [],
       authorities: [],
       newsDigest: [],
@@ -120,20 +112,12 @@ export async function assembleContext(
 
   const authUserId = user.id;
 
-  console.log("[SESSION] verified", {
-    sessionId: session.sessionId,
-    authUserId,
-    workspaceId,
-  });
-
-  // ------------------------------------------------------------
-  // MEMORY (READ ONLY)
-  // ------------------------------------------------------------
+  // ---------------- MEMORY (READ ONLY) ----------------
   const [facts, episodic, autobiography] = await Promise.all([
     supabase
       .schema("memory")
       .from("memories")
-      .select("id, memory_type, content, created_at")
+      .select("id, content, created_at")
       .eq("user_id", authUserId)
       .eq("memory_type", "fact")
       .order("created_at", { ascending: false })
@@ -143,7 +127,7 @@ export async function assembleContext(
     supabase
       .schema("memory")
       .from("memories")
-      .select("id, memory_type, content, created_at")
+      .select("id, content, created_at")
       .eq("user_id", authUserId)
       .eq("memory_type", "episodic")
       .order("created_at", { ascending: false })
@@ -153,7 +137,7 @@ export async function assembleContext(
     supabase
       .schema("memory")
       .from("memories")
-      .select("id, memory_type, content, created_at")
+      .select("id, content, created_at")
       .eq("user_id", authUserId)
       .eq("memory_type", "identity")
       .order("created_at", { ascending: false })
@@ -168,25 +152,34 @@ export async function assembleContext(
     sessionId: session.sessionId,
   });
 
-  // ------------------------------------------------------------
-  // RESEARCH
-  // ------------------------------------------------------------
-  const researchContext = await readHubbleResearchContext(10);
-  const didResearch = researchContext.length > 0;
+  // ---------------- WORKING MEMORY ----------------
+  const workingMemory: WorkingMemoryItem[] = [
+    {
+      role: "user",
+      content: userMessage,
+      created_at: new Date().toISOString(),
+    },
+  ];
 
-  diag("research context", {
-    count: researchContext.length,
+  console.log("[WM] initialized", {
     sessionId: session.sessionId,
+    items: workingMemory.length,
   });
+
+  const researchContext = await readHubbleResearchContext(10);
 
   return {
     persona: "Solace",
     memoryPack: { facts, episodic, autobiography },
-    workingMemory: { active: false, items: [] },
+    workingMemory: {
+      active: true,
+      sessionId: session.sessionId,
+      items: workingMemory,
+    },
     researchContext,
     authorities: [],
     newsDigest: [],
-    didResearch,
+    didResearch: researchContext.length > 0,
     session: {
       id: session.sessionId,
       verified: true,
