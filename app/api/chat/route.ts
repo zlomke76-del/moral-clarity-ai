@@ -17,11 +17,7 @@ import { assembleContext } from "./modules/assembleContext";
 import { runHybridPipeline } from "./modules/hybrid";
 import { runNewsroomExecutor } from "./modules/newsroom-executor";
 import { writeMemory } from "./modules/memory-writer";
-
-import {
-  addWorkingMemoryItem,
-  getWorkingMemory,
-} from "./modules/working-memory";
+import { WorkingMemory } from "./modules/working-memory";
 
 // ------------------------------------------------------------
 // Runtime configuration
@@ -107,6 +103,14 @@ export async function POST(req: Request) {
     });
 
     // --------------------------------------------------------
+    // Initialize Working Memory (CONVERSATION-SCOPED)
+    // --------------------------------------------------------
+    const workingMemory = new WorkingMemory({
+      sessionId,
+      maxItems: 40,
+    });
+
+    // --------------------------------------------------------
     // Supabase auth
     // --------------------------------------------------------
     const cookieStore = await cookies();
@@ -132,7 +136,7 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
-    // EXPLICIT FACT MEMORY WRITE
+    // EXPLICIT FACT MEMORY WRITE (PERSISTENT)
     // --------------------------------------------------------
     const explicitFact = extractExplicitFact(message);
 
@@ -157,26 +161,30 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // WORKING MEMORY — USER TURN WRITE
+    // WORKING MEMORY — USER TURN
     // --------------------------------------------------------
-    addWorkingMemoryItem(sessionId, {
+    workingMemory.append({
       role: "user",
       content: message,
     });
 
     console.log("[WM] turn_append", {
       sessionId,
-      items: getWorkingMemory(sessionId).length,
+      items: workingMemory.items.length,
     });
 
     // --------------------------------------------------------
-    // Assemble context (READ ONLY)
+    // Assemble context (READ-ONLY)
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
       workspaceId ?? null,
       message,
-      { sessionId, sessionStartedAt }
+      {
+        sessionId,
+        sessionStartedAt,
+        workingMemory,
+      }
     );
 
     const wantsNews = isNewsRequest(message);
@@ -232,16 +240,16 @@ export async function POST(req: Request) {
         : "I’m here and ready to continue.";
 
     // --------------------------------------------------------
-    // WORKING MEMORY — ASSISTANT TURN WRITE
+    // WORKING MEMORY — ASSISTANT TURN
     // --------------------------------------------------------
-    addWorkingMemoryItem(sessionId, {
+    workingMemory.append({
       role: "assistant",
       content: safeResponse,
     });
 
     console.log("[WM] turn_complete", {
       sessionId,
-      items: getWorkingMemory(sessionId).length,
+      items: workingMemory.items.length,
     });
 
     console.log("[SESSION] active", {
