@@ -1,11 +1,13 @@
 // ------------------------------------------------------------
 // Solace Chat API Route (AUTHORITATIVE)
 // Option C — Hybrid Session Boundary (LOG-PROVEN)
+// MEMORY WRITES: EXPLICIT ONLY (ROUTE-LEVEL)
 // NEXT 16 SAFE — NODE RUNTIME
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { cookies } from "next/headers";
 
 import {
   FACTS_LIMIT,
@@ -15,6 +17,7 @@ import {
 import { assembleContext } from "./modules/assembleContext";
 import { runHybridPipeline } from "./modules/hybrid";
 import { runNewsroomExecutor } from "./modules/newsroom-executor";
+import { writeMemory } from "./modules/memory-writer";
 
 // ------------------------------------------------------------
 // Runtime configuration
@@ -40,6 +43,23 @@ function isNewsRequest(message: string): boolean {
 
 function generateSessionId() {
   return crypto.randomUUID();
+}
+
+// VERY STRICT explicit-memory detector
+function extractExplicitIdentity(message: string): string | null {
+  const m = message.trim();
+
+  // Examples:
+  // "remember my name is Joy Zlomke"
+  // "my name is Tim"
+  // "please remember my name is Sarah"
+  const match = m.match(
+    /\b(?:remember\s+)?my\s+name\s+is\s+([a-zA-Z][a-zA-Z\s.'-]{1,60})/i
+  );
+
+  if (!match) return null;
+
+  return match[1].trim();
 }
 
 // ------------------------------------------------------------
@@ -88,7 +108,7 @@ export async function POST(req: Request) {
     });
 
     // --------------------------------------------------------
-    // Assemble context (SESSION-AWARE)
+    // Assemble context (READ-ONLY)
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
@@ -96,6 +116,51 @@ export async function POST(req: Request) {
       message,
       { sessionId, sessionStartedAt }
     );
+
+    // --------------------------------------------------------
+    // AUTH CONTEXT (ROUTE-LEVEL ONLY)
+    // --------------------------------------------------------
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore
+      .getAll()
+      .map((c) => `${c.name}=${c.value}`)
+      .join("; ");
+
+    // --------------------------------------------------------
+    // EXPLICIT MEMORY COMMIT (IDENTITY ONLY)
+    // --------------------------------------------------------
+    const explicitName = extractExplicitIdentity(message);
+
+    if (explicitName && context?.memoryPack) {
+      try {
+        const supabaseUserId =
+          context.memoryPack?.facts?.[0]?.user_id ??
+          null;
+
+        // We rely on Supabase auth inside writeMemory
+        await writeMemory(
+          {
+            userId: finalUserKey,
+            email: "unknown", // email resolved by Supabase RLS
+            workspaceId: workspaceId ?? null,
+            memoryType: "identity",
+            source: "explicit",
+            content: `Name: ${explicitName}`,
+          },
+          cookieHeader
+        );
+
+        console.log("[MEMORY-COMMIT] identity", {
+          sessionId,
+          value: explicitName,
+        });
+      } catch (err: any) {
+        console.error("[MEMORY-COMMIT] FAILED", {
+          sessionId,
+          error: err?.message,
+        });
+      }
+    }
 
     const wantsNews = isNewsRequest(message);
 
@@ -134,7 +199,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // HYBRID PIPELINE
+    // HYBRID PIPELINE (REASONING ONLY)
     // --------------------------------------------------------
     const result = await runHybridPipeline({
       userMessage: message,
