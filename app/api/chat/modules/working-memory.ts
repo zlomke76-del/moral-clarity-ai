@@ -1,117 +1,70 @@
 // ------------------------------------------------------------
-// WORKING MEMORY (AUTHORITATIVE)
-// Conversation-scoped, ephemeral, non-persistent
-// Flush ONLY when explicitly instructed
+// Working Memory Store — Conversation Scoped
+// Phase 5 (AUTHORITATIVE)
+// ------------------------------------------------------------
+// - In-memory only
+// - Scoped by conversationId (sessionId)
+// - Explicit writes only
+// - No automatic flushing
 // ------------------------------------------------------------
 
-export type WMItem = {
-  role: "user" | "assistant" | "system";
+export type WorkingMemoryRole = "user" | "assistant";
+
+export type WorkingMemoryItem = {
+  role: WorkingMemoryRole;
   content: string;
-  ts?: number;
+  created_at: string;
 };
 
-type WorkingMemoryInit = {
-  sessionId: string;
-  maxItems?: number;
-};
+// ------------------------------------------------------------
+// Global WM Store (INTENTIONAL, EPHEMERAL)
+// ------------------------------------------------------------
+const globalAny = globalThis as any;
 
-export class WorkingMemory {
-  readonly sessionId: string;
-  readonly maxItems: number;
+if (!globalAny.__SOLACE_WORKING_MEMORY__) {
+  globalAny.__SOLACE_WORKING_MEMORY__ = new Map<
+    string,
+    WorkingMemoryItem[]
+  >();
+}
 
-  private _items: WMItem[] = [];
-  private _active = true;
+const WM_STORE: Map<string, WorkingMemoryItem[]> =
+  globalAny.__SOLACE_WORKING_MEMORY__;
 
-  constructor(init: WorkingMemoryInit) {
-    this.sessionId = init.sessionId;
-    this.maxItems = init.maxItems ?? 40;
+// ------------------------------------------------------------
+// Helpers
+// ------------------------------------------------------------
+function nowISO(): string {
+  return new Date().toISOString();
+}
 
-    console.log("[WM] initialized", {
-      sessionId: this.sessionId,
-      items: this._items.length,
-    });
+// ------------------------------------------------------------
+// PUBLIC API (EXPLICIT, STABLE)
+// ------------------------------------------------------------
+export function getWorkingMemory(
+  sessionId: string
+): WorkingMemoryItem[] {
+  return WM_STORE.get(sessionId) ?? [];
+}
+
+export function addWorkingMemoryItem(
+  sessionId: string,
+  item: {
+    role: WorkingMemoryRole;
+    content: string;
   }
+): void {
+  const existing = WM_STORE.get(sessionId) ?? [];
 
-  // ----------------------------------------------------------
-  // State
-  // ----------------------------------------------------------
-  get active(): boolean {
-    return this._active;
-  }
+  const next: WorkingMemoryItem = {
+    role: item.role,
+    content: item.content,
+    created_at: nowISO(),
+  };
 
-  get items(): WMItem[] {
-    return this._items;
-  }
+  WM_STORE.set(sessionId, [...existing, next]);
+}
 
-  get size(): number {
-    return this._items.length;
-  }
-
-  // ----------------------------------------------------------
-  // Append (AUTHORITATIVE PATH)
-  // ----------------------------------------------------------
-  async append(item: WMItem): Promise<void> {
-    if (!this._active) {
-      console.warn("[WM] append_ignored_inactive", {
-        sessionId: this.sessionId,
-      });
-      return;
-    }
-
-    this._items.push({
-      ...item,
-      ts: Date.now(),
-    });
-
-    // Enforce rolling window (oldest-first eviction)
-    if (this._items.length > this.maxItems) {
-      const overflow = this._items.length - this.maxItems;
-      this._items.splice(0, overflow);
-
-      console.log("[WM] evicted", {
-        sessionId: this.sessionId,
-        overflow,
-        remaining: this._items.length,
-      });
-    }
-
-    console.log("[WM] append", {
-      sessionId: this.sessionId,
-      role: item.role,
-      size: this._items.length,
-    });
-  }
-
-  // ----------------------------------------------------------
-  // Snapshot (READ-ONLY)
-  // ----------------------------------------------------------
-  snapshot(): WMItem[] {
-    return [...this._items];
-  }
-
-  // ----------------------------------------------------------
-  // Turn boundary marker (NO FLUSH)
-  // ----------------------------------------------------------
-  markTurnComplete(reason: string = "turn_complete") {
-    console.log("[WM] turn_complete", {
-      sessionId: this.sessionId,
-      items: this._items.length,
-      reason,
-    });
-  }
-
-  // ----------------------------------------------------------
-  // Explicit flush (MANUAL ONLY)
-  // ----------------------------------------------------------
-  flush(reason: string = "explicit_flush") {
-    const count = this._items.length;
-    this._items = [];
-    this._active = false;
-
-    console.log("[WM] flushed", {
-      sessionId: this.sessionId,
-      items: count,
-      reason,
-    });
-  }
+export function clearWorkingMemory(sessionId: string): void {
+  WM_STORE.delete(sessionId);
 }
