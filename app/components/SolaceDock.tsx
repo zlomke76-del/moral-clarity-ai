@@ -72,6 +72,15 @@ export default function SolaceDock() {
   }, []);
 
   // --------------------------------------------------------------------
+  // Conversation ID (STABLE PER CONVERSATION)
+  // --------------------------------------------------------------------
+  const conversationIdRef = useRef<string | null>(null);
+  if (!conversationIdRef.current) {
+    conversationIdRef.current = crypto.randomUUID();
+  }
+  const conversationId = conversationIdRef.current;
+
+  // --------------------------------------------------------------------
   // Store state
   // --------------------------------------------------------------------
   const { visible, setVisible, x, y, setPos, filters, setFilters } =
@@ -332,33 +341,8 @@ export default function SolaceDock() {
   }
 
   // ====================================================================
-  // ADDITIVE: Vision helper (unchanged logic, explicit only)
-  // ====================================================================
-  async function runVisionOnce(imageUrl: string) {
-    try {
-      const res = await fetch("/api/solace/vision", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl }),
-      });
-      const data = await res.json();
-      if (data?.answer) {
-        setMessages((m) => [
-          ...m,
-          { role: "assistant", content: data.answer },
-        ]);
-      }
-    } catch {
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", content: "⚠️ Vision analysis failed." },
-      ]);
-    }
-  }
-
-  // --------------------------------------------------------------------
   // SEND (EXTENDED, SAFE)
-  // --------------------------------------------------------------------
+  // ====================================================================
   async function send() {
     if (!input.trim() && pendingFiles.length === 0) return;
     if (streaming) return;
@@ -376,6 +360,7 @@ export default function SolaceDock() {
           message: userMsg,
           canonicalUserKey: userKey || undefined,
           workspaceId: MCA_WORKSPACE_ID,
+          conversationId,
           ministryMode: ministryOn,
           modeHint,
           attachments: pendingFiles,
@@ -384,13 +369,6 @@ export default function SolaceDock() {
 
       const data = await res.json();
       ingestPayload(data);
-
-      const firstImage = pendingFiles.find((f) =>
-        f.mime?.startsWith("image/")
-      );
-      if (firstImage?.url) {
-        await runVisionOnce(firstImage.url);
-      }
     } catch (e: any) {
       setMessages((m) => [
         ...m,
@@ -479,7 +457,6 @@ export default function SolaceDock() {
               lineHeight: 1.35,
             }}
           >
-            {/* ADDITIVE: inline image rendering */}
             {m.imageUrl && (
               <img
                 src={m.imageUrl}
@@ -500,7 +477,6 @@ export default function SolaceDock() {
         style={composerWrapStyle}
         onPaste={(e) => handlePaste(e, { prefix: "solace" })}
       >
-        {/* ADDITIVE: attachment previews */}
         {pendingFiles.length > 0 && (
           <div
             style={{
