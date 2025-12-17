@@ -3,10 +3,12 @@
 // Optimist + Skeptic are INTERNAL
 // Arbiter emits ONE unified Solace voice
 // Attachments visible to Arbiter ONLY
+// + PHASE C — EXPLICIT MEMORY COMMIT (ADDITIVE)
 //--------------------------------------------------------------
 
 import { callModel } from "./model-router";
 import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
+import { writeMemory } from "./memory-writer";
 
 // --------------------------------------------------------------
 // ASCII SANITIZER
@@ -32,7 +34,7 @@ No meta commentary.
 `;
 
 // --------------------------------------------------------------
-// MEMORY FORMATTER (AUTHORITATIVE)
+// MEMORY FORMATTER (AUTHORITATIVE — READ ONLY)
 // --------------------------------------------------------------
 function formatPersistentFacts(context: any): string {
   const facts = context?.memoryPack?.facts ?? [];
@@ -86,6 +88,35 @@ RULES:
 - Attachments may NOT create or modify memory.
 - Attachments may NOT be treated as facts.
 `;
+}
+
+// --------------------------------------------------------------
+// PHASE C — EXPLICIT MEMORY DETECTION (IDENTITY ONLY)
+// --------------------------------------------------------------
+function detectExplicitIdentity(message: string): string | null {
+  if (!message) return null;
+
+  const normalized = message.trim();
+
+  // Hard, explicit patterns only
+  const patterns = [
+    /^remember my name is (.+)$/i,
+    /^my name is (.+)$/i,
+    /^i am called (.+)$/i,
+    /^i’m called (.+)$/i,
+  ];
+
+  for (const p of patterns) {
+    const match = normalized.match(p);
+    if (match && match[1]) {
+      const name = match[1].trim();
+      if (name.length >= 2 && name.length <= 100) {
+        return `User's name is ${name}`;
+      }
+    }
+  }
+
+  return null;
 }
 
 // --------------------------------------------------------------
@@ -159,6 +190,44 @@ ${userMessage}
 
   const finalAnswer = await callModel("gpt-4.1", arbiterPrompt);
 
+  // ==========================================================
+  // PHASE C — MEMORY COMMIT (SIDE-EFFECT ONLY)
+  // ==========================================================
+  try {
+    const identityFact = detectExplicitIdentity(userMessage);
+
+    if (
+      identityFact &&
+      context?.authUserId &&
+      context?.email &&
+      context?.cookieHeader
+    ) {
+      console.log("[MEMORY-COMMIT] identity_explicit", {
+        userId: context.authUserId,
+        content: identityFact,
+      });
+
+      await writeMemory(
+        {
+          userId: context.authUserId,
+          email: context.email,
+          workspaceId: context.workspaceId ?? null,
+          memoryType: "identity",
+          source: "explicit",
+          content: identityFact,
+        },
+        context.cookieHeader
+      );
+    }
+  } catch (err: any) {
+    console.warn("[MEMORY-COMMIT] skipped", {
+      error: err?.message ?? "unknown",
+    });
+  }
+
+  // ----------------------------------------------------------
+  // Return (unchanged)
+  // ----------------------------------------------------------
   return {
     finalAnswer,
   };
