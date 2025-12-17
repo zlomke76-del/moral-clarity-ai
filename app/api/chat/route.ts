@@ -1,15 +1,17 @@
 // ------------------------------------------------------------
 // Solace Chat API Route (AUTHORITATIVE)
-// Option C — Hybrid Session Boundary (LOG-PROVEN)
+// Conversation-scoped Working Memory (LOG-PROVEN)
 // NEXT 16 SAFE — NODE RUNTIME
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
-
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-import { FACTS_LIMIT, EPISODES_LIMIT } from "./modules/context.constants";
+import {
+  FACTS_LIMIT,
+  EPISODES_LIMIT,
+} from "./modules/context.constants";
 
 import { assembleContext } from "./modules/assembleContext";
 import { runHybridPipeline } from "./modules/hybrid";
@@ -43,6 +45,7 @@ function isNewsRequest(message: string): boolean {
 // ------------------------------------------------------------
 function extractExplicitFact(msg: string): string | null {
   const m = msg.trim();
+
   const match = m.match(/^(remember\s+(that\s+)?)(.+)$/i);
   if (!match) return null;
 
@@ -67,7 +70,6 @@ export async function POST(req: Request) {
       userKey,
       workspaceId,
       conversationId,
-      endConversation = false,
       ministryMode = false,
       founderMode = false,
       modeHint = "",
@@ -129,36 +131,6 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
-    // OPTIONAL: END CONVERSATION (TRUE WM FLUSH)
-    // --------------------------------------------------------
-    if (endConversation && authUserId) {
-      await supabase
-        .schema("memory")
-        .from("working_memory")
-        .delete()
-        .eq("conversation_id", sessionId)
-        .eq("user_id", authUserId);
-
-      console.log("[WM] flushed", {
-        sessionId,
-        reason: "conversation_end",
-      });
-
-      console.log("[SESSION] end", {
-        sessionId,
-        durationMs: Date.now() - sessionStartMs,
-        wmFlushed: true,
-      });
-
-      return NextResponse.json({
-        ok: true,
-        response: "Conversation ended.",
-        messages: [{ role: "assistant", content: "Conversation ended." }],
-        diagnostics: { sessionId, ended: true },
-      });
-    }
-
-    // --------------------------------------------------------
     // EXPLICIT FACT MEMORY WRITE (FACTS ONLY)
     // --------------------------------------------------------
     const explicitFact = extractExplicitFact(message);
@@ -184,7 +156,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // Assemble context (SESSION-AWARE, READ-ONLY)
+    // Assemble context (SESSION-AWARE)
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
@@ -193,9 +165,17 @@ export async function POST(req: Request) {
       { sessionId, sessionStartedAt }
     );
 
+    // --------------------------------------------------------
+    // WORKING MEMORY WRITE — USER TURN (AUTHORITATIVE)
+    // --------------------------------------------------------
+    await context.workingMemory.append({
+      role: "user",
+      content: message,
+    });
+
     console.log("[DIAG-WM]", {
       sessionId,
-      wmActive: context.workingMemory.active,
+      wmActive: true,
       wmItems: context.workingMemory.items.length,
     });
 
@@ -205,7 +185,10 @@ export async function POST(req: Request) {
     // HARD NEWSROOM GATE
     // --------------------------------------------------------
     if (wantsNews) {
-      if (!Array.isArray(context.newsDigest) || context.newsDigest.length < 3) {
+      if (
+        !Array.isArray(context.newsDigest) ||
+        context.newsDigest.length < 3
+      ) {
         const refusal =
           "No verified neutral news digest is available for this request. I will not speculate.";
 
@@ -220,7 +203,9 @@ export async function POST(req: Request) {
         });
       }
 
-      const newsroomResponse = await runNewsroomExecutor(context.newsDigest);
+      const newsroomResponse = await runNewsroomExecutor(
+        context.newsDigest
+      );
 
       return NextResponse.json({
         ok: true,
@@ -234,20 +219,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // WORKING MEMORY APPEND (USER TURN)
-    // --------------------------------------------------------
-    if (authUserId) {
-      await supabase.schema("memory").from("working_memory").insert({
-        conversation_id: sessionId,
-        user_id: authUserId,
-        workspace_id: workspaceId ?? null,
-        role: "user",
-        content: message,
-      });
-    }
-
-    // --------------------------------------------------------
-    // HYBRID PIPELINE
+    // HYBRID PIPELINE (PURE)
     // --------------------------------------------------------
     const result = await runHybridPipeline({
       userMessage: message,
@@ -263,17 +235,17 @@ export async function POST(req: Request) {
         : "I’m here and ready to continue.";
 
     // --------------------------------------------------------
-    // WORKING MEMORY APPEND (ASSISTANT TURN)
+    // WORKING MEMORY WRITE — ASSISTANT TURN
     // --------------------------------------------------------
-    if (authUserId) {
-      await supabase.schema("memory").from("working_memory").insert({
-        conversation_id: sessionId,
-        user_id: authUserId,
-        workspace_id: workspaceId ?? null,
-        role: "assistant",
-        content: safeResponse,
-      });
-    }
+    await context.workingMemory.append({
+      role: "assistant",
+      content: safeResponse,
+    });
+
+    console.log("[WM] turn_complete", {
+      sessionId,
+      reason: "turn_complete",
+    });
 
     console.log("[SESSION] active", {
       sessionId,
@@ -281,13 +253,8 @@ export async function POST(req: Request) {
     });
 
     // --------------------------------------------------------
-    // TURN COMPLETE (NOT A FLUSH)
+    // SESSION END (NO FLUSH)
     // --------------------------------------------------------
-    console.log("[WM] turn_complete", {
-      sessionId,
-      reason: "turn_complete",
-    });
-
     console.log("[SESSION] end", {
       sessionId,
       durationMs: Date.now() - sessionStartMs,
@@ -301,11 +268,16 @@ export async function POST(req: Request) {
       diagnostics: {
         sessionId,
         pipeline: "hybrid",
-        factsUsed: Math.min(context.memoryPack.facts.length, FACTS_LIMIT),
-        episodicUsed: Math.min(context.memoryPack.episodic.length, EPISODES_LIMIT),
+        factsUsed: Math.min(
+          context.memoryPack.facts.length,
+          FACTS_LIMIT
+        ),
+        episodicUsed: Math.min(
+          context.memoryPack.episodic.length,
+          EPISODES_LIMIT
+        ),
         didResearch: context.didResearch,
         newsDigestUsed: context.newsDigest.length,
-        wmItems: context.workingMemory.items.length,
       },
     });
   } catch (err: any) {
@@ -313,11 +285,13 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
-      response: "An internal error occurred. I’m still here and ready to continue.",
+      response:
+        "An internal error occurred. I’m still here and ready to continue.",
       messages: [
         {
           role: "assistant",
-          content: "An internal error occurred. I’m still here and ready to continue.",
+          content:
+            "An internal error occurred. I’m still here and ready to continue.",
         },
       ],
     });
