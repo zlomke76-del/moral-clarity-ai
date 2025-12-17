@@ -194,33 +194,32 @@ ${userMessage}
   // ==========================================================
   try {
     const identityFact = detectExplicitIdentity(userMessage);
+    const userId =
+      context?.canonicalUserKey ??
+      context?.authUserId ??
+      null;
 
     console.log("[MEMORY-CHECK]", {
       identityFact,
-      hasAuthUserId: !!context?.authUserId,
-      hasCookieHeader: !!context?.cookieHeader,
+      userId,
     });
 
-    if (
-      identityFact &&
-      context?.authUserId &&
-      context?.cookieHeader
-    ) {
+    if (identityFact && userId) {
       console.log("[MEMORY-COMMIT] identity_explicit", {
-        userId: context.authUserId,
+        userId,
         content: identityFact,
       });
 
       await writeMemory(
         {
-          userId: context.authUserId,
-          email: context.email ?? null,
-          workspaceId: context.workspaceId ?? null,
+          userId,
+          email: context?.email ?? null,
+          workspaceId: context?.workspaceId ?? null,
           memoryType: "fact",
           source: "explicit",
           content: identityFact,
         },
-        context.cookieHeader
+        context?.cookieHeader ?? null
       );
     }
   } catch (err: any) {
