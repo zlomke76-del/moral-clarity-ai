@@ -601,7 +601,7 @@ export default function SolaceDock() {
             }}
             aria-label="Attach files"
           >
-            ??
+            📎
             <input
               type="file"
               multiple
@@ -629,7 +629,7 @@ export default function SolaceDock() {
             aria-label={listening ? "Stop recording" : "Start recording"}
             type="button"
           >
-            ??
+            🎤
           </button>
 
           <textarea
