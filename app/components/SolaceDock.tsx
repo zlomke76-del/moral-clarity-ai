@@ -212,9 +212,6 @@ export default function SolaceDock() {
     throw new Error("Unrecognized response payload");
   }
 
-  // (rest of file unchanged)
-
-
   // ====================================================================
   // SEND (VISION-AWARE) — TURBOPACK SAFE + IMAGE INTENT GATE
   // ====================================================================
