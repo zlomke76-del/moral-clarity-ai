@@ -381,51 +381,35 @@ const chatPayload = result?.chatPayload ?? result;
       // -----------------------------------------------
       // IMAGE RESULTS (PRIMARY)
       // -----------------------------------------------
-      if (Array.isArray(visionResults) && visionResults.length > 0) {
-        for (const v of visionResults) {
-          setMessages((m) => [
-            ...m,
-            {
-              role: "assistant",
-              content: v?.answer ?? "",
-              imageUrl: v?.imageUrl ?? null,
-            },
-          ]);
-        }
-      }
+     // IMAGE-ONLY RESPONSE FROM SERVER
+if (
+  chatPayload?.diagnostics?.pipeline === "image" &&
+  Array.isArray(chatPayload.messages)
+) {
+  ingestPayload(chatPayload);
+  return;
+}
 
-      // -----------------------------------------------
-      // SERVER PAYLOAD (TEXT / IMAGE / MIXED)
-      // -----------------------------------------------
-      if (chatPayload) {
-        ingestPayload(chatPayload);
-      }
-
-      // -----------------------------------------------
-      // SAFETY NET ? NEVER SILENT
-      // -----------------------------------------------
-      if (
-        (!visionResults || visionResults.length === 0) &&
-        !chatPayload
-      ) {
-        setMessages((m) => [
-          ...m,
-          { role: "assistant", content: " " },
-        ]);
-      }
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Request failed";
-
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", content: `? ${message}` },
-      ]);
-    } finally {
-      setStreaming(false);
-      clearPending();
-    }
+// VISION RESULTS (client-side vision)
+if (Array.isArray(visionResults) && visionResults.length > 0) {
+  for (const v of visionResults) {
+    setMessages((m) => [
+      ...m,
+      {
+        role: "assistant",
+        content: v.answer ?? "",
+        imageUrl: v.imageUrl ?? null,
+      },
+    ]);
   }
+  return;
+}
+
+// FALLBACK
+if (chatPayload) {
+  ingestPayload(chatPayload);
+}
+
 
   // --------------------------------------------------------------------
   // Enter-to-send handler
