@@ -133,7 +133,6 @@ export async function assembleContext(
       .select("id, content, created_at")
       .eq("user_id", authUserId)
       .eq("memory_type", "fact")
-      .order("created_at", { ascending: false })
       .limit(FACTS_LIMIT)
       .then((r) => safeRows(r.data)),
 
@@ -143,7 +142,6 @@ export async function assembleContext(
       .select("id, content, created_at")
       .eq("user_id", authUserId)
       .eq("memory_type", "episodic")
-      .order("created_at", { ascending: false })
       .limit(EPISODES_LIMIT)
       .then((r) => safeRows(r.data)),
 
@@ -153,7 +151,6 @@ export async function assembleContext(
       .select("id, content, created_at")
       .eq("user_id", authUserId)
       .eq("memory_type", "identity")
-      .order("created_at", { ascending: false })
       .limit(25)
       .then((r) => safeRows(r.data)),
   ]);
@@ -178,7 +175,6 @@ export async function assembleContext(
       .select("id, role, content, created_at")
       .eq("conversation_id", conversationId)
       .eq("user_id", authUserId)
-      .order("created_at", { ascending: true })
       .limit(200);
 
     wmItems = safeRows(wmRes.data) as WorkingMemoryItem[];
@@ -195,9 +191,8 @@ export async function assembleContext(
   const { data: newsDigest, error: newsError } = await supabaseService
     .from("solace_news_digest")
     .select(
-      "story_title, outlet, neutral_summary, story_url, created_at"
+      "story_title, outlet, neutral_summary, story_url"
     )
-    .order("created_at", { ascending: false })
     .limit(6);
 
   if (newsError) {
