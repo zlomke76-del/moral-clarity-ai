@@ -352,9 +352,9 @@ export default function SolaceDock() {
   }
 
 // ====================================================================
-// SEND (VISION-AWARE) — AUTHORITATIVE
+// SEND (VISION-AWARE) — AUTHORITATIVE / TURBOPACK SAFE
 // ====================================================================
-async function send() {
+async function send(): Promise<void> {
   if (!input.trim() && pendingFiles.length === 0) return;
   if (streaming) return;
 
@@ -362,14 +362,10 @@ async function send() {
   setInput("");
   setStreaming(true);
 
-  // Echo user message immediately
   setMessages((m) => [...m, { role: "user", content: userMsg }]);
 
   try {
-    // --------------------------------------------------
-    // VISION-AWARE SEND (THIS WAS THE BROKEN LINE)
-    // --------------------------------------------------
-    const { visionResults, chatPayload } = await sendWithVision({
+    const result = await sendWithVision({
       userMsg,
       pendingFiles,
       userKey,
@@ -379,51 +375,51 @@ async function send() {
       modeHint,
     });
 
-    // --------------------------------------------------
-    // IMAGE RESPONSES (PRIMARY)
-    // --------------------------------------------------
+    const visionResults = result?.visionResults;
+    const chatPayload = result?.chatPayload;
+
+    // -----------------------------------------------
+    // IMAGE RESULTS (PRIMARY)
+    // -----------------------------------------------
     if (Array.isArray(visionResults) && visionResults.length > 0) {
       for (const v of visionResults) {
         setMessages((m) => [
           ...m,
           {
             role: "assistant",
-            content: v.answer ?? "",
-            imageUrl: v.imageUrl ?? null,
+            content: v?.answer ?? "",
+            imageUrl: v?.imageUrl ?? null,
           },
         ]);
       }
     }
 
-    // --------------------------------------------------
-    // ALWAYS INGEST SERVER PAYLOAD (CHAT / IMAGE / MIXED)
-    // --------------------------------------------------
+    // -----------------------------------------------
+    // SERVER PAYLOAD (TEXT / IMAGE / MIXED)
+    // -----------------------------------------------
     if (chatPayload) {
       ingestPayload(chatPayload);
     }
 
-    // --------------------------------------------------
-    // SAFETY NET — NEVER LEAVE UI SILENT
-    // --------------------------------------------------
+    // -----------------------------------------------
+    // SAFETY NET — NEVER SILENT
+    // -----------------------------------------------
     if (
       (!visionResults || visionResults.length === 0) &&
       !chatPayload
     ) {
       setMessages((m) => [
         ...m,
-        {
-          role: "assistant",
-          content: " ",
-        },
+        { role: "assistant", content: " " },
       ]);
     }
-  } catch (e: any) {
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : "Request failed";
+
     setMessages((m) => [
       ...m,
-      {
-        role: "assistant",
-        content: `⚠ ${e?.message ?? "Request failed"}`,
-      },
+      { role: "assistant", content: `⚠ ${message}` },
     ]);
   } finally {
     setStreaming(false);
