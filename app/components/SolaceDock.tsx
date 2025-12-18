@@ -13,6 +13,7 @@ import { IconPaperclip, IconMic } from "@/app/components/icons";
 import { sendWithVision } from "./sendWithVision";
 import SolaceTranscript from "./SolaceTranscript";
 import { UI } from "./dock-ui";
+import { useDockPosition } from "./useDockPosition";
 import SolaceDockHeaderLite from "./dock-header-lite";
 import {
   useDockSize,
@@ -231,81 +232,24 @@ export default function SolaceDock() {
     };
   }, []);
 
-  // --------------------------------------------------------------------
-  // Load saved position
-  // --------------------------------------------------------------------
-  useEffect(() => {
-    if (!canRender || !visible) return;
-    if (viewport.w === 0 || viewport.h === 0) return;
+const {
+  containerRef,
+  posReady,
+  onHeaderMouseDown,
+} = useDockPosition({
+  canRender,
+  visible,
+  viewport,
+  panelW,
+  panelH,
+  isMobile,
+  PAD,
+  posKey: POS_KEY,
+  x,
+  y,
+  setPos,
+});
 
-    const vw = viewport.w;
-    const vh = viewport.h;
-
-    if (vw <= 768) {
-      setPosReady(true);
-      return;
-    }
-
-    try {
-      const raw = localStorage.getItem(POS_KEY);
-      if (raw) {
-        const saved = JSON.parse(raw);
-        if (Number.isFinite(saved?.x) && Number.isFinite(saved?.y)) {
-          setPos(
-            Math.max(PAD, Math.min(vw - panelW - PAD, saved.x)),
-            Math.max(PAD, Math.min(vh - panelH - PAD, saved.y))
-          );
-          setPosReady(true);
-          return;
-        }
-      }
-    } catch {}
-
-    setPos(Math.round((vw - 760) / 2), Math.round((vh - 560) / 2));
-    setPosReady(true);
-  }, [canRender, visible, viewport.w, viewport.h, setPos, panelW, panelH]);
-
-  // --------------------------------------------------------------------
-  // Persist position
-  // --------------------------------------------------------------------
-  useEffect(() => {
-    if (dragging) return;
-    if (!posReady) return;
-    if (viewport.w === 0 || viewport.h === 0) return;
-    if (viewport.w <= 768) return;
-
-    try {
-      localStorage.setItem(POS_KEY, JSON.stringify({ x, y }));
-    } catch {}
-  }, [dragging, posReady, x, y, viewport.w, viewport.h]);
-
-  // --------------------------------------------------------------------
-  // Drag handlers
-  // --------------------------------------------------------------------
-  function onHeaderMouseDown(e: React.MouseEvent) {
-    if (isMobile) return;
-    const rect = containerRef.current?.getBoundingClientRect();
-    setOffset({
-      dx: e.clientX - (rect?.left ?? 0),
-      dy: e.clientY - (rect?.top ?? 0),
-    });
-    setDragging(true);
-  }
-
-  useEffect(() => {
-    if (!dragging) return;
-
-    const onMove = (e: MouseEvent) =>
-      setPos(e.clientX - offset.dx, e.clientY - offset.dy);
-    const onUp = () => setDragging(false);
-
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-  }, [dragging, offset.dx, offset.dy, setPos]);
 
   // --------------------------------------------------------------------
   // Resize
