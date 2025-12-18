@@ -532,132 +532,126 @@ if (image) {
 }
 
   // --------------------------------------------------------------------
-  // RENDER
-  // --------------------------------------------------------------------
-  const panel = (
-    <section ref={containerRef} style={panelStyle}>
-      <SolaceDockHeaderLite
-        ministryOn={ministryOn}
-        memReady={memReady}
-        onToggleMinistry={() => {
-          const next = new Set(filters);
-          if (ministryOn) {
-            next.delete("abrahamic");
-            next.delete("ministry");
-            try {
-              localStorage.setItem(MINISTRY_KEY, "0");
-            } catch {}
-          } else {
-            next.add("abrahamic");
-            next.add("ministry");
-            try {
-              localStorage.setItem(MINISTRY_KEY, "1");
-            } catch {}
-          }
-          setFilters(next);
-        }}
-        onMinimize={() => setMinimized(true)}
-        onDragStart={onHeaderMouseDown}
-      />
+// RENDER
+// --------------------------------------------------------------------
+const panel = (
+  <section ref={containerRef} style={panelStyle}>
+    <SolaceDockHeaderLite
+      ministryOn={ministryOn}
+      memReady={memReady}
+      onToggleMinistry={() => {
+        const next = new Set(filters);
+        if (ministryOn) {
+          next.delete("abrahamic");
+          next.delete("ministry");
+          try {
+            localStorage.setItem(MINISTRY_KEY, "0");
+          } catch {}
+        } else {
+          next.add("abrahamic");
+          next.add("ministry");
+          try {
+            localStorage.setItem(MINISTRY_KEY, "1");
+          } catch {}
+        }
+        setFilters(next);
+      }}
+      onMinimize={() => setMinimized(true)}
+      onDragStart={onHeaderMouseDown}
+    />
 
-      <div
-        ref={transcriptRef}
-        style={transcriptStyle}
-        tabIndex={-1}
-        aria-live="polite"
-      >
-        {messages.map((m, i) => (
-  <div
-    key={i}
-    style={{
-      margin: "6px 0",
-      padding: "10px 12px",
-      borderRadius: UI.radiusLg,
-      background:
-        m.role === "user"
-          ? "rgba(39,52,74,.6)"
-          : "rgba(28,38,54,.6)",
-      whiteSpace: "pre-wrap",
-      overflowWrap: "anywhere",
-      wordBreak: "break-word",
-      lineHeight: 1.35,
-      color: "white",
-    }}
-  >
-    {m.imageUrl && (
-      <img
-        src={m.imageUrl}
-        alt="Solace visual"
-        style={{
-          maxWidth: "100%",
-          borderRadius: 12,
-          marginBottom: m.content ? 6 : 0,
-          display: "block",
-        }}
-      />
-    )}
+    {/* ---------------- Transcript ---------------- */}
+    <div
+      ref={transcriptRef}
+      style={transcriptStyle}
+      tabIndex={-1}
+      aria-live="polite"
+    >
+      {messages.map((m, i) => (
+        <div
+          key={i}
+          style={{
+            margin: "6px 0",
+            padding: "10px 12px",
+            borderRadius: UI.radiusLg,
+            background:
+              m.role === "user"
+                ? "rgba(39,52,74,.6)"
+                : "rgba(28,38,54,.6)",
+            whiteSpace: "pre-wrap",
+            overflowWrap: "anywhere",
+            wordBreak: "break-word",
+            lineHeight: 1.35,
+            color: "white",
+          }}
+        >
+          {m.imageUrl && (
+            <img
+              src={m.imageUrl}
+              alt="Solace visual"
+              style={{
+                maxWidth: "100%",
+                borderRadius: 12,
+                marginBottom: m.content ? 6 : 0,
+                display: "block",
+              }}
+            />
+          )}
 
-    {m.content && (
-      <div>
-        {m.content}
-      </div>
-    )}
-  </div>
-))}
+          {m.content && <MessageRenderer content={m.content} />}
+        </div>
+      ))}
+    </div>
 
+    {/* ---------------- Composer ---------------- */}
+    <div
+      style={composerWrapStyle}
+      onPaste={(e) => handlePaste(e, { prefix: "solace" })}
+    >
+      {pendingFiles.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            paddingBottom: 8,
+            overflowX: "auto",
+          }}
+        >
+          {pendingFiles.map((f: PendingFile, i: number) => (
+            <div
+              key={i}
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: 8,
+                border: UI.border,
+                background: UI.surface2,
+                position: "relative",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              title={f.name}
+            >
+              {f.mime.startsWith("image/") ? (
+                <img
+                  src={f.url}
+                  alt={f.name}
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "100%",
+                    borderRadius: 6,
+                  }}
+                />
+              ) : (
+                <span style={{ fontSize: 18 }}>??</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
-{m.content && <MessageRenderer content={m.content} />}
-
-          </div>
-        ))}
-      </div>
-
-      <div
-        style={composerWrapStyle}
-        onPaste={(e) => handlePaste(e, { prefix: "solace" })}
-      >
-        {pendingFiles.length > 0 && (
-          <div
-            style={{
-              display: "flex",
-              gap: 8,
-              paddingBottom: 8,
-              overflowX: "auto",
-            }}
-          >
-            {pendingFiles.map((f: PendingFile, i: number) => (
-              <div
-                key={i}
-                style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 8,
-                  border: UI.border,
-                  background: UI.surface2,
-                  position: "relative",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-                title={f.name}
-              >
-                {f.mime.startsWith("image/") ? (
-                  <img
-                    src={f.url}
-                    alt={f.name}
-                    style={{
-                      maxWidth: "100%",
-                      maxHeight: "100%",
-                      borderRadius: 6,
-                    }}
-                  />
-                ) : (
-                  <span style={{ fontSize: 18 }}>??</span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+      {/* composer input continues below */}
 
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <label
