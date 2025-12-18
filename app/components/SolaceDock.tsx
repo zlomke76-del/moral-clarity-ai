@@ -20,7 +20,7 @@ import { useSolaceAttachments } from "./useSolaceAttachments";
 import { useSpeechInput } from "./useSpeechInput";
 import { IconPaperclip, IconMic } from "@/app/components/icons";
 import { sendWithVision } from "./sendWithVision";
-import { SolaceTranscript } from "./SolaceTranscript";
+import SolaceTranscript from "./SolaceTranscript";
 import { UI } from "./dock-ui";
 import SolaceDockHeaderLite from "./dock-header-lite";
 import {
