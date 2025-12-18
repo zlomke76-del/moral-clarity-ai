@@ -427,47 +427,72 @@ export default function SolaceDock() {
   // Payload ingestion (unchanged)
   // --------------------------------------------------------------------
   function ingestPayload(data: any) {
-    if (!data) throw new Error("Empty response payload");
+  if (!data) throw new Error("Empty response payload");
 
-    if (data.ok === true && typeof data.response === "string") {
-      setMessages((m) => [...m, { role: "assistant", content: data.response }]);
-      return;
-    }
-
-    if (Array.isArray(data.messages)) {
-      setMessages((m) => [...m, ...data.messages]);
-      return;
-    }
-
-    if (data.message?.content) {
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", content: data.message.content },
-      ]);
-      return;
-    }
-
-    if (Array.isArray(data.evidence)) {
-      const evMsgs: Message[] = data.evidence.map((e: EvidenceBlock) => ({
+  // --------------------------------------------------
+  // IMAGE RESPONSE (AUTHORITATIVE)
+  // --------------------------------------------------
+  if (typeof data.image === "string") {
+    setMessages((m) => [
+      ...m,
+      {
         role: "assistant",
-        content:
-          `?? Evidence` +
-          (e.source ? ` (${e.source})` : "") +
-          `\n\n${e.summary || e.text || "[no content]"}`,
-      }));
-      setMessages((m) => [...m, ...evMsgs]);
-      return;
-    }
-
-    throw new Error("Unrecognized response payload");
+        content: "", // image-only bubble
+        imageUrl: data.image,
+      },
+    ]);
+    return;
   }
 
-  function onEnterSend(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      send();
-    }
+  // --------------------------------------------------
+  // STANDARD STRING RESPONSE
+  // --------------------------------------------------
+  if (data.ok === true && typeof data.response === "string") {
+    setMessages((m) => [...m, { role: "assistant", content: data.response }]);
+    return;
   }
+
+  // --------------------------------------------------
+  // MULTI-MESSAGE RESPONSE
+  // --------------------------------------------------
+  if (Array.isArray(data.messages)) {
+    const normalized = data.messages.map((msg: any) => ({
+      role: msg.role,
+      content: msg.content ?? "",
+      imageUrl: msg.imageUrl ?? null,
+    }));
+    setMessages((m) => [...m, ...normalized]);
+    return;
+  }
+
+  // --------------------------------------------------
+  // LEGACY SINGLE MESSAGE
+  // --------------------------------------------------
+  if (data.message?.content) {
+    setMessages((m) => [
+      ...m,
+      { role: "assistant", content: data.message.content },
+    ]);
+    return;
+  }
+
+  // --------------------------------------------------
+  // EVIDENCE BLOCKS
+  // --------------------------------------------------
+  if (Array.isArray(data.evidence)) {
+    const evMsgs: Message[] = data.evidence.map((e: EvidenceBlock) => ({
+      role: "assistant",
+      content:
+        `📎 Evidence` +
+        (e.source ? ` (${e.source})` : "") +
+        `\n\n${e.summary || e.text || "[no content]"}`,
+    }));
+    setMessages((m) => [...m, ...evMsgs]);
+    return;
+  }
+
+  throw new Error("Unrecognized response payload");
+}
 
   // --------------------------------------------------------------------
   // RENDER
