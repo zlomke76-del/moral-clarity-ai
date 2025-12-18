@@ -437,6 +437,27 @@ export default function SolaceDock() {
   // --------------------------------------------------------------------
   function ingestPayload(data: any) {
   if (!data) throw new Error("Empty response payload");
+// --------------------------------------------------
+// IMAGE RESPONSE — BASE64 (AUTHORITATIVE)
+// --------------------------------------------------
+if (
+  Array.isArray(data.data) &&
+  data.data[0] &&
+  typeof data.data[0].b64_json === "string"
+) {
+  const base64 = data.data[0].b64_json;
+  const imageUrl = `data:image/png;base64,${base64}`;
+
+  setMessages((m) => [
+    ...m,
+    {
+      role: "assistant",
+      content: "",
+      imageUrl,
+    },
+  ]);
+  return;
+}
 
   // --------------------------------------------------
 // IMAGE RESPONSE (AUTHORITATIVE)
