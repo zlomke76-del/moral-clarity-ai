@@ -598,11 +598,7 @@ const panel = (
             />
           )}
 
-          {m.content && <MessageRenderer content={m.content} />}
-        </div>
-      ))}
-    </div>
-
+         
     {/* ---------------- Composer ---------------- */}
     <div
       style={composerWrapStyle}
