@@ -70,18 +70,42 @@ ${digestBlock}
 }
 
 // --------------------------------------------------------------
+// SIMPLE CONTRACT CHECK (NON-SEMANTIC, SAFE)
+// --------------------------------------------------------------
+function looksLikeValidNewsroomOutput(text: string): boolean {
+  if (!text || text.length < 1000) return false;
+
+  // Rough but reliable signals
+  const storyCount =
+    (text.match(/source/i)?.length ?? 0);
+
+  return storyCount >= 3;
+}
+
+// --------------------------------------------------------------
 // EXECUTOR (NO HYBRID, NO TRIAD)
 // --------------------------------------------------------------
 export async function runNewsroomExecutor(
   newsDigest: NewsDigestItem[]
 ): Promise<string> {
+
   if (!Array.isArray(newsDigest) || newsDigest.length < 3) {
-    return "There is insufficient verified neutral news content to produce a full daily briefing.";
+    throw new Error("NEWSROOM_INSUFFICIENT_DIGEST");
   }
 
   const prompt = buildNewsroomPrompt(newsDigest);
 
   const response = await callModel("gpt-4.1", prompt);
+
+  if (!looksLikeValidNewsroomOutput(response)) {
+    console.error("[NEWSROOM CONTRACT VIOLATION]", {
+      length: response?.length,
+    });
+
+    return (
+      "Verified neutral news content was available, but a compliant newsroom briefing could not be produced at this time."
+    );
+  }
 
   return response;
 }
