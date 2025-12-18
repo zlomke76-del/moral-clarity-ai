@@ -300,108 +300,97 @@ const {
   }
 
   // --------------------------------------------------------------------
-  // Payload ingestion (AUTHORITATIVE)
-  // --------------------------------------------------------------------
-  function ingestPayload(data: any) {
-    if (!data) throw new Error("Empty response payload");
+// Payload ingestion (AUTHORITATIVE — REPAIRED)
+// --------------------------------------------------------------------
+function ingestPayload(data: any) {
+  if (!data) throw new Error("Empty response payload");
 
-    // --------------------------------------------------
-    // IMAGE RESPONSE — OPENAI RAW BASE64 SHAPE (data[0].b64_json)
-    // --------------------------------------------------
-    if (
-      Array.isArray(data.data) &&
-      data.data[0] &&
-      typeof data.data[0].b64_json === "string"
-    ) {
-      const base64 = data.data[0].b64_json;
-      const imageUrl = `data:image/png;base64,${base64}`;
+  // --------------------------------------------------
+  // IMAGE RESPONSE — OPENAI RAW BASE64 SHAPE
+  // --------------------------------------------------
+  if (
+    Array.isArray(data.data) &&
+    data.data[0] &&
+    typeof data.data[0].b64_json === "string"
+  ) {
+    const base64 = data.data[0].b64_json;
+    const imageUrl = `data:image/png;base64,${base64}`;
 
-      console.log("[CLIENT IMAGE RECEIVED]", {
-        shape: "openai.b64_json",
-        prefix: imageUrl.slice(0, 32),
-        length: imageUrl.length,
-      });
-
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", content: " ", imageUrl },
-      ]);
-      return;
-    }
-
-    // --------------------------------------------------
-    // IMAGE RESPONSE — our API shape (imageUrl or image)
-    // --------------------------------------------------
-    const image =
-      typeof data.imageUrl === "string"
-        ? data.imageUrl
-        : typeof data.image === "string"
-        ? data.image
-        : null;
-
-    if (image) {
-      console.log("[CLIENT IMAGE RECEIVED]", {
-        shape: "api.imageUrl",
-        prefix: image.slice(0, 32),
-        length: image.length,
-      });
-
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", content: " ", imageUrl: image },
-      ]);
-      return;
-    }
-
-    // --------------------------------------------------
-    // STANDARD STRING RESPONSE
-    // --------------------------------------------------
-    if (data.ok === true && typeof data.response === "string") {
-      setMessages((m) => [...m, { role: "assistant", content: data.response }]);
-      return;
-    }
-
-    // --------------------------------------------------
-    // MULTI-MESSAGE RESPONSE
-    // --------------------------------------------------
-    if (Array.isArray(data.messages)) {
-      const normalized = data.messages.map((msg: any) => ({
-        role: msg.role,
-        content: (msg.content ?? "") as string,
-        imageUrl: (msg.imageUrl ?? null) as string | null,
-      }));
-      setMessages((m) => [...m, ...normalized]);
-      return;
-    }
-
-    // --------------------------------------------------
-    // LEGACY SINGLE MESSAGE
-    // --------------------------------------------------
-    if (data.message?.content) {
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", content: data.message.content },
-      ]);
-      return;
-    }
-
-    // --------------------------------------------------
-    // EVIDENCE BLOCKS
-    // --------------------------------------------------
-    if (Array.isArray(data.evidence)) {
-      const evMsgs: Message[] = data.evidence.map((e: EvidenceBlock) => ({
-        role: "assistant",
-        content:
-          `🧾 Evidence` +
-          (e.source ? ` (${e.source})` : "") +
-          `\n\n${e.summary || e.text || "[no content]"}`,
-      }));
-      setMessages((m) => [...m, ...evMsgs]);
-      return;
-    }
-
-    throw new Error("Unrecognized response payload");
+    setMessages((m) => [
+      ...m,
+      { role: "assistant", content: " ", imageUrl },
+    ]);
+    return;
   }
+
+  // --------------------------------------------------
+  // IMAGE RESPONSE — direct imageUrl / image
+  // --------------------------------------------------
+  const image =
+    typeof data.imageUrl === "string"
+      ? data.imageUrl
+      : typeof data.image === "string"
+      ? data.image
+      : null;
+
+  if (image) {
+    setMessages((m) => [
+      ...m,
+      { role: "assistant", content: " ", imageUrl: image },
+    ]);
+    return;
+  }
+
+  // --------------------------------------------------
+  // MULTI-MESSAGE RESPONSE (MUST COME BEFORE ok/response)
+  // --------------------------------------------------
+  if (Array.isArray(data.messages)) {
+    const normalized = data.messages.map((msg: any) => ({
+      role: msg.role,
+      content: (msg.content ?? "") as string,
+      imageUrl: (msg.imageUrl ?? null) as string | null,
+    }));
+    setMessages((m) => [...m, ...normalized]);
+    return;
+  }
+
+  // --------------------------------------------------
+  // STANDARD STRING RESPONSE
+  // --------------------------------------------------
+  if (data.ok === true && typeof data.response === "string") {
+    setMessages((m) => [...m, { role: "assistant", content: data.response }]);
+    return;
+  }
+
+  // --------------------------------------------------
+  // LEGACY SINGLE MESSAGE
+  // --------------------------------------------------
+  if (data.message?.content) {
+    setMessages((m) => [
+      ...m,
+      { role: "assistant", content: data.message.content },
+    ]);
+    return;
+  }
+
+  // --------------------------------------------------
+  // EVIDENCE BLOCKS
+  // --------------------------------------------------
+  if (Array.isArray(data.evidence)) {
+    const evMsgs: Message[] = data.evidence.map((e: EvidenceBlock) => ({
+      role: "assistant",
+      content:
+        `🧾 Evidence` +
+        (e.source ? ` (${e.source})` : "") +
+        `\n\n${e.summary || e.text || "[no content]"}`,
+    }));
+    setMessages((m) => [...m, ...evMsgs]);
+    return;
+  }
+
+  throw new Error("Unrecognized response payload");
+}
+
 
   // ====================================================================
   // SEND (VISION-AWARE) — TURBOPACK SAFE + IMAGE INTENT GATE
