@@ -391,6 +391,16 @@ if (
 }
 
 // VISION RESULTS (client-side vision)
+// IMAGE-ONLY RESPONSE FROM SERVER
+if (
+  chatPayload?.diagnostics?.pipeline === "image" &&
+  Array.isArray(chatPayload.messages)
+) {
+  ingestPayload(chatPayload);
+  return;
+}
+
+// VISION RESULTS (client-side vision)
 if (Array.isArray(visionResults) && visionResults.length > 0) {
   for (const v of visionResults) {
     setMessages((m) => [
