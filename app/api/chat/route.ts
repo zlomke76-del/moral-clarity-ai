@@ -191,7 +191,7 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
-    // IMAGE PIPELINE
+    // IMAGE PIPELINE (FIXED)
     // --------------------------------------------------------
     if (isImageRequest(message)) {
       console.log("[IMAGE PIPELINE FIRED]", { sessionId });
@@ -204,7 +204,7 @@ export async function POST(req: Request) {
         messages: [
           {
             role: "assistant",
-            content: "",
+            content: " ", // ✅ REQUIRED — prevents message normalization loss
             imageUrl,
           },
         ],
@@ -242,7 +242,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // Assemble context (FIXED)
+    // Assemble context
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
