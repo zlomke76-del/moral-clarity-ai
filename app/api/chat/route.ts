@@ -7,7 +7,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { put } from "@vercel/blob";
 
 import {
   FACTS_LIMIT,
@@ -68,7 +67,7 @@ function extractExplicitFact(msg: string): string | null {
 }
 
 // ------------------------------------------------------------
-// RELIABILITY DIAGNOSTICS (READ-ONLY, LOG ONLY)
+// RELIABILITY DIAGNOSTICS (READ-ONLY)
 // ------------------------------------------------------------
 function emitReliabilityDiag(params: {
   sessionId: string;
@@ -108,25 +107,37 @@ function emitReliabilityDiag(params: {
 }
 
 // ------------------------------------------------------------
-// IMAGE STORAGE (AUTHORITATIVE)
+// IMAGE STORAGE — SUPABASE (AUTHORITATIVE)
 // ------------------------------------------------------------
-async function storeBase64Image(
+async function storeBase64ImageSupabase(
   base64: string,
-  sessionId: string
+  sessionId: string,
+  supabaseService: ReturnType<typeof createServerClient>
 ): Promise<string> {
   const buffer = Buffer.from(
     base64.replace(/^data:image\/\w+;base64,/, ""),
     "base64"
   );
 
-  const filename = `solace/${sessionId}/${Date.now()}.png`;
+  const path = `sessions/${sessionId}/${Date.now()}.png`;
 
-  const blob = await put(filename, buffer, {
-    access: "public",
-    contentType: "image/png",
-  });
+  const { error } = await supabaseService.storage
+    .from("solace-images")
+    .upload(path, buffer, {
+      contentType: "image/png",
+      upsert: false,
+    });
 
-  return blob.url;
+  if (error) {
+    console.error("[IMAGE STORE ERROR]", error);
+    throw new Error("Failed to store generated image");
+  }
+
+  const { data } = supabaseService.storage
+    .from("solace-images")
+    .getPublicUrl(path);
+
+  return data.publicUrl;
 }
 
 // ------------------------------------------------------------
@@ -214,7 +225,7 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
-    // IMAGE PIPELINE — STORED & SERVED (CSP SAFE)
+    // IMAGE PIPELINE — STORED & SERVED
     // --------------------------------------------------------
     if (isImageRequest(message)) {
       console.log("[IMAGE PIPELINE FIRED]", { sessionId });
@@ -226,16 +237,14 @@ export async function POST(req: Request) {
         approxBytes: Math.floor((base64Image.length * 3) / 4),
       });
 
-      const imageUrl = await storeBase64Image(base64Image, sessionId);
-
-      console.log("[IMAGE STORED]", {
+      const imageUrl = await storeBase64ImageSupabase(
+        base64Image,
         sessionId,
-        imageUrl,
-      });
+        supabaseService
+      );
 
       console.log("[IMAGE PIPELINE DELIVERED]", {
         sessionId,
-        imageUrlType: typeof imageUrl,
         imageUrlPrefix: imageUrl.slice(0, 32),
         imageUrlLength: imageUrl.length,
       });
@@ -246,7 +255,7 @@ export async function POST(req: Request) {
         messages: [
           {
             role: "assistant",
-            content: " ", // REQUIRED to survive client normalization
+            content: " ",
             imageUrl,
           },
         ],
@@ -254,7 +263,7 @@ export async function POST(req: Request) {
           sessionId,
           pipeline: "image",
           delivered: true,
-          stored: true,
+          stored: "supabase",
         },
       });
     }
