@@ -190,12 +190,12 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // NEWS DIGEST (AUTHORITATIVE SOURCE — TABLE, NOT VIEW)
+  // NEWS DIGEST (AUTHORITATIVE SOURCE — TABLE)
   // ----------------------------------------------------------
   const { data: newsDigest, error: newsError } = await supabaseService
     .from("solace_news_digest")
     .select(
-      "story_title, outlet, neutral_summary, source_url, created_at"
+      "story_title, outlet, neutral_summary, story_url, created_at"
     )
     .order("created_at", { ascending: false })
     .limit(6);
