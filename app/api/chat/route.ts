@@ -154,7 +154,7 @@ export async function POST(req: Request) {
     });
 
     // --------------------------------------------------------
-    // Supabase auth client (USER CONTEXT — ANON KEY)
+    // Supabase auth client
     // --------------------------------------------------------
     const cookieStore = await cookies();
 
@@ -172,9 +172,6 @@ export async function POST(req: Request) {
       }
     );
 
-    // --------------------------------------------------------
-    // Supabase service-role client (SERVER AUTHORITY)
-    // --------------------------------------------------------
     const supabaseService = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -196,10 +193,10 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
-    // IMAGE GENERATION — ARTIFACT LANE (NO MEMORY, NO HYBRID)
+    // IMAGE PIPELINE (ARTIFACT LANE)
     // --------------------------------------------------------
     if (isImageRequest(message)) {
-      console.log("[IMAGE PIPELINE] triggered", { sessionId });
+      console.log("[IMAGE PIPELINE FIRED]", { sessionId });
 
       const imageUrl = await generateImage(message);
 
@@ -213,25 +210,16 @@ export async function POST(req: Request) {
             imageUrl,
           },
         ],
-        diagnostics: {
-          sessionId,
-          pipeline: "image",
-        },
+        diagnostics: { sessionId, pipeline: "image" },
       });
     }
 
     // --------------------------------------------------------
-    // EXPLICIT FACT MEMORY WRITE (FACTS ONLY)
+    // FACT MEMORY
     // --------------------------------------------------------
     const explicitFact = extractExplicitFact(message);
 
     if (explicitFact && authUserId && user?.email) {
-      console.log("[MEMORY-COMMIT] explicit_fact", {
-        sessionId,
-        authUserId,
-        content: explicitFact,
-      });
-
       await writeMemory(
         {
           userId: authUserId,
@@ -245,9 +233,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // --------------------------------------------------------
-    // WORKING MEMORY — USER TURN
-    // --------------------------------------------------------
     if (authUserId) {
       await supabaseService
         .schema("memory")
@@ -261,9 +246,6 @@ export async function POST(req: Request) {
         });
     }
 
-    // --------------------------------------------------------
-    // Assemble context
-    // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
       workspaceId ?? null,
@@ -273,6 +255,9 @@ export async function POST(req: Request) {
 
     const wantsNews = isNewsRequest(message);
 
+    // 🔎 PROOF LINE — NEWSROOM GATE
+    if (wantsNews) console.log("[NEWSROOM GATE FIRED]", { sessionId });
+
     emitReliabilityDiag({
       sessionId,
       context,
@@ -280,21 +265,9 @@ export async function POST(req: Request) {
     });
 
     // --------------------------------------------------------
-    // HARD NEWSROOM GATE
+    // NEWSROOM
     // --------------------------------------------------------
     if (wantsNews) {
-      if (!Array.isArray(context.newsDigest) || context.newsDigest.length < 3) {
-        const refusal =
-          "No verified neutral news digest is available for this request. I will not speculate.";
-
-        return NextResponse.json({
-          ok: true,
-          response: refusal,
-          messages: [{ role: "assistant", content: refusal }],
-          diagnostics: { sessionId, newsroom: "refused_no_digest" },
-        });
-      }
-
       const newsroomResponse = await runNewsroomExecutor(
         context.newsDigest
       );
@@ -303,12 +276,12 @@ export async function POST(req: Request) {
         ok: true,
         response: newsroomResponse,
         messages: [{ role: "assistant", content: newsroomResponse }],
-        diagnostics: { sessionId, newsroom: "executed" },
+        diagnostics: { sessionId, pipeline: "newsroom" },
       });
     }
 
     // --------------------------------------------------------
-    // HYBRID PIPELINE
+    // HYBRID
     // --------------------------------------------------------
     const result = await runHybridPipeline({
       userMessage: message,
@@ -323,9 +296,6 @@ export async function POST(req: Request) {
         ? result.finalAnswer
         : "I’m here and ready to continue.";
 
-    // --------------------------------------------------------
-    // WORKING MEMORY — ASSISTANT TURN
-    // --------------------------------------------------------
     if (authUserId) {
       await supabaseService
         .schema("memory")
@@ -339,26 +309,11 @@ export async function POST(req: Request) {
         });
     }
 
-    console.log("[SESSION] end", {
-      sessionId,
-      durationMs: Date.now() - sessionStartMs,
-    });
-
     return NextResponse.json({
       ok: true,
       response: safeResponse,
       messages: [{ role: "assistant", content: safeResponse }],
-      diagnostics: {
-        sessionId,
-        pipeline: "hybrid",
-        factsUsed: Math.min(context.memoryPack.facts.length, FACTS_LIMIT),
-        episodicUsed: Math.min(
-          context.memoryPack.episodic.length,
-          EPISODES_LIMIT
-        ),
-        didResearch: context.didResearch,
-        newsDigestUsed: context.newsDigest.length,
-      },
+      diagnostics: { sessionId, pipeline: "hybrid" },
     });
   } catch (err: any) {
     console.error("[CHAT ROUTE ERROR]", err?.message);
