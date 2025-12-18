@@ -141,8 +141,8 @@ export async function POST(req: Request) {
       throw new Error("conversationId is required for session continuity");
     }
 
-    const sessionId = conversationId;
-    const sessionStartedAt = new Date().toISOString();
+    const sessionId: string = conversationId;
+    const sessionStartedAt: string = new Date().toISOString();
 
     console.log("[SESSION] start", {
       sessionId,
@@ -191,7 +191,7 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
-    // IMAGE PIPELINE (ARTIFACT LANE)
+    // IMAGE PIPELINE
     // --------------------------------------------------------
     if (isImageRequest(message)) {
       console.log("[IMAGE PIPELINE FIRED]", { sessionId });
@@ -232,20 +232,17 @@ export async function POST(req: Request) {
     }
 
     if (authUserId) {
-      await supabaseService
-        .schema("memory")
-        .from("working_memory")
-        .insert({
-          conversation_id: sessionId,
-          user_id: authUserId,
-          workspace_id: workspaceId,
-          role: "user",
-          content: message,
-        });
+      await supabaseService.schema("memory").from("working_memory").insert({
+        conversation_id: sessionId,
+        user_id: authUserId,
+        workspace_id: workspaceId,
+        role: "user",
+        content: message,
+      });
     }
 
     // --------------------------------------------------------
-    // Assemble context (FIXED — sessionStartedAt INCLUDED)
+    // Assemble context (FIXED)
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
@@ -263,13 +260,10 @@ export async function POST(req: Request) {
     });
 
     // --------------------------------------------------------
-    // HARD NEWSROOM GATE
+    // NEWSROOM GATE
     // --------------------------------------------------------
     if (wantsNews) {
-      if (
-        !Array.isArray(context.newsDigest) ||
-        context.newsDigest.length < 3
-      ) {
+      if (!Array.isArray(context.newsDigest) || context.newsDigest.length < 3) {
         const refusal =
           "No verified neutral news digest is available for this request. I will not speculate.";
 
@@ -285,9 +279,7 @@ export async function POST(req: Request) {
         });
       }
 
-      const newsroomResponse = await runNewsroomExecutor(
-        context.newsDigest
-      );
+      const newsroomResponse = await runNewsroomExecutor(context.newsDigest);
 
       return NextResponse.json({
         ok: true,
@@ -314,16 +306,13 @@ export async function POST(req: Request) {
         : "I’m here and ready to continue.";
 
     if (authUserId) {
-      await supabaseService
-        .schema("memory")
-        .from("working_memory")
-        .insert({
-          conversation_id: sessionId,
-          user_id: authUserId,
-          workspace_id: workspaceId,
-          role: "assistant",
-          content: safeResponse,
-        });
+      await supabaseService.schema("memory").from("working_memory").insert({
+        conversation_id: sessionId,
+        user_id: authUserId,
+        workspace_id: workspaceId,
+        role: "assistant",
+        content: safeResponse,
+      });
     }
 
     return NextResponse.json({
