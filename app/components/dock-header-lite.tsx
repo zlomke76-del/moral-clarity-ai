@@ -7,7 +7,7 @@ import { UI } from "./dock-ui";
 interface Props {
   ministryOn: boolean;
   memReady: boolean;
-  onToggleMinistry: () => void;
+  onToggleMinistry: () => void; // intentionally unused (kept for compatibility)
   onMinimize: () => void;
   onDragStart: (e: any) => void;
 }
@@ -15,10 +15,18 @@ interface Props {
 export default function SolaceDockHeaderLite({
   ministryOn,
   memReady,
-  onToggleMinistry,
   onMinimize,
   onDragStart,
 }: Props) {
+  // ------------------------------------------------------------
+  // Anchor / Triangle visual state
+  // ------------------------------------------------------------
+  const anchorGlow = ministryOn
+    ? "0 0 28px rgba(251,191,36,.65), 0 0 6px rgba(251,191,36,.45)"
+    : "0 0 6px rgba(148,163,184,.25)";
+
+  const anchorFill = ministryOn ? "#fbbf24" : "#94a3b8";
+
   return (
     <header
       onMouseDown={onDragStart}
@@ -32,17 +40,36 @@ export default function SolaceDockHeaderLite({
         userSelect: "none",
       }}
     >
-      {/* Solace orb */}
+      {/* Triangle / Anchor Mark */}
       <span
+        aria-hidden
         style={{
           width: 22,
           height: 22,
-          borderRadius: "50%",
-          background:
-            "radial-gradient(62% 62% at 50% 42%, rgba(251,191,36,1) 0%, rgba(251,191,36,.65) 38%, rgba(251,191,36,.22) 72%, rgba(251,191,36,.12) 100%)",
-          boxShadow: "0 0 38px rgba(251,191,36,.55)",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          filter: "drop-shadow(" + anchorGlow + ")",
         }}
-      />
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={anchorFill}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          {/* Triangle */}
+          <path d="M12 3 L21 19 H3 Z" />
+          {/* Anchor stem */}
+          <line x1="12" y1="8" x2="12" y2="19" />
+          {/* Anchor base */}
+          <path d="M8 19c1.5 2 6.5 2 8 0" />
+        </svg>
+      </span>
 
       {/* Title */}
       <span style={{ font: "600 13px system-ui" }}>Solace</span>
@@ -53,7 +80,7 @@ export default function SolaceDockHeaderLite({
 
       {/* Memory ready indicator */}
       <span
-        title={memReady ? "Memory ready" : "Loading memory…"}
+        title={memReady ? "Memory ready" : "Loading memory"}
         style={{
           marginLeft: 8,
           width: 8,
@@ -67,21 +94,6 @@ export default function SolaceDockHeaderLite({
       {/* Right controls */}
       <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
         <button
-          onClick={onToggleMinistry}
-          style={{
-            borderRadius: 8,
-            padding: "7px 10px",
-            font: "700 12px system-ui",
-            background: ministryOn ? "#f6c453" : "#0e1726",
-            color: ministryOn ? "#000" : UI.text,
-            border: ministryOn ? "1px solid #f4cf72" : UI.edge,
-            cursor: "pointer",
-          }}
-        >
-          Ministry
-        </button>
-
-        <button
           onClick={onMinimize}
           style={{
             borderRadius: 6,
@@ -92,6 +104,7 @@ export default function SolaceDockHeaderLite({
             color: UI.sub,
             cursor: "pointer",
           }}
+          aria-label="Minimize Solace"
         >
           –
         </button>
