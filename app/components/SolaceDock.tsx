@@ -439,19 +439,26 @@ export default function SolaceDock() {
   if (!data) throw new Error("Empty response payload");
 
   // --------------------------------------------------
-  // IMAGE RESPONSE (AUTHORITATIVE)
-  // --------------------------------------------------
-  if (typeof data.image === "string") {
-    setMessages((m) => [
-      ...m,
-      {
-        role: "assistant",
-        content: "", // image-only bubble
-        imageUrl: data.image,
-      },
-    ]);
-    return;
-  }
+// IMAGE RESPONSE (AUTHORITATIVE)
+// --------------------------------------------------
+const image =
+  typeof data.image === "string"
+    ? data.image
+    : typeof data.imageUrl === "string"
+    ? data.imageUrl
+    : null;
+
+if (image) {
+  setMessages((m) => [
+    ...m,
+    {
+      role: "assistant",
+      content: "", // image-only bubble
+      imageUrl: image,
+    },
+  ]);
+  return;
+}
 
   // --------------------------------------------------
   // STANDARD STRING RESPONSE
