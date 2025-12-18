@@ -567,42 +567,42 @@ const panel = (
       tabIndex={-1}
       aria-live="polite"
     >
-{messages.map((m, i) => (
-  <div
-    key={i}
-    style={{
-      margin: "6px 0",
-      padding: "10px 12px",
-      borderRadius: UI.radiusLg,
-      background:
-        m.role === "user"
-          ? "rgba(39,52,74,.6)"
-          : "rgba(28,38,54,.6)",
-      whiteSpace: "pre-wrap",
-      overflowWrap: "anywhere",
-      wordBreak: "break-word",
-      lineHeight: 1.35,
-      color: "white",
-    }}
-  >
-    {m.imageUrl && (
-      <img
-        src={m.imageUrl}
-        alt="Solace visual"
-        style={{
-          maxWidth: "100%",
-          borderRadius: 12,
-          marginBottom: m.content ? 6 : 0,
-          display: "block",
-        }}
-      />
-    )}
+      {messages.map((m, i) => (
+        <div
+          key={i}
+          style={{
+            margin: "6px 0",
+            padding: "10px 12px",
+            borderRadius: UI.radiusLg,
+            background:
+              m.role === "user"
+                ? "rgba(39,52,74,.6)"
+                : "rgba(28,38,54,.6)",
+            whiteSpace: "pre-wrap",
+            overflowWrap: "anywhere",
+            wordBreak: "break-word",
+            lineHeight: 1.35,
+            color: "white",
+          }}
+        >
+          {m.imageUrl && (
+            <img
+              src={m.imageUrl}
+              alt="Solace visual"
+              style={{
+                maxWidth: "100%",
+                borderRadius: 12,
+                marginBottom: m.content ? 6 : 0,
+                display: "block",
+              }}
+            />
+          )}
 
-    {m.content && <MessageRenderer content={m.content} />}
-  </div>
-))}
+          {m.content && <MessageRenderer content={m.content} />}
+        </div>
+      ))}
+    </div>
 
-         
     {/* ---------------- Composer ---------------- */}
     <div
       style={composerWrapStyle}
