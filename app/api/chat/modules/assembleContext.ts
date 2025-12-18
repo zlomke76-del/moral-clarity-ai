@@ -190,15 +190,19 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // NEWS DIGEST (AUTHORITATIVE, READ ONLY)
+  // NEWS DIGEST (AUTHORITATIVE SOURCE — TABLE, NOT VIEW)
   // ----------------------------------------------------------
-  const { data: newsDigest } = await supabaseService
-    .from("solace_news_digest_view")
+  const { data: newsDigest, error: newsError } = await supabaseService
+    .from("solace_news_digest")
     .select(
       "story_title, outlet, neutral_summary, source_url, created_at"
     )
     .order("created_at", { ascending: false })
     .limit(6);
+
+  if (newsError) {
+    console.error("[NEWS DIGEST LOAD ERROR]", newsError);
+  }
 
   console.log("[NEWS DIGEST LOADED]", {
     items: newsDigest?.length ?? 0,
