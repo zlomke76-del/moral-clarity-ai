@@ -52,66 +52,16 @@ function isImageRequest(message: string): boolean {
   );
 }
 
-// ------------------------------------------------------------
-// EXPLICIT FACT REMEMBER DETECTOR (AUTHORITATIVE)
-// ------------------------------------------------------------
-function extractExplicitFact(msg: string): string | null {
-  const m = msg.trim();
-  const match = m.match(/^(remember\s+(that\s+)?)(.+)$/i);
-  if (!match) return null;
-
-  const fact = match[3]?.trim();
-  if (!fact || fact.length < 3) return null;
-
-  return fact;
-}
-
-// ------------------------------------------------------------
-// RELIABILITY DIAGNOSTICS (READ-ONLY, LOG ONLY)
-// ------------------------------------------------------------
-function emitReliabilityDiag(params: {
-  sessionId: string;
-  context: any;
-  pipeline: "hybrid" | "newsroom" | "image";
-}) {
-  const wmItems = params.context?.workingMemory?.items ?? [];
-  const facts = params.context?.memoryPack?.facts ?? [];
-  const episodic = params.context?.memoryPack?.episodic ?? [];
-
-  console.log("[DIAG-CTX-INTEGRITY]", {
-    sessionId: params.sessionId,
-    wmTurns: wmItems.length,
-    wmCap: 10,
-    wmOverflowed: wmItems.length > 10,
-    factsAvailable: facts.length,
-    episodicAvailable: episodic.length,
-    researchUsed: params.context.didResearch === true,
-    newsDigestUsed: params.context.newsDigest?.length ?? 0,
-  });
-
-  console.log("[DIAG-MEMORY]", {
-    sessionId: params.sessionId,
-    workingMemoryActive: params.context.workingMemory?.active === true,
-    workingMemoryItems: wmItems.length,
-    persistentFactsRead: facts.length,
-    persistentEpisodesRead: episodic.length,
-    unauthorizedWrites: false,
-  });
-
-  console.log("[DIAG-CONSTRAINTS]", {
-    sessionId: params.sessionId,
-    pipeline: params.pipeline,
-    speculationBlocked: true,
-    memoryWriteGuarded: true,
-  });
+function normalizeImageUrl(image: string): string {
+  if (!image) return "";
+  if (image.startsWith("data:image")) return image;
+  return `data:image/png;base64,${image}`;
 }
 
 // ------------------------------------------------------------
 // POST handler
 // ------------------------------------------------------------
 export async function POST(req: Request) {
-  const sessionStartMs = Date.now();
-
   try {
     const body = await req.json();
 
@@ -128,29 +78,25 @@ export async function POST(req: Request) {
 
     const finalUserKey = canonicalUserKey ?? userKey;
 
-    if (!message || !finalUserKey) {
-      const fallback =
-        "I’m here, but I didn’t receive a valid message or user identity.";
-
+    if (!message || !finalUserKey || !conversationId) {
       return NextResponse.json({
         ok: true,
-        response: fallback,
-        messages: [{ role: "assistant", content: fallback }],
+        messages: [
+          {
+            role: "assistant",
+            content:
+              "I’m here, but I didn’t receive a valid message or session.",
+          },
+        ],
       });
     }
 
-    if (!conversationId) {
-      throw new Error("conversationId is required for session continuity");
-    }
-
     const sessionId = conversationId;
-    const sessionStartedAt = new Date().toISOString();
 
     console.log("[SESSION] start", {
       sessionId,
       userKey: finalUserKey,
       workspaceId,
-      startedAt: sessionStartedAt,
     });
 
     // --------------------------------------------------------
@@ -193,12 +139,27 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
-    // IMAGE PIPELINE (ARTIFACT LANE)
+    // IMAGE PIPELINE (AUTHORITATIVE FIX)
     // --------------------------------------------------------
     if (isImageRequest(message)) {
       console.log("[IMAGE PIPELINE FIRED]", { sessionId });
 
-      const imageUrl = await generateImage(message);
+      const rawImage = await generateImage(message);
+      const imageUrl = normalizeImageUrl(rawImage);
+
+      if (authUserId) {
+        await supabaseService
+          .schema("memory")
+          .from("working_memory")
+          .insert({
+            conversation_id: sessionId,
+            user_id: authUserId,
+            workspace_id: workspaceId,
+            role: "assistant",
+            content: "",
+            image_url: imageUrl,
+          });
+      }
 
       return NextResponse.json({
         ok: true,
@@ -215,24 +176,8 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // EXPLICIT FACT MEMORY
+    // Persist user message
     // --------------------------------------------------------
-    const explicitFact = extractExplicitFact(message);
-
-    if (explicitFact && authUserId && user?.email) {
-      await writeMemory(
-        {
-          userId: authUserId,
-          email: user.email,
-          workspaceId: workspaceId ?? null,
-          memoryType: "fact",
-          source: "explicit",
-          content: explicitFact,
-        },
-        req.headers.get("cookie") ?? ""
-      );
-    }
-
     if (authUserId) {
       await supabaseService
         .schema("memory")
@@ -253,46 +198,25 @@ export async function POST(req: Request) {
       finalUserKey,
       workspaceId ?? null,
       message,
-      { sessionId, sessionStartedAt }
+      { sessionId }
     );
 
     const wantsNews = isNewsRequest(message);
 
-    if (wantsNews) {
-      console.log("[NEWSROOM GATE FIRED]", { sessionId });
-    }
-
-    emitReliabilityDiag({
-      sessionId,
-      context,
-      pipeline: wantsNews ? "newsroom" : "hybrid",
-    });
-
     // --------------------------------------------------------
-    // HARD NEWSROOM GATE (RESTORED)
+    // NEWSROOM
     // --------------------------------------------------------
     if (wantsNews) {
-      if (
-        !Array.isArray(context.newsDigest) ||
-        context.newsDigest.length < 3
-      ) {
-        console.log("[NEWSROOM BLOCKED — EMPTY DIGEST]", {
-          sessionId,
-          items: context.newsDigest?.length ?? 0,
-        });
-
-        const refusal =
-          "No verified neutral news digest is available for this request. I will not speculate.";
-
+      if (!context.newsDigest?.length) {
         return NextResponse.json({
           ok: true,
-          response: refusal,
-          messages: [{ role: "assistant", content: refusal }],
-          diagnostics: {
-            sessionId,
-            pipeline: "newsroom",
-            reason: "insufficient_digest",
-          },
+          messages: [
+            {
+              role: "assistant",
+              content:
+                "No verified neutral news digest is available. I will not speculate.",
+            },
+          ],
         });
       }
 
@@ -302,9 +226,9 @@ export async function POST(req: Request) {
 
       return NextResponse.json({
         ok: true,
-        response: newsroomResponse,
-        messages: [{ role: "assistant", content: newsroomResponse }],
-        diagnostics: { sessionId, pipeline: "newsroom" },
+        messages: [
+          { role: "assistant", content: newsroomResponse },
+        ],
       });
     }
 
@@ -320,7 +244,7 @@ export async function POST(req: Request) {
     });
 
     const safeResponse =
-      typeof result?.finalAnswer === "string" && result.finalAnswer.length > 0
+      typeof result?.finalAnswer === "string" && result.finalAnswer.length
         ? result.finalAnswer
         : "I’m here and ready to continue.";
 
@@ -341,25 +265,12 @@ export async function POST(req: Request) {
       ok: true,
       response: safeResponse,
       messages: [{ role: "assistant", content: safeResponse }],
-      diagnostics: {
-        sessionId,
-        pipeline: "hybrid",
-        factsUsed: Math.min(context.memoryPack.facts.length, FACTS_LIMIT),
-        episodicUsed: Math.min(
-          context.memoryPack.episodic.length,
-          EPISODES_LIMIT
-        ),
-        didResearch: context.didResearch,
-        newsDigestUsed: context.newsDigest.length,
-      },
     });
   } catch (err: any) {
-    console.error("[CHAT ROUTE ERROR]", err?.message);
+    console.error("[CHAT ROUTE ERROR]", err);
 
     return NextResponse.json({
       ok: true,
-      response:
-        "An internal error occurred. I’m still here and ready to continue.",
       messages: [
         {
           role: "assistant",
