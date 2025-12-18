@@ -2,7 +2,6 @@
 
 import React from "react";
 import { UI } from "./dock-ui";
-import MessageRenderer from "./MessageRenderer";
 
 type Message = {
   role: "user" | "assistant";
@@ -25,6 +24,7 @@ export default function SolaceTranscript({
     <div ref={transcriptRef} style={transcriptStyle}>
       {messages.map((msg, i) => {
         const isUser = msg.role === "user";
+        const hasText = Boolean(msg.content && msg.content.trim().length > 0);
 
         return (
           <div
@@ -45,6 +45,9 @@ export default function SolaceTranscript({
                 boxShadow: UI.shadow,
                 whiteSpace: "pre-wrap",
                 wordBreak: "break-word",
+                display: "flex",
+                flexDirection: "column",
+                gap: hasText && msg.imageUrl ? 8 : 0,
               }}
             >
               {msg.imageUrl && (
@@ -54,12 +57,11 @@ export default function SolaceTranscript({
                   style={{
                     maxWidth: "100%",
                     borderRadius: UI.radiusMd,
-                    marginBottom: msg.content ? 8 : 0,
                   }}
                 />
               )}
 
-              <MessageRenderer content={msg.content} />
+              {hasText && <span>{msg.content}</span>}
             </div>
           </div>
         );
