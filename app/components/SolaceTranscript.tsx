@@ -29,7 +29,7 @@ export default function SolaceTranscript({
 
         return (
           <div
-            key={i}
+            key={`${i}-${msg.role}-${msg.imageUrl ? "img" : "txt"}`}
             style={{
               display: "flex",
               justifyContent: isUser ? "flex-end" : "flex-start",
