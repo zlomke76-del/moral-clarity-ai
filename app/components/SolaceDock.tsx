@@ -178,7 +178,7 @@ export default function SolaceDock() {
         setFilters(next);
       }
     } catch {}
-  }, []);
+  }, [setFilters]);
 
   // --------------------------------------------------------------------
   // Initial message
@@ -340,6 +340,7 @@ export default function SolaceDock() {
           fontWeight: 700,
           cursor: "pointer",
         }}
+        aria-label="Open Solace Dock"
       >
         S
       </button>,
@@ -354,7 +355,7 @@ export default function SolaceDock() {
     if (!input.trim() && pendingFiles.length === 0) return;
     if (streaming) return;
 
-    const userMsg = input || "Attachments:";
+    const userMsg = input.trim() || "Attachments:";
     setInput("");
     setStreaming(true);
 
@@ -405,12 +406,16 @@ export default function SolaceDock() {
         }),
       });
 
+      if (!res.ok) {
+        throw new Error(`Status ${res.status}`);
+      }
+
       const data = await res.json();
       ingestPayload(data);
     } catch (e: any) {
       setMessages((m) => [
         ...m,
-        { role: "assistant", content: `⚠️ ${e?.message ?? "Request failed"}` },
+        { role: "assistant", content: `?? ${e?.message ?? "Request failed"}` },
       ]);
     } finally {
       setStreaming(false);
@@ -446,7 +451,7 @@ export default function SolaceDock() {
       const evMsgs: Message[] = data.evidence.map((e: EvidenceBlock) => ({
         role: "assistant",
         content:
-          `📄 Evidence` +
+          `?? Evidence` +
           (e.source ? ` (${e.source})` : "") +
           `\n\n${e.summary || e.text || "[no content]"}`,
       }));
@@ -472,12 +477,33 @@ export default function SolaceDock() {
       <SolaceDockHeaderLite
         ministryOn={ministryOn}
         memReady={memReady}
-        onToggleMinistry={() => {}}
+        onToggleMinistry={() => {
+          const next = new Set(filters);
+          if (ministryOn) {
+            next.delete("abrahamic");
+            next.delete("ministry");
+            try {
+              localStorage.setItem(MINISTRY_KEY, "0");
+            } catch {}
+          } else {
+            next.add("abrahamic");
+            next.add("ministry");
+            try {
+              localStorage.setItem(MINISTRY_KEY, "1");
+            } catch {}
+          }
+          setFilters(next);
+        }}
         onMinimize={() => setMinimized(true)}
         onDragStart={onHeaderMouseDown}
       />
 
-      <div ref={transcriptRef} style={transcriptStyle}>
+      <div
+        ref={transcriptRef}
+        style={transcriptStyle}
+        tabIndex={-1}
+        aria-live="polite"
+      >
         {messages.map((m, i) => (
           <div
             key={i}
@@ -493,6 +519,7 @@ export default function SolaceDock() {
               overflowWrap: "anywhere",
               wordBreak: "break-word",
               lineHeight: 1.35,
+              color: "white",
             }}
           >
             {m.imageUrl && (
@@ -538,6 +565,7 @@ export default function SolaceDock() {
                   alignItems: "center",
                   justifyContent: "center",
                 }}
+                title={f.name}
               >
                 {f.mime.startsWith("image/") ? (
                   <img
@@ -550,7 +578,7 @@ export default function SolaceDock() {
                     }}
                   />
                 ) : (
-                  <span style={{ fontSize: 18 }}>📄</span>
+                  <span style={{ fontSize: 18 }}>??</span>
                 )}
               </div>
             ))}
@@ -571,8 +599,9 @@ export default function SolaceDock() {
               cursor: "pointer",
               flexShrink: 0,
             }}
+            aria-label="Attach files"
           >
-            📎
+            ??
             <input
               type="file"
               multiple
@@ -592,9 +621,15 @@ export default function SolaceDock() {
               border: UI.border,
               background: listening ? "rgba(255,0,0,.45)" : UI.surface2,
               cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
+            aria-pressed={listening}
+            aria-label={listening ? "Stop recording" : "Start recording"}
+            type="button"
           >
-            🎤
+            ??
           </button>
 
           <textarea
@@ -603,6 +638,9 @@ export default function SolaceDock() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onEnterSend}
             placeholder="Ask Solace..."
+            aria-label="Message input"
+            rows={1}
+            spellCheck={false}
           />
 
           <button
@@ -615,8 +653,10 @@ export default function SolaceDock() {
               background: "#fbbf24",
               border: "none",
               fontWeight: 600,
-              cursor: "pointer",
+              cursor: streaming ? "not-allowed" : "pointer",
             }}
+            type="button"
+            aria-disabled={streaming}
           >
             Ask
           </button>
