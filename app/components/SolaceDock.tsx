@@ -365,7 +365,7 @@ export default function SolaceDock() {
   setMessages((m) => [...m, { role: "user", content: userMsg }]);
 
   try {
-    const { visionResults, chatPayload } = await sendWithVision(...);
+    const { visionResults, chatPayload } = await;
 
 // ALWAYS render image responses
 if (Array.isArray(visionResults) && visionResults.length > 0) {
