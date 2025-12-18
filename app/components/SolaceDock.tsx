@@ -542,8 +542,6 @@ export default function SolaceDock() {
   transcriptRef={transcriptRef}
   transcriptStyle={transcriptStyle}
 />
-        ))}
-      </div>
 
       {/* ---------------- Composer ---------------- */}
       <div
