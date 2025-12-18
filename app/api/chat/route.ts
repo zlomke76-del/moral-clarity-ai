@@ -17,7 +17,7 @@ import { assembleContext } from "./modules/assembleContext";
 import { runHybridPipeline } from "./modules/hybrid";
 import { runNewsroomExecutor } from "./modules/newsroom-executor";
 import { writeMemory } from "./modules/memory-writer";
-import { generateImage } from "./modules/image-generator";
+import { generateImage } from "./modules/image-router";
 
 // ------------------------------------------------------------
 // Runtime configuration
