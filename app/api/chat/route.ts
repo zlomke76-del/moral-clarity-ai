@@ -154,7 +154,7 @@ export async function POST(req: Request) {
     });
 
     // --------------------------------------------------------
-    // Supabase auth client
+    // Supabase clients
     // --------------------------------------------------------
     const cookieStore = await cookies();
 
@@ -215,7 +215,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // FACT MEMORY
+    // EXPLICIT FACT MEMORY
     // --------------------------------------------------------
     const explicitFact = extractExplicitFact(message);
 
@@ -246,6 +246,9 @@ export async function POST(req: Request) {
         });
     }
 
+    // --------------------------------------------------------
+    // Assemble context
+    // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
       workspaceId ?? null,
@@ -255,8 +258,9 @@ export async function POST(req: Request) {
 
     const wantsNews = isNewsRequest(message);
 
-    // 🔎 PROOF LINE — NEWSROOM GATE
-    if (wantsNews) console.log("[NEWSROOM GATE FIRED]", { sessionId });
+    if (wantsNews) {
+      console.log("[NEWSROOM GATE FIRED]", { sessionId });
+    }
 
     emitReliabilityDiag({
       sessionId,
@@ -265,9 +269,33 @@ export async function POST(req: Request) {
     });
 
     // --------------------------------------------------------
-    // NEWSROOM
+    // HARD NEWSROOM GATE (RESTORED)
     // --------------------------------------------------------
     if (wantsNews) {
+      if (
+        !Array.isArray(context.newsDigest) ||
+        context.newsDigest.length < 3
+      ) {
+        console.log("[NEWSROOM BLOCKED — EMPTY DIGEST]", {
+          sessionId,
+          items: context.newsDigest?.length ?? 0,
+        });
+
+        const refusal =
+          "No verified neutral news digest is available for this request. I will not speculate.";
+
+        return NextResponse.json({
+          ok: true,
+          response: refusal,
+          messages: [{ role: "assistant", content: refusal }],
+          diagnostics: {
+            sessionId,
+            pipeline: "newsroom",
+            reason: "insufficient_digest",
+          },
+        });
+      }
+
       const newsroomResponse = await runNewsroomExecutor(
         context.newsDigest
       );
@@ -281,7 +309,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // HYBRID
+    // HYBRID PIPELINE
     // --------------------------------------------------------
     const result = await runHybridPipeline({
       userMessage: message,
@@ -313,7 +341,17 @@ export async function POST(req: Request) {
       ok: true,
       response: safeResponse,
       messages: [{ role: "assistant", content: safeResponse }],
-      diagnostics: { sessionId, pipeline: "hybrid" },
+      diagnostics: {
+        sessionId,
+        pipeline: "hybrid",
+        factsUsed: Math.min(context.memoryPack.facts.length, FACTS_LIMIT),
+        episodicUsed: Math.min(
+          context.memoryPack.episodic.length,
+          EPISODES_LIMIT
+        ),
+        didResearch: context.didResearch,
+        newsDigestUsed: context.newsDigest.length,
+      },
     });
   } catch (err: any) {
     console.error("[CHAT ROUTE ERROR]", err?.message);
