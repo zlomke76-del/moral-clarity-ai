@@ -351,10 +351,10 @@ export default function SolaceDock() {
     );
   }
 
-  // ====================================================================
-  // SEND (VISION-AWARE)
-  // ====================================================================
- async function send() {
+// ====================================================================
+// SEND (VISION-AWARE) — AUTHORITATIVE
+// ====================================================================
+async function send() {
   if (!input.trim() && pendingFiles.length === 0) return;
   if (streaming) return;
 
@@ -362,61 +362,73 @@ export default function SolaceDock() {
   setInput("");
   setStreaming(true);
 
+  // Echo user message immediately
   setMessages((m) => [...m, { role: "user", content: userMsg }]);
 
   try {
-    const { visionResults, chatPayload } = await;
+    // --------------------------------------------------
+    // VISION-AWARE SEND (THIS WAS THE BROKEN LINE)
+    // --------------------------------------------------
+    const { visionResults, chatPayload } = await sendWithVision({
+      userMsg,
+      pendingFiles,
+      userKey,
+      workspaceId: MCA_WORKSPACE_ID,
+      conversationId,
+      ministryOn,
+      modeHint,
+    });
 
-// ALWAYS render image responses
-if (Array.isArray(visionResults) && visionResults.length > 0) {
-  for (const v of visionResults) {
+    // --------------------------------------------------
+    // IMAGE RESPONSES (PRIMARY)
+    // --------------------------------------------------
+    if (Array.isArray(visionResults) && visionResults.length > 0) {
+      for (const v of visionResults) {
+        setMessages((m) => [
+          ...m,
+          {
+            role: "assistant",
+            content: v.answer ?? "",
+            imageUrl: v.imageUrl ?? null,
+          },
+        ]);
+      }
+    }
+
+    // --------------------------------------------------
+    // ALWAYS INGEST SERVER PAYLOAD (CHAT / IMAGE / MIXED)
+    // --------------------------------------------------
+    if (chatPayload) {
+      ingestPayload(chatPayload);
+    }
+
+    // --------------------------------------------------
+    // SAFETY NET — NEVER LEAVE UI SILENT
+    // --------------------------------------------------
+    if (
+      (!visionResults || visionResults.length === 0) &&
+      !chatPayload
+    ) {
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content: " ",
+        },
+      ]);
+    }
+  } catch (e: any) {
     setMessages((m) => [
       ...m,
       {
         role: "assistant",
-        content: v.answer ?? "",
-        imageUrl: v.imageUrl ?? null,
+        content: `⚠ ${e?.message ?? "Request failed"}`,
       },
     ]);
+  } finally {
+    setStreaming(false);
+    clearPending();
   }
-} 
-// FALLBACK: server already returned messages[]
-else if (chatPayload) {
-  ingestPayload(chatPayload);
-} 
-// SAFETY NET (never leave UI silent)
-else {
-  setMessages((m) => [
-    ...m,
-    {
-      role: "assistant",
-      content: " ",
-    },
-  ]);
-}
-
-
-    // --------------------------------------------------
-    // IMAGE-ONLY RESPONSE (AUTHORITATIVE)
-    // --------------------------------------------------
-   if (Array.isArray(visionResults) && visionResults.length > 0) {
-  for (const v of visionResults) {
-    setMessages((m) => [
-      ...m,
-      {
-        role: "assistant",
-        content: v.answer ?? "",
-        imageUrl: v.imageUrl ?? null,
-      },
-    ]);
-  }
-
-  // 🔑 IMPORTANT: still ingest payload if present
-  if (chatPayload) {
-    ingestPayload(chatPayload);
-  }
-
-  return;
 }
 
     // --------------------------------------------------
