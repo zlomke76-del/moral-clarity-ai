@@ -446,7 +446,7 @@ if (
   typeof data.data[0].b64_json === "string"
 ) {
   const base64 = data.data[0].b64_json;
-  const imageUrl = `data:image/png;base64,${image.data[0].b64_json}`;
+const imageUrl = `data:image/png;base64,${base64}`;
 
   setMessages((m) => [
     ...m,
