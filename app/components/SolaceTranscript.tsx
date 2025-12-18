@@ -156,7 +156,7 @@ function ImageWithFallback({
           padding: 12,
           borderRadius: UI.radiusMd,
           background: UI.surface2,
-          color: UI.muted,
+          color: UI.sub, // ✅ FIXED: UI.muted → UI.sub
           fontSize: 13,
           textAlign: "center",
         }}
