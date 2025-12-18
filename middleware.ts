@@ -1,12 +1,33 @@
 // middleware.ts
-// bump: v4  <-- forces Vercel edge rebuild
+// bump: v5  <-- forces Vercel edge rebuild
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
+// --------------------------------------------------
+// Content Security Policy (required for base64 images)
+// --------------------------------------------------
+function applyCSP(res: NextResponse) {
+  res.headers.set(
+    "Content-Security-Policy",
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' https: data:",
+      "font-src 'self' https:",
+      "connect-src 'self' https:",
+      "media-src 'self' https:",
+      "frame-src 'self'",
+    ].join("; ")
+  );
+}
+
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
+  applyCSP(res);
+
   const pathname = req.nextUrl.pathname;
 
   // --------------------------------------------------
