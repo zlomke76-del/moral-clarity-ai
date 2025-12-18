@@ -29,9 +29,9 @@ declare global {
   }
 }
 
-// --------------------------------------------------------------------------------------
+// ------------------------------------------------------------
 // Types
-// --------------------------------------------------------------------------------------
+// ------------------------------------------------------------
 type Message = {
   role: "user" | "assistant";
   content: string;
@@ -52,14 +52,16 @@ type PendingFile = {
   size?: number;
 };
 
-// --------------------------------------------------------------------------------------
+// ------------------------------------------------------------
 // Constants
-// --------------------------------------------------------------------------------------
+// ------------------------------------------------------------
 const POS_KEY = "solace:pos:v4";
 const MINISTRY_KEY = "solace:ministry";
 const PAD = 12;
 
-// Image intent MUST bypass sendWithVision and go straight to /api/chat
+// ------------------------------------------------------------
+// Image intent detector
+// ------------------------------------------------------------
 function isImageIntent(message: string): boolean {
   const m = (message || "").toLowerCase().trim();
   return (
@@ -73,15 +75,15 @@ function isImageIntent(message: string): boolean {
   );
 }
 
-// --------------------------------------------------------------------------------------
+// ------------------------------------------------------------
 // MAIN COMPONENT
-// --------------------------------------------------------------------------------------
+// ------------------------------------------------------------
 export default function SolaceDock() {
   const [canRender, setCanRender] = useState(false);
 
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
   // One-time mount protection
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.__solaceDockMounted) return;
@@ -94,26 +96,26 @@ export default function SolaceDock() {
     };
   }, []);
 
-  // --------------------------------------------------------------------
-  // Conversation ID (STABLE PER CONVERSATION)
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
+  // Stable conversation ID
+  // ------------------------------------------------------------
   const conversationIdRef = useRef<string | null>(null);
   if (!conversationIdRef.current) {
     conversationIdRef.current = crypto.randomUUID();
   }
   const conversationId = conversationIdRef.current;
 
-  // --------------------------------------------------------------------
-  // Store state
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
+  // Store
+  // ------------------------------------------------------------
   const { visible, setVisible, x, y, setPos, filters, setFilters } =
     useSolaceStore();
 
   const modeHint = "Neutral" as const;
 
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
   // Viewport
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
   const [viewport, setViewport] = useState({ w: 0, h: 0 });
   useEffect(() => {
     const update = () =>
@@ -123,23 +125,55 @@ export default function SolaceDock() {
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  // --------------------------------------------------------------------
-  // Mobile detection
-  // --------------------------------------------------------------------
   const isMobile = viewport.w > 0 ? viewport.w <= 768 : false;
 
   useEffect(() => {
     if (canRender && !isMobile && !visible) setVisible(true);
   }, [canRender, isMobile, visible, setVisible]);
 
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
+  // Ministry state (LOCKED DEFAULT OFF)
+  // ------------------------------------------------------------
+  const didHydrateRef = useRef(false);
+
+  const ministryOn = useMemo(
+    () => filters.has("abrahamic") && filters.has("ministry"),
+    [filters]
+  );
+
+  useEffect(() => {
+    if (didHydrateRef.current) return;
+    didHydrateRef.current = true;
+
+    try {
+      const persisted = localStorage.getItem(MINISTRY_KEY);
+      const next = new Set(filters);
+
+      if (persisted === "1") {
+        next.add("abrahamic");
+        next.add("ministry");
+      } else {
+        next.delete("abrahamic");
+        next.delete("ministry");
+      }
+
+      setFilters(next);
+    } catch {
+      const next = new Set(filters);
+      next.delete("abrahamic");
+      next.delete("ministry");
+      setFilters(next);
+    }
+  }, [setFilters]);
+
+  // ------------------------------------------------------------
   // Minimized
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
   const [minimized, setMinimized] = useState(false);
- 
-  // --------------------------------------------------------------------
-  // Chat
-  // --------------------------------------------------------------------
+
+  // ------------------------------------------------------------
+  // Chat state
+  // ------------------------------------------------------------
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -149,9 +183,9 @@ export default function SolaceDock() {
     transcriptRef.current?.scrollTo(0, transcriptRef.current.scrollHeight);
   }, [messages]);
 
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
   // Memory + attachments
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
   const { userKey, memReady } = useSolaceMemory();
 
   const { pendingFiles, handleFiles, handlePaste, clearPending } =
@@ -160,48 +194,31 @@ export default function SolaceDock() {
         setMessages((m) => [...m, { role: "assistant", content: msg }]),
     });
 
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
   // Microphone
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
   const { listening, toggleMic } = useSpeechInput({
     onText: (text) => setInput((p) => (p ? p + " " : "") + text),
     onError: (msg) =>
       setMessages((m) => [...m, { role: "assistant", content: msg }]),
   });
 
-  // --------------------------------------------------------------------
-  // Ministry
-  // --------------------------------------------------------------------
-  const ministryOn = useMemo(
-    () => filters.has("abrahamic") && filters.has("ministry"),
-    [filters]
-  );
-
-  useEffect(() => {
-    try {
-      if (localStorage.getItem(MINISTRY_KEY) === "1") {
-        const next = new Set(filters);
-        next.add("abrahamic");
-        next.add("ministry");
-        setFilters(next);
-      }
-    } catch {}
-  }, [setFilters]); // intentionally not depending on `filters` to avoid churn
-
-  // --------------------------------------------------------------------
-  // Initial message
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
+  // Initial assistant message
+  // ------------------------------------------------------------
   useEffect(() => {
     if (messages.length === 0) {
       setMessages([{ role: "assistant", content: "Ready when you are." }]);
     }
   }, [messages.length]);
 
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
   // Measure panel
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
   const [panelW, setPanelW] = useState(0);
   const [panelH, setPanelH] = useState(0);
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -224,34 +241,29 @@ export default function SolaceDock() {
     };
   }, []);
 
-const {
-  containerRef,
-  posReady,
-  onHeaderMouseDown,
-} = useDockPosition({
-  canRender,
-  visible,
-  viewport,
-  panelW,
-  panelH,
-  isMobile,
-  PAD,
-  posKey: POS_KEY,
-  x,
-  y,
-  setPos,
-});
+  const { posReady, onHeaderMouseDown } = useDockPosition({
+    canRender,
+    visible,
+    viewport,
+    panelW,
+    panelH,
+    isMobile,
+    PAD,
+    posKey: POS_KEY,
+    x,
+    y,
+    setPos,
+  });
 
-
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
   // Resize
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
   const { dockW, dockH, setDockW, setDockH } = useDockSize();
   const startResize = createResizeController(dockW, dockH, setDockW, setDockH);
 
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
   // Styles
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
   const vw = viewport.w || 1;
   const vh = viewport.h || 1;
 
@@ -269,9 +281,9 @@ const {
       PAD,
     });
 
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
   // Early returns
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
   if (!canRender || !visible) return null;
 
   if (minimized) {
@@ -299,123 +311,80 @@ const {
     );
   }
 
-  // --------------------------------------------------------------------
-// Payload ingestion (AUTHORITATIVE — REPAIRED)
-// --------------------------------------------------------------------
-function ingestPayload(data: any) {
-  if (!data) throw new Error("Empty response payload");
+  // ------------------------------------------------------------
+  // Payload ingestion
+  // ------------------------------------------------------------
+  function ingestPayload(data: any) {
+    if (!data) throw new Error("Empty response payload");
 
-  // --------------------------------------------------
-  // IMAGE RESPONSE — OPENAI RAW BASE64 SHAPE
-  // --------------------------------------------------
-  if (
-    Array.isArray(data.data) &&
-    data.data[0] &&
-    typeof data.data[0].b64_json === "string"
-  ) {
-    const base64 = data.data[0].b64_json;
-    const imageUrl = `data:image/png;base64,${base64}`;
+    if (
+      Array.isArray(data.data) &&
+      data.data[0] &&
+      typeof data.data[0].b64_json === "string"
+    ) {
+      const base64 = data.data[0].b64_json;
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: " ", imageUrl: `data:image/png;base64,${base64}` },
+      ]);
+      return;
+    }
 
-    setMessages((m) => [
-      ...m,
-      { role: "assistant", content: " ", imageUrl },
-    ]);
-    return;
+    if (Array.isArray(data.messages)) {
+      setMessages((m) => [
+        ...m,
+        ...data.messages.map((msg: any) => ({
+          role: msg.role,
+          content: msg.content ?? "",
+          imageUrl: msg.imageUrl ?? null,
+        })),
+      ]);
+      return;
+    }
+
+    if (data.ok === true && typeof data.response === "string") {
+      setMessages((m) => [...m, { role: "assistant", content: data.response }]);
+      return;
+    }
+
+    if (Array.isArray(data.evidence)) {
+      setMessages((m) => [
+        ...m,
+        ...data.evidence.map((e: EvidenceBlock) => ({
+          role: "assistant",
+          content:
+            "Evidence" +
+            (e.source ? ` (${e.source})` : "") +
+            "\n\n" +
+            (e.summary || e.text || "[no content]"),
+        })),
+      ]);
+      return;
+    }
+
+    throw new Error("Unrecognized response payload");
   }
 
-  // --------------------------------------------------
-  // IMAGE RESPONSE — direct imageUrl / image
-  // --------------------------------------------------
-  const image =
-    typeof data.imageUrl === "string"
-      ? data.imageUrl
-      : typeof data.image === "string"
-      ? data.image
-      : null;
-
-  if (image) {
-    setMessages((m) => [
-      ...m,
-      { role: "assistant", content: " ", imageUrl: image },
-    ]);
-    return;
-  }
-
-  // --------------------------------------------------
-  // MULTI-MESSAGE RESPONSE (MUST COME BEFORE ok/response)
-  // --------------------------------------------------
-  if (Array.isArray(data.messages)) {
-    const normalized = data.messages.map((msg: any) => ({
-      role: msg.role,
-      content: (msg.content ?? "") as string,
-      imageUrl: (msg.imageUrl ?? null) as string | null,
-    }));
-    setMessages((m) => [...m, ...normalized]);
-    return;
-  }
-
-  // --------------------------------------------------
-  // STANDARD STRING RESPONSE
-  // --------------------------------------------------
-  if (data.ok === true && typeof data.response === "string") {
-    setMessages((m) => [...m, { role: "assistant", content: data.response }]);
-    return;
-  }
-
-  // --------------------------------------------------
-  // LEGACY SINGLE MESSAGE
-  // --------------------------------------------------
-  if (data.message?.content) {
-    setMessages((m) => [
-      ...m,
-      { role: "assistant", content: data.message.content },
-    ]);
-    return;
-  }
-
-  // --------------------------------------------------
-  // EVIDENCE BLOCKS
-  // --------------------------------------------------
-  if (Array.isArray(data.evidence)) {
-    const evMsgs: Message[] = data.evidence.map((e: EvidenceBlock) => ({
-      role: "assistant",
-      content:
-        `🧾 Evidence` +
-        (e.source ? ` (${e.source})` : "") +
-        `\n\n${e.summary || e.text || "[no content]"}`,
-    }));
-    setMessages((m) => [...m, ...evMsgs]);
-    return;
-  }
-
-  throw new Error("Unrecognized response payload");
-}
-
-
-  // ====================================================================
-  // SEND (VISION-AWARE) — TURBOPACK SAFE + IMAGE INTENT GATE
-  // ====================================================================
-  async function send(): Promise<void> {
+  // ------------------------------------------------------------
+  // Send handler
+  // ------------------------------------------------------------
+  async function send() {
     if (!input.trim() && pendingFiles.length === 0) return;
     if (streaming) return;
 
     const userMsg = input.trim() || "Attachments:";
     setInput("");
     setStreaming(true);
-
     setMessages((m) => [...m, { role: "user", content: userMsg }]);
 
     try {
-      // ------------------------------------------------------------
-      // FIX 2: IMAGE GENERATION MUST BYPASS sendWithVision()
-      // ------------------------------------------------------------
       if (isImageIntent(userMsg)) {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             message: userMsg,
-            canonicalUserKey: userKey || undefined,
+            canonicalUserKey: userKey,
             workspaceId: MCA_WORKSPACE_ID,
             conversationId,
             ministryMode: ministryOn,
@@ -423,14 +392,10 @@ function ingestPayload(data: any) {
           }),
         });
 
-        const payload = await res.json();
-        ingestPayload(payload);
+        ingestPayload(await res.json());
         return;
       }
 
-      // ------------------------------------------------------------
-      // Normal path: vision analysis + chat
-      // ------------------------------------------------------------
       const result = await sendWithVision({
         userMsg,
         pendingFiles,
@@ -441,44 +406,33 @@ function ingestPayload(data: any) {
         modeHint,
       });
 
-      const visionResults = result?.visionResults;
-      const chatPayload = result?.chatPayload;
-
-      // Vision results (analysis bubbles)
-      if (Array.isArray(visionResults) && visionResults.length > 0) {
-        for (const v of visionResults) {
+      if (result?.visionResults) {
+        for (const v of result.visionResults) {
           setMessages((m) => [
             ...m,
             {
               role: "assistant",
-              content: v?.answer ?? "",
-              imageUrl: v?.imageUrl ?? null,
+              content: v.answer ?? "",
+              imageUrl: v.imageUrl ?? null,
             },
           ]);
         }
       }
 
-      // Chat payload (text/image/mixed)
-      if (chatPayload) {
-        ingestPayload(chatPayload);
+      if (result?.chatPayload) {
+        ingestPayload(result.chatPayload);
       }
-
-      // Safety net: never silent
-      if ((!visionResults || visionResults.length === 0) && !chatPayload) {
-        setMessages((m) => [...m, { role: "assistant", content: " " }]);
-      }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Request failed";
-      setMessages((m) => [...m, { role: "assistant", content: `⚠ ${message}` }]);
+    } catch (err: any) {
+      setMessages((m) => [...m, { role: "assistant", content: `⚠ ${err.message}` }]);
     } finally {
       setStreaming(false);
       clearPending();
     }
   }
 
-  // --------------------------------------------------------------------
-  // Enter-to-send handler
-  // --------------------------------------------------------------------
+  // ------------------------------------------------------------
+  // Enter-to-send
+  // ------------------------------------------------------------
   const onEnterSend = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -486,10 +440,10 @@ function ingestPayload(data: any) {
     }
   };
 
-  // --------------------------------------------------------------------
-  // RENDER
-  // --------------------------------------------------------------------
-  const panel = (
+  // ------------------------------------------------------------
+  // Render
+  // ------------------------------------------------------------
+  return createPortal(
     <section ref={containerRef} style={panelStyle}>
       <SolaceDockHeaderLite
         ministryOn={ministryOn}
@@ -499,15 +453,11 @@ function ingestPayload(data: any) {
           if (ministryOn) {
             next.delete("abrahamic");
             next.delete("ministry");
-            try {
-              localStorage.setItem(MINISTRY_KEY, "0");
-            } catch {}
+            localStorage.setItem(MINISTRY_KEY, "0");
           } else {
             next.add("abrahamic");
             next.add("ministry");
-            try {
-              localStorage.setItem(MINISTRY_KEY, "1");
-            } catch {}
+            localStorage.setItem(MINISTRY_KEY, "1");
           }
           setFilters(next);
         }}
@@ -515,63 +465,16 @@ function ingestPayload(data: any) {
         onDragStart={onHeaderMouseDown}
       />
 
-      {/* ---------------- Transcript ---------------- */}
       <SolaceTranscript
         messages={messages}
         transcriptRef={transcriptRef}
         transcriptStyle={transcriptStyle}
       />
 
-      {/* ---------------- Composer ---------------- */}
       <div
         style={composerWrapStyle}
         onPaste={(e) => handlePaste(e, { prefix: "solace" })}
       >
-        {pendingFiles.length > 0 && (
-          <div
-            style={{
-              display: "flex",
-              gap: 8,
-              paddingBottom: 8,
-              overflowX: "auto",
-            }}
-          >
-            {pendingFiles.map((f: PendingFile, i: number) => (
-              <div
-                key={i}
-                style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 8,
-                  border: UI.border,
-                  background: UI.surface2,
-                  position: "relative",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-                title={f.name}
-              >
-                {f.mime.startsWith("image/") ? (
-                  <img
-                    src={f.url}
-                    alt={f.name}
-                    style={{
-                      maxWidth: "100%",
-                      maxHeight: "100%",
-                      borderRadius: 6,
-                    }}
-                  />
-                ) : (
-                  <span style={{ fontSize: 18 }}>
-                    <IconPaperclip />
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <label
             style={{
@@ -584,9 +487,7 @@ function ingestPayload(data: any) {
               border: UI.border,
               background: UI.surface2,
               cursor: "pointer",
-              flexShrink: 0,
             }}
-            aria-label="Attach files"
           >
             <IconPaperclip />
             <input
@@ -606,13 +507,7 @@ function ingestPayload(data: any) {
               border: UI.border,
               background: listening ? "rgba(255,0,0,.45)" : UI.surface2,
               cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
             }}
-            aria-pressed={listening}
-            aria-label={listening ? "Stop recording" : "Start recording"}
-            type="button"
           >
             <IconMic />
           </button>
@@ -623,9 +518,7 @@ function ingestPayload(data: any) {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onEnterSend}
             placeholder="Ask Solace..."
-            aria-label="Message input"
             rows={1}
-            spellCheck={false}
           />
 
           <button
@@ -636,12 +529,8 @@ function ingestPayload(data: any) {
               padding: "0 14px",
               borderRadius: UI.radiusMd,
               background: "#fbbf24",
-              border: "none",
               fontWeight: 600,
-              cursor: streaming ? "not-allowed" : "pointer",
             }}
-            type="button"
-            aria-disabled={streaming}
           >
             Ask
           </button>
@@ -649,8 +538,7 @@ function ingestPayload(data: any) {
       </div>
 
       <ResizeHandle onResizeStart={startResize} />
-    </section>
+    </section>,
+    document.body
   );
-
-  return createPortal(panel, document.body);
 }
