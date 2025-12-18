@@ -3,9 +3,9 @@
 import React from "react";
 import { UI } from "./dock-ui";
 
-type Message = {
+export type Message = {
   role: "user" | "assistant";
-  content: string;
+  content?: string | null;
   imageUrl?: string | null;
 };
 
@@ -24,6 +24,19 @@ export default function SolaceTranscript({
     <div ref={transcriptRef} style={transcriptStyle}>
       {messages.map((msg, i) => {
         const isUser = msg.role === "user";
+
+        const hasText =
+          typeof msg.content === "string" &&
+          msg.content.trim().length > 0;
+
+        const hasImage =
+          typeof msg.imageUrl === "string" &&
+          msg.imageUrl.length > 0;
+
+        // HARD GUARD: never render an empty bubble
+        if (!hasText && !hasImage) {
+          return null;
+        }
 
         return (
           <div
@@ -45,11 +58,14 @@ export default function SolaceTranscript({
                 display: "flex",
                 flexDirection: "column",
                 gap: 8,
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
               }}
             >
-              {msg.imageUrl && (
+              {/* IMAGE — artifact lane (text-independent) */}
+              {hasImage && (
                 <img
-                  src={msg.imageUrl}
+                  src={msg.imageUrl!}
                   alt="Generated"
                   style={{
                     maxWidth: "100%",
@@ -58,19 +74,8 @@ export default function SolaceTranscript({
                 />
               )}
 
-              {/* TEXT CONTENT — matches inspected DOM */}
-              {msg.content && (
-                <span
-                  style={{
-                    whiteSpace: "pre-wrap",
-                    overflowWrap: "anywhere",
-                    lineHeight: "1.35",
-                    wordBreak: "break-word",
-                  }}
-                >
-                  {msg.content}
-                </span>
-              )}
+              {/* TEXT — only if meaningful */}
+              {hasText && <span>{msg.content}</span>}
             </div>
           </div>
         );
