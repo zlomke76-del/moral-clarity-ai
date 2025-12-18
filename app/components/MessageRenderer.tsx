@@ -3,15 +3,68 @@
 import React from "react";
 
 type Props = {
-  content: string;
+  content?: string | null;
+  imageUrl?: string | null;
 };
 
-export default function MessageRenderer({ content }: Props) {
-  // Split on fenced code blocks ```
-  const parts = content.split(/```/g);
+export default function MessageRenderer({ content, imageUrl }: Props) {
+  // --------------------------------------------------
+  // IMAGE-ONLY MESSAGE (AUTHORITATIVE)
+  // --------------------------------------------------
+  if (imageUrl && (!content || !content.trim())) {
+    return (
+      <div
+        style={{
+          margin: "6px 0",
+          borderRadius: 12,
+          overflow: "hidden",
+          background: "rgba(14,23,38,.85)",
+          boxShadow: "0 4px 14px rgba(0,0,0,.45)",
+        }}
+      >
+        <img
+          src={imageUrl}
+          alt="Generated image"
+          style={{
+            display: "block",
+            maxWidth: "100%",
+            height: "auto",
+          }}
+        />
+      </div>
+    );
+  }
+
+  // --------------------------------------------------
+  // TEXT (WITH OPTIONAL INLINE IMAGE)
+  // --------------------------------------------------
+  const safeContent = content ?? "";
+  const parts = safeContent.split(/```/g);
 
   return (
     <>
+      {imageUrl && (
+        <div
+          style={{
+            marginBottom: 8,
+            borderRadius: 12,
+            overflow: "hidden",
+            background: "rgba(14,23,38,.85)",
+            boxShadow: "0 4px 14px rgba(0,0,0,.45)",
+          }}
+        >
+          <img
+            src={imageUrl}
+            alt="Generated image"
+            style={{
+              display: "block",
+              maxWidth: "100%",
+              height: "auto",
+            }}
+          />
+        </div>
+      )}
+
       {parts.map((part, idx) => {
         const isCode = idx % 2 === 1;
 
@@ -30,7 +83,6 @@ export default function MessageRenderer({ content }: Props) {
           );
         }
 
-        // Optional language line (e.g. ts, js)
         const lines = part.split("\n");
         const firstLine = lines[0].trim();
         const hasLang = /^[a-zA-Z0-9]+$/.test(firstLine);
