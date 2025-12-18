@@ -1,7 +1,6 @@
 //--------------------------------------------------------------
 // NEWSROOM EXECUTOR — SINGLE PASS (AUTHORITATIVE)
 // Strict neutral delivery
-// Uses ONLY solace_news_digest_view.neutral_summary
 //--------------------------------------------------------------
 
 import { callModel } from "./model-router";
@@ -19,7 +18,7 @@ export type NewsDigestItem = {
 };
 
 // --------------------------------------------------------------
-// SYSTEM PROMPT (LOCKED CONTRACT)
+// SYSTEM PROMPT
 // --------------------------------------------------------------
 function buildNewsroomPrompt(items: NewsDigestItem[]) {
   const system = buildSolaceSystemPrompt(
@@ -31,19 +30,9 @@ OUTPUT CONTRACT (MANDATORY):
 - Each story must be between 350 and 450 words.
 - Narrative prose only.
 - One topic per story.
-- No bullet points.
-- No summaries, conclusions, or meta commentary.
-- No trend analysis.
-- No opinion, framing, or emotional language.
-- Neutral tone only.
-
-SOURCE RULES:
-
+- No opinion, framing, or emotion.
+- Each story MUST end with a source link.
 - Use ONLY the provided neutral summaries.
-- Do NOT infer intent, motive, or morality.
-- Do NOT merge stories.
-- Each story MUST end with a source citation link.
-- If insufficient material exists, explicitly state that and stop.
 `
   );
 
@@ -70,42 +59,23 @@ ${digestBlock}
 }
 
 // --------------------------------------------------------------
-// SIMPLE CONTRACT CHECK (NON-SEMANTIC, SAFE)
-// --------------------------------------------------------------
-function looksLikeValidNewsroomOutput(text: string): boolean {
-  if (!text || text.length < 1000) return false;
-
-  // Rough but reliable signals
-  const storyCount =
-    (text.match(/source/i)?.length ?? 0);
-
-  return storyCount >= 3;
-}
-
-// --------------------------------------------------------------
-// EXECUTOR (NO HYBRID, NO TRIAD)
+// EXECUTOR
 // --------------------------------------------------------------
 export async function runNewsroomExecutor(
   newsDigest: NewsDigestItem[]
 ): Promise<string> {
+
+  // 🔎 PROOF LINE — EXECUTOR ENTERED
+  console.log("[NEWSROOM EXECUTOR ENTERED]", {
+    items: newsDigest?.length ?? 0,
+  });
 
   if (!Array.isArray(newsDigest) || newsDigest.length < 3) {
     throw new Error("NEWSROOM_INSUFFICIENT_DIGEST");
   }
 
   const prompt = buildNewsroomPrompt(newsDigest);
-
   const response = await callModel("gpt-4.1", prompt);
-
-  if (!looksLikeValidNewsroomOutput(response)) {
-    console.error("[NEWSROOM CONTRACT VIOLATION]", {
-      length: response?.length,
-    });
-
-    return (
-      "Verified neutral news content was available, but a compliant newsroom briefing could not be produced at this time."
-    );
-  }
 
   return response;
 }
