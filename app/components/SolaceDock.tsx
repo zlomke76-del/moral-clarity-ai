@@ -375,18 +375,30 @@ export default function SolaceDock() {
       modeHint,
     });
 
-    for (const v of visionResults) {
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          content: v.answer,
-          imageUrl: v.imageUrl,
-        },
-      ]);
+    // --------------------------------------------------
+    // IMAGE RESULTS (AUTHORITATIVE)
+    // --------------------------------------------------
+    if (Array.isArray(visionResults) && visionResults.length > 0) {
+      for (const v of visionResults) {
+        setMessages((m) => [
+          ...m,
+          {
+            role: "assistant",
+            content: v.answer ?? "",
+            imageUrl: v.imageUrl ?? null,
+          },
+        ]);
+      }
+
+      // 🔑 CRITICAL: STOP HERE — do NOT ingest chatPayload
+      return;
     }
 
+    // --------------------------------------------------
+    // NORMAL CHAT FLOW
+    // --------------------------------------------------
     ingestPayload(chatPayload);
+
   } catch (e: any) {
     setMessages((m) => [
       ...m,
@@ -397,6 +409,7 @@ export default function SolaceDock() {
     clearPending();
   }
 }
+
 
   // --------------------------------------------------------------------
   // Enter-to-send handler
