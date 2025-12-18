@@ -557,17 +557,20 @@ export default function SolaceDock() {
             }}
           >
             {m.imageUrl && (
-              <img
-                src={m.imageUrl}
-                alt="Solace visual"
-                style={{
-                  maxWidth: "100%",
-                  borderRadius: 12,
-                  marginBottom: 6,
-                }}
-              />
-            )}
-            <MessageRenderer content={m.content} />
+  <img
+    src={m.imageUrl}
+    alt="Solace visual"
+    style={{
+      maxWidth: "100%",
+      borderRadius: 12,
+      marginBottom: m.content ? 6 : 0,
+      display: "block",
+    }}
+  />
+)}
+
+{m.content && <MessageRenderer content={m.content} />}
+
           </div>
         ))}
       </div>
