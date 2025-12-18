@@ -49,7 +49,9 @@ export function useDockStyles({
 
     const transcriptStyle: React.CSSProperties = {
       flex: "1 1 auto",
-      overflow: "auto",
+      minHeight: 0,                // 🔑 CRITICAL: allows scrolling in flex column
+      overflowY: "auto",
+      overflowX: "hidden",
       padding: "14px 16px",
       color: UI.text,
       background:
