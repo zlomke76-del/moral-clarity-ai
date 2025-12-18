@@ -27,6 +27,42 @@ import {
   createResizeController,
 } from "./dock-resize";
 
+// -------------------- ICONS --------------------
+const ICON_PAPERCLIP = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.2-9.19a3.5 3.5 0 0 1 4.95 4.95L8.22 16.6a1.5 1.5 0 0 1-2.12-2.12l7.07-7.07" />
+  </svg>
+);
+
+const ICON_MIC = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect x="9" y="2" width="6" height="12" rx="3" />
+    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+    <line x1="12" y1="19" x2="12" y2="23" />
+    <line x1="8" y1="23" x2="16" y2="23" />
+  </svg>
+);
+
 // --------------------------------------------------------------------------------------
 // Types
 // --------------------------------------------------------------------------------------
@@ -436,222 +472,222 @@ export default function SolaceDock() {
   // Payload ingestion (unchanged)
   // --------------------------------------------------------------------
   function ingestPayload(data: any) {
-  if (!data) throw new Error("Empty response payload");
-// --------------------------------------------------
-// IMAGE RESPONSE — BASE64 (AUTHORITATIVE)
-// --------------------------------------------------
-if (
-  Array.isArray(data.data) &&
-  data.data[0] &&
-  typeof data.data[0].b64_json === "string"
-) {
-  const base64 = data.data[0].b64_json;
-const imageUrl = `data:image/png;base64,${base64}`;
+    if (!data) throw new Error("Empty response payload");
+    // --------------------------------------------------
+    // IMAGE RESPONSE ? BASE64 (AUTHORITATIVE)
+    // --------------------------------------------------
+    if (
+      Array.isArray(data.data) &&
+      data.data[0] &&
+      typeof data.data[0].b64_json === "string"
+    ) {
+      const base64 = data.data[0].b64_json;
+      const imageUrl = `data:image/png;base64,${base64}`;
 
-  setMessages((m) => [
-    ...m,
-    {
-      role: "assistant",
-      content: "",
-      imageUrl,
-    },
-  ]);
-  return;
-}
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content: "",
+          imageUrl,
+        },
+      ]);
+      return;
+    }
 
-  // --------------------------------------------------
-// IMAGE RESPONSE (AUTHORITATIVE)
-// --------------------------------------------------
-const image =
-  typeof data.image === "string"
-    ? data.image
-    : typeof data.imageUrl === "string"
-    ? data.imageUrl
-    : null;
+    // --------------------------------------------------
+    // IMAGE RESPONSE (AUTHORITATIVE)
+    // --------------------------------------------------
+    const image =
+      typeof data.image === "string"
+        ? data.image
+        : typeof data.imageUrl === "string"
+        ? data.imageUrl
+        : null;
 
-if (image) {
-  setMessages((m) => [
-    ...m,
-    {
-      role: "assistant",
-      content: "", // image-only bubble
-      imageUrl: image,
-    },
-  ]);
-  return;
-}
+    if (image) {
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content: "", // image-only bubble
+          imageUrl: image,
+        },
+      ]);
+      return;
+    }
 
-  // --------------------------------------------------
-  // STANDARD STRING RESPONSE
-  // --------------------------------------------------
-  if (data.ok === true && typeof data.response === "string") {
-    setMessages((m) => [...m, { role: "assistant", content: data.response }]);
-    return;
+    // --------------------------------------------------
+    // STANDARD STRING RESPONSE
+    // --------------------------------------------------
+    if (data.ok === true && typeof data.response === "string") {
+      setMessages((m) => [...m, { role: "assistant", content: data.response }]);
+      return;
+    }
+
+    // --------------------------------------------------
+    // MULTI-MESSAGE RESPONSE
+    // --------------------------------------------------
+    if (Array.isArray(data.messages)) {
+      const normalized = data.messages.map((msg: any) => ({
+        role: msg.role,
+        content: msg.content ?? "",
+        imageUrl: msg.imageUrl ?? null,
+      }));
+      setMessages((m) => [...m, ...normalized]);
+      return;
+    }
+
+    // --------------------------------------------------
+    // LEGACY SINGLE MESSAGE
+    // --------------------------------------------------
+    if (data.message?.content) {
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: data.message.content },
+      ]);
+      return;
+    }
+
+    // --------------------------------------------------
+    // EVIDENCE BLOCKS
+    // --------------------------------------------------
+    if (Array.isArray(data.evidence)) {
+      const evMsgs: Message[] = data.evidence.map((e: EvidenceBlock) => ({
+        role: "assistant",
+        content:
+          `?? Evidence` +
+          (e.source ? ` (${e.source})` : "") +
+          `\n\n${e.summary || e.text || "[no content]"}`,
+      }));
+      setMessages((m) => [...m, ...evMsgs]);
+      return;
+    }
+
+    throw new Error("Unrecognized response payload");
   }
-
-  // --------------------------------------------------
-  // MULTI-MESSAGE RESPONSE
-  // --------------------------------------------------
-  if (Array.isArray(data.messages)) {
-    const normalized = data.messages.map((msg: any) => ({
-      role: msg.role,
-      content: msg.content ?? "",
-      imageUrl: msg.imageUrl ?? null,
-    }));
-    setMessages((m) => [...m, ...normalized]);
-    return;
-  }
-
-  // --------------------------------------------------
-  // LEGACY SINGLE MESSAGE
-  // --------------------------------------------------
-  if (data.message?.content) {
-    setMessages((m) => [
-      ...m,
-      { role: "assistant", content: data.message.content },
-    ]);
-    return;
-  }
-
-  // --------------------------------------------------
-  // EVIDENCE BLOCKS
-  // --------------------------------------------------
-  if (Array.isArray(data.evidence)) {
-    const evMsgs: Message[] = data.evidence.map((e: EvidenceBlock) => ({
-      role: "assistant",
-      content:
-        `📎 Evidence` +
-        (e.source ? ` (${e.source})` : "") +
-        `\n\n${e.summary || e.text || "[no content]"}`,
-    }));
-    setMessages((m) => [...m, ...evMsgs]);
-    return;
-  }
-
-  throw new Error("Unrecognized response payload");
-}
 
   // --------------------------------------------------------------------
-// RENDER
-// --------------------------------------------------------------------
-const panel = (
-  <section ref={containerRef} style={panelStyle}>
-    <SolaceDockHeaderLite
-      ministryOn={ministryOn}
-      memReady={memReady}
-      onToggleMinistry={() => {
-        const next = new Set(filters);
-        if (ministryOn) {
-          next.delete("abrahamic");
-          next.delete("ministry");
-          try {
-            localStorage.setItem(MINISTRY_KEY, "0");
-          } catch {}
-        } else {
-          next.add("abrahamic");
-          next.add("ministry");
-          try {
-            localStorage.setItem(MINISTRY_KEY, "1");
-          } catch {}
-        }
-        setFilters(next);
-      }}
-      onMinimize={() => setMinimized(true)}
-      onDragStart={onHeaderMouseDown}
-    />
+  // RENDER
+  // --------------------------------------------------------------------
+  const panel = (
+    <section ref={containerRef} style={panelStyle}>
+      <SolaceDockHeaderLite
+        ministryOn={ministryOn}
+        memReady={memReady}
+        onToggleMinistry={() => {
+          const next = new Set(filters);
+          if (ministryOn) {
+            next.delete("abrahamic");
+            next.delete("ministry");
+            try {
+              localStorage.setItem(MINISTRY_KEY, "0");
+            } catch {}
+          } else {
+            next.add("abrahamic");
+            next.add("ministry");
+            try {
+              localStorage.setItem(MINISTRY_KEY, "1");
+            } catch {}
+          }
+          setFilters(next);
+        }}
+        onMinimize={() => setMinimized(true)}
+        onDragStart={onHeaderMouseDown}
+      />
 
-    {/* ---------------- Transcript ---------------- */}
-    <div
-      ref={transcriptRef}
-      style={transcriptStyle}
-      tabIndex={-1}
-      aria-live="polite"
-    >
-      {messages.map((m, i) => (
-        <div
-          key={i}
-          style={{
-            margin: "6px 0",
-            padding: "10px 12px",
-            borderRadius: UI.radiusLg,
-            background:
-              m.role === "user"
-                ? "rgba(39,52,74,.6)"
-                : "rgba(28,38,54,.6)",
-            whiteSpace: "pre-wrap",
-            overflowWrap: "anywhere",
-            wordBreak: "break-word",
-            lineHeight: 1.35,
-            color: "white",
-          }}
-        >
-          {m.imageUrl && (
-            <img
-              src={m.imageUrl}
-              alt="Solace visual"
-              style={{
-                maxWidth: "100%",
-                borderRadius: 12,
-                marginBottom: m.content ? 6 : 0,
-                display: "block",
-              }}
-            />
-          )}
+      {/* ---------------- Transcript ---------------- */}
+      <div
+        ref={transcriptRef}
+        style={transcriptStyle}
+        tabIndex={-1}
+        aria-live="polite"
+      >
+        {messages.map((m, i) => (
+          <div
+            key={i}
+            style={{
+              margin: "6px 0",
+              padding: "10px 12px",
+              borderRadius: UI.radiusLg,
+              background:
+                m.role === "user"
+                  ? "rgba(39,52,74,.6)"
+                  : "rgba(28,38,54,.6)",
+              whiteSpace: "pre-wrap",
+              overflowWrap: "anywhere",
+              wordBreak: "break-word",
+              lineHeight: 1.35,
+              color: "white",
+            }}
+          >
+            {m.imageUrl && (
+              <img
+                src={m.imageUrl}
+                alt="Solace visual"
+                style={{
+                  maxWidth: "100%",
+                  borderRadius: 12,
+                  marginBottom: m.content ? 6 : 0,
+                  display: "block",
+                }}
+              />
+            )}
 
-          {m.content && <MessageRenderer content={m.content} />}
-        </div>
-      ))}
-    </div>
+            {m.content && <MessageRenderer content={m.content} />}
+          </div>
+        ))}
+      </div>
 
-    {/* ---------------- Composer ---------------- */}
-    <div
-      style={composerWrapStyle}
-      onPaste={(e) => handlePaste(e, { prefix: "solace" })}
-    >
-      {pendingFiles.length > 0 && (
-        <div
-          style={{
-            display: "flex",
-            gap: 8,
-            paddingBottom: 8,
-            overflowX: "auto",
-          }}
-        >
-          {pendingFiles.map((f: PendingFile, i: number) => (
-            <div
-              key={i}
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: 8,
-                border: UI.border,
-                background: UI.surface2,
-                position: "relative",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-              title={f.name}
-            >
-              {f.mime.startsWith("image/") ? (
-                <img
-                  src={f.url}
-                  alt={f.name}
-                  style={{
-                    maxWidth: "100%",
-                    maxHeight: "100%",
-                    borderRadius: 6,
-                  }}
-                />
-              ) : (
-                <span style={{ fontSize: 18 }}>??</span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      {/* ---------------- Composer ---------------- */}
+      <div
+        style={composerWrapStyle}
+        onPaste={(e) => handlePaste(e, { prefix: "solace" })}
+      >
+        {pendingFiles.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              paddingBottom: 8,
+              overflowX: "auto",
+            }}
+          >
+            {pendingFiles.map((f: PendingFile, i: number) => (
+              <div
+                key={i}
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 8,
+                  border: UI.border,
+                  background: UI.surface2,
+                  position: "relative",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                title={f.name}
+              >
+                {f.mime.startsWith("image/") ? (
+                  <img
+                    src={f.url}
+                    alt={f.name}
+                    style={{
+                      maxWidth: "100%",
+                      maxHeight: "100%",
+                      borderRadius: 6,
+                    }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 18 }}>{ICON_PAPERCLIP}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
-      {/* composer input continues below */}
+        {/* composer input continues below */}
 
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <label
@@ -669,7 +705,7 @@ const panel = (
             }}
             aria-label="Attach files"
           >
-            📎
+            {ICON_PAPERCLIP}
             <input
               type="file"
               multiple
@@ -697,7 +733,7 @@ const panel = (
             aria-label={listening ? "Stop recording" : "Start recording"}
             type="button"
           >
-            🎤
+            {ICON_MIC}
           </button>
 
           <textarea
