@@ -141,8 +141,8 @@ export async function POST(req: Request) {
       throw new Error("conversationId is required for session continuity");
     }
 
-    const sessionId: string = conversationId;
-    const sessionStartedAt: string = new Date().toISOString();
+    const sessionId = conversationId;
+    const sessionStartedAt = new Date().toISOString();
 
     console.log("[SESSION] start", {
       sessionId,
@@ -191,12 +191,20 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
-    // IMAGE PIPELINE (FIXED)
+    // IMAGE PIPELINE — AUTHORITATIVE + PROVABLE DELIVERY
     // --------------------------------------------------------
     if (isImageRequest(message)) {
       console.log("[IMAGE PIPELINE FIRED]", { sessionId });
 
       const imageUrl = await generateImage(message);
+
+      // 🔒 DELIVERY PROOF — this is the missing signal
+      console.log("[IMAGE PIPELINE DELIVERED]", {
+        sessionId,
+        imageUrlType: typeof imageUrl,
+        imageUrlPrefix: imageUrl.slice(0, 32),
+        imageUrlLength: imageUrl.length,
+      });
 
       return NextResponse.json({
         ok: true,
@@ -204,11 +212,15 @@ export async function POST(req: Request) {
         messages: [
           {
             role: "assistant",
-            content: " ", // ✅ REQUIRED — prevents message normalization loss
+            content: " ", // REQUIRED to survive client normalization
             imageUrl,
           },
         ],
-        diagnostics: { sessionId, pipeline: "image" },
+        diagnostics: {
+          sessionId,
+          pipeline: "image",
+          delivered: true,
+        },
       });
     }
 
