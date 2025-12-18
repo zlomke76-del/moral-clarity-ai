@@ -1,4 +1,13 @@
-import { PendingFile } from "./types";
+// app/components/sendWithVision.ts
+
+// ---------------------------------------------------------------------
+// Types (self-contained to avoid missing imports during refactors)
+// ---------------------------------------------------------------------
+export type PendingFile = {
+  name: string;
+  mime: string;
+  url: string;
+};
 
 type SendArgs = {
   userMsg: string;
@@ -10,6 +19,9 @@ type SendArgs = {
   modeHint?: string;
 };
 
+// ---------------------------------------------------------------------
+// Vision-aware send helper
+// ---------------------------------------------------------------------
 export async function sendWithVision({
   userMsg,
   pendingFiles,
@@ -19,11 +31,14 @@ export async function sendWithVision({
   ministryOn,
   modeHint,
 }: SendArgs) {
+  // Collect vision responses separately so the caller
+  // can decide how to inject them into messages[]
   const visionResults: {
     imageUrl: string;
     answer: string;
   }[] = [];
 
+  // ---------------- Vision pass (images only) ----------------
   const imageFiles = pendingFiles.filter((f) =>
     f.mime.startsWith("image/")
   );
@@ -38,7 +53,12 @@ export async function sendWithVision({
       }),
     });
 
+    if (!visionRes.ok) {
+      continue; // vision failure should not block chat
+    }
+
     const visionData = await visionRes.json();
+
     if (visionData?.answer) {
       visionResults.push({
         imageUrl: img.url,
@@ -47,6 +67,7 @@ export async function sendWithVision({
     }
   }
 
+  // ---------------- Main chat request ----------------
   const chatRes = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -62,7 +83,7 @@ export async function sendWithVision({
   });
 
   if (!chatRes.ok) {
-    throw new Error(`Status ${chatRes.status}`);
+    throw new Error(`Chat request failed: ${chatRes.status}`);
   }
 
   const chatPayload = await chatRes.json();
