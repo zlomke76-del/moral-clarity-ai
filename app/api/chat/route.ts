@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { put } from "@vercel/blob";
 
 import {
   FACTS_LIMIT,
@@ -107,6 +108,28 @@ function emitReliabilityDiag(params: {
 }
 
 // ------------------------------------------------------------
+// IMAGE STORAGE (AUTHORITATIVE)
+// ------------------------------------------------------------
+async function storeBase64Image(
+  base64: string,
+  sessionId: string
+): Promise<string> {
+  const buffer = Buffer.from(
+    base64.replace(/^data:image\/\w+;base64,/, ""),
+    "base64"
+  );
+
+  const filename = `solace/${sessionId}/${Date.now()}.png`;
+
+  const blob = await put(filename, buffer, {
+    access: "public",
+    contentType: "image/png",
+  });
+
+  return blob.url;
+}
+
+// ------------------------------------------------------------
 // POST handler
 // ------------------------------------------------------------
 export async function POST(req: Request) {
@@ -191,14 +214,25 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
-    // IMAGE PIPELINE — AUTHORITATIVE + PROVABLE DELIVERY
+    // IMAGE PIPELINE — STORED & SERVED (CSP SAFE)
     // --------------------------------------------------------
     if (isImageRequest(message)) {
       console.log("[IMAGE PIPELINE FIRED]", { sessionId });
 
-      const imageUrl = await generateImage(message);
+      const base64Image = await generateImage(message);
 
-      // 🔒 DELIVERY PROOF — this is the missing signal
+      console.log("[IMAGE GEN OK]", {
+        base64Length: base64Image.length,
+        approxBytes: Math.floor((base64Image.length * 3) / 4),
+      });
+
+      const imageUrl = await storeBase64Image(base64Image, sessionId);
+
+      console.log("[IMAGE STORED]", {
+        sessionId,
+        imageUrl,
+      });
+
       console.log("[IMAGE PIPELINE DELIVERED]", {
         sessionId,
         imageUrlType: typeof imageUrl,
@@ -220,6 +254,7 @@ export async function POST(req: Request) {
           sessionId,
           pipeline: "image",
           delivered: true,
+          stored: true,
         },
       });
     }
