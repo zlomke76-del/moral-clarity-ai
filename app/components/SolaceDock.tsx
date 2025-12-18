@@ -20,6 +20,7 @@ import { useSolaceAttachments } from "./useSolaceAttachments";
 import { useSpeechInput } from "./useSpeechInput";
 import { IconPaperclip, IconMic } from "@/app/components/icons";
 import { sendWithVision } from "./sendWithVision";
+import { SolaceTranscript } from "./SolaceTranscript";
 import { UI } from "./dock-ui";
 import SolaceDockHeaderLite from "./dock-header-lite";
 import {
@@ -536,47 +537,11 @@ export default function SolaceDock() {
       />
 
       {/* ---------------- Transcript ---------------- */}
-      <div
-        ref={transcriptRef}
-        style={transcriptStyle}
-        tabIndex={-1}
-        aria-live="polite"
-      >
-        {messages.map((m, i) => (
-          <div
-            key={i}
-            style={{
-              margin: "6px 0",
-              padding: "10px 12px",
-              borderRadius: UI.radiusLg,
-              background:
-                m.role === "user"
-                  ? "rgba(39,52,74,.6)"
-                  : "rgba(28,38,54,.6)",
-              whiteSpace: "pre-wrap",
-              overflowWrap: "anywhere",
-              wordBreak: "break-word",
-              lineHeight: 1.35,
-              color: "white",
-            }}
-          >
-            {m.imageUrl && (
-              <img
-  src={m.imageUrl}
-  alt="Solace visual"
-  style={{
-    maxWidth: "100%",
-    width: "100%",          // ✅ REQUIRED
-    height: "auto",         // ✅ REQUIRED
-    borderRadius: 12,
-    marginBottom: m.content ? 6 : 0,
-    display: "block",
-  }}
+      <SolaceTranscript
+  messages={messages}
+  transcriptRef={transcriptRef}
+  transcriptStyle={transcriptStyle}
 />
-            )}
-
-            {m.content && <MessageRenderer content={m.content} />}
-          </div>
         ))}
       </div>
 
