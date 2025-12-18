@@ -24,7 +24,7 @@ export default function SolaceTranscript({
     <div ref={transcriptRef} style={transcriptStyle}>
       {messages.map((msg, i) => {
         const isUser = msg.role === "user";
-        const hasImage = Boolean(msg.imageUrl);
+        const hasImage = typeof msg.imageUrl === "string";
         const hasText = Boolean(msg.content && msg.content.trim());
 
         return (
@@ -39,6 +39,7 @@ export default function SolaceTranscript({
             <div
               style={{
                 maxWidth: "80%",
+                minWidth: hasImage ? 220 : undefined, // 🔑 RESTORED
                 padding: 12,
                 borderRadius: UI.radiusLg,
                 background: isUser ? UI.surface2 : UI.surface1,
@@ -47,18 +48,18 @@ export default function SolaceTranscript({
                 display: "flex",
                 flexDirection: "column",
                 gap: 8,
-                minWidth: hasImage ? 200 : undefined, // 🔑 forces bubble
               }}
             >
               {hasImage && (
                 <img
                   src={msg.imageUrl!}
                   alt="Generated"
+                  loading="eager"
                   style={{
                     width: "100%",
                     height: "auto",
                     borderRadius: UI.radiusMd,
-                    display: "block", // 🔑 critical
+                    display: "block",
                   }}
                 />
               )}
