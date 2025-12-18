@@ -43,6 +43,13 @@ type EvidenceBlock = {
   text?: string;
 };
 
+type PendingFile = {
+  name: string;
+  mime: string;
+  url: string;
+  size?: number;
+};
+
 // --------------------------------------------------------------------------------------
 // Constants
 // --------------------------------------------------------------------------------------
@@ -341,7 +348,7 @@ export default function SolaceDock() {
   }
 
   // ====================================================================
-  // SEND (EXTENDED, SAFE)
+  // SEND (VISION-AWARE)
   // ====================================================================
   async function send() {
     if (!input.trim() && pendingFiles.length === 0) return;
@@ -350,9 +357,40 @@ export default function SolaceDock() {
     const userMsg = input || "Attachments:";
     setInput("");
     setStreaming(true);
+
     setMessages((m) => [...m, { role: "user", content: userMsg }]);
 
     try {
+      const imageFiles = (pendingFiles as PendingFile[]).filter((f) =>
+        f.mime.startsWith("image/")
+      );
+
+      if (imageFiles.length > 0) {
+        for (const img of imageFiles) {
+          const visionRes = await fetch("/api/solace/vision", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              imageUrl: img.url,
+              prompt: userMsg,
+            }),
+          });
+
+          const visionData = await visionRes.json();
+
+          if (visionData?.answer) {
+            setMessages((m) => [
+              ...m,
+              {
+                role: "assistant",
+                content: visionData.answer,
+                imageUrl: img.url,
+              },
+            ]);
+          }
+        }
+      }
+
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -486,7 +524,7 @@ export default function SolaceDock() {
               overflowX: "auto",
             }}
           >
-            {pendingFiles.map((f, i) => (
+            {pendingFiles.map((f: PendingFile, i: number) => (
               <div
                 key={i}
                 style={{
