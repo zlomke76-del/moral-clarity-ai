@@ -24,7 +24,6 @@ export default function SolaceTranscript({
     <div ref={transcriptRef} style={transcriptStyle}>
       {messages.map((msg, i) => {
         const isUser = msg.role === "user";
-        const hasText = Boolean(msg.content && msg.content.trim().length > 0);
 
         return (
           <div
@@ -43,11 +42,9 @@ export default function SolaceTranscript({
                 background: isUser ? UI.surface2 : UI.surface1,
                 color: UI.text,
                 boxShadow: UI.shadow,
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
                 display: "flex",
                 flexDirection: "column",
-                gap: hasText && msg.imageUrl ? 8 : 0,
+                gap: 8,
               }}
             >
               {msg.imageUrl && (
@@ -61,7 +58,19 @@ export default function SolaceTranscript({
                 />
               )}
 
-              {hasText && <span>{msg.content}</span>}
+              {/* TEXT CONTENT — matches inspected DOM */}
+              {msg.content && (
+                <span
+                  style={{
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "anywhere",
+                    lineHeight: "1.35",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {msg.content}
+                </span>
+              )}
             </div>
           </div>
         );
