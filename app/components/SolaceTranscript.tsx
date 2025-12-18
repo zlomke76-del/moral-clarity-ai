@@ -3,7 +3,7 @@
 import React from "react";
 import { UI } from "./dock-ui";
 
-export type Message = {
+type Message = {
   role: "user" | "assistant";
   content?: string | null;
   imageUrl?: string | null;
@@ -24,19 +24,8 @@ export default function SolaceTranscript({
     <div ref={transcriptRef} style={transcriptStyle}>
       {messages.map((msg, i) => {
         const isUser = msg.role === "user";
-
-        const hasText =
-          typeof msg.content === "string" &&
-          msg.content.trim().length > 0;
-
-        const hasImage =
-          typeof msg.imageUrl === "string" &&
-          msg.imageUrl.length > 0;
-
-        // HARD GUARD: never render an empty bubble
-        if (!hasText && !hasImage) {
-          return null;
-        }
+        const hasImage = Boolean(msg.imageUrl);
+        const hasText = Boolean(msg.content && msg.content.trim());
 
         return (
           <div
@@ -50,7 +39,7 @@ export default function SolaceTranscript({
             <div
               style={{
                 maxWidth: "80%",
-                padding: "10px 12px",
+                padding: 12,
                 borderRadius: UI.radiusLg,
                 background: isUser ? UI.surface2 : UI.surface1,
                 color: UI.text,
@@ -58,24 +47,33 @@ export default function SolaceTranscript({
                 display: "flex",
                 flexDirection: "column",
                 gap: 8,
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
+                minWidth: hasImage ? 200 : undefined, // 🔑 forces bubble
               }}
             >
-              {/* IMAGE — artifact lane (text-independent) */}
               {hasImage && (
                 <img
                   src={msg.imageUrl!}
                   alt="Generated"
                   style={{
-                    maxWidth: "100%",
+                    width: "100%",
+                    height: "auto",
                     borderRadius: UI.radiusMd,
+                    display: "block", // 🔑 critical
                   }}
                 />
               )}
 
-              {/* TEXT — only if meaningful */}
-              {hasText && <span>{msg.content}</span>}
+              {hasText && (
+                <div
+                  style={{
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                    lineHeight: 1.35,
+                  }}
+                >
+                  {msg.content}
+                </div>
+              )}
             </div>
           </div>
         );
