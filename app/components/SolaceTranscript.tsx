@@ -11,8 +11,8 @@ type Message = {
 
 type Props = {
   messages: Message[];
-  transcriptRef?: React.MutableRefObject<HTMLDivElement | null>;
-  transcriptStyle?: React.CSSProperties;
+  transcriptRef: React.MutableRefObject<HTMLDivElement | null>;
+  transcriptStyle: React.CSSProperties;
 };
 
 export default function SolaceTranscript({
@@ -21,56 +21,45 @@ export default function SolaceTranscript({
   transcriptStyle,
 }: Props) {
   return (
-    <div
-      ref={transcriptRef}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 12,
-        padding: "12px 14px",
-        ...(transcriptStyle || {}),
-      }}
-    >
-      {messages.map((msg, idx) => {
+    <div ref={transcriptRef} style={transcriptStyle}>
+      {messages.map((msg, i) => {
         const isUser = msg.role === "user";
 
         return (
           <div
-            key={idx}
+            key={i}
             style={{
-              alignSelf: isUser ? "flex-end" : "flex-start",
-              maxWidth: "92%",
+              display: "flex",
+              justifyContent: isUser ? "flex-end" : "flex-start",
+              marginBottom: 10,
             }}
           >
-            {/* Message bubble */}
             <div
               style={{
+                maxWidth: "80%",
                 padding: "10px 12px",
-                borderRadius: UI.radiusMd,
-                border: UI.border,
+                borderRadius: UI.radiusLg,
                 background: isUser ? UI.surface2 : UI.surface1,
                 color: UI.text,
-                whiteSpace: "pre-wrap",
-                overflowWrap: "anywhere",
                 boxShadow: UI.shadow,
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
               }}
             >
+              {msg.imageUrl && (
+                <img
+                  src={msg.imageUrl}
+                  alt="Generated"
+                  style={{
+                    maxWidth: "100%",
+                    borderRadius: UI.radiusMd,
+                    marginBottom: msg.content ? 8 : 0,
+                  }}
+                />
+              )}
+
               {msg.content}
             </div>
-
-            {/* Optional image */}
-            {msg.imageUrl && (
-              <img
-                src={msg.imageUrl}
-                alt="Assistant generated"
-                style={{
-                  marginTop: 8,
-                  maxWidth: "100%",
-                  borderRadius: UI.radiusMd,
-                  border: UI.border,
-                }}
-              />
-            )}
           </div>
         );
       })}
