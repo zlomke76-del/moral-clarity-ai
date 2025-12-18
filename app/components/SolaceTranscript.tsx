@@ -5,7 +5,7 @@ import { UI } from "./dock-ui";
 
 type Message = {
   role: "user" | "assistant";
-  content: string;
+  content?: string | null;
   imageUrl?: string | null;
 };
 
@@ -14,6 +14,16 @@ type Props = {
   transcriptRef: React.MutableRefObject<HTMLDivElement | null>;
   transcriptStyle: React.CSSProperties;
 };
+
+function normalizeImageSrc(src: string): string {
+  if (!src) return "";
+  // If already a data URL or http(s), return as-is
+  if (src.startsWith("data:") || src.startsWith("http")) {
+    return src;
+  }
+  // Otherwise assume raw base64 PNG
+  return `data:image/png;base64,${src}`;
+}
 
 export default function SolaceTranscript({
   messages,
@@ -24,6 +34,8 @@ export default function SolaceTranscript({
     <div ref={transcriptRef} style={transcriptStyle}>
       {messages.map((msg, i) => {
         const isUser = msg.role === "user";
+        const hasImage = Boolean(msg.imageUrl);
+        const hasText = Boolean(msg.content && msg.content.trim());
 
         return (
           <div
@@ -44,21 +56,24 @@ export default function SolaceTranscript({
                 boxShadow: UI.shadow,
                 whiteSpace: "pre-wrap",
                 wordBreak: "break-word",
+                display: "flex",
+                flexDirection: "column",
+                gap: hasImage && hasText ? 8 : 0,
               }}
             >
-              {msg.imageUrl && (
+              {hasImage && (
                 <img
-                  src={msg.imageUrl}
+                  src={normalizeImageSrc(msg.imageUrl!)}
                   alt="Generated"
                   style={{
                     maxWidth: "100%",
                     borderRadius: UI.radiusMd,
-                    marginBottom: msg.content ? 8 : 0,
+                    display: "block",
                   }}
                 />
               )}
 
-              {msg.content}
+              {hasText && <span>{msg.content}</span>}
             </div>
           </div>
         );
