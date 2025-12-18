@@ -136,15 +136,7 @@ export default function SolaceDock() {
   // Minimized
   // --------------------------------------------------------------------
   const [minimized, setMinimized] = useState(false);
-
-  // --------------------------------------------------------------------
-  // Dragging
-  // --------------------------------------------------------------------
-  const [dragging, setDragging] = useState(false);
-  const [offset, setOffset] = useState({ dx: 0, dy: 0 });
-  const [posReady, setPosReady] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
+ 
   // --------------------------------------------------------------------
   // Chat
   // --------------------------------------------------------------------
