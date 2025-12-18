@@ -375,7 +375,8 @@ export default function SolaceDock() {
       });
 
       const visionResults = result?.visionResults;
-      const chatPayload = result?.chatPayload;
+const chatPayload = result?.chatPayload ?? result;
+
 
       // -----------------------------------------------
       // IMAGE RESULTS (PRIMARY)
