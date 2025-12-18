@@ -422,6 +422,15 @@ export default function SolaceDock() {
       clearPending();
     }
   }
+  // --------------------------------------------------------------------
+  // Enter-to-send handler
+  // --------------------------------------------------------------------
+  const onEnterSend = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  };
 
   // --------------------------------------------------------------------
   // Payload ingestion (unchanged)
