@@ -378,19 +378,25 @@ export default function SolaceDock() {
     // --------------------------------------------------
     // IMAGE-ONLY RESPONSE (AUTHORITATIVE)
     // --------------------------------------------------
-    if (Array.isArray(visionResults) && visionResults.length > 0) {
-      for (const v of visionResults) {
-        setMessages((m) => [
-          ...m,
-          {
-            role: "assistant",
-            content: v.answer ?? "",
-            imageUrl: v.imageUrl,
-          },
-        ]);
-      }
-      return; // IMPORTANT: stop here
-    }
+   if (Array.isArray(visionResults) && visionResults.length > 0) {
+  for (const v of visionResults) {
+    setMessages((m) => [
+      ...m,
+      {
+        role: "assistant",
+        content: v.answer ?? "",
+        imageUrl: v.imageUrl ?? null,
+      },
+    ]);
+  }
+
+  // 🔑 IMPORTANT: still ingest payload if present
+  if (chatPayload) {
+    ingestPayload(chatPayload);
+  }
+
+  return;
+}
 
     // --------------------------------------------------
     // STANDARD CHAT RESPONSE
