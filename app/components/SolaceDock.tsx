@@ -363,16 +363,25 @@ export default function SolaceDock() {
 
     setMessages((m) => [...m, { role: "user", content: userMsg }]);
 
-    try {
-      const result = await sendWithVision({
-        userMsg,
-        pendingFiles,
-        userKey,
-        workspaceId: MCA_WORKSPACE_ID,
-        conversationId,
-        ministryOn,
-        modeHint,
-      });
+    // IMAGE REQUESTS MUST GO DIRECTLY TO /api/chat
+if (/^(generate|create|draw)|image of|picture of/i.test(userMsg)) {
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message: userMsg,
+      canonicalUserKey: userKey,
+      workspaceId: MCA_WORKSPACE_ID,
+      conversationId,
+      ministryMode: ministryOn,
+      modeHint,
+    }),
+  });
+
+  const payload = await res.json();
+  ingestPayload(payload);
+  return;
+}
 
       const visionResults = result?.visionResults;
 const chatPayload = result?.chatPayload ?? result;
