@@ -2,10 +2,11 @@
 
 import React from "react";
 import { UI } from "./dock-ui";
+import MessageRenderer from "./MessageRenderer";
 
 type Message = {
   role: "user" | "assistant";
-  content?: string | null;
+  content: string;
   imageUrl?: string | null;
 };
 
@@ -14,16 +15,6 @@ type Props = {
   transcriptRef: React.MutableRefObject<HTMLDivElement | null>;
   transcriptStyle: React.CSSProperties;
 };
-
-function normalizeImageSrc(src: string): string {
-  if (!src) return "";
-  // If already a data URL or http(s), return as-is
-  if (src.startsWith("data:") || src.startsWith("http")) {
-    return src;
-  }
-  // Otherwise assume raw base64 PNG
-  return `data:image/png;base64,${src}`;
-}
 
 export default function SolaceTranscript({
   messages,
@@ -34,8 +25,6 @@ export default function SolaceTranscript({
     <div ref={transcriptRef} style={transcriptStyle}>
       {messages.map((msg, i) => {
         const isUser = msg.role === "user";
-        const hasImage = Boolean(msg.imageUrl);
-        const hasText = Boolean(msg.content && msg.content.trim());
 
         return (
           <div
@@ -56,24 +45,21 @@ export default function SolaceTranscript({
                 boxShadow: UI.shadow,
                 whiteSpace: "pre-wrap",
                 wordBreak: "break-word",
-                display: "flex",
-                flexDirection: "column",
-                gap: hasImage && hasText ? 8 : 0,
               }}
             >
-              {hasImage && (
+              {msg.imageUrl && (
                 <img
-                  src={normalizeImageSrc(msg.imageUrl!)}
+                  src={msg.imageUrl}
                   alt="Generated"
                   style={{
                     maxWidth: "100%",
                     borderRadius: UI.radiusMd,
-                    display: "block",
+                    marginBottom: msg.content ? 8 : 0,
                   }}
                 />
               )}
 
-              {hasText && <span>{msg.content}</span>}
+              <MessageRenderer content={msg.content} />
             </div>
           </div>
         );
