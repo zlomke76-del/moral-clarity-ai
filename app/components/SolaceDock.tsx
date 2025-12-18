@@ -567,7 +567,7 @@ const panel = (
       tabIndex={-1}
       aria-live="polite"
     >
- {messages.map((m, i) => (
+{messages.map((m, i) => (
   <div
     key={i}
     style={{
