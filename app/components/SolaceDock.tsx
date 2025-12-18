@@ -389,7 +389,7 @@ export default function SolaceDock() {
           },
         ]);
       }
-      return; // CRITICAL: do not fall through
+      return; // IMPORTANT: stop here
     }
 
     // --------------------------------------------------
@@ -401,49 +401,16 @@ export default function SolaceDock() {
   } catch (e: any) {
     setMessages((m) => [
       ...m,
-      { role: "assistant", content: `⚠ ${e?.message ?? "Request failed"}` },
+      {
+        role: "assistant",
+        content: `⚠ ${e?.message ?? "Request failed"}`,
+      },
     ]);
   } finally {
     setStreaming(false);
     clearPending();
   }
 }
-
-    // --------------------------------------------------
-    // IMAGE RESULTS (AUTHORITATIVE)
-    // --------------------------------------------------
-    if (Array.isArray(visionResults) && visionResults.length > 0) {
-      for (const v of visionResults) {
-        setMessages((m) => [
-          ...m,
-          {
-            role: "assistant",
-            content: v.answer ?? "",
-            imageUrl: v.imageUrl ?? null,
-          },
-        ]);
-      }
-
-      // 🔑 CRITICAL: STOP HERE — do NOT ingest chatPayload
-      return;
-    }
-
-    // --------------------------------------------------
-    // NORMAL CHAT FLOW
-    // --------------------------------------------------
-    ingestPayload(chatPayload);
-
-  } catch (e: any) {
-    setMessages((m) => [
-      ...m,
-      { role: "assistant", content: `⚠ ${e?.message ?? "Request failed"}` },
-    ]);
-  } finally {
-    setStreaming(false);
-    clearPending();
-  }
-}
-
 
   // --------------------------------------------------------------------
   // Enter-to-send handler
