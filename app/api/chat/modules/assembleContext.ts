@@ -89,7 +89,7 @@ export async function assembleContext(
   );
 
   // ----------------------------------------------------------
-  // SERVICE ROLE CLIENT (authoritative WM access)
+  // SERVICE ROLE CLIENT (authoritative, read-only)
   // ----------------------------------------------------------
   const supabaseService = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -124,7 +124,7 @@ export async function assembleContext(
   const authUserId = user.id;
 
   // ----------------------------------------------------------
-  // LONG-TERM MEMORY (USER CONTEXT — READ ONLY)
+  // LONG-TERM MEMORY (READ ONLY)
   // ----------------------------------------------------------
   const [facts, episodic, autobiography] = await Promise.all([
     supabaseUser
@@ -166,7 +166,7 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // WORKING MEMORY (SERVICE ROLE — AUTHORITATIVE)
+  // WORKING MEMORY (SERVICE ROLE)
   // ----------------------------------------------------------
   const conversationId = session?.sessionId ?? null;
   let wmItems: WorkingMemoryItem[] = [];
@@ -190,6 +190,21 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
+  // NEWS DIGEST (AUTHORITATIVE, READ ONLY)
+  // ----------------------------------------------------------
+  const { data: newsDigest } = await supabaseService
+    .from("solace_news_digest_view")
+    .select(
+      "story_title, outlet, neutral_summary, source_url, created_at"
+    )
+    .order("created_at", { ascending: false })
+    .limit(6);
+
+  console.log("[NEWS DIGEST LOADED]", {
+    items: newsDigest?.length ?? 0,
+  });
+
+  // ----------------------------------------------------------
   // RESEARCH
   // ----------------------------------------------------------
   const researchContext = await readHubbleResearchContext(10);
@@ -204,7 +219,7 @@ export async function assembleContext(
     },
     researchContext,
     authorities: [],
-    newsDigest: [],
+    newsDigest: safeRows(newsDigest),
     didResearch,
   };
 }
