@@ -19,10 +19,20 @@ export async function generateImage(prompt: string): Promise<string> {
   const b64 = result.data?.[0]?.b64_json;
 
   if (!b64) {
+    console.error("[IMAGE GEN FAILED]", {
+      reason: "missing_base64",
+      hasDataArray: Array.isArray(result.data),
+      dataLength: result.data?.length ?? 0,
+    });
+
     throw new Error("Image generation failed: no base64 payload returned");
   }
 
-  // ✅ CRITICAL FIX:
-  // Convert raw base64 into a browser-safe data URL
+  // ✅ AUTHORITATIVE SUCCESS SIGNAL
+  console.log("[IMAGE GEN OK]", {
+    base64Length: b64.length,
+    approxBytes: Math.round(b64.length * 0.75),
+  });
+
   return `data:image/png;base64,${b64}`;
 }
