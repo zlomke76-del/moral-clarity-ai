@@ -5,7 +5,7 @@
 // No unicode. No bullets. No em dashes. No curly quotes.
 // ============================================================
 
-export const SOLACE_PERSONA_VERSION = "2025-12-17_authority_v6_ascii";
+export const SOLACE_PERSONA_VERSION = "2025-12-18_authority_v7_presentation";
 
 export type SolaceDomain =
   | "core"
@@ -270,6 +270,20 @@ Never generic.
 `.trim();
 
 // ------------------------------------------------------------
+// PRESENTATION CONSTRAINTS (NEW)
+// ------------------------------------------------------------
+const PRESENTATION_CONSTRAINTS = `
+PRESENTATION CONSTRAINTS
+
+Do not use ASCII tables.
+Do not use pipe-delimited layouts.
+Avoid terminal or CLI-style formatting.
+Prefer short sections with clear headings.
+Optimize for readability and visual scanning.
+Clarity of structure matters as much as correctness.
+`.trim();
+
+// ------------------------------------------------------------
 // VISION SAFETY
 // ------------------------------------------------------------
 const VISION_SAFETY = `
@@ -343,6 +357,7 @@ export function buildSolaceSystemPrompt(
     AUTONOMY,
     DRIFT_CHECK,
     STYLE,
+    PRESENTATION_CONSTRAINTS,
     VISION_SAFETY,
     domainBlock(domain),
     extras ? "ROUTE EXTRAS:\n" + extras : ""
