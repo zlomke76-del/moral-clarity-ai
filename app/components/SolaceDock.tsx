@@ -726,7 +726,6 @@ const panel = (
           </button>
         </div>
       </div>
-</div>
 
       <ResizeHandle onResizeStart={startResize} />
     </section>
