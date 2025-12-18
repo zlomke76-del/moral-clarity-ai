@@ -1,7 +1,13 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { UI } from "./dock-ui";
+
+/**
+ * Toggle diagnostics here.
+ * Leave false in production unless actively debugging.
+ */
+const DEV_DIAG = true;
 
 type Message = {
   role: "user" | "assistant";
@@ -21,9 +27,11 @@ export default function SolaceTranscript({
   transcriptStyle,
 }: Props) {
   // --------------------------------------------------
-  // DIAGNOSTIC: snapshot messages every render
+  // DIAGNOSTIC: snapshot messages on change
   // --------------------------------------------------
   useEffect(() => {
+    if (!DEV_DIAG) return;
+
     console.log("[DIAG-TRANSCRIPT] render", {
       count: messages.length,
       messages: messages.map((m, i) => ({
@@ -49,22 +57,26 @@ export default function SolaceTranscript({
         const hasImage = typeof msg.imageUrl === "string";
         const hasText = Boolean(msg.content && msg.content.trim());
 
+        /**
+         * NOTE:
+         * Still index-based, but stable for append-only streams.
+         * Upgrade to message.id when available.
+         */
         const renderKey = `${i}-${msg.role}-${hasImage ? "img" : "txt"}`;
 
-        // --------------------------------------------------
-        // DIAGNOSTIC: per-message render
-        // --------------------------------------------------
-        console.log("[DIAG-MESSAGE-RENDER]", {
-          i,
-          key: renderKey,
-          role: msg.role,
-          hasImage,
-          hasText,
-          imageUrlPrefix: hasImage
-            ? msg.imageUrl!.slice(0, 32)
-            : null,
-          imageUrlLength: hasImage ? msg.imageUrl!.length : 0,
-        });
+        if (DEV_DIAG) {
+          console.log("[DIAG-MESSAGE-RENDER]", {
+            i,
+            key: renderKey,
+            role: msg.role,
+            hasImage,
+            hasText,
+            imageUrlPrefix: hasImage
+              ? msg.imageUrl!.slice(0, 32)
+              : null,
+            imageUrlLength: hasImage ? msg.imageUrl!.length : 0,
+          });
+        }
 
         return (
           <div
@@ -90,24 +102,10 @@ export default function SolaceTranscript({
               }}
             >
               {hasImage && (
-                <>
-                  {console.log("[DIAG-IMG-MOUNT]", {
-                    i,
-                    srcPrefix: msg.imageUrl!.slice(0, 32),
-                    srcLength: msg.imageUrl!.length,
-                  })}
-                  <img
-                    src={msg.imageUrl!}
-                    alt="Generated"
-                    loading="eager"
-                    style={{
-                      width: "100%",
-                      height: "auto",
-                      borderRadius: UI.radiusMd,
-                      display: "block",
-                    }}
-                  />
-                </>
+                <ImageWithFallback
+                  src={msg.imageUrl!}
+                  messageIndex={i}
+                />
               )}
 
               {hasText && (
@@ -126,5 +124,74 @@ export default function SolaceTranscript({
         );
       })}
     </div>
+  );
+}
+
+// --------------------------------------------------
+// Image with explicit load / error visibility
+// --------------------------------------------------
+
+function ImageWithFallback({
+  src,
+  messageIndex,
+}: {
+  src: string;
+  messageIndex: number;
+}) {
+  const [errored, setErrored] = useState(false);
+
+  if (DEV_DIAG) {
+    console.log("[DIAG-IMG-MOUNT]", {
+      i: messageIndex,
+      srcPrefix: src.slice(0, 32),
+      srcLength: src.length,
+    });
+  }
+
+  if (errored) {
+    return (
+      <div
+        style={{
+          width: "100%",
+          padding: 12,
+          borderRadius: UI.radiusMd,
+          background: UI.surface2,
+          color: UI.muted,
+          fontSize: 13,
+          textAlign: "center",
+        }}
+      >
+        Image failed to load
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt="Generated"
+      loading="lazy"
+      onLoad={() => {
+        if (DEV_DIAG) {
+          console.log("[DIAG-IMG-LOADED]", {
+            i: messageIndex,
+            srcPrefix: src.slice(0, 32),
+          });
+        }
+      }}
+      onError={() => {
+        console.error("[DIAG-IMG-ERROR]", {
+          i: messageIndex,
+          srcPrefix: src.slice(0, 32),
+        });
+        setErrored(true);
+      }}
+      style={{
+        width: "100%",
+        height: "auto",
+        borderRadius: UI.radiusMd,
+        display: "block",
+      }}
+    />
   );
 }
