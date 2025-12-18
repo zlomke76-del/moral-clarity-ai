@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSolaceStore } from "@/app/providers/solace-store";
-import MessageRenderer from "./solace/MessageRenderer";
+import MessageRenderer from "./MessageRenderer";
 
 declare global {
   interface Window {
