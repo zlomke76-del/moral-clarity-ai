@@ -17,6 +17,7 @@ import { assembleContext } from "./modules/assembleContext";
 import { runHybridPipeline } from "./modules/hybrid";
 import { runNewsroomExecutor } from "./modules/newsroom-executor";
 import { writeMemory } from "./modules/memory-writer";
+import { generateImage } from "./modules/image-generator";
 
 // ------------------------------------------------------------
 // Runtime configuration
@@ -40,6 +41,17 @@ function isNewsRequest(message: string): boolean {
   );
 }
 
+function isImageRequest(message: string): boolean {
+  const m = message.toLowerCase().trim();
+  return (
+    m.startsWith("generate an image") ||
+    m.startsWith("create an image") ||
+    m.startsWith("draw ") ||
+    m.includes("image of") ||
+    m.includes("picture of")
+  );
+}
+
 // ------------------------------------------------------------
 // EXPLICIT FACT REMEMBER DETECTOR (AUTHORITATIVE)
 // ------------------------------------------------------------
@@ -60,7 +72,7 @@ function extractExplicitFact(msg: string): string | null {
 function emitReliabilityDiag(params: {
   sessionId: string;
   context: any;
-  pipeline: "hybrid" | "newsroom";
+  pipeline: "hybrid" | "newsroom" | "image";
 }) {
   const wmItems = params.context?.workingMemory?.items ?? [];
   const facts = params.context?.memoryPack?.facts ?? [];
@@ -86,16 +98,9 @@ function emitReliabilityDiag(params: {
     unauthorizedWrites: false,
   });
 
-  console.log("[DIAG-COHERENCE]", {
-    sessionId: params.sessionId,
-    wmTurnMatch: wmItems.length > 0,
-    contradictionDetected: false,
-  });
-
   console.log("[DIAG-CONSTRAINTS]", {
     sessionId: params.sessionId,
     pipeline: params.pipeline,
-    newsroomGateUsed: params.pipeline === "newsroom",
     speculationBlocked: true,
     memoryWriteGuarded: true,
   });
@@ -191,6 +196,31 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
+    // IMAGE GENERATION — ARTIFACT LANE (NO MEMORY, NO HYBRID)
+    // --------------------------------------------------------
+    if (isImageRequest(message)) {
+      console.log("[IMAGE PIPELINE] triggered", { sessionId });
+
+      const imageUrl = await generateImage(message);
+
+      return NextResponse.json({
+        ok: true,
+        response: "",
+        messages: [
+          {
+            role: "assistant",
+            content: "",
+            imageUrl,
+          },
+        ],
+        diagnostics: {
+          sessionId,
+          pipeline: "image",
+        },
+      });
+    }
+
+    // --------------------------------------------------------
     // EXPLICIT FACT MEMORY WRITE (FACTS ONLY)
     // --------------------------------------------------------
     const explicitFact = extractExplicitFact(message);
@@ -216,10 +246,10 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // WORKING MEMORY — USER TURN (SERVICE ROLE)
+    // WORKING MEMORY — USER TURN
     // --------------------------------------------------------
     if (authUserId) {
-      const { error } = await supabaseService
+      await supabaseService
         .schema("memory")
         .from("working_memory")
         .insert({
@@ -229,21 +259,10 @@ export async function POST(req: Request) {
           role: "user",
           content: message,
         });
-
-      if (error) {
-        console.error("[FATAL][WM_WRITE_FAILED]", error);
-        throw new Error("WORKING_MEMORY_WRITE_FAILED");
-      }
-
-      console.log("[WM] write_success", {
-        sessionId,
-        role: "user",
-        via: "service_role",
-      });
     }
 
     // --------------------------------------------------------
-    // Assemble context (AUTHORITATIVE READ)
+    // Assemble context
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
@@ -251,12 +270,6 @@ export async function POST(req: Request) {
       message,
       { sessionId, sessionStartedAt }
     );
-
-    console.log("[DIAG-WM]", {
-      sessionId,
-      wmActive: context.workingMemory?.active,
-      wmItems: context.workingMemory?.items.length,
-    });
 
     const wantsNews = isNewsRequest(message);
 
@@ -270,10 +283,7 @@ export async function POST(req: Request) {
     // HARD NEWSROOM GATE
     // --------------------------------------------------------
     if (wantsNews) {
-      if (
-        !Array.isArray(context.newsDigest) ||
-        context.newsDigest.length < 3
-      ) {
+      if (!Array.isArray(context.newsDigest) || context.newsDigest.length < 3) {
         const refusal =
           "No verified neutral news digest is available for this request. I will not speculate.";
 
@@ -314,10 +324,10 @@ export async function POST(req: Request) {
         : "I’m here and ready to continue.";
 
     // --------------------------------------------------------
-    // WORKING MEMORY — ASSISTANT TURN (SERVICE ROLE)
+    // WORKING MEMORY — ASSISTANT TURN
     // --------------------------------------------------------
     if (authUserId) {
-      const { error } = await supabaseService
+      await supabaseService
         .schema("memory")
         .from("working_memory")
         .insert({
@@ -327,28 +337,11 @@ export async function POST(req: Request) {
           role: "assistant",
           content: safeResponse,
         });
-
-      if (error) {
-        console.error("[FATAL][WM_WRITE_FAILED]", error);
-        throw new Error("WORKING_MEMORY_WRITE_FAILED");
-      }
-
-      console.log("[WM] write_success", {
-        sessionId,
-        role: "assistant",
-        via: "service_role",
-      });
     }
-
-    console.log("[SESSION] active", {
-      sessionId,
-      pipeline: "hybrid",
-    });
 
     console.log("[SESSION] end", {
       sessionId,
       durationMs: Date.now() - sessionStartMs,
-      wmFlushed: false,
     });
 
     return NextResponse.json({
