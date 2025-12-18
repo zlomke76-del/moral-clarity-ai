@@ -107,7 +107,7 @@ function emitReliabilityDiag(params: {
 }
 
 // ------------------------------------------------------------
-// IMAGE STORAGE — SUPABASE (AUTHORITATIVE)
+// IMAGE STORAGE — SUPABASE (PUBLIC BUCKET)
 // ------------------------------------------------------------
 async function storeBase64ImageSupabase(
   base64: string,
@@ -122,7 +122,7 @@ async function storeBase64ImageSupabase(
   const path = `sessions/${sessionId}/${Date.now()}.png`;
 
   const { error } = await supabaseService.storage
-    .from("solace-images")
+    .from("moralclarity_uploads") // ✅ EXISTING PUBLIC BUCKET
     .upload(path, buffer, {
       contentType: "image/png",
       upsert: false,
@@ -134,7 +134,7 @@ async function storeBase64ImageSupabase(
   }
 
   const { data } = supabaseService.storage
-    .from("solace-images")
+    .from("moralclarity_uploads")
     .getPublicUrl(path);
 
   return data.publicUrl;
@@ -225,7 +225,7 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
-    // IMAGE PIPELINE — STORED & SERVED
+    // IMAGE PIPELINE — STORED & SERVED (CSP SAFE)
     // --------------------------------------------------------
     if (isImageRequest(message)) {
       console.log("[IMAGE PIPELINE FIRED]", { sessionId });
@@ -255,7 +255,7 @@ export async function POST(req: Request) {
         messages: [
           {
             role: "assistant",
-            content: " ",
+            content: " ", // client normalization guard
             imageUrl,
           },
         ],
