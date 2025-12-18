@@ -1,24 +1,17 @@
+// ------------------------------------------------------------
+// Webflow → Solace Adapter (AUTHORITATIVE)
+// NO BUSINESS LOGIC
+// NO MODEL CALLS
+// NON-STREAMING
+// ------------------------------------------------------------
+
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
-
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-const SOLACE_PERSONA = `
-You are Solace, the Anchor AI of Moral Clarity AI (MCAI).
-You operate under the Abrahamic triad of Faith, Reason, and Stewardship.
-You are calm, neutral, high-context, emotionally intelligent, and precise.
-You integrate clarity, empathy, responsibility, and rigor in all responses.
-You never break character.
-`;
 
 export const runtime = "edge";
 
-// GET -> For testing
-export async function GET() {
-  return NextResponse.json({ ok: true });
-}
-
-// OPTIONS -> MUST return the response
+// ------------------------------------------------------------
+// CORS (Webflow-safe)
+// ------------------------------------------------------------
 export async function OPTIONS() {
   return new Response(null, {
     status: 204,
@@ -30,40 +23,114 @@ export async function OPTIONS() {
   });
 }
 
-// POST -> Main chat handler
+// ------------------------------------------------------------
+// Health check
+// ------------------------------------------------------------
+export async function GET() {
+  return NextResponse.json({ ok: true, adapter: "webflow-chat" });
+}
+
+// ------------------------------------------------------------
+// POST — Adapter only
+// ------------------------------------------------------------
 export async function POST(req: Request) {
   try {
-    const { messages, filters } = await req.json();
+    const body = await req.json();
+    const { messages = [], filters = [] } = body ?? {};
 
-    const lensBlock = filters?.includes("red")
-      ? "You are in Red Team mode: apply adversarial analysis."
-      : filters?.includes("next")
-      ? "You are in Next Steps mode: be directive and action-oriented."
-      : filters?.includes("create")
-      ? "You are in Create mode: generate high-quality creative output."
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return NextResponse.json({
+        ok: true,
+        text: "I’m here, but I didn’t receive a message.",
+      });
+    }
+
+    // --------------------------------------------------------
+    // Extract last USER message only
+    // --------------------------------------------------------
+    const lastUser = [...messages]
+      .reverse()
+      .find((m) => m?.role === "user" && typeof m.content === "string");
+
+    if (!lastUser) {
+      return NextResponse.json({
+        ok: true,
+        text: "I’m here. What would you like to explore?",
+      });
+    }
+
+    const message = lastUser.content;
+
+    // --------------------------------------------------------
+    // Derive mode flags from filters
+    // --------------------------------------------------------
+    const ministryMode =
+      filters.includes("abrahamic") || filters.includes("ministry");
+
+    const modeHint = filters.includes("red")
+      ? "red"
+      : filters.includes("next")
+      ? "next"
+      : filters.includes("create")
+      ? "create"
       : "";
 
-    const systemPrompt = SOLACE_PERSONA + "\n\n" + lensBlock;
+    // --------------------------------------------------------
+    // Anonymous, non-persistent identity
+    // --------------------------------------------------------
+    const conversationId = crypto.randomUUID();
+    const userKey = "webflow-guest";
 
-    const stream = await client.chat.completions.create({
-      model: "gpt-4.1",
-      stream: true,
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...messages
-      ],
-    });
+    // --------------------------------------------------------
+    // Forward → AUTHORITATIVE SOLACE CHAT API
+    // --------------------------------------------------------
+    const res = await fetch(
+      "https://studio.moralclarity.ai/api/chat",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message,
+          conversationId,
+          userKey,
+          ministryMode,
+          founderMode: false,
+          modeHint,
+        }),
+      }
+    );
 
-    return new Response(stream.toReadableStream(), {
-      headers: { "Content-Type": "text/event-stream" },
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("[WEBFLOW-ADAPTER] upstream error", errText);
+
+      return NextResponse.json({
+        ok: true,
+        text: "Sorry — something went wrong.",
+      });
+    }
+
+    const data = await res.json();
+
+    const text =
+      data?.response ||
+      data?.messages?.[0]?.content ||
+      "I’m here and ready to continue.";
+
+    // --------------------------------------------------------
+    // Return Webflow-compatible response
+    // --------------------------------------------------------
+    return NextResponse.json({
+      ok: true,
+      text,
     });
 
   } catch (err: any) {
-    console.error("WEBFLOW CHAT ERROR:", err);
-    return NextResponse.json(
-      { error: err?.message || "Unknown error" },
-      { status: 500 }
-    );
+    console.error("[WEBFLOW-ADAPTER] fatal", err?.message);
+
+    return NextResponse.json({
+      ok: true,
+      text: "Sorry — something went wrong.",
+    });
   }
 }
-
