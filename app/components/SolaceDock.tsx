@@ -365,15 +365,36 @@ export default function SolaceDock() {
   setMessages((m) => [...m, { role: "user", content: userMsg }]);
 
   try {
-    const { visionResults, chatPayload } = await sendWithVision({
-      userMsg,
-      pendingFiles,
-      userKey,
-      workspaceId: MCA_WORKSPACE_ID,
-      conversationId,
-      ministryOn,
-      modeHint,
-    });
+    const { visionResults, chatPayload } = await sendWithVision(...);
+
+// ALWAYS render image responses
+if (Array.isArray(visionResults) && visionResults.length > 0) {
+  for (const v of visionResults) {
+    setMessages((m) => [
+      ...m,
+      {
+        role: "assistant",
+        content: v.answer ?? "",
+        imageUrl: v.imageUrl ?? null,
+      },
+    ]);
+  }
+} 
+// FALLBACK: server already returned messages[]
+else if (chatPayload) {
+  ingestPayload(chatPayload);
+} 
+// SAFETY NET (never leave UI silent)
+else {
+  setMessages((m) => [
+    ...m,
+    {
+      role: "assistant",
+      content: " ",
+    },
+  ]);
+}
+
 
     // --------------------------------------------------
     // IMAGE-ONLY RESPONSE (AUTHORITATIVE)
