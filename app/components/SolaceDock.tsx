@@ -237,8 +237,8 @@ export default function SolaceDock() {
         const saved = JSON.parse(raw);
         if (Number.isFinite(saved?.x) && Number.isFinite(saved?.y)) {
           setPos(
-            Math.max(PAD, Math.min(vw - PAD, saved.x)),
-            Math.max(PAD, Math.min(vh - PAD, saved.y))
+            Math.max(PAD, Math.min(vw - panelW - PAD, saved.x)),
+            Math.max(PAD, Math.min(vh - panelH - PAD, saved.y))
           );
           setPosReady(true);
           return;
@@ -248,7 +248,7 @@ export default function SolaceDock() {
 
     setPos(Math.round((vw - 760) / 2), Math.round((vh - 560) / 2));
     setPosReady(true);
-  }, [canRender, visible, viewport.w, viewport.h, setPos]);
+  }, [canRender, visible, viewport.w, viewport.h, setPos, panelW, panelH]);
 
   // --------------------------------------------------------------------
   // Persist position
