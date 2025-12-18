@@ -42,16 +42,23 @@ export default function SolaceTranscript({
               maxWidth: "92%",
             }}
           >
-            <UI.Bubble
-              role={msg.role}
+            {/* Message bubble */}
+            <div
               style={{
+                padding: "10px 12px",
+                borderRadius: UI.radiusMd,
+                border: UI.border,
+                background: isUser ? UI.surface2 : UI.surface1,
+                color: UI.text,
                 whiteSpace: "pre-wrap",
                 overflowWrap: "anywhere",
+                boxShadow: UI.shadow,
               }}
             >
               {msg.content}
-            </UI.Bubble>
+            </div>
 
+            {/* Optional image */}
             {msg.imageUrl && (
               <img
                 src={msg.imageUrl}
@@ -59,7 +66,7 @@ export default function SolaceTranscript({
                 style={{
                   marginTop: 8,
                   maxWidth: "100%",
-                  borderRadius: 8,
+                  borderRadius: UI.radiusMd,
                   border: UI.border,
                 }}
               />
