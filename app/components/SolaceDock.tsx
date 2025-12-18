@@ -365,28 +365,49 @@ export default function SolaceDock() {
   setMessages((m) => [...m, { role: "user", content: userMsg }]);
 
   try {
-    const { visionResults, chatPayload } = await sendWithVision(...);
+    const { visionResults, chatPayload } = await sendWithVision({
+      userMsg,
+      pendingFiles,
+      userKey,
+      workspaceId: MCA_WORKSPACE_ID,
+      conversationId,
+      ministryOn,
+      modeHint,
+    });
 
-// IMAGE-ONLY RESPONSE (PRIMARY PATH)
-if (visionResults && visionResults.length > 0) {
-  for (const v of visionResults) {
+    // --------------------------------------------------
+    // IMAGE-ONLY RESPONSE (AUTHORITATIVE)
+    // --------------------------------------------------
+    if (Array.isArray(visionResults) && visionResults.length > 0) {
+      for (const v of visionResults) {
+        setMessages((m) => [
+          ...m,
+          {
+            role: "assistant",
+            content: v.answer ?? "",
+            imageUrl: v.imageUrl,
+          },
+        ]);
+      }
+      return; // CRITICAL: do not fall through
+    }
+
+    // --------------------------------------------------
+    // STANDARD CHAT RESPONSE
+    // --------------------------------------------------
+    if (chatPayload) {
+      ingestPayload(chatPayload);
+    }
+  } catch (e: any) {
     setMessages((m) => [
       ...m,
-      {
-        role: "assistant",
-        content: v.answer ?? "",
-        imageUrl: v.imageUrl,
-      },
+      { role: "assistant", content: `⚠ ${e?.message ?? "Request failed"}` },
     ]);
+  } finally {
+    setStreaming(false);
+    clearPending();
   }
-  return; // ⬅️ CRITICAL: stop here
 }
-
-// FALLBACK TO CHAT PIPELINE
-if (chatPayload) {
-  ingestPayload(chatPayload);
-}
-
 
     // --------------------------------------------------
     // IMAGE RESULTS (AUTHORITATIVE)
