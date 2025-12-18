@@ -3,15 +3,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSolaceStore } from "@/app/providers/solace-store";
-import MessageRenderer from "./MessageRenderer";
-
-declare global {
-  interface Window {
-    __solaceDockMounted?: boolean;
-    webkitSpeechRecognition?: any;
-    SpeechRecognition?: any;
-  }
-}
 
 import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
 import { useDockStyles } from "./useDockStyles";
@@ -28,6 +19,14 @@ import {
   ResizeHandle,
   createResizeController,
 } from "./dock-resize";
+
+declare global {
+  interface Window {
+    __solaceDockMounted?: boolean;
+    webkitSpeechRecognition?: any;
+    SpeechRecognition?: any;
+  }
+}
 
 // --------------------------------------------------------------------------------------
 // Types
@@ -58,6 +57,20 @@ type PendingFile = {
 const POS_KEY = "solace:pos:v4";
 const MINISTRY_KEY = "solace:ministry";
 const PAD = 12;
+
+// Image intent MUST bypass sendWithVision and go straight to /api/chat
+function isImageIntent(message: string): boolean {
+  const m = (message || "").toLowerCase().trim();
+  return (
+    m.startsWith("generate an image") ||
+    m.startsWith("create an image") ||
+    m.startsWith("draw ") ||
+    m.includes("image of") ||
+    m.includes("picture of") ||
+    m.startsWith("make an image") ||
+    m.startsWith("make a picture")
+  );
+}
 
 // --------------------------------------------------------------------------------------
 // MAIN COMPONENT
@@ -180,7 +193,7 @@ export default function SolaceDock() {
         setFilters(next);
       }
     } catch {}
-  }, [setFilters]);
+  }, [setFilters]); // intentionally not depending on `filters` to avoid churn
 
   // --------------------------------------------------------------------
   // Initial message
@@ -350,103 +363,14 @@ export default function SolaceDock() {
     );
   }
 
-  // ====================================================================
-  // SEND (VISION-AWARE) ? AUTHORITATIVE / TURBOPACK SAFE
-  // ====================================================================
-  async function send(): Promise<void> {
-    if (!input.trim() && pendingFiles.length === 0) return;
-    if (streaming) return;
-
-    const userMsg = input.trim() || "Attachments:";
-    setInput("");
-    setStreaming(true);
-
-    setMessages((m) => [...m, { role: "user", content: userMsg }]);
-
-    // IMAGE REQUESTS MUST GO DIRECTLY TO /api/chat
-if (/^(generate|create|draw)|image of|picture of/i.test(userMsg)) {
-  const res = await fetch("/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      message: userMsg,
-      canonicalUserKey: userKey,
-      workspaceId: MCA_WORKSPACE_ID,
-      conversationId,
-      ministryMode: ministryOn,
-      modeHint,
-    }),
-  });
-
-  const payload = await res.json();
-  ingestPayload(payload);
-  return;
-}
-
-      const visionResults = result?.visionResults;
-const chatPayload = result?.chatPayload ?? result;
-
-
-      // -----------------------------------------------
-      // IMAGE RESULTS (PRIMARY)
-      // -----------------------------------------------
-     // IMAGE-ONLY RESPONSE FROM SERVER
-if (
-  chatPayload?.diagnostics?.pipeline === "image" &&
-  Array.isArray(chatPayload.messages)
-) {
-  ingestPayload(chatPayload);
-  return;
-}
-
-// VISION RESULTS (client-side vision)
-// IMAGE-ONLY RESPONSE FROM SERVER
-if (
-  chatPayload?.diagnostics?.pipeline === "image" &&
-  Array.isArray(chatPayload.messages)
-) {
-  ingestPayload(chatPayload);
-  return;
-}
-
-// VISION RESULTS (client-side vision)
-if (Array.isArray(visionResults) && visionResults.length > 0) {
-  for (const v of visionResults) {
-    setMessages((m) => [
-      ...m,
-      {
-        role: "assistant",
-        content: v.answer ?? "",
-        imageUrl: v.imageUrl ?? null,
-      },
-    ]);
-  }
-  return;
-}
-
-// FALLBACK
-if (chatPayload) {
-  ingestPayload(chatPayload);
-}
-
-
   // --------------------------------------------------------------------
-  // Enter-to-send handler
-  // --------------------------------------------------------------------
-  const onEnterSend = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      send();
-    }
-  };
-
-  // --------------------------------------------------------------------
-  // Payload ingestion (unchanged)
+  // Payload ingestion (AUTHORITATIVE)
   // --------------------------------------------------------------------
   function ingestPayload(data: any) {
     if (!data) throw new Error("Empty response payload");
+
     // --------------------------------------------------
-    // IMAGE RESPONSE ? BASE64 (AUTHORITATIVE)
+    // IMAGE RESPONSE — OPENAI RAW BASE64 SHAPE (data[0].b64_json)
     // --------------------------------------------------
     if (
       Array.isArray(data.data) &&
@@ -456,35 +380,39 @@ if (chatPayload) {
       const base64 = data.data[0].b64_json;
       const imageUrl = `data:image/png;base64,${base64}`;
 
+      console.log("[CLIENT IMAGE RECEIVED]", {
+        shape: "openai.b64_json",
+        prefix: imageUrl.slice(0, 32),
+        length: imageUrl.length,
+      });
+
       setMessages((m) => [
         ...m,
-        {
-          role: "assistant",
-          content: "",
-          imageUrl,
-        },
+        { role: "assistant", content: " ", imageUrl },
       ]);
       return;
     }
 
     // --------------------------------------------------
-    // IMAGE RESPONSE (AUTHORITATIVE)
+    // IMAGE RESPONSE — our API shape (imageUrl or image)
     // --------------------------------------------------
     const image =
-      typeof data.image === "string"
-        ? data.image
-        : typeof data.imageUrl === "string"
+      typeof data.imageUrl === "string"
         ? data.imageUrl
+        : typeof data.image === "string"
+        ? data.image
         : null;
 
     if (image) {
+      console.log("[CLIENT IMAGE RECEIVED]", {
+        shape: "api.imageUrl",
+        prefix: image.slice(0, 32),
+        length: image.length,
+      });
+
       setMessages((m) => [
         ...m,
-        {
-          role: "assistant",
-          content: "", // image-only bubble
-          imageUrl: image,
-        },
+        { role: "assistant", content: " ", imageUrl: image },
       ]);
       return;
     }
@@ -503,8 +431,8 @@ if (chatPayload) {
     if (Array.isArray(data.messages)) {
       const normalized = data.messages.map((msg: any) => ({
         role: msg.role,
-        content: msg.content ?? "",
-        imageUrl: msg.imageUrl ?? null,
+        content: (msg.content ?? "") as string,
+        imageUrl: (msg.imageUrl ?? null) as string | null,
       }));
       setMessages((m) => [...m, ...normalized]);
       return;
@@ -528,7 +456,7 @@ if (chatPayload) {
       const evMsgs: Message[] = data.evidence.map((e: EvidenceBlock) => ({
         role: "assistant",
         content:
-          `?? Evidence` +
+          `🧾 Evidence` +
           (e.source ? ` (${e.source})` : "") +
           `\n\n${e.summary || e.text || "[no content]"}`,
       }));
@@ -538,6 +466,100 @@ if (chatPayload) {
 
     throw new Error("Unrecognized response payload");
   }
+
+  // ====================================================================
+  // SEND (VISION-AWARE) — TURBOPACK SAFE + IMAGE INTENT GATE
+  // ====================================================================
+  async function send(): Promise<void> {
+    if (!input.trim() && pendingFiles.length === 0) return;
+    if (streaming) return;
+
+    const userMsg = input.trim() || "Attachments:";
+    setInput("");
+    setStreaming(true);
+
+    setMessages((m) => [...m, { role: "user", content: userMsg }]);
+
+    try {
+      // ------------------------------------------------------------
+      // FIX 2: IMAGE GENERATION MUST BYPASS sendWithVision()
+      // ------------------------------------------------------------
+      if (isImageIntent(userMsg)) {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: userMsg,
+            canonicalUserKey: userKey || undefined,
+            workspaceId: MCA_WORKSPACE_ID,
+            conversationId,
+            ministryMode: ministryOn,
+            modeHint,
+          }),
+        });
+
+        const payload = await res.json();
+        ingestPayload(payload);
+        return;
+      }
+
+      // ------------------------------------------------------------
+      // Normal path: vision analysis + chat
+      // ------------------------------------------------------------
+      const result = await sendWithVision({
+        userMsg,
+        pendingFiles,
+        userKey,
+        workspaceId: MCA_WORKSPACE_ID,
+        conversationId,
+        ministryOn,
+        modeHint,
+      });
+
+      const visionResults = result?.visionResults;
+      const chatPayload = result?.chatPayload;
+
+      // Vision results (analysis bubbles)
+      if (Array.isArray(visionResults) && visionResults.length > 0) {
+        for (const v of visionResults) {
+          setMessages((m) => [
+            ...m,
+            {
+              role: "assistant",
+              content: v?.answer ?? "",
+              imageUrl: v?.imageUrl ?? null,
+            },
+          ]);
+        }
+      }
+
+      // Chat payload (text/image/mixed)
+      if (chatPayload) {
+        ingestPayload(chatPayload);
+      }
+
+      // Safety net: never silent
+      if ((!visionResults || visionResults.length === 0) && !chatPayload) {
+        setMessages((m) => [...m, { role: "assistant", content: " " }]);
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Request failed";
+      setMessages((m) => [...m, { role: "assistant", content: `⚠ ${message}` }]);
+    } finally {
+      setStreaming(false);
+      clearPending();
+    }
+  }
+
+  // --------------------------------------------------------------------
+  // Enter-to-send handler
+  // --------------------------------------------------------------------
+  const onEnterSend = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  };
 
   // --------------------------------------------------------------------
   // RENDER
@@ -625,8 +647,6 @@ if (chatPayload) {
           </div>
         )}
 
-        {/* composer input continues below */}
-
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <label
             style={{
@@ -648,9 +668,7 @@ if (chatPayload) {
               type="file"
               multiple
               hidden
-              onChange={(e) =>
-                handleFiles(e.target.files, { prefix: "solace" })
-              }
+              onChange={(e) => handleFiles(e.target.files, { prefix: "solace" })}
             />
           </label>
 
