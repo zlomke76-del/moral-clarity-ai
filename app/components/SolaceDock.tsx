@@ -29,7 +29,6 @@ import {
   createResizeController,
 } from "./dock-resize";
 
-
 // --------------------------------------------------------------------------------------
 // Types
 // --------------------------------------------------------------------------------------
@@ -351,101 +350,81 @@ export default function SolaceDock() {
     );
   }
 
-// ====================================================================
-// SEND (VISION-AWARE) — AUTHORITATIVE / TURBOPACK SAFE
-// ====================================================================
-async function send(): Promise<void> {
-  if (!input.trim() && pendingFiles.length === 0) return;
-  if (streaming) return;
+  // ====================================================================
+  // SEND (VISION-AWARE) ? AUTHORITATIVE / TURBOPACK SAFE
+  // ====================================================================
+  async function send(): Promise<void> {
+    if (!input.trim() && pendingFiles.length === 0) return;
+    if (streaming) return;
 
-  const userMsg = input.trim() || "Attachments:";
-  setInput("");
-  setStreaming(true);
+    const userMsg = input.trim() || "Attachments:";
+    setInput("");
+    setStreaming(true);
 
-  setMessages((m) => [...m, { role: "user", content: userMsg }]);
+    setMessages((m) => [...m, { role: "user", content: userMsg }]);
 
-  try {
-    const result = await sendWithVision({
-      userMsg,
-      pendingFiles,
-      userKey,
-      workspaceId: MCA_WORKSPACE_ID,
-      conversationId,
-      ministryOn,
-      modeHint,
-    });
+    try {
+      const result = await sendWithVision({
+        userMsg,
+        pendingFiles,
+        userKey,
+        workspaceId: MCA_WORKSPACE_ID,
+        conversationId,
+        ministryOn,
+        modeHint,
+      });
 
-    const visionResults = result?.visionResults;
-    const chatPayload = result?.chatPayload;
+      const visionResults = result?.visionResults;
+      const chatPayload = result?.chatPayload;
 
-    // -----------------------------------------------
-    // IMAGE RESULTS (PRIMARY)
-    // -----------------------------------------------
-    if (Array.isArray(visionResults) && visionResults.length > 0) {
-      for (const v of visionResults) {
+      // -----------------------------------------------
+      // IMAGE RESULTS (PRIMARY)
+      // -----------------------------------------------
+      if (Array.isArray(visionResults) && visionResults.length > 0) {
+        for (const v of visionResults) {
+          setMessages((m) => [
+            ...m,
+            {
+              role: "assistant",
+              content: v?.answer ?? "",
+              imageUrl: v?.imageUrl ?? null,
+            },
+          ]);
+        }
+      }
+
+      // -----------------------------------------------
+      // SERVER PAYLOAD (TEXT / IMAGE / MIXED)
+      // -----------------------------------------------
+      if (chatPayload) {
+        ingestPayload(chatPayload);
+      }
+
+      // -----------------------------------------------
+      // SAFETY NET ? NEVER SILENT
+      // -----------------------------------------------
+      if (
+        (!visionResults || visionResults.length === 0) &&
+        !chatPayload
+      ) {
         setMessages((m) => [
           ...m,
-          {
-            role: "assistant",
-            content: v?.answer ?? "",
-            imageUrl: v?.imageUrl ?? null,
-          },
+          { role: "assistant", content: " " },
         ]);
       }
-    }
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Request failed";
 
-    // -----------------------------------------------
-    // SERVER PAYLOAD (TEXT / IMAGE / MIXED)
-    // -----------------------------------------------
-    if (chatPayload) {
-      ingestPayload(chatPayload);
-    }
-
-    // -----------------------------------------------
-    // SAFETY NET — NEVER SILENT
-    // -----------------------------------------------
-    if (
-      (!visionResults || visionResults.length === 0) &&
-      !chatPayload
-    ) {
       setMessages((m) => [
         ...m,
-        { role: "assistant", content: " " },
+        { role: "assistant", content: `? ${message}` },
       ]);
+    } finally {
+      setStreaming(false);
+      clearPending();
     }
-  } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : "Request failed";
-
-    setMessages((m) => [
-      ...m,
-      { role: "assistant", content: `⚠ ${message}` },
-    ]);
-  } finally {
-    setStreaming(false);
-    clearPending();
   }
-}
-
-    // --------------------------------------------------
-    // STANDARD CHAT RESPONSE
-    // --------------------------------------------------
-    if (chatPayload) {
-      ingestPayload(chatPayload);
-    }
-  } catch (e: any) {
-    setMessages((m) => [
-      ...m,
-      {
-        role: "assistant",
-        content: `⚠ ${e?.message ?? "Request failed"}`,
-      },
-    ]);
-  } finally {
-    setStreaming(false);
-    clearPending();
-  }
-}
 
   // --------------------------------------------------------------------
   // Enter-to-send handler
@@ -587,10 +566,10 @@ async function send(): Promise<void> {
 
       {/* ---------------- Transcript ---------------- */}
       <SolaceTranscript
-  messages={messages}
-  transcriptRef={transcriptRef}
-  transcriptStyle={transcriptStyle}
-/>
+        messages={messages}
+        transcriptRef={transcriptRef}
+        transcriptStyle={transcriptStyle}
+      />
 
       {/* ---------------- Composer ---------------- */}
       <div
@@ -633,7 +612,9 @@ async function send(): Promise<void> {
                     }}
                   />
                 ) : (
-                  <span style={{ fontSize: 18 }}><IconPaperclip /></span>
+                  <span style={{ fontSize: 18 }}>
+                    <IconPaperclip />
+                  </span>
                 )}
               </div>
             ))}
