@@ -19,7 +19,7 @@ import { useSolaceMemory } from "./useSolaceMemory";
 import { useSolaceAttachments } from "./useSolaceAttachments";
 import { useSpeechInput } from "./useSpeechInput";
 import { IconPaperclip, IconMic } from "@/app/components/icons";
-
+import { sendWithVision } from "./sendWithVision";
 import { UI } from "./dock-ui";
 import SolaceDockHeaderLite from "./dock-header-lite";
 import {
@@ -353,77 +353,50 @@ export default function SolaceDock() {
   // ====================================================================
   // SEND (VISION-AWARE)
   // ====================================================================
-  async function send() {
-    if (!input.trim() && pendingFiles.length === 0) return;
-    if (streaming) return;
+ async function send() {
+  if (!input.trim() && pendingFiles.length === 0) return;
+  if (streaming) return;
 
-    const userMsg = input.trim() || "Attachments:";
-    setInput("");
-    setStreaming(true);
+  const userMsg = input.trim() || "Attachments:";
+  setInput("");
+  setStreaming(true);
 
-    setMessages((m) => [...m, { role: "user", content: userMsg }]);
+  setMessages((m) => [...m, { role: "user", content: userMsg }]);
 
-    try {
-      const imageFiles = (pendingFiles as PendingFile[]).filter((f) =>
-        f.mime.startsWith("image/")
-      );
+  try {
+    const { visionResults, chatPayload } = await sendWithVision({
+      userMsg,
+      pendingFiles,
+      userKey,
+      workspaceId: MCA_WORKSPACE_ID,
+      conversationId,
+      ministryOn,
+      modeHint,
+    });
 
-      if (imageFiles.length > 0) {
-        for (const img of imageFiles) {
-          const visionRes = await fetch("/api/solace/vision", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              imageUrl: img.url,
-              prompt: userMsg,
-            }),
-          });
-
-          const visionData = await visionRes.json();
-
-          if (visionData?.answer) {
-            setMessages((m) => [
-              ...m,
-              {
-                role: "assistant",
-                content: visionData.answer,
-                imageUrl: img.url,
-              },
-            ]);
-          }
-        }
-      }
-
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: userMsg,
-          canonicalUserKey: userKey || undefined,
-          workspaceId: MCA_WORKSPACE_ID,
-          conversationId,
-          ministryMode: ministryOn,
-          modeHint,
-          attachments: pendingFiles,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error(`Status ${res.status}`);
-      }
-
-      const data = await res.json();
-      ingestPayload(data);
-    } catch (e: any) {
+    for (const v of visionResults) {
       setMessages((m) => [
         ...m,
-        { role: "assistant", content: `?? ${e?.message ?? "Request failed"}` },
+        {
+          role: "assistant",
+          content: v.answer,
+          imageUrl: v.imageUrl,
+        },
       ]);
-    } finally {
-      setStreaming(false);
-      clearPending();
     }
+
+    ingestPayload(chatPayload);
+  } catch (e: any) {
+    setMessages((m) => [
+      ...m,
+      { role: "assistant", content: `⚠ ${e?.message ?? "Request failed"}` },
+    ]);
+  } finally {
+    setStreaming(false);
+    clearPending();
   }
+}
+
   // --------------------------------------------------------------------
   // Enter-to-send handler
   // --------------------------------------------------------------------
