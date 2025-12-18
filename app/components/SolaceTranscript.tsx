@@ -49,3 +49,4 @@ export default function SolaceTranscript({ messages }: Props) {
     </div>
   );
 }
+
