@@ -20,12 +20,18 @@ export type SolaceFile = {
 /* ------------------------------------------------------------------
    Hook
 ------------------------------------------------------------------- */
-export function useSolaceAttachments() {
+export function useSolaceAttachments(
+  opts?: {
+    onInfoMessage?: (msg: string) => void;
+  }
+) {
+  const onInfoMessage = opts?.onInfoMessage ?? (() => {});
+
   // Stable, non-reactive container (intentional)
   const pendingFilesRef = useRef<SolaceFile[]>([]);
 
   /* ------------------------------------------------------------------
-     INTERNAL ADD (NO SIDE EFFECTS)
+     INTERNAL ADD
   ------------------------------------------------------------------- */
   function add(file: SolaceFile) {
     pendingFilesRef.current.push(file);
@@ -33,7 +39,6 @@ export function useSolaceAttachments() {
 
   /* ------------------------------------------------------------------
      HANDLE FILE INPUT (<input type="file" />)
-     NOTE: Does NOT emit assistant messages
   ------------------------------------------------------------------- */
   async function handleFiles(
     fileList: FileList | null,
@@ -50,7 +55,7 @@ export function useSolaceAttachments() {
 
     if (errors.length > 0) {
       console.error("[ATTACHMENTS] upload errors", errors);
-      // UI may react separately if desired
+      onInfoMessage(`⚠️ ${errors.length} file(s) failed to upload.`);
     }
 
     for (const a of attachments) {
@@ -69,11 +74,14 @@ export function useSolaceAttachments() {
         size: a.size,
       });
     }
+
+    if (attachments.length > 0) {
+      onInfoMessage(`${attachments.length} file(s) attached.`);
+    }
   }
 
   /* ------------------------------------------------------------------
      HANDLE PASTE (clipboard images/files)
-     NOTE: Does NOT emit assistant messages
   ------------------------------------------------------------------- */
   async function handlePaste(
     e: React.ClipboardEvent,
@@ -88,7 +96,7 @@ export function useSolaceAttachments() {
 
     if (errors.length > 0) {
       console.error("[ATTACHMENTS] paste upload errors", errors);
-      // UI may react separately if desired
+      onInfoMessage(`⚠️ ${errors.length} pasted item(s) failed.`);
     }
 
     for (const a of attachments) {
@@ -107,10 +115,14 @@ export function useSolaceAttachments() {
         size: a.size,
       });
     }
+
+    if (attachments.length > 0) {
+      onInfoMessage(`${attachments.length} file(s) pasted.`);
+    }
   }
 
   /* ------------------------------------------------------------------
-     CLEAR (CALLED AFTER SEND)
+     CLEAR
   ------------------------------------------------------------------- */
   function clearPending() {
     console.info("[ATTACHMENTS] clearing pending files", {
