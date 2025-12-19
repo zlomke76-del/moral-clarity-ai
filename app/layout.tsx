@@ -9,7 +9,6 @@ import Toaster from "@/components/Toaster";
 // ⭐ Solace wrapper (conditionally mounted)
 import SolaceDockWrapper from "@/app/components/SolaceDockWrapper";
 
-// ✅ client-only hook
 import { headers } from "next/headers";
 
 export const metadata: Metadata = {
@@ -28,7 +27,7 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -36,11 +35,11 @@ export default function RootLayout({
   /**
    * 🔒 INSTITUTIONAL MODE GUARD
    *
-   * We derive pathname from request headers at the ROOT layout level.
-   * This guarantees Solace is never mounted for /newsroom/**
-   * regardless of nested layouts or shells.
+   * Root layouts run on the server.
+   * In Next 16, headers() is async and must be awaited.
    */
-  const hdrs = headers();
+  const hdrs = await headers();
+
   const pathname =
     hdrs.get("x-pathname") ||
     hdrs.get("x-invoke-path") ||
