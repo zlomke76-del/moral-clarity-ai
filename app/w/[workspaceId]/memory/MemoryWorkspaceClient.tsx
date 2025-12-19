@@ -9,12 +9,12 @@ import MemoryEditorPanel, {
 
 type Props = {
   workspaceId: string;
-  initialItems: MemoryRecord[];
+  initialItems?: MemoryRecord[];
 };
 
 export default function MemoryWorkspaceClient({
   workspaceId,
-  initialItems,
+  initialItems = [],
 }: Props) {
   const [selected, setSelected] = useState<MemoryRecord | null>(null);
 
@@ -23,7 +23,6 @@ export default function MemoryWorkspaceClient({
       data-memory-grid
       className="h-full grid grid-cols-[420px_1fr] min-h-0"
     >
-      {/* LEFT: MEMORY INDEX */}
       <aside className="border-r border-neutral-800 overflow-y-auto">
         <MemoryIndexPanel
           workspaceId={workspaceId}
@@ -32,12 +31,14 @@ export default function MemoryWorkspaceClient({
         />
       </aside>
 
-      {/* RIGHT: MEMORY EDITOR */}
       <main className="overflow-hidden">
-        <MemoryEditorPanel
-          workspaceId={workspaceId}
-          record={selected}
-        />
+        {selected ? (
+          <MemoryEditorPanel record={selected} />
+        ) : (
+          <div className="h-full flex items-center justify-center text-sm text-neutral-500">
+            Select a memory to view or edit
+          </div>
+        )}
       </main>
     </div>
   );
