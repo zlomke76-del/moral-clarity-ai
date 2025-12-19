@@ -1,6 +1,6 @@
 "use client";
 
-import { MemoryRecord } from "./MemoryEditorPanel";
+import type { MemoryRecord } from "./types";
 
 type Props = {
   workspaceId: string;
