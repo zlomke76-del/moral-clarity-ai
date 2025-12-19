@@ -4,7 +4,7 @@ import type { OutletOverview } from "../types";
 import OutletCard from "./OutletCard";
 
 type Props = {
-  outlets: OutletOverview[];
+  outlets: OutletOverview[]; // MUST already be PI-ranked (highest → lowest)
   selectedCanonical: string | null;
   onSelect: (canonical: string, wasSelected: boolean) => void;
 };
@@ -14,18 +14,24 @@ export default function Leaderboard({
   selectedCanonical,
   onSelect,
 }: Props) {
-  const maxGolden = 3;
-  const maxWatchlist = 3;
+  // 🔒 Explicit rules
+  const GOLDEN_COUNT = 3;
+  const WATCHLIST_COUNT = 3;
 
-  const golden = outlets.slice(0, maxGolden);
-  const watchlist = outlets.slice(-maxWatchlist);
+  // Top PI performers
+  const golden = outlets.slice(0, GOLDEN_COUNT);
+
+  // Bottom PI performers
+  const watchlist = outlets.slice(-WATCHLIST_COUNT);
+
+  // Everyone else
   const neutral = outlets.slice(
-    golden.length,
-    Math.max(outlets.length - watchlist.length, golden.length)
+    GOLDEN_COUNT,
+    Math.max(outlets.length - WATCHLIST_COUNT, GOLDEN_COUNT)
   );
 
-  const handle = (canon: string) => {
-    onSelect(canon, canon === selectedCanonical);
+  const handleSelect = (canonical: string) => {
+    onSelect(canonical, canonical === selectedCanonical);
   };
 
   return (
@@ -34,6 +40,7 @@ export default function Leaderboard({
         Outlet Neutrality Leaderboard
       </h2>
 
+      {/* 🟡 Golden Anchors */}
       {golden.map((o, i) => (
         <OutletCard
           key={o.canonical_outlet}
@@ -41,29 +48,31 @@ export default function Leaderboard({
           rank={i + 1}
           selected={selectedCanonical === o.canonical_outlet}
           badge="golden"
-          onSelect={() => handle(o.canonical_outlet)}
+          onSelect={() => handleSelect(o.canonical_outlet)}
         />
       ))}
 
+      {/* ⚪ Neutral / Competitive Middle */}
       {neutral.map((o, i) => (
         <OutletCard
           key={o.canonical_outlet}
           outlet={o}
-          rank={golden.length + i + 1}
+          rank={GOLDEN_COUNT + i + 1}
           selected={selectedCanonical === o.canonical_outlet}
           badge="neutral"
-          onSelect={() => handle(o.canonical_outlet)}
+          onSelect={() => handleSelect(o.canonical_outlet)}
         />
       ))}
 
+      {/* 🔴 Watchlist */}
       {watchlist.map((o, i) => (
         <OutletCard
           key={o.canonical_outlet}
           outlet={o}
-          rank={outlets.length - watchlist.length + i + 1}
+          rank={outlets.length - WATCHLIST_COUNT + i + 1}
           selected={selectedCanonical === o.canonical_outlet}
           badge="watchlist"
-          onSelect={() => handle(o.canonical_outlet)}
+          onSelect={() => handleSelect(o.canonical_outlet)}
         />
       ))}
     </div>
