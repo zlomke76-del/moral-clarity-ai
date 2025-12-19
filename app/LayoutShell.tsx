@@ -14,15 +14,17 @@ export default function LayoutShell({
 }) {
   const pathname = usePathname() ?? "";
 
-  const isApp = pathname === "/app" || pathname.startsWith("/app/");
-  const isAuth = pathname.startsWith("/auth");
+  const isApp =
+    pathname === "/app" ||
+    pathname.startsWith("/app/") ||
+    pathname.startsWith("/w/"); // IMPORTANT
 
-  // 🔒 INSTITUTIONAL MODE — NO SOLACE
-  const isNewsroom = pathname === "/newsroom" || pathname.startsWith("/newsroom/");
+  const isAuth = pathname.startsWith("/auth");
+  const isNewsroom =
+    pathname === "/newsroom" || pathname.startsWith("/newsroom/");
 
   return (
     <>
-      {/* Mount Solace ONLY when allowed */}
       {!isAuth && !isNewsroom && (
         <Suspense fallback={null}>
           <SolaceGuard />
@@ -30,19 +32,28 @@ export default function LayoutShell({
       )}
 
       {isApp ? (
-        // GRID LAYOUT ONLY FOR APP ROUTES
-        <div className="grid grid-cols-[20vw_1fr] min-h-screen relative z-10">
-          <aside className="h-full">
+        <div
+          data-app-shell
+          className="grid grid-cols-[20vw_1fr] min-h-screen relative z-10"
+        >
+          <aside data-neural-sidebar className="h-full">
             <NeuralSidebar />
           </aside>
 
-          <main className="h-full flex flex-col items-start justify-start">
-            <div className="w-full max-w-3xl px-8 py-16">{children}</div>
+          <main
+            data-app-main
+            className="h-full flex flex-col items-start justify-start"
+          >
+            <div className="w-full max-w-3xl px-8 py-16">
+              {children}
+            </div>
           </main>
         </div>
       ) : (
-        // PURE CONTENT (NO SIDEBAR)
-        <main className="min-h-screen w-full flex flex-col items-center justify-start px-6 py-16">
+        <main
+          data-standalone
+          className="min-h-screen w-full flex flex-col items-center justify-start px-6 py-16"
+        >
           {children}
         </main>
       )}
