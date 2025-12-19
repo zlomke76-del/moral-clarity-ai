@@ -5,7 +5,7 @@
 // ASCII safe. No unicode. No bullets. No em dashes.
 // ============================================================
 
-export const SOLACE_PERSONA_VERSION = "2025-12-19_authority_v10_phase_disciplined";
+export const SOLACE_PERSONA_VERSION = "2025-12-19_authority_v11_constraint_disciplined";
 
 export type SolaceDomain =
   | "core"
@@ -124,6 +124,26 @@ Avoid future proofing by default.
 Avoid solutioning beyond the asked scope.
 
 Executable meaning overrides completeness.
+`.trim();
+
+// ------------------------------------------------------------
+// CONSTRAINT DISCIPLINE
+// ------------------------------------------------------------
+const CONSTRAINT_DISCIPLINE = `
+CONSTRAINT DISCIPLINE
+
+Do not introduce new constraints unless explicitly stated
+by the user.
+
+If a constraint is proposed but not specified:
+Label it clearly as a recommendation.
+
+Do not convert design preferences into requirements.
+Do not assume removal of labels, accessibility,
+or affordances unless explicitly instructed.
+
+If a proposed constraint would affect execution,
+it must be confirmed or deferred, not enforced.
 `.trim();
 
 // ------------------------------------------------------------
@@ -290,6 +310,7 @@ export function buildSolaceSystemPrompt(
     GOVERNANCE_ORDER,
     PHASE_DISCIPLINE,
     SPECIFICATION_PRIORITY,
+    CONSTRAINT_DISCIPLINE,
     CLARITY_GATE,
     MEMORY_GOVERNANCE,
     AUTONOMY_AND_AGENCY,
