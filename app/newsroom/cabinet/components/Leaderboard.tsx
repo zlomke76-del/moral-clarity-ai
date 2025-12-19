@@ -14,12 +14,24 @@ export default function Leaderboard({
   selectedCanonical,
   onSelect,
 }: Props) {
-  // Assumes `outlets` is ALREADY sorted by PI descending
-  const golden = outlets.slice(0, 3);
-  const watchlist = outlets.slice(-3);
-  const neutral = outlets.slice(3, Math.max(outlets.length - 3, 3));
+  // 🔒 HARD RULES
+  const GOLD_COUNT = 3;
+  const WATCH_COUNT = 3;
 
-  const handle = (canon: string) => {
+  // 🔒 AUTHORITATIVE SORT — PI ONLY, DESC
+  const sorted = [...outlets].sort((a, b) => {
+    if (b.avg_pi !== a.avg_pi) {
+      return b.avg_pi - a.avg_pi;
+    }
+    // deterministic tie-breaker
+    return a.canonical_outlet.localeCompare(b.canonical_outlet);
+  });
+
+  const golden = sorted.slice(0, GOLD_COUNT);
+  const watchlist = sorted.slice(-WATCH_COUNT);
+  const neutral = sorted.slice(GOLD_COUNT, sorted.length - WATCH_COUNT);
+
+  const handleSelect = (canon: string) => {
     onSelect(canon, canon === selectedCanonical);
   };
 
@@ -27,43 +39,39 @@ export default function Leaderboard({
     <div className="space-y-10">
       {/* ================= GOLDEN ANCHOR ================= */}
       <section>
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-amber-300">
+        <h2 className="mb-3 text-sm font-semibold tracking-wide text-amber-300">
           Golden Anchor
-        </h3>
+        </h2>
 
-        <div className="grid grid-cols-1 gap-3">
+        <div className="flex gap-4">
           {golden.map((o, i) => (
-            <div
+            <OutletCard
               key={o.canonical_outlet}
-              className="rounded-xl shadow-[0_0_30px_rgba(251,191,36,0.25)]"
-            >
-              <OutletCard
-                outlet={o}
-                rank={i + 1}
-                selected={selectedCanonical === o.canonical_outlet}
-                badge="golden"
-                onSelect={() => handle(o.canonical_outlet)}
-              />
-            </div>
+              outlet={o}
+              rank={i + 1}
+              selected={selectedCanonical === o.canonical_outlet}
+              badge="golden"
+              onSelect={() => handleSelect(o.canonical_outlet)}
+            />
           ))}
         </div>
       </section>
 
       {/* ================= NEUTRAL ================= */}
       <section>
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-300">
+        <h2 className="mb-3 text-sm font-semibold tracking-wide text-neutral-300">
           Neutral
-        </h3>
+        </h2>
 
-        <div className="grid grid-cols-1 gap-3">
+        <div className="flex flex-wrap gap-3">
           {neutral.map((o, i) => (
             <OutletCard
               key={o.canonical_outlet}
               outlet={o}
-              rank={golden.length + i + 1}
+              rank={GOLD_COUNT + i + 1}
               selected={selectedCanonical === o.canonical_outlet}
               badge="neutral"
-              onSelect={() => handle(o.canonical_outlet)}
+              onSelect={() => handleSelect(o.canonical_outlet)}
             />
           ))}
         </div>
@@ -71,24 +79,20 @@ export default function Leaderboard({
 
       {/* ================= WATCHLIST ================= */}
       <section>
-        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-red-400">
+        <h2 className="mb-3 text-sm font-semibold tracking-wide text-red-400">
           Watchlist
-        </h3>
+        </h2>
 
-        <div className="grid grid-cols-1 gap-3">
+        <div className="flex gap-4">
           {watchlist.map((o, i) => (
-            <div
+            <OutletCard
               key={o.canonical_outlet}
-              className="rounded-xl shadow-[0_0_30px_rgba(239,68,68,0.35)]"
-            >
-              <OutletCard
-                outlet={o}
-                rank={outlets.length - watchlist.length + i + 1}
-                selected={selectedCanonical === o.canonical_outlet}
-                badge="watchlist"
-                onSelect={() => handle(o.canonical_outlet)}
-              />
-            </div>
+              outlet={o}
+              rank={sorted.length - WATCH_COUNT + i + 1}
+              selected={selectedCanonical === o.canonical_outlet}
+              badge="watchlist"
+              onSelect={() => handleSelect(o.canonical_outlet)}
+            />
           ))}
         </div>
       </section>
