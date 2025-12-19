@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Solace Context Assembler
-// Phase B + Phase 5 (WM-PERSISTENT PER CONVERSATION)
-// Option C — Session-Aware (conversationId/sessionId scoped)
+// Phase B + Phase 5 (Session-Aware, Compaction-First)
+// Authoritative Read Path
 // ------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
@@ -20,12 +20,19 @@ export type WorkingMemoryItem = {
   created_at?: string;
 };
 
+export type SessionCompaction = {
+  id: string;
+  content: string; // JSON string (authoritative state)
+  created_at: string;
+};
+
 export type SolaceContextBundle = {
   persona: string;
   memoryPack: {
     facts: any[];
     episodic: any[];
     autobiography: any[];
+    sessionCompaction?: SessionCompaction | null;
   };
   workingMemory: {
     active: boolean;
@@ -63,16 +70,18 @@ export async function assembleContext(
     sessionStartedAt: string;
   }
 ): Promise<SolaceContextBundle> {
+  const conversationId = session?.sessionId ?? null;
+
   diag("assemble start", {
     canonicalUserKey,
     workspaceId,
-    sessionId: session?.sessionId,
+    conversationId,
   });
 
   const cookieStore = await cookies();
 
   // ----------------------------------------------------------
-  // USER CONTEXT CLIENT (anon, cookie-bound)
+  // USER CONTEXT CLIENT (cookie-bound)
   // ----------------------------------------------------------
   const supabaseUser = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -89,7 +98,7 @@ export async function assembleContext(
   );
 
   // ----------------------------------------------------------
-  // SERVICE ROLE CLIENT (authoritative, read-only)
+  // SERVICE ROLE CLIENT (authoritative reads)
   // ----------------------------------------------------------
   const supabaseService = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -112,7 +121,12 @@ export async function assembleContext(
   if (!user) {
     return {
       persona: "Solace",
-      memoryPack: { facts: [], episodic: [], autobiography: [] },
+      memoryPack: {
+        facts: [],
+        episodic: [],
+        autobiography: [],
+        sessionCompaction: null,
+      },
       workingMemory: { active: false, items: [] },
       researchContext: [],
       authorities: [],
@@ -124,7 +138,7 @@ export async function assembleContext(
   const authUserId = user.id;
 
   // ----------------------------------------------------------
-  // LONG-TERM MEMORY (READ ONLY)
+  // LONG-TERM MEMORY (FACTS / EPISODIC / IDENTITY)
   // ----------------------------------------------------------
   const [facts, episodic, autobiography] = await Promise.all([
     supabaseUser
@@ -159,13 +173,39 @@ export async function assembleContext(
     facts: facts.length,
     episodic: episodic.length,
     autobiography: autobiography.length,
-    sessionId: session?.sessionId,
+    conversationId,
   });
 
   // ----------------------------------------------------------
-  // WORKING MEMORY (SERVICE ROLE)
+  // SESSION COMPACTION (AUTHORITATIVE STATE)
   // ----------------------------------------------------------
-  const conversationId = session?.sessionId ?? null;
+  let sessionCompaction: SessionCompaction | null = null;
+
+  if (conversationId) {
+    const compactionRes = await supabaseService
+      .schema("memory")
+      .from("memories")
+      .select("id, content, created_at")
+      .eq("memory_type", "session_compaction")
+      .eq("conversation_id", conversationId)
+      .eq("user_id", authUserId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (compactionRes?.data) {
+      sessionCompaction = compactionRes.data as SessionCompaction;
+    }
+  }
+
+  diag("session compaction", {
+    conversationId,
+    present: Boolean(sessionCompaction),
+  });
+
+  // ----------------------------------------------------------
+  // RAW WORKING MEMORY (TAIL ONLY, HIGH FIDELITY)
+  // ----------------------------------------------------------
   let wmItems: WorkingMemoryItem[] = [];
 
   if (conversationId) {
@@ -175,43 +215,50 @@ export async function assembleContext(
       .select("id, role, content, created_at")
       .eq("conversation_id", conversationId)
       .eq("user_id", authUserId)
-      .limit(200);
+      .order("created_at", { ascending: false })
+      .limit(15);
 
-    wmItems = safeRows(wmRes.data) as WorkingMemoryItem[];
+    wmItems = safeRows(wmRes.data).reverse();
   }
 
-  console.log("[WM] loaded", {
-    sessionId: conversationId,
+  diag("working memory loaded", {
+    conversationId,
     items: wmItems.length,
   });
 
   // ----------------------------------------------------------
-  // NEWS DIGEST (AUTHORITATIVE SOURCE — TABLE)
+  // NEWS DIGEST (AUTHORITATIVE)
   // ----------------------------------------------------------
   const { data: newsDigest, error: newsError } = await supabaseService
     .from("solace_news_digest")
-    .select(
-      "story_title, outlet, neutral_summary, story_url"
-    )
+    .select("story_title, outlet, neutral_summary, story_url")
     .limit(6);
 
   if (newsError) {
     console.error("[NEWS DIGEST LOAD ERROR]", newsError);
   }
 
-  console.log("[NEWS DIGEST LOADED]", {
+  diag("news digest loaded", {
     items: newsDigest?.length ?? 0,
   });
 
   // ----------------------------------------------------------
-  // RESEARCH
+  // RESEARCH CONTEXT
   // ----------------------------------------------------------
   const researchContext = await readHubbleResearchContext(10);
   const didResearch = researchContext.length > 0;
 
+  // ----------------------------------------------------------
+  // FINAL CONTEXT BUNDLE
+  // ----------------------------------------------------------
   return {
     persona: "Solace",
-    memoryPack: { facts, episodic, autobiography },
+    memoryPack: {
+      facts,
+      episodic,
+      autobiography,
+      sessionCompaction,
+    },
     workingMemory: {
       active: Boolean(conversationId),
       items: wmItems,
