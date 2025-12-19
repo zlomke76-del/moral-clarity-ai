@@ -1,31 +1,23 @@
 "use client";
 
-import React from "react";
 import type { OutletOverview } from "../types";
-
-type Badge = "golden" | "neutral" | "watchlist";
 
 type Props = {
   outlet: OutletOverview;
   rank: number;
-  badge: Badge;
+  badge: "golden" | "neutral" | "watchlist";
   selected: boolean;
   onSelect: () => void;
 };
 
-/**
- * AUTHORITATIVE PI FORMATTER
- * - Always numeric
- * - Always 2 decimals
- * - Never mutates ranking value
- */
-function formatPI(pi: number): string {
-  if (Number.isNaN(pi)) return "—";
-  return pi.toFixed(2);
+function formatPI(value: number): string {
+  if (!Number.isFinite(value)) return "—";
+  return (Math.floor(value * 100) / 100).toFixed(2);
 }
 
-function formatStories(n: number): string {
-  return `${n} stories analyzed`;
+function logoUrl(domain: string) {
+  if (!domain) return null;
+  return `https://logo.clearbit.com/${domain}?size=64`;
 }
 
 export default function OutletCard({
@@ -35,58 +27,48 @@ export default function OutletCard({
   selected,
   onSelect,
 }: Props) {
-  const domain = outlet.canonical_outlet.trim();
-  const piText = formatPI(outlet.avg_pi);
-  const storiesText = formatStories(outlet.total_stories);
+  const domain = outlet.canonical_outlet?.trim() ?? "unknown";
+  const pi = formatPI(outlet.avg_pi);
+  const stories = outlet.total_stories ?? 0;
 
   const glow =
     badge === "golden"
-      ? "shadow-[0_0_25px_rgba(255,200,80,0.45)]"
+      ? "shadow-[0_0_30px_rgba(255,215,128,0.45)]"
       : badge === "watchlist"
-      ? "shadow-[0_0_25px_rgba(255,80,80,0.45)]"
+      ? "shadow-[0_0_30px_rgba(255,80,80,0.45)]"
       : "";
 
   return (
     <button
       onClick={onSelect}
-      className={[
-        "relative w-[220px] rounded-lg border border-neutral-600",
-        "bg-neutral-800/90 text-neutral-100",
-        "px-3 py-2 text-left transition",
-        "hover:border-neutral-400",
-        glow,
-        selected ? "ring-2 ring-neutral-300" : "",
-      ].join(" ")}
+      className={`relative w-56 rounded-lg border border-neutral-700 bg-neutral-800 p-3 text-left transition ${
+        selected ? "ring-2 ring-neutral-300" : ""
+      } ${glow}`}
     >
-      {/* Rank */}
-      <div className="absolute top-1 left-2 text-xs text-neutral-400">
+      <div className="absolute top-1 right-2 text-xs text-neutral-400">
         #{rank}
       </div>
 
-      {/* Outlet Logo */}
-      <div className="flex justify-center mb-1">
-        <img
-          src={`https://logo.clearbit.com/${domain}`}
-          alt={domain}
-          className="h-6 w-6 object-contain"
-          loading="lazy"
-          referrerPolicy="no-referrer"
-        />
+      <div className="flex items-center gap-2 mb-2">
+        {logoUrl(domain) && (
+          <img
+            src={logoUrl(domain)!}
+            alt={`${domain} logo`}
+            className="h-6 w-6 rounded-sm bg-neutral-900"
+            loading="lazy"
+          />
+        )}
+        <div className="text-sm font-semibold text-neutral-100">
+          {domain}
+        </div>
       </div>
 
-      {/* Domain */}
-      <div className="text-xs text-center text-neutral-300 truncate">
-        {domain}
+      <div className="text-xs text-neutral-300">
+        {stories} stories analyzed
       </div>
 
-      {/* Stories */}
-      <div className="mt-1 text-[11px] text-neutral-400 text-center">
-        {storiesText}
-      </div>
-
-      {/* PI — PRIMARY SIGNAL */}
-      <div className="mt-1 text-sm font-semibold text-center text-white">
-        PI {piText}
+      <div className="mt-1 text-sm font-bold text-neutral-100">
+        PI {pi}
       </div>
     </button>
   );
