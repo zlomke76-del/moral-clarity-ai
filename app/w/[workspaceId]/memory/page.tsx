@@ -18,7 +18,6 @@ export default async function WorkspaceMemoryPage({ params }: Props) {
     .from("memory.memories")
     .select("id, content, memory_type, updated_at")
     .eq("workspace_id", workspaceId)
-    .eq("memory_type", "fact")
     .order("updated_at", { ascending: false })
     .limit(25);
 
@@ -31,19 +30,23 @@ export default async function WorkspaceMemoryPage({ params }: Props) {
       data-layout-boundary="WorkspaceMemoryPage"
       className="w-full h-full flex flex-col"
     >
+      {/* Header */}
       <header className="px-8 py-6 border-b border-neutral-800">
         <h1 className="text-2xl font-semibold tracking-tight">
           Workspace Memories
         </h1>
         <p className="text-sm text-neutral-400">
-          Long term factual memory only
+          Long-term factual memory only
         </p>
       </header>
 
-      <MemoryWorkspaceClient
-        workspaceId={workspaceId}
-        initialItems={Array.isArray(data) ? data : []}
-      />
+      {/* Client Workspace */}
+      <div className="flex-1 min-h-0">
+        <MemoryWorkspaceClient
+          workspaceId={workspaceId}
+          initialItems={Array.isArray(data) ? data : []}
+        />
+      </div>
     </section>
   );
 }
