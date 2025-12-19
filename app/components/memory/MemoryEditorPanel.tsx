@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { MemoryRecord } from "@/app/w/[workspaceId]/memory/MemoryWorkspaceClient";
+import type { MemoryRecord } from "./types";
 
 type Props = {
   workspaceId: string;
