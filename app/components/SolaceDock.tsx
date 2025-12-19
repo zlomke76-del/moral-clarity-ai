@@ -214,19 +214,49 @@ export default function SolaceDock() {
   const vw = viewport.w || 1;
   const vh = viewport.h || 1;
 
-  const tx = Math.min(Math.max(0, x - PAD), vw - panelW - PAD);
-  const ty = Math.min(Math.max(0, y - PAD), vh - panelH - PAD);
+  // ------------------------------
+  // MOBILE CLAMP (no drift)
+  // ------------------------------
+  const mobileW = Math.max(280, Math.min(dockW, vw - PAD * 2));
+  const mobileH = Math.max(360, Math.min(dockH, vh - PAD * 2));
+
+  // Desktop: use stored x/y. Mobile: pin inside viewport.
+  const txDesktop = Math.min(Math.max(0, x - PAD), vw - panelW - PAD);
+  const tyDesktop = Math.min(Math.max(0, y - PAD), vh - panelH - PAD);
+
+  const tx = isMobile ? PAD : txDesktop;
+  const ty = isMobile ? Math.max(PAD, vh - mobileH - PAD) : tyDesktop;
 
   const { panelStyle, transcriptStyle, textareaStyle, composerWrapStyle } =
     useDockStyles({
-      dockW,
-      dockH,
+      dockW: isMobile ? mobileW : dockW,
+      dockH: isMobile ? mobileH : dockH,
       tx,
       ty,
-      invisible: !posReady,
+      invisible: isMobile ? false : !posReady,
       ministryOn,
       PAD,
     });
+
+  // iOS scroll polish without changing desktop styling
+  const transcriptStyleSafe: React.CSSProperties = isMobile
+    ? {
+        ...transcriptStyle,
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
+      }
+    : transcriptStyle;
+
+  // Hard clamp at the container level too (prevents iOS “wider than viewport” weirdness)
+  const panelStyleSafe: React.CSSProperties = isMobile
+    ? {
+        ...panelStyle,
+        width: mobileW,
+        height: mobileH,
+        maxWidth: vw - PAD * 2,
+        maxHeight: vh - PAD * 2,
+      }
+    : panelStyle;
 
   if (!canRender || !visible) return null;
 
@@ -267,7 +297,10 @@ export default function SolaceDock() {
     // IMAGE (url)
     if (typeof data.imageUrl === "string" || typeof data.image === "string") {
       const image = data.imageUrl ?? data.image;
-      setMessages((m) => [...m, { role: "assistant", content: " ", imageUrl: image }]);
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: " ", imageUrl: image },
+      ]);
       return;
     }
 
@@ -375,7 +408,7 @@ export default function SolaceDock() {
   };
 
   const panel = (
-    <section ref={containerRef} style={panelStyle}>
+    <section ref={containerRef} style={panelStyleSafe}>
       <SolaceDockHeaderLite
         ministryOn={ministryOn}
         memReady={memReady}
@@ -393,13 +426,13 @@ export default function SolaceDock() {
           setFilters(next);
         }}
         onMinimize={() => setMinimized(true)}
-        onDragStart={onHeaderMouseDown}
+        onDragStart={isMobile ? undefined : onHeaderMouseDown}
       />
 
       <SolaceTranscript
         messages={messages}
         transcriptRef={transcriptRef}
-        transcriptStyle={transcriptStyle}
+        transcriptStyle={transcriptStyleSafe}
       />
 
       <div
@@ -436,7 +469,7 @@ export default function SolaceDock() {
         </div>
       </div>
 
-      <ResizeHandle onResizeStart={startResize} />
+      {!isMobile && <ResizeHandle onResizeStart={startResize} />}
     </section>
   );
 
