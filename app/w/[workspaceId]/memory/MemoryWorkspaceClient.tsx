@@ -1,48 +1,31 @@
+// app/w/layout.tsx
+
 "use client";
 
-import { useState } from "react";
+import { usePathname } from "next/navigation";
+import clsx from "clsx";
 
-import MemoryIndexPanel from "@/app/components/memory/MemoryIndexPanel";
-import MemoryEditorPanel, {
-  MemoryRecord,
-} from "@/app/components/memory/MemoryEditorPanel";
+export default function WorkspaceLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const pathname = usePathname() ?? "";
 
-type Props = {
-  workspaceId: string;
-  initialItems?: MemoryRecord[];
-};
-
-export default function MemoryWorkspaceClient({
-  workspaceId,
-  initialItems = [],
-}: Props) {
-  const [selected, setSelected] = useState<MemoryRecord | null>(null);
+  // Editor / tool pages should be edge-to-edge
+  const noPadding =
+    pathname.includes("/memory") ||
+    pathname.includes("/newsroom");
 
   return (
     <div
-      data-memory-grid
-      className="h-full grid grid-cols-[420px_1fr] min-h-0"
+      data-app-content
+      className={clsx(
+        "w-full h-full",
+        noPadding ? "px-0 py-0" : "px-8 py-10"
+      )}
     >
-      <aside className="border-r border-neutral-800 overflow-y-auto">
-        <MemoryIndexPanel
-          workspaceId={workspaceId}
-          initialItems={initialItems}
-          onSelect={setSelected}
-        />
-      </aside>
-
-      <main className="overflow-hidden">
-        {selected ? (
-          <MemoryEditorPanel
-            workspaceId={workspaceId}
-            record={selected}
-          />
-        ) : (
-          <div className="h-full flex items-center justify-center text-sm text-neutral-500">
-            Select a memory to view or edit
-          </div>
-        )}
-      </main>
+      {children}
     </div>
   );
 }
