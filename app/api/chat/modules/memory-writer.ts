@@ -1,7 +1,8 @@
 // app/api/chat/modules/memory-writer.ts
 // ------------------------------------------------------------
 // Phase A Memory Writer — COOKIE-AWARE, RLS-SAFE
-// + Classifier Instrumentation (Advisory)
+// Explicit Intent Takes Precedence Over Classification
+// Classifier = Advisory Only (No Scope Authority)
 // ------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
@@ -52,8 +53,11 @@ export async function writeMemory(
     }
   );
 
+  const hasWorkspace = Boolean(workspaceId);
+  const isExplicit = source === "explicit";
+
   // ----------------------------
-  // Intent log (pre-classification)
+  // Intent log (authoritative)
   // ----------------------------
   console.log("[MEMORY-WRITE] intent", {
     schema: "memory",
@@ -62,11 +66,11 @@ export async function writeMemory(
     memoryType,
     source,
     bytes: content.length,
-    hasWorkspace: Boolean(workspaceId),
+    hasWorkspace,
   });
 
   // ----------------------------
-  // Classification (advisory)
+  // Classification (advisory only)
   // ----------------------------
   let classification:
     | {
@@ -81,7 +85,6 @@ export async function writeMemory(
   if (content && content.trim().length >= 5) {
     try {
       const result = await classifyMemoryText(content);
-
       classification = {
         label: result.label,
         confidence: Number(result.confidence?.toFixed(3)) || 0,
@@ -94,18 +97,10 @@ export async function writeMemory(
           err instanceof Error ? err.message : "unknown classifier error",
       });
     }
-  } else {
-    console.log("[MEMORY-CLASSIFIER] skipped (input too short)", {
-      userId,
-      length: content?.length ?? 0,
-    });
   }
 
   const classifyDurationMs = Date.now() - classifyStart;
 
-  // ----------------------------
-  // Classification instrumentation
-  // ----------------------------
   if (classification) {
     console.log("[MEMORY-CLASSIFIER] result", {
       userId,
@@ -113,12 +108,33 @@ export async function writeMemory(
       confidence: classification.confidence,
       provider: classification.provider,
       duration_ms: classifyDurationMs,
-      is_other: classification.label === "Other",
+      advisory: true,
     });
   }
 
+  // --------------------------------------------------
+  // FINAL PRECEDENCE RESOLUTION (THIS IS THE FIX)
+  // --------------------------------------------------
+  //
+  // Rule:
+  // Explicit user intent + workspace context
+  // CANNOT be downgraded by classifier semantics.
+  //
+  // Classification may annotate, never veto.
+  //
+  const workspaceEligible =
+    isExplicit && hasWorkspace;
+
+  console.log("[MEMORY-WRITE] precedence", {
+    userId,
+    explicit: isExplicit,
+    hasWorkspace,
+    classifierLabel: classification?.label ?? null,
+    workspaceEligible,
+  });
+
   // ----------------------------
-  // Write memory (unchanged schema)
+  // Write memory (authoritative)
   // ----------------------------
   const writeStart = Date.now();
 
@@ -128,13 +144,11 @@ export async function writeMemory(
     .insert({
       user_id: userId,
       email,
-      workspace_id: workspaceId,
+      workspace_id: workspaceEligible ? workspaceId : null,
       memory_type: memoryType,
       source,
       content,
-      // NOTE:
-      // Classification is advisory for now.
-      // We are intentionally NOT persisting label yet
+      // Classification intentionally NOT persisted
       // until taxonomy is finalized.
     });
 
@@ -158,6 +172,7 @@ export async function writeMemory(
   console.log("[MEMORY-WRITE] SUCCESS", {
     userId,
     memoryType,
+    workspaceEligible,
     write_duration_ms: writeDurationMs,
     total_duration_ms: Date.now() - startedAt,
     classified: Boolean(classification),
