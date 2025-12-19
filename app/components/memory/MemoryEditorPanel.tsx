@@ -1,41 +1,38 @@
 "use client";
 
-export type MemoryRecord = {
-  id: string;
-  content: string;
-  memory_type: string;
-  updated_at: string;
-};
+import { useState } from "react";
+import type { MemoryRecord } from "@/app/w/[workspaceId]/memory/MemoryWorkspaceClient";
 
 type Props = {
   workspaceId: string;
-  record: MemoryRecord | null;
+  record: MemoryRecord;
 };
 
 export default function MemoryEditorPanel({
+  workspaceId,
   record,
 }: Props) {
-  if (!record) {
-    return (
-      <div className="h-full flex items-center justify-center text-sm text-neutral-500">
-        Select a memory to view or edit
-      </div>
-    );
-  }
+  const [content, setContent] = useState(record.content);
 
   return (
-    <div className="h-full p-6 flex flex-col gap-4">
-      <div className="text-xs uppercase tracking-wide text-neutral-400">
-        {record.memory_type}
+    <div className="h-full flex flex-col p-6 gap-4">
+      <div className="text-xs text-neutral-500">
+        Workspace: {workspaceId}
       </div>
 
       <textarea
-        className="flex-1 w-full rounded-md bg-neutral-900 border border-neutral-800 p-4 text-sm text-neutral-200 resize-none"
-        defaultValue={record.content}
+        className="flex-1 w-full rounded-md bg-neutral-900 border border-neutral-800 p-4 text-sm"
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
       />
 
-      <div className="text-xs text-neutral-500">
-        Last updated: {new Date(record.updated_at).toLocaleString()}
+      <div className="flex justify-end gap-2">
+        <button className="px-3 py-1 text-sm rounded-md border border-neutral-700">
+          Cancel
+        </button>
+        <button className="px-3 py-1 text-sm rounded-md bg-blue-600 text-white">
+          Save
+        </button>
       </div>
     </div>
   );
