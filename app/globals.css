@@ -254,34 +254,4 @@ html, body {
     padding: 3rem 2.5rem;
   }
 }
-/* Golden Anchor glow */
-.mc-outlet-glow-gold::before {
-  content: "";
-  position: absolute;
-  inset: -2px;
-  border-radius: 10px;
-  background: radial-gradient(
-    80% 80% at 50% 50%,
-    rgba(245, 158, 11, 0.35),
-    rgba(245, 158, 11, 0.0) 70%
-  );
-  filter: blur(8px);
-  z-index: -1;
-}
-
-/* Watchlist glow */
-.mc-outlet-glow-red::before {
-  content: "";
-  position: absolute;
-  inset: -2px;
-  border-radius: 10px;
-  background: radial-gradient(
-    80% 80% at 50% 50%,
-    rgba(239, 68, 68, 0.35),
-    rgba(239, 68, 68, 0.0) 70%
-  );
-  filter: blur(8px);
-  z-index: -1;
-}
-
 
