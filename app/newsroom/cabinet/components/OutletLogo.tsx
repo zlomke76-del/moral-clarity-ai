@@ -1,51 +1,62 @@
-// app/newsroom/cabinet/components/OutletLogo.tsx
 "use client";
 
 import { useState } from "react";
 
 type Props = {
   domain: string;
-  name: string;
-  logoUrl?: string | null;
+  name?: string;
   className?: string;
 };
 
-export default function OutletLogo({
-  domain,
-  name,
-  logoUrl,
-  className,
-}: Props) {
+export default function OutletLogo({ domain, name, className }: Props) {
   const [broken, setBroken] = useState(false);
 
-  const baseClass =
-    "flex items-center justify-center overflow-hidden rounded-lg bg-neutral-900 text-sm font-semibold text-neutral-50";
   const sizeClass = className ?? "h-10 w-10";
 
-  const labelSource = name || domain || "?";
+  const label = name || domain || "?";
   const initial =
-    labelSource.trim().length > 0
-      ? labelSource.trim()[0]!.toUpperCase()
-      : "?";
+    label.trim().length > 0 ? label.trim()[0].toUpperCase() : "?";
 
-  // If no logo URL or it failed, render fallback
-  if (!logoUrl || broken) {
+  // Normalize domain (IMPORTANT)
+  const normalizedDomain = domain
+    ?.replace(/^https?:\/\//, "")
+    ?.replace(/^www\./, "")
+    ?.trim();
+
+  const src = normalizedDomain
+    ? `https://logo.clearbit.com/${normalizedDomain}`
+    : null;
+
+  // FALLBACK (intentional)
+  if (!src || broken) {
     return (
-      <div className={`${baseClass} ${sizeClass}`}>
+      <div
+        className={[
+          "flex items-center justify-center rounded-lg",
+          "bg-neutral-800 text-neutral-100",
+          "font-semibold text-sm",
+          sizeClass,
+        ].join(" ")}
+        title={label}
+      >
         {initial}
       </div>
     );
   }
 
   return (
-    <div className={`${baseClass} ${sizeClass}`}>
+    <div
+      className={[
+        "flex items-center justify-center rounded-lg",
+        "bg-neutral-900 overflow-hidden",
+        sizeClass,
+      ].join(" ")}
+    >
       <img
-        src={logoUrl}
-        alt={name || domain}
+        src={src}
+        alt={label}
         className="h-full w-full object-contain"
         onError={() => setBroken(true)}
-        loading="lazy"
-        referrerPolicy="no-referrer"
       />
     </div>
   );
