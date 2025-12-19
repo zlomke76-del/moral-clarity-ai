@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 export type MemoryRecord = {
   id: string;
   content: string;
@@ -8,12 +10,16 @@ export type MemoryRecord = {
 };
 
 type Props = {
-  memory: MemoryRecord | null;
-  onSave: (memory: MemoryRecord) => void;
+  workspaceId: string;
+  selected?: MemoryRecord | null;
 };
 
-export default function MemoryEditorPanel({ memory, onSave }: Props) {
-  if (!memory) {
+export default function MemoryEditorPanel({
+  selected,
+}: Props) {
+  const [content, setContent] = useState(selected?.content ?? "");
+
+  if (!selected) {
     return (
       <div className="h-full flex items-center justify-center text-sm text-neutral-500">
         Select a memory to view or edit
@@ -22,21 +28,24 @@ export default function MemoryEditorPanel({ memory, onSave }: Props) {
   }
 
   return (
-    <div className="h-full flex flex-col gap-4">
+    <div className="h-full flex flex-col gap-4 p-6">
+      <div className="text-xs text-neutral-500">
+        {selected.memory_type} •{" "}
+        {new Date(selected.updated_at).toLocaleString()}
+      </div>
+
       <textarea
-        className="flex-1 w-full resize-none rounded border border-neutral-800 bg-neutral-900 p-4 text-sm outline-none"
-        value={memory.content}
-        onChange={(e) => {
-          memory.content = e.target.value;
-        }}
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        className="flex-1 w-full rounded-md bg-neutral-950 border border-neutral-800 p-4 text-sm text-neutral-100 resize-none focus:outline-none focus:ring-1 focus:ring-neutral-700"
       />
 
       <div className="flex justify-end">
         <button
-          onClick={() => onSave(memory)}
-          className="rounded bg-emerald-600 px-4 py-2 text-sm hover:bg-emerald-700"
+          disabled
+          className="px-4 py-2 rounded-md text-sm bg-neutral-800 text-neutral-400 cursor-not-allowed"
         >
-          Save
+          Save (wired next)
         </button>
       </div>
     </div>
