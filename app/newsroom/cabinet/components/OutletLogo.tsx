@@ -1,4 +1,3 @@
-// app/newsroom/cabinet/components/OutletLogo.tsx
 "use client";
 
 import { useState } from "react";
@@ -9,8 +8,14 @@ type Props = {
   className?: string;
 };
 
+function normalizeLogoDomain(domain: string) {
+  return domain
+    .replace(/^www\./, "")
+    .replace(/^.+?\.(?=[^.]+\.[^.]+$)/, "");
+}
+
 export default function OutletLogo({ domain, name, className }: Props) {
-  const [failed, setFailed] = useState(false);
+  const [broken, setBroken] = useState(false);
 
   const baseClass =
     "flex items-center justify-center overflow-hidden rounded-lg bg-neutral-900 text-sm font-semibold text-neutral-50";
@@ -22,8 +27,7 @@ export default function OutletLogo({ domain, name, className }: Props) {
       ? labelSource.trim()[0]!.toUpperCase()
       : "?";
 
-  // Fallback: initials only
-  if (failed || !domain) {
+  if (!domain || broken) {
     return (
       <div className={`${baseClass} ${sizeClass}`}>
         {initial}
@@ -31,17 +35,17 @@ export default function OutletLogo({ domain, name, className }: Props) {
     );
   }
 
-  const src = `/api/logo?domain=${encodeURIComponent(domain)}`;
+  const normalized = normalizeLogoDomain(domain);
+  const url = `https://logo.clearbit.com/${normalized}`;
 
   return (
     <div className={`${baseClass} ${sizeClass}`}>
       <img
-        src={src}
+        src={url}
         alt={name || domain}
         className="h-full w-full object-contain"
-        onError={() => setFailed(true)}
+        onError={() => setBroken(true)}
         loading="lazy"
-        decoding="async"
       />
     </div>
   );
