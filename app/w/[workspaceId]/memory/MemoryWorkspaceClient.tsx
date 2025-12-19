@@ -7,14 +7,14 @@ import type { MemoryRecord } from "@/app/components/memory/types";
 
 type Props = {
   workspaceId: string;
-  initialItems?: MemoryRecord[];
+  initialItems: MemoryRecord[];
 };
 
 export default function MemoryWorkspaceClient({
   workspaceId,
-  initialItems = [],
+  initialItems,
 }: Props) {
-  const [items, setItems] = useState<MemoryRecord[]>(initialItems);
+  const [items] = useState<MemoryRecord[]>(initialItems);
   const [selected, setSelected] = useState<MemoryRecord | null>(null);
 
   return (
