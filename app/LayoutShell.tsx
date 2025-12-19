@@ -18,7 +18,7 @@ export default function LayoutShell({
   const isApp =
     pathname === "/app" ||
     pathname.startsWith("/app/") ||
-    pathname.startsWith("/w/"); // IMPORTANT
+    pathname.startsWith("/w/"); // workspace routes included
 
   const isAuth = pathname.startsWith("/auth");
   const isNewsroom =
@@ -26,6 +26,7 @@ export default function LayoutShell({
 
   return (
     <>
+      {/* Mount Solace only where allowed */}
       {!isAuth && !isNewsroom && (
         <Suspense fallback={null}>
           <SolaceGuard />
@@ -45,7 +46,10 @@ export default function LayoutShell({
             data-app-main
             className="h-full flex flex-col items-start justify-start"
           >
-            <div className="w-full max-w-3xl px-8 py-16">
+            <div
+              data-layout-boundary="AppContentColumn"
+              className="w-full max-w-3xl px-8 py-16"
+            >
               {children}
             </div>
           </main>
@@ -58,7 +62,9 @@ export default function LayoutShell({
           {children}
         </main>
       )}
-<LayoutDebugOverlay />
+
+      {/* Always-on visual diagnostics */}
+      <LayoutDebugOverlay />
 
       <SpeedInsights />
     </>
