@@ -20,6 +20,7 @@ export default function LayoutShell({
     pathname.startsWith("/app/") ||
     pathname.startsWith("/w/");
 
+  const isWorkspace = pathname.startsWith("/w/");
   const isAuth = pathname.startsWith("/auth");
   const isNewsroom =
     pathname === "/newsroom" || pathname.startsWith("/newsroom/");
@@ -46,13 +47,18 @@ export default function LayoutShell({
             data-app-main
             className="h-full flex flex-col items-start justify-start"
           >
-            {/* IMPORTANT:
-                NO width constraints here.
-                Pages decide their own layout.
+            {/* 
+              RULE:
+              - /w/* pages own the canvas (NO padding)
+              - /app/* pages get standard padding
             */}
             <div
               data-app-content
-              className="w-full px-8 py-10"
+              className={
+                isWorkspace
+                  ? "w-full h-full px-0 py-0"
+                  : "w-full px-8 py-10"
+              }
             >
               {children}
             </div>
