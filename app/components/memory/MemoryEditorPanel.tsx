@@ -4,17 +4,16 @@ import { useEffect, useState } from "react";
 
 export type MemoryRecord = {
   id: string;
-  content: string;
   memory_type: string;
-  confidence?: number;
-  sensitivity?: number;
+  content: string;
+  created_at?: string;
   updated_at?: string;
 };
 
 type Props = {
   memory: MemoryRecord | null;
-  onChange?: (updated: Partial<MemoryRecord>) => void;
-  onSave?: () => void;
+  onChange?: (updated: MemoryRecord) => void;
+  onSave?: (memory: MemoryRecord) => void;
 };
 
 export default function MemoryEditorPanel({
@@ -22,21 +21,27 @@ export default function MemoryEditorPanel({
   onChange,
   onSave,
 }: Props) {
-  const [content, setContent] = useState("");
-  const [memoryType, setMemoryType] = useState("fact");
+  const [draft, setDraft] = useState<MemoryRecord | null>(memory);
 
   useEffect(() => {
-    if (!memory) return;
-    setContent(memory.content ?? "");
-    setMemoryType(memory.memory_type ?? "fact");
-  }, [memory]);
+    setDraft(memory);
+  }, [memory?.id]);
 
-  if (!memory) {
+  if (!draft) {
     return (
       <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-6 text-sm text-neutral-400">
-        Select a memory to view or edit.
+        Select a memory to review or edit.
       </div>
     );
+  }
+
+  function update<K extends keyof MemoryRecord>(
+    key: K,
+    value: MemoryRecord[K]
+  ) {
+    const next = { ...draft, [key]: value };
+    setDraft(next);
+    onChange?.(next);
   }
 
   return (
@@ -46,25 +51,21 @@ export default function MemoryEditorPanel({
           Memory Editor
         </h2>
 
-        {memory.updated_at && (
-          <span className="text-xs text-neutral-500">
-            Last updated {new Date(memory.updated_at).toLocaleString()}
-          </span>
-        )}
+        <span className="text-xs text-neutral-500 capitalize">
+          {draft.memory_type}
+        </span>
       </div>
 
-      <div className="space-y-2">
-        <label className="text-xs text-neutral-400">
-          Memory type
+      <div className="space-y-3">
+        <label className="block text-xs text-neutral-400">
+          Type
         </label>
         <select
-          className="w-full rounded-md border border-neutral-700 bg-black/40 px-3 py-2 text-sm"
-          value={memoryType}
-          onChange={(e) => {
-            const value = e.target.value;
-            setMemoryType(value);
-            onChange?.({ memory_type: value });
-          }}
+          value={draft.memory_type}
+          onChange={(e) =>
+            update("memory_type", e.target.value)
+          }
+          className="w-full rounded-md bg-black/40 border border-neutral-700 px-3 py-2 text-sm text-neutral-200"
         >
           <option value="fact">Fact</option>
           <option value="identity">Identity</option>
@@ -73,37 +74,33 @@ export default function MemoryEditorPanel({
         </select>
       </div>
 
-      <div className="space-y-2">
-        <label className="text-xs text-neutral-400">
+      <div className="space-y-3">
+        <label className="block text-xs text-neutral-400">
           Content
         </label>
         <textarea
-          className="w-full min-h-[180px] rounded-md border border-neutral-700 bg-black/40 px-3 py-2 text-sm leading-relaxed"
-          value={content}
-          onChange={(e) => {
-            const value = e.target.value;
-            setContent(value);
-            onChange?.({ content: value });
-          }}
+          value={draft.content}
+          onChange={(e) =>
+            update("content", e.target.value)
+          }
+          className="w-full min-h-[160px] rounded-md bg-black/40 border border-neutral-700 px-3 py-2 text-sm text-neutral-200"
+          placeholder="Edit memory content..."
         />
       </div>
 
-      <div className="flex justify-end gap-3 pt-2">
-        <button
-          type="button"
-          className="rounded-md border border-neutral-700 px-4 py-2 text-xs text-neutral-300 hover:bg-neutral-800"
-          onClick={() => {
-            setContent(memory.content ?? "");
-            setMemoryType(memory.memory_type ?? "fact");
-          }}
-        >
-          Reset
-        </button>
+      <div className="flex items-center justify-between pt-2">
+        <div className="text-xs text-neutral-500">
+          {draft.updated_at
+            ? `Last updated ${new Date(
+                draft.updated_at
+              ).toLocaleString()}`
+            : "Unsaved memory"}
+        </div>
 
         <button
           type="button"
+          onClick={() => onSave?.(draft)}
           className="rounded-md bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-500"
-          onClick={onSave}
         >
           Save
         </button>
