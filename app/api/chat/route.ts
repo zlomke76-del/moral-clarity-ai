@@ -1,6 +1,7 @@
 // ------------------------------------------------------------
 // Solace Chat API Route (AUTHORITATIVE)
 // Conversation-scoped Working Memory
+// Rolling Compaction Installed
 // NEXT 16 SAFE — NODE RUNTIME
 // ------------------------------------------------------------
 
@@ -18,6 +19,7 @@ import { runHybridPipeline } from "./modules/hybrid";
 import { runNewsroomExecutor } from "./modules/newsroom-executor";
 import { writeMemory } from "./modules/memory-writer";
 import { generateImage } from "./modules/image-router";
+import { runSessionCompaction } from "./modules/runSessionCompaction";
 
 // ------------------------------------------------------------
 // Runtime configuration
@@ -25,6 +27,13 @@ import { generateImage } from "./modules/image-router";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+// ------------------------------------------------------------
+// Compaction thresholds (Founder-lane safe)
+// ------------------------------------------------------------
+const WM_TURN_TRIGGER = 25;
+const WM_CHUNK_SIZE = 12;
+const WM_TAIL_PROTECT = 10;
 
 // ------------------------------------------------------------
 // Helpers
@@ -53,7 +62,7 @@ function isImageRequest(message: string): boolean {
 }
 
 // ------------------------------------------------------------
-// EXPLICIT FACT REMEMBER DETECTOR (AUTHORITATIVE)
+// EXPLICIT FACT REMEMBER DETECTOR
 // ------------------------------------------------------------
 function extractExplicitFact(msg: string): string | null {
   const m = msg.trim();
@@ -67,77 +76,71 @@ function extractExplicitFact(msg: string): string | null {
 }
 
 // ------------------------------------------------------------
-// RELIABILITY DIAGNOSTICS (READ-ONLY)
+// ROLLING COMPACTION CHECK (NON-BLOCKING)
 // ------------------------------------------------------------
-function emitReliabilityDiag(params: {
-  sessionId: string;
-  context: any;
-  pipeline: "hybrid" | "newsroom" | "image";
+async function maybeRunRollingCompaction(params: {
+  supabaseService: ReturnType<typeof createServerClient>;
+  conversationId: string;
+  userId: string;
 }) {
-  const wmItems = params.context?.workingMemory?.items ?? [];
-  const facts = params.context?.memoryPack?.facts ?? [];
-  const episodic = params.context?.memoryPack?.episodic ?? [];
+  const { supabaseService, conversationId, userId } = params;
 
-  console.log("[DIAG-CTX-INTEGRITY]", {
-    sessionId: params.sessionId,
-    wmTurns: wmItems.length,
-    wmCap: 10,
-    wmOverflowed: wmItems.length > 10,
-    factsAvailable: facts.length,
-    episodicAvailable: episodic.length,
-    researchUsed: params.context.didResearch === true,
-    newsDigestUsed: params.context.newsDigest?.length ?? 0,
-  });
+  const wmRes = await supabaseService
+    .schema("memory")
+    .from("working_memory")
+    .select("id, role, content, created_at")
+    .eq("conversation_id", conversationId)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true });
 
-  console.log("[DIAG-MEMORY]", {
-    sessionId: params.sessionId,
-    workingMemoryActive: params.context.workingMemory?.active === true,
-    workingMemoryItems: wmItems.length,
-    persistentFactsRead: facts.length,
-    persistentEpisodesRead: episodic.length,
-    unauthorizedWrites: false,
-  });
+  const wm = wmRes.data ?? [];
 
-  console.log("[DIAG-CONSTRAINTS]", {
-    sessionId: params.sessionId,
-    pipeline: params.pipeline,
-    speculationBlocked: true,
-    memoryWriteGuarded: true,
-  });
-}
-
-// ------------------------------------------------------------
-// IMAGE STORAGE — SUPABASE (PUBLIC BUCKET)
-// ------------------------------------------------------------
-async function storeBase64ImageSupabase(
-  base64: string,
-  sessionId: string,
-  supabaseService: ReturnType<typeof createServerClient>
-): Promise<string> {
-  const buffer = Buffer.from(
-    base64.replace(/^data:image\/\w+;base64,/, ""),
-    "base64"
-  );
-
-  const path = `sessions/${sessionId}/${Date.now()}.png`;
-
-  const { error } = await supabaseService.storage
-    .from("moralclarity_uploads") // ✅ EXISTING PUBLIC BUCKET
-    .upload(path, buffer, {
-      contentType: "image/png",
-      upsert: false,
-    });
-
-  if (error) {
-    console.error("[IMAGE STORE ERROR]", error);
-    throw new Error("Failed to store generated image");
+  if (wm.length <= WM_TURN_TRIGGER) {
+    return;
   }
 
-  const { data } = supabaseService.storage
-    .from("moralclarity_uploads")
-    .getPublicUrl(path);
+  const safeLimit = Math.max(0, wm.length - WM_TAIL_PROTECT);
+  const chunk = wm.slice(0, Math.min(WM_CHUNK_SIZE, safeLimit));
 
-  return data.publicUrl;
+  if (chunk.length === 0) {
+    return;
+  }
+
+  console.log("[WM-COMPACTION] trigger fired", {
+    conversationId,
+    wmTurns: wm.length,
+    chunkSize: chunk.length,
+  });
+
+  try {
+    const compaction = await runSessionCompaction(conversationId, chunk);
+
+    await supabaseService.schema("memory").from("memories").insert({
+      user_id: userId,
+      email: "system",
+      workspace_id: null,
+      memory_type: "session_compaction",
+      source: "system",
+      content: JSON.stringify(compaction),
+      conversation_id: conversationId,
+      confidence: 1.0,
+    });
+
+    const idsToDelete = chunk.map((m) => m.id);
+
+    await supabaseService
+      .schema("memory")
+      .from("working_memory")
+      .delete()
+      .in("id", idsToDelete);
+
+    console.log("[WM-COMPACTION] persisted and cleaned", {
+      conversationId,
+      deleted: idsToDelete.length,
+    });
+  } catch (err) {
+    console.error("[WM-COMPACTION] failed", err);
+  }
 }
 
 // ------------------------------------------------------------
@@ -185,9 +188,6 @@ export async function POST(req: Request) {
       startedAt: sessionStartedAt,
     });
 
-    // --------------------------------------------------------
-    // Supabase clients
-    // --------------------------------------------------------
     const cookieStore = await cookies();
 
     const supabase = createServerClient(
@@ -225,46 +225,14 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
-    // IMAGE PIPELINE — STORED & SERVED (CSP SAFE)
+    // IMAGE PIPELINE
     // --------------------------------------------------------
     if (isImageRequest(message)) {
-      console.log("[IMAGE PIPELINE FIRED]", { sessionId });
-
       const base64Image = await generateImage(message);
-
-      console.log("[IMAGE GEN OK]", {
-        base64Length: base64Image.length,
-        approxBytes: Math.floor((base64Image.length * 3) / 4),
-      });
-
-      const imageUrl = await storeBase64ImageSupabase(
-        base64Image,
-        sessionId,
-        supabaseService
-      );
-
-      console.log("[IMAGE PIPELINE DELIVERED]", {
-        sessionId,
-        imageUrlPrefix: imageUrl.slice(0, 32),
-        imageUrlLength: imageUrl.length,
-      });
-
       return NextResponse.json({
         ok: true,
         response: "",
-        messages: [
-          {
-            role: "assistant",
-            content: " ", // client normalization guard
-            imageUrl,
-          },
-        ],
-        diagnostics: {
-          sessionId,
-          pipeline: "image",
-          delivered: true,
-          stored: "supabase",
-        },
+        messages: [{ role: "assistant", content: " ", imageUrl: base64Image }],
       });
     }
 
@@ -298,6 +266,17 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
+    // ROLLING COMPACTION (ASYNC, NON-BLOCKING)
+    // --------------------------------------------------------
+    if (authUserId) {
+      void maybeRunRollingCompaction({
+        supabaseService,
+        conversationId: sessionId,
+        userId: authUserId,
+      });
+    }
+
+    // --------------------------------------------------------
     // Assemble context
     // --------------------------------------------------------
     const context = await assembleContext(
@@ -309,39 +288,12 @@ export async function POST(req: Request) {
 
     const wantsNews = isNewsRequest(message);
 
-    emitReliabilityDiag({
-      sessionId,
-      context,
-      pipeline: wantsNews ? "newsroom" : "hybrid",
-    });
-
-    // --------------------------------------------------------
-    // NEWSROOM GATE
-    // --------------------------------------------------------
     if (wantsNews) {
-      if (!Array.isArray(context.newsDigest) || context.newsDigest.length < 3) {
-        const refusal =
-          "No verified neutral news digest is available for this request. I will not speculate.";
-
-        return NextResponse.json({
-          ok: true,
-          response: refusal,
-          messages: [{ role: "assistant", content: refusal }],
-          diagnostics: {
-            sessionId,
-            pipeline: "newsroom",
-            reason: "insufficient_digest",
-          },
-        });
-      }
-
       const newsroomResponse = await runNewsroomExecutor(context.newsDigest);
-
       return NextResponse.json({
         ok: true,
         response: newsroomResponse,
         messages: [{ role: "assistant", content: newsroomResponse }],
-        diagnostics: { sessionId, pipeline: "newsroom" },
       });
     }
 
@@ -375,17 +327,6 @@ export async function POST(req: Request) {
       ok: true,
       response: safeResponse,
       messages: [{ role: "assistant", content: safeResponse }],
-      diagnostics: {
-        sessionId,
-        pipeline: "hybrid",
-        factsUsed: Math.min(context.memoryPack.facts.length, FACTS_LIMIT),
-        episodicUsed: Math.min(
-          context.memoryPack.episodic.length,
-          EPISODES_LIMIT
-        ),
-        didResearch: context.didResearch,
-        newsDigestUsed: context.newsDigest.length,
-      },
     });
   } catch (err: any) {
     console.error("[CHAT ROUTE ERROR]", err?.message);
