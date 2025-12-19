@@ -1,5 +1,5 @@
 //--------------------------------------------------------------
-// HYBRID PIPELINE — REASONING ONLY (FACT-AWARE)
+// HYBRID PIPELINE — REASONING ONLY (FACT-AWARE, SESSION-BOUND)
 // Optimist + Skeptic are INTERNAL
 // Arbiter emits ONE unified Solace voice
 // Attachments visible to Arbiter ONLY
@@ -62,6 +62,44 @@ MEMORY RULES:
 }
 
 // --------------------------------------------------------------
+// SESSION STATE FORMATTER (HARD CONSTRAINT)
+// --------------------------------------------------------------
+function formatSessionState(context: any): string {
+  const state = context?.memoryPack?.sessionState;
+
+  if (!state) {
+    return `
+SESSION STATE:
+None established.
+
+RULES:
+- If no session domain exists, remain within the user's explicit topic.
+- Do NOT introduce new domains unprompted.
+`;
+  }
+
+  const constraints =
+    Array.isArray(state.constraints) && state.constraints.length > 0
+      ? state.constraints.map((c: string) => `- ${c}`).join("\n")
+      : "None specified.";
+
+  return `
+SESSION STATE (AUTHORITATIVE — DO NOT VIOLATE):
+Domain: ${state.domain ?? "unspecified"}
+Intent: ${state.intent ?? "unspecified"}
+
+SESSION CONSTRAINTS:
+${constraints}
+
+RULES:
+- You MUST remain within this domain unless the user explicitly changes it.
+- You MUST honor the session intent.
+- You MUST NOT introduce unrelated projects, products, or domains.
+- If the user appears to shift domains, ASK for confirmation.
+`;
+}
+
+// --------------------------------------------------------------
 // ATTACHMENT FORMATTER (SESSION-ONLY, NON-AUTHORITATIVE)
 // --------------------------------------------------------------
 function formatAttachments(context: any): string {
@@ -101,7 +139,7 @@ export async function runHybridPipeline(args: {
   const { userMessage, context, ministryMode, founderMode, modeHint } = args;
 
   // ----------------------------------------------------------
-  // Optimist — memory blind, attachment blind
+  // Optimist — memory blind, session blind
   // ----------------------------------------------------------
   const optimist = await callModel(
     "gpt-4.1-mini",
@@ -109,7 +147,7 @@ export async function runHybridPipeline(args: {
   );
 
   // ----------------------------------------------------------
-  // Skeptic — memory blind, attachment blind
+  // Skeptic — memory blind, session blind
   // ----------------------------------------------------------
   const skeptic = await callModel(
     "gpt-4.1-mini",
@@ -131,9 +169,15 @@ ABSOLUTE RULES:
 - Do NOT reference internal roles or stages.
 - Do NOT infer memory, preferences, or identity.
 
+DOMAIN RULES:
+- You are bound to the SESSION STATE.
+- You may NOT introduce new domains, ventures, or projects.
+- You may NOT cross-pollinate contexts.
+
 MEMORY RULES:
 - Only persisted facts may be stated as facts.
 - If no persisted facts exist, say so explicitly.
+- Session state is authoritative for this conversation.
 - Attachments are NOT facts and are session-only.
 `
   );
@@ -142,8 +186,9 @@ MEMORY RULES:
   // PERSONA DIAGNOSTIC (LOG-PROVEN)
   // ----------------------------------------------------------
   console.log("[DIAG-PERSONA]", {
-    personaVersion: "2025-12-11_authority_v5_ascii",
-    domain: "core",
+    personaVersion: "2025-12-19_session_bound_v6",
+    domain: context?.memoryPack?.sessionState?.domain ?? "unset",
+    intent: context?.memoryPack?.sessionState?.intent ?? "unset",
     founderMode,
     ministryMode,
     hasSystemPrompt:
@@ -152,6 +197,8 @@ MEMORY RULES:
 
   const arbiterPrompt = sanitizeASCII(`
 ${system}
+
+${formatSessionState(context)}
 
 ${formatPersistentFacts(context)}
 
@@ -169,7 +216,7 @@ ${userMessage}
   const finalAnswer = await callModel("gpt-4.1", arbiterPrompt);
 
   // ----------------------------------------------------------
-  // Return (pure)
+  // Return (pure, constrained)
   // ----------------------------------------------------------
   return {
     finalAnswer,
