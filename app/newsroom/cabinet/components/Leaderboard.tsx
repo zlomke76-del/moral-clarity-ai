@@ -4,7 +4,7 @@ import type { OutletOverview } from "../types";
 import OutletCard from "./OutletCard";
 
 type Props = {
-  outlets: OutletOverview[]; // MUST already be PI-ranked (highest → lowest)
+  outlets: OutletOverview[];
   selectedCanonical: string | null;
   onSelect: (canonical: string, wasSelected: boolean) => void;
 };
@@ -14,67 +14,70 @@ export default function Leaderboard({
   selectedCanonical,
   onSelect,
 }: Props) {
-  // 🔒 Explicit rules
-  const GOLDEN_COUNT = 3;
-  const WATCHLIST_COUNT = 3;
+  const GOLD_COUNT = 3;
+  const WATCH_COUNT = 3;
 
-  // Top PI performers
-  const golden = outlets.slice(0, GOLDEN_COUNT);
+  const golden = outlets.slice(0, GOLD_COUNT);
+  const watchlist = outlets.slice(-WATCH_COUNT);
+  const neutral = outlets.slice(GOLD_COUNT, outlets.length - WATCH_COUNT);
 
-  // Bottom PI performers
-  const watchlist = outlets.slice(-WATCHLIST_COUNT);
-
-  // Everyone else
-  const neutral = outlets.slice(
-    GOLDEN_COUNT,
-    Math.max(outlets.length - WATCHLIST_COUNT, GOLDEN_COUNT)
-  );
-
-  const handleSelect = (canonical: string) => {
-    onSelect(canonical, canonical === selectedCanonical);
+  const handleSelect = (canon: string) => {
+    onSelect(canon, canon === selectedCanonical);
   };
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-sm font-semibold text-neutral-100">
-        Outlet Neutrality Leaderboard
-      </h2>
+    <div className="space-y-6">
 
-      {/* 🟡 Golden Anchors */}
-      {golden.map((o, i) => (
-        <OutletCard
-          key={o.canonical_outlet}
-          outlet={o}
-          rank={i + 1}
-          selected={selectedCanonical === o.canonical_outlet}
-          badge="golden"
-          onSelect={() => handleSelect(o.canonical_outlet)}
-        />
-      ))}
+      {/* ===== GOLDEN ANCHOR ===== */}
+      <div className="space-y-2">
+        {golden.map((o, i) => (
+          <div
+            key={o.canonical_outlet}
+            className="relative rounded-xl bg-yellow-500/10 shadow-[0_0_40px_rgba(234,179,8,0.35)]"
+          >
+            <OutletCard
+              outlet={o}
+              rank={i + 1}
+              selected={selectedCanonical === o.canonical_outlet}
+              badge="golden"
+              onSelect={() => handleSelect(o.canonical_outlet)}
+            />
+          </div>
+        ))}
+      </div>
 
-      {/* ⚪ Neutral / Competitive Middle */}
-      {neutral.map((o, i) => (
-        <OutletCard
-          key={o.canonical_outlet}
-          outlet={o}
-          rank={GOLDEN_COUNT + i + 1}
-          selected={selectedCanonical === o.canonical_outlet}
-          badge="neutral"
-          onSelect={() => handleSelect(o.canonical_outlet)}
-        />
-      ))}
+      {/* ===== NEUTRAL FIELD ===== */}
+      <div className="space-y-2">
+        {neutral.map((o, i) => (
+          <OutletCard
+            key={o.canonical_outlet}
+            outlet={o}
+            rank={GOLD_COUNT + i + 1}
+            selected={selectedCanonical === o.canonical_outlet}
+            badge="neutral"
+            onSelect={() => handleSelect(o.canonical_outlet)}
+          />
+        ))}
+      </div>
 
-      {/* 🔴 Watchlist */}
-      {watchlist.map((o, i) => (
-        <OutletCard
-          key={o.canonical_outlet}
-          outlet={o}
-          rank={outlets.length - WATCHLIST_COUNT + i + 1}
-          selected={selectedCanonical === o.canonical_outlet}
-          badge="watchlist"
-          onSelect={() => handleSelect(o.canonical_outlet)}
-        />
-      ))}
+      {/* ===== WATCHLIST ===== */}
+      <div className="space-y-2">
+        {watchlist.map((o, i) => (
+          <div
+            key={o.canonical_outlet}
+            className="relative rounded-xl bg-red-500/10 shadow-[0_0_40px_rgba(239,68,68,0.35)]"
+          >
+            <OutletCard
+              outlet={o}
+              rank={outlets.length - WATCH_COUNT + i + 1}
+              selected={selectedCanonical === o.canonical_outlet}
+              badge="watchlist"
+              onSelect={() => handleSelect(o.canonical_outlet)}
+            />
+          </div>
+        ))}
+      </div>
+
     </div>
   );
 }
