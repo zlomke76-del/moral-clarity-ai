@@ -6,6 +6,7 @@ import NeuralSidebar from "@/app/components/NeuralSidebar";
 import SolaceGuard from "@/app/components/SolaceGuard";
 import { Suspense } from "react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import LayoutDebugOverlay from "@/app/components/LayoutDebugOverlay";
 
 export default function LayoutShell({
   children,
@@ -57,6 +58,7 @@ export default function LayoutShell({
           {children}
         </main>
       )}
+<LayoutDebugOverlay />
 
       <SpeedInsights />
     </>
