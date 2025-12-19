@@ -1,9 +1,23 @@
 /* app/(marketing)/neutral-news/page.tsx */
 
+import dynamic from "next/dynamic";
 import HowSolaceWorks from "@/components/news/HowSolaceWorks";
-import { DailyDigestFeedClient } from "@/components/news/DailyDigestFeedClient";
-import { OutletNeutralityScoreboardClient } from "@/components/news/OutletNeutralityScoreboardClient";
 
+// Client-only components MUST be dynamically imported with ssr disabled
+const DailyDigestFeedClient = dynamic(
+  () => import("@/components/news/DailyDigestFeedClient").then(m => m.DailyDigestFeedClient),
+  { ssr: false }
+);
+
+const OutletNeutralityScoreboardClient = dynamic(
+  () =>
+    import("@/components/news/OutletNeutralityScoreboardClient").then(
+      m => m.OutletNeutralityScoreboardClient
+    ),
+  { ssr: false }
+);
+
+// This page is allowed to be static once client code is isolated
 export const dynamic = "force-static";
 
 export default function NeutralNewsPage() {
@@ -13,11 +27,12 @@ export default function NeutralNewsPage() {
       <section className="border-b border-slate-800 bg-slate-950/95 px-6 py-20">
         <div className="mx-auto flex max-w-5xl flex-col items-start gap-6">
           <h1 className="text-3xl font-bold leading-tight text-slate-50 md:text-4xl">
-            The World’s First <span className="text-emerald-400">Neutral AI News Anchor</span>
+            The World’s First{" "}
+            <span className="text-emerald-400">Neutral AI News Anchor</span>
           </h1>
           <p className="max-w-2xl text-lg text-slate-300">
-            Solace doesn’t browse the web. She reads a verified, bias-scored,
-            mathematically transparent news digest — backed by MCAI’s
+            Solace does not browse the web. She reads a verified, bias scored,
+            mathematically transparent news digest backed by MCAI’s
             ledger-driven media engine.
           </p>
 
@@ -46,7 +61,7 @@ export default function NeutralNewsPage() {
           </h2>
           <p className="mb-8 max-w-2xl text-sm text-slate-400">
             Each story shown here has been independently scored for bias,
-            context, omissions, disputed claims, and predictability — then
+            context, omissions, disputed claims, and predictability, then
             locked into MCAI’s global ledger for Solace to read.
           </p>
 
@@ -61,8 +76,9 @@ export default function NeutralNewsPage() {
             Outlet Neutrality Scoreboard
           </h2>
           <p className="mb-8 max-w-2xl text-sm text-slate-400">
-            Lifetime bias intent and predictability across all outlets MCAI has
-            scored. Each outlet is normalized, deduped, and tracked over time.
+            Lifetime bias intent and predictability across all outlets MCAI
+            has scored. Each outlet is normalized, deduped, and tracked over
+            time.
           </p>
 
           <OutletNeutralityScoreboardClient limit={200} minStories={3} />
