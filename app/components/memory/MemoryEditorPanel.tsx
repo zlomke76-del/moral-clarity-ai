@@ -9,34 +9,36 @@ export type MemoryRecord = {
 
 type Props = {
   memory: MemoryRecord | null;
-  onSave: (m: MemoryRecord) => void;
+  onSave: (memory: MemoryRecord) => void;
 };
 
 export default function MemoryEditorPanel({ memory, onSave }: Props) {
   if (!memory) {
     return (
-      <div className="text-neutral-500 text-sm">
-        Select a memory to edit
+      <div className="h-full flex items-center justify-center text-sm text-neutral-500">
+        Select a memory to view or edit
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full gap-4">
+    <div className="h-full flex flex-col gap-4">
       <textarea
-        className="flex-1 w-full resize-none bg-neutral-900 border border-neutral-700 rounded p-4 text-sm"
+        className="flex-1 w-full resize-none rounded border border-neutral-800 bg-neutral-900 p-4 text-sm outline-none"
         value={memory.content}
-        onChange={(e) =>
-          (memory.content = e.target.value)
-        }
+        onChange={(e) => {
+          memory.content = e.target.value;
+        }}
       />
 
-      <button
-        onClick={() => onSave(memory)}
-        className="self-end px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700 text-sm"
-      >
-        Save
-      </button>
+      <div className="flex justify-end">
+        <button
+          onClick={() => onSave(memory)}
+          className="rounded bg-emerald-600 px-4 py-2 text-sm hover:bg-emerald-700"
+        >
+          Save
+        </button>
+      </div>
     </div>
   );
 }
