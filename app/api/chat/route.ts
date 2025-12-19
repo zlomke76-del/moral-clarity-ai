@@ -1,7 +1,8 @@
 // ------------------------------------------------------------
 // Solace Chat API Route (AUTHORITATIVE)
 // Conversation-scoped Working Memory
-// Explicit Finalization Installed
+// Rolling Compaction + Explicit Finalization
+// NEXT 16 SAFE — NODE RUNTIME
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -18,6 +19,7 @@ import { runHybridPipeline } from "./modules/hybrid";
 import { runNewsroomExecutor } from "./modules/newsroom-executor";
 import { writeMemory } from "./modules/memory-writer";
 import { generateImage } from "./modules/image-router";
+
 import { runSessionCompaction } from "@/lib/memory/runSessionCompaction";
 import { finalizeConversation } from "@/lib/memory/finalizeConversation";
 
@@ -29,11 +31,21 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 // ------------------------------------------------------------
-// Compaction thresholds
+// Compaction thresholds (Founder lane)
 // ------------------------------------------------------------
 const WM_TURN_TRIGGER = 25;
 const WM_CHUNK_SIZE = 12;
 const WM_TAIL_PROTECT = 10;
+
+// ------------------------------------------------------------
+// TYPES
+// ------------------------------------------------------------
+type WMRow = {
+  id: string;
+  role: "system" | "user" | "assistant";
+  content: string;
+  created_at?: string;
+};
 
 // ------------------------------------------------------------
 // Helpers
@@ -62,6 +74,20 @@ function isImageRequest(message: string): boolean {
 }
 
 // ------------------------------------------------------------
+// EXPLICIT FACT REMEMBER DETECTOR
+// ------------------------------------------------------------
+function extractExplicitFact(msg: string): string | null {
+  const m = msg.trim();
+  const match = m.match(/^(remember\s+(that\s+)?)(.+)$/i);
+  if (!match) return null;
+
+  const fact = match[3]?.trim();
+  if (!fact || fact.length < 3) return null;
+
+  return fact;
+}
+
+// ------------------------------------------------------------
 // ROLLING COMPACTION (NON-BLOCKING)
 // ------------------------------------------------------------
 async function maybeRunRollingCompaction(params: {
@@ -79,13 +105,20 @@ async function maybeRunRollingCompaction(params: {
     .eq("user_id", userId)
     .order("created_at", { ascending: true });
 
-  const wm = wmRes.data ?? [];
+  const wm: WMRow[] = (wmRes.data ?? []) as WMRow[];
 
   if (wm.length <= WM_TURN_TRIGGER) return;
 
   const safeLimit = Math.max(0, wm.length - WM_TAIL_PROTECT);
-  const chunk = wm.slice(0, Math.min(WM_CHUNK_SIZE, safeLimit));
+  const chunk: WMRow[] = wm.slice(0, Math.min(WM_CHUNK_SIZE, safeLimit));
+
   if (chunk.length === 0) return;
+
+  console.log("[WM-COMPACTION] trigger fired", {
+    conversationId,
+    wmTurns: wm.length,
+    chunkSize: chunk.length,
+  });
 
   try {
     const compaction = await runSessionCompaction(conversationId, chunk);
@@ -107,8 +140,13 @@ async function maybeRunRollingCompaction(params: {
       .delete()
       .in(
         "id",
-        chunk.map((c) => c.id)
+        chunk.map((c: WMRow) => c.id)
       );
+
+    console.log("[WM-COMPACTION] persisted and cleaned", {
+      conversationId,
+      deleted: chunk.length,
+    });
   } catch (err) {
     console.error("[WM-COMPACTION] failed", err);
   }
@@ -127,7 +165,7 @@ export async function POST(req: Request) {
       userKey,
       workspaceId,
       conversationId,
-      action, // <-- NEW
+      action,
       ministryMode = false,
       founderMode = false,
       modeHint = "",
@@ -198,17 +236,40 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // Normal chat flow continues below
+    // IMAGE PIPELINE
     // --------------------------------------------------------
-    if (!message) {
+    if (message && isImageRequest(message)) {
+      const base64Image = await generateImage(message);
       return NextResponse.json({
         ok: true,
         response: "",
-        messages: [],
+        messages: [{ role: "assistant", content: " ", imageUrl: base64Image }],
       });
     }
 
-    if (authUserId) {
+    // --------------------------------------------------------
+    // EXPLICIT FACT MEMORY
+    // --------------------------------------------------------
+    const explicitFact = message ? extractExplicitFact(message) : null;
+
+    if (explicitFact && authUserId && user?.email) {
+      await writeMemory(
+        {
+          userId: authUserId,
+          email: user.email,
+          workspaceId: workspaceId ?? null,
+          memoryType: "fact",
+          source: "explicit",
+          content: explicitFact,
+        },
+        req.headers.get("cookie") ?? ""
+      );
+    }
+
+    // --------------------------------------------------------
+    // WRITE USER MESSAGE TO WM
+    // --------------------------------------------------------
+    if (authUserId && message) {
       await supabaseService.schema("memory").from("working_memory").insert({
         conversation_id: conversationId,
         user_id: authUserId,
@@ -218,6 +279,9 @@ export async function POST(req: Request) {
       });
     }
 
+    // --------------------------------------------------------
+    // ROLLING COMPACTION (ASYNC)
+    // --------------------------------------------------------
     if (authUserId) {
       void maybeRunRollingCompaction({
         supabaseService,
@@ -226,17 +290,23 @@ export async function POST(req: Request) {
       });
     }
 
+    // --------------------------------------------------------
+    // ASSEMBLE CONTEXT
+    // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
       workspaceId ?? null,
-      message,
+      message ?? "",
       {
         sessionId: conversationId,
         sessionStartedAt: new Date().toISOString(),
       }
     );
 
-    if (isNewsRequest(message)) {
+    // --------------------------------------------------------
+    // NEWSROOM
+    // --------------------------------------------------------
+    if (message && isNewsRequest(message)) {
       const newsroomResponse = await runNewsroomExecutor(context.newsDigest);
       return NextResponse.json({
         ok: true,
@@ -245,8 +315,11 @@ export async function POST(req: Request) {
       });
     }
 
+    // --------------------------------------------------------
+    // HYBRID PIPELINE
+    // --------------------------------------------------------
     const result = await runHybridPipeline({
-      userMessage: message,
+      userMessage: message ?? "",
       context,
       ministryMode,
       founderMode,
