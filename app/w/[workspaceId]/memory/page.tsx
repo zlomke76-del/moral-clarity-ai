@@ -1,7 +1,3 @@
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-import { createClientServer } from "@/lib/supabase/server";
 import MemoryWorkspaceClient from "./MemoryWorkspaceClient";
 
 type Props = {
@@ -10,27 +6,12 @@ type Props = {
   };
 };
 
-export default async function WorkspaceMemoryPage({ params }: Props) {
-  const workspaceId = decodeURIComponent(params.workspaceId);
-  const supabase = await createClientServer();
-
-  const { data, error } = await supabase
-    .from("memory.memories")
-    .select("id, content, memory_type, updated_at")
-    .eq("workspace_id", workspaceId)
-    .order("updated_at", { ascending: false })
-    .limit(25);
-
-  if (error) {
-    console.error("[memory page] load error", error);
-  }
-
+export default function WorkspaceMemoryPage({ params }: Props) {
   return (
     <section
       data-layout-boundary="WorkspaceMemoryPage"
       className="w-full h-full flex flex-col"
     >
-      {/* Header */}
       <header className="px-8 py-6 border-b border-neutral-800">
         <h1 className="text-2xl font-semibold tracking-tight">
           Workspace Memories
@@ -40,12 +21,8 @@ export default async function WorkspaceMemoryPage({ params }: Props) {
         </p>
       </header>
 
-      {/* Client Workspace */}
       <div className="flex-1 min-h-0">
-        <MemoryWorkspaceClient
-          workspaceId={workspaceId}
-          initialItems={Array.isArray(data) ? data : []}
-        />
+        <MemoryWorkspaceClient workspaceId={params.workspaceId} />
       </div>
     </section>
   );
