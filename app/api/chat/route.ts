@@ -1,8 +1,7 @@
 // ------------------------------------------------------------
 // Solace Chat API Route (AUTHORITATIVE)
 // Conversation-scoped Working Memory
-// Rolling Compaction Installed
-// NEXT 16 SAFE — NODE RUNTIME
+// Explicit Finalization Installed
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -20,6 +19,7 @@ import { runNewsroomExecutor } from "./modules/newsroom-executor";
 import { writeMemory } from "./modules/memory-writer";
 import { generateImage } from "./modules/image-router";
 import { runSessionCompaction } from "./modules/runSessionCompaction";
+import { finalizeConversation } from "@/lib/memory/finalizeConversation";
 
 // ------------------------------------------------------------
 // Runtime configuration
@@ -29,7 +29,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 // ------------------------------------------------------------
-// Compaction thresholds (Founder-lane safe)
+// Compaction thresholds
 // ------------------------------------------------------------
 const WM_TURN_TRIGGER = 25;
 const WM_CHUNK_SIZE = 12;
@@ -62,21 +62,7 @@ function isImageRequest(message: string): boolean {
 }
 
 // ------------------------------------------------------------
-// EXPLICIT FACT REMEMBER DETECTOR
-// ------------------------------------------------------------
-function extractExplicitFact(msg: string): string | null {
-  const m = msg.trim();
-  const match = m.match(/^(remember\s+(that\s+)?)(.+)$/i);
-  if (!match) return null;
-
-  const fact = match[3]?.trim();
-  if (!fact || fact.length < 3) return null;
-
-  return fact;
-}
-
-// ------------------------------------------------------------
-// ROLLING COMPACTION CHECK (NON-BLOCKING)
+// ROLLING COMPACTION (NON-BLOCKING)
 // ------------------------------------------------------------
 async function maybeRunRollingCompaction(params: {
   supabaseService: ReturnType<typeof createServerClient>;
@@ -95,22 +81,11 @@ async function maybeRunRollingCompaction(params: {
 
   const wm = wmRes.data ?? [];
 
-  if (wm.length <= WM_TURN_TRIGGER) {
-    return;
-  }
+  if (wm.length <= WM_TURN_TRIGGER) return;
 
   const safeLimit = Math.max(0, wm.length - WM_TAIL_PROTECT);
   const chunk = wm.slice(0, Math.min(WM_CHUNK_SIZE, safeLimit));
-
-  if (chunk.length === 0) {
-    return;
-  }
-
-  console.log("[WM-COMPACTION] trigger fired", {
-    conversationId,
-    wmTurns: wm.length,
-    chunkSize: chunk.length,
-  });
+  if (chunk.length === 0) return;
 
   try {
     const compaction = await runSessionCompaction(conversationId, chunk);
@@ -126,18 +101,14 @@ async function maybeRunRollingCompaction(params: {
       confidence: 1.0,
     });
 
-    const idsToDelete = chunk.map((m) => m.id);
-
     await supabaseService
       .schema("memory")
       .from("working_memory")
       .delete()
-      .in("id", idsToDelete);
-
-    console.log("[WM-COMPACTION] persisted and cleaned", {
-      conversationId,
-      deleted: idsToDelete.length,
-    });
+      .in(
+        "id",
+        chunk.map((c) => c.id)
+      );
   } catch (err) {
     console.error("[WM-COMPACTION] failed", err);
   }
@@ -156,6 +127,7 @@ export async function POST(req: Request) {
       userKey,
       workspaceId,
       conversationId,
+      action, // <-- NEW
       ministryMode = false,
       founderMode = false,
       modeHint = "",
@@ -163,30 +135,9 @@ export async function POST(req: Request) {
 
     const finalUserKey = canonicalUserKey ?? userKey;
 
-    if (!message || !finalUserKey) {
-      const fallback =
-        "I’m here, but I didn’t receive a valid message or user identity.";
-
-      return NextResponse.json({
-        ok: true,
-        response: fallback,
-        messages: [{ role: "assistant", content: fallback }],
-      });
+    if (!finalUserKey || !conversationId) {
+      throw new Error("userKey and conversationId are required");
     }
-
-    if (!conversationId) {
-      throw new Error("conversationId is required for session continuity");
-    }
-
-    const sessionId = conversationId;
-    const sessionStartedAt = new Date().toISOString();
-
-    console.log("[SESSION] start", {
-      sessionId,
-      userKey: finalUserKey,
-      workspaceId,
-      startedAt: sessionStartedAt,
-    });
 
     const cookieStore = await cookies();
 
@@ -225,39 +176,41 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
-    // IMAGE PIPELINE
+    // EXPLICIT FINALIZATION
     // --------------------------------------------------------
-    if (isImageRequest(message)) {
-      const base64Image = await generateImage(message);
+    if (action === "finalize" && authUserId) {
+      await finalizeConversation({
+        supabaseService,
+        conversationId,
+        userId: authUserId,
+        reason: "explicit",
+      });
+
       return NextResponse.json({
         ok: true,
         response: "",
-        messages: [{ role: "assistant", content: " ", imageUrl: base64Image }],
+        messages: [],
+        diagnostics: {
+          conversationId,
+          finalized: true,
+        },
       });
     }
 
     // --------------------------------------------------------
-    // EXPLICIT FACT MEMORY
+    // Normal chat flow continues below
     // --------------------------------------------------------
-    const explicitFact = extractExplicitFact(message);
-
-    if (explicitFact && authUserId && user?.email) {
-      await writeMemory(
-        {
-          userId: authUserId,
-          email: user.email,
-          workspaceId: workspaceId ?? null,
-          memoryType: "fact",
-          source: "explicit",
-          content: explicitFact,
-        },
-        req.headers.get("cookie") ?? ""
-      );
+    if (!message) {
+      return NextResponse.json({
+        ok: true,
+        response: "",
+        messages: [],
+      });
     }
 
     if (authUserId) {
       await supabaseService.schema("memory").from("working_memory").insert({
-        conversation_id: sessionId,
+        conversation_id: conversationId,
         user_id: authUserId,
         workspace_id: workspaceId,
         role: "user",
@@ -265,30 +218,25 @@ export async function POST(req: Request) {
       });
     }
 
-    // --------------------------------------------------------
-    // ROLLING COMPACTION (ASYNC, NON-BLOCKING)
-    // --------------------------------------------------------
     if (authUserId) {
       void maybeRunRollingCompaction({
         supabaseService,
-        conversationId: sessionId,
+        conversationId,
         userId: authUserId,
       });
     }
 
-    // --------------------------------------------------------
-    // Assemble context
-    // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
       workspaceId ?? null,
       message,
-      { sessionId, sessionStartedAt }
+      {
+        sessionId: conversationId,
+        sessionStartedAt: new Date().toISOString(),
+      }
     );
 
-    const wantsNews = isNewsRequest(message);
-
-    if (wantsNews) {
+    if (isNewsRequest(message)) {
       const newsroomResponse = await runNewsroomExecutor(context.newsDigest);
       return NextResponse.json({
         ok: true,
@@ -297,9 +245,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // --------------------------------------------------------
-    // HYBRID PIPELINE
-    // --------------------------------------------------------
     const result = await runHybridPipeline({
       userMessage: message,
       context,
@@ -315,7 +260,7 @@ export async function POST(req: Request) {
 
     if (authUserId) {
       await supabaseService.schema("memory").from("working_memory").insert({
-        conversation_id: sessionId,
+        conversation_id: conversationId,
         user_id: authUserId,
         workspace_id: workspaceId,
         role: "assistant",
