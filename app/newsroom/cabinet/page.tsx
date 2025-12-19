@@ -44,8 +44,10 @@ export default function NewsroomCabinetPage() {
         const data: OverviewResponse = await res.json();
         if (!alive || !data.ok) return;
 
+        // 🔒 SINGLE SOURCE OF TRUTH:
+        // Rank by PI (higher = more neutral)
         const sorted = [...data.outlets].sort(
-          (a, b) => a.avg_bias_intent - b.avg_bias_intent
+          (a, b) => b.avg_pi - a.avg_pi
         );
 
         setOutlets(sorted);
@@ -69,9 +71,9 @@ export default function NewsroomCabinetPage() {
   /* ========= Selected outlet ========= */
   const selectedOutlet = useMemo(() => {
     if (!selectedCanonical) return null;
-    return (
-      outlets.find((o) => o.canonical_outlet === selectedCanonical) ?? null
-    );
+    return outlets.find(
+      (o) => o.canonical_outlet === selectedCanonical
+    ) ?? null;
   }, [outlets, selectedCanonical]);
 
   /* ========= Modal DTO ========= */
@@ -84,19 +86,16 @@ export default function NewsroomCabinetPage() {
       canonical_outlet: selectedOutlet.canonical_outlet,
       display_name: selectedOutlet.canonical_outlet,
       storiesAnalyzed: selectedOutlet.total_stories,
-      lifetimePi: selectedOutlet.avg_pi, // 0..1 canonical
+      lifetimePi: selectedOutlet.avg_pi,
       lifetimeBiasIntent: selectedOutlet.avg_bias_intent,
       lifetimeLanguage: selectedOutlet.bias_language,
       lifetimeSource: selectedOutlet.bias_source,
       lifetimeFraming: selectedOutlet.bias_framing,
       lifetimeContext: selectedOutlet.bias_context,
 
-      // 🔒 Type requires string — normalize here
-      lastScoredAt:
-        selectedOutlet.last_story_day ??
-        "Not yet scored",
+      // Type contract requires string
+      lastScoredAt: selectedOutlet.last_story_day ?? "Not yet scored",
 
-      // 🔒 Required by existing contract
       ninetyDaySummary: `Lifetime PI ${piPercent} based on ${selectedOutlet.total_stories} stories.`,
     };
   }, [selectedOutlet]);
