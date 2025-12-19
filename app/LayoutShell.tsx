@@ -7,14 +7,28 @@ import SolaceGuard from "@/app/components/SolaceGuard";
 import { Suspense } from "react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-export default function LayoutShell({ children }: { children: React.ReactNode }) {
+export default function LayoutShell({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname() ?? "";
 
   const isApp = pathname === "/app" || pathname.startsWith("/app/");
   const isAuth = pathname.startsWith("/auth");
 
+  // 🔒 INSTITUTIONAL MODE — NO SOLACE
+  const isNewsroom = pathname === "/newsroom" || pathname.startsWith("/newsroom/");
+
   return (
     <>
+      {/* Mount Solace ONLY when allowed */}
+      {!isAuth && !isNewsroom && (
+        <Suspense fallback={null}>
+          <SolaceGuard />
+        </Suspense>
+      )}
+
       {isApp ? (
         // GRID LAYOUT ONLY FOR APP ROUTES
         <div className="grid grid-cols-[20vw_1fr] min-h-screen relative z-10">
@@ -32,8 +46,8 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
           {children}
         </main>
       )}
+
+      <SpeedInsights />
     </>
   );
 }
-
-
