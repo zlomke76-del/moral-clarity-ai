@@ -254,4 +254,52 @@ html, body {
     padding: 3rem 2.5rem;
   }
 }
+/* ============================================================
+   NEWSROOM — EPISTEMIC WEIGHTING (ANCHOR-FIRST)
+   Scoped. Non-invasive.
+   ============================================================ */
+
+/* --- Golden Anchor (authority compression) --- */
+.outlet-card--anchor {
+  background: linear-gradient(
+    180deg,
+    rgba(247, 199, 106, 0.12),
+    rgba(2, 6, 23, 0.85)
+  );
+  border: 1px solid rgba(247, 199, 106, 0.55);
+
+  box-shadow:
+    0 0 0 1px rgba(247, 199, 106, 0.45),
+    0 14px 38px -12px rgba(247, 199, 106, 0.45);
+
+  position: relative;
+}
+
+.outlet-card--anchor::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+
+  background: radial-gradient(
+    circle at top,
+    rgba(247, 199, 106, 0.25),
+    transparent 60%
+  );
+}
+
+/* --- Neutral (baseline field) --- */
+.outlet-card--neutral {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+/* --- Watchlist (caution signal) --- */
+.outlet-card--watchlist {
+  background: rgba(127, 29, 29, 0.18);
+  border: 1px solid rgba(220, 38, 38, 0.45);
+
+  opacity: 0.92;
+}
 
