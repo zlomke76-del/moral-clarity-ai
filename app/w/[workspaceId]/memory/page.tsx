@@ -2,14 +2,19 @@ import MemoryWorkspaceClient from "./MemoryWorkspaceClient";
 
 type PageProps = {
   params: {
-    workspaceId: string;
+    id?: string;
+    workspaceId?: string;
   };
 };
 
 export default async function WorkspaceMemoryPage({
   params,
 }: PageProps) {
-  const { workspaceId } = params;
+  const workspaceId = params.workspaceId ?? params.id;
+
+  if (!workspaceId) {
+    throw new Error("Workspace ID missing in route params");
+  }
 
   return (
     <section
