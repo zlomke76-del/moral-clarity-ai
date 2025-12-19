@@ -1,12 +1,16 @@
 import MemoryWorkspaceClient from "./MemoryWorkspaceClient";
 
-type Props = {
+type PageProps = {
   params: {
     workspaceId: string;
   };
 };
 
-export default function WorkspaceMemoryPage({ params }: Props) {
+export default async function WorkspaceMemoryPage({
+  params,
+}: PageProps) {
+  const { workspaceId } = params;
+
   return (
     <section
       data-layout-boundary="WorkspaceMemoryPage"
@@ -22,7 +26,10 @@ export default function WorkspaceMemoryPage({ params }: Props) {
       </header>
 
       <div className="flex-1 min-h-0">
-        <MemoryWorkspaceClient workspaceId={params.workspaceId} />
+        <MemoryWorkspaceClient
+          workspaceId={workspaceId}
+          initialItems={[]}
+        />
       </div>
     </section>
   );
