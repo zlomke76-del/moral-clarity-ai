@@ -12,28 +12,15 @@ export default function MemoryEditorPanel({
   workspaceId,
   record,
 }: Props) {
-  const [content, setContent] = useState(record.content);
+  const [value, setValue] = useState(record.content);
 
   return (
-    <div className="h-full flex flex-col p-6 gap-4">
-      <div className="text-xs text-neutral-500">
-        Workspace: {workspaceId}
-      </div>
-
+    <div className="h-full flex flex-col p-6">
       <textarea
-        className="flex-1 w-full rounded-md bg-neutral-900 border border-neutral-800 p-4 text-sm"
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
+        className="flex-1 w-full bg-neutral-900 border border-neutral-800 rounded-md p-3 text-sm"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
       />
-
-      <div className="flex justify-end gap-2">
-        <button className="px-3 py-1 text-sm rounded-md border border-neutral-700">
-          Cancel
-        </button>
-        <button className="px-3 py-1 text-sm rounded-md bg-blue-600 text-white">
-          Save
-        </button>
-      </div>
     </div>
   );
 }
