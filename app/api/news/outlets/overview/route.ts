@@ -1,4 +1,5 @@
 // app/api/news/outlets/overview/route.ts
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -26,17 +27,9 @@ const supabaseAdmin =
 /* ========= TYPES ========= */
 
 type OutletOverview = {
-  outlet: string;
   canonical_outlet: string;
   total_stories: number;
-  days_active: number;
-  avg_bias_intent: number;
   avg_pi: number;
-  bias_language: number;
-  bias_source: number;
-  bias_framing: number;
-  bias_context: number;
-  last_story_day: string | null;
 };
 
 /* ========= HELPERS ========= */
@@ -59,7 +52,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Allow ?minStories=1 for debugging; default 5 for production
+    // Optional: ?minStories=5 (default)
     const url = new URL(req.url);
     const minStoriesParam = url.searchParams.get("minStories");
     const parsedMin = Number(minStoriesParam ?? "5");
@@ -67,129 +60,39 @@ export async function GET(req: NextRequest) {
       Number.isFinite(parsedMin) && parsedMin > 0 ? parsedMin : 5;
 
     /**
-     * Source of truth: outlet_bias_pi_daily_trends
+     * ✅ SOURCE OF TRUTH (CANONICAL)
      *
-     * Columns (confirmed from CSV):
-     *   outlet
-     *   story_day
-     *   outlet_story_count
-     *   avg_pi_score
-     *   avg_bias_intent
-     *   avg_bias_language
-     *   avg_bias_source
-     *   avg_bias_framing
-     *   avg_bias_context
+     * outlet_neutrality_aggregates_ranked_by_story_count
+     *
+     * Columns:
+     *   outlet              (canonical outlet key)
+     *   stories_analyzed    (lifetime count)
+     *   pi                  (lifetime PI)
      */
     const { data, error } = await supabaseAdmin
-      .from("outlet_bias_pi_daily_trends")
+      .from("outlet_neutrality_aggregates_ranked_by_story_count")
       .select(
         `
         outlet,
-        story_day,
-        outlet_story_count,
-        avg_pi_score,
-        avg_bias_intent,
-        avg_bias_language,
-        avg_bias_source,
-        avg_bias_framing,
-        avg_bias_context
+        stories_analyzed,
+        pi
       `
-      );
+      )
+      .gte("stories_analyzed", MIN_STORIES);
 
     if (error) {
       console.error("[news/outlets/overview] query error", error);
-      return jsonError("Failed to load outlet neutrality data.", 500, {
+      return jsonError("Failed to load outlet overview.", 500, {
         code: error.code,
         details: error.details,
       });
     }
 
-    const rows = (data || []) as any[];
-
-    // Aggregate by outlet using weighted averages by outlet_story_count
-    const grouped: Record<
-      string,
-      {
-        outlet: string;
-        totalStories: number;
-        days: Set<string>;
-        sumBiasIntent: number;
-        sumPi: number;
-        sumLanguage: number;
-        sumSource: number;
-        sumFraming: number;
-        sumContext: number;
-        lastDay: string | null;
-      }
-    > = {};
-
-    for (const r of rows) {
-      const outlet: string = r.outlet ?? "unknown";
-      const storyDay: string | null = r.story_day ?? null;
-      const count: number = Number(r.outlet_story_count ?? 0);
-
-      if (!grouped[outlet]) {
-        grouped[outlet] = {
-          outlet,
-          totalStories: 0,
-          days: new Set<string>(),
-          sumBiasIntent: 0,
-          sumPi: 0,
-          sumLanguage: 0,
-          sumSource: 0,
-          sumFraming: 0,
-          sumContext: 0,
-          lastDay: null,
-        };
-      }
-
-      const g = grouped[outlet];
-
-      if (count > 0) {
-        g.totalStories += count;
-
-        g.sumBiasIntent += Number(r.avg_bias_intent ?? 0) * count;
-        g.sumPi += Number(r.avg_pi_score ?? 0) * count;
-        g.sumLanguage += Number(r.avg_bias_language ?? 0) * count;
-        g.sumSource += Number(r.avg_bias_source ?? 0) * count;
-        g.sumFraming += Number(r.avg_bias_framing ?? 0) * count;
-        g.sumContext += Number(r.avg_bias_context ?? 0) * count;
-      }
-
-      if (storyDay) {
-        g.days.add(storyDay);
-        if (!g.lastDay || storyDay > g.lastDay) {
-          g.lastDay = storyDay;
-        }
-      }
-    }
-
-    const outlets: OutletOverview[] = [];
-
-    for (const outlet of Object.keys(grouped)) {
-      const g = grouped[outlet];
-
-      if (g.totalStories < MIN_STORIES) continue;
-
-      const total = g.totalStories || 1;
-
-      outlets.push({
-        outlet,
-        canonical_outlet: outlet, // canonical == outlet for now
-        total_stories: g.totalStories,
-        days_active: g.days.size,
-        avg_bias_intent: g.sumBiasIntent / total,
-        avg_pi: g.sumPi / total,
-        bias_language: g.sumLanguage / total,
-        bias_source: g.sumSource / total,
-        bias_framing: g.sumFraming / total,
-        bias_context: g.sumContext / total,
-        last_story_day: g.lastDay,
-      });
-    }
-
-    // Sort by avg_bias_intent ascending (best → worst)
-    outlets.sort((a, b) => a.avg_bias_intent - b.avg_bias_intent);
+    const outlets: OutletOverview[] = (data || []).map((row: any) => ({
+      canonical_outlet: row.outlet,
+      total_stories: Number(row.stories_analyzed),
+      avg_pi: Number(row.pi),
+    }));
 
     return NextResponse.json({
       ok: true,
