@@ -26,6 +26,12 @@ export type SessionCompaction = {
   created_at: string;
 };
 
+export type ParsedSessionState = {
+  domain?: string;
+  intent?: string;
+  constraints?: string[];
+};
+
 export type SolaceContextBundle = {
   persona: string;
   memoryPack: {
@@ -33,6 +39,7 @@ export type SolaceContextBundle = {
     episodic: any[];
     autobiography: any[];
     sessionCompaction?: SessionCompaction | null;
+    sessionState?: ParsedSessionState | null;
   };
   workingMemory: {
     active: boolean;
@@ -56,6 +63,27 @@ function diag(label: string, payload: any) {
 // ------------------------------------------------------------
 function safeRows<T>(rows: T[] | null): T[] {
   return Array.isArray(rows) ? rows : [];
+}
+
+function parseSessionCompaction(
+  compaction: SessionCompaction | null
+): ParsedSessionState | null {
+  if (!compaction?.content) return null;
+
+  try {
+    const parsed = JSON.parse(compaction.content);
+
+    return {
+      domain: parsed?.domain ?? undefined,
+      intent: parsed?.intent ?? undefined,
+      constraints: Array.isArray(parsed?.constraints)
+        ? parsed.constraints
+        : undefined,
+    };
+  } catch (err) {
+    console.error("[CTX] failed to parse session compaction", err);
+    return null;
+  }
 }
 
 // ------------------------------------------------------------
@@ -126,6 +154,7 @@ export async function assembleContext(
         episodic: [],
         autobiography: [],
         sessionCompaction: null,
+        sessionState: null,
       },
       workingMemory: { active: false, items: [] },
       researchContext: [],
@@ -180,6 +209,7 @@ export async function assembleContext(
   // SESSION COMPACTION (AUTHORITATIVE STATE)
   // ----------------------------------------------------------
   let sessionCompaction: SessionCompaction | null = null;
+  let sessionState: ParsedSessionState | null = null;
 
   if (conversationId) {
     const compactionRes = await supabaseService
@@ -195,12 +225,14 @@ export async function assembleContext(
 
     if (compactionRes?.data) {
       sessionCompaction = compactionRes.data as SessionCompaction;
+      sessionState = parseSessionCompaction(sessionCompaction);
     }
   }
 
   diag("session compaction", {
     conversationId,
     present: Boolean(sessionCompaction),
+    parsed: sessionState,
   });
 
   // ----------------------------------------------------------
@@ -249,7 +281,7 @@ export async function assembleContext(
   const didResearch = researchContext.length > 0;
 
   // ----------------------------------------------------------
-  // FINAL CONTEXT BUNDLE
+  // FINAL CONTEXT BUNDLE (BINDING)
   // ----------------------------------------------------------
   return {
     persona: "Solace",
@@ -258,6 +290,7 @@ export async function assembleContext(
       episodic,
       autobiography,
       sessionCompaction,
+      sessionState,
     },
     workingMemory: {
       active: Boolean(conversationId),
