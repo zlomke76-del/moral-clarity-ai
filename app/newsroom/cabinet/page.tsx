@@ -49,6 +49,7 @@ export default function NewsroomCabinetPage() {
         );
 
         setOutlets(sorted);
+
         if (!selectedCanonical && sorted.length > 0) {
           setSelectedCanonical(sorted[0].canonical_outlet);
         }
@@ -77,17 +78,22 @@ export default function NewsroomCabinetPage() {
   const detailOutlet: OutletDetailData | null = useMemo(() => {
     if (!selectedOutlet) return null;
 
+    const piPercent = (selectedOutlet.avg_pi * 100).toFixed(1);
+
     return {
       canonical_outlet: selectedOutlet.canonical_outlet,
       display_name: selectedOutlet.canonical_outlet,
       storiesAnalyzed: selectedOutlet.total_stories,
-      lifetimePi: selectedOutlet.avg_pi, // 0..1 (canonical)
+      lifetimePi: selectedOutlet.avg_pi, // 0..1 canonical
       lifetimeBiasIntent: selectedOutlet.avg_bias_intent,
       lifetimeLanguage: selectedOutlet.bias_language,
       lifetimeSource: selectedOutlet.bias_source,
       lifetimeFraming: selectedOutlet.bias_framing,
       lifetimeContext: selectedOutlet.bias_context,
       lastScoredAt: selectedOutlet.last_story_day ?? null,
+
+      // REQUIRED by existing type contract
+      ninetyDaySummary: `Lifetime PI ${piPercent} based on ${selectedOutlet.total_stories} stories.`,
     };
   }, [selectedOutlet]);
 
