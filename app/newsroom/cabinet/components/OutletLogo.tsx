@@ -10,7 +10,7 @@ type Props = {
 };
 
 export default function OutletLogo({ domain, name, className }: Props) {
-  const [broken, setBroken] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   const baseClass =
     "flex items-center justify-center overflow-hidden rounded-lg bg-neutral-900 text-sm font-semibold text-neutral-50";
@@ -22,7 +22,8 @@ export default function OutletLogo({ domain, name, className }: Props) {
       ? labelSource.trim()[0]!.toUpperCase()
       : "?";
 
-  if (broken || !domain) {
+  // Fallback: initials only
+  if (failed || !domain) {
     return (
       <div className={`${baseClass} ${sizeClass}`}>
         {initial}
@@ -30,15 +31,17 @@ export default function OutletLogo({ domain, name, className }: Props) {
     );
   }
 
-  const url = `https://logo.clearbit.com/${domain}`;
+  const src = `/api/logo?domain=${encodeURIComponent(domain)}`;
 
   return (
     <div className={`${baseClass} ${sizeClass}`}>
       <img
-        src={url}
+        src={src}
         alt={name || domain}
         className="h-full w-full object-contain"
-        onError={() => setBroken(true)}
+        onError={() => setFailed(true)}
+        loading="lazy"
+        decoding="async"
       />
     </div>
   );
