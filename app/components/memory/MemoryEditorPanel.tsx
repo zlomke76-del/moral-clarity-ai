@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-
 export type MemoryRecord = {
   id: string;
   content: string;
@@ -11,15 +9,13 @@ export type MemoryRecord = {
 
 type Props = {
   workspaceId: string;
-  selected?: MemoryRecord | null;
+  record: MemoryRecord | null;
 };
 
 export default function MemoryEditorPanel({
-  selected,
+  record,
 }: Props) {
-  const [content, setContent] = useState(selected?.content ?? "");
-
-  if (!selected) {
+  if (!record) {
     return (
       <div className="h-full flex items-center justify-center text-sm text-neutral-500">
         Select a memory to view or edit
@@ -28,25 +24,18 @@ export default function MemoryEditorPanel({
   }
 
   return (
-    <div className="h-full flex flex-col gap-4 p-6">
-      <div className="text-xs text-neutral-500">
-        {selected.memory_type} •{" "}
-        {new Date(selected.updated_at).toLocaleString()}
+    <div className="h-full p-6 flex flex-col gap-4">
+      <div className="text-xs uppercase tracking-wide text-neutral-400">
+        {record.memory_type}
       </div>
 
       <textarea
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        className="flex-1 w-full rounded-md bg-neutral-950 border border-neutral-800 p-4 text-sm text-neutral-100 resize-none focus:outline-none focus:ring-1 focus:ring-neutral-700"
+        className="flex-1 w-full rounded-md bg-neutral-900 border border-neutral-800 p-4 text-sm text-neutral-200 resize-none"
+        defaultValue={record.content}
       />
 
-      <div className="flex justify-end">
-        <button
-          disabled
-          className="px-4 py-2 rounded-md text-sm bg-neutral-800 text-neutral-400 cursor-not-allowed"
-        >
-          Save (wired next)
-        </button>
+      <div className="text-xs text-neutral-500">
+        Last updated: {new Date(record.updated_at).toLocaleString()}
       </div>
     </div>
   );
