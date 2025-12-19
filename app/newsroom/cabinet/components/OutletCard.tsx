@@ -1,4 +1,3 @@
-// app/newsroom/cabinet/components/OutletCard.tsx
 "use client";
 
 import type { OutletOverview } from "../types";
@@ -19,37 +18,23 @@ export default function OutletCard({
   badge,
   onSelect,
 }: Props) {
-  // PI displayed on a 0–100 scale, one decimal place (e.g. 82.7)
-  const piDisplay = (outlet.avg_pi * 100).toFixed(1);
-  const stories = outlet.total_stories;
-
-  const tierLabel =
-    badge === "golden"
-      ? "Golden Anchor"
-      : badge === "watchlist"
-      ? "High Bias Watchlist"
-      : badge === "neutral"
-      ? "Neutral Band"
-      : "";
-
-  const borderClass = selected
-    ? "border-emerald-400/70 shadow-[0_0_0_1px_rgba(16,185,129,.6)]"
-    : "border-neutral-800";
+  const pi = (outlet.avg_pi * 100).toFixed(1);
 
   return (
     <button
       type="button"
       onClick={onSelect}
       className={[
-        "w-full text-left rounded-xl border px-4 py-3 transition",
+        "w-full rounded-xl border px-4 py-3 text-left transition",
         "bg-neutral-950/70 hover:bg-neutral-900/80",
-        borderClass,
+        selected
+          ? "border-emerald-400/70 shadow-[0_0_0_1px_rgba(16,185,129,.6)]"
+          : "border-neutral-800",
       ].join(" ")}
     >
       <div className="flex items-center justify-between gap-3">
-        {/* Left: rank + logo + outlet */}
         <div className="flex items-center gap-3">
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-900 text-xs font-semibold text-neutral-200">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-900 text-xs font-semibold">
             #{rank}
           </div>
           <OutletLogo
@@ -57,31 +42,20 @@ export default function OutletCard({
             name={outlet.canonical_outlet}
           />
           <div>
-            <div className="text-sm font-semibold text-neutral-100">
+            <div className="text-sm font-semibold">
               {outlet.canonical_outlet}
             </div>
-            <div className="mt-0.5 text-[11px] text-neutral-400">
-              {stories} stories analyzed · PI based on lifetime
+            <div className="text-[11px] text-neutral-400">
+              {outlet.total_stories} stories analyzed · PI based on lifetime
             </div>
           </div>
         </div>
 
-        {/* Right: PI + tier label */}
-        <div className="flex flex-col items-end gap-1">
-          <div className="flex items-baseline gap-2">
-            <div className="text-xs text-neutral-400">PI</div>
-            <div className="font-mono text-lg text-neutral-50">
-              {piDisplay}
-            </div>
-          </div>
-          {tierLabel && (
-            <div className="text-[11px] font-medium text-emerald-300">
-              {tierLabel}
-            </div>
-          )}
+        <div className="text-right">
+          <div className="text-xs text-neutral-400">PI</div>
+          <div className="font-mono text-lg text-neutral-50">{pi}</div>
         </div>
       </div>
     </button>
   );
 }
-
