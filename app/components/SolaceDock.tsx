@@ -426,7 +426,10 @@ export default function SolaceDock() {
           setFilters(next);
         }}
         onMinimize={() => setMinimized(true)}
-        onDragStart={isMobile ? undefined : onHeaderMouseDown}
+       onDragStart={(e) => {
+  if (!isMobile) onHeaderMouseDown(e);
+}}
+
       />
 
       <SolaceTranscript
