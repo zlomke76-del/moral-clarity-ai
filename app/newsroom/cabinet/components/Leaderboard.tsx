@@ -7,7 +7,7 @@ import OutletCard from "./OutletCard";
 type Props = {
   outlets: OutletOverview[];
   selectedCanonical: string | null;
-  onSelect: (canonical: string) => void;
+  onSelect: (canonical: string, wasSelected: boolean) => void;
 };
 
 export default function Leaderboard({
@@ -23,7 +23,6 @@ export default function Leaderboard({
     );
   }
 
-  // outlets are already sorted by avg_bias_intent from the API/page
   const maxGolden = 3;
   const maxWatchlist = 3;
 
@@ -33,6 +32,10 @@ export default function Leaderboard({
     golden.length,
     Math.max(outlets.length - watchlist.length, golden.length)
   );
+
+  const handleSelect = (canonical: string) => {
+    onSelect(canonical, canonical === selectedCanonical);
+  };
 
   return (
     <div className="space-y-4">
@@ -48,7 +51,6 @@ export default function Leaderboard({
         </p>
       </div>
 
-      {/* Golden Anchors */}
       {golden.length > 0 && (
         <section className="space-y-2">
           <div className="flex items-center justify-between">
@@ -67,14 +69,13 @@ export default function Leaderboard({
                 rank={idx + 1}
                 selected={selectedCanonical === o.canonical_outlet}
                 badge="golden"
-                onSelect={() => onSelect(o.canonical_outlet)}
+                onSelect={() => handleSelect(o.canonical_outlet)}
               />
             ))}
           </div>
         </section>
       )}
 
-      {/* Neutral Band */}
       {neutral.length > 0 && (
         <section className="space-y-2">
           <div className="flex items-center justify-between">
@@ -93,14 +94,13 @@ export default function Leaderboard({
                 rank={golden.length + idx + 1}
                 selected={selectedCanonical === o.canonical_outlet}
                 badge="neutral"
-                onSelect={() => onSelect(o.canonical_outlet)}
+                onSelect={() => handleSelect(o.canonical_outlet)}
               />
             ))}
           </div>
         </section>
       )}
 
-      {/* High Bias Watchlist */}
       {watchlist.length > 0 && (
         <section className="space-y-2">
           <div className="flex items-center justify-between">
@@ -120,7 +120,7 @@ export default function Leaderboard({
                 rank={outlets.length - watchlist.length + idx + 1}
                 selected={selectedCanonical === o.canonical_outlet}
                 badge="watchlist"
-                onSelect={() => onSelect(o.canonical_outlet)}
+                onSelect={() => handleSelect(o.canonical_outlet)}
               />
             ))}
           </div>
@@ -129,4 +129,3 @@ export default function Leaderboard({
     </div>
   );
 }
-
