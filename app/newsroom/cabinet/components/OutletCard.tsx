@@ -1,74 +1,63 @@
 "use client";
 
+import Image from "next/image";
 import type { OutletOverview } from "../types";
 
 type Props = {
   outlet: OutletOverview;
   rank: number;
-  badge: "golden" | "neutral" | "watchlist";
   selected: boolean;
+  badge: "golden" | "neutral" | "watchlist";
   onSelect: () => void;
 };
-
-function formatPI(value: number): string {
-  if (!Number.isFinite(value)) return "—";
-  return (Math.floor(value * 100) / 100).toFixed(2);
-}
-
-function logoUrl(domain: string) {
-  if (!domain) return null;
-  return `https://logo.clearbit.com/${domain}?size=64`;
-}
 
 export default function OutletCard({
   outlet,
   rank,
-  badge,
   selected,
+  badge,
   onSelect,
 }: Props) {
-  const domain = outlet.canonical_outlet?.trim() ?? "unknown";
-  const pi = formatPI(outlet.avg_pi);
-  const stories = outlet.total_stories ?? 0;
+  const domain = outlet.canonical_outlet;
 
-  const glow =
-    badge === "golden"
-      ? "shadow-[0_0_30px_rgba(255,215,128,0.45)]"
-      : badge === "watchlist"
-      ? "shadow-[0_0_30px_rgba(255,80,80,0.45)]"
-      : "";
+  // ✅ SAFE logo source (not blocked by tracking prevention)
+  const logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 
   return (
     <button
       onClick={onSelect}
-      className={`relative w-56 rounded-lg border border-neutral-700 bg-neutral-800 p-3 text-left transition ${
-        selected ? "ring-2 ring-neutral-300" : ""
-      } ${glow}`}
+      className={`w-full rounded-lg border px-4 py-3 text-left transition
+        ${
+          selected
+            ? "border-amber-400/60 bg-amber-400/10"
+            : "border-neutral-800 bg-neutral-900/60 hover:bg-neutral-900"
+        }
+      `}
     >
-      <div className="absolute top-1 right-2 text-xs text-neutral-400">
-        #{rank}
-      </div>
+      <div className="flex items-center gap-3">
+        {/* Rank */}
+        <div className="w-6 text-xs text-neutral-400">#{rank}</div>
 
-      <div className="flex items-center gap-2 mb-2">
-        {logoUrl(domain) && (
-          <img
-            src={logoUrl(domain)!}
-            alt={`${domain} logo`}
-            className="h-6 w-6 rounded-sm bg-neutral-900"
-            loading="lazy"
-          />
-        )}
-        <div className="text-sm font-semibold text-neutral-100">
-          {domain}
+        {/* Logo */}
+        <Image
+          src={logoUrl}
+          alt={`${domain} logo`}
+          width={20}
+          height={20}
+          className="rounded-sm"
+          unoptimized
+        />
+
+        {/* Text */}
+        <div className="flex-1">
+          <div className="text-sm font-medium text-neutral-100">
+            {domain}
+          </div>
+          <div className="text-xs text-neutral-400">
+            {outlet.total_stories} stories analyzed · PI{" "}
+            {(outlet.avg_pi * 100).toFixed(1)}
+          </div>
         </div>
-      </div>
-
-      <div className="text-xs text-neutral-300">
-        {stories} stories analyzed
-      </div>
-
-      <div className="mt-1 text-sm font-bold text-neutral-100">
-        PI {pi}
       </div>
     </button>
   );
