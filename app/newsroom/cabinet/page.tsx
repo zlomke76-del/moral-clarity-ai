@@ -90,9 +90,13 @@ export default function NewsroomCabinetPage() {
       lifetimeSource: selectedOutlet.bias_source,
       lifetimeFraming: selectedOutlet.bias_framing,
       lifetimeContext: selectedOutlet.bias_context,
-      lastScoredAt: selectedOutlet.last_story_day ?? null,
 
-      // REQUIRED by existing type contract
+      // 🔒 Type requires string — normalize here
+      lastScoredAt:
+        selectedOutlet.last_story_day ??
+        "Not yet scored",
+
+      // 🔒 Required by existing contract
       ninetyDaySummary: `Lifetime PI ${piPercent} based on ${selectedOutlet.total_stories} stories.`,
     };
   }, [selectedOutlet]);
