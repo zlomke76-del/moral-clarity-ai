@@ -14,44 +14,28 @@ type Props = {
 };
 
 /**
- * Truncate (do NOT round) a number to 1 decimal place.
- * Example: 81.25 -> 81.2 (not 81.3)
+ * Truncate (do NOT round) to 1 decimal place.
+ * Example: 78.25 -> 78.2
  */
 function trunc1(n: number): number {
   if (!Number.isFinite(n)) return 0;
-  // toward zero
   return Math.trunc(n * 10) / 10;
 }
 
 /**
- * avg_pi is 0..1 (canonical). We display PI as 0..100.
- * NO rounding up: truncate to 1 decimal.
+ * avg_pi is 0..1 → display 0..100
+ * Truncated, never rounded.
  */
 function formatPiPercent(avgPi: number): string {
   const percent = avgPi * 100;
-  const t = trunc1(percent);
-  return t.toFixed(1); // safe: already truncated, this just prints 1 decimal
-}
-
-/**
- * Stories line uses whole number.
- */
-function formatStories(n: number): string {
-  const v = Number.isFinite(n) ? Math.trunc(n) : 0;
-  return v.toString();
+  const truncated = trunc1(percent);
+  return truncated.toFixed(1);
 }
 
 function badgeGlowClass(badge: Badge): string {
-  // Glow is behind the card (gold for top 3, red for bottom 3)
   if (badge === "golden") return "mc-outlet-glow-gold";
   if (badge === "watchlist") return "mc-outlet-glow-red";
   return "";
-}
-
-function badgeLabel(badge: Badge): string {
-  if (badge === "golden") return "Golden Anchor";
-  if (badge === "watchlist") return "Watchlist";
-  return "Neutral";
 }
 
 export default function OutletCard({
@@ -61,11 +45,7 @@ export default function OutletCard({
   badge,
   onSelect,
 }: Props) {
-  const displayDomain =
-    outlet.canonical_outlet?.trim() || outlet.outlet?.trim() || "unknown";
-
-  const stories = formatStories(outlet.total_stories);
-  const piText = formatPiPercent(outlet.avg_pi);
+  const displayDomain = outlet.canonical_outlet.trim();
 
   return (
     <button
@@ -85,43 +65,32 @@ export default function OutletCard({
         selected ? "border-white/35" : "border-white/20",
         badgeGlowClass(badge),
       ].join(" ")}
-      aria-label={`${badgeLabel(badge)} #${rank}: ${displayDomain}`}
+      aria-label={`#${rank} ${displayDomain}`}
     >
       {/* Rank */}
       <div className="flex items-center justify-between">
         <div className="text-xs font-semibold text-white/90">#{rank}</div>
-        {/* keep space for emblem in your existing design system if present */}
       </div>
 
-      {/* Logo slot (your existing logo rendering should live here; this file does NOT fetch clearbit) */}
+      {/* Logo slot — your existing logo renderer can live here */}
       <div className="mt-1 flex items-center justify-center">
-        {/* If you already inject a logo image component elsewhere, keep it.
-            This placeholder prevents layout jump. */}
         <div className="h-6 w-6 rounded-sm bg-white/10" />
       </div>
 
-      {/* Domain */}
+      {/* Outlet name */}
       <div className="mt-1 text-sm font-semibold text-white/95">
         {displayDomain}
       </div>
 
-      {/* Credibility line (your mandated format) */}
+      {/* Credibility line (your required format) */}
       <div className="mt-0.5 text-[12px] leading-tight text-white/90">
-        {stories} stories analyzed · PI based on lifetime.
+        {outlet.total_stories} stories analyzed · PI based on lifetime.
       </div>
 
       {/* PI */}
       <div className="mt-0.5 text-[12px] leading-tight text-white/90">
-        PI {piText}
+        PI {formatPiPercent(outlet.avg_pi)}
       </div>
     </button>
   );
 }
-
-/**
- * Minimal glow classes (assumes Tailwind is available).
- * If you already have these in globals.css, remove duplicates there and keep one source of truth.
- *
- * Gold = subtle amber halo
- * Red  = subtle red halo
- */
