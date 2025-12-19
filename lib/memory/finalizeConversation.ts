@@ -6,8 +6,21 @@
 import { createServerClient } from "@supabase/ssr";
 import { runSessionCompaction } from "./runSessionCompaction";
 
+// ------------------------------------------------------------
+// TYPES
+// ------------------------------------------------------------
 type FinalizationReason = "explicit" | "timeout" | "superseded";
 
+type WMRow = {
+  id: string;
+  role: "system" | "user" | "assistant";
+  content: string;
+  created_at?: string;
+};
+
+// ------------------------------------------------------------
+// FINALIZATION ENTRYPOINT
+// ------------------------------------------------------------
 export async function finalizeConversation(params: {
   supabaseService: ReturnType<typeof createServerClient>;
   conversationId: string;
@@ -47,7 +60,7 @@ export async function finalizeConversation(params: {
     .eq("user_id", userId)
     .order("created_at", { ascending: true });
 
-  const wm = wmRes.data ?? [];
+  const wm: WMRow[] = (wmRes.data ?? []) as WMRow[];
 
   // ----------------------------------------------------------
   // Final compaction (if anything remains)
@@ -70,7 +83,7 @@ export async function finalizeConversation(params: {
       },
     });
 
-    const ids = wm.map((m) => m.id);
+    const ids: string[] = wm.map((m: WMRow) => m.id);
 
     await supabaseService
       .schema("memory")
@@ -85,7 +98,7 @@ export async function finalizeConversation(params: {
   }
 
   // ----------------------------------------------------------
-  // Write finalization marker (authority)
+  // Write finalization marker
   // ----------------------------------------------------------
   await supabaseService.schema("memory").from("memories").insert({
     user_id: userId,
