@@ -1,19 +1,29 @@
 import MemoryWorkspaceClient from "./MemoryWorkspaceClient";
 
 type PageProps = {
-  params: {
-    id?: string;
-    workspaceId?: string;
-  };
+  params: Record<string, string | string[] | undefined>;
 };
 
-export default async function WorkspaceMemoryPage({
-  params,
-}: PageProps) {
-  const workspaceId = params.workspaceId ?? params.id;
+export default function WorkspaceMemoryPage({ params }: PageProps) {
+  const workspaceId =
+    typeof params.workspaceId === "string"
+      ? params.workspaceId
+      : Array.isArray(params.workspaceId)
+      ? params.workspaceId[0]
+      : undefined;
 
+  // 🔕 Do NOT throw in production
   if (!workspaceId) {
-    throw new Error("Workspace ID missing in route params");
+    console.error(
+      "[WorkspaceMemoryPage] Missing workspaceId in route params",
+      { params }
+    );
+
+    return (
+      <section className="w-full h-full flex items-center justify-center text-sm text-neutral-500">
+        Unable to load workspace memories.
+      </section>
+    );
   }
 
   return (
