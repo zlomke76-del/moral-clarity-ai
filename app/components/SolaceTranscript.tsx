@@ -9,10 +9,21 @@ import { UI } from "./dock-ui";
  */
 const DEV_DIAG = true;
 
+/* ------------------------------------------------------------------
+   Types
+------------------------------------------------------------------- */
+type ExportItem = {
+  kind: "export";
+  format: "docx" | "pdf" | "csv";
+  filename: string;
+  url: string;
+};
+
 type Message = {
   role: "user" | "assistant";
   content?: string | null;
   imageUrl?: string | null;
+  export?: ExportItem | null;
 };
 
 type Props = {
@@ -21,6 +32,9 @@ type Props = {
   transcriptStyle: React.CSSProperties;
 };
 
+/* ------------------------------------------------------------------
+   Component
+------------------------------------------------------------------- */
 export default function SolaceTranscript({
   messages,
   transcriptRef,
@@ -38,14 +52,9 @@ export default function SolaceTranscript({
         i,
         role: m.role,
         hasImage: typeof m.imageUrl === "string",
-        imageUrlPrefix:
-          typeof m.imageUrl === "string"
-            ? m.imageUrl.slice(0, 32)
-            : null,
-        imageUrlLength:
-          typeof m.imageUrl === "string" ? m.imageUrl.length : 0,
         hasText: Boolean(m.content && m.content.trim()),
-        contentLength: m.content?.length ?? 0,
+        hasExport: Boolean(m.export),
+        exportFormat: m.export?.format ?? null,
       })),
     });
   }, [messages]);
@@ -56,13 +65,14 @@ export default function SolaceTranscript({
         const isUser = msg.role === "user";
         const hasImage = typeof msg.imageUrl === "string";
         const hasText = Boolean(msg.content && msg.content.trim());
+        const hasExport = Boolean(msg.export);
 
         /**
          * NOTE:
          * Still index-based, but stable for append-only streams.
          * Upgrade to message.id when available.
          */
-        const renderKey = `${i}-${msg.role}-${hasImage ? "img" : "txt"}`;
+        const renderKey = `${i}-${msg.role}-${hasImage ? "img" : hasExport ? "export" : "txt"}`;
 
         if (DEV_DIAG) {
           console.log("[DIAG-MESSAGE-RENDER]", {
@@ -71,10 +81,7 @@ export default function SolaceTranscript({
             role: msg.role,
             hasImage,
             hasText,
-            imageUrlPrefix: hasImage
-              ? msg.imageUrl!.slice(0, 32)
-              : null,
-            imageUrlLength: hasImage ? msg.imageUrl!.length : 0,
+            hasExport,
           });
         }
 
@@ -90,7 +97,7 @@ export default function SolaceTranscript({
             <div
               style={{
                 maxWidth: "80%",
-                minWidth: hasImage ? 220 : undefined,
+                minWidth: hasImage || hasExport ? 220 : undefined,
                 padding: 12,
                 borderRadius: UI.radiusLg,
                 background: isUser ? UI.surface2 : UI.surface1,
@@ -101,6 +108,10 @@ export default function SolaceTranscript({
                 gap: 8,
               }}
             >
+              {/* ---------------- Export Card ---------------- */}
+              {hasExport && <ExportCard exportItem={msg.export!} />}
+
+              {/* ---------------- Image ---------------- */}
               {hasImage && (
                 <ImageWithFallback
                   src={msg.imageUrl!}
@@ -108,6 +119,7 @@ export default function SolaceTranscript({
                 />
               )}
 
+              {/* ---------------- Text ---------------- */}
               {hasText && (
                 <div
                   style={{
@@ -127,10 +139,58 @@ export default function SolaceTranscript({
   );
 }
 
-// --------------------------------------------------
-// Image with explicit load / error visibility
-// --------------------------------------------------
+/* ------------------------------------------------------------------
+   Export Card
+------------------------------------------------------------------- */
+function ExportCard({ exportItem }: { exportItem: ExportItem }) {
+  const label =
+    exportItem.format === "docx"
+      ? "Word Document"
+      : exportItem.format === "pdf"
+      ? "PDF Document"
+      : "CSV File";
 
+  return (
+    <div
+      style={{
+        border: UI.edge,
+        borderRadius: 10,
+        padding: 10,
+        background: UI.surface2,
+        display: "flex",
+        flexDirection: "column",
+        gap: 6,
+      }}
+    >
+      <div style={{ fontWeight: 600 }}>{label}</div>
+
+      <div style={{ fontSize: 12, color: UI.sub }}>
+        {exportItem.filename}
+      </div>
+
+      <a
+        href={exportItem.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          alignSelf: "flex-start",
+          padding: "6px 10px",
+          borderRadius: 8,
+          background: "#fbbf24",
+          color: "#000",
+          fontWeight: 600,
+          textDecoration: "none",
+        }}
+      >
+        Download
+      </a>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------
+   Image with explicit load / error visibility
+------------------------------------------------------------------- */
 function ImageWithFallback({
   src,
   messageIndex,
@@ -156,7 +216,7 @@ function ImageWithFallback({
           padding: 12,
           borderRadius: UI.radiusMd,
           background: UI.surface2,
-          color: UI.sub, // ✅ FIXED: UI.muted → UI.sub
+          color: UI.sub,
           fontSize: 13,
           textAlign: "center",
         }}
