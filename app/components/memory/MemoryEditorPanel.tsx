@@ -2,48 +2,108 @@
 
 import { useEffect, useState } from "react";
 
-type MemoryItem = {
+export type MemoryRecord = {
   id: string;
   content: string;
+  memory_type: string;
+  confidence?: number;
+  sensitivity?: number;
+  updated_at?: string;
 };
 
 type Props = {
-  memory?: MemoryItem | null;
-  onSave?: (content: string) => void;
+  memory: MemoryRecord | null;
+  onChange?: (updated: Partial<MemoryRecord>) => void;
+  onSave?: () => void;
 };
 
-export default function MemoryEditorPanel({ memory, onSave }: Props) {
+export default function MemoryEditorPanel({
+  memory,
+  onChange,
+  onSave,
+}: Props) {
   const [content, setContent] = useState("");
+  const [memoryType, setMemoryType] = useState("fact");
 
   useEffect(() => {
-    setContent(memory?.content ?? "");
-  }, [memory?.id]);
+    if (!memory) return;
+    setContent(memory.content ?? "");
+    setMemoryType(memory.memory_type ?? "fact");
+  }, [memory]);
 
   if (!memory) {
     return (
-      <div className="flex-1 flex items-center justify-center text-neutral-500">
+      <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-6 text-sm text-neutral-400">
         Select a memory to view or edit.
       </div>
     );
   }
 
   return (
-    <div className="flex-1 flex flex-col">
-      <div className="border-b border-neutral-800 px-6 py-4 text-sm font-medium">
-        Memory Editor
+    <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-medium text-neutral-200">
+          Memory Editor
+        </h2>
+
+        {memory.updated_at && (
+          <span className="text-xs text-neutral-500">
+            Last updated {new Date(memory.updated_at).toLocaleString()}
+          </span>
+        )}
       </div>
 
-      <textarea
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        className="flex-1 w-full resize-none bg-neutral-950 p-6 text-sm outline-none"
-        placeholder="Edit memory content..."
-      />
+      <div className="space-y-2">
+        <label className="text-xs text-neutral-400">
+          Memory type
+        </label>
+        <select
+          className="w-full rounded-md border border-neutral-700 bg-black/40 px-3 py-2 text-sm"
+          value={memoryType}
+          onChange={(e) => {
+            const value = e.target.value;
+            setMemoryType(value);
+            onChange?.({ memory_type: value });
+          }}
+        >
+          <option value="fact">Fact</option>
+          <option value="identity">Identity</option>
+          <option value="insight">Insight</option>
+          <option value="decision">Decision</option>
+        </select>
+      </div>
 
-      <div className="border-t border-neutral-800 px-6 py-4 flex justify-end">
+      <div className="space-y-2">
+        <label className="text-xs text-neutral-400">
+          Content
+        </label>
+        <textarea
+          className="w-full min-h-[180px] rounded-md border border-neutral-700 bg-black/40 px-3 py-2 text-sm leading-relaxed"
+          value={content}
+          onChange={(e) => {
+            const value = e.target.value;
+            setContent(value);
+            onChange?.({ content: value });
+          }}
+        />
+      </div>
+
+      <div className="flex justify-end gap-3 pt-2">
         <button
-          onClick={() => onSave?.(content)}
-          className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 text-sm text-white"
+          type="button"
+          className="rounded-md border border-neutral-700 px-4 py-2 text-xs text-neutral-300 hover:bg-neutral-800"
+          onClick={() => {
+            setContent(memory.content ?? "");
+            setMemoryType(memory.memory_type ?? "fact");
+          }}
+        >
+          Reset
+        </button>
+
+        <button
+          type="button"
+          className="rounded-md bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-500"
+          onClick={onSave}
         >
           Save
         </button>
