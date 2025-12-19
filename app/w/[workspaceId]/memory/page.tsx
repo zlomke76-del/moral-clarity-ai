@@ -1,12 +1,9 @@
-// app/w/[workspaceId]/memory/page.tsx
-
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-import Link from "next/link";
 import { createClientServer } from "@/lib/supabase/server";
-import MemoryComposer from "@/components/MemoryComposer";
-import MemoryList from "@/components/MemoryList";
+import MemoryIndexPanel from "@/components/memory/MemoryIndexPanel";
+import MemoryEditorPanel from "@/components/memory/MemoryEditorPanel";
 
 type Props = {
   params: {
@@ -16,68 +13,60 @@ type Props = {
 
 export default async function WorkspaceMemoryPage({ params }: Props) {
   const workspaceId = decodeURIComponent(params.workspaceId);
-
   const supabase = await createClientServer();
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    console.error("[WorkspaceMemoryPage] auth error", authError);
-    return null;
-  }
-
+  // Initial page load (first page only)
   const { data, error } = await supabase
-    .schema("memory")
-    .from("memories")
-    .select(
-      "id, content, created_at, memory_type, is_active"
-    )
-    .eq("user_id", user.id)
-    .eq("memory_type", "fact")
-    .eq("is_active", true)
-    .order("created_at", { ascending: false })
-    .limit(100);
+    .from("memory.memories")
+    .select("id, content, memory_type, updated_at")
+    .eq("workspace_id", workspaceId)
+    .order("updated_at", { ascending: false })
+    .limit(25);
 
   if (error) {
-    console.error("[WorkspaceMemoryPage] load error", error);
+    console.error("[memory page] load error", error);
   }
 
   return (
     <section
       data-layout-boundary="WorkspaceMemoryPage"
-      className="space-y-8"
+      className="w-full h-full flex flex-col"
     >
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Long Term Memory
-          </h1>
-          <p className="text-sm text-neutral-400">
-            Factual memories stored for this account
-          </p>
-        </div>
-
-        <Link
-          href={`/w/${workspaceId}`}
-          className="text-sm text-neutral-300 hover:text-white underline underline-offset-4"
-        >
-          Back to workspace
-        </Link>
+      {/* Header */}
+      <header className="px-8 py-6 border-b border-neutral-800">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Workspace Memories
+        </h1>
+        <p className="text-sm text-neutral-400">
+          Long term factual memory only
+        </p>
       </header>
 
-      <div className="space-y-6">
-        <div data-layout-boundary="MemoryComposer">
-          <MemoryComposer workspaceId={workspaceId} />
-        </div>
-
-        <div data-layout-boundary="MemoryList">
-          <MemoryList
-            items={Array.isArray(data) ? data : []}
+      {/* CONTENT GRID */}
+      <div
+        data-memory-grid
+        className="flex-1 grid grid-cols-[420px_1fr] min-h-0"
+      >
+        {/* LEFT: MEMORY INDEX */}
+        <aside
+          data-memory-index
+          className="border-r border-neutral-800 overflow-y-auto"
+        >
+          <MemoryIndexPanel
+            workspaceId={workspaceId}
+            initialItems={Array.isArray(data) ? data : []}
           />
-        </div>
+        </aside>
+
+        {/* RIGHT: MEMORY EDITOR */}
+        <main
+          data-memory-editor
+          className="overflow-hidden"
+        >
+          <MemoryEditorPanel
+            workspaceId={workspaceId}
+          />
+        </main>
       </div>
     </section>
   );
