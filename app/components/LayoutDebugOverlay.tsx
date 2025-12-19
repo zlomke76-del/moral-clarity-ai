@@ -4,71 +4,38 @@ import { useSearchParams } from "next/navigation";
 
 export default function LayoutDebugOverlay() {
   const params = useSearchParams();
-  const enabled = params.get("debug") === "layout";
+
+  // Defensive: params can be null during build / prerender
+  const enabled =
+    params?.get("debug") === "layout";
 
   if (!enabled) return null;
 
   return (
-    <>
-      {/* App shell outline */}
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          pointerEvents: "none",
-          zIndex: 9999,
-        }}
-      >
-        {/* Sidebar */}
-        <div
-          style={{
-            position: "absolute",
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: "20vw",
-            border: "2px dashed #22c55e",
-            boxSizing: "border-box",
-          }}
-        >
-          <Label text="NEURAL SIDEBAR" />
-        </div>
-
-        {/* Main */}
-        <div
-          style={{
-            position: "absolute",
-            left: "20vw",
-            right: 0,
-            top: 0,
-            bottom: 0,
-            border: "2px dashed #3b82f6",
-            boxSizing: "border-box",
-          }}
-        >
-          <Label text="APP MAIN" />
-        </div>
-      </div>
-    </>
-  );
-}
-
-function Label({ text }: { text: string }) {
-  return (
     <div
-      style={{
-        position: "absolute",
-        top: 8,
-        left: 8,
-        fontSize: 11,
-        padding: "2px 6px",
-        background: "rgba(0,0,0,0.6)",
-        color: "#fff",
-        borderRadius: 4,
-        pointerEvents: "none",
-      }}
+      data-layout-debug-overlay
+      className="fixed inset-0 pointer-events-none z-[9999]"
     >
-      {text}
+      {/* App shell */}
+      <div className="absolute inset-0 outline outline-2 outline-red-500/40">
+        <span className="absolute top-2 left-2 text-xs text-red-400 bg-black/60 px-2 py-1 rounded">
+          app-shell
+        </span>
+      </div>
+
+      {/* Neural sidebar */}
+      <div className="absolute inset-y-0 left-0 w-[20vw] outline outline-2 outline-blue-500/40">
+        <span className="absolute top-10 left-2 text-xs text-blue-400 bg-black/60 px-2 py-1 rounded">
+          neural-sidebar
+        </span>
+      </div>
+
+      {/* Main content */}
+      <div className="absolute inset-y-0 left-[20vw] right-0 outline outline-2 outline-green-500/40">
+        <span className="absolute top-10 left-2 text-xs text-green-400 bg-black/60 px-2 py-1 rounded">
+          app-main
+        </span>
+      </div>
     </div>
   );
 }
