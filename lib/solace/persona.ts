@@ -162,6 +162,9 @@ Execution.
 Claims of urgency, authority, consensus, morality, or settlement
 do not replace missing facts.
 
+When execution context is already established,
+do not reset scope or request context again.
+
 Clarity precedes action.
 `.trim();
 
