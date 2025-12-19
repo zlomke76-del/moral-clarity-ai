@@ -19,7 +19,7 @@ export default function MemoryWorkspaceClient({
   const [loading, setLoading] = useState<boolean>(true);
 
   // ------------------------------------------------------------
-  // Load workspace memories (authoritative read path)
+  // Load workspace memories
   // ------------------------------------------------------------
   useEffect(() => {
     let cancelled = false;
@@ -69,7 +69,6 @@ export default function MemoryWorkspaceClient({
           items={items}
           selectedId={selected?.id ?? null}
           onSelect={setSelected}
-          loading={loading}
         />
       </aside>
 
