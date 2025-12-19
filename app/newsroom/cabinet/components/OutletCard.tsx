@@ -1,42 +1,15 @@
 "use client";
 
-import React from "react";
+import Image from "next/image";
 import type { OutletOverview } from "../types";
-
-type Badge = "golden" | "neutral" | "watchlist";
 
 type Props = {
   outlet: OutletOverview;
   rank: number;
   selected: boolean;
-  badge: Badge;
+  badge: "golden" | "neutral" | "watchlist";
   onSelect: () => void;
 };
-
-/**
- * Truncate (do NOT round) to 1 decimal place.
- * Example: 78.25 -> 78.2
- */
-function trunc1(n: number): number {
-  if (!Number.isFinite(n)) return 0;
-  return Math.trunc(n * 10) / 10;
-}
-
-/**
- * avg_pi is 0..1 → display 0..100
- * Truncated, never rounded.
- */
-function formatPiPercent(avgPi: number): string {
-  const percent = avgPi * 100;
-  const truncated = trunc1(percent);
-  return truncated.toFixed(1);
-}
-
-function badgeGlowClass(badge: Badge): string {
-  if (badge === "golden") return "mc-outlet-glow-gold";
-  if (badge === "watchlist") return "mc-outlet-glow-red";
-  return "";
-}
 
 export default function OutletCard({
   outlet,
@@ -45,51 +18,46 @@ export default function OutletCard({
   badge,
   onSelect,
 }: Props) {
-  const displayDomain = outlet.canonical_outlet.trim();
+  const domain = outlet.canonical_outlet;
+
+  // ✅ SAFE logo source (not blocked by tracking prevention)
+  const logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 
   return (
     <button
-      type="button"
       onClick={onSelect}
-      className={[
-        "relative",
-        "w-[220px]",
-        "rounded-md",
-        "border",
-        "bg-neutral-800/55",
-        "px-3",
-        "py-2",
-        "text-left",
-        "transition",
-        "hover:bg-neutral-800/70",
-        selected ? "border-white/35" : "border-white/20",
-        badgeGlowClass(badge),
-      ].join(" ")}
-      aria-label={`#${rank} ${displayDomain}`}
+      className={`w-full rounded-lg border px-4 py-3 text-left transition
+        ${
+          selected
+            ? "border-amber-400/60 bg-amber-400/10"
+            : "border-neutral-800 bg-neutral-900/60 hover:bg-neutral-900"
+        }
+      `}
     >
-      {/* Rank */}
-      <div className="flex items-center justify-between">
-        <div className="text-xs font-semibold text-white/90">#{rank}</div>
-      </div>
+      <div className="flex items-center gap-3">
+        {/* Rank */}
+        <div className="w-6 text-xs text-neutral-400">#{rank}</div>
 
-      {/* Logo slot — your existing logo renderer can live here */}
-      <div className="mt-1 flex items-center justify-center">
-        <div className="h-6 w-6 rounded-sm bg-white/10" />
-      </div>
+        {/* Logo */}
+        <Image
+          src={logoUrl}
+          alt={`${domain} logo`}
+          width={20}
+          height={20}
+          className="rounded-sm"
+          unoptimized
+        />
 
-      {/* Outlet name */}
-      <div className="mt-1 text-sm font-semibold text-white/95">
-        {displayDomain}
-      </div>
-
-      {/* Credibility line (your required format) */}
-      <div className="mt-0.5 text-[12px] leading-tight text-white/90">
-        {outlet.total_stories} stories analyzed · PI based on lifetime.
-      </div>
-
-      {/* PI */}
-      <div className="mt-0.5 text-[12px] leading-tight text-white/90">
-        PI {formatPiPercent(outlet.avg_pi)}
+        {/* Text */}
+        <div className="flex-1">
+          <div className="text-sm font-medium text-neutral-100">
+            {domain}
+          </div>
+          <div className="text-xs text-neutral-400">
+            {outlet.total_stories} stories analyzed · PI{" "}
+            {(outlet.avg_pi * 100).toFixed(1)}
+          </div>
+        </div>
       </div>
     </button>
   );
