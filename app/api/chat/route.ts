@@ -18,7 +18,7 @@ import { runHybridPipeline } from "./modules/hybrid";
 import { runNewsroomExecutor } from "./modules/newsroom-executor";
 import { writeMemory } from "./modules/memory-writer";
 import { generateImage } from "./modules/image-router";
-import { runSessionCompaction } from "./modules/runSessionCompaction";
+import { runSessionCompaction } from "@/lib/memory/runSessionCompaction";
 import { finalizeConversation } from "@/lib/memory/finalizeConversation";
 
 // ------------------------------------------------------------
