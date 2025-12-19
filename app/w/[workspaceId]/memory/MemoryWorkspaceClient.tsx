@@ -33,7 +33,10 @@ export default function MemoryWorkspaceClient({
 
       <main className="overflow-hidden">
         {selected ? (
-          <MemoryEditorPanel record={selected} />
+          <MemoryEditorPanel
+            workspaceId={workspaceId}
+            record={selected}
+          />
         ) : (
           <div className="h-full flex items-center justify-center text-sm text-neutral-500">
             Select a memory to view or edit
