@@ -6,8 +6,11 @@ import AuthProvider from "@/components/AuthProvider";
 import LayoutShell from "./LayoutShell";
 import Toaster from "@/components/Toaster";
 
-// ⭐ import the wrapper instead of SolaceDock
+// ⭐ Solace wrapper (conditionally mounted)
 import SolaceDockWrapper from "@/app/components/SolaceDockWrapper";
+
+// ✅ client-only hook
+import { headers } from "next/headers";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.moralclarity.ai"),
@@ -25,7 +28,29 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  /**
+   * 🔒 INSTITUTIONAL MODE GUARD
+   *
+   * We derive pathname from request headers at the ROOT layout level.
+   * This guarantees Solace is never mounted for /newsroom/**
+   * regardless of nested layouts or shells.
+   */
+  const hdrs = headers();
+  const pathname =
+    hdrs.get("x-pathname") ||
+    hdrs.get("x-invoke-path") ||
+    hdrs.get("referer") ||
+    "";
+
+  const isNewsroom =
+    pathname.includes("/newsroom") ||
+    pathname.includes("/newsroom/");
+
   return (
     <html lang="en" className="h-full dark">
       <body className="mc-root min-h-screen relative">
@@ -35,8 +60,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <LayoutShell>{children}</LayoutShell>
 
-          {/* ⭐ Solace resurrected safely */}
-          <SolaceDockWrapper />
+          {/* 🔒 Solace is NEVER mounted in Newsroom */}
+          {!isNewsroom && <SolaceDockWrapper />}
         </AuthProvider>
 
         <Toaster />
@@ -44,5 +69,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-
-
