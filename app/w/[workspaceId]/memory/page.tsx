@@ -8,6 +8,7 @@ import { createClientServer } from "@/lib/supabase/server";
 import MemoryComposer from "@/components/MemoryComposer";
 import MemoryList from "@/components/MemoryList";
 import LayoutDiagnosticsBoundary from "@/components/LayoutDiagnosticsBoundary";
+import ShellPresenceProbe from "@/components/ShellPresenceProbe";
 
 type Props = {
   params: {
@@ -21,8 +22,6 @@ export default async function WorkspaceMemoryPage({ params }: Props) {
   console.log("[LAYOUT-PAGE]", {
     page: "WorkspaceMemoryPage",
     workspaceId,
-    runtime: "nodejs",
-    dynamic: true,
   });
 
   const supabase = await createClientServer();
@@ -40,6 +39,8 @@ export default async function WorkspaceMemoryPage({ params }: Props) {
 
   return (
     <LayoutDiagnosticsBoundary id="WorkspaceMemoryPage">
+      <ShellPresenceProbe />
+
       <section className="space-y-8 p-6">
         <header className="flex items-center justify-between">
           <div>
