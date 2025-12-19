@@ -3,32 +3,41 @@
 import type { MemoryRecord } from "./types";
 
 type Props = {
-  workspaceId: string;
-  initialItems: MemoryRecord[];
+  items: MemoryRecord[];
+  selectedId: string | null;
   onSelect: (record: MemoryRecord) => void;
 };
 
 export default function MemoryIndexPanel({
-  initialItems,
+  items,
+  selectedId,
   onSelect,
 }: Props) {
   return (
     <div className="h-full overflow-y-auto">
       <ul className="divide-y divide-neutral-800">
-        {initialItems.map((m) => (
-          <li
-            key={m.id}
-            onClick={() => onSelect(m)}
-            className="cursor-pointer px-4 py-3 hover:bg-neutral-900"
-          >
-            <div className="truncate text-sm text-neutral-200">
-              {m.content}
-            </div>
-            <div className="mt-1 text-xs text-neutral-500">
-              {new Date(m.updated_at).toLocaleString()}
-            </div>
-          </li>
-        ))}
+        {items.map((m) => {
+          const active = m.id === selectedId;
+
+          return (
+            <li
+              key={m.id}
+              onClick={() => onSelect(m)}
+              className={`cursor-pointer px-4 py-3 ${
+                active
+                  ? "bg-neutral-900 text-white"
+                  : "hover:bg-neutral-900/60 text-neutral-300"
+              }`}
+            >
+              <div className="truncate text-sm">
+                {m.content}
+              </div>
+              <div className="mt-1 text-xs text-neutral-500">
+                {new Date(m.updated_at).toLocaleString()}
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
