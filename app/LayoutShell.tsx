@@ -1,11 +1,11 @@
-// app/LayoutShell.tsx
 "use client";
 
 import { usePathname } from "next/navigation";
-import NeuralSidebar from "@/app/components/NeuralSidebar";
-import SolaceGuard from "@/app/components/SolaceGuard";
 import { Suspense } from "react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+
+import NeuralSidebar from "@/app/components/NeuralSidebar";
+import SolaceGuard from "@/app/components/SolaceGuard";
 import LayoutDebugOverlay from "@/app/components/LayoutDebugOverlay";
 
 export default function LayoutShell({
@@ -18,7 +18,7 @@ export default function LayoutShell({
   const isApp =
     pathname === "/app" ||
     pathname.startsWith("/app/") ||
-    pathname.startsWith("/w/"); // workspace routes included
+    pathname.startsWith("/w/");
 
   const isAuth = pathname.startsWith("/auth");
   const isNewsroom =
@@ -26,7 +26,7 @@ export default function LayoutShell({
 
   return (
     <>
-      {/* Mount Solace only where allowed */}
+      {/* Solace mounts everywhere except auth + newsroom */}
       {!isAuth && !isNewsroom && (
         <Suspense fallback={null}>
           <SolaceGuard />
@@ -46,9 +46,13 @@ export default function LayoutShell({
             data-app-main
             className="h-full flex flex-col items-start justify-start"
           >
+            {/* IMPORTANT:
+                NO width constraints here.
+                Pages decide their own layout.
+            */}
             <div
-              data-layout-boundary="AppContentColumn"
-              className="w-full max-w-3xl px-8 py-16"
+              data-app-content
+              className="w-full px-8 py-10"
             >
               {children}
             </div>
@@ -63,7 +67,7 @@ export default function LayoutShell({
         </main>
       )}
 
-      {/* Always-on visual diagnostics */}
+      {/* Debug overlay is always last */}
       <LayoutDebugOverlay />
 
       <SpeedInsights />
