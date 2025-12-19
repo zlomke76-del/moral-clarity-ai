@@ -2,15 +2,10 @@
 
 import { useState } from "react";
 
-import MemoryIndexPanel from "@/components/memory/MemoryIndexPanel";
-import MemoryEditorPanel from "@/components/memory/MemoryEditorPanel";
-
-export type MemoryRecord = {
-  id: string;
-  content: string;
-  memory_type: string;
-  updated_at: string;
-};
+import MemoryIndexPanel from "@/app/components/memory/MemoryIndexPanel";
+import MemoryEditorPanel, {
+  MemoryRecord,
+} from "@/app/components/memory/MemoryEditorPanel";
 
 type Props = {
   workspaceId: string;
@@ -21,33 +16,29 @@ export default function MemoryWorkspaceClient({
   workspaceId,
   initialItems,
 }: Props) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<MemoryRecord | null>(null);
 
   return (
-    <>
+    <div
+      data-memory-grid
+      className="h-full grid grid-cols-[420px_1fr] min-h-0"
+    >
       {/* LEFT: MEMORY INDEX */}
-      <aside
-        data-memory-index
-        className="border-r border-neutral-800 overflow-y-auto"
-      >
+      <aside className="border-r border-neutral-800 overflow-y-auto">
         <MemoryIndexPanel
           workspaceId={workspaceId}
           initialItems={initialItems}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
+          onSelect={setSelected}
         />
       </aside>
 
       {/* RIGHT: MEMORY EDITOR */}
-      <main
-        data-memory-editor
-        className="overflow-hidden"
-      >
+      <main className="overflow-hidden">
         <MemoryEditorPanel
           workspaceId={workspaceId}
-          memoryId={selectedId}
+          record={selected}
         />
       </main>
-    </>
+    </div>
   );
 }
