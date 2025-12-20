@@ -32,17 +32,6 @@ import { IconPaperclip, IconMic } from "@/app/components/icons";
 import type { SolaceExport } from "@/lib/exports/types";
 
 /* ------------------------------------------------------------------ */
-/* Globals */
-/* ------------------------------------------------------------------ */
-declare global {
-  interface Window {
-    __solaceDockMounted?: boolean;
-    webkitSpeechRecognition?: any;
-    SpeechRecognition?: any;
-  }
-}
-
-/* ------------------------------------------------------------------ */
 /* Types */
 /* ------------------------------------------------------------------ */
 type Message = {
@@ -93,23 +82,6 @@ function isImageIntent(message: string): boolean {
 /* ------------------------------------------------------------------ */
 export default function SolaceDock() {
   /* -------------------------------------------------------------- */
-  /* Mount guard (prevents double mount / freeze) */
-  /* -------------------------------------------------------------- */
-  const [canRender, setCanRender] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.__solaceDockMounted) return;
-
-    window.__solaceDockMounted = true;
-    setCanRender(true);
-
-    return () => {
-      window.__solaceDockMounted = false;
-    };
-  }, []);
-
-  /* -------------------------------------------------------------- */
   /* Conversation */
   /* -------------------------------------------------------------- */
   const conversationIdRef = useRef<string>(crypto.randomUUID());
@@ -144,13 +116,6 @@ export default function SolaceDock() {
   }, []);
 
   const isMobile = viewport.w > 0 && viewport.w <= 768;
-
-  /* Ensure desktop always visible */
-  useEffect(() => {
-    if (canRender && !isMobile && !visible) {
-      setVisible(true);
-    }
-  }, [canRender, isMobile, visible, setVisible]);
 
   /* -------------------------------------------------------------- */
   /* Chat state */
@@ -247,7 +212,6 @@ export default function SolaceDock() {
   /* Position + Resize */
   /* -------------------------------------------------------------- */
   const { posReady, onHeaderMouseDown } = useDockPosition({
-    canRender,
     visible,
     viewport,
     panelW,
@@ -310,7 +274,7 @@ export default function SolaceDock() {
       }
     : styles.panelStyle;
 
-  if (!canRender || !visible) return null;
+  if (!visible) return null;
 
   /* -------------------------------------------------------------- */
   /* Payload ingest */
