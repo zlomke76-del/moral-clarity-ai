@@ -88,7 +88,7 @@ export default function SolaceDock() {
   const conversationId = conversationIdRef.current;
 
   /* -------------------------------------------------------------- */
-  /* Solace Store — SINGLE SOURCE OF TRUTH */
+  /* Solace Store (single source of truth) */
   /* -------------------------------------------------------------- */
   const {
     visible,
@@ -110,6 +110,7 @@ export default function SolaceDock() {
   useEffect(() => {
     const update = () =>
       setViewport({ w: window.innerWidth, h: window.innerHeight });
+
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
@@ -181,7 +182,7 @@ export default function SolaceDock() {
   }, [messages.length]);
 
   /* -------------------------------------------------------------- */
-  /* Measure */
+  /* Measure (FIXED — no resize loop) */
   /* -------------------------------------------------------------- */
   const [panelW, setPanelW] = useState(0);
   const [panelH, setPanelH] = useState(0);
@@ -193,18 +194,16 @@ export default function SolaceDock() {
 
     const measure = () => {
       const r = el.getBoundingClientRect();
-      setPanelW(r.width);
-      setPanelH(r.height);
+      setPanelW((w) => (w !== r.width ? r.width : w));
+      setPanelH((h) => (h !== r.height ? r.height : h));
     };
 
-    measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
-    window.addEventListener("resize", measure);
+    measure();
 
     return () => {
       ro.disconnect();
-      window.removeEventListener("resize", measure);
     };
   }, []);
 
