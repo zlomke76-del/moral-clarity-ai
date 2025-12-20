@@ -31,9 +31,9 @@ export default function Leaderboard({
   const watchlist = sorted.slice(-WATCH_COUNT);
   const neutral = sorted.slice(GOLD_COUNT, sorted.length - WATCH_COUNT);
 
-  // 📊 TOTAL STORIES ANALYZED (LEADERBOARD-DERIVED, LIFETIME)
+  // 📊 TOTAL STORIES ANALYZED (LIFETIME, CANONICAL)
   const totalStoriesAnalyzed = sorted.reduce(
-    (sum, o) => sum + (o.stories_analyzed ?? 0),
+    (sum, o) => sum + o.total_stories,
     0
   );
 
