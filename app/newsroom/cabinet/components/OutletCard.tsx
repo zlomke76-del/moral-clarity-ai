@@ -23,6 +23,11 @@ export default function OutletCard({
   // ✅ SAFE logo source (not blocked by tracking prevention)
   const logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 
+  // 🔒 CANONICAL PI DISPLAY RULE
+  // Internal: 0.0–1.0
+  // Display: 0–100, TWO DECIMALS
+  const piDisplay = (outlet.avg_pi * 100).toFixed(2);
+
   return (
     <button
       onClick={onSelect}
@@ -54,8 +59,8 @@ export default function OutletCard({
             {domain}
           </div>
           <div className="text-xs text-neutral-400">
-            {outlet.stories_analyzed.toLocaleString()} stories analyzed · PI{" "}
-            {(outlet.avg_pi * 100).toFixed(2)}
+            {outlet.total_stories.toLocaleString()} stories analyzed · PI{" "}
+            {piDisplay}
           </div>
         </div>
       </div>
