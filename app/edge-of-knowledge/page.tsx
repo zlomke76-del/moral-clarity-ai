@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Governing Action at the Edge of Knowledge | Moral Clarity AI",
   description:
-    "A public doctrine for responsible intelligence when certainty breaks. Governing action under uncertainty across human and artificial systems.",
+    "A public doctrine for AI safety and responsible intelligence when certainty breaks. Governing action under uncertainty across human and automated systems.",
   openGraph: {
     title: "Governing Action at the Edge of Knowledge",
     description:
@@ -26,7 +26,9 @@ export default function EdgeOfKnowledgePage() {
       <article className="prose prose-neutral dark:prose-invert max-w-none">
         <h1>Governing Action at the Edge of Knowledge</h1>
         <p className="lead">
-          <strong>A doctrine for responsible intelligence when certainty breaks</strong>
+          <strong>
+            A doctrine for responsible intelligence when certainty breaks
+          </strong>
         </p>
 
         <h2>Preface</h2>
@@ -36,6 +38,14 @@ export default function EdgeOfKnowledgePage() {
           It is offered as a public doctrine for governing action under uncertainty,
           not as a product specification or policy mandate. The intent is to make
           uncertainty visible, governable, and survivable.
+        </p>
+
+        <p>
+          This doctrine addresses failures in AI safety, automation, and decision-making
+          under uncertainty, where systems act with high confidence outside their
+          training or validity regimes. It is relevant to engineers, researchers, and
+          leaders concerned with unexpected model behavior, robustness, and safe
+          human–machine collaboration.
         </p>
 
         <h2>Abstract</h2>
