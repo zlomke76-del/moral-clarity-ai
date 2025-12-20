@@ -44,7 +44,8 @@ None.
   }
 
   const lines = wm.map(
-    (m: any) => `- (${m.role}) ${m.content}`
+    (m: { role: string; content: string }) =>
+      `- (${m.role}) ${m.content}`
   );
 
   return `
@@ -69,12 +70,18 @@ None established.
 `;
   }
 
+  const constraintsText = Array.isArray(state.constraints)
+    ? state.constraints
+        .map((c: string) => `- ${c}`)
+        .join("\n")
+    : "None";
+
   return `
 SESSION STATE (AUTHORITATIVE):
 Domain: ${state.domain ?? "unspecified"}
 Intent: ${state.intent ?? "unspecified"}
 Constraints:
-${Array.isArray(state.constraints) ? state.constraints.map(c => `- ${c}`).join("\n") : "None"}
+${constraintsText}
 `;
 }
 
@@ -96,10 +103,12 @@ export async function runHybridPipeline(args: {
   console.log("[DIAG-HYBRID-WM]", {
     active: context?.workingMemory?.active ?? false,
     count: context?.workingMemory?.items?.length ?? 0,
-    sample: context?.workingMemory?.items?.slice(0, 2)?.map((m: any) => ({
-      role: m.role,
-      content: m.content.slice(0, 60),
-    })),
+    sample: context?.workingMemory?.items
+      ?.slice(0, 2)
+      ?.map((m: { role: string; content: string }) => ({
+        role: m.role,
+        content: m.content.slice(0, 60),
+      })),
   });
 
   // ----------------------------------------------------------
