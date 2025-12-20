@@ -1,39 +1,39 @@
 "use client";
 
-import React, {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  KeyboardEvent,
-} from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-
 import { useSolaceStore } from "@/app/providers/solace-store";
-import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
 
+import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
 import { useDockStyles } from "./useDockStyles";
+import { useSolaceMemory } from "./useSolaceMemory";
+import { useSolaceAttachments } from "./useSolaceAttachments";
+import { useSpeechInput } from "./useSpeechInput";
+import { IconPaperclip, IconMic } from "@/app/components/icons";
+import { sendWithVision } from "./sendWithVision";
+import SolaceTranscript from "./SolaceTranscript";
+import { UI } from "./dock-ui";
 import { useDockPosition } from "./useDockPosition";
+import SolaceDockHeaderLite from "./dock-header-lite";
 import {
   useDockSize,
   ResizeHandle,
   createResizeController,
 } from "./dock-resize";
 
-import { useSolaceMemory } from "./useSolaceMemory";
-import { useSolaceAttachments } from "./useSolaceAttachments";
-import { useSpeechInput } from "./useSpeechInput";
-import { sendWithVision } from "./sendWithVision";
-
-import SolaceTranscript from "./SolaceTranscript";
-import SolaceDockHeaderLite from "./dock-header-lite";
-import { IconPaperclip, IconMic } from "@/app/components/icons";
-
 import type { SolaceExport } from "@/lib/exports/types";
 
-/* ------------------------------------------------------------------ */
-/* Types */
-/* ------------------------------------------------------------------ */
+declare global {
+  interface Window {
+    __solaceDockMounted?: boolean;
+    webkitSpeechRecognition?: any;
+    SpeechRecognition?: any;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Types
+------------------------------------------------------------------- */
 type Message = {
   role: "user" | "assistant";
   content: string;
@@ -54,16 +54,16 @@ type PendingFile = {
   size?: number;
 };
 
-/* ------------------------------------------------------------------ */
-/* Constants */
-/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------
+   Constants
+------------------------------------------------------------------- */
 const POS_KEY = "solace:pos:v4";
 const MINISTRY_KEY = "solace:ministry";
 const PAD = 12;
 
-/* ------------------------------------------------------------------ */
-/* Image intent gate */
-/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------
+   Image intent gate
+------------------------------------------------------------------- */
 function isImageIntent(message: string): boolean {
   const m = (message || "").toLowerCase().trim();
   return (
@@ -77,88 +77,75 @@ function isImageIntent(message: string): boolean {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* MAIN */
-/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------
+   MAIN
+------------------------------------------------------------------- */
 export default function SolaceDock() {
-  /* -------------------------------------------------------------- */
-  /* Conversation */
-  /* -------------------------------------------------------------- */
-  const conversationIdRef = useRef<string>(crypto.randomUUID());
+  const [canRender, setCanRender] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.__solaceDockMounted) return;
+
+    window.__solaceDockMounted = true;
+    setCanRender(true);
+
+    return () => {
+      window.__solaceDockMounted = false;
+    };
+  }, []);
+
+  const conversationIdRef = useRef<string | null>(null);
+  if (!conversationIdRef.current) {
+    conversationIdRef.current = crypto.randomUUID();
+  }
   const conversationId = conversationIdRef.current;
 
-  /* -------------------------------------------------------------- */
-  /* Solace Store (single source of truth) */
-  /* -------------------------------------------------------------- */
-  const {
-    visible,
-    setVisible,
-    x,
-    y,
-    setPos,
-    filters,
-    setFilters,
-  } = useSolaceStore();
+  const { visible, setVisible, x, y, setPos, filters, setFilters } =
+    useSolaceStore();
 
   const modeHint = "Neutral" as const;
 
-  /* -------------------------------------------------------------- */
-  /* Viewport */
-  /* -------------------------------------------------------------- */
   const [viewport, setViewport] = useState({ w: 0, h: 0 });
-
   useEffect(() => {
     const update = () =>
       setViewport({ w: window.innerWidth, h: window.innerHeight });
-
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  const isMobile = viewport.w > 0 && viewport.w <= 768;
+  const isMobile = viewport.w > 0 ? viewport.w <= 768 : false;
 
-  /* -------------------------------------------------------------- */
-  /* Chat state */
-  /* -------------------------------------------------------------- */
+  useEffect(() => {
+    if (canRender && !isMobile && !visible) setVisible(true);
+  }, [canRender, isMobile, visible, setVisible]);
+
+  const [minimized, setMinimized] = useState(false);
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
 
   const transcriptRef = useRef<HTMLDivElement | null>(null);
-
   useEffect(() => {
-    transcriptRef.current?.scrollTo(
-      0,
-      transcriptRef.current.scrollHeight
-    );
+    transcriptRef.current?.scrollTo(0, transcriptRef.current.scrollHeight);
   }, [messages]);
 
-  /* -------------------------------------------------------------- */
-  /* Memory + Attachments + Speech */
-  /* -------------------------------------------------------------- */
   const { userKey, memReady } = useSolaceMemory();
 
-  const {
-    pendingFiles,
-    handleFiles,
-    handlePaste,
-    clearPending,
-  } = useSolaceAttachments({
-    onInfoMessage: (msg) =>
-      setMessages((m) => [...m, { role: "assistant", content: msg }]),
-  });
+  const { pendingFiles, handleFiles, handlePaste, clearPending } =
+    useSolaceAttachments({
+      onInfoMessage: (msg) =>
+        setMessages((m) => [...m, { role: "assistant", content: msg }]),
+    });
 
-  const { toggleMic } = useSpeechInput({
-    onText: (text) =>
-      setInput((p) => (p ? `${p} ${text}` : text)),
+  const { listening, toggleMic } = useSpeechInput({
+    onText: (text) => setInput((p) => (p ? p + " " : "") + text),
     onError: (msg) =>
       setMessages((m) => [...m, { role: "assistant", content: msg }]),
   });
 
-  /* -------------------------------------------------------------- */
-  /* Ministry mode */
-  /* -------------------------------------------------------------- */
   const ministryOn = useMemo(
     () => filters.has("abrahamic") && filters.has("ministry"),
     [filters]
@@ -173,7 +160,7 @@ export default function SolaceDock() {
         setFilters(next);
       }
     } catch {}
-  }, [filters, setFilters]);
+  }, [setFilters]);
 
   useEffect(() => {
     if (messages.length === 0) {
@@ -181,11 +168,9 @@ export default function SolaceDock() {
     }
   }, [messages.length]);
 
-  /* -------------------------------------------------------------- */
-  /* Measure (FIXED — no resize loop) */
-  /* -------------------------------------------------------------- */
   const [panelW, setPanelW] = useState(0);
   const [panelH, setPanelH] = useState(0);
+
   const containerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -194,23 +179,23 @@ export default function SolaceDock() {
 
     const measure = () => {
       const r = el.getBoundingClientRect();
-      setPanelW((w) => (w !== r.width ? r.width : w));
-      setPanelH((h) => (h !== r.height ? r.height : h));
+      setPanelW(r.width);
+      setPanelH(r.height);
     };
 
+    measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
-    measure();
+    window.addEventListener("resize", measure);
 
     return () => {
       ro.disconnect();
+      window.removeEventListener("resize", measure);
     };
   }, []);
 
-  /* -------------------------------------------------------------- */
-  /* Position + Resize */
-  /* -------------------------------------------------------------- */
   const { posReady, onHeaderMouseDown } = useDockPosition({
+    canRender,
     visible,
     viewport,
     panelW,
@@ -224,126 +209,133 @@ export default function SolaceDock() {
   });
 
   const { dockW, dockH, setDockW, setDockH } = useDockSize();
-  const startResize = createResizeController(
-    dockW,
-    dockH,
-    setDockW,
-    setDockH
-  );
+  const startResize = createResizeController(dockW, dockH, setDockW, setDockH);
 
   const vw = viewport.w || 1;
   const vh = viewport.h || 1;
 
+  // ------------------------------
+  // MOBILE CLAMP (no drift)
+  // ------------------------------
   const mobileW = Math.max(280, Math.min(dockW, vw - PAD * 2));
   const mobileH = Math.max(360, Math.min(dockH, vh - PAD * 2));
 
-  const tx = isMobile
-    ? PAD
-    : Math.min(Math.max(0, x - PAD), vw - panelW - PAD);
+  // Desktop: use stored x/y. Mobile: pin inside viewport.
+  const txDesktop = Math.min(Math.max(0, x - PAD), vw - panelW - PAD);
+  const tyDesktop = Math.min(Math.max(0, y - PAD), vh - panelH - PAD);
 
-  const ty = isMobile
-    ? Math.max(PAD, vh - mobileH - PAD)
-    : Math.min(Math.max(0, y - PAD), vh - panelH - PAD);
+  const tx = isMobile ? PAD : txDesktop;
+  const ty = isMobile ? Math.max(PAD, vh - mobileH - PAD) : tyDesktop;
 
-  const styles = useDockStyles({
-    dockW: isMobile ? mobileW : dockW,
-    dockH: isMobile ? mobileH : dockH,
-    tx,
-    ty,
-    invisible: isMobile ? false : !posReady,
-    ministryOn,
-    PAD,
-  });
+  const { panelStyle, transcriptStyle, textareaStyle, composerWrapStyle } =
+    useDockStyles({
+      dockW: isMobile ? mobileW : dockW,
+      dockH: isMobile ? mobileH : dockH,
+      tx,
+      ty,
+      invisible: isMobile ? false : !posReady,
+      ministryOn,
+      PAD,
+    });
 
+  // iOS scroll polish without changing desktop styling
   const transcriptStyleSafe: React.CSSProperties = isMobile
     ? {
-        ...styles.transcriptStyle,
+        ...transcriptStyle,
         overflowY: "auto",
         WebkitOverflowScrolling: "touch",
       }
-    : styles.transcriptStyle;
+    : transcriptStyle;
 
+  // Hard clamp at the container level too (prevents iOS “wider than viewport” weirdness)
   const panelStyleSafe: React.CSSProperties = isMobile
     ? {
-        ...styles.panelStyle,
+        ...panelStyle,
         width: mobileW,
         height: mobileH,
         maxWidth: vw - PAD * 2,
         maxHeight: vh - PAD * 2,
       }
-    : styles.panelStyle;
+    : panelStyle;
 
-  if (!visible) return null;
+  if (!canRender || !visible) return null;
 
-  /* -------------------------------------------------------------- */
-  /* Payload ingest */
-  /* -------------------------------------------------------------- */
+  /* ------------------------------------------------------------------
+     PAYLOAD INGEST (AUTHORITATIVE)
+  ------------------------------------------------------------------- */
   function ingestPayload(data: any) {
     if (!data) throw new Error("Empty response payload");
 
+    // EXPORT DELIVERY — MUST PREEMPT EVERYTHING
     if ((data.export as SolaceExport)?.kind === "export") {
       const exp = data.export as SolaceExport;
+
       setMessages((m) => [
         ...m,
         {
           role: "assistant",
-          content: `Your document is ready.\n\nFile: ${exp.filename}\nDownload: ${exp.url}`,
+          content:
+            `Your document is ready.\n\n` +
+            `File: ${exp.filename}\n` +
+            `Download: ${exp.url}`,
         },
       ]);
       return;
     }
 
-    if (Array.isArray(data.data) && data.data[0]?.b64_json) {
+    // IMAGE (base64)
+    if (
+      Array.isArray(data.data) &&
+      data.data[0] &&
+      typeof data.data[0].b64_json === "string"
+    ) {
+      const imageUrl = `data:image/png;base64,${data.data[0].b64_json}`;
+      setMessages((m) => [...m, { role: "assistant", content: " ", imageUrl }]);
+      return;
+    }
+
+    // IMAGE (url)
+    if (typeof data.imageUrl === "string" || typeof data.image === "string") {
+      const image = data.imageUrl ?? data.image;
       setMessages((m) => [
         ...m,
-        {
-          role: "assistant",
-          content: " ",
-          imageUrl: `data:image/png;base64,${data.data[0].b64_json}`,
-        },
+        { role: "assistant", content: " ", imageUrl: image },
       ]);
       return;
     }
 
-    if (typeof data.imageUrl === "string") {
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", content: " ", imageUrl: data.imageUrl },
-      ]);
-      return;
-    }
-
+    // MULTI-MESSAGE
     if (Array.isArray(data.messages)) {
       setMessages((m) => [...m, ...data.messages]);
       return;
     }
 
-    if (data.ok && typeof data.response === "string") {
+    // STRING RESPONSE
+    if (data.ok === true && typeof data.response === "string") {
       setMessages((m) => [...m, { role: "assistant", content: data.response }]);
       return;
     }
 
+    // EVIDENCE
     if (Array.isArray(data.evidence)) {
-      setMessages((m) => [
-        ...m,
-        ...data.evidence.map((e: EvidenceBlock) => ({
-          role: "assistant",
-          content:
-            `Evidence${e.source ? ` (${e.source})` : ""}\n\n${
-              e.summary || e.text || "[no content]"
-            }`,
-        })),
-      ]);
+      const evMsgs: Message[] = data.evidence.map((e: EvidenceBlock) => ({
+        role: "assistant",
+        content:
+          `Evidence` +
+          (e.source ? ` (${e.source})` : "") +
+          `\n\n${e.summary || e.text || "[no content]"}`,
+      }));
+      setMessages((m) => [...m, ...evMsgs]);
       return;
     }
 
     throw new Error("Unrecognized response payload");
   }
 
-  /* -------------------------------------------------------------- */
-  /* Send */
-  /* -------------------------------------------------------------- */
-  async function send() {
+  /* ------------------------------------------------------------------
+     SEND
+  ------------------------------------------------------------------- */
+  async function send(): Promise<void> {
     if (!input.trim() && pendingFiles.length === 0) return;
     if (streaming) return;
 
@@ -366,13 +358,14 @@ export default function SolaceDock() {
             modeHint,
           }),
         });
+
         ingestPayload(await res.json());
         return;
       }
 
       const result = await sendWithVision({
         userMsg,
-        pendingFiles: pendingFiles as PendingFile[],
+        pendingFiles,
         userKey,
         workspaceId: MCA_WORKSPACE_ID,
         conversationId,
@@ -393,7 +386,9 @@ export default function SolaceDock() {
         }
       }
 
-      if (result?.chatPayload) ingestPayload(result.chatPayload);
+      if (result?.chatPayload) {
+        ingestPayload(result.chatPayload);
+      }
     } catch (err: any) {
       setMessages((m) => [
         ...m,
@@ -405,28 +400,14 @@ export default function SolaceDock() {
     }
   }
 
-  /* -------------------------------------------------------------- */
-  /* Handlers */
-  /* -------------------------------------------------------------- */
-  const onEnterSend = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+  const onEnterSend = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       send();
     }
   };
 
-  const handleHeaderDragStart = (e: any) => {
-    if (!isMobile) onHeaderMouseDown(e);
-  };
-
-  const handleMinimize = () => {
-    setVisible(false);
-  };
-
-  /* -------------------------------------------------------------- */
-  /* Render */
-  /* -------------------------------------------------------------- */
-  return createPortal(
+  const panel = (
     <section ref={containerRef} style={panelStyleSafe}>
       <SolaceDockHeaderLite
         ministryOn={ministryOn}
@@ -444,8 +425,11 @@ export default function SolaceDock() {
           }
           setFilters(next);
         }}
-        onMinimize={handleMinimize}
-        onDragStart={handleHeaderDragStart}
+        onMinimize={() => setMinimized(true)}
+       onDragStart={(e) => {
+  if (!isMobile) onHeaderMouseDown(e);
+}}
+
       />
 
       <SolaceTranscript
@@ -455,7 +439,7 @@ export default function SolaceDock() {
       />
 
       <div
-        style={styles.composerWrapStyle}
+        style={composerWrapStyle}
         onPaste={(e) => handlePaste(e, { prefix: "solace" })}
       >
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -465,9 +449,7 @@ export default function SolaceDock() {
               type="file"
               multiple
               hidden
-              onChange={(e) =>
-                handleFiles(e.target.files, { prefix: "solace" })
-              }
+              onChange={(e) => handleFiles(e.target.files, { prefix: "solace" })}
             />
           </label>
 
@@ -476,7 +458,7 @@ export default function SolaceDock() {
           </button>
 
           <textarea
-            style={styles.textareaStyle}
+            style={textareaStyle}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onEnterSend}
@@ -491,7 +473,8 @@ export default function SolaceDock() {
       </div>
 
       {!isMobile && <ResizeHandle onResizeStart={startResize} />}
-    </section>,
-    document.body
+    </section>
   );
+
+  return createPortal(panel, document.body);
 }
