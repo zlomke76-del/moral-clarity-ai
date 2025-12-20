@@ -235,8 +235,8 @@ export default function SolaceDock() {
   const transcriptStyleSafe: React.CSSProperties = isMobile
     ? {
         ...styles.transcriptStyle,
-        overflowY: "auto",
-        WebkitOverflowScrolling: "touch",
+        overflowY: "auto" as const,
+        WebkitOverflowScrolling: "touch" as const,
       }
     : styles.transcriptStyle;
 
@@ -391,7 +391,7 @@ export default function SolaceDock() {
   };
 
   const handleMinimize = () => {
-    setVisible(false); // restores yellow orb behavior
+    setVisible(false); // restore yellow orb
   };
 
   /* ---------------- Render ---------------- */
