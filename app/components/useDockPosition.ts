@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 type Args = {
-  canRender: boolean;
+  canRender?: boolean; // OPTIONAL — deprecated lifecycle flag
   visible: boolean;
   viewport: { w: number; h: number };
   panelW: number;
@@ -17,7 +17,6 @@ type Args = {
 };
 
 export function useDockPosition({
-  canRender,
   visible,
   viewport,
   panelW,
@@ -36,12 +35,13 @@ export function useDockPosition({
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // --------------------------------------------------
-  // Load saved position
+  // Load / initialize position
   // --------------------------------------------------
   useEffect(() => {
-    if (!canRender || !visible) return;
+    if (!visible) return;
     if (viewport.w === 0 || viewport.h === 0) return;
 
+    // Mobile: no persistence, always ready
     if (viewport.w <= 768) {
       setPosReady(true);
       return;
@@ -60,14 +60,26 @@ export function useDockPosition({
           return;
         }
       }
-    } catch {}
+    } catch {
+      // ignore storage errors
+    }
 
+    // Fallback: center-ish default
     setPos(
       Math.round((viewport.w - 760) / 2),
       Math.round((viewport.h - 560) / 2)
     );
     setPosReady(true);
-  }, [canRender, visible, viewport.w, viewport.h, panelW, panelH, setPos]);
+  }, [
+    visible,
+    viewport.w,
+    viewport.h,
+    panelW,
+    panelH,
+    PAD,
+    posKey,
+    setPos,
+  ]);
 
   // --------------------------------------------------
   // Persist position
@@ -79,14 +91,17 @@ export function useDockPosition({
 
     try {
       localStorage.setItem(posKey, JSON.stringify({ x, y }));
-    } catch {}
-  }, [dragging, posReady, x, y, viewport.w]);
+    } catch {
+      // ignore storage errors
+    }
+  }, [dragging, posReady, x, y, viewport.w, posKey]);
 
   // --------------------------------------------------
   // Drag handlers
   // --------------------------------------------------
   function onHeaderMouseDown(e: React.MouseEvent) {
     if (isMobile) return;
+
     const rect = containerRef.current?.getBoundingClientRect();
     setOffset({
       dx: e.clientX - (rect?.left ?? 0),
@@ -98,8 +113,10 @@ export function useDockPosition({
   useEffect(() => {
     if (!dragging) return;
 
-    const onMove = (e: MouseEvent) =>
+    const onMove = (e: MouseEvent) => {
       setPos(e.clientX - offset.dx, e.clientY - offset.dy);
+    };
+
     const onUp = () => setDragging(false);
 
     window.addEventListener("mousemove", onMove);
