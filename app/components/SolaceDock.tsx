@@ -1,27 +1,39 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  KeyboardEvent,
+} from "react";
 import { createPortal } from "react-dom";
-import { useSolaceStore } from "@/app/providers/solace-store";
 
+import { useSolaceStore } from "@/app/providers/solace-store";
 import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
+
 import { useDockStyles } from "./useDockStyles";
-import { useSolaceMemory } from "./useSolaceMemory";
-import { useSolaceAttachments } from "./useSolaceAttachments";
-import { useSpeechInput } from "./useSpeechInput";
-import { IconPaperclip, IconMic } from "@/app/components/icons";
-import { sendWithVision } from "./sendWithVision";
-import SolaceTranscript from "./SolaceTranscript";
 import { useDockPosition } from "./useDockPosition";
-import SolaceDockHeaderLite from "./dock-header-lite";
 import {
   useDockSize,
   ResizeHandle,
   createResizeController,
 } from "./dock-resize";
 
+import { useSolaceMemory } from "./useSolaceMemory";
+import { useSolaceAttachments } from "./useSolaceAttachments";
+import { useSpeechInput } from "./useSpeechInput";
+import { sendWithVision } from "./sendWithVision";
+
+import SolaceTranscript from "./SolaceTranscript";
+import SolaceDockHeaderLite from "./dock-header-lite";
+import { IconPaperclip, IconMic } from "@/app/components/icons";
+
 import type { SolaceExport } from "@/lib/exports/types";
 
+/* ------------------------------------------------------------------ */
+/* Globals */
+/* ------------------------------------------------------------------ */
 declare global {
   interface Window {
     __solaceDockMounted?: boolean;
@@ -80,18 +92,10 @@ function isImageIntent(message: string): boolean {
 /* MAIN */
 /* ------------------------------------------------------------------ */
 export default function SolaceDock() {
+  /* -------------------------------------------------------------- */
+  /* Mount guard (prevents double mount / freeze) */
+  /* -------------------------------------------------------------- */
   const [canRender, setCanRender] = useState(false);
-
-const { visible, setVisible, x, y, setPos, filters, setFilters } =
-  useSolaceStore();
-
-// ✅ HARD GUARANTEE: Solace never stays invisible after mount
-useEffect(() => {
-  if (canRender && !visible) {
-    setVisible(true);
-  }
-}, [canRender, visible, setVisible]);
-
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -105,15 +109,30 @@ useEffect(() => {
     };
   }, []);
 
+  /* -------------------------------------------------------------- */
+  /* Conversation */
+  /* -------------------------------------------------------------- */
   const conversationIdRef = useRef<string>(crypto.randomUUID());
   const conversationId = conversationIdRef.current;
 
-  const { visible, setVisible, x, y, setPos, filters, setFilters } =
-    useSolaceStore();
+  /* -------------------------------------------------------------- */
+  /* Solace Store — SINGLE SOURCE OF TRUTH */
+  /* -------------------------------------------------------------- */
+  const {
+    visible,
+    setVisible,
+    x,
+    y,
+    setPos,
+    filters,
+    setFilters,
+  } = useSolaceStore();
 
   const modeHint = "Neutral" as const;
 
-  /* ---------------- Viewport ---------------- */
+  /* -------------------------------------------------------------- */
+  /* Viewport */
+  /* -------------------------------------------------------------- */
   const [viewport, setViewport] = useState({ w: 0, h: 0 });
 
   useEffect(() => {
@@ -126,35 +145,54 @@ useEffect(() => {
 
   const isMobile = viewport.w > 0 && viewport.w <= 768;
 
+  /* Ensure desktop always visible */
   useEffect(() => {
-    if (canRender && !isMobile && !visible) setVisible(true);
+    if (canRender && !isMobile && !visible) {
+      setVisible(true);
+    }
   }, [canRender, isMobile, visible, setVisible]);
 
-  /* ---------------- State ---------------- */
+  /* -------------------------------------------------------------- */
+  /* Chat state */
+  /* -------------------------------------------------------------- */
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
 
   const transcriptRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
-    transcriptRef.current?.scrollTo(0, transcriptRef.current.scrollHeight);
+    transcriptRef.current?.scrollTo(
+      0,
+      transcriptRef.current.scrollHeight
+    );
   }, [messages]);
 
+  /* -------------------------------------------------------------- */
+  /* Memory + Attachments + Speech */
+  /* -------------------------------------------------------------- */
   const { userKey, memReady } = useSolaceMemory();
 
-  const { pendingFiles, handleFiles, handlePaste, clearPending } =
-    useSolaceAttachments({
-      onInfoMessage: (msg) =>
-        setMessages((m) => [...m, { role: "assistant", content: msg }]),
-    });
+  const {
+    pendingFiles,
+    handleFiles,
+    handlePaste,
+    clearPending,
+  } = useSolaceAttachments({
+    onInfoMessage: (msg) =>
+      setMessages((m) => [...m, { role: "assistant", content: msg }]),
+  });
 
   const { toggleMic } = useSpeechInput({
-    onText: (text) => setInput((p) => (p ? p + " " : "") + text),
+    onText: (text) =>
+      setInput((p) => (p ? `${p} ${text}` : text)),
     onError: (msg) =>
       setMessages((m) => [...m, { role: "assistant", content: msg }]),
   });
 
-  /* ---------------- Ministry ---------------- */
+  /* -------------------------------------------------------------- */
+  /* Ministry mode */
+  /* -------------------------------------------------------------- */
   const ministryOn = useMemo(
     () => filters.has("abrahamic") && filters.has("ministry"),
     [filters]
@@ -177,7 +215,9 @@ useEffect(() => {
     }
   }, [messages.length]);
 
-  /* ---------------- Measure ---------------- */
+  /* -------------------------------------------------------------- */
+  /* Measure */
+  /* -------------------------------------------------------------- */
   const [panelW, setPanelW] = useState(0);
   const [panelH, setPanelH] = useState(0);
   const containerRef = useRef<HTMLElement | null>(null);
@@ -203,7 +243,9 @@ useEffect(() => {
     };
   }, []);
 
-  /* ---------------- Position / Resize ---------------- */
+  /* -------------------------------------------------------------- */
+  /* Position + Resize */
+  /* -------------------------------------------------------------- */
   const { posReady, onHeaderMouseDown } = useDockPosition({
     canRender,
     visible,
@@ -219,7 +261,12 @@ useEffect(() => {
   });
 
   const { dockW, dockH, setDockW, setDockH } = useDockSize();
-  const startResize = createResizeController(dockW, dockH, setDockW, setDockH);
+  const startResize = createResizeController(
+    dockW,
+    dockH,
+    setDockW,
+    setDockH
+  );
 
   const vw = viewport.w || 1;
   const vh = viewport.h || 1;
@@ -227,7 +274,10 @@ useEffect(() => {
   const mobileW = Math.max(280, Math.min(dockW, vw - PAD * 2));
   const mobileH = Math.max(360, Math.min(dockH, vh - PAD * 2));
 
-  const tx = isMobile ? PAD : Math.min(Math.max(0, x - PAD), vw - panelW - PAD);
+  const tx = isMobile
+    ? PAD
+    : Math.min(Math.max(0, x - PAD), vw - panelW - PAD);
+
   const ty = isMobile
     ? Math.max(PAD, vh - mobileH - PAD)
     : Math.min(Math.max(0, y - PAD), vh - panelH - PAD);
@@ -242,12 +292,11 @@ useEffect(() => {
     PAD,
   });
 
-  /* ---------------- SAFE STYLE BUILD ---------------- */
   const transcriptStyleSafe: React.CSSProperties = isMobile
     ? {
         ...styles.transcriptStyle,
-        overflowY: "auto" as const,
-        WebkitOverflowScrolling: "touch" as const,
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
       }
     : styles.transcriptStyle;
 
@@ -263,7 +312,9 @@ useEffect(() => {
 
   if (!canRender || !visible) return null;
 
-  /* ---------------- PAYLOAD INGEST ---------------- */
+  /* -------------------------------------------------------------- */
+  /* Payload ingest */
+  /* -------------------------------------------------------------- */
   function ingestPayload(data: any) {
     if (!data) throw new Error("Empty response payload");
 
@@ -326,7 +377,9 @@ useEffect(() => {
     throw new Error("Unrecognized response payload");
   }
 
-  /* ---------------- SEND ---------------- */
+  /* -------------------------------------------------------------- */
+  /* Send */
+  /* -------------------------------------------------------------- */
   async function send() {
     if (!input.trim() && pendingFiles.length === 0) return;
     if (streaming) return;
@@ -389,8 +442,10 @@ useEffect(() => {
     }
   }
 
-  /* ---------------- Handlers ---------------- */
-  const onEnterSend = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  /* -------------------------------------------------------------- */
+  /* Handlers */
+  /* -------------------------------------------------------------- */
+  const onEnterSend = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       send();
@@ -402,10 +457,12 @@ useEffect(() => {
   };
 
   const handleMinimize = () => {
-    setVisible(false); // restore yellow orb
+    setVisible(false);
   };
 
-  /* ---------------- Render ---------------- */
+  /* -------------------------------------------------------------- */
+  /* Render */
+  /* -------------------------------------------------------------- */
   return createPortal(
     <section ref={containerRef} style={panelStyleSafe}>
       <SolaceDockHeaderLite
@@ -445,7 +502,9 @@ useEffect(() => {
               type="file"
               multiple
               hidden
-              onChange={(e) => handleFiles(e.target.files, { prefix: "solace" })}
+              onChange={(e) =>
+                handleFiles(e.target.files, { prefix: "solace" })
+              }
             />
           </label>
 
