@@ -31,12 +31,23 @@ export default function Leaderboard({
   const watchlist = sorted.slice(-WATCH_COUNT);
   const neutral = sorted.slice(GOLD_COUNT, sorted.length - WATCH_COUNT);
 
+  // 📊 TOTAL STORIES ANALYZED (LEADERBOARD-DERIVED, LIFETIME)
+  const totalStoriesAnalyzed = sorted.reduce(
+    (sum, o) => sum + (o.stories_analyzed ?? 0),
+    0
+  );
+
   const handleSelect = (canon: string) => {
     onSelect(canon, canon === selectedCanonical);
   };
 
   return (
     <div className="space-y-10">
+      {/* ================= GLOBAL CORPUS COUNTER ================= */}
+      <div className="text-sm text-neutral-400 font-mono">
+        {totalStoriesAnalyzed.toLocaleString()} stories analyzed · lifetime corpus
+      </div>
+
       {/* ================= GOLDEN ANCHOR ================= */}
       <section>
         <h2 className="mb-3 text-sm font-semibold tracking-wide text-amber-300">
