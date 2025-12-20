@@ -23,7 +23,6 @@ export default function Leaderboard({
     if (b.avg_pi !== a.avg_pi) {
       return b.avg_pi - a.avg_pi;
     }
-    // deterministic tie-breaker
     return a.canonical_outlet.localeCompare(b.canonical_outlet);
   });
 
@@ -74,7 +73,8 @@ export default function Leaderboard({
           Neutral
         </h2>
 
-        <div className="flex flex-wrap gap-3">
+        {/* 🔒 GRID LAYOUT — CABINET / SCOREBOARD */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {neutral.map((o, i) => (
             <OutletCard
               key={o.canonical_outlet}
