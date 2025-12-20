@@ -11,6 +11,24 @@ type Props = {
   onSelect: () => void;
 };
 
+/* ========= DISPLAY HELPERS (UI ONLY) ========= */
+
+/**
+ * Human-readable outlet name.
+ * IMPORTANT:
+ * - Display-only
+ * - Does NOT affect canonical_outlet
+ * - Does NOT merge outlets
+ */
+function formatOutletDisplay(domain: string): string {
+  return domain
+    .replace(/^amp\./i, "")
+    .replace(/^www\./i, "")
+    .replace(/\.co\.uk$/i, "")
+    .replace(/\.(com|org|net)$/i, "")
+    .toUpperCase();
+}
+
 export default function OutletCard({
   outlet,
   rank,
@@ -20,10 +38,10 @@ export default function OutletCard({
 }: Props) {
   const domain = outlet.canonical_outlet;
 
-  // ✅ SAFE logo source
+  // ✅ SAFE favicon source
   const logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 
-  // 🔒 CANONICAL PI DISPLAY
+  // 🔒 CANONICAL PI DISPLAY (percent, 2 decimals)
   const piDisplay = (outlet.avg_pi * 100).toFixed(2);
 
   return (
@@ -54,7 +72,7 @@ export default function OutletCard({
         {/* Text */}
         <div className="flex-1">
           <div className="text-sm font-medium text-neutral-100">
-            {domain}
+            {formatOutletDisplay(domain)}
           </div>
           <div className="text-xs text-neutral-400">
             {outlet.total_stories.toLocaleString()} stories analyzed · PI{" "}
