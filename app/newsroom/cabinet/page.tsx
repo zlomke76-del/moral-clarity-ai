@@ -65,8 +65,7 @@ export default function NewsroomCabinetPage() {
     return () => {
       alive = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedCanonical]);
 
   /* ========= Selected outlet ========= */
   const selectedOutlet = useMemo(() => {
@@ -80,20 +79,23 @@ export default function NewsroomCabinetPage() {
   const detailOutlet: OutletDetailData | null = useMemo(() => {
     if (!selectedOutlet) return null;
 
-    const piPercent = (selectedOutlet.avg_pi * 100).toFixed(1);
+    // 🔒 CANONICAL PI DISPLAY: percent, TWO decimals
+    const piPercent = (selectedOutlet.avg_pi * 100).toFixed(2);
 
     return {
       canonical_outlet: selectedOutlet.canonical_outlet,
       display_name: selectedOutlet.canonical_outlet,
       storiesAnalyzed: selectedOutlet.total_stories,
+
+      // Keep raw value for charts / math
       lifetimePi: selectedOutlet.avg_pi,
+
       lifetimeBiasIntent: selectedOutlet.avg_bias_intent,
       lifetimeLanguage: selectedOutlet.bias_language,
       lifetimeSource: selectedOutlet.bias_source,
       lifetimeFraming: selectedOutlet.bias_framing,
       lifetimeContext: selectedOutlet.bias_context,
 
-      // Type contract requires string
       lastScoredAt: selectedOutlet.last_story_day ?? "Not yet scored",
 
       ninetyDaySummary: `Lifetime PI ${piPercent} based on ${selectedOutlet.total_stories} stories.`,
