@@ -32,7 +32,7 @@ No meta commentary.
 `;
 
 // --------------------------------------------------------------
-// MEMORY FORMATTER (AUTHORITATIVE — READ ONLY)
+// PERSISTENT FACTS FORMATTER (LONG-TERM, AUTHORITATIVE)
 // --------------------------------------------------------------
 function formatPersistentFacts(context: any): string {
   const facts = context?.memoryPack?.facts ?? [];
@@ -42,22 +42,54 @@ function formatPersistentFacts(context: any): string {
 PERSISTENT FACTS:
 None.
 
-MEMORY RULES:
-- No personal facts have been saved.
-- Do not infer traits, preferences, or history.
+FACT RULES:
+- No long-term facts are established.
+- Do NOT infer traits, preferences, or history.
 `;
   }
 
   const lines = facts.map((f: any) => `- ${f.content}`);
 
   return `
-PERSISTENT FACTS (USER-APPROVED):
+PERSISTENT FACTS (LONG-TERM, USER-APPROVED):
 ${lines.join("\n")}
 
-MEMORY RULES:
-- Only the above facts persist across sessions.
-- Do not infer additional traits or history.
+FACT RULES:
+- These facts persist across sessions.
+- These facts may be referenced explicitly when relevant.
 - If facts conflict with the user, ask for correction.
+`;
+}
+
+// --------------------------------------------------------------
+// WORKING MEMORY FORMATTER (SESSION-SCOPED, NON-AUTHORITATIVE)
+// --------------------------------------------------------------
+function formatWorkingMemory(context: any): string {
+  const working = context?.memoryPack?.workingMemory ?? [];
+
+  if (!Array.isArray(working) || working.length === 0) {
+    return `
+WORKING MEMORY:
+None.
+
+WORKING MEMORY RULES:
+- No transient context is established.
+`;
+  }
+
+  const lines = working.map((w: any) => `- ${w.content}`);
+
+  return `
+WORKING MEMORY (SESSION-SCOPED — NOT FACTS):
+${lines.join("\n")}
+
+WORKING MEMORY RULES:
+- Working memory reflects recent conversational context.
+- Working memory MAY be used silently to maintain continuity and coherence.
+- Working memory MUST NOT be stated as fact.
+- Working memory MUST NOT persist across sessions.
+- Working memory MUST yield to persistent facts and session state.
+- If working memory appears incorrect, ask for clarification.
 `;
 }
 
@@ -73,7 +105,7 @@ SESSION STATE:
 None established.
 
 RULES:
-- If no session domain exists, remain within the user's explicit topic.
+- Remain within the user's explicit topic.
 - Do NOT introduce new domains unprompted.
 `;
   }
@@ -94,8 +126,8 @@ ${constraints}
 RULES:
 - You MUST remain within this domain unless the user explicitly changes it.
 - You MUST honor the session intent.
-- You MUST NOT introduce unrelated projects, products, or domains.
-- If the user appears to shift domains, ASK for confirmation.
+- You MUST NOT cross domains or projects.
+- If the user shifts scope, ASK for confirmation.
 `;
 }
 
@@ -114,15 +146,12 @@ None.
 
   return `
 ATTACHMENTS (SESSION-ONLY — NOT FACTS):
-The following materials were provided for reference in THIS SESSION ONLY.
-They are NOT verified facts and MUST NOT be remembered or inferred from.
-
 ${attachments}
 
-RULES:
+ATTACHMENT RULES:
 - Attachments may inform reasoning.
-- Attachments may NOT create or modify memory.
-- Attachments may NOT be treated as facts.
+- Attachments MUST NOT modify memory.
+- Attachments MUST NOT be treated as facts.
 `;
 }
 
@@ -139,7 +168,7 @@ export async function runHybridPipeline(args: {
   const { userMessage, context, ministryMode, founderMode, modeHint } = args;
 
   // ----------------------------------------------------------
-  // Optimist — memory blind, session blind
+  // Optimist — memory blind
   // ----------------------------------------------------------
   const optimist = await callModel(
     "gpt-4.1-mini",
@@ -147,7 +176,7 @@ export async function runHybridPipeline(args: {
   );
 
   // ----------------------------------------------------------
-  // Skeptic — memory blind, session blind
+  // Skeptic — memory blind
   // ----------------------------------------------------------
   const skeptic = await callModel(
     "gpt-4.1-mini",
@@ -165,25 +194,29 @@ Ministry Mode: ${ministryMode}
 Mode Hint: ${modeHint}
 
 ABSOLUTE RULES:
-- Speak with a single unified voice.
-- Do NOT reference internal roles or stages.
-- Do NOT infer memory, preferences, or identity.
+- Speak with one unified voice.
+- Do NOT reference internal systems or stages.
+- Do NOT fabricate memory.
+
+MEMORY HIERARCHY (STRICT):
+1. SESSION STATE (highest authority)
+2. PERSISTENT FACTS
+3. WORKING MEMORY
+4. ATTACHMENTS (lowest authority)
+
+WORKING MEMORY UTILIZATION:
+- Working memory MAY silently shape reasoning and continuity.
+- Working memory MUST NOT be asserted as fact.
+- Working memory MUST NOT outlive this session.
 
 DOMAIN RULES:
 - You are bound to the SESSION STATE.
-- You may NOT introduce new domains, ventures, or projects.
-- You may NOT cross-pollinate contexts.
-
-MEMORY RULES:
-- Only persisted facts may be stated as facts.
-- If no persisted facts exist, say so explicitly.
-- Session state is authoritative for this conversation.
-- Attachments are NOT facts and are session-only.
+- Do NOT introduce new domains or ventures.
 `
   );
 
   // ----------------------------------------------------------
-  // PERSONA DIAGNOSTIC (LOG-PROVEN)
+  // PERSONA DIAGNOSTIC
   // ----------------------------------------------------------
   console.log("[DIAG-PERSONA]", {
     personaVersion: "2025-12-19_session_bound_v6",
@@ -191,8 +224,7 @@ MEMORY RULES:
     intent: context?.memoryPack?.sessionState?.intent ?? "unset",
     founderMode,
     ministryMode,
-    hasSystemPrompt:
-      typeof system === "string" && system.length > 1000,
+    hasSystemPrompt: typeof system === "string" && system.length > 1000,
   });
 
   const arbiterPrompt = sanitizeASCII(`
@@ -201,6 +233,8 @@ ${system}
 ${formatSessionState(context)}
 
 ${formatPersistentFacts(context)}
+
+${formatWorkingMemory(context)}
 
 ${formatAttachments(context)}
 
@@ -216,7 +250,7 @@ ${userMessage}
   const finalAnswer = await callModel("gpt-4.1", arbiterPrompt);
 
   // ----------------------------------------------------------
-  // Return (pure, constrained)
+  // Return
   // ----------------------------------------------------------
   return {
     finalAnswer,
