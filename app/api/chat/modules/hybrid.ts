@@ -1,8 +1,7 @@
 //--------------------------------------------------------------
-// HYBRID PIPELINE — REASONING ONLY (FACT-AWARE, SESSION-BOUND)
+// HYBRID PIPELINE — REASONING ONLY (SESSION-AWARE)
 // Optimist + Skeptic are INTERNAL
 // Arbiter emits ONE unified Solace voice
-// Attachments visible to Arbiter ONLY
 //--------------------------------------------------------------
 
 import { callModel } from "./model-router";
@@ -32,70 +31,34 @@ No meta commentary.
 `;
 
 // --------------------------------------------------------------
-// PERSISTENT FACTS FORMATTER (LONG-TERM, AUTHORITATIVE)
-// --------------------------------------------------------------
-function formatPersistentFacts(context: any): string {
-  const facts = context?.memoryPack?.facts ?? [];
-
-  if (!Array.isArray(facts) || facts.length === 0) {
-    return `
-PERSISTENT FACTS:
-None.
-
-FACT RULES:
-- No long-term facts are established.
-- Do NOT infer traits, preferences, or history.
-`;
-  }
-
-  const lines = facts.map((f: any) => `- ${f.content}`);
-
-  return `
-PERSISTENT FACTS (LONG-TERM, USER-APPROVED):
-${lines.join("\n")}
-
-FACT RULES:
-- These facts persist across sessions.
-- These facts may be referenced explicitly when relevant.
-- If facts conflict with the user, ask for correction.
-`;
-}
-
-// --------------------------------------------------------------
-// WORKING MEMORY FORMATTER (SESSION-SCOPED, NON-AUTHORITATIVE)
+// FORMATTERS
 // --------------------------------------------------------------
 function formatWorkingMemory(context: any): string {
-  const working = context?.memoryPack?.workingMemory ?? [];
+  const wm = context?.workingMemory?.items ?? [];
 
-  if (!Array.isArray(working) || working.length === 0) {
+  if (!Array.isArray(wm) || wm.length === 0) {
     return `
 WORKING MEMORY:
 None.
-
-WORKING MEMORY RULES:
-- No transient context is established.
 `;
   }
 
-  const lines = working.map((w: any) => `- ${w.content}`);
+  const lines = wm.map(
+    (m: any) => `- (${m.role}) ${m.content}`
+  );
 
   return `
-WORKING MEMORY (SESSION-SCOPED — NOT FACTS):
+WORKING MEMORY (SESSION-SCOPED, NON-DURABLE):
 ${lines.join("\n")}
 
-WORKING MEMORY RULES:
-- Working memory reflects recent conversational context.
-- Working memory MAY be used silently to maintain continuity and coherence.
+RULES:
+- Working memory MUST be read before responding.
+- Working memory MAY influence reasoning silently.
 - Working memory MUST NOT be stated as fact.
-- Working memory MUST NOT persist across sessions.
-- Working memory MUST yield to persistent facts and session state.
-- If working memory appears incorrect, ask for clarification.
+- Working memory MUST NOT be persisted.
 `;
 }
 
-// --------------------------------------------------------------
-// SESSION STATE FORMATTER (HARD CONSTRAINT)
-// --------------------------------------------------------------
 function formatSessionState(context: any): string {
   const state = context?.memoryPack?.sessionState;
 
@@ -103,55 +66,15 @@ function formatSessionState(context: any): string {
     return `
 SESSION STATE:
 None established.
-
-RULES:
-- Remain within the user's explicit topic.
-- Do NOT introduce new domains unprompted.
 `;
   }
 
-  const constraints =
-    Array.isArray(state.constraints) && state.constraints.length > 0
-      ? state.constraints.map((c: string) => `- ${c}`).join("\n")
-      : "None specified.";
-
   return `
-SESSION STATE (AUTHORITATIVE — DO NOT VIOLATE):
+SESSION STATE (AUTHORITATIVE):
 Domain: ${state.domain ?? "unspecified"}
 Intent: ${state.intent ?? "unspecified"}
-
-SESSION CONSTRAINTS:
-${constraints}
-
-RULES:
-- You MUST remain within this domain unless the user explicitly changes it.
-- You MUST honor the session intent.
-- You MUST NOT cross domains or projects.
-- If the user shifts scope, ASK for confirmation.
-`;
-}
-
-// --------------------------------------------------------------
-// ATTACHMENT FORMATTER (SESSION-ONLY, NON-AUTHORITATIVE)
-// --------------------------------------------------------------
-function formatAttachments(context: any): string {
-  const attachments = context?.attachments;
-
-  if (!attachments || typeof attachments !== "string") {
-    return `
-ATTACHMENTS:
-None.
-`;
-  }
-
-  return `
-ATTACHMENTS (SESSION-ONLY — NOT FACTS):
-${attachments}
-
-ATTACHMENT RULES:
-- Attachments may inform reasoning.
-- Attachments MUST NOT modify memory.
-- Attachments MUST NOT be treated as facts.
+Constraints:
+${Array.isArray(state.constraints) ? state.constraints.map(c => `- ${c}`).join("\n") : "None"}
 `;
 }
 
@@ -166,6 +89,18 @@ export async function runHybridPipeline(args: {
   modeHint?: string;
 }) {
   const { userMessage, context, ministryMode, founderMode, modeHint } = args;
+
+  // ----------------------------------------------------------
+  // HARD DIAGNOSTIC — PROVES WM VISIBILITY
+  // ----------------------------------------------------------
+  console.log("[DIAG-HYBRID-WM]", {
+    active: context?.workingMemory?.active ?? false,
+    count: context?.workingMemory?.items?.length ?? 0,
+    sample: context?.workingMemory?.items?.slice(0, 2)?.map((m: any) => ({
+      role: m.role,
+      content: m.content.slice(0, 60),
+    })),
+  });
 
   // ----------------------------------------------------------
   // Optimist — memory blind
@@ -184,7 +119,7 @@ export async function runHybridPipeline(args: {
   );
 
   // ----------------------------------------------------------
-  // Arbiter — single authoritative voice
+  // Arbiter — authoritative
   // ----------------------------------------------------------
   const system = buildSolaceSystemPrompt(
     "core",
@@ -195,52 +130,25 @@ Mode Hint: ${modeHint}
 
 ABSOLUTE RULES:
 - Speak with one unified voice.
-- Do NOT reference internal systems or stages.
+- Do NOT reference internal systems.
 - Do NOT fabricate memory.
 
-MEMORY HIERARCHY (STRICT):
-1. SESSION STATE (highest authority)
-2. PERSISTENT FACTS
-3. WORKING MEMORY
-4. ATTACHMENTS (lowest authority)
-
-WORKING MEMORY UTILIZATION:
-- Working memory MAY silently shape reasoning and continuity.
-- Working memory MUST NOT be asserted as fact.
-- Working memory MUST NOT outlive this session.
-
-DOMAIN RULES:
-- You are bound to the SESSION STATE.
-- Do NOT introduce new domains or ventures.
+MEMORY HIERARCHY:
+1. SESSION STATE
+2. WORKING MEMORY
+3. USER MESSAGE
 `
   );
-
-  // ----------------------------------------------------------
-  // PERSONA DIAGNOSTIC
-  // ----------------------------------------------------------
-  console.log("[DIAG-PERSONA]", {
-    personaVersion: "2025-12-19_session_bound_v6",
-    domain: context?.memoryPack?.sessionState?.domain ?? "unset",
-    intent: context?.memoryPack?.sessionState?.intent ?? "unset",
-    founderMode,
-    ministryMode,
-    hasSystemPrompt: typeof system === "string" && system.length > 1000,
-  });
 
   const arbiterPrompt = sanitizeASCII(`
 ${system}
 
 ${formatSessionState(context)}
 
-${formatPersistentFacts(context)}
-
 ${formatWorkingMemory(context)}
-
-${formatAttachments(context)}
 
 INTERNAL REASONING CONTEXT (DO NOT EXPOSE):
 ${optimist}
-
 ${skeptic}
 
 USER MESSAGE:
@@ -249,10 +157,5 @@ ${userMessage}
 
   const finalAnswer = await callModel("gpt-4.1", arbiterPrompt);
 
-  // ----------------------------------------------------------
-  // Return
-  // ----------------------------------------------------------
-  return {
-    finalAnswer,
-  };
+  return { finalAnswer };
 }
