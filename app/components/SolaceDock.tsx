@@ -82,6 +82,17 @@ function isImageIntent(message: string): boolean {
 export default function SolaceDock() {
   const [canRender, setCanRender] = useState(false);
 
+const { visible, setVisible, x, y, setPos, filters, setFilters } =
+  useSolaceStore();
+
+// ✅ HARD GUARANTEE: Solace never stays invisible after mount
+useEffect(() => {
+  if (canRender && !visible) {
+    setVisible(true);
+  }
+}, [canRender, visible, setVisible]);
+
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.__solaceDockMounted) return;
