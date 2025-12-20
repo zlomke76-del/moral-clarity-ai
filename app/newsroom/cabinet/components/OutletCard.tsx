@@ -54,8 +54,8 @@ export default function OutletCard({
             {domain}
           </div>
           <div className="text-xs text-neutral-400">
-            {outlet.total_stories} stories analyzed · PI{" "}
-            {(outlet.avg_pi * 100).toFixed(1)}
+            {outlet.stories_analyzed.toLocaleString()} stories analyzed · PI{" "}
+            {(outlet.avg_pi * 100).toFixed(2)}
           </div>
         </div>
       </div>
