@@ -30,9 +30,9 @@ declare global {
   }
 }
 
-/* ------------------------------------------------------------------
-   Types
-------------------------------------------------------------------- */
+/* ------------------------------------------------------------------ */
+/* Types */
+/* ------------------------------------------------------------------ */
 type Message = {
   role: "user" | "assistant";
   content: string;
@@ -53,16 +53,16 @@ type PendingFile = {
   size?: number;
 };
 
-/* ------------------------------------------------------------------
-   Constants
-------------------------------------------------------------------- */
+/* ------------------------------------------------------------------ */
+/* Constants */
+/* ------------------------------------------------------------------ */
 const POS_KEY = "solace:pos:v4";
 const MINISTRY_KEY = "solace:ministry";
 const PAD = 12;
 
-/* ------------------------------------------------------------------
-   Image intent gate
-------------------------------------------------------------------- */
+/* ------------------------------------------------------------------ */
+/* Image intent gate */
+/* ------------------------------------------------------------------ */
 function isImageIntent(message: string): boolean {
   const m = (message || "").toLowerCase().trim();
   return (
@@ -76,9 +76,9 @@ function isImageIntent(message: string): boolean {
   );
 }
 
-/* ------------------------------------------------------------------
-   MAIN
-------------------------------------------------------------------- */
+/* ------------------------------------------------------------------ */
+/* MAIN */
+/* ------------------------------------------------------------------ */
 export default function SolaceDock() {
   const [canRender, setCanRender] = useState(false);
 
@@ -94,22 +94,17 @@ export default function SolaceDock() {
     };
   }, []);
 
-  const conversationIdRef = useRef<string | null>(null);
-  if (!conversationIdRef.current) {
-    conversationIdRef.current = crypto.randomUUID();
-  }
+  const conversationIdRef = useRef<string>(crypto.randomUUID());
   const conversationId = conversationIdRef.current;
 
   const { visible, setVisible, x, y, setPos, filters, setFilters } =
     useSolaceStore();
 
-  // Keep contract stable.
   const modeHint = "Neutral" as const;
 
-  /* ----------------------------
-     Viewport
-  ----------------------------- */
+  /* ---------------- Viewport ---------------- */
   const [viewport, setViewport] = useState({ w: 0, h: 0 });
+
   useEffect(() => {
     const update = () =>
       setViewport({ w: window.innerWidth, h: window.innerHeight });
@@ -118,22 +113,13 @@ export default function SolaceDock() {
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  const isMobile = viewport.w > 0 ? viewport.w <= 768 : false;
+  const isMobile = viewport.w > 0 && viewport.w <= 768;
 
-  // Desktop: default to visible if user hasn't hidden it.
   useEffect(() => {
     if (canRender && !isMobile && !visible) setVisible(true);
   }, [canRender, isMobile, visible, setVisible]);
 
-  /* ----------------------------
-     Local UI state
-  ----------------------------- */
-  const [minimized, setMinimized] = useState(false);
-  useEffect(() => {
-    // Sync minimized flag with global visibility, but do not force-show.
-    if (visible) setMinimized(false);
-  }, [visible]);
-
+  /* ---------------- State ---------------- */
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -157,9 +143,7 @@ export default function SolaceDock() {
       setMessages((m) => [...m, { role: "assistant", content: msg }]),
   });
 
-  /* ----------------------------
-     Ministry mode
-  ----------------------------- */
+  /* ---------------- Ministry ---------------- */
   const ministryOn = useMemo(
     () => filters.has("abrahamic") && filters.has("ministry"),
     [filters]
@@ -174,7 +158,7 @@ export default function SolaceDock() {
         setFilters(next);
       }
     } catch {}
-  }, [setFilters]);
+  }, [filters, setFilters]);
 
   useEffect(() => {
     if (messages.length === 0) {
@@ -182,12 +166,9 @@ export default function SolaceDock() {
     }
   }, [messages.length]);
 
-  /* ----------------------------
-     Measure container
-  ----------------------------- */
+  /* ---------------- Measure ---------------- */
   const [panelW, setPanelW] = useState(0);
   const [panelH, setPanelH] = useState(0);
-
   const containerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -211,9 +192,7 @@ export default function SolaceDock() {
     };
   }, []);
 
-  /* ----------------------------
-     Position & Resize
-  ----------------------------- */
+  /* ---------------- Position / Resize ---------------- */
   const { posReady, onHeaderMouseDown } = useDockPosition({
     canRender,
     visible,
@@ -234,135 +213,110 @@ export default function SolaceDock() {
   const vw = viewport.w || 1;
   const vh = viewport.h || 1;
 
-  // ------------------------------
-  // MOBILE CLAMP (no drift)
-  // ------------------------------
   const mobileW = Math.max(280, Math.min(dockW, vw - PAD * 2));
   const mobileH = Math.max(360, Math.min(dockH, vh - PAD * 2));
 
-  // Desktop: use stored x/y. Mobile: pin inside viewport.
-  const txDesktop = Math.min(Math.max(0, x - PAD), vw - panelW - PAD);
-  const tyDesktop = Math.min(Math.max(0, y - PAD), vh - panelH - PAD);
+  const tx = isMobile ? PAD : Math.min(Math.max(0, x - PAD), vw - panelW - PAD);
+  const ty = isMobile
+    ? Math.max(PAD, vh - mobileH - PAD)
+    : Math.min(Math.max(0, y - PAD), vh - panelH - PAD);
 
-  const tx = isMobile ? PAD : txDesktop;
-  const ty = isMobile ? Math.max(PAD, vh - mobileH - PAD) : tyDesktop;
+  const styles = useDockStyles({
+    dockW: isMobile ? mobileW : dockW,
+    dockH: isMobile ? mobileH : dockH,
+    tx,
+    ty,
+    invisible: isMobile ? false : !posReady,
+    ministryOn,
+    PAD,
+  });
 
-  const { panelStyle, transcriptStyle, textareaStyle, composerWrapStyle } =
-    useDockStyles({
-      dockW: isMobile ? mobileW : dockW,
-      dockH: isMobile ? mobileH : dockH,
-      tx,
-      ty,
-      invisible: isMobile ? false : !posReady,
-      ministryOn,
-      PAD,
-    });
+  /* ---------------- SAFE STYLE BUILD ---------------- */
+  const transcriptStyleSafe: React.CSSProperties = isMobile
+    ? {
+        ...styles.transcriptStyle,
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
+      }
+    : styles.transcriptStyle;
 
-  // ------------------------------------------------------------------
-  // Next 16 / TS strictness fix:
-  // Avoid CSSProperties widening (overflowY inferred as `string`)
-  // by building a single object and casting once.
-  // ------------------------------------------------------------------
-  const transcriptStyleSafe = ({
-    ...transcriptStyle,
-    ...(isMobile
-      ? {
-          overflowY: "auto" as React.CSSProperties["overflowY"],
-          WebkitOverflowScrolling: "touch" as any,
-        }
-      : null),
-  } ?? transcriptStyle) as React.CSSProperties;
-
-  const panelStyleSafe = ({
-    ...panelStyle,
-    ...(isMobile
-      ? {
-          width: mobileW,
-          height: mobileH,
-          maxWidth: vw - PAD * 2,
-          maxHeight: vh - PAD * 2,
-        }
-      : null),
-  } ?? panelStyle) as React.CSSProperties;
+  const panelStyleSafe: React.CSSProperties = isMobile
+    ? {
+        ...styles.panelStyle,
+        width: mobileW,
+        height: mobileH,
+        maxWidth: vw - PAD * 2,
+        maxHeight: vh - PAD * 2,
+      }
+    : styles.panelStyle;
 
   if (!canRender || !visible) return null;
 
-  /* ------------------------------------------------------------------
-     PAYLOAD INGEST (AUTHORITATIVE)
-  ------------------------------------------------------------------- */
+  /* ---------------- PAYLOAD INGEST ---------------- */
   function ingestPayload(data: any) {
     if (!data) throw new Error("Empty response payload");
 
-    // EXPORT DELIVERY — MUST PREEMPT EVERYTHING
     if ((data.export as SolaceExport)?.kind === "export") {
       const exp = data.export as SolaceExport;
-
       setMessages((m) => [
         ...m,
         {
           role: "assistant",
-          content:
-            `Your document is ready.\n\n` +
-            `File: ${exp.filename}\n` +
-            `Download: ${exp.url}`,
+          content: `Your document is ready.\n\nFile: ${exp.filename}\nDownload: ${exp.url}`,
         },
       ]);
       return;
     }
 
-    // IMAGE (base64)
-    if (
-      Array.isArray(data.data) &&
-      data.data[0] &&
-      typeof data.data[0].b64_json === "string"
-    ) {
-      const imageUrl = `data:image/png;base64,${data.data[0].b64_json}`;
-      setMessages((m) => [...m, { role: "assistant", content: " ", imageUrl }]);
-      return;
-    }
-
-    // IMAGE (url)
-    if (typeof data.imageUrl === "string" || typeof data.image === "string") {
-      const image = data.imageUrl ?? data.image;
+    if (Array.isArray(data.data) && data.data[0]?.b64_json) {
       setMessages((m) => [
         ...m,
-        { role: "assistant", content: " ", imageUrl: image },
+        {
+          role: "assistant",
+          content: " ",
+          imageUrl: `data:image/png;base64,${data.data[0].b64_json}`,
+        },
       ]);
       return;
     }
 
-    // MULTI-MESSAGE
+    if (typeof data.imageUrl === "string") {
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: " ", imageUrl: data.imageUrl },
+      ]);
+      return;
+    }
+
     if (Array.isArray(data.messages)) {
       setMessages((m) => [...m, ...data.messages]);
       return;
     }
 
-    // STRING RESPONSE
-    if (data.ok === true && typeof data.response === "string") {
+    if (data.ok && typeof data.response === "string") {
       setMessages((m) => [...m, { role: "assistant", content: data.response }]);
       return;
     }
 
-    // EVIDENCE
     if (Array.isArray(data.evidence)) {
-      const evMsgs: Message[] = data.evidence.map((e: EvidenceBlock) => ({
-        role: "assistant",
-        content:
-          `Evidence` +
-          (e.source ? ` (${e.source})` : "") +
-          `\n\n${e.summary || e.text || "[no content]"}`,
-      }));
-      setMessages((m) => [...m, ...evMsgs]);
+      setMessages((m) => [
+        ...m,
+        ...data.evidence.map((e: EvidenceBlock) => ({
+          role: "assistant",
+          content:
+            `Evidence${e.source ? ` (${e.source})` : ""}\n\n${
+              e.summary || e.text || "[no content]"
+            }`,
+        })),
+      ]);
       return;
     }
 
     throw new Error("Unrecognized response payload");
   }
 
-  /* ------------------------------------------------------------------
-     SEND
-  ------------------------------------------------------------------- */
-  async function send(): Promise<void> {
+  /* ---------------- SEND ---------------- */
+  async function send() {
     if (!input.trim() && pendingFiles.length === 0) return;
     if (streaming) return;
 
@@ -372,7 +326,6 @@ export default function SolaceDock() {
     setMessages((m) => [...m, { role: "user", content: userMsg }]);
 
     try {
-      // Image-intent: direct /api/chat (keeps your current contract)
       if (isImageIntent(userMsg)) {
         const res = await fetch("/api/chat", {
           method: "POST",
@@ -386,12 +339,10 @@ export default function SolaceDock() {
             modeHint,
           }),
         });
-
         ingestPayload(await res.json());
         return;
       }
 
-      // Vision pipeline (attachments and/or screenshots)
       const result = await sendWithVision({
         userMsg,
         pendingFiles: pendingFiles as PendingFile[],
@@ -402,7 +353,6 @@ export default function SolaceDock() {
         modeHint,
       });
 
-      // Render vision blocks first if present
       if (result?.visionResults) {
         for (const v of result.visionResults) {
           setMessages((m) => [
@@ -416,10 +366,7 @@ export default function SolaceDock() {
         }
       }
 
-      // Then ingest the main chat payload
-      if (result?.chatPayload) {
-        ingestPayload(result.chatPayload);
-      }
+      if (result?.chatPayload) ingestPayload(result.chatPayload);
     } catch (err: any) {
       setMessages((m) => [
         ...m,
@@ -431,6 +378,7 @@ export default function SolaceDock() {
     }
   }
 
+  /* ---------------- Handlers ---------------- */
   const onEnterSend = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -438,20 +386,16 @@ export default function SolaceDock() {
     }
   };
 
-  // IMPORTANT:
-  // Header expects a function. Never pass undefined. We guard inside.
   const handleHeaderDragStart = (e: any) => {
-    if (isMobile) return;
-    onHeaderMouseDown(e);
+    if (!isMobile) onHeaderMouseDown(e);
   };
 
   const handleMinimize = () => {
-    // Yellow orb contract: visible=false
-    setMinimized(true);
-    setVisible(false);
+    setVisible(false); // restores yellow orb behavior
   };
 
-  const panel = (
+  /* ---------------- Render ---------------- */
+  return createPortal(
     <section ref={containerRef} style={panelStyleSafe}>
       <SolaceDockHeaderLite
         ministryOn={ministryOn}
@@ -480,7 +424,7 @@ export default function SolaceDock() {
       />
 
       <div
-        style={composerWrapStyle}
+        style={styles.composerWrapStyle}
         onPaste={(e) => handlePaste(e, { prefix: "solace" })}
       >
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -494,12 +438,12 @@ export default function SolaceDock() {
             />
           </label>
 
-          <button onClick={toggleMic} aria-label="Voice input">
+          <button onClick={toggleMic}>
             <IconMic />
           </button>
 
           <textarea
-            style={textareaStyle}
+            style={styles.textareaStyle}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onEnterSend}
@@ -514,8 +458,7 @@ export default function SolaceDock() {
       </div>
 
       {!isMobile && <ResizeHandle onResizeStart={startResize} />}
-    </section>
+    </section>,
+    document.body
   );
-
-  return createPortal(panel, document.body);
 }
