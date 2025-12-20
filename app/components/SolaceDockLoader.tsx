@@ -1,13 +1,22 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useCallback, useState } from "react";
+import dynamic from "next/dynamic";
 
 /**
- * Client-only loader for SolaceDock.
- * Owns visibility + orb lifecycle.
+ * SolaceDockLoader
+ *
+ * AUTHORITATIVE VISIBILITY CONTROLLER
+ * ----------------------------------
+ * - Owns minimized state
+ * - Owns yellow orb restore control
+ * - SolaceDock may REQUEST minimize
+ * - Loader alone decides what is mounted
+ *
+ * This file MUST remain simple and boring.
  */
-const SolaceDock = dynamic(() => import("@/app/components/SolaceDock"), {
+
+const SolaceDock = dynamic(() => import("./SolaceDock"), {
   ssr: false,
 });
 
@@ -23,11 +32,13 @@ export default function SolaceDockLoader() {
       {/* Expanded Dock */}
       {!minimized && (
         <SolaceDock
-          onRequestMinimize={() => setMinimized(true)}
+          onRequestMinimize={() => {
+            setMinimized(true);
+          }}
         />
       )}
 
-      {/* Yellow Orb */}
+      {/* Yellow Orb Restore */}
       {minimized && (
         <button
           aria-label="Restore Solace"
@@ -47,16 +58,7 @@ export default function SolaceDockLoader() {
             cursor: "pointer",
             zIndex: 1000,
           }}
-        >
-          <span
-            style={{
-              display: "block",
-              width: "100%",
-              height: "100%",
-              borderRadius: "50%",
-            }}
-          />
-        </button>
+        />
       )}
     </>
   );
