@@ -20,18 +20,16 @@ export default function OutletCard({
 }: Props) {
   const domain = outlet.canonical_outlet;
 
-  // ✅ SAFE logo source (not blocked by tracking prevention)
+  // ✅ SAFE logo source
   const logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 
-  // 🔒 CANONICAL PI DISPLAY RULE
-  // Internal: 0.0–1.0
-  // Display: 0–100, TWO DECIMALS
+  // 🔒 CANONICAL PI DISPLAY
   const piDisplay = (outlet.avg_pi * 100).toFixed(2);
 
   return (
     <button
       onClick={onSelect}
-      className={`w-full rounded-lg border px-4 py-3 text-left transition
+      className={`rounded-lg border px-4 py-3 text-left transition
         ${
           selected
             ? "border-amber-400/60 bg-amber-400/10"
