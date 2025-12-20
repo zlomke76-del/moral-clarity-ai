@@ -60,25 +60,23 @@ export async function GET(req: NextRequest) {
       Number.isFinite(parsedMin) && parsedMin > 0 ? parsedMin : 5;
 
     /**
-     * ✅ SOURCE OF TRUTH (CANONICAL)
+     * 🔒 TRUE SOURCE OF TRUTH
      *
-     * outlet_neutrality_aggregates_ranked_by_story_count
+     * public.outlet_bias_pi_summary_all_time
      *
      * Columns:
-     *   outlet              (canonical outlet key)
-     *   stories_analyzed    (lifetime count)
-     *   pi                  (lifetime PI)
+     *   outlet               (canonical outlet)
+     *   outlet_story_count   (lifetime stories)
+     *   avg_pi_score         (FULL PRECISION PI, 0–1)
      */
     const { data, error } = await supabaseAdmin
-      .from("outlet_neutrality_aggregates_ranked_by_story_count")
-      .select(
-        `
+      .from("outlet_bias_pi_summary_all_time")
+      .select(`
         outlet,
-        stories_analyzed,
-        pi
-      `
-      )
-      .gte("stories_analyzed", MIN_STORIES);
+        outlet_story_count,
+        avg_pi_score
+      `)
+      .gte("outlet_story_count", MIN_STORIES);
 
     if (error) {
       console.error("[news/outlets/overview] query error", error);
@@ -90,8 +88,9 @@ export async function GET(req: NextRequest) {
 
     const outlets: OutletOverview[] = (data || []).map((row: any) => ({
       canonical_outlet: row.outlet,
-      total_stories: Number(row.stories_analyzed),
-      avg_pi: Number(row.pi),
+      total_stories: Number(row.outlet_story_count),
+      // 🔒 PARSE ONCE — NO ROUNDING
+      avg_pi: parseFloat(row.avg_pi_score),
     }));
 
     return NextResponse.json({
