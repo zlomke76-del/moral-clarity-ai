@@ -22,6 +22,14 @@ import {
 
 import type { SolaceExport } from "@/lib/exports/types";
 
+declare global {
+  interface Window {
+    __solaceDockMounted?: boolean;
+    webkitSpeechRecognition?: any;
+    SpeechRecognition?: any;
+  }
+}
+
 /* ------------------------------------------------------------------
    Types
 ------------------------------------------------------------------- */
@@ -36,6 +44,13 @@ type EvidenceBlock = {
   source?: string;
   summary?: string;
   text?: string;
+};
+
+type PendingFile = {
+  name: string;
+  mime: string;
+  url: string;
+  size?: number;
 };
 
 /* ------------------------------------------------------------------
@@ -62,27 +77,20 @@ function isImageIntent(message: string): boolean {
 }
 
 /* ------------------------------------------------------------------
-   Props
-------------------------------------------------------------------- */
-type SolaceDockProps = {
-  onRequestMinimize?: () => void;
-};
-
-/* ------------------------------------------------------------------
    MAIN
 ------------------------------------------------------------------- */
-export default function SolaceDock({ onRequestMinimize }: SolaceDockProps) {
+export default function SolaceDock() {
   const [canRender, setCanRender] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if ((window as any).__solaceDockMounted) return;
+    if (window.__solaceDockMounted) return;
 
-    (window as any).__solaceDockMounted = true;
+    window.__solaceDockMounted = true;
     setCanRender(true);
 
     return () => {
-      (window as any).__solaceDockMounted = false;
+      window.__solaceDockMounted = false;
     };
   }, []);
 
@@ -95,9 +103,12 @@ export default function SolaceDock({ onRequestMinimize }: SolaceDockProps) {
   const { visible, setVisible, x, y, setPos, filters, setFilters } =
     useSolaceStore();
 
+  // Keep contract stable.
   const modeHint = "Neutral" as const;
 
-  /* ---------------- Viewport ---------------- */
+  /* ----------------------------
+     Viewport
+  ----------------------------- */
   const [viewport, setViewport] = useState({ w: 0, h: 0 });
   useEffect(() => {
     const update = () =>
@@ -109,11 +120,20 @@ export default function SolaceDock({ onRequestMinimize }: SolaceDockProps) {
 
   const isMobile = viewport.w > 0 ? viewport.w <= 768 : false;
 
+  // Desktop: default to visible if user hasn't hidden it.
   useEffect(() => {
     if (canRender && !isMobile && !visible) setVisible(true);
   }, [canRender, isMobile, visible, setVisible]);
 
-  /* ---------------- Messages ---------------- */
+  /* ----------------------------
+     Local UI state
+  ----------------------------- */
+  const [minimized, setMinimized] = useState(false);
+  useEffect(() => {
+    // Sync minimized flag with global visibility, but do not force-show.
+    if (visible) setMinimized(false);
+  }, [visible]);
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -137,7 +157,9 @@ export default function SolaceDock({ onRequestMinimize }: SolaceDockProps) {
       setMessages((m) => [...m, { role: "assistant", content: msg }]),
   });
 
-  /* ---------------- Ministry ---------------- */
+  /* ----------------------------
+     Ministry mode
+  ----------------------------- */
   const ministryOn = useMemo(
     () => filters.has("abrahamic") && filters.has("ministry"),
     [filters]
@@ -160,7 +182,9 @@ export default function SolaceDock({ onRequestMinimize }: SolaceDockProps) {
     }
   }, [messages.length]);
 
-  /* ---------------- Layout ---------------- */
+  /* ----------------------------
+     Measure container
+  ----------------------------- */
   const [panelW, setPanelW] = useState(0);
   const [panelH, setPanelH] = useState(0);
 
@@ -187,6 +211,9 @@ export default function SolaceDock({ onRequestMinimize }: SolaceDockProps) {
     };
   }, []);
 
+  /* ----------------------------
+     Position & Resize
+  ----------------------------- */
   const { posReady, onHeaderMouseDown } = useDockPosition({
     canRender,
     visible,
@@ -207,9 +234,13 @@ export default function SolaceDock({ onRequestMinimize }: SolaceDockProps) {
   const vw = viewport.w || 1;
   const vh = viewport.h || 1;
 
+  // ------------------------------
+  // MOBILE CLAMP (no drift)
+  // ------------------------------
   const mobileW = Math.max(280, Math.min(dockW, vw - PAD * 2));
   const mobileH = Math.max(360, Math.min(dockH, vh - PAD * 2));
 
+  // Desktop: use stored x/y. Mobile: pin inside viewport.
   const txDesktop = Math.min(Math.max(0, x - PAD), vw - panelW - PAD);
   const tyDesktop = Math.min(Math.max(0, y - PAD), vh - panelH - PAD);
 
@@ -227,89 +258,111 @@ export default function SolaceDock({ onRequestMinimize }: SolaceDockProps) {
       PAD,
     });
 
-  const transcriptStyleSafe = isMobile
-    ? { ...transcriptStyle, overflowY: "auto", WebkitOverflowScrolling: "touch" }
-    : transcriptStyle;
+  // ------------------------------------------------------------------
+  // Next 16 / TS strictness fix:
+  // Avoid CSSProperties widening (overflowY inferred as `string`)
+  // by building a single object and casting once.
+  // ------------------------------------------------------------------
+  const transcriptStyleSafe = ({
+    ...transcriptStyle,
+    ...(isMobile
+      ? {
+          overflowY: "auto" as React.CSSProperties["overflowY"],
+          WebkitOverflowScrolling: "touch" as any,
+        }
+      : null),
+  } ?? transcriptStyle) as React.CSSProperties;
 
-  const panelStyleSafe = isMobile
-    ? {
-        ...panelStyle,
-        width: mobileW,
-        height: mobileH,
-        maxWidth: vw - PAD * 2,
-        maxHeight: vh - PAD * 2,
-      }
-    : panelStyle;
+  const panelStyleSafe = ({
+    ...panelStyle,
+    ...(isMobile
+      ? {
+          width: mobileW,
+          height: mobileH,
+          maxWidth: vw - PAD * 2,
+          maxHeight: vh - PAD * 2,
+        }
+      : null),
+  } ?? panelStyle) as React.CSSProperties;
 
   if (!canRender || !visible) return null;
 
-  /* ---------------- Payload ingest ---------------- */
+  /* ------------------------------------------------------------------
+     PAYLOAD INGEST (AUTHORITATIVE)
+  ------------------------------------------------------------------- */
   function ingestPayload(data: any) {
     if (!data) throw new Error("Empty response payload");
 
+    // EXPORT DELIVERY — MUST PREEMPT EVERYTHING
     if ((data.export as SolaceExport)?.kind === "export") {
       const exp = data.export as SolaceExport;
+
       setMessages((m) => [
         ...m,
         {
           role: "assistant",
-          content: `Your document is ready.\n\nFile: ${exp.filename}\nDownload: ${exp.url}`,
+          content:
+            `Your document is ready.\n\n` +
+            `File: ${exp.filename}\n` +
+            `Download: ${exp.url}`,
         },
       ]);
       return;
     }
 
+    // IMAGE (base64)
     if (
       Array.isArray(data.data) &&
-      data.data[0]?.b64_json
+      data.data[0] &&
+      typeof data.data[0].b64_json === "string"
     ) {
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          content: " ",
-          imageUrl: `data:image/png;base64,${data.data[0].b64_json}`,
-        },
-      ]);
+      const imageUrl = `data:image/png;base64,${data.data[0].b64_json}`;
+      setMessages((m) => [...m, { role: "assistant", content: " ", imageUrl }]);
       return;
     }
 
+    // IMAGE (url)
     if (typeof data.imageUrl === "string" || typeof data.image === "string") {
+      const image = data.imageUrl ?? data.image;
       setMessages((m) => [
         ...m,
-        { role: "assistant", content: " ", imageUrl: data.imageUrl ?? data.image },
+        { role: "assistant", content: " ", imageUrl: image },
       ]);
       return;
     }
 
+    // MULTI-MESSAGE
     if (Array.isArray(data.messages)) {
       setMessages((m) => [...m, ...data.messages]);
       return;
     }
 
+    // STRING RESPONSE
     if (data.ok === true && typeof data.response === "string") {
       setMessages((m) => [...m, { role: "assistant", content: data.response }]);
       return;
     }
 
+    // EVIDENCE
     if (Array.isArray(data.evidence)) {
-      setMessages((m) => [
-        ...m,
-        ...data.evidence.map((e: EvidenceBlock) => ({
-          role: "assistant",
-          content:
-            `Evidence${e.source ? ` (${e.source})` : ""}\n\n` +
-            (e.summary || e.text || "[no content]"),
-        })),
-      ]);
+      const evMsgs: Message[] = data.evidence.map((e: EvidenceBlock) => ({
+        role: "assistant",
+        content:
+          `Evidence` +
+          (e.source ? ` (${e.source})` : "") +
+          `\n\n${e.summary || e.text || "[no content]"}`,
+      }));
+      setMessages((m) => [...m, ...evMsgs]);
       return;
     }
 
     throw new Error("Unrecognized response payload");
   }
 
-  /* ---------------- Send ---------------- */
-  async function send() {
+  /* ------------------------------------------------------------------
+     SEND
+  ------------------------------------------------------------------- */
+  async function send(): Promise<void> {
     if (!input.trim() && pendingFiles.length === 0) return;
     if (streaming) return;
 
@@ -319,6 +372,7 @@ export default function SolaceDock({ onRequestMinimize }: SolaceDockProps) {
     setMessages((m) => [...m, { role: "user", content: userMsg }]);
 
     try {
+      // Image-intent: direct /api/chat (keeps your current contract)
       if (isImageIntent(userMsg)) {
         const res = await fetch("/api/chat", {
           method: "POST",
@@ -337,9 +391,10 @@ export default function SolaceDock({ onRequestMinimize }: SolaceDockProps) {
         return;
       }
 
+      // Vision pipeline (attachments and/or screenshots)
       const result = await sendWithVision({
         userMsg,
-        pendingFiles,
+        pendingFiles: pendingFiles as PendingFile[],
         userKey,
         workspaceId: MCA_WORKSPACE_ID,
         conversationId,
@@ -347,18 +402,24 @@ export default function SolaceDock({ onRequestMinimize }: SolaceDockProps) {
         modeHint,
       });
 
-      result?.visionResults?.forEach((v) =>
-        setMessages((m) => [
-          ...m,
-          {
-            role: "assistant",
-            content: v?.answer ?? "",
-            imageUrl: v?.imageUrl ?? null,
-          },
-        ])
-      );
+      // Render vision blocks first if present
+      if (result?.visionResults) {
+        for (const v of result.visionResults) {
+          setMessages((m) => [
+            ...m,
+            {
+              role: "assistant",
+              content: v?.answer ?? "",
+              imageUrl: v?.imageUrl ?? null,
+            },
+          ]);
+        }
+      }
 
-      if (result?.chatPayload) ingestPayload(result.chatPayload);
+      // Then ingest the main chat payload
+      if (result?.chatPayload) {
+        ingestPayload(result.chatPayload);
+      }
     } catch (err: any) {
       setMessages((m) => [
         ...m,
@@ -370,24 +431,46 @@ export default function SolaceDock({ onRequestMinimize }: SolaceDockProps) {
     }
   }
 
-  /* ---------------- Render ---------------- */
-  return createPortal(
+  const onEnterSend = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  };
+
+  // IMPORTANT:
+  // Header expects a function. Never pass undefined. We guard inside.
+  const handleHeaderDragStart = (e: any) => {
+    if (isMobile) return;
+    onHeaderMouseDown(e);
+  };
+
+  const handleMinimize = () => {
+    // Yellow orb contract: visible=false
+    setMinimized(true);
+    setVisible(false);
+  };
+
+  const panel = (
     <section ref={containerRef} style={panelStyleSafe}>
       <SolaceDockHeaderLite
         ministryOn={ministryOn}
         memReady={memReady}
         onToggleMinistry={() => {
           const next = new Set(filters);
-          ministryOn
-            ? (next.delete("abrahamic"), next.delete("ministry"))
-            : (next.add("abrahamic"), next.add("ministry"));
-          localStorage.setItem(MINISTRY_KEY, ministryOn ? "0" : "1");
+          if (ministryOn) {
+            next.delete("abrahamic");
+            next.delete("ministry");
+            localStorage.setItem(MINISTRY_KEY, "0");
+          } else {
+            next.add("abrahamic");
+            next.add("ministry");
+            localStorage.setItem(MINISTRY_KEY, "1");
+          }
           setFilters(next);
         }}
-        onMinimize={() => onRequestMinimize?.()}
-        onDragStart={(e) => {
-          if (!isMobile) onHeaderMouseDown(e);
-        }}
+        onMinimize={handleMinimize}
+        onDragStart={handleHeaderDragStart}
       />
 
       <SolaceTranscript
@@ -396,30 +479,43 @@ export default function SolaceDock({ onRequestMinimize }: SolaceDockProps) {
         transcriptStyle={transcriptStyleSafe}
       />
 
-      <div style={composerWrapStyle} onPaste={(e) => handlePaste(e, { prefix: "solace" })}>
+      <div
+        style={composerWrapStyle}
+        onPaste={(e) => handlePaste(e, { prefix: "solace" })}
+      >
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <label style={{ width: 38, height: 38, cursor: "pointer" }}>
             <IconPaperclip />
-            <input type="file" multiple hidden onChange={(e) => handleFiles(e.target.files, { prefix: "solace" })} />
+            <input
+              type="file"
+              multiple
+              hidden
+              onChange={(e) => handleFiles(e.target.files, { prefix: "solace" })}
+            />
           </label>
 
-          <button onClick={toggleMic}><IconMic /></button>
+          <button onClick={toggleMic} aria-label="Voice input">
+            <IconMic />
+          </button>
 
           <textarea
             style={textareaStyle}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), send())}
+            onKeyDown={onEnterSend}
             placeholder="Ask Solace..."
             rows={1}
           />
 
-          <button onClick={send} disabled={streaming}>Ask</button>
+          <button onClick={send} disabled={streaming}>
+            Ask
+          </button>
         </div>
       </div>
 
       {!isMobile && <ResizeHandle onResizeStart={startResize} />}
-    </section>,
-    document.body
+    </section>
   );
+
+  return createPortal(panel, document.body);
 }
