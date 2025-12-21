@@ -59,50 +59,26 @@ export async function GET(req: NextRequest) {
       Number.isFinite(parsedMin) && parsedMin > 0 ? parsedMin : 5;
 
     /**
-     * 🔒 CANONICAL READ-TIME COLLAPSE
+     * 🔒 READ FROM CANONICAL VIEW
+     * outlet_canonical_overview
      *
-     * Source table:
-     *   outlet_neutrality_summary
-     *     - outlet           (source_domain)
-     *     - story_count
-     *     - avg_pi_score
+     * This view performs:
+     * - domain → canonical collapse
+     * - weighted PI math
+     * - UNMAPPED fallback
      *
-     * Identity table:
-     *   outlet_domain_map
-     *     - source_domain
-     *     - canonical_outlet
-     *     - active
-     *
-     * Rules:
-     *   - Canonicalization happens ONLY here (read-time)
-     *   - PI is weighted by story_count
-     *   - Unmapped domains surface as 'UNMAPPED'
-     *   - No data is mutated or persisted
+     * No data mutation. No aggregation tables.
      */
 
-    const { data, error } = await supabaseAdmin.rpc(
-      "sql",
-      {
-        query: `
-          SELECT
-            COALESCE(m.canonical_outlet, 'UNMAPPED') AS canonical_outlet,
-            SUM(s.story_count)::bigint               AS total_stories,
-            CASE
-              WHEN SUM(s.story_count) > 0
-              THEN SUM(s.avg_pi_score * s.story_count) / SUM(s.story_count)
-              ELSE NULL
-            END                                     AS avg_pi
-          FROM outlet_neutrality_summary s
-          LEFT JOIN outlet_domain_map m
-            ON s.outlet = m.source_domain
-           AND m.active = true
-          WHERE s.story_count >= $1
-          GROUP BY COALESCE(m.canonical_outlet, 'UNMAPPED')
-          ORDER BY avg_pi DESC NULLS LAST
-        `,
-        params: [MIN_STORIES],
-      }
-    );
+    const { data, error } = await supabaseAdmin
+      .from("outlet_canonical_overview")
+      .select(`
+        canonical_outlet,
+        total_stories,
+        avg_pi
+      `)
+      .gte("total_stories", MIN_STORIES)
+      .order("avg_pi", { ascending: false, nullsFirst: false });
 
     if (error) {
       console.error("[news/outlets/overview] query error", error);
