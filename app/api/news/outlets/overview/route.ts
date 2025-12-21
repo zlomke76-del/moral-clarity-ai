@@ -52,7 +52,6 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Optional: ?minStories=5 (default)
     const url = new URL(req.url);
     const minStoriesParam = url.searchParams.get("minStories");
     const parsedMin = Number(minStoriesParam ?? "5");
@@ -60,23 +59,21 @@ export async function GET(req: NextRequest) {
       Number.isFinite(parsedMin) && parsedMin > 0 ? parsedMin : 5;
 
     /**
-     * 🔒 SOURCE OF TRUTH
+     * 🔒 CANONICAL SOURCE OF TRUTH
      *
-     * public.outlet_bias_pi_summary_all_time
+     * public.outlet_neutrality_summary
      *
-     * Columns (ACTUAL):
-     *   outlet              text
-     *   stories_analyzed    bigint
-     *   pi                  numeric
+     * This table is authoritative for outlet-level aggregates.
+     * No other summary tables should be queried by the Newsroom.
      */
     const { data, error } = await supabaseAdmin
-      .from("outlet_bias_pi_summary_all_time")
+      .from("outlet_neutrality_summary")
       .select(`
         outlet,
-        stories_analyzed,
-        pi
+        total_stories,
+        avg_pi
       `)
-      .gte("stories_analyzed", MIN_STORIES);
+      .gte("total_stories", MIN_STORIES);
 
     if (error) {
       console.error("[news/outlets/overview] query error", error);
@@ -88,8 +85,8 @@ export async function GET(req: NextRequest) {
 
     const outlets: OutletOverview[] = (data || []).map((row: any) => ({
       canonical_outlet: row.outlet,
-      total_stories: Number(row.stories_analyzed),
-      avg_pi: Number(row.pi),
+      total_stories: Number(row.total_stories),
+      avg_pi: Number(row.avg_pi),
     }));
 
     return NextResponse.json({
