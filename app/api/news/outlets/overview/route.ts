@@ -63,17 +63,19 @@ export async function GET(req: NextRequest) {
      *
      * public.outlet_neutrality_summary
      *
-     * This table is authoritative for outlet-level aggregates.
-     * No other summary tables should be queried by the Newsroom.
+     * Column mapping:
+     *   outlet           → canonical_outlet
+     *   story_count      → total_stories
+     *   avg_pi_score     → avg_pi
      */
     const { data, error } = await supabaseAdmin
       .from("outlet_neutrality_summary")
       .select(`
         outlet,
-        total_stories,
-        avg_pi
+        story_count,
+        avg_pi_score
       `)
-      .gte("total_stories", MIN_STORIES);
+      .gte("story_count", MIN_STORIES);
 
     if (error) {
       console.error("[news/outlets/overview] query error", error);
@@ -85,8 +87,8 @@ export async function GET(req: NextRequest) {
 
     const outlets: OutletOverview[] = (data || []).map((row: any) => ({
       canonical_outlet: row.outlet,
-      total_stories: Number(row.total_stories),
-      avg_pi: Number(row.avg_pi),
+      total_stories: Number(row.story_count),
+      avg_pi: Number(row.avg_pi_score),
     }));
 
     return NextResponse.json({
