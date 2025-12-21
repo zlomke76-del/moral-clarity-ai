@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     default: "Moral Clarity AI",
     template: "%s • Moral Clarity AI",
   },
-  description: "Anchored answers. Neutral • Guidance • Ministry.",
+  description: "Anchored answers. Neutral • Guidance.",
 };
 
 export const viewport: Viewport = {
@@ -46,9 +46,17 @@ export default async function RootLayout({
     hdrs.get("referer") ||
     "";
 
-  const isNewsroom =
-    pathname.includes("/newsroom") ||
-    pathname.includes("/newsroom/");
+  /**
+   * ✅ Solace is APP-ONLY
+   * Never mounted on:
+   * - public doctrine
+   * - white papers
+   * - newsroom
+   * - marketing
+   */
+  const isApp =
+    pathname.startsWith("/app") ||
+    pathname.includes("/app/");
 
   return (
     <html lang="en" className="h-full dark">
@@ -59,8 +67,8 @@ export default async function RootLayout({
         <AuthProvider>
           <LayoutShell>{children}</LayoutShell>
 
-          {/* 🔒 Solace is NEVER mounted in Newsroom */}
-          {!isNewsroom && <SolaceDockWrapper />}
+          {/* 🔒 Solace mounts ONLY inside /app */}
+          {isApp && <SolaceDockWrapper />}
         </AuthProvider>
 
         <Toaster />
