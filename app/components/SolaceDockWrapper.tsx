@@ -7,7 +7,7 @@ export default function SolaceDockWrapper() {
   const pathname = usePathname();
 
   // 🔒 HARD GATE: Solace ONLY exists in /app
-  if (!pathname.startsWith("/app")) {
+  if (!pathname || !pathname.startsWith("/app")) {
     return null;
   }
 
