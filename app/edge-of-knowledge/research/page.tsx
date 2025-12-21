@@ -117,11 +117,13 @@ export default function EdgeOfKnowledgeIndexPage() {
               Materials That Quietly Prevent Failure
             </Link>
           </li>
+
           <li>
             <Link href="/edge-of-knowledge/neglect-impossible">
               Materials That Make Neglect Impossible
             </Link>
           </li>
+
           <li>
             <Link href="/edge-of-knowledge/irreversible-infrastructure-exposure-marker">
               Irreversible Infrastructure Exposure Marker
@@ -131,21 +133,35 @@ export default function EdgeOfKnowledgeIndexPage() {
               Infrastructure states that permanently surface neglect, misuse, or deferred responsibility
             </span>
           </li>
+
+          <li>
+            <Link href="/edge-of-knowledge/phase-locked-wear-surfaces">
+              Phase-Locked Wear Surfaces
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Irreversible, physically encoded wear patterns that record maintenance sequence and adherence
+            </span>
+          </li>
+
           <li>
             <Link href="/material-encoded-truth">
               Material-Encoded Truth
             </Link>
           </li>
+
           <li>
             <Link href="/edge-of-knowledge/intrinsic-cognitive-drift-materials">
               Intrinsic Cognitive-Drift Signaling Materials
             </Link>
           </li>
+
           <li>
             <Link href="/edge-of-knowledge/signaling-before-failure">
               Signaling Before Failure
             </Link>
           </li>
+
           <li>
             <Link href="/edge-of-knowledge/thermal-indicator-paint">
               Thermal Indicator Paint for Food Safety
