@@ -55,9 +55,9 @@ export default function OutletCard({
         }
       `}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col items-start gap-1">
         {/* Rank */}
-        <div className="w-6 text-xs text-neutral-400">#{rank}</div>
+        <div className="text-xs text-neutral-400">#{rank}</div>
 
         {/* Logo */}
         <Image
@@ -69,15 +69,19 @@ export default function OutletCard({
           unoptimized
         />
 
-        {/* Text */}
-        <div className="flex-1">
-          <div className="text-sm font-medium text-neutral-100">
-            {formatOutletDisplay(domain)}
-          </div>
-          <div className="text-xs text-neutral-400">
-            {outlet.total_stories.toLocaleString()} stories analyzed · PI{" "}
-            {piDisplay}
-          </div>
+        {/* Outlet Name */}
+        <div className="text-sm font-medium text-neutral-100">
+          {formatOutletDisplay(domain)}
+        </div>
+
+        {/* PI Score */}
+        <div className="text-xs text-amber-300">
+          PI {piDisplay}
+        </div>
+
+        {/* Story Count */}
+        <div className="text-xs text-neutral-400">
+          {outlet.total_stories.toLocaleString()} stories analyzed
         </div>
       </div>
     </button>
