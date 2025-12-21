@@ -59,36 +59,63 @@ export async function GET(req: NextRequest) {
       Number.isFinite(parsedMin) && parsedMin > 0 ? parsedMin : 5;
 
     /**
-     * 🔒 CANONICAL SOURCE OF TRUTH
+     * 🔒 CANONICAL READ-TIME COLLAPSE
      *
-     * public.outlet_neutrality_summary
+     * Source table:
+     *   outlet_neutrality_summary
+     *     - outlet           (source_domain)
+     *     - story_count
+     *     - avg_pi_score
      *
-     * Column mapping:
-     *   outlet           → canonical_outlet
-     *   story_count      → total_stories
-     *   avg_pi_score     → avg_pi
+     * Identity table:
+     *   outlet_domain_map
+     *     - source_domain
+     *     - canonical_outlet
+     *     - active
+     *
+     * Rules:
+     *   - Canonicalization happens ONLY here (read-time)
+     *   - PI is weighted by story_count
+     *   - Unmapped domains surface as 'UNMAPPED'
+     *   - No data is mutated or persisted
      */
-    const { data, error } = await supabaseAdmin
-      .from("outlet_neutrality_summary")
-      .select(`
-        outlet,
-        story_count,
-        avg_pi_score
-      `)
-      .gte("story_count", MIN_STORIES);
+
+    const { data, error } = await supabaseAdmin.rpc(
+      "sql",
+      {
+        query: `
+          SELECT
+            COALESCE(m.canonical_outlet, 'UNMAPPED') AS canonical_outlet,
+            SUM(s.story_count)::bigint               AS total_stories,
+            CASE
+              WHEN SUM(s.story_count) > 0
+              THEN SUM(s.avg_pi_score * s.story_count) / SUM(s.story_count)
+              ELSE NULL
+            END                                     AS avg_pi
+          FROM outlet_neutrality_summary s
+          LEFT JOIN outlet_domain_map m
+            ON s.outlet = m.source_domain
+           AND m.active = true
+          WHERE s.story_count >= $1
+          GROUP BY COALESCE(m.canonical_outlet, 'UNMAPPED')
+          ORDER BY avg_pi DESC NULLS LAST
+        `,
+        params: [MIN_STORIES],
+      }
+    );
 
     if (error) {
       console.error("[news/outlets/overview] query error", error);
       return jsonError("Failed to load outlet overview.", 500, {
         code: error.code,
-        details: error.details,
+        details: error.message,
       });
     }
 
     const outlets: OutletOverview[] = (data || []).map((row: any) => ({
-      canonical_outlet: row.outlet,
-      total_stories: Number(row.story_count),
-      avg_pi: Number(row.avg_pi_score),
+      canonical_outlet: row.canonical_outlet,
+      total_stories: Number(row.total_stories),
+      avg_pi: Number(row.avg_pi),
     }));
 
     return NextResponse.json({
