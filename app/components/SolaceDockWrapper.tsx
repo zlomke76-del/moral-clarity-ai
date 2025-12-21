@@ -1,15 +1,15 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import SolaceDockLoader from "./SolaceDockLoader";
+import SolaceDock from "./SolaceDock";
 
 export default function SolaceDockWrapper() {
-  const pathname = usePathname() ?? "";
+  const pathname = usePathname();
 
-  // Hard exclusion
-  if (pathname.startsWith("/newsroom")) {
+  // 🔒 HARD GATE: Solace ONLY exists in /app
+  if (!pathname.startsWith("/app")) {
     return null;
   }
 
-  return <SolaceDockLoader />;
+  return <SolaceDock />;
 }
