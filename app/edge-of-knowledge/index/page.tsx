@@ -6,12 +6,12 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Edge of Knowledge — Research Index | Moral Clarity AI",
   description:
-    "An index of public research notes and white papers exploring failure, uncertainty, and governance at the limits of knowledge.",
+    "A public research index exploring failure, uncertainty, and responsible action where optimization and certainty break down.",
   openGraph: {
     title: "Edge of Knowledge — Research Index",
     description:
-      "Research notes examining failure modes, uncertainty, and responsible action beyond certainty.",
-    url: "https://moralclarity.ai/edge-of-knowledge/index",
+      "Public research on failure modes, uncertainty, and responsible action beyond certainty.",
+    url: "https://moralclarity.ai/edge-of-knowledge",
     siteName: "Moral Clarity AI",
     type: "article",
   },
@@ -29,23 +29,36 @@ export default function EdgeOfKnowledgeIndexPage() {
 
         <p className="lead">
           <strong>
-            Research notes on failure, uncertainty, and responsible action beyond certainty
+            Research on failure, uncertainty, and responsible action where
+            optimization breaks
           </strong>
         </p>
 
         <p>
-          This index collects public research notes associated with the{" "}
-          <em>Edge of Knowledge</em> doctrine. These documents explore how systems
-          fail quietly, how risk becomes normalized, and how responsibility must
-          shift when certainty breaks.
+          <em>Edge of Knowledge</em> is a public research series examining how
+          systems fail when assumptions quietly collapse, incentives misalign,
+          and certainty becomes dangerous. These documents are not product
+          proposals, investment theses, or policy mandates. They are
+          regime-bounded analyses intended to clarify limits, surface risk, and
+          govern action where traditional optimization no longer applies.
         </p>
 
         <p>
-          Each paper is regime-bounded, falsifiable, and written to stand alone.
-          They are not product documentation or policy statements.
+          Each document is written to stand alone, is explicitly falsifiable
+          where applicable, and is framed to resist misinterpretation as
+          performance enhancement or technological salvation.
         </p>
 
-        <h2>Doctrine</h2>
+        <hr />
+
+        <h2>I. Doctrine — Governing Action Under Uncertainty</h2>
+
+        <p>
+          These documents establish how intelligent systems—human or
+          artificial—should behave when confidence exceeds validity and
+          assumptions silently fail.
+        </p>
+
         <ul>
           <li>
             <Link href="/edge-of-knowledge">
@@ -53,20 +66,57 @@ export default function EdgeOfKnowledgeIndexPage() {
             </Link>
             <br />
             <span className="text-sm text-muted-foreground">
-              Foundational doctrine for responsible intelligence under uncertainty
+              A foundational doctrine for responsible intelligence when certainty breaks
             </span>
           </li>
         </ul>
 
-        <h2>Research Notes</h2>
+        <h2>II. Failure Visibility & Accountability</h2>
+
+        <p>
+          These papers examine material and system designs that do not eliminate
+          failure, but instead make risk, neglect, degradation, or impending harm
+          visible early—before catastrophic outcomes occur.
+        </p>
+
         <ul>
           <li>
             <Link href="/edge-of-knowledge/quiet-failure">
-              Quiet Failure
+              Materials That Quietly Prevent Failure
             </Link>
             <br />
             <span className="text-sm text-muted-foreground">
-              How systems degrade silently before catastrophic breakdown
+              Suppressing failure modes without improving baseline performance
+            </span>
+          </li>
+
+          <li>
+            <Link href="/edge-of-knowledge/neglect-impossible">
+              Materials That Make Neglect Impossible
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Eliminating plausible deniability around omission or skipped care
+            </span>
+          </li>
+
+          <li>
+            <Link href="/material-encoded-truth">
+              Material-Encoded Truth
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Irreversible physical encoding of cumulative risk and misuse
+            </span>
+          </li>
+
+          <li>
+            <Link href="/edge-of-knowledge/intrinsic-cognitive-drift-materials">
+              Intrinsic Cognitive-Drift Signaling Materials
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Passive materials that surface early cognitive erosion without surveillance
             </span>
           </li>
 
@@ -76,37 +126,27 @@ export default function EdgeOfKnowledgeIndexPage() {
             </Link>
             <br />
             <span className="text-sm text-muted-foreground">
-              Physical and informational signals that precede collapse
+              Designing materials to warn before biological harm occurs
             </span>
           </li>
+        </ul>
 
-          <li>
-            <Link href="/edge-of-knowledge/neglect-impossible">
-              Neglect-Impossible Systems
-            </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Designing systems where neglect becomes unignorable
-            </span>
-          </li>
+        <h2>III. Boundary Research — Physically Allowed, Non-Scalable</h2>
 
-          <li>
-            <Link href="/edge-of-knowledge/intrinsic-cognitive-drift-materials">
-              Intrinsic Cognitive Drift Materials
-            </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Materials that encode misuse, drift, or cumulative exposure
-            </span>
-          </li>
+        <p>
+          These documents explore hypotheses that are not forbidden by physics,
+          but operate at the edge of plausibility. They are explicitly constrained,
+          non-scalable, and ethically framed to prevent misuse or overclaiming.
+        </p>
 
+        <ul>
           <li>
             <Link href="/edge-of-knowledge/damage-activated-nitrogen-fixation">
               Damage-Activated Nitrogen Fixation
             </Link>
             <br />
             <span className="text-sm text-muted-foreground">
-              Environmental response systems triggered by physical harm
+              A tightly bounded evaluation of marginal nitrogen fixation driven by mechanical damage
             </span>
           </li>
         </ul>
@@ -115,7 +155,8 @@ export default function EdgeOfKnowledgeIndexPage() {
 
         <p className="text-sm text-muted-foreground">
           Edge of Knowledge is a public research series. Documents are updated
-          only by explicit revision and remain accessible for historical reference.
+          only by explicit revision and remain accessible for historical and
+          epistemic continuity.
         </p>
       </article>
     </main>
