@@ -201,6 +201,16 @@ export default function EdgeOfKnowledgeIndexPage() {
               Regime-bounded mapping of cost-accessible polymer architectures using commodity materials
             </span>
           </li>
+
+          <li>
+            <Link href="/edge-of-knowledge/semi-ipn-polyolefin-tpe">
+              Semi-Interpenetrating Network (Semi-IPN) of Polyolefin &amp; Elastomer
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Physically interlocked polyolefin–elastomer architectures for fatigue and impact durability
+            </span>
+          </li>
         </ul>
 
         <hr />
