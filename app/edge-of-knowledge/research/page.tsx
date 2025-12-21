@@ -152,6 +152,16 @@ export default function EdgeOfKnowledgeIndexPage() {
               Damage-Activated Nitrogen Fixation
             </Link>
           </li>
+
+          <li>
+            <Link href="/edge-of-knowledge/salt-gradient-desalination-wick">
+              Salt-Gradient Desalination Wick
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              NO-GO — membrane-free passive desalination falsified by thermodynamics
+            </span>
+          </li>
         </ul>
 
         <hr />
