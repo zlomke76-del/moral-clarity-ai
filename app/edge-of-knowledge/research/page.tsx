@@ -123,6 +123,15 @@ export default function EdgeOfKnowledgeIndexPage() {
             </Link>
           </li>
           <li>
+            <Link href="/edge-of-knowledge/irreversible-infrastructure-exposure-marker">
+              Irreversible Infrastructure Exposure Marker
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Infrastructure states that permanently surface neglect, misuse, or deferred responsibility
+            </span>
+          </li>
+          <li>
             <Link href="/material-encoded-truth">
               Material-Encoded Truth
             </Link>
