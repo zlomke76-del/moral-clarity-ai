@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     title: "Edge of Knowledge — Research Index",
     description:
       "Public research on failure modes, uncertainty, and responsible action beyond certainty.",
-    url: "https://moralclarity.ai/edge-of-knowledge",
+    url: "https://moralclarity.ai/edge-of-knowledge/research",
     siteName: "Moral Clarity AI",
     type: "article",
   },
