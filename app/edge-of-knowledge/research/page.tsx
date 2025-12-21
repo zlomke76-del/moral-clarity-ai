@@ -43,21 +43,9 @@ export default function EdgeOfKnowledgeIndexPage() {
           govern action where traditional optimization no longer applies.
         </p>
 
-        <p>
-          Each document is written to stand alone, is explicitly falsifiable
-          where applicable, and is framed to resist misinterpretation as
-          performance enhancement or technological salvation.
-        </p>
-
         <hr />
 
         <h2>I. Doctrine — Governing Action Under Uncertainty</h2>
-
-        <p>
-          These documents establish how intelligent systems—human or
-          artificial—should behave when confidence exceeds validity and
-          assumptions silently fail.
-        </p>
 
         <ul>
           <li>
@@ -66,88 +54,68 @@ export default function EdgeOfKnowledgeIndexPage() {
             </Link>
             <br />
             <span className="text-sm text-muted-foreground">
-              A foundational doctrine for responsible intelligence when certainty breaks
+              Foundational doctrine for responsible intelligence when certainty breaks
             </span>
           </li>
         </ul>
 
-        <h2>II. Failure Visibility & Accountability</h2>
+        <h2>II. Governance-Driven Failure Modes</h2>
 
         <p>
-          These papers examine material and system designs that do not eliminate
-          failure, but instead make risk, neglect, degradation, or impending harm
-          visible early—before catastrophic outcomes occur.
+          These papers examine failures that arise after risk is recognized,
+          signaling is sufficient, and capability exists—but governance logic
+          itself prevents timely or proportionate action.
         </p>
+
+        <ul>
+          <li>
+            <Link href="/edge-of-knowledge/procedural-entrenchment">
+              Procedural Entrenchment
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Governance inertia after risk recognition due to procedural rigidity
+            </span>
+          </li>
+        </ul>
+
+        <h2>III. Failure Visibility & Accountability</h2>
 
         <ul>
           <li>
             <Link href="/edge-of-knowledge/quiet-failure">
               Materials That Quietly Prevent Failure
             </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Suppressing failure modes without improving baseline performance
-            </span>
           </li>
-
           <li>
             <Link href="/edge-of-knowledge/neglect-impossible">
               Materials That Make Neglect Impossible
             </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Eliminating plausible deniability around omission or skipped care
-            </span>
           </li>
-
           <li>
             <Link href="/material-encoded-truth">
               Material-Encoded Truth
             </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Irreversible physical encoding of cumulative risk and misuse
-            </span>
           </li>
-
           <li>
             <Link href="/edge-of-knowledge/intrinsic-cognitive-drift-materials">
               Intrinsic Cognitive-Drift Signaling Materials
             </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Passive materials that surface early cognitive erosion without surveillance
-            </span>
           </li>
-
           <li>
             <Link href="/edge-of-knowledge/signaling-before-failure">
               Signaling Before Failure
             </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Designing materials to warn before biological harm occurs
-            </span>
           </li>
         </ul>
 
-        <h2>III. Boundary Research — Physically Allowed, Non-Scalable</h2>
-
-        <p>
-          These documents explore hypotheses that are not forbidden by physics,
-          but operate at the edge of plausibility. They are explicitly constrained,
-          non-scalable, and ethically framed to prevent misuse or overclaiming.
-        </p>
+        <h2>IV. Boundary Research — Physically Allowed, Non-Scalable</h2>
 
         <ul>
           <li>
             <Link href="/edge-of-knowledge/damage-activated-nitrogen-fixation">
               Damage-Activated Nitrogen Fixation
             </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              A tightly bounded evaluation of marginal nitrogen fixation driven by mechanical damage
-            </span>
           </li>
         </ul>
 
@@ -155,8 +123,7 @@ export default function EdgeOfKnowledgeIndexPage() {
 
         <p className="text-sm text-muted-foreground">
           Edge of Knowledge is a public research series. Documents are updated
-          only by explicit revision and remain accessible for historical and
-          epistemic continuity.
+          only by explicit revision and remain accessible for epistemic continuity.
         </p>
       </article>
     </main>
