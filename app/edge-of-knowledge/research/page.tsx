@@ -57,6 +57,16 @@ export default function EdgeOfKnowledgeIndexPage() {
               Foundational doctrine for responsible intelligence when certainty breaks
             </span>
           </li>
+
+          <li>
+            <Link href="/edge-of-knowledge/epistemic-lock-in">
+              Epistemic Lock-In After Risk Acknowledgment
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              When recognized risk fails to reframe understanding
+            </span>
+          </li>
         </ul>
 
         <h2>II. Governance-Driven Failure Modes</h2>
