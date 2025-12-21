@@ -77,6 +77,16 @@ export default function EdgeOfKnowledgeIndexPage() {
               Governance inertia after risk recognition due to procedural rigidity
             </span>
           </li>
+
+          <li>
+            <Link href="/edge-of-knowledge/action-threshold-collapse">
+              Action Threshold Collapse
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              When all available interventions produce greater harm than inaction
+            </span>
+          </li>
         </ul>
 
         <h2>III. Failure Visibility & Accountability</h2>
