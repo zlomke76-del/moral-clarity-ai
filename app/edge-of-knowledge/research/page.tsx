@@ -97,6 +97,16 @@ export default function EdgeOfKnowledgeIndexPage() {
               When all available interventions produce greater harm than inaction
             </span>
           </li>
+
+          <li>
+            <Link href="/edge-of-knowledge/fragmented-responsibility-disjunction">
+              Fragmented Responsibility Disjunction
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              When recognized risk fails to produce action due to fragmented authority
+            </span>
+          </li>
         </ul>
 
         <h2>III. Failure Visibility & Accountability</h2>
