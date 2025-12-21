@@ -1,32 +1,26 @@
-// app/app/layout.tsx
-
 "use client";
 
-import { usePathname } from "next/navigation";
-import clsx from "clsx";
+import { Suspense } from "react";
+import LayoutShell from "@/app/LayoutShell";
+import SolaceGuard from "@/app/components/SolaceGuard";
+import SolaceDockWrapper from "@/app/components/SolaceDockWrapper";
 
 export default function AppSectionLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname() ?? "";
-
-  // Tool / editor pages must be edge-to-edge
-  const noPadding =
-    pathname.includes("/memory") ||
-    pathname.includes("/newsroom") ||
-    pathname.includes("/builder");
-
   return (
-    <div
-      data-app-content
-      className={clsx(
-        "w-full h-full",
-        noPadding ? "px-0 py-0" : "px-8 py-10"
-      )}
-    >
-      {children}
-    </div>
+    <>
+      {/* 🔒 Solace exists ONLY inside /app */}
+      <Suspense fallback={null}>
+        <SolaceGuard />
+      </Suspense>
+
+      <LayoutShell>{children}</LayoutShell>
+
+      {/* 🔒 Dock is also /app-only */}
+      <SolaceDockWrapper />
+    </>
   );
 }
