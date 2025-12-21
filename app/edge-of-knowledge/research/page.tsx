@@ -107,6 +107,11 @@ export default function EdgeOfKnowledgeIndexPage() {
               Signaling Before Failure
             </Link>
           </li>
+          <li>
+            <Link href="/edge-of-knowledge/thermal-indicator-paint">
+              Thermal Indicator Paint for Food Safety
+            </Link>
+          </li>
         </ul>
 
         <h2>IV. Boundary Research — Physically Allowed, Non-Scalable</h2>
