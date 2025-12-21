@@ -189,6 +189,20 @@ export default function EdgeOfKnowledgeIndexPage() {
           </li>
         </ul>
 
+        <h2>V. Validation-First Materials Exploration</h2>
+
+        <ul>
+          <li>
+            <Link href="/edge-of-knowledge/polymer-discovery-validation">
+              Polymer Discovery (Validation-First, Non-Inventive)
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Regime-bounded mapping of cost-accessible polymer architectures using commodity materials
+            </span>
+          </li>
+        </ul>
+
         <hr />
 
         <p className="text-sm text-muted-foreground">
