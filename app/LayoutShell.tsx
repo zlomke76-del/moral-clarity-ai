@@ -5,7 +5,6 @@ import { Suspense } from "react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import NeuralSidebar from "@/app/components/NeuralSidebar";
-import SolaceGuard from "@/app/components/SolaceGuard";
 import LayoutDebugOverlay from "@/app/components/LayoutDebugOverlay";
 
 export default function LayoutShell({
@@ -21,19 +20,9 @@ export default function LayoutShell({
     pathname.startsWith("/w/");
 
   const isWorkspace = pathname.startsWith("/w/");
-  const isAuth = pathname.startsWith("/auth");
-  const isNewsroom =
-    pathname === "/newsroom" || pathname.startsWith("/newsroom/");
 
   return (
     <>
-      {/* Solace mounts everywhere except auth + newsroom */}
-      {!isAuth && !isNewsroom && (
-        <Suspense fallback={null}>
-          <SolaceGuard />
-        </Suspense>
-      )}
-
       {isApp ? (
         <div
           data-app-shell
@@ -47,11 +36,6 @@ export default function LayoutShell({
             data-app-main
             className="h-full flex flex-col items-start justify-start"
           >
-            {/* 
-              RULE:
-              - /w/* pages own the canvas (NO padding)
-              - /app/* pages get standard padding
-            */}
             <div
               data-app-content
               className={
