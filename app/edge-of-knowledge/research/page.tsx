@@ -213,6 +213,20 @@ export default function EdgeOfKnowledgeIndexPage() {
           </li>
         </ul>
 
+        <h2>VI. Operational Drift & Degradation</h2>
+
+        <ul>
+          <li>
+            <Link href="/edge-of-knowledge/maintenance-drift-and-degradation-dynamics">
+              Maintenance Drift and Degradation Dynamics in Operational Systems
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Cumulative, slow degradation arising between validation and overt failure
+            </span>
+          </li>
+        </ul>
+
         <hr />
 
         <p className="text-sm text-muted-foreground">
