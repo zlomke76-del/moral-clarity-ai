@@ -211,9 +211,19 @@ export default function EdgeOfKnowledgeIndexPage() {
               Physically interlocked polyolefin–elastomer architectures for fatigue and impact durability
             </span>
           </li>
+
+          <li>
+            <Link href="/edge-of-knowledge/mineral-filled-polyolefin-barrier-films">
+              Mineral-Filled Polyolefin Barrier Films
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Tuned permeability and mechanical response using commodity mineral fillers
+            </span>
+          </li>
         </ul>
 
-        <h2>VI. Operational Drift & Degradation</h2>
+        <h2>VI. Operational Drift &amp; Degradation</h2>
 
         <ul>
           <li>
