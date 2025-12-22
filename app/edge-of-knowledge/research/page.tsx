@@ -60,6 +60,17 @@ export default function EdgeOfKnowledgeIndexPage() {
           </li>
 
           <li>
+            <Link href="/edge-of-knowledge/non-commutative-morphology-trajectories">
+              Non-Commutative Morphology Trajectories in Polymer Durability
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Path-dependent morphology evolution as a governing durability
+              constraint
+            </span>
+          </li>
+
+          <li>
             <Link href="/edge-of-knowledge/epistemic-lock-in">
               Epistemic Lock-In After Risk Acknowledgment
             </Link>
