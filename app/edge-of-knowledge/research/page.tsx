@@ -117,6 +117,17 @@ export default function EdgeOfKnowledgeIndexPage() {
 
         <ul>
           <li>
+            <Link href="/edge-of-knowledge/interfacial-debond-failure-class">
+              Interfacial-Debond–Controlled Failure (General Class)
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              A universal failure regime arising from reversible interfaces and
+              environment-coupled morphology
+            </span>
+          </li>
+
+          <li>
             <Link href="/edge-of-knowledge/quiet-failure">
               Materials That Quietly Prevent Failure
             </Link>
