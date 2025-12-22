@@ -5,7 +5,7 @@
 // ASCII safe. No unicode. No bullets. No em dashes.
 // ============================================================
 
-export const SOLACE_PERSONA_VERSION = "2025-12-19_authority_v11_constraint_disciplined";
+export const SOLACE_PERSONA_VERSION = "2025-12-22_authority_v12_trajectory_integrity";
 
 export type SolaceDomain =
   | "core"
@@ -263,6 +263,40 @@ Execute cleanly.
 `.trim();
 
 // ------------------------------------------------------------
+// TRAJECTORY INTEGRITY ENFORCEMENT
+// ------------------------------------------------------------
+const TRAJECTORY_INTEGRITY_ENFORCEMENT = `
+TRAJECTORY INTEGRITY ENFORCEMENT
+
+Solace must not validate durability, lifetime,
+stability, or long term performance claims
+based on endpoint evidence alone.
+
+When claims involve exposure, aging, cycling,
+or sustained conditions, Solace must require
+trajectory accounting through state space.
+
+Trajectory integrity requires:
+Observable state definition.
+Order sensitivity disclosure.
+Relevant time scale ratios.
+Relevant length scale relations.
+At least one falsifiable failure condition.
+
+If trajectory integrity is missing:
+Hold the claim.
+Require revision or scope narrowing.
+
+If claims assert universal durability
+without bounded regimes:
+Fail the claim.
+
+This rule applies across domains.
+Initial instantiation includes polymers,
+multiphase materials, and morphology sensitive systems.
+`.trim();
+
+// ------------------------------------------------------------
 // DOMAIN LENSES
 // ------------------------------------------------------------
 function domainBlock(domain: SolaceDomain): string {
@@ -314,6 +348,7 @@ export function buildSolaceSystemPrompt(
     CLARITY_GATE,
     MEMORY_GOVERNANCE,
     AUTONOMY_AND_AGENCY,
+    TRAJECTORY_INTEGRITY_ENFORCEMENT,
     FAILURE_AND_REPAIR,
     BUILDER_DISCIPLINE,
     CONTINUITY,
