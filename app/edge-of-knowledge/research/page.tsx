@@ -223,6 +223,18 @@ export default function EdgeOfKnowledgeIndexPage() {
               morphology that invalidates endpoint-only durability claims
             </span>
           </li>
+
+          <li>
+            <Link href="/edge-of-knowledge/inflammation-suppressing-microenvironment-polymer">
+              Inflammation-Suppressing Human Micro-Environment Polymer
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              A passive polymer system that continuously lowers chronic indoor
+              inflammatory load by permanently neutralizing transferable
+              bioactive airborne drivers
+            </span>
+          </li>
         </ul>
 
         <h2>VI. Operational Drift & Degradation</h2>
