@@ -211,6 +211,17 @@ export default function EdgeOfKnowledgeIndexPage() {
           </li>
 
           <li>
+            <Link href="/edge-of-knowledge/tpu-elastomer-networks">
+              Thermoplastic Polyurethane Elastomer Networks
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Microphase-separated elastomer networks with bounded environmental
+              durability
+            </span>
+          </li>
+
+          <li>
             <Link href="/edge-of-knowledge/polymer-discovery-validation">
               Polymer Discovery (Validation-First, Non-Inventive)
             </Link>
