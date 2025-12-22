@@ -246,6 +246,19 @@ export default function EdgeOfKnowledgeIndexPage() {
               remediation, emissions, or endpoint-only claims
             </span>
           </li>
+
+          {/* ADDITIVE ONLY — NEW PAPER */}
+          <li>
+            <Link href="/edge-of-knowledge/irreversible-gradient-ratcheting-composites">
+              Irreversible Gradient-Ratcheting Composites (IGRC)
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Composite architectures that irreversibly convert operational
+              energy gradients into directional structural order, invalidating
+              endpoint-only durability claims
+            </span>
+          </li>
         </ul>
 
         <h2>VI. Operational Drift & Degradation</h2>
