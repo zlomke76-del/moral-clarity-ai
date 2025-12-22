@@ -233,7 +233,7 @@ export default function EdgeOfKnowledgeIndexPage() {
             </span>
           </li>
 
-          {/* ✅ ADDITIVE ONLY — NEW PAPER */}
+          {/* ADDITIVE ONLY — NEW PAPER */}
           <li>
             <Link href="/edge-of-knowledge/passive-infrastructure-organophosphate-interruption">
               Passive Infrastructure Polymers for Irreversible Interruption of
