@@ -54,7 +54,8 @@ export default function EdgeOfKnowledgeIndexPage() {
             </Link>
             <br />
             <span className="text-sm text-muted-foreground">
-              Foundational doctrine for responsible intelligence when certainty breaks
+              Foundational doctrine for responsible intelligence when certainty
+              breaks
             </span>
           </li>
 
@@ -84,7 +85,8 @@ export default function EdgeOfKnowledgeIndexPage() {
             </Link>
             <br />
             <span className="text-sm text-muted-foreground">
-              Governance inertia after risk recognition due to procedural rigidity
+              Governance inertia after risk recognition due to procedural
+              rigidity
             </span>
           </li>
 
@@ -94,7 +96,8 @@ export default function EdgeOfKnowledgeIndexPage() {
             </Link>
             <br />
             <span className="text-sm text-muted-foreground">
-              When all available interventions produce greater harm than inaction
+              When all available interventions produce greater harm than
+              inaction
             </span>
           </li>
 
@@ -104,7 +107,8 @@ export default function EdgeOfKnowledgeIndexPage() {
             </Link>
             <br />
             <span className="text-sm text-muted-foreground">
-              When recognized risk fails to produce action due to fragmented authority
+              When recognized risk fails to produce action due to fragmented
+              authority
             </span>
           </li>
         </ul>
@@ -130,7 +134,8 @@ export default function EdgeOfKnowledgeIndexPage() {
             </Link>
             <br />
             <span className="text-sm text-muted-foreground">
-              Infrastructure states that permanently surface neglect, misuse, or deferred responsibility
+              Infrastructure states that permanently surface neglect, misuse, or
+              deferred responsibility
             </span>
           </li>
 
@@ -140,7 +145,8 @@ export default function EdgeOfKnowledgeIndexPage() {
             </Link>
             <br />
             <span className="text-sm text-muted-foreground">
-              Irreversible, physically encoded wear patterns that record maintenance sequence and adherence
+              Irreversible, physically encoded wear patterns that record
+              maintenance sequence and adherence
             </span>
           </li>
 
@@ -184,7 +190,8 @@ export default function EdgeOfKnowledgeIndexPage() {
             </Link>
             <br />
             <span className="text-sm text-muted-foreground">
-              NO-GO — membrane-free passive desalination falsified by thermodynamics
+              NO-GO — membrane-free passive desalination falsified by
+              thermodynamics
             </span>
           </li>
         </ul>
@@ -193,22 +200,36 @@ export default function EdgeOfKnowledgeIndexPage() {
 
         <ul>
           <li>
+            <Link href="/edge-of-knowledge/high-crystallinity-polyamide-fibers">
+              High-Crystallinity Polyamide Fibers
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Morphology-driven mechanical and thermal performance in commodity
+              polyamides
+            </span>
+          </li>
+
+          <li>
             <Link href="/edge-of-knowledge/polymer-discovery-validation">
               Polymer Discovery (Validation-First, Non-Inventive)
             </Link>
             <br />
             <span className="text-sm text-muted-foreground">
-              Regime-bounded mapping of cost-accessible polymer architectures using commodity materials
+              Regime-bounded mapping of cost-accessible polymer architectures
+              using commodity materials
             </span>
           </li>
 
           <li>
             <Link href="/edge-of-knowledge/semi-ipn-polyolefin-tpe">
-              Semi-Interpenetrating Network (Semi-IPN) of Polyolefin &amp; Elastomer
+              Semi-Interpenetrating Network (Semi-IPN) of Polyolefin &amp;
+              Elastomer
             </Link>
             <br />
             <span className="text-sm text-muted-foreground">
-              Physically interlocked polyolefin–elastomer architectures for fatigue and impact durability
+              Physically interlocked polyolefin–elastomer architectures for
+              fatigue and impact durability
             </span>
           </li>
 
@@ -218,7 +239,8 @@ export default function EdgeOfKnowledgeIndexPage() {
             </Link>
             <br />
             <span className="text-sm text-muted-foreground">
-              Tuned permeability and mechanical response using commodity mineral fillers
+              Tuned permeability and mechanical response using commodity mineral
+              fillers
             </span>
           </li>
         </ul>
@@ -232,7 +254,8 @@ export default function EdgeOfKnowledgeIndexPage() {
             </Link>
             <br />
             <span className="text-sm text-muted-foreground">
-              Cumulative, slow degradation arising between validation and overt failure
+              Cumulative, slow degradation arising between validation and overt
+              failure
             </span>
           </li>
         </ul>
@@ -241,7 +264,8 @@ export default function EdgeOfKnowledgeIndexPage() {
 
         <p className="text-sm text-muted-foreground">
           Edge of Knowledge is a public research series. Documents are updated
-          only by explicit revision and remain accessible for epistemic continuity.
+          only by explicit revision and remain accessible for epistemic
+          continuity.
         </p>
       </article>
     </main>
