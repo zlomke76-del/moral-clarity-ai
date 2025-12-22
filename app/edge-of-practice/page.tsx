@@ -55,10 +55,10 @@ export default function EdgeOfPracticeIndexPage() {
 
         <p>
           <em>Edge of Practice</em> sits downstream of{" "}
-          <Link href="/edge-of-knowledge">Edge of Knowledge</Link>.
-          Where Edge of Knowledge governs the limits of certainty, Edge of
-          Practice governs where action can begin anyway—carefully, humbly, and
-          with full epistemic accountability.
+          <Link href="/edge-of-knowledge">Edge of Knowledge</Link>. Where Edge of
+          Knowledge governs the limits of certainty, Edge of Practice governs
+          where action can begin anyway—carefully, humbly, and with full
+          epistemic accountability.
         </p>
 
         <ul>
@@ -86,7 +86,7 @@ export default function EdgeOfPracticeIndexPage() {
           </li>
 
           <li>
-            <Link href="/edge-of-practice/sweat-induced-metal-corrosion">
+            <Link href="/edge-of-practice/sweat-driven-device-corrosion">
               Acceleration of Device Metal Corrosion Due to Human Sweat and Skin Oils
             </Link>
             <br />
@@ -106,7 +106,7 @@ export default function EdgeOfPracticeIndexPage() {
           </li>
 
           <li>
-            <Link href="/edge-of-practice/compostable-plastic-residue">
+            <Link href="/edge-of-practice/compostable-packaging-microfragments">
               Residual Microfragments from “Compostable” Packaging
             </Link>
             <br />
@@ -116,7 +116,7 @@ export default function EdgeOfPracticeIndexPage() {
           </li>
 
           <li>
-            <Link href="/edge-of-practice/cleaning-resistance-gene-transfer">
+            <Link href="/edge-of-practice/antibiotic-resistance-gene-cleaning">
               Antibiotic Resistance Gene Spread After Household Cleaning
             </Link>
             <br />
@@ -126,7 +126,7 @@ export default function EdgeOfPracticeIndexPage() {
           </li>
 
           <li>
-            <Link href="/edge-of-practice/lighting-circadian-gene-expression">
+            <Link href="/edge-of-practice/indoor-lighting-circadian-expression">
               Indoor Lighting Spectra and Circadian Gene Expression
             </Link>
             <br />
@@ -136,7 +136,7 @@ export default function EdgeOfPracticeIndexPage() {
           </li>
 
           <li>
-            <Link href="/edge-of-practice/uv-shadow-pathogen-survival">
+            <Link href="/edge-of-practice/uv-sterilization-shadows">
               Pathogen Persistence in UV-Sterilized Equipment Shadows
             </Link>
             <br />
@@ -146,17 +146,17 @@ export default function EdgeOfPracticeIndexPage() {
           </li>
 
           <li>
-            <Link href="/edge-of-practice/hot-water-pH-metal-leaching">
+            <Link href="/edge-of-practice/hot-water-ph-metal-leaching">
               Effect of Hot Water pH on Plumbing Metal Leaching
             </Link>
             <br />
             <span className="text-sm text-muted-foreground">
-              Tests heavy metal exposure under realistic household conditions
+              Tests metal release under realistic household conditions
             </span>
           </li>
 
           <li>
-            <Link href="/edge-of-practice/air-ionizer-static-risk">
+            <Link href="/edge-of-practice/air-ionizer-electrostatic-charge">
               Air Ionizer Effects on Electrostatic Charge Buildup
             </Link>
             <br />
@@ -166,7 +166,7 @@ export default function EdgeOfPracticeIndexPage() {
           </li>
 
           <li>
-            <Link href="/edge-of-practice/glove-additive-leaching">
+            <Link href="/edge-of-practice/glove-additive-leaching-alcohol-sanitizer">
               Lab Glove Additive Leaching After Sanitizer Exposure
             </Link>
             <br />
