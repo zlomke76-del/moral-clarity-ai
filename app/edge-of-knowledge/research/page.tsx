@@ -232,6 +232,20 @@ export default function EdgeOfKnowledgeIndexPage() {
               intervention
             </span>
           </li>
+
+          {/* ✅ ADDITIVE ONLY — NEW PAPER */}
+          <li>
+            <Link href="/edge-of-knowledge/passive-infrastructure-organophosphate-interruption">
+              Passive Infrastructure Polymers for Irreversible Interruption of
+              Organophosphate Surface Transfer Pathways
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              A regime-bounded surface polymer framework that permanently
+              interrupts secondary organophosphate exposure pathways without
+              remediation, emissions, or endpoint-only claims
+            </span>
+          </li>
         </ul>
 
         <h2>VI. Operational Drift & Degradation</h2>
