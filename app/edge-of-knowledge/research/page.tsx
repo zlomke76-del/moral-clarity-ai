@@ -58,11 +58,6 @@ export default function EdgeOfKnowledgeIndexPage() {
             <Link href="/edge-of-knowledge/morphology-trajectory-integrity">
               Morphology Trajectory Integrity (MTI-1)
             </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              A governing rule requiring explicit accounting of internal
-              morphology evolution for durability and lifetime claims
-            </span>
           </li>
 
           <li>
@@ -217,22 +212,24 @@ export default function EdgeOfKnowledgeIndexPage() {
             <Link href="/edge-of-knowledge/hdpe-non-commutative-morphology">
               Non-Commutative Morphology Encoding in Semicrystalline Polyolefins
             </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              HDPE case study demonstrating irreversible, sequence-dependent
-              morphology that invalidates endpoint-only durability claims
-            </span>
           </li>
 
           <li>
             <Link href="/edge-of-knowledge/inflammation-suppressing-microenvironment-polymer">
               Inflammation-Suppressing Human Micro-Environment Polymer
             </Link>
+          </li>
+
+          <li>
+            <Link href="/edge-of-knowledge/suppressing-transferable-inflammatory-signaling">
+              Suppressing Transferable Inflammatory Signaling in Indoor
+              Micro-Environments
+            </Link>
             <br />
             <span className="text-sm text-muted-foreground">
-              A passive polymer system that continuously lowers chronic indoor
-              inflammatory load by permanently neutralizing transferable
-              bioactive airborne drivers
+              A passive, non-leaching polymer textile system that irreversibly
+              reduces transferable indoor inflammatory drivers without user
+              intervention
             </span>
           </li>
         </ul>
