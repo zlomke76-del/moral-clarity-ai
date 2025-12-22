@@ -52,11 +52,6 @@ export default function EdgeOfKnowledgeIndexPage() {
             <Link href="/edge-of-knowledge">
               Governing Action at the Edge of Knowledge
             </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Foundational doctrine for responsible intelligence when certainty
-              breaks
-            </span>
           </li>
 
           <li>
@@ -74,42 +69,22 @@ export default function EdgeOfKnowledgeIndexPage() {
             <Link href="/edge-of-knowledge/untracked-configurational-energy-landscapes">
               Untracked Configurational Energy Landscapes in Polymer Durability
             </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              The missing internal state variable that makes durability
-              prediction structurally conditional
-            </span>
           </li>
 
           <li>
             <Link href="/edge-of-knowledge/non-commutative-morphology-trajectories">
               Non-Commutative Morphology Trajectories in Polymer Durability
             </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Path-dependent morphology evolution as a governing durability
-              constraint
-            </span>
           </li>
 
           <li>
             <Link href="/edge-of-knowledge/epistemic-lock-in">
               Epistemic Lock-In After Risk Acknowledgment
             </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              When recognized risk fails to reframe understanding
-            </span>
           </li>
         </ul>
 
         <h2>II. Governance-Driven Failure Modes</h2>
-
-        <p>
-          These papers examine failures that arise after risk is recognized,
-          signaling is sufficient, and capability exists—but governance logic
-          itself prevents timely or proportionate action.
-        </p>
 
         <ul>
           <li>
@@ -236,6 +211,17 @@ export default function EdgeOfKnowledgeIndexPage() {
             <Link href="/edge-of-knowledge/mineral-filled-polyolefin-barrier-films">
               Mineral-Filled Polyolefin Barrier Films
             </Link>
+          </li>
+
+          <li>
+            <Link href="/edge-of-knowledge/hdpe-non-commutative-morphology">
+              Non-Commutative Morphology Encoding in Semicrystalline Polyolefins
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              HDPE case study demonstrating irreversible, sequence-dependent
+              morphology that invalidates endpoint-only durability claims
+            </span>
           </li>
         </ul>
 
