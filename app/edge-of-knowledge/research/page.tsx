@@ -60,6 +60,17 @@ export default function EdgeOfKnowledgeIndexPage() {
           </li>
 
           <li>
+            <Link href="/edge-of-knowledge/untracked-configurational-energy-landscapes">
+              Untracked Configurational Energy Landscapes in Polymer Durability
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              The missing internal state variable that makes durability
+              prediction structurally conditional
+            </span>
+          </li>
+
+          <li>
             <Link href="/edge-of-knowledge/non-commutative-morphology-trajectories">
               Non-Commutative Morphology Trajectories in Polymer Durability
             </Link>
