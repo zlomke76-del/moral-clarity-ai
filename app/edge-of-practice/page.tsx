@@ -174,6 +174,30 @@ export default function EdgeOfPracticeIndexPage() {
               Tests chemical integrity of gloves under real use
             </span>
           </li>
+
+          {/* ADDITIVE — civilization-scale chemistry entries */}
+
+          <li>
+            <Link href="/edge-of-practice/microplastics-dynamic-chemistry">
+              Microplastics as Dynamic Chemical Agents
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Tests whether microplastics chemically alter surrounding water and
+              sediment under ordinary environmental conditions
+            </span>
+          </li>
+
+          <li>
+            <Link href="/edge-of-practice/heavy-metal-remobilization-urban-soils">
+              Heavy Metal Stability in Ordinary Urban Environments
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Tests whether chemically bound heavy metals remobilize under normal
+              rainfall and drainage conditions
+            </span>
+          </li>
         </ul>
 
         <hr />
