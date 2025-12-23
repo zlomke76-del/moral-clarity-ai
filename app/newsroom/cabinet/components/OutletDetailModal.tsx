@@ -7,22 +7,27 @@ import OutletLogo from "./OutletLogo";
 
 type Props = {
   open: boolean;
-  onClose: () => void;
   outlet: OutletDetailData | null;
   trends: OutletTrendPoint[] | null;
+  onOpenChange: (open: boolean) => void;
 };
 
-export default function OutletDetailModal({ open, onClose, outlet, trends }: Props) {
+export default function OutletDetailDialog({
+  open,
+  outlet,
+  trends,
+  onOpenChange,
+}: Props) {
   if (!open || !outlet) return null;
 
-  // Escape key closes modal — SAFE, no scroll locking.
+  // Escape key closes modal — safe, no scroll locking.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onOpenChange(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onOpenChange]);
 
   const {
     canonical_outlet,
@@ -40,7 +45,7 @@ export default function OutletDetailModal({ open, onClose, outlet, trends }: Pro
   return (
     <div
       className="fixed inset-0 z-40 bg-black/60 flex items-center justify-center p-4 overflow-y-auto"
-      onClick={onClose}
+      onClick={() => onOpenChange(false)}
     >
       <div
         className="relative w-full max-w-3xl rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5 shadow-2xl shadow-black/80"
@@ -49,7 +54,7 @@ export default function OutletDetailModal({ open, onClose, outlet, trends }: Pro
         {/* Close chip */}
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => onOpenChange(false)}
           className="absolute right-3 top-3 rounded-full border border-neutral-700 bg-neutral-900 px-2 py-[1px] text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
         >
           Esc
@@ -66,7 +71,9 @@ export default function OutletDetailModal({ open, onClose, outlet, trends }: Pro
               <div className="text-sm font-semibold text-neutral-50">
                 {display_name}
               </div>
-              <div className="text-xs text-neutral-400">{canonical_outlet}</div>
+              <div className="text-xs text-neutral-400">
+                {canonical_outlet}
+              </div>
             </div>
           </div>
 
@@ -91,7 +98,9 @@ export default function OutletDetailModal({ open, onClose, outlet, trends }: Pro
               {lifetimeBiasIntent.toFixed(2)} / 3.0
             </span>
           </div>
-          <div className="text-neutral-500">Last scored: {lastScoredAt}</div>
+          <div className="text-neutral-500">
+            Last scored: {lastScoredAt}
+          </div>
         </div>
 
         {/* COMPONENT SCORES */}
