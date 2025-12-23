@@ -173,8 +173,6 @@ export default function EdgeOfPracticeIndexPage() {
             </span>
           </li>
 
-          {/* ADDITIVE — civilization-scale chemistry entries */}
-
           <li>
             <Link href="/edge-of-practice/microplastics-dynamic-chemistry">
               Microplastics as Dynamic Chemical Agents
@@ -196,8 +194,6 @@ export default function EdgeOfPracticeIndexPage() {
               rainfall and drainage conditions
             </span>
           </li>
-
-          {/* NEW — polymer physics */}
 
           <li>
             <Link href="/edge-of-practice/pp-pvp-hydration-capture">
@@ -251,6 +247,32 @@ export default function EdgeOfPracticeIndexPage() {
             <span className="text-sm text-muted-foreground">
               Tests whether confined paraffin wax moderates heat rise rates in
               commodity polyethylene without leakage
+            </span>
+          </li>
+
+          {/* NEW — tribological / optical */}
+
+          <li>
+            <Link href="/edge-of-practice/ps-pdms-surface-lubricity">
+              Low-Friction, Clear Surfaces via PDMS Migration in Polystyrene
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Tests whether trace PDMS creates durable, optically clear,
+              low-friction PS surfaces without blooming or coatings
+            </span>
+          </li>
+
+          {/* NEW — mechanical */}
+
+          <li>
+            <Link href="/edge-of-practice/hdpe-ldpe-interfacial-toughening">
+              Interfacial Toughening in HDPE via Dispersed LDPE Domains
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Tests whether LDPE inclusions increase mechanical toughness in HDPE
+              through morphology alone
             </span>
           </li>
         </ul>
