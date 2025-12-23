@@ -17,7 +17,7 @@ export default function ScoreBreakdown({ outlet }: Props) {
     );
   }
 
-  const pi = outlet.avg_pi;
+  const piPercent = (outlet.avg_pi * 100).toFixed(2);
   const biasIntent = outlet.avg_bias_intent;
 
   return (
@@ -28,11 +28,9 @@ export default function ScoreBreakdown({ outlet }: Props) {
             {outlet.canonical_outlet}
           </h2>
           <p className="mt-1 text-xs text-neutral-400">
-            Predictability Index and bias components are averaged over{" "}
+            Predictability Index and bias components are computed over{" "}
             <span className="font-medium">{outlet.total_stories}</span> scored
-            stories across{" "}
-            <span className="font-medium">{outlet.days_active}</span>{" "}
-            day{outlet.days_active === 1 ? "" : "s"}.
+            stories.
           </p>
           {outlet.last_story_day && (
             <p className="mt-1 text-[11px] text-neutral-500">
@@ -40,12 +38,13 @@ export default function ScoreBreakdown({ outlet }: Props) {
             </p>
           )}
         </div>
+
         <div className="flex flex-col items-end gap-1">
           <div className="text-[11px] uppercase tracking-[0.16em] text-neutral-400">
             Predictability Index
           </div>
           <div className="font-mono text-2xl text-emerald-300">
-            {pi.toFixed(3)}
+            {piPercent}
           </div>
           <div className="text-[11px] text-neutral-400">
             Bias intent:{" "}
@@ -89,8 +88,8 @@ export default function ScoreBreakdown({ outlet }: Props) {
       <p className="text-[11px] text-neutral-500">
         This cabinet does not decide who is right or wrong. It measures{" "}
         <span className="font-medium">how stories are told</span> — language,
-        sourcing, framing, and missing context — and turns that into a
-        predictable, auditable signal.
+        sourcing, framing, and missing context — and expresses that as a
+        predictable, auditable score.
       </p>
     </div>
   );
