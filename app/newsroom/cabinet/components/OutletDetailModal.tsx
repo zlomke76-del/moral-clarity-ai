@@ -41,29 +41,33 @@ export default function OutletDetailDialog({
     lastScoredAt,
   } = outlet;
 
+  const piDisplay =
+    typeof lifetimePi === "number"
+      ? (lifetimePi * 100).toFixed(2)
+      : "—";
+
   return (
     <div
       className="fixed inset-0 z-40 bg-black/60 flex items-center justify-center p-4 overflow-y-auto"
       onClick={() => onOpenChange(false)}
     >
       <div
-        className="relative w-full max-w-3xl rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5 shadow-2xl shadow-black/80"
+        className="relative w-full max-w-3xl rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
-          type="button"
           onClick={() => onOpenChange(false)}
-          className="absolute right-3 top-3 rounded-full border border-neutral-700 bg-neutral-900 px-2 py-[1px] text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-400"
+          className="absolute right-3 top-3 rounded-full border border-neutral-700 bg-neutral-900 px-2 py-[1px] text-[10px] uppercase tracking-widest text-neutral-400"
         >
           Esc
         </button>
 
-        {/* HEADER */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        {/* Header */}
+        <div className="flex justify-between items-center gap-4">
           <div className="flex items-center gap-3">
             <OutletLogo domain={canonical_outlet} name={display_name} />
             <div>
-              <div className="text-xs uppercase tracking-[0.16em] text-neutral-500">
+              <div className="text-xs uppercase tracking-widest text-neutral-500">
                 Outlet
               </div>
               <div className="text-sm font-semibold text-neutral-50">
@@ -76,11 +80,11 @@ export default function OutletDetailDialog({
           </div>
 
           <div className="text-right">
-            <div className="text-[11px] uppercase tracking-[0.16em] text-neutral-400">
+            <div className="text-[11px] uppercase tracking-widest text-neutral-400">
               Predictability Index
             </div>
             <div className="font-mono text-2xl text-emerald-300">
-              {(lifetimePi * 100).toFixed(2)}
+              {piDisplay}
             </div>
             <div className="text-[11px] text-neutral-400">
               {storiesAnalyzed} stories analyzed · lifetime
@@ -88,15 +92,18 @@ export default function OutletDetailDialog({
           </div>
         </div>
 
-        {/* META */}
+        {/* Bias intent */}
         <div className="mt-3 text-xs text-neutral-400">
           Bias intent:{" "}
           <span className="font-mono text-neutral-100">
-            {lifetimeBiasIntent.toFixed(2)} / 3.0
+            {typeof lifetimeBiasIntent === "number"
+              ? lifetimeBiasIntent.toFixed(2)
+              : "—"}{" "}
+            / 3.0
           </span>
         </div>
 
-        {/* COMPONENT SCORES */}
+        {/* Component scores */}
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <BiasBar label="Language" value={lifetimeLanguage} />
           <BiasBar label="Source" value={lifetimeSource} />
@@ -117,34 +124,34 @@ function BiasBar({
   value,
 }: {
   label: string;
-  value: number | null | undefined;
+  value?: number | null;
 }) {
-  if (value == null) {
+  if (typeof value !== "number") {
     return (
-      <div className="space-y-1">
-        <div className="flex justify-between text-[11px] text-neutral-500">
+      <div>
+        <div className="flex justify-between text-xs text-neutral-500">
           <span>{label}</span>
           <span className="italic">N/A</span>
         </div>
-        <div className="h-1.5 w-full rounded-full bg-neutral-900 opacity-40" />
+        <div className="h-1.5 bg-neutral-900 opacity-40 rounded-full" />
       </div>
     );
   }
 
-  const width = Math.max(4, Math.min((value / 3) * 100, 100));
+  const width = Math.min(100, Math.max(4, (value / 3) * 100));
 
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-[11px] text-neutral-400">
+    <div>
+      <div className="flex justify-between text-xs text-neutral-400">
         <span>{label}</span>
-        <span className="font-mono text-neutral-200">
+        <span className="font-mono">
           {value.toFixed(2)} / 3.00
         </span>
       </div>
-      <div className="h-1.5 w-full rounded-full bg-neutral-900">
+      <div className="h-1.5 bg-neutral-900 rounded-full">
         <div
-          className="h-full rounded-full bg-neutral-200"
-          style={{ width: `${width.toFixed(1)}%` }}
+          className="h-full bg-neutral-200 rounded-full"
+          style={{ width: `${width}%` }}
         />
       </div>
     </div>
