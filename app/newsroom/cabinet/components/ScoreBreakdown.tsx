@@ -1,10 +1,9 @@
-// app/newsroom/cabinet/components/ScoreBreakdown.tsx
 "use client";
 
-import type { OutletOverview } from "../types";
+import type { OutletDetailData } from "../types";
 
 type Props = {
-  outlet: OutletOverview | null;
+  outlet: OutletDetailData | null;
 };
 
 export default function ScoreBreakdown({ outlet }: Props) {
@@ -17,29 +16,35 @@ export default function ScoreBreakdown({ outlet }: Props) {
     );
   }
 
-  const pi = outlet.avg_pi ?? 0;
-  const biasIntent = outlet.avg_bias_intent ?? 0;
+  const {
+    canonical_outlet,
+    storiesAnalyzed,
+    lifetimePi,
+    lifetimeBiasIntent,
+    lifetimeLanguage,
+    lifetimeSource,
+    lifetimeFraming,
+    lifetimeContext,
+    lastScoredAt,
+  } = outlet;
 
-  const biasLanguage = outlet.bias_language ?? 0;
-  const biasSource = outlet.bias_source ?? 0;
-  const biasFraming = outlet.bias_framing ?? 0;
-  const biasContext = outlet.bias_context ?? 0;
+  const piDisplay = (lifetimePi * 100).toFixed(2);
 
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-950/80 p-4 space-y-4">
+      {/* HEADER */}
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-sm font-semibold text-neutral-100">
-            {outlet.canonical_outlet}
+            {canonical_outlet}
           </h2>
           <p className="mt-1 text-xs text-neutral-400">
             Predictability Index and bias components are averaged over{" "}
-            <span className="font-medium">{outlet.total_stories}</span> scored
-            stories.
+            <span className="font-medium">{storiesAnalyzed}</span> scored stories.
           </p>
-          {outlet.last_story_day && (
+          {lastScoredAt && (
             <p className="mt-1 text-[11px] text-neutral-500">
-              Last scored: {outlet.last_story_day}
+              Last scored: {lastScoredAt}
             </p>
           )}
         </div>
@@ -49,24 +54,20 @@ export default function ScoreBreakdown({ outlet }: Props) {
             Predictability Index
           </div>
           <div className="font-mono text-2xl text-emerald-300">
-            {pi.toFixed(3)}
+            {piDisplay}
           </div>
           <div className="text-[11px] text-neutral-400">
-            Bias intent:{" "}
-            <span className="font-mono text-neutral-100">
-              {biasIntent.toFixed(2)}
-            </span>{" "}
-            (0 = neutral, 3 = strong bias)
+            PI scale: 0–100
           </div>
         </div>
       </div>
 
-      {/* Bias intent bar */}
+      {/* BIAS INTENT */}
       <div className="space-y-1">
         <div className="flex justify-between text-[11px] text-neutral-400">
           <span>Bias intent (overall)</span>
           <span className="font-mono text-neutral-200">
-            {biasIntent.toFixed(2)} / 3.00
+            {lifetimeBiasIntent.toFixed(2)} / 3.00
           </span>
         </div>
         <div className="h-2 w-full rounded-full bg-neutral-900">
@@ -75,19 +76,19 @@ export default function ScoreBreakdown({ outlet }: Props) {
             style={{
               width: `${Math.max(
                 4,
-                Math.min((biasIntent / 3) * 100, 100)
+                Math.min((lifetimeBiasIntent / 3) * 100, 100)
               ).toFixed(1)}%`,
             }}
           />
         </div>
       </div>
 
-      {/* Four component bars */}
+      {/* COMPONENT BARS */}
       <div className="grid gap-3 sm:grid-cols-2">
-        <BiasBar label="Language" value={biasLanguage} />
-        <BiasBar label="Source" value={biasSource} />
-        <BiasBar label="Framing" value={biasFraming} />
-        <BiasBar label="Context" value={biasContext} />
+        <BiasBar label="Language" value={lifetimeLanguage} />
+        <BiasBar label="Source" value={lifetimeSource} />
+        <BiasBar label="Framing" value={lifetimeFraming} />
+        <BiasBar label="Context" value={lifetimeContext} />
       </div>
 
       <p className="text-[11px] text-neutral-500">
