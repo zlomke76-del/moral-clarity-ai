@@ -211,6 +211,39 @@ export default function EdgeOfPracticeIndexPage() {
               capture in humid air without electrostatic charging
             </span>
           </li>
+
+          <li>
+            <Link href="/edge-of-practice/hdpe-ptfe-surface-energy">
+              Surface Energy Control via PTFE Microdomains in HDPE
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Tests whether trace PTFE alters surface adhesion through physical
+              energy contrast alone
+            </span>
+          </li>
+
+          <li>
+            <Link href="/edge-of-practice/pc-pmma-scratch-resistance">
+              Scratch Resistance from Physical PMMA Dispersion in Polycarbonate
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Tests whether PMMA microdomains improve abrasion resistance without
+              coatings or chemistry
+            </span>
+          </li>
+
+          <li>
+            <Link href="/edge-of-practice/pc-abs-interfacial-microdamping">
+              Interfacial Micro-Damping in Layered PC/ABS Structures
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Tests whether compliance mismatch at a pure polymer interface
+              increases fatigue resistance
+            </span>
+          </li>
         </ul>
 
         <hr />
