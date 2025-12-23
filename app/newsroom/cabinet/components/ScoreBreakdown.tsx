@@ -17,8 +17,13 @@ export default function ScoreBreakdown({ outlet }: Props) {
     );
   }
 
-  const pi = outlet.avg_pi;
-  const biasIntent = outlet.avg_bias_intent;
+  const pi = outlet.avg_pi ?? 0;
+  const biasIntent = outlet.avg_bias_intent ?? 0;
+
+  const biasLanguage = outlet.bias_language ?? 0;
+  const biasSource = outlet.bias_source ?? 0;
+  const biasFraming = outlet.bias_framing ?? 0;
+  const biasContext = outlet.bias_context ?? 0;
 
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-950/80 p-4 space-y-4">
@@ -30,9 +35,7 @@ export default function ScoreBreakdown({ outlet }: Props) {
           <p className="mt-1 text-xs text-neutral-400">
             Predictability Index and bias components are averaged over{" "}
             <span className="font-medium">{outlet.total_stories}</span> scored
-            stories across{" "}
-            <span className="font-medium">{outlet.days_active}</span>{" "}
-            day{outlet.days_active === 1 ? "" : "s"}.
+            stories.
           </p>
           {outlet.last_story_day && (
             <p className="mt-1 text-[11px] text-neutral-500">
@@ -40,6 +43,7 @@ export default function ScoreBreakdown({ outlet }: Props) {
             </p>
           )}
         </div>
+
         <div className="flex flex-col items-end gap-1">
           <div className="text-[11px] uppercase tracking-[0.16em] text-neutral-400">
             Predictability Index
@@ -80,17 +84,16 @@ export default function ScoreBreakdown({ outlet }: Props) {
 
       {/* Four component bars */}
       <div className="grid gap-3 sm:grid-cols-2">
-        <BiasBar label="Language" value={outlet.bias_language} />
-        <BiasBar label="Source" value={outlet.bias_source} />
-        <BiasBar label="Framing" value={outlet.bias_framing} />
-        <BiasBar label="Context" value={outlet.bias_context} />
+        <BiasBar label="Language" value={biasLanguage} />
+        <BiasBar label="Source" value={biasSource} />
+        <BiasBar label="Framing" value={biasFraming} />
+        <BiasBar label="Context" value={biasContext} />
       </div>
 
       <p className="text-[11px] text-neutral-500">
-        This cabinet does not decide who is right or wrong. It measures{" "}
-        <span className="font-medium">how stories are told</span> — language,
-        sourcing, framing, and missing context — and turns that into a
-        predictable, auditable signal.
+        This cabinet does <span className="font-medium">not judge truth</span>.
+        It measures how stories are told — language, sourcing, framing, and
+        missing context — and converts that into a stable, auditable signal.
       </p>
     </div>
   );
