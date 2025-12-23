@@ -1,45 +1,47 @@
-/* ===============================
-   Newsroom Cabinet — Types
-   =============================== */
+/* =======================
+   NEWSROOM — TYPE CONTRACTS
+   ======================= */
 
-/* ---------- OVERVIEW (RANKING) ---------- */
+/* ---------- Overview row (lifetime, weighted) ---------- */
 export type OutletOverview = {
   canonical_outlet: string;
 
-  avg_pi: number;
-  avg_bias_intent: number;
-
-  bias_language: number | null;
-  bias_source: number | null;
-  bias_framing: number | null;
-  bias_context: number | null;
-
+  /* corpus */
   total_stories: number;
   days_active?: number | null;
   last_story_day?: string | null;
+
+  /* Predictability Index */
+  avg_pi_weighted: number;
+
+  /* Bias components (weighted, 0–3) */
+  avg_bias_intent_weighted: number | null;
+  avg_bias_language_weighted: number | null;
+  avg_bias_source_weighted: number | null;
+  avg_bias_framing_weighted: number | null;
+  avg_bias_context_weighted: number | null;
 };
 
-/* ---------- DETAIL (AUTHORITATIVE / LIFETIME) ---------- */
+/* ---------- Detail DTO (UI-facing, lifetime) ---------- */
 export type OutletDetailData = {
   canonical_outlet: string;
   display_name: string;
 
   storiesAnalyzed: number;
 
-  /* Lifetime / authoritative — may be NULL */
-  lifetimePi: number | null;
+  lifetimePi: number;
   lifetimeBiasIntent: number | null;
   lifetimeLanguage: number | null;
   lifetimeSource: number | null;
   lifetimeFraming: number | null;
   lifetimeContext: number | null;
 
-  lastScoredAt: string | null;
-  ninetyDaySummary: string;
+  lastScoredAt?: string | null;
+  ninetyDaySummary?: string;
 };
 
-/* ---------- TRENDS ---------- */
+/* ---------- Trend point (daily) ---------- */
 export type OutletTrendPoint = {
-  day: string;
-  avg_pi: number;
+  story_day: string;
+  avg_pi_weighted: number;
 };
