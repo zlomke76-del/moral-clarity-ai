@@ -1,4 +1,3 @@
-// app/newsroom/cabinet/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -70,7 +69,7 @@ export default function NewsroomCabinetPage() {
     };
   }, [selectedCanonical]);
 
-  /* ========= Selected outlet ========= */
+  /* ========= Selected outlet (overview) ========= */
   const selectedOutlet = useMemo(() => {
     if (!selectedCanonical) return null;
     return (
@@ -80,7 +79,7 @@ export default function NewsroomCabinetPage() {
     );
   }, [outlets, selectedCanonical]);
 
-  /* ========= Modal DTO ========= */
+  /* ========= Detail DTO (authoritative lifetime contract) ========= */
   const detailOutlet: OutletDetailData | null = useMemo(() => {
     if (!selectedOutlet) return null;
 
@@ -91,8 +90,8 @@ export default function NewsroomCabinetPage() {
       display_name: selectedOutlet.canonical_outlet,
       storiesAnalyzed: selectedOutlet.total_stories,
 
+      // Lifetime / authoritative fields
       lifetimePi: selectedOutlet.avg_pi,
-
       lifetimeBiasIntent: selectedOutlet.avg_bias_intent,
       lifetimeLanguage: selectedOutlet.bias_language,
       lifetimeSource: selectedOutlet.bias_source,
@@ -191,9 +190,9 @@ export default function NewsroomCabinetPage() {
           </p>
         </div>
 
-        {/* Score breakdown */}
+        {/* Score breakdown — 🔒 lifetime-backed */}
         <div className="lg:col-span-2">
-          <ScoreBreakdown outlet={selectedOutlet} />
+          <ScoreBreakdown outlet={detailOutlet} />
         </div>
       </section>
 
