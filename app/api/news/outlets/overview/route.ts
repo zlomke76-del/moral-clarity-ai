@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClientServer } from "@/lib/supabase/server";
 
 export async function GET() {
-  const supabase = createClient();
+  const supabase = createClientServer();
 
   const { data, error } = await supabase
     .from("outlet_bias_pi_overview")
@@ -30,7 +30,7 @@ export async function GET() {
     canonical_outlet: row.canonical_outlet,
     total_stories: row.total_stories,
 
-    // 🔑 THIS IS THE FIX
+    // 🔑 CANONICAL FIELD — UI EXPECTS avg_pi
     avg_pi: row.avg_pi_weighted,
 
     avg_bias_intent: row.avg_bias_intent_weighted,
