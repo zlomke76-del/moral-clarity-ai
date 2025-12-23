@@ -1,6 +1,6 @@
 "use client";
 
-import OutletLogo from "./OutletLogo";
+import Image from "next/image";
 import type { OutletOverview } from "../types";
 
 type Props = {
@@ -11,6 +11,24 @@ type Props = {
   onSelect: () => void;
 };
 
+/* ========= DISPLAY HELPERS (UI ONLY) ========= */
+
+/**
+ * Human-readable outlet name.
+ * IMPORTANT:
+ * - Display-only
+ * - Does NOT affect canonical_outlet
+ * - Does NOT merge outlets
+ */
+function formatOutletDisplay(domain: string): string {
+  return domain
+    .replace(/^amp\./i, "")
+    .replace(/^www\./i, "")
+    .replace(/\.co\.uk$/i, "")
+    .replace(/\.(com|org|net)$/i, "")
+    .toUpperCase();
+}
+
 export default function OutletCard({
   outlet,
   rank,
@@ -18,38 +36,52 @@ export default function OutletCard({
   badge,
   onSelect,
 }: Props) {
-  // 🔒 CANONICAL PI DISPLAY (WEIGHTED, LIFETIME)
-  const piDisplay = (outlet.avg_pi_weighted * 100).toFixed(2);
+  const domain = outlet.canonical_outlet;
 
-  const base =
-    "rounded-lg border px-4 py-3 text-left transition cursor-pointer";
-  const selectedStyle =
-    badge === "golden"
-      ? "border-amber-400/60 bg-amber-400/10"
-      : "border-neutral-700 bg-neutral-900";
-  const unselectedStyle =
-    "border-neutral-800 bg-neutral-900/60 hover:bg-neutral-900";
+  // ✅ SAFE favicon source
+  const logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+
+  // 🔒 CANONICAL PI DISPLAY (percent, 2 decimals)
+  const piDisplay = (outlet.avg_pi * 100).toFixed(2);
 
   return (
     <button
-      className={`${base} ${selected ? selectedStyle : unselectedStyle}`}
       onClick={onSelect}
+      className={`rounded-lg border px-4 py-3 text-left transition
+        ${
+          selected
+            ? "border-amber-400/60 bg-amber-400/10"
+            : "border-neutral-800 bg-neutral-900/60 hover:bg-neutral-900"
+        }
+      `}
     >
       <div className="flex flex-col items-start gap-1">
+        {/* Rank */}
         <div className="text-xs text-neutral-400">#{rank}</div>
 
-        <OutletLogo domain={outlet.canonical_outlet} />
+        {/* Logo */}
+        <Image
+          src={logoUrl}
+          alt={`${domain} logo`}
+          width={20}
+          height={20}
+          className="rounded-sm"
+          unoptimized
+        />
 
+        {/* Outlet Name */}
         <div className="text-sm font-medium text-neutral-100">
-          {outlet.canonical_outlet.replace(".com", "").toUpperCase()}
+          {formatOutletDisplay(domain)}
         </div>
 
+        {/* PI Score */}
         <div className="text-xs text-amber-300">
           PI {piDisplay}
         </div>
 
+        {/* Story Count */}
         <div className="text-xs text-neutral-400">
-          {outlet.total_stories} stories analyzed
+          {outlet.total_stories.toLocaleString()} stories analyzed
         </div>
       </div>
     </button>
