@@ -10,7 +10,7 @@ type Props = {
 export default function TrendChart({ points, loading }: Props) {
   if (loading) {
     return (
-      <div className="h-24 rounded-lg border border-neutral-800 bg-neutral-950/60 flex items-center justify-center text-xs text-neutral-500">
+      <div className="h-24 flex items-center justify-center text-xs text-neutral-500">
         Loading trend…
       </div>
     );
@@ -18,38 +18,37 @@ export default function TrendChart({ points, loading }: Props) {
 
   if (!points || points.length === 0) {
     return (
-      <div className="h-24 rounded-lg border border-neutral-800 bg-neutral-950/60 flex items-center justify-center text-xs text-neutral-500">
+      <div className="h-24 flex items-center justify-center text-xs text-neutral-500">
         No trend data available
       </div>
     );
   }
 
   return (
-    <div className="h-24 rounded-lg border border-neutral-800 bg-neutral-950/60 p-2">
-      <div className="flex h-full items-end gap-1">
-        {points.map((p) => {
-          const value =
-            typeof p.avg_pi === "number" ? p.avg_pi : 0;
+    <div className="flex h-24 items-end gap-1">
+      {points.map((p) => {
+        // 🔒 AUTHORITATIVE FIELD — WEIGHTED PI
+        const value =
+          typeof p.avg_pi_weighted === "number"
+            ? p.avg_pi_weighted
+            : 0;
 
-          const height = Math.max(
-            4,
-            Math.min(20 + value * 100, 100)
-          );
+        // Scale: min 4px, max 100px
+        const height = Math.max(4, Math.min(value * 100, 100));
 
-          return (
+        return (
+          <div
+            key={p.story_day}
+            className="flex flex-col items-center"
+            title={`${(value * 100).toFixed(2)} PI`}
+          >
             <div
-              key={p.day}
-              className="flex flex-col items-center flex-1"
-            >
-              <div
-                className="w-full rounded-sm bg-emerald-400/80"
-                style={{ height: `${height}%` }}
-                title={`PI ${value.toFixed(2)}`}
-              />
-            </div>
-          );
-        })}
-      </div>
+              className="w-2 rounded bg-neutral-200"
+              style={{ height }}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }
