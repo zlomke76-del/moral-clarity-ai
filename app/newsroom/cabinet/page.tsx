@@ -1,3 +1,4 @@
+// app/newsroom/cabinet/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -9,6 +10,7 @@ import type {
 
 import Leaderboard from "./components/Leaderboard";
 import OutletDetailDialog from "./components/OutletDetailDialog";
+import ScoreBreakdown from "./components/ScoreBreakdown";
 
 type OverviewResponse = {
   ok: boolean;
@@ -44,17 +46,11 @@ export default function NewsroomCabinetPage() {
         const data: OverviewResponse = await res.json();
         if (!alive || !data.ok) return;
 
-        // 🔒 SINGLE SOURCE OF TRUTH:
-        // Rank by PI (higher = more neutral)
         const sorted = [...data.outlets].sort(
           (a, b) => b.avg_pi - a.avg_pi
         );
 
         setOutlets(sorted);
-
-        if (!selectedCanonical && sorted.length > 0) {
-          setSelectedCanonical(sorted[0].canonical_outlet);
-        }
       } catch (e: any) {
         if (alive) setError(e?.message ?? "Failed to load cabinet.");
       } finally {
@@ -65,44 +61,17 @@ export default function NewsroomCabinetPage() {
     return () => {
       alive = false;
     };
-  }, [selectedCanonical]);
+  }, []);
 
   /* ========= Selected outlet ========= */
   const selectedOutlet = useMemo(() => {
     if (!selectedCanonical) return null;
-    return outlets.find(
-      (o) => o.canonical_outlet === selectedCanonical
-    ) ?? null;
+    return (
+      outlets.find((o) => o.canonical_outlet === selectedCanonical) ?? null
+    );
   }, [outlets, selectedCanonical]);
 
-  /* ========= Modal DTO ========= */
-  const detailOutlet: OutletDetailData | null = useMemo(() => {
-    if (!selectedOutlet) return null;
-
-    // 🔒 CANONICAL PI DISPLAY: percent, TWO decimals
-    const piPercent = (selectedOutlet.avg_pi * 100).toFixed(2);
-
-    return {
-      canonical_outlet: selectedOutlet.canonical_outlet,
-      display_name: selectedOutlet.canonical_outlet,
-      storiesAnalyzed: selectedOutlet.total_stories,
-
-      // Keep raw value for charts / math
-      lifetimePi: selectedOutlet.avg_pi,
-
-      lifetimeBiasIntent: selectedOutlet.avg_bias_intent,
-      lifetimeLanguage: selectedOutlet.bias_language,
-      lifetimeSource: selectedOutlet.bias_source,
-      lifetimeFraming: selectedOutlet.bias_framing,
-      lifetimeContext: selectedOutlet.bias_context,
-
-      lastScoredAt: selectedOutlet.last_story_day ?? "Not yet scored",
-
-      ninetyDaySummary: `Lifetime PI ${piPercent} based on ${selectedOutlet.total_stories} stories.`,
-    };
-  }, [selectedOutlet]);
-
-  /* ========= Trends ========= */
+  /* ========= Trends (unchanged, dormant for now) ========= */
   useEffect(() => {
     let alive = true;
 
@@ -160,9 +129,27 @@ export default function NewsroomCabinetPage() {
         />
       )}
 
+      {/* ================= SCORE BREAKDOWN (ALWAYS VISIBLE) ================= */}
+      <ScoreBreakdown outlet={selectedOutlet} />
+
       <OutletDetailDialog
-        open={detailOpen && !!detailOutlet}
-        outlet={detailOutlet}
+        open={detailOpen && !!selectedOutlet}
+        outlet={
+          selectedOutlet
+            ? {
+                canonical_outlet: selectedOutlet.canonical_outlet,
+                display_name: selectedOutlet.canonical_outlet,
+                storiesAnalyzed: selectedOutlet.total_stories,
+                lifetimePi: selectedOutlet.avg_pi,
+                lifetimeBiasIntent: selectedOutlet.avg_bias_intent,
+                lifetimeLanguage: selectedOutlet.bias_language,
+                lifetimeSource: selectedOutlet.bias_source,
+                lifetimeFraming: selectedOutlet.bias_framing,
+                lifetimeContext: selectedOutlet.bias_context,
+                lastScoredAt: selectedOutlet.last_story_day,
+              }
+            : null
+        }
         trends={trendLoading ? null : trends}
         onOpenChange={setDetailOpen}
       />
