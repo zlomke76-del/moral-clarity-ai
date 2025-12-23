@@ -306,15 +306,15 @@ export async function POST(req: Request) {
     // --------------------------------------------------------
     // NEWSROOM (RESTORED, ISOLATED)
     // --------------------------------------------------------
-    if (message && isNewsRequest(message)) {
-      const digestRes = await fetch(
-        `${process.env.NEXT_PUBLIC_APP_URL}/api/news/digest?limit=3`,
-        { cache: "no-store" }
-      );
+if (message && isNewsRequest(message)) {
+  const digestRes = await fetch(
+    "/api/news/digest?limit=3",
+    { cache: "no-store" }
+  );
 
-      if (!digestRes.ok) {
-        throw new Error("NEWS_DIGEST_FETCH_FAILED");
-      }
+  if (!digestRes.ok) {
+    throw new Error("NEWS_DIGEST_FETCH_FAILED");
+  }
 
       const digestJson = await digestRes.json();
       const stories = Array.isArray(digestJson?.stories)
