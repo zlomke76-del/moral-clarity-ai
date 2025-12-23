@@ -198,6 +198,19 @@ export default function EdgeOfPracticeIndexPage() {
               rainfall and drainage conditions
             </span>
           </li>
+
+          {/* NEW ENTRY — polymer physics */}
+
+          <li>
+            <Link href="/edge-of-practice/pp-pvp-hydration-capture">
+              Hydration-Mediated Aerosol Capture in Polypropylene Fibers
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Tests whether interface-localized hydration layers improve particle
+              capture in humid air without electrostatic charging
+            </span>
+          </li>
         </ul>
 
         <hr />
