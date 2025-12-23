@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-
 import type {
   OutletOverview,
   OutletTrendPoint,
@@ -10,7 +9,6 @@ import type {
 
 import Leaderboard from "./components/Leaderboard";
 import OutletDetailDialog from "./components/OutletDetailDialog";
-import ScoreBreakdown from "./components/ScoreBreakdown";
 
 type OverviewResponse = {
   ok: boolean;
@@ -46,8 +44,10 @@ export default function NewsroomCabinetPage() {
         const data: OverviewResponse = await res.json();
         if (!alive || !data.ok) return;
 
+        // 🔒 SINGLE SOURCE OF TRUTH:
+        // Rank by PI (higher = more neutral)
         const sorted = [...data.outlets].sort(
-          (a, b) => b.avg_pi_weighted - a.avg_pi_weighted
+          (a, b) => b.avg_pi - a.avg_pi
         );
 
         setOutlets(sorted);
@@ -69,31 +69,32 @@ export default function NewsroomCabinetPage() {
 
   /* ========= Selected outlet ========= */
   const selectedOutlet = useMemo(() => {
-    if (!outlets.length) return null;
-    return (
-      outlets.find(
-        (o) => o.canonical_outlet === selectedCanonical
-      ) ?? outlets[0]
-    );
+    if (!selectedCanonical) return null;
+    return outlets.find(
+      (o) => o.canonical_outlet === selectedCanonical
+    ) ?? null;
   }, [outlets, selectedCanonical]);
 
-  /* ========= Detail DTO (CORRECTED FIELD MAP) ========= */
+  /* ========= Modal DTO ========= */
   const detailOutlet: OutletDetailData | null = useMemo(() => {
     if (!selectedOutlet) return null;
 
-    const piPercent = (selectedOutlet.avg_pi_weighted * 100).toFixed(2);
+    // 🔒 CANONICAL PI DISPLAY: percent, TWO decimals
+    const piPercent = (selectedOutlet.avg_pi * 100).toFixed(2);
 
     return {
       canonical_outlet: selectedOutlet.canonical_outlet,
       display_name: selectedOutlet.canonical_outlet,
       storiesAnalyzed: selectedOutlet.total_stories,
 
-      lifetimePi: selectedOutlet.avg_pi_weighted,
-      lifetimeBiasIntent: selectedOutlet.avg_bias_intent_weighted,
-      lifetimeLanguage: selectedOutlet.avg_bias_language_weighted,
-      lifetimeSource: selectedOutlet.avg_bias_source_weighted,
-      lifetimeFraming: selectedOutlet.avg_bias_framing_weighted,
-      lifetimeContext: selectedOutlet.avg_bias_context_weighted,
+      // Keep raw value for charts / math
+      lifetimePi: selectedOutlet.avg_pi,
+
+      lifetimeBiasIntent: selectedOutlet.avg_bias_intent,
+      lifetimeLanguage: selectedOutlet.bias_language,
+      lifetimeSource: selectedOutlet.bias_source,
+      lifetimeFraming: selectedOutlet.bias_framing,
+      lifetimeContext: selectedOutlet.bias_context,
 
       lastScoredAt: selectedOutlet.last_story_day ?? "Not yet scored",
 
@@ -135,7 +136,7 @@ export default function NewsroomCabinetPage() {
   }, [selectedCanonical]);
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex flex-col gap-8">
       {loading ? (
         <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 text-sm text-neutral-400">
           Loading cabinet…
@@ -158,32 +159,6 @@ export default function NewsroomCabinetPage() {
           }}
         />
       )}
-
-      <section className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-1 space-y-3 text-sm text-neutral-400">
-          <h3 className="text-xs font-semibold tracking-wide text-neutral-300 uppercase">
-            How to read this cabinet
-          </h3>
-
-          <p>
-            Outlets are ranked by{" "}
-            <span className="font-medium text-neutral-200">
-              Predictability Index (PI)
-            </span>
-            , a stability signal derived from how consistently stories are framed
-            over time.
-          </p>
-
-          <p>
-            Lower bias does not mean an outlet is “right.” It means fewer swings
-            in language, sourcing, framing, and contextual omission.
-          </p>
-        </div>
-
-        <div className="lg:col-span-2">
-          <ScoreBreakdown outlet={detailOutlet} />
-        </div>
-      </section>
 
       <OutletDetailDialog
         open={detailOpen && !!detailOutlet}
