@@ -12,6 +12,8 @@ import Leaderboard from "./components/Leaderboard";
 import OutletDetailDialog from "./components/OutletDetailDialog";
 import ScoreBreakdown from "./components/ScoreBreakdown";
 
+/* ================= TYPES ================= */
+
 type OverviewResponse = {
   ok: boolean;
   count: number;
@@ -25,29 +27,49 @@ type TrendsResponse = {
   points: OutletTrendPoint[];
 };
 
+type BiasOverviewResponse = {
+  ok: boolean;
+  outlet: string;
+  total_stories: number;
+  avg_pi_weighted: number | null;
+  avg_bias_intent_weighted: number | null;
+  avg_bias_language_weighted: number | null;
+  avg_bias_source_weighted: number | null;
+  avg_bias_framing_weighted: number | null;
+  avg_bias_context_weighted: number | null;
+  last_scored_at: string | null;
+};
+
+/* ================= PAGE ================= */
+
 export default function NewsroomCabinetPage() {
   const [outlets, setOutlets] = useState<OutletOverview[]>([]);
   const [selectedCanonical, setSelectedCanonical] = useState<string | null>(null);
+
+  const [detailOutlet, setDetailOutlet] =
+    useState<OutletDetailData | null>(null);
+
   const [detailOpen, setDetailOpen] = useState(false);
   const [trends, setTrends] = useState<OutletTrendPoint[] | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [trendLoading, setTrendLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /* ========= Load overview ========= */
+  /* ========= LOAD OVERVIEW (RANKING ONLY) ========= */
   useEffect(() => {
     let alive = true;
 
     (async () => {
       try {
         setLoading(true);
+
         const res = await fetch("/api/news/outlets/overview");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
         const data: OverviewResponse = await res.json();
         if (!alive || !data.ok) return;
 
-        // 🔒 SINGLE SOURCE OF TRUTH:
-        // Rank by PI (higher = more predictable / neutral)
         const sorted = [...data.outlets].sort(
           (a, b) => b.avg_pi - a.avg_pi
         );
@@ -67,44 +89,57 @@ export default function NewsroomCabinetPage() {
     return () => {
       alive = false;
     };
+  }, []); // 🔒 load once
+
+  /* ========= LOAD DETAIL (AUTHORITATIVE BIAS TABLE) ========= */
+  useEffect(() => {
+    let alive = true;
+
+    if (!selectedCanonical) {
+      setDetailOutlet(null);
+      return;
+    }
+
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/news/outlets/bias-overview?outlet=${encodeURIComponent(
+            selectedCanonical
+          )}`
+        );
+        if (!res.ok) throw new Error();
+
+        const data: BiasOverviewResponse = await res.json();
+        if (!alive || !data.ok) return;
+
+        const dto: OutletDetailData = {
+          canonical_outlet: data.outlet,
+          display_name: data.outlet,
+          storiesAnalyzed: data.total_stories,
+
+          lifetimePi: data.avg_pi_weighted,
+          lifetimeBiasIntent: data.avg_bias_intent_weighted,
+          lifetimeLanguage: data.avg_bias_language_weighted,
+          lifetimeSource: data.avg_bias_source_weighted,
+          lifetimeFraming: data.avg_bias_framing_weighted,
+          lifetimeContext: data.avg_bias_context_weighted,
+
+          lastScoredAt: data.last_scored_at ?? "Not yet scored",
+          ninetyDaySummary: "",
+        };
+
+        setDetailOutlet(dto);
+      } catch {
+        if (alive) setDetailOutlet(null);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
   }, [selectedCanonical]);
 
-  /* ========= Selected outlet (overview) ========= */
-  const selectedOutlet = useMemo(() => {
-    if (!selectedCanonical) return null;
-    return (
-      outlets.find(
-        (o) => o.canonical_outlet === selectedCanonical
-      ) ?? null
-    );
-  }, [outlets, selectedCanonical]);
-
-  /* ========= Detail DTO (authoritative lifetime contract) ========= */
-  const detailOutlet: OutletDetailData | null = useMemo(() => {
-    if (!selectedOutlet) return null;
-
-    const piPercent = (selectedOutlet.avg_pi * 100).toFixed(2);
-
-    return {
-      canonical_outlet: selectedOutlet.canonical_outlet,
-      display_name: selectedOutlet.canonical_outlet,
-      storiesAnalyzed: selectedOutlet.total_stories,
-
-      // Lifetime / authoritative fields
-      lifetimePi: selectedOutlet.avg_pi,
-      lifetimeBiasIntent: selectedOutlet.avg_bias_intent,
-      lifetimeLanguage: selectedOutlet.bias_language,
-      lifetimeSource: selectedOutlet.bias_source,
-      lifetimeFraming: selectedOutlet.bias_framing,
-      lifetimeContext: selectedOutlet.bias_context,
-
-      lastScoredAt: selectedOutlet.last_story_day ?? "Not yet scored",
-
-      ninetyDaySummary: `Lifetime PI ${piPercent} based on ${selectedOutlet.total_stories} stories.`,
-    };
-  }, [selectedOutlet]);
-
-  /* ========= Trends ========= */
+  /* ========= LOAD TRENDS ========= */
   useEffect(() => {
     let alive = true;
 
@@ -116,14 +151,17 @@ export default function NewsroomCabinetPage() {
     (async () => {
       try {
         setTrendLoading(true);
+
         const res = await fetch(
           `/api/news/outlets/trends?outlet=${encodeURIComponent(
             selectedCanonical
           )}`
         );
         if (!res.ok) throw new Error();
+
         const data: TrendsResponse = await res.json();
         if (!alive || !data.ok) return;
+
         setTrends(data.points);
       } catch {
         if (alive) setTrends(null);
@@ -136,6 +174,8 @@ export default function NewsroomCabinetPage() {
       alive = false;
     };
   }, [selectedCanonical]);
+
+  /* ================= RENDER ================= */
 
   return (
     <div className="flex flex-col gap-10">
@@ -163,9 +203,8 @@ export default function NewsroomCabinetPage() {
         />
       )}
 
-      {/* ================= INTERPRETATION LAYER ================= */}
+      {/* ================= INTERPRETATION ================= */}
       <section className="grid gap-6 lg:grid-cols-3">
-        {/* Explanation */}
         <div className="lg:col-span-1 space-y-3 text-sm text-neutral-400">
           <h3 className="text-xs font-semibold tracking-wide text-neutral-300 uppercase">
             How to read this cabinet
@@ -190,7 +229,6 @@ export default function NewsroomCabinetPage() {
           </p>
         </div>
 
-        {/* Score breakdown — 🔒 lifetime-backed */}
         <div className="lg:col-span-2">
           <ScoreBreakdown outlet={detailOutlet} />
         </div>
