@@ -1,4 +1,4 @@
-//------------------------------------------------------------
+// ------------------------------------------------------------
 // Solace Context Assembler
 // Authoritative Read Path
 //------------------------------------------------------------
@@ -112,7 +112,27 @@ export async function assembleContext(
   const authUserId = user.id;
 
   // ----------------------------------------------------------
-  // WORKING MEMORY (LIVE)
+  // FACTUAL MEMORY (AUTHORITATIVE, DURABLE)
+  // ----------------------------------------------------------
+  const factsRes = await supabaseService
+    .schema("memory")
+    .from("memories")
+    .select("content, created_at")
+    .eq("user_id", authUserId)
+    .eq("memory_type", "fact")
+    .order("created_at", { ascending: false })
+    .limit(FACTS_LIMIT);
+
+  const factualMemories = Array.isArray(factsRes.data)
+    ? factsRes.data.map((m) => m.content)
+    : [];
+
+  console.log("[DIAG-ASSEMBLE-FACTS]", {
+    count: factualMemories.length,
+  });
+
+  // ----------------------------------------------------------
+  // WORKING MEMORY (LIVE, SESSION-SCOPED)
   // ----------------------------------------------------------
   let wmItems: WorkingMemoryItem[] = [];
 
@@ -140,7 +160,7 @@ export async function assembleContext(
   return {
     persona: "Solace",
     memoryPack: {
-      facts: [],
+      facts: factualMemories,
       episodic: [],
       autobiography: [],
       sessionCompaction: null,
