@@ -291,7 +291,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // ASSEMBLE CONTEXT
+    // ASSEMBLE CONTEXT (MEMORY ONLY)
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
@@ -304,10 +304,27 @@ export async function POST(req: Request) {
     );
 
     // --------------------------------------------------------
-    // NEWSROOM
+    // NEWSROOM (RESTORED, ISOLATED)
     // --------------------------------------------------------
     if (message && isNewsRequest(message)) {
-      const newsroomResponse = await runNewsroomExecutor(context.newsDigest);
+      const digestRes = await fetch(
+        `${process.env.NEXT_PUBLIC_APP_URL}/api/news/digest?limit=3`,
+        { cache: "no-store" }
+      );
+
+      if (!digestRes.ok) {
+        throw new Error("NEWS_DIGEST_FETCH_FAILED");
+      }
+
+      const digestJson = await digestRes.json();
+      const stories = Array.isArray(digestJson?.stories)
+        ? digestJson.stories
+        : [];
+
+      console.log("[NEWSROOM] digest fetched", { count: stories.length });
+
+      const newsroomResponse = await runNewsroomExecutor(stories);
+
       return NextResponse.json({
         ok: true,
         response: newsroomResponse,
