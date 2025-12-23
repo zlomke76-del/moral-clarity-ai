@@ -6,7 +6,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-import { FACTS_LIMIT, EPISODES_LIMIT } from "./context.constants";
+import {
+  FACTS_LIMIT,
+  EPISODES_LIMIT,
+} from "./context.constants";
+
+import { RESEARCH_CONTEXT_LIMIT } from "./context.constants";
 
 // ------------------------------------------------------------
 // TYPES
@@ -132,6 +137,24 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
+  // HUBBLE / RESEARCH CONTEXT (AUTHORITATIVE, READ-ONLY)
+  // ----------------------------------------------------------
+  const hubbleRes = await supabaseService
+    .schema("research")
+    .from("hubble_ingest_v1")
+    .select("*")
+    .order("timestamp_utc", { ascending: false })
+    .limit(RESEARCH_CONTEXT_LIMIT);
+
+  const researchItems = Array.isArray(hubbleRes.data)
+    ? hubbleRes.data
+    : [];
+
+  console.log("[DIAG-ASSEMBLE-HUBBLE]", {
+    count: researchItems.length,
+  });
+
+  // ----------------------------------------------------------
   // WORKING MEMORY (LIVE, SESSION-SCOPED)
   // ----------------------------------------------------------
   let wmItems: WorkingMemoryItem[] = [];
@@ -170,9 +193,9 @@ export async function assembleContext(
       active: Boolean(conversationId),
       items: wmItems,
     },
-    researchContext: [],
+    researchContext: researchItems,
     authorities: [],
     newsDigest: [],
-    didResearch: false,
+    didResearch: researchItems.length > 0,
   };
 }
