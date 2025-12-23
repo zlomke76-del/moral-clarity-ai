@@ -1,116 +1,50 @@
-// app/api/news/outlets/overview/route.ts
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export async function GET() {
+  const supabase = createClient();
 
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+  const { data, error } = await supabase
+    .from("outlet_bias_pi_overview")
+    .select(`
+      canonical_outlet,
+      total_stories,
+      avg_pi_weighted,
+      avg_bias_intent_weighted,
+      avg_bias_language_weighted,
+      avg_bias_source_weighted,
+      avg_bias_framing_weighted,
+      avg_bias_context_weighted,
+      last_story_day
+    `);
 
-/* ========= ENV / ADMIN CLIENT ========= */
-
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.warn(
-    "[news/outlets/overview] Missing Supabase admin credentials — API will 500."
-  );
-}
-
-const supabaseAdmin =
-  SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
-    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-        auth: { persistSession: false },
-      })
-    : null;
-
-/* ========= TYPES ========= */
-
-type OutletOverview = {
-  canonical_outlet: string;
-  total_stories: number;
-  avg_pi: number;
-};
-
-/* ========= HELPERS ========= */
-
-function jsonError(
-  message: string,
-  status = 500,
-  extra: Record<string, unknown> = {}
-) {
-  return NextResponse.json({ ok: false, error: message, ...extra }, { status });
-}
-
-/* ========= MAIN HANDLER ========= */
-
-export async function GET(req: NextRequest) {
-  try {
-    if (!supabaseAdmin) {
-      return jsonError("Supabase admin client not configured.", 500, {
-        code: "NO_SUPABASE_ADMIN",
-      });
-    }
-
-    const url = new URL(req.url);
-    const minStoriesParam = url.searchParams.get("minStories");
-    const parsedMin = Number(minStoriesParam ?? "5");
-    const MIN_STORIES =
-      Number.isFinite(parsedMin) && parsedMin > 0 ? parsedMin : 5;
-
-    /**
-     * 🔒 READ FROM CANONICAL VIEW
-     * outlet_canonical_overview
-     *
-     * This view performs:
-     * - domain → canonical collapse
-     * - weighted PI math
-     * - UNMAPPED fallback
-     *
-     * No data mutation. No aggregation tables.
-     */
-
-    const { data, error } = await supabaseAdmin
-      .from("outlet_canonical_overview")
-      .select(`
-        canonical_outlet,
-        total_stories,
-        avg_pi
-      `)
-      .gte("total_stories", MIN_STORIES)
-      .order("avg_pi", { ascending: false, nullsFirst: false });
-
-    if (error) {
-      console.error("[news/outlets/overview] query error", error);
-      return jsonError("Failed to load outlet overview.", 500, {
-        code: error.code,
-        details: error.message,
-      });
-    }
-
-    const outlets: OutletOverview[] = (data || []).map((row: any) => ({
-      canonical_outlet: row.canonical_outlet,
-      total_stories: Number(row.total_stories),
-      avg_pi: Number(row.avg_pi),
-    }));
-
-    return NextResponse.json({
-      ok: true,
-      count: outlets.length,
-      outlets,
-    });
-  } catch (err: any) {
-    console.error("[news/outlets/overview] fatal error", err);
-    return jsonError(
-      err?.message || "Unexpected error in outlets overview.",
-      500,
-      { code: "NEWS_OUTLETS_OVERVIEW_FATAL" }
+  if (error) {
+    return NextResponse.json(
+      { ok: false, error: error.message },
+      { status: 500 }
     );
   }
-}
 
-/* ========= Allow POST to behave as GET ========= */
+  // 🔒 CONTRACT ADAPTER — NO RE-ENGINEERING
+  const outlets = (data ?? []).map((row) => ({
+    canonical_outlet: row.canonical_outlet,
+    total_stories: row.total_stories,
 
-export async function POST(req: NextRequest) {
-  return GET(req);
+    // 🔑 THIS IS THE FIX
+    avg_pi: row.avg_pi_weighted,
+
+    avg_bias_intent: row.avg_bias_intent_weighted,
+    bias_language: row.avg_bias_language_weighted,
+    bias_source: row.avg_bias_source_weighted,
+    bias_framing: row.avg_bias_framing_weighted,
+    bias_context: row.avg_bias_context_weighted,
+
+    last_story_day: row.last_story_day,
+  }));
+
+  return NextResponse.json({
+    ok: true,
+    count: outlets.length,
+    outlets,
+  });
 }
