@@ -1,3 +1,5 @@
+// app/edge-of-practice/extended-cycle/page.tsx
+
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -26,23 +28,21 @@ export default function EdgeOfPracticeExtendedCyclePage() {
         <h1>Edge of Practice — Extended Cycle</h1>
 
         <p className="lead">
-          <strong>
-            Experiments that earned time
-          </strong>
+          <strong>Experiments that earned time</strong>
         </p>
 
         <p>
           <em>Extended Cycle</em> experiments are promoted from{" "}
           <Link href="/edge-of-practice">Edge of Practice (Short-Cycle)</Link>{" "}
-          after surviving initial falsification. These experiments do not ask
-          new questions—they test whether the same assumptions fail under
-          repetition, fatigue, or environmental cycling.
+          after surviving initial falsification. These experiments do not ask new
+          questions—they test whether the same assumptions fail under repetition,
+          fatigue, or environmental cycling.
         </p>
 
         <p>
           Entry into this index is gated. An experiment must demonstrate that
-          rapid failure modes have been ruled out and that time itself is now
-          the dominant variable.
+          rapid failure modes have been ruled out and that time itself is now the
+          dominant variable.
         </p>
 
         <hr />
@@ -62,32 +62,52 @@ export default function EdgeOfPracticeExtendedCyclePage() {
 
         <ul>
           <li>
-            <Link href="/edge-of-practice/pc-abs-interfacial-microdamping">
-              Interfacial Micro-Damping in Layered PC/ABS Structures
+            <Link href="/edge-of-practice/extended-cycle/pp-caco3-fatigue-dissipation">
+              Fatigue Energy Dissipation in PP via Untreated CaCO₃
             </Link>
             <br />
             <span className="text-sm text-muted-foreground">
-              Fatigue resistance under repeated mechanical cycling
+              Crack deflection and delayed fatigue failure under cyclic loading
             </span>
           </li>
 
           <li>
-            <Link href="/edge-of-practice/hdpe-ldpe-interfacial-toughening">
-              Interfacial Toughening in HDPE via Dispersed LDPE Domains
+            <Link href="/edge-of-practice/extended-cycle/hdpe-talc-wear-stability">
+              Wear Stability in HDPE via Untreated Talc
             </Link>
             <br />
             <span className="text-sm text-muted-foreground">
-              Toughness evolution under repeated loading and fracture
+              Long-horizon tribological behavior driven by particle orientation
             </span>
           </li>
 
           <li>
-            <Link href="/edge-of-practice/pc-pmma-scratch-resistance">
-              Scratch Resistance from Physical PMMA Dispersion in Polycarbonate
+            <Link href="/edge-of-practice/extended-cycle/pc-glassfiber-thermal-cycling">
+              Thermal Cycling Stability in PC with Short Glass Fiber
             </Link>
             <br />
             <span className="text-sm text-muted-foreground">
-              Abrasion resistance under repeated wear
+              Micro-slip stress dissipation under repeated thermal shock
+            </span>
+          </li>
+
+          <li>
+            <Link href="/edge-of-practice/extended-cycle/pmma-silica-optical-stability">
+              Optical Stability in PMMA via Untreated Silica
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Haze resistance under humidity and thermal cycling
+            </span>
+          </li>
+
+          <li>
+            <Link href="/edge-of-practice/extended-cycle/nylon-graphite-moisture-cycling">
+              Moisture Cycling Stability in Nylon 6 via Graphite
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Dimensional and modulus stability under wet–dry cycling
             </span>
           </li>
         </ul>
@@ -98,8 +118,8 @@ export default function EdgeOfPracticeExtendedCyclePage() {
 
         <p>
           Extended Cycle experiments remain falsification-first. Survival does
-          not imply usefulness, safety, or permanence—only that time has not
-          yet broken the assumption.
+          not imply usefulness, safety, or permanence—only that time has not yet
+          broken the assumption.
         </p>
 
         <p className="text-sm text-muted-foreground">
