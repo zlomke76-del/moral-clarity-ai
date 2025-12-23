@@ -26,22 +26,18 @@ const supabaseAdmin =
 
 const DEFAULT_WORKSPACE_ID = process.env.MCA_WORKSPACE_ID || 'global_news';
 const DEFAULT_USER_KEY = 'system-news-anchor';
-
 const DEFAULT_STORIES_TARGET = 60;
 const DEFAULT_PER_DOMAIN_MAX = 5;
 const DEFAULT_NEWS_WINDOW_DAYS = 1;
 const GLOBAL_TOP_MAX = 15;
 
 /* ========= DOMAIN-SPECIFIC THROTTLES ========= */
-/**
- * Domains listed here are intentionally slowed to avoid
- * over-representation or narrative distortion.
- */
+
 const DOMAIN_MAX_OVERRIDES: Record<string, number> = {
-  'rferl.org': 1, // Radio Free Europe / Radio Liberty
+  'rferl.org': 1,
 };
 
-/* ========= STRICTNESS CONFIG ========= */
+/* ========= STRICTNESS ========= */
 
 const MIN_ARTICLE_CHARS = 400;
 
@@ -86,12 +82,8 @@ export type FetcherResult = {
 };
 
 /* ========= SOURCE REGISTRY ========= */
-/**
- * Eligibility registry only.
- * No ideological weighting, no bias labeling.
- */
+
 export const SOURCE_REGISTRY: NewsSource[] = [
-  // U.S. mainstream
   { id: 'ap', label: 'AP News', domain: 'apnews.com' },
   { id: 'reuters', label: 'Reuters', domain: 'reuters.com' },
   { id: 'bloomberg', label: 'Bloomberg', domain: 'bloomberg.com' },
@@ -106,7 +98,6 @@ export const SOURCE_REGISTRY: NewsSource[] = [
   { id: 'time', label: 'Time', domain: 'time.com' },
   { id: 'forbes', label: 'Forbes', domain: 'forbes.com' },
 
-  // U.S. broadcasters
   { id: 'abc', label: 'ABC News', domain: 'abcnews.go.com' },
   { id: 'cbs', label: 'CBS News', domain: 'cbsnews.com' },
   { id: 'nbc', label: 'NBC News', domain: 'nbcnews.com' },
@@ -116,73 +107,40 @@ export const SOURCE_REGISTRY: NewsSource[] = [
   { id: 'msnbc', label: 'MSNBC', domain: 'msnbc.com' },
   { id: 'newsnation', label: 'NewsNation', domain: 'newsnationnow.com' },
 
-  // U.S. opinion-leaning (eligible, not weighted)
   { id: 'newsmax', label: 'Newsmax', domain: 'newsmax.com' },
   { id: 'dailycaller', label: 'Daily Caller', domain: 'dailycaller.com' },
   { id: 'federalist', label: 'The Federalist', domain: 'thefederalist.com' },
-  {
-    id: 'washingtonexaminer',
-    label: 'Washington Examiner',
-    domain: 'washingtonexaminer.com',
-  },
+  { id: 'washingtonexaminer', label: 'Washington Examiner', domain: 'washingtonexaminer.com' },
   { id: 'huffpost', label: 'HuffPost', domain: 'huffpost.com' },
-  { id: 'guardian-us', label: 'The Guardian', domain: 'theguardian.com' },
+  { id: 'guardian', label: 'The Guardian', domain: 'theguardian.com' },
   { id: 'atlantic', label: 'The Atlantic', domain: 'theatlantic.com' },
   { id: 'motherjones', label: 'Mother Jones', domain: 'motherjones.com' },
 
-  // Elite finance / institutional
-  { id: 'ft', label: 'Financial Times', domain: 'ft.com', country: 'UK' },
-  { id: 'economist', label: 'The Economist', domain: 'economist.com', country: 'UK' },
+  { id: 'ft', label: 'Financial Times', domain: 'ft.com' },
+  { id: 'economist', label: 'The Economist', domain: 'economist.com' },
   { id: 'barrons', label: "Barron's", domain: 'barrons.com' },
 
-  // Legal / institutional process
-  {
-    id: 'courthouse',
-    label: 'Courthouse News',
-    domain: 'courthousenews.com',
-    notes: 'Legal process reporting',
-  },
-  {
-    id: 'lawfare',
-    label: 'Lawfare',
-    domain: 'lawfaremedia.org',
-    notes: 'National security & legal analysis',
-  },
-  {
-    id: 'justsecurity',
-    label: 'Just Security',
-    domain: 'justsecurity.org',
-    notes: 'Legal & accountability analysis',
-  },
+  { id: 'courthouse', label: 'Courthouse News', domain: 'courthousenews.com' },
+  { id: 'lawfare', label: 'Lawfare', domain: 'lawfaremedia.org' },
+  { id: 'justsecurity', label: 'Just Security', domain: 'justsecurity.org' },
 
-  // International
-  { id: 'bbc', label: 'BBC', domain: 'bbc.com', country: 'UK' },
-  { id: 'aljazeera', label: 'Al Jazeera', domain: 'aljazeera.com', country: 'QA' },
-  { id: 'times-uk', label: 'The Times (UK)', domain: 'thetimes.co.uk', country: 'UK' },
-  { id: 'telegraph', label: 'The Telegraph', domain: 'telegraph.co.uk', country: 'UK' },
-  { id: 'independent', label: 'The Independent', domain: 'independent.co.uk', country: 'UK' },
-  { id: 'france24', label: 'France 24', domain: 'france24.com', country: 'FR' },
-  { id: 'dw', label: 'Deutsche Welle', domain: 'dw.com', country: 'DE' },
-  { id: 'spiegel', label: 'Der Spiegel', domain: 'spiegel.de', country: 'DE' },
-  { id: 'lemonde', label: 'Le Monde', domain: 'lemonde.fr', country: 'FR' },
-  { id: 'nikkei', label: 'Nikkei Asia', domain: 'nikkei.com', country: 'JP' },
+  { id: 'bbc', label: 'BBC', domain: 'bbc.com' },
+  { id: 'aljazeera', label: 'Al Jazeera', domain: 'aljazeera.com' },
+  { id: 'france24', label: 'France 24', domain: 'france24.com' },
+  { id: 'dw', label: 'Deutsche Welle', domain: 'dw.com' },
+  { id: 'spiegel', label: 'Der Spiegel', domain: 'spiegel.de' },
+  { id: 'lemonde', label: 'Le Monde', domain: 'lemonde.fr' },
+  { id: 'nikkei', label: 'Nikkei Asia', domain: 'nikkei.com' },
 
-  // State-linked international (throttled)
-  {
-    id: 'rfe',
-    label: 'Radio Free Europe / Radio Liberty',
-    domain: 'rferl.org',
-    notes: 'Throttled to prevent over-sampling',
-  },
+  { id: 'rfe', label: 'Radio Free Europe / Radio Liberty', domain: 'rferl.org' },
 ];
 
-/* ========= SMALL HELPERS ========= */
+/* ========= HELPERS ========= */
 
 function extractDomainFromUrl(url: string): string {
   try {
     const u = new URL(url);
-    const host = u.hostname.toLowerCase();
-    return host.startsWith('www.') ? host.slice(4) : host;
+    return u.hostname.replace(/^www\./, '').toLowerCase();
   } catch {
     return 'unknown';
   }
@@ -192,20 +150,158 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-/* ========= MAIN FETCH LOGIC ========= */
+function shuffle<T>(arr: T[]): T[] {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
 
 function perDomainLimit(domain: string): number {
   return DOMAIN_MAX_OVERRIDES[domain] ?? DEFAULT_PER_DOMAIN_MAX;
 }
 
-/* Remaining logic unchanged except replacing perDomainMax with perDomainLimit(domain)
-   inside the dedupe / cap enforcement loop.
-   (No behavioral changes elsewhere.)
-*/
+/* ========= MAIN FETCH ========= */
 
-// ⬇️ NOTE
-// The rest of the file remains identical to your current implementation,
-// with the single substitution:
-//   perDomainCounts[domain] >= perDomainLimit(domain)
-//
-// This preserves all existing behavior while enforcing RFE throttling.
+export async function runNewsFetchRefresh(opts?: {
+  workspaceId?: string;
+  userKey?: string;
+  storiesTarget?: number;
+  perDomainMax?: number;
+  newsWindowDays?: number;
+}): Promise<FetcherResult> {
+  if (!supabaseAdmin) {
+    throw new Error('[news/fetcher] Supabase admin client not initialized.');
+  }
+
+  const workspaceId = opts?.workspaceId || DEFAULT_WORKSPACE_ID;
+  const userKey = opts?.userKey || DEFAULT_USER_KEY;
+  const storiesTarget = opts?.storiesTarget ?? DEFAULT_STORIES_TARGET;
+  const newsWindowDays = opts?.newsWindowDays ?? DEFAULT_NEWS_WINDOW_DAYS;
+
+  const startedAt = nowIso();
+  const errors: string[] = [];
+  const domainStats: Record<string, DomainStats> = {};
+  const candidates: FetcherArticleCandidate[] = [];
+
+  for (const source of shuffle(SOURCE_REGISTRY)) {
+    const query = `latest news from ${source.label} (${source.domain})`;
+    let items: any[] = [];
+
+    try {
+      items = await webSearch(query, {
+        news: true,
+        max: perDomainLimit(source.domain) * 2,
+        days: newsWindowDays,
+      });
+    } catch (err: any) {
+      errors.push(`webSearch failed for ${source.domain}`);
+      continue;
+    }
+
+    for (const item of items) {
+      const url = item.url;
+      if (!url) continue;
+
+      const domain = extractDomainFromUrl(url);
+      if (!domain.endsWith(source.domain)) continue;
+
+      domainStats[domain] ??= { domain, attempted: 0, deduped: 0, inserted: 0, failed: 0 };
+      domainStats[domain].attempted++;
+
+      candidates.push({
+        title: item.title || '(untitled)',
+        url,
+        content: item.content,
+        sourceDomain: domain,
+        query,
+      });
+    }
+  }
+
+  const seen = new Set<string>();
+  const perDomainCount: Record<string, number> = {};
+  const final: FetcherArticleCandidate[] = [];
+
+  for (const c of shuffle(candidates)) {
+    if (seen.has(c.url)) continue;
+
+    const limit = perDomainLimit(c.sourceDomain);
+    perDomainCount[c.sourceDomain] ??= 0;
+    if (perDomainCount[c.sourceDomain] >= limit) continue;
+
+    seen.add(c.url);
+    perDomainCount[c.sourceDomain]++;
+    domainStats[c.sourceDomain].deduped++;
+    final.push(c);
+
+    if (final.length >= storiesTarget) break;
+  }
+
+  let inserted = 0;
+  let failed = 0;
+
+  for (const c of final) {
+    try {
+      const extracted = await extractArticle({
+        url: c.url,
+        tavilyContent: c.content,
+        tavilyTitle: c.title,
+      });
+
+      const text = (extracted.clean_text || '').trim();
+      if (!extracted.success || text.length < MIN_ARTICLE_CHARS) {
+        domainStats[c.sourceDomain].failed++;
+        failed++;
+        continue;
+      }
+
+      const row = {
+        workspace_id: workspaceId,
+        user_key: userKey,
+        query: c.query,
+        summary: text.slice(0, 1200),
+        pi_score: 0.5,
+        confidence_level: 'medium',
+        scientific_domain: 'news',
+        category: 'news_story',
+        status: 'snapshot',
+        raw_url: c.url,
+        raw_snapshot: text.slice(0, 4000),
+        created_at: nowIso(),
+        updated_at: nowIso(),
+      };
+
+      const { error } = await supabaseAdmin.from('truth_facts').insert(row);
+      if (error) {
+        domainStats[c.sourceDomain].failed++;
+        failed++;
+        continue;
+      }
+
+      domainStats[c.sourceDomain].inserted++;
+      inserted++;
+    } catch {
+      domainStats[c.sourceDomain].failed++;
+      failed++;
+    }
+  }
+
+  const finishedAt = nowIso();
+
+  return {
+    ok: true,
+    workspaceId,
+    userKey,
+    startedAt,
+    finishedAt,
+    totalCandidates: final.length,
+    totalInserted: inserted,
+    totalFailed: failed,
+    distinctDomains: Object.keys(domainStats).length,
+    domainStats,
+    errors,
+  };
+}
