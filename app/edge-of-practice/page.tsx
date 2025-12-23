@@ -49,6 +49,30 @@ export default function EdgeOfPracticeIndexPage() {
 
         <hr />
 
+        {/* NEW — cycle navigation */}
+
+        <h2>Experiment Lifecycle</h2>
+
+        <ul>
+          <li>
+            <strong>Short-Cycle</strong> — rapid falsification (this index)
+          </li>
+          <li>
+            <Link href="/edge-of-practice/extended-cycle">
+              Extended Cycle
+            </Link>{" "}
+            — durability, fatigue, and repetition after short-cycle survival
+          </li>
+          <li>
+            <Link href="/edge-of-practice/persistence">
+              Persistence
+            </Link>{" "}
+            — long-duration, time-dominated failure modes
+          </li>
+        </ul>
+
+        <hr />
+
         <h2>Founding Principle</h2>
 
         <p>
@@ -250,8 +274,6 @@ export default function EdgeOfPracticeIndexPage() {
             </span>
           </li>
 
-          {/* NEW — tribological / optical */}
-
           <li>
             <Link href="/edge-of-practice/ps-pdms-surface-lubricity">
               Low-Friction, Clear Surfaces via PDMS Migration in Polystyrene
@@ -262,8 +284,6 @@ export default function EdgeOfPracticeIndexPage() {
               low-friction PS surfaces without blooming or coatings
             </span>
           </li>
-
-          {/* NEW — mechanical */}
 
           <li>
             <Link href="/edge-of-practice/hdpe-ldpe-interfacial-toughening">
