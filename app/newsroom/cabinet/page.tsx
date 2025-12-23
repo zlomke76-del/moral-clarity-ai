@@ -46,14 +46,12 @@ export default function NewsroomCabinetPage() {
         const data: OverviewResponse = await res.json();
         if (!alive || !data.ok) return;
 
-        // 🔒 AUTHORITATIVE SORT — PI DESC
         const sorted = [...data.outlets].sort(
-          (a, b) => b.avg_pi - a.avg_pi
+          (a, b) => b.avg_pi_weighted - a.avg_pi_weighted
         );
 
         setOutlets(sorted);
 
-        // 🔒 HARD DEFAULT SELECTION
         if (!selectedCanonical && sorted.length > 0) {
           setSelectedCanonical(sorted[0].canonical_outlet);
         }
@@ -69,10 +67,9 @@ export default function NewsroomCabinetPage() {
     };
   }, [selectedCanonical]);
 
-  /* ========= Selected outlet (HARD FALLBACK) ========= */
+  /* ========= Selected outlet ========= */
   const selectedOutlet = useMemo(() => {
     if (!outlets.length) return null;
-
     return (
       outlets.find(
         (o) => o.canonical_outlet === selectedCanonical
@@ -80,23 +77,23 @@ export default function NewsroomCabinetPage() {
     );
   }, [outlets, selectedCanonical]);
 
-  /* ========= Detail DTO (lifetime, authoritative) ========= */
+  /* ========= Detail DTO (CORRECTED FIELD MAP) ========= */
   const detailOutlet: OutletDetailData | null = useMemo(() => {
     if (!selectedOutlet) return null;
 
-    const piPercent = (selectedOutlet.avg_pi * 100).toFixed(2);
+    const piPercent = (selectedOutlet.avg_pi_weighted * 100).toFixed(2);
 
     return {
       canonical_outlet: selectedOutlet.canonical_outlet,
       display_name: selectedOutlet.canonical_outlet,
       storiesAnalyzed: selectedOutlet.total_stories,
 
-      lifetimePi: selectedOutlet.avg_pi,
-      lifetimeBiasIntent: selectedOutlet.avg_bias_intent,
-      lifetimeLanguage: selectedOutlet.bias_language,
-      lifetimeSource: selectedOutlet.bias_source,
-      lifetimeFraming: selectedOutlet.bias_framing,
-      lifetimeContext: selectedOutlet.bias_context,
+      lifetimePi: selectedOutlet.avg_pi_weighted,
+      lifetimeBiasIntent: selectedOutlet.avg_bias_intent_weighted,
+      lifetimeLanguage: selectedOutlet.avg_bias_language_weighted,
+      lifetimeSource: selectedOutlet.avg_bias_source_weighted,
+      lifetimeFraming: selectedOutlet.avg_bias_framing_weighted,
+      lifetimeContext: selectedOutlet.avg_bias_context_weighted,
 
       lastScoredAt: selectedOutlet.last_story_day ?? "Not yet scored",
 
@@ -139,7 +136,6 @@ export default function NewsroomCabinetPage() {
 
   return (
     <div className="flex flex-col gap-10">
-      {/* ================= CABINET ================= */}
       {loading ? (
         <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 text-sm text-neutral-400">
           Loading cabinet…
@@ -163,7 +159,6 @@ export default function NewsroomCabinetPage() {
         />
       )}
 
-      {/* ================= INTERPRETATION LAYER ================= */}
       <section className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-1 space-y-3 text-sm text-neutral-400">
           <h3 className="text-xs font-semibold tracking-wide text-neutral-300 uppercase">
@@ -183,10 +178,6 @@ export default function NewsroomCabinetPage() {
             Lower bias does not mean an outlet is “right.” It means fewer swings
             in language, sourcing, framing, and contextual omission.
           </p>
-
-          <p className="text-xs text-neutral-500">
-            Select an outlet to inspect how its score is composed.
-          </p>
         </div>
 
         <div className="lg:col-span-2">
@@ -194,7 +185,6 @@ export default function NewsroomCabinetPage() {
         </div>
       </section>
 
-      {/* ================= DETAIL MODAL ================= */}
       <OutletDetailDialog
         open={detailOpen && !!detailOutlet}
         outlet={detailOutlet}
