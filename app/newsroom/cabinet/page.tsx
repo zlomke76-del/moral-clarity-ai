@@ -1,6 +1,8 @@
+// app/newsroom/cabinet/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+
 import type {
   OutletOverview,
   OutletTrendPoint,
@@ -9,6 +11,7 @@ import type {
 
 import Leaderboard from "./components/Leaderboard";
 import OutletDetailDialog from "./components/OutletDetailDialog";
+import ScoreBreakdown from "./components/ScoreBreakdown";
 
 type OverviewResponse = {
   ok: boolean;
@@ -45,7 +48,7 @@ export default function NewsroomCabinetPage() {
         if (!alive || !data.ok) return;
 
         // 🔒 SINGLE SOURCE OF TRUTH:
-        // Rank by PI (higher = more neutral)
+        // Rank by PI (higher = more predictable / neutral)
         const sorted = [...data.outlets].sort(
           (a, b) => b.avg_pi - a.avg_pi
         );
@@ -70,16 +73,17 @@ export default function NewsroomCabinetPage() {
   /* ========= Selected outlet ========= */
   const selectedOutlet = useMemo(() => {
     if (!selectedCanonical) return null;
-    return outlets.find(
-      (o) => o.canonical_outlet === selectedCanonical
-    ) ?? null;
+    return (
+      outlets.find(
+        (o) => o.canonical_outlet === selectedCanonical
+      ) ?? null
+    );
   }, [outlets, selectedCanonical]);
 
   /* ========= Modal DTO ========= */
   const detailOutlet: OutletDetailData | null = useMemo(() => {
     if (!selectedOutlet) return null;
 
-    // 🔒 CANONICAL PI DISPLAY: percent, TWO decimals
     const piPercent = (selectedOutlet.avg_pi * 100).toFixed(2);
 
     return {
@@ -87,7 +91,6 @@ export default function NewsroomCabinetPage() {
       display_name: selectedOutlet.canonical_outlet,
       storiesAnalyzed: selectedOutlet.total_stories,
 
-      // Keep raw value for charts / math
       lifetimePi: selectedOutlet.avg_pi,
 
       lifetimeBiasIntent: selectedOutlet.avg_bias_intent,
@@ -136,7 +139,8 @@ export default function NewsroomCabinetPage() {
   }, [selectedCanonical]);
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-10">
+      {/* ================= CABINET ================= */}
       {loading ? (
         <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 text-sm text-neutral-400">
           Loading cabinet…
@@ -160,6 +164,40 @@ export default function NewsroomCabinetPage() {
         />
       )}
 
+      {/* ================= INTERPRETATION LAYER ================= */}
+      <section className="grid gap-6 lg:grid-cols-3">
+        {/* Explanation */}
+        <div className="lg:col-span-1 space-y-3 text-sm text-neutral-400">
+          <h3 className="text-xs font-semibold tracking-wide text-neutral-300 uppercase">
+            How to read this cabinet
+          </h3>
+
+          <p>
+            Outlets are ranked by{" "}
+            <span className="font-medium text-neutral-200">
+              Predictability Index (PI)
+            </span>
+            , a stability signal derived from how consistently stories are framed
+            over time.
+          </p>
+
+          <p>
+            Lower bias does not mean an outlet is “right.” It means fewer swings
+            in language, sourcing, framing, and contextual omission.
+          </p>
+
+          <p className="text-xs text-neutral-500">
+            Select an outlet to inspect how its score is composed.
+          </p>
+        </div>
+
+        {/* Score breakdown */}
+        <div className="lg:col-span-2">
+          <ScoreBreakdown outlet={selectedOutlet} />
+        </div>
+      </section>
+
+      {/* ================= DETAIL MODAL ================= */}
       <OutletDetailDialog
         open={detailOpen && !!detailOutlet}
         outlet={detailOutlet}
