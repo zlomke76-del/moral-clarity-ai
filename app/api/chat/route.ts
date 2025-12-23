@@ -47,6 +47,14 @@ type WMRow = {
   created_at?: string;
 };
 
+type NewsDigestItem = {
+  story_title: string;
+  outlet: string;
+  neutral_summary: string;
+  source_url?: string;
+  created_at: string;
+};
+
 // ------------------------------------------------------------
 // Helpers
 // ------------------------------------------------------------
@@ -85,6 +93,41 @@ function extractExplicitFact(msg: string): string | null {
   if (!fact || fact.length < 3) return null;
 
   return fact;
+}
+
+// ------------------------------------------------------------
+// NEWS DIGEST LOADER (AUTHORITATIVE)
+// ------------------------------------------------------------
+async function loadNewsDigestForChat(
+  supabaseService: ReturnType<typeof createServerClient>
+): Promise<NewsDigestItem[]> {
+  console.log("[NEWSROOM PREFLIGHT] digest load started");
+
+  const { data, error } = await supabaseService
+    .schema("news")
+    .from("digest")
+    .select(
+      `
+      story_title,
+      outlet,
+      neutral_summary,
+      source_url,
+      created_at
+    `
+    )
+    .order("created_at", { ascending: false })
+    .limit(3);
+
+  if (error) {
+    console.error("[NEWSROOM PREFLIGHT] digest query failed", error);
+    throw new Error("NEWSROOM_DIGEST_QUERY_FAILED");
+  }
+
+  console.log("[NEWSROOM PREFLIGHT] digest loaded", {
+    count: data?.length ?? 0,
+  });
+
+  return (data ?? []) as NewsDigestItem[];
 }
 
 // ------------------------------------------------------------
@@ -304,10 +347,17 @@ export async function POST(req: Request) {
     );
 
     // --------------------------------------------------------
-    // NEWSROOM
+    // NEWSROOM (AUTHORITATIVE)
     // --------------------------------------------------------
     if (message && isNewsRequest(message)) {
-      const newsroomResponse = await runNewsroomExecutor(context.newsDigest);
+      const newsDigest = await loadNewsDigestForChat(supabaseService);
+
+      if (!Array.isArray(newsDigest) || newsDigest.length < 3) {
+        throw new Error("NEWSROOM_DIGEST_NOT_INVOKED");
+      }
+
+      const newsroomResponse = await runNewsroomExecutor(newsDigest);
+
       return NextResponse.json({
         ok: true,
         response: newsroomResponse,
