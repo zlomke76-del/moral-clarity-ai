@@ -303,12 +303,15 @@ export async function POST(req: Request) {
       }
     );
 
-    // --------------------------------------------------------
-    // NEWSROOM (RESTORED, ISOLATED)
-    // --------------------------------------------------------
+ // --------------------------------------------------------
+// NEWSROOM (RESTORED, ISOLATED)
+// --------------------------------------------------------
 if (message && isNewsRequest(message)) {
+  // Derive absolute origin from the incoming request (Node-safe)
+  const origin = new URL(req.url).origin;
+
   const digestRes = await fetch(
-    "/api/news/digest?limit=3",
+    `${origin}/api/news/digest?limit=3`,
     { cache: "no-store" }
   );
 
@@ -316,21 +319,22 @@ if (message && isNewsRequest(message)) {
     throw new Error("NEWS_DIGEST_FETCH_FAILED");
   }
 
-      const digestJson = await digestRes.json();
-      const stories = Array.isArray(digestJson?.stories)
-        ? digestJson.stories
-        : [];
+  const digestJson = await digestRes.json();
 
-      console.log("[NEWSROOM] digest fetched", { count: stories.length });
+  const stories = Array.isArray(digestJson?.stories)
+    ? digestJson.stories
+    : [];
 
-      const newsroomResponse = await runNewsroomExecutor(stories);
+  console.log("[NEWSROOM] digest fetched", { count: stories.length });
 
-      return NextResponse.json({
-        ok: true,
-        response: newsroomResponse,
-        messages: [{ role: "assistant", content: newsroomResponse }],
-      });
-    }
+  const newsroomResponse = await runNewsroomExecutor(stories);
+
+  return NextResponse.json({
+    ok: true,
+    response: newsroomResponse,
+    messages: [{ role: "assistant", content: newsroomResponse }],
+  });
+}
 
     // --------------------------------------------------------
     // HYBRID PIPELINE
