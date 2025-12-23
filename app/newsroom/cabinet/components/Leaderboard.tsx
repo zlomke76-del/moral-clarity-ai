@@ -18,10 +18,10 @@ export default function Leaderboard({
   const GOLD_COUNT = 3;
   const WATCH_COUNT = 3;
 
-  // 🔒 AUTHORITATIVE SORT — WEIGHTED LIFETIME PI ONLY, DESC
+  // 🔒 AUTHORITATIVE SORT — PI ONLY, DESC
   const sorted = [...outlets].sort((a, b) => {
-    if (b.avg_pi_weighted !== a.avg_pi_weighted) {
-      return b.avg_pi_weighted - a.avg_pi_weighted;
+    if (b.avg_pi !== a.avg_pi) {
+      return b.avg_pi - a.avg_pi;
     }
     return a.canonical_outlet.localeCompare(b.canonical_outlet);
   });
@@ -30,7 +30,7 @@ export default function Leaderboard({
   const watchlist = sorted.slice(-WATCH_COUNT);
   const neutral = sorted.slice(GOLD_COUNT, sorted.length - WATCH_COUNT);
 
-  // 📊 TOTAL STORIES ANALYZED (LIFETIME CORPUS)
+  // 📊 TOTAL STORIES ANALYZED (LIFETIME, CANONICAL)
   const totalStoriesAnalyzed = sorted.reduce(
     (sum, o) => sum + o.total_stories,
     0
@@ -73,6 +73,7 @@ export default function Leaderboard({
           Neutral
         </h2>
 
+        {/* 🔒 GRID LAYOUT — CABINET / SCOREBOARD */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {neutral.map((o, i) => (
             <OutletCard
