@@ -4,13 +4,13 @@ import type { OutletTrendPoint } from "../types";
 
 type Props = {
   points: OutletTrendPoint[] | null;
-  loading: boolean;
+  loading?: boolean;
 };
 
 export default function TrendChart({ points, loading }: Props) {
   if (loading) {
     return (
-      <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4 text-sm text-neutral-400">
+      <div className="h-24 rounded-lg border border-neutral-800 bg-neutral-950/60 flex items-center justify-center text-xs text-neutral-500">
         Loading trend…
       </div>
     );
@@ -18,27 +18,34 @@ export default function TrendChart({ points, loading }: Props) {
 
   if (!points || points.length === 0) {
     return (
-      <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4 text-sm text-neutral-400">
-        No daily trend data yet.
+      <div className="h-24 rounded-lg border border-neutral-800 bg-neutral-950/60 flex items-center justify-center text-xs text-neutral-500">
+        No trend data available
       </div>
     );
   }
 
   return (
-    <div className="h-40 overflow-x-auto">
+    <div className="h-24 rounded-lg border border-neutral-800 bg-neutral-950/60 p-2">
       <div className="flex h-full items-end gap-1">
         {points.map((p) => {
-          const height = 20 + p.avg_pi_score * 100;
+          const value =
+            typeof p.avg_pi === "number" ? p.avg_pi : 0;
+
+          const height = Math.max(
+            4,
+            Math.min(20 + value * 100, 100)
+          );
+
           return (
-            <div key={p.story_day} className="flex flex-col items-center">
+            <div
+              key={p.day}
+              className="flex flex-col items-center flex-1"
+            >
               <div
-                className="w-3 rounded-t-md bg-emerald-400/80"
-                style={{ height }}
-                title={`${p.story_day}: PI ${p.avg_pi_score.toFixed(3)}`}
+                className="w-full rounded-sm bg-emerald-400/80"
+                style={{ height: `${height}%` }}
+                title={`PI ${value.toFixed(2)}`}
               />
-              <div className="mt-1 rotate-90 text-[9px] text-neutral-500">
-                {p.story_day.slice(5)}
-              </div>
             </div>
           );
         })}
