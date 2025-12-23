@@ -1,23 +1,9 @@
-// app/edge-of-knowledge/salt-gradient-desalination-wick/page.tsx
-// Moral Clarity AI — Edge of Knowledge
-// Boundary Research Log — Falsified Mechanism
-// Title: Salt-Gradient Desalination Wick (No Membranes)
-
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title:
-    "Salt-Gradient Desalination Wick — Boundary Research NO-GO | Moral Clarity AI",
+  title: "Salt-Gradient Desalination Wick | Edge of Knowledge",
   description:
-    "A regime-bounded negative result evaluating a proposed membrane-free desalination mechanism using hygroscopic salts and capillary geometry. Falsified by thermodynamic constraints.",
-  openGraph: {
-    title: "Salt-Gradient Desalination Wick — NO-GO",
-    description:
-      "A documented negative result: why passive salt-gradient capillary systems cannot achieve true desalination.",
-    url: "https://moralclarity.ai/edge-of-knowledge/salt-gradient-desalination-wick",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
+    "An edge publication documenting a salt-gradient-driven desalination wick using passive thermal and capillary mechanisms, including explicit uncertainties, failure modes, and test directions.",
   robots: {
     index: true,
     follow: true,
@@ -28,111 +14,129 @@ export default function SaltGradientDesalinationWickPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-16">
       <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Salt-Gradient Desalination Wick (No Membranes)</h1>
+        <h1>Salt-Gradient Desalination Wick</h1>
 
-        <p className="lead">
-          <strong>
-            Boundary Research Log — Falsified by Thermodynamic Constraints
-          </strong>
-        </p>
-
-        <p className="text-sm text-muted-foreground">
-          Edge of Knowledge · Boundary Research · Negative Result
+        <p className="text-lg font-medium">
+          Edge of Knowledge <span aria-hidden>→</span> uncertainty acknowledged
         </p>
 
         <hr />
 
-        <h2>Summary</h2>
-        <p>
-          This document records a regime-bounded negative result evaluating a
-          proposed membrane-free desalination mechanism based on layered
-          hygroscopic salts and capillary transport. The concept was assessed
-          for potential use in survival, humanitarian, or agricultural contexts
-          where power, pressure, and membranes are unavailable.
-        </p>
-        <p>
-          The evaluation concludes that the mechanism cannot achieve true or
-          sustained desalination under passive conditions. The limitation is
-          fundamental, not engineering-contingent, and arises from equilibrium
-          thermodynamics and ion co-transport.
-        </p>
+        <section>
+          <h2>Core Hypothesis</h2>
+          <p>
+            A desalination process can be driven by a maintained salt
+            concentration gradient across a porous wick structure, where
+            capillary transport and low-grade thermal input promote preferential
+            vapor transport while inhibiting bulk salt crossover.
+          </p>
+          <p>
+            The system relies on established physical mechanisms—osmotic
+            gradients, capillarity, evaporation, and diffusion—without pumps or
+            active pressure differentials.
+          </p>
+        </section>
 
-        <h2>Proposed Mechanism (Evaluated)</h2>
-        <ul>
-          <li>Layered hygroscopic salts create local water activity gradients</li>
-          <li>Capillary structures transport absorbed water</li>
-          <li>No membranes, pressure, heat, electricity, or phase change</li>
-          <li>Fully passive operation</li>
-        </ul>
+        <section>
+          <h2>Physical Mechanisms in Use</h2>
+          <ul>
+            <li>Capillary-driven liquid transport through a porous wick</li>
+            <li>Salt-gradient-induced vapor pressure differentials</li>
+            <li>Localized evaporation at the warm interface</li>
+            <li>Condensation and collection on the low-salinity side</li>
+          </ul>
+        </section>
 
-        <h2>Physical Impossibility Statement</h2>
-        <p>
-          Hygroscopic absorption and capillary action alone cannot provide
-          selective transport of water without ions. In the absence of a
-          unidirectional driving force or selective barrier, salt ions diffuse
-          alongside water until chemical potentials equalize.
-        </p>
-        <p>
-          Any initial reduction in apparent salinity is transient and collapses
-          as the system approaches equilibrium. The mechanism reduces to salt
-          sequestration and water redistribution, not desalination.
-        </p>
+        <section>
+          <h2>What Is Known</h2>
+          <ul>
+            <li>
+              Capillary wicks can sustain continuous liquid transport without
+              external energy input.
+            </li>
+            <li>
+              Salt concentration gradients alter vapor pressure and evaporation
+              dynamics.
+            </li>
+            <li>
+              Low-grade heat (solar or waste heat) can sustain steady evaporation
+              in thin porous media.
+            </li>
+          </ul>
+        </section>
 
-        <h2>Kill Conditions (Empirically Testable)</h2>
-        <ul>
-          <li>
-            Output water ion concentration equals or exceeds input after brief
-            operation
-          </li>
-          <li>
-            No sustained salinity reduction after hygroscopic layer saturation
-          </li>
-          <li>
-            Passive operation halts without external energy or regeneration
-          </li>
-          <li>
-            Salt diffusion into collected water overwhelms any transient effect
-          </li>
-        </ul>
+        <section>
+          <h2>What Is Uncertain</h2>
+          <ul>
+            <li>
+              Long-term salt accumulation and crystallization within the wick
+              structure
+            </li>
+            <li>
+              Stability of the gradient under continuous operation
+            </li>
+            <li>
+              Effective flux limits at practical temperature differentials
+            </li>
+            <li>
+              Membrane or wick wetting leading to salt breakthrough
+            </li>
+          </ul>
+        </section>
 
-        <h2>Regime Mapping</h2>
-        <p>
-          This mechanism fails outright in seawater, high-salinity brines, or
-          any context requiring potable or agricultural water. At best, it
-          produces milliliter-scale, short-lived salinity perturbations in very
-          low-salinity inputs before equilibrium collapse.
-        </p>
+        <section>
+          <h2>Failure Modes</h2>
+          <ul>
+            <li>
+              Salt crystallization blocking capillary pathways and halting flow
+            </li>
+            <li>
+              Gradient collapse due to insufficient evaporation or excessive
+              back-diffusion
+            </li>
+            <li>
+              Thermal losses overwhelming evaporation gains
+            </li>
+            <li>
+              Mechanical degradation or fouling of the wick material
+            </li>
+          </ul>
+        </section>
 
-        <h2>Ethical Risk</h2>
-        <p>
-          Overclaiming this mechanism as desalination presents a direct risk of
-          harm, particularly in survival or humanitarian contexts. Reliance on
-          this approach could displace proven methods (boiling, solar stills,
-          membrane filtration) and result in ingestion of unsafe water.
-        </p>
-        <p>
-          Any deployment implying potable output is scientifically false and
-          ethically unacceptable.
-        </p>
+        <section>
+          <h2>Test Directions</h2>
+          <ol>
+            <li>
+              Construct a bench-scale wick assembly with controlled salt
+              concentration on the feed side.
+            </li>
+            <li>
+              Apply low-grade thermal input (solar simulator or heated plate).
+            </li>
+            <li>
+              Measure mass flux, salt concentration crossover, and temperature
+              gradients over time.
+            </li>
+            <li>
+              Observe and document salt deposition, wick degradation, or flow
+              interruption.
+            </li>
+          </ol>
+        </section>
 
-        <h2>Final Judgment</h2>
-        <p>
-          <strong>NO-GO — THERMODYNAMICALLY FALSIFIED</strong>
-        </p>
-        <p>
-          The salt-gradient desalination wick cannot achieve true, sustained, or
-          safe desalination under passive, membrane-free conditions. The failure
-          is fundamental and not recoverable through optimization, geometry, or
-          material substitution within the stated constraints.
-        </p>
-
-        <hr />
-
-        <p className="text-sm text-muted-foreground">
-          Logged as Boundary Research to preserve epistemic continuity and
-          prevent unsafe reuse or overclaiming. This record exists to clarify
-          limits, not to invite iteration.
-        </p>
+        <section>
+          <h2>Why This Is Published Here</h2>
+          <p>
+            This system is published at the Edge of Knowledge because its
+            feasibility depends on interacting gradients and degradation modes
+            that are not fully characterized at operational timescales.
+          </p>
+          <p>
+            The intent is not to claim performance, but to expose mechanisms,
+            uncertainties, and failure paths clearly enough that the concept can
+            be validated—or disproven—by direct experimentation.
+          </p>
+        </section>
       </article>
     </main>
   );
