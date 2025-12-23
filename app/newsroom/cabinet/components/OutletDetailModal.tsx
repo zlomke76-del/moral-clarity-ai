@@ -20,7 +20,6 @@ export default function OutletDetailDialog({
 }: Props) {
   if (!open || !outlet) return null;
 
-  // Escape key closes modal — safe, no scroll locking.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onOpenChange(false);
@@ -51,11 +50,10 @@ export default function OutletDetailDialog({
         className="relative w-full max-w-3xl rounded-2xl border border-neutral-800 bg-neutral-950/95 p-5 shadow-2xl shadow-black/80"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close chip */}
         <button
           type="button"
           onClick={() => onOpenChange(false)}
-          className="absolute right-3 top-3 rounded-full border border-neutral-700 bg-neutral-900 px-2 py-[1px] text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
+          className="absolute right-3 top-3 rounded-full border border-neutral-700 bg-neutral-900 px-2 py-[1px] text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-400"
         >
           Esc
         </button>
@@ -64,7 +62,7 @@ export default function OutletDetailDialog({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <OutletLogo domain={canonical_outlet} name={display_name} />
-            <div className="space-y-0.5">
+            <div>
               <div className="text-xs uppercase tracking-[0.16em] text-neutral-500">
                 Outlet
               </div>
@@ -77,30 +75,25 @@ export default function OutletDetailDialog({
             </div>
           </div>
 
-          <div className="flex flex-col items-end gap-1 text-right">
+          <div className="text-right">
             <div className="text-[11px] uppercase tracking-[0.16em] text-neutral-400">
               Predictability Index
             </div>
             <div className="font-mono text-2xl text-emerald-300">
-              {lifetimePi.toFixed(1)}
+              {(lifetimePi * 100).toFixed(2)}
             </div>
             <div className="text-[11px] text-neutral-400">
-              {storiesAnalyzed} stories analyzed · PI based on lifetime.
+              {storiesAnalyzed} stories analyzed · lifetime
             </div>
           </div>
         </div>
 
         {/* META */}
-        <div className="mt-3 space-y-1 text-xs text-neutral-400">
-          <div>
-            Bias intent:{" "}
-            <span className="font-mono text-neutral-100">
-              {lifetimeBiasIntent.toFixed(2)} / 3.0
-            </span>
-          </div>
-          <div className="text-neutral-500">
-            Last scored: {lastScoredAt}
-          </div>
+        <div className="mt-3 text-xs text-neutral-400">
+          Bias intent:{" "}
+          <span className="font-mono text-neutral-100">
+            {lifetimeBiasIntent.toFixed(2)} / 3.0
+          </span>
         </div>
 
         {/* COMPONENT SCORES */}
@@ -111,23 +104,33 @@ export default function OutletDetailDialog({
           <BiasBar label="Context" value={lifetimeContext} />
         </div>
 
-        {/* TREND CHART */}
         <div className="mt-6">
-          <TrendChart points={trends} loading={!trends && !!outlet} />
+          <TrendChart points={trends} loading={!trends} />
         </div>
-
-        <p className="mt-4 text-[11px] text-neutral-500 leading-relaxed">
-          This cabinet doesn’t decide who is right or wrong. It measures how
-          stories are told — language, sourcing, framing, and missing context —
-          and turns that into a predictable, auditable signal. Higher PI means
-          more stable, neutral storytelling.
-        </p>
       </div>
     </div>
   );
 }
 
-function BiasBar({ label, value }: { label: string; value: number }) {
+function BiasBar({
+  label,
+  value,
+}: {
+  label: string;
+  value: number | null | undefined;
+}) {
+  if (value == null) {
+    return (
+      <div className="space-y-1">
+        <div className="flex justify-between text-[11px] text-neutral-500">
+          <span>{label}</span>
+          <span className="italic">N/A</span>
+        </div>
+        <div className="h-1.5 w-full rounded-full bg-neutral-900 opacity-40" />
+      </div>
+    );
+  }
+
   const width = Math.max(4, Math.min((value / 3) * 100, 100));
 
   return (
