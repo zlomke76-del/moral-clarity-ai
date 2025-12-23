@@ -1,5 +1,3 @@
-// app/edge-of-practice/page.tsx
-
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -199,7 +197,7 @@ export default function EdgeOfPracticeIndexPage() {
             </span>
           </li>
 
-          {/* NEW ENTRY — polymer physics */}
+          {/* NEW — polymer physics */}
 
           <li>
             <Link href="/edge-of-practice/pp-pvp-hydration-capture">
@@ -242,6 +240,17 @@ export default function EdgeOfPracticeIndexPage() {
             <span className="text-sm text-muted-foreground">
               Tests whether compliance mismatch at a pure polymer interface
               increases fatigue resistance
+            </span>
+          </li>
+
+          <li>
+            <Link href="/edge-of-practice/pe-paraffin-thermal-buffering">
+              Passive Thermal Buffering in Polyethylene Films
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Tests whether confined paraffin wax moderates heat rise rates in
+              commodity polyethylene without leakage
             </span>
           </li>
         </ul>
