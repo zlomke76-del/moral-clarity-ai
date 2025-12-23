@@ -1,7 +1,8 @@
-//--------------------------------------------------------------
+// --------------------------------------------------------------
 // HYBRID PIPELINE — REASONING ONLY (SESSION-AWARE)
 // Optimist + Skeptic are INTERNAL
 // Arbiter emits ONE unified Solace voice
+// FACTS SUPERSEDE ALL
 //--------------------------------------------------------------
 
 import { callModel } from "./model-router";
@@ -53,10 +54,33 @@ WORKING MEMORY (SESSION-SCOPED, NON-DURABLE):
 ${lines.join("\n")}
 
 RULES:
-- Working memory MUST be read before responding.
-- Working memory MAY influence reasoning silently.
+- Working memory MAY influence reasoning.
+- Working memory MUST NOT override factual memory.
 - Working memory MUST NOT be stated as fact.
-- Working memory MUST NOT be persisted.
+`;
+}
+
+function formatFactualMemory(context: any): string {
+  const facts = context?.memoryPack?.facts ?? [];
+
+  if (!Array.isArray(facts) || facts.length === 0) {
+    return `
+FACTUAL MEMORY:
+None recorded.
+`;
+  }
+
+  const lines = facts.map((f: any) =>
+    typeof f === "string" ? `- ${f}` : `- ${JSON.stringify(f)}`
+  );
+
+  return `
+FACTUAL MEMORY (AUTHORITATIVE, DURABLE):
+${lines.join("\n")}
+
+ABSOLUTE RULE:
+- Factual memory OVERRIDES all other context.
+- Identity facts (name, role, relationships) MUST be used unless a newer FACT contradicts them.
 `;
 }
 
@@ -71,13 +95,11 @@ None established.
   }
 
   const constraintsText = Array.isArray(state.constraints)
-    ? state.constraints
-        .map((c: string) => `- ${c}`)
-        .join("\n")
+    ? state.constraints.map((c: string) => `- ${c}`).join("\n")
     : "None";
 
   return `
-SESSION STATE (AUTHORITATIVE):
+SESSION STATE:
 Domain: ${state.domain ?? "unspecified"}
 Intent: ${state.intent ?? "unspecified"}
 Constraints:
@@ -98,17 +120,11 @@ export async function runHybridPipeline(args: {
   const { userMessage, context, ministryMode, founderMode, modeHint } = args;
 
   // ----------------------------------------------------------
-  // HARD DIAGNOSTIC — PROVES WM VISIBILITY
+  // HARD DIAGNOSTIC — PROVES MEMORY VISIBILITY
   // ----------------------------------------------------------
-  console.log("[DIAG-HYBRID-WM]", {
-    active: context?.workingMemory?.active ?? false,
-    count: context?.workingMemory?.items?.length ?? 0,
-    sample: context?.workingMemory?.items
-      ?.slice(0, 2)
-      ?.map((m: { role: string; content: string }) => ({
-        role: m.role,
-        content: m.content.slice(0, 60),
-      })),
+  console.log("[DIAG-HYBRID-MEMORY]", {
+    facts: context?.memoryPack?.facts?.length ?? 0,
+    wm: context?.workingMemory?.items?.length ?? 0,
   });
 
   // ----------------------------------------------------------
@@ -137,20 +153,24 @@ Founder Mode: ${founderMode}
 Ministry Mode: ${ministryMode}
 Mode Hint: ${modeHint}
 
-ABSOLUTE RULES:
+ABSOLUTE RULES (NON-NEGOTIABLE):
 - Speak with one unified voice.
 - Do NOT reference internal systems.
 - Do NOT fabricate memory.
+- FACTUAL MEMORY IS AUTHORITATIVE.
 
-MEMORY HIERARCHY:
-1. SESSION STATE
-2. WORKING MEMORY
-3. USER MESSAGE
+MEMORY HIERARCHY (STRICT):
+1. FACTUAL MEMORY (supersedes all)
+2. SESSION STATE
+3. WORKING MEMORY
+4. USER MESSAGE
 `
   );
 
   const arbiterPrompt = sanitizeASCII(`
 ${system}
+
+${formatFactualMemory(context)}
 
 ${formatSessionState(context)}
 
