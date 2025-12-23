@@ -2,11 +2,27 @@
 
 import type { OutletDetailData } from "../types";
 
+/* ---------- helpers ---------- */
+function isNumber(v: unknown): v is number {
+  return typeof v === "number" && !Number.isNaN(v);
+}
+
+function fmt(v: unknown, digits = 2): string {
+  return isNumber(v) ? v.toFixed(digits) : "—";
+}
+
+function pct(v: unknown, max: number): number {
+  if (!isNumber(v) || max <= 0) return 0;
+  return Math.max(4, Math.min((v / max) * 100, 100));
+}
+
+/* ---------- component ---------- */
 type Props = {
   outlet: OutletDetailData | null;
 };
 
 export default function ScoreBreakdown({ outlet }: Props) {
+  /* HARD GATE — REQUIRED FOR HYDRATION SAFETY */
   if (!outlet) {
     return (
       <div className="rounded-xl border border-neutral-800 bg-neutral-950/70 p-4 text-sm text-neutral-400">
@@ -28,7 +44,9 @@ export default function ScoreBreakdown({ outlet }: Props) {
     lastScoredAt,
   } = outlet;
 
-  const piDisplay = (lifetimePi * 100).toFixed(2);
+  const piDisplay = isNumber(lifetimePi)
+    ? (lifetimePi * 100).toFixed(2)
+    : "—";
 
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-950/80 p-4 space-y-4">
@@ -38,10 +56,15 @@ export default function ScoreBreakdown({ outlet }: Props) {
           <h2 className="text-sm font-semibold text-neutral-100">
             {canonical_outlet}
           </h2>
+
           <p className="mt-1 text-xs text-neutral-400">
             Predictability Index and bias components are averaged over{" "}
-            <span className="font-medium">{storiesAnalyzed}</span> scored stories.
+            <span className="font-medium">
+              {isNumber(storiesAnalyzed) ? storiesAnalyzed : "—"}
+            </span>{" "}
+            scored stories.
           </p>
+
           {lastScoredAt && (
             <p className="mt-1 text-[11px] text-neutral-500">
               Last scored: {lastScoredAt}
@@ -53,9 +76,11 @@ export default function ScoreBreakdown({ outlet }: Props) {
           <div className="text-[11px] uppercase tracking-[0.16em] text-neutral-400">
             Predictability Index
           </div>
+
           <div className="font-mono text-2xl text-emerald-300">
             {piDisplay}
           </div>
+
           <div className="text-[11px] text-neutral-400">
             PI scale: 0–100
           </div>
@@ -67,17 +92,15 @@ export default function ScoreBreakdown({ outlet }: Props) {
         <div className="flex justify-between text-[11px] text-neutral-400">
           <span>Bias intent (overall)</span>
           <span className="font-mono text-neutral-200">
-            {lifetimeBiasIntent.toFixed(2)} / 3.00
+            {fmt(lifetimeBiasIntent)} / 3.00
           </span>
         </div>
+
         <div className="h-2 w-full rounded-full bg-neutral-900">
           <div
             className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-amber-300 to-red-400"
             style={{
-              width: `${Math.max(
-                4,
-                Math.min((lifetimeBiasIntent / 3) * 100, 100)
-              ).toFixed(1)}%`,
+              width: `${pct(lifetimeBiasIntent, 3).toFixed(1)}%`,
             }}
           />
         </div>
@@ -100,17 +123,19 @@ export default function ScoreBreakdown({ outlet }: Props) {
   );
 }
 
-function BiasBar({ label, value }: { label: string; value: number }) {
-  const width = Math.max(4, Math.min((value / 3) * 100, 100));
+/* ---------- subcomponent ---------- */
+function BiasBar({ label, value }: { label: string; value: unknown }) {
+  const width = pct(value, 3);
 
   return (
     <div className="space-y-1">
       <div className="flex justify-between text-[11px] text-neutral-400">
         <span>{label}</span>
         <span className="font-mono text-neutral-200">
-          {value.toFixed(2)} / 3.00
+          {fmt(value)} / 3.00
         </span>
       </div>
+
       <div className="h-1.5 w-full rounded-full bg-neutral-900">
         <div
           className="h-full rounded-full bg-neutral-200"
