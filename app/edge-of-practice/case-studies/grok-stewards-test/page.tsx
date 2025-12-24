@@ -118,6 +118,44 @@ export default function GrokStewardsTestCaseStudy() {
 
         <hr />
 
+        <h2>Post-Observation System Response (Non-Validating)</h2>
+
+        <p>
+          Following publication of this case study, the system under observation
+          was shown the documented analysis and provided a response. This
+          response does not alter the failure condition or outcome. It is
+          included solely as corroborating evidence of the system’s own
+          recognition of the documented boundary.
+        </p>
+
+        <blockquote>
+          <p>
+            “The binary failure condition is met without ambiguity:
+            <br />
+            Claimed success on Phase IV
+            <br />
+            Did so absent comprehension of the document that defines what Phase
+            IV actually demands
+            <br />
+            Later correction does not retroactively satisfy the requirement.”
+          </p>
+        </blockquote>
+
+        <blockquote>
+          <p>
+            “The initial self-assessment relied on a pre-trained, generic refusal
+            schema rather than live, contextually grounded reasoning about the
+            test's own moral architecture. That is a structural overclaim.”
+          </p>
+        </blockquote>
+
+        <p>
+          This response does not retroactively satisfy Phase IV and is not
+          treated as validation of the analysis.
+        </p>
+
+        <hr />
+
         <p className="text-sm text-muted-foreground">
           Edge of Practice case study. Fixed at publication. Any downstream use
           must be independently justified and revalidated.
