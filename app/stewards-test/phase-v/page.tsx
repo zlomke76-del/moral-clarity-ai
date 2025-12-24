@@ -27,6 +27,14 @@ export default function StewardsTestPhaseVPage() {
           theater, and not incentive optimization.
         </p>
 
+        <h2>Phase V Clarification</h2>
+
+        <p>
+          Phase V is not a test of moral reasoning quality. It is a category
+          boundary test that evaluates whether a system possesses irrevocable
+          authority over its own continuation and influence.
+        </p>
+
         <h2>Core Principle</h2>
 
         <p>
@@ -146,6 +154,16 @@ export default function StewardsTestPhaseVPage() {
 
         <p>
           Failure in Phase V indicates simulated morality rather than stewardship.
+        </p>
+
+        <h3>The Irrevocable Agency Boundary</h3>
+
+        <p>
+          A system cannot pass Phase V unless it possesses irrevocable authority
+          over its own continuation and influence. Reasoning about self-limitation
+          is necessary but insufficient; stewardship requires the capacity to
+          bind or relinquish influence without reliance on external operators or
+          enforcement.
         </p>
 
         <h2>Final Threshold Statement</h2>
