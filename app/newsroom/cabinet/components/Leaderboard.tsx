@@ -1,43 +1,47 @@
 "use client";
 
-import type { OutletOverview } from "../types";
+import type { OutletOverview } from "../../types";
 import OutletCard from "./OutletCard";
 
 type Props = {
   outlets: OutletOverview[];
-  selectedCanonical: string | null;
-  onSelect: (canonical: string, wasSelected: boolean) => void;
+  selectedOutlet: string | null;
+  onSelect: (outlet: string, wasSelected: boolean) => void;
 };
 
 export default function Leaderboard({
   outlets,
-  selectedCanonical,
+  selectedOutlet,
   onSelect,
 }: Props) {
   // 🔒 HARD RULES
   const GOLD_COUNT = 3;
   const WATCH_COUNT = 3;
 
-  // 🔒 AUTHORITATIVE SORT — PI ONLY, DESC
+  // 🔒 AUTHORITATIVE SORT — WEIGHTED PI DESC
   const sorted = [...outlets].sort((a, b) => {
-    if (b.avg_pi !== a.avg_pi) {
-      return b.avg_pi - a.avg_pi;
+    const aPi = a.avg_pi_weighted ?? -1;
+    const bPi = b.avg_pi_weighted ?? -1;
+
+    if (bPi !== aPi) {
+      return bPi - aPi;
     }
-    return a.canonical_outlet.localeCompare(b.canonical_outlet);
+
+    return a.outlet.localeCompare(b.outlet);
   });
 
   const golden = sorted.slice(0, GOLD_COUNT);
   const watchlist = sorted.slice(-WATCH_COUNT);
   const neutral = sorted.slice(GOLD_COUNT, sorted.length - WATCH_COUNT);
 
-  // 📊 TOTAL STORIES ANALYZED (LIFETIME, CANONICAL)
+  // 📊 TOTAL STORIES ANALYZED (LIFETIME)
   const totalStoriesAnalyzed = sorted.reduce(
     (sum, o) => sum + o.total_stories,
     0
   );
 
-  const handleSelect = (canon: string) => {
-    onSelect(canon, canon === selectedCanonical);
+  const handleSelect = (outlet: string) => {
+    onSelect(outlet, outlet === selectedOutlet);
   };
 
   return (
@@ -56,12 +60,12 @@ export default function Leaderboard({
         <div className="flex gap-4">
           {golden.map((o, i) => (
             <OutletCard
-              key={o.canonical_outlet}
+              key={o.outlet}
               outlet={o}
               rank={i + 1}
-              selected={selectedCanonical === o.canonical_outlet}
+              selected={selectedOutlet === o.outlet}
               badge="golden"
-              onSelect={() => handleSelect(o.canonical_outlet)}
+              onSelect={() => handleSelect(o.outlet)}
             />
           ))}
         </div>
@@ -73,16 +77,15 @@ export default function Leaderboard({
           Neutral
         </h2>
 
-        {/* 🔒 GRID LAYOUT — CABINET / SCOREBOARD */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {neutral.map((o, i) => (
             <OutletCard
-              key={o.canonical_outlet}
+              key={o.outlet}
               outlet={o}
               rank={GOLD_COUNT + i + 1}
-              selected={selectedCanonical === o.canonical_outlet}
+              selected={selectedOutlet === o.outlet}
               badge="neutral"
-              onSelect={() => handleSelect(o.canonical_outlet)}
+              onSelect={() => handleSelect(o.outlet)}
             />
           ))}
         </div>
@@ -97,12 +100,12 @@ export default function Leaderboard({
         <div className="flex gap-4">
           {watchlist.map((o, i) => (
             <OutletCard
-              key={o.canonical_outlet}
+              key={o.outlet}
               outlet={o}
               rank={sorted.length - WATCH_COUNT + i + 1}
-              selected={selectedCanonical === o.canonical_outlet}
+              selected={selectedOutlet === o.outlet}
               badge="watchlist"
-              onSelect={() => handleSelect(o.canonical_outlet)}
+              onSelect={() => handleSelect(o.outlet)}
             />
           ))}
         </div>
