@@ -15,12 +15,9 @@ type Props = {
 
 /**
  * Human-readable outlet name.
- * IMPORTANT:
- * - Display-only
- * - Does NOT affect outlet identity
- * - Does NOT merge outlets
+ * Display-only. Does not affect canonical identity.
  */
-function formatOutletDisplay(domain?: string): string {
+function formatOutletDisplay(domain: string): string {
   if (!domain) return "UNKNOWN";
 
   return domain
@@ -38,16 +35,17 @@ export default function OutletCard({
   badge,
   onSelect,
 }: Props) {
-  const domain = outlet.outlet;
+  // 🔒 CANONICAL DOMAIN (single source of truth)
+  const domain = outlet.canonical_outlet;
 
-  // ✅ SAFE favicon source (empty domain allowed)
-  const logoUrl = `https://www.google.com/s2/favicons?domain=${domain ?? ""}&sz=64`;
+  // ✅ SAFE favicon source
+  const logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 
-  // 🔒 WEIGHTED PI DISPLAY (percent, guarded)
-  const piDisplay =
+  // 🔒 PI DISPLAY (weighted, percent)
+  const pi =
     typeof outlet.avg_pi_weighted === "number"
       ? (outlet.avg_pi_weighted * 100).toFixed(2)
-      : "—";
+      : null;
 
   return (
     <button
@@ -67,7 +65,7 @@ export default function OutletCard({
         {/* Logo */}
         <Image
           src={logoUrl}
-          alt={`${domain ?? "unknown"} logo`}
+          alt={`${domain} logo`}
           width={20}
           height={20}
           className="rounded-sm"
@@ -79,9 +77,9 @@ export default function OutletCard({
           {formatOutletDisplay(domain)}
         </div>
 
-        {/* PI Score */}
+        {/* PI */}
         <div className="text-xs text-amber-300">
-          PI {piDisplay}
+          PI {pi ?? "—"}
         </div>
 
         {/* Story Count */}
