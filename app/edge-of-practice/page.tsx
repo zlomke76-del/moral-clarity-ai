@@ -1,3 +1,5 @@
+// app/edge-of-practice/page.tsx
+
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -49,8 +51,6 @@ export default function EdgeOfPracticeIndexPage() {
 
         <hr />
 
-        {/* NEW — cycle navigation */}
-
         <h2>Experiment Lifecycle</h2>
 
         <ul>
@@ -96,6 +96,19 @@ export default function EdgeOfPracticeIndexPage() {
         <h2>Founding Experiments</h2>
 
         <ul>
+          {/* NEW ENTRY */}
+          <li>
+            <Link href="/edge-of-practice/irreversible-cognitive-dead-zones">
+              Irreversible Cognitive Dead Zones in Human–Automation Handoffs
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Identifies non-negotiable cognitive and temporal boundaries during
+              automation handoff where safe human intervention becomes physically
+              impossible
+            </span>
+          </li>
+
           <li>
             <Link href="/edge-of-practice/viral-viability-indoor-surfaces">
               Longevity of Viral Viability on Common Indoor Surfaces
