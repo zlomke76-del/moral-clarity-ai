@@ -1,9 +1,25 @@
 "use client";
 
-import type { OutletOverview } from "../../types";
+/* =========================
+   DEDICATED BREAKDOWN TYPE
+   ========================= */
+
+export type OutletBreakdown = {
+  outlet: string;
+  total_stories: number;
+  days_active: number;
+  last_story_day: string | null;
+
+  avg_pi_weighted: number | null;
+  avg_bias_intent_weighted: number | null;
+  avg_bias_language_weighted: number | null;
+  avg_bias_source_weighted: number | null;
+  avg_bias_framing_weighted: number | null;
+  avg_bias_context_weighted: number | null;
+};
 
 type Props = {
-  outlet: OutletOverview | null;
+  outlet: OutletBreakdown | null;
 };
 
 export default function ScoreBreakdown({ outlet }: Props) {
@@ -15,43 +31,24 @@ export default function ScoreBreakdown({ outlet }: Props) {
     );
   }
 
-  /* ================= CANONICAL VALUES (WEIGHTED) ================= */
-
-  const piRaw: number | null =
+  const piRaw =
     typeof outlet.avg_pi_weighted === "number"
       ? outlet.avg_pi_weighted
       : null;
 
-  const piPercent: number | null =
+  const piPercent =
     typeof piRaw === "number" ? piRaw * 100 : null;
 
-  // Normalize null -> undefined at the UI boundary (TS strictness)
   const bias = [
-    {
-      label: "Intent",
-      value: outlet.avg_bias_intent_weighted ?? undefined,
-    },
-    {
-      label: "Language",
-      value: outlet.avg_bias_language_weighted ?? undefined,
-    },
-    {
-      label: "Source",
-      value: outlet.avg_bias_source_weighted ?? undefined,
-    },
-    {
-      label: "Framing",
-      value: outlet.avg_bias_framing_weighted ?? undefined,
-    },
-    {
-      label: "Context",
-      value: outlet.avg_bias_context_weighted ?? undefined,
-    },
+    { label: "Intent", value: outlet.avg_bias_intent_weighted ?? undefined },
+    { label: "Language", value: outlet.avg_bias_language_weighted ?? undefined },
+    { label: "Source", value: outlet.avg_bias_source_weighted ?? undefined },
+    { label: "Framing", value: outlet.avg_bias_framing_weighted ?? undefined },
+    { label: "Context", value: outlet.avg_bias_context_weighted ?? undefined },
   ];
 
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-950/80 p-5 space-y-5">
-      {/* HEADER */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-sm font-semibold text-neutral-100">
@@ -77,34 +74,14 @@ export default function ScoreBreakdown({ outlet }: Props) {
           <div className="font-mono text-2xl text-emerald-300">
             {piPercent !== null ? `${piPercent.toFixed(2)}%` : "—"}
           </div>
-          <div className="text-[11px] text-neutral-400">
-            PI = weighted lifetime story stability
-          </div>
         </div>
       </div>
 
-      {/* PI MATH */}
-      <div className="rounded-lg bg-neutral-900/60 p-3 text-[11px] text-neutral-400">
-        <div className="font-mono text-neutral-200">
-          PI = {piRaw !== null ? piRaw.toFixed(4) : "—"} × 100 ={" "}
-          {piPercent !== null ? `${piPercent.toFixed(2)}%` : "—"}
-        </div>
-        <div className="mt-1">
-          Predictability measures consistency, not correctness.
-        </div>
-      </div>
-
-      {/* BIAS BREAKDOWN */}
       <div className="space-y-3">
         {bias.map((b) => (
           <BiasBar key={b.label} label={b.label} value={b.value} />
         ))}
       </div>
-
-      <p className="text-[11px] text-neutral-500 leading-relaxed">
-        Bias scores represent directional pressure, not truth.
-        Predictability represents structural consistency, not trust.
-      </p>
     </div>
   );
 }
