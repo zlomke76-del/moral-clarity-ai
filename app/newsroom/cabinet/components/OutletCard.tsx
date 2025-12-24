@@ -20,7 +20,9 @@ type Props = {
  * - Does NOT affect outlet identity
  * - Does NOT merge outlets
  */
-function formatOutletDisplay(domain: string): string {
+function formatOutletDisplay(domain?: string): string {
+  if (!domain) return "UNKNOWN";
+
   return domain
     .replace(/^amp\./i, "")
     .replace(/^www\./i, "")
@@ -38,8 +40,8 @@ export default function OutletCard({
 }: Props) {
   const domain = outlet.outlet;
 
-  // ✅ SAFE favicon source
-  const logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+  // ✅ SAFE favicon source (empty domain allowed)
+  const logoUrl = `https://www.google.com/s2/favicons?domain=${domain ?? ""}&sz=64`;
 
   // 🔒 WEIGHTED PI DISPLAY (percent, guarded)
   const piDisplay =
@@ -65,7 +67,7 @@ export default function OutletCard({
         {/* Logo */}
         <Image
           src={logoUrl}
-          alt={`${domain} logo`}
+          alt={`${domain ?? "unknown"} logo`}
           width={20}
           height={20}
           className="rounded-sm"
