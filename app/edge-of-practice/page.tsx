@@ -6,11 +6,11 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Edge of Practice — Short-Cycle Experiments | Moral Clarity AI",
   description:
-    "A public index of short-cycle, falsifiable experiments designed to test hidden assumptions governing health, materials, energy, and everyday human environments.",
+    "A complete public index of short-cycle, falsifiable experiments designed to test hidden assumptions governing health, materials, energy, automation, and everyday human environments.",
   openGraph: {
     title: "Edge of Practice — Short-Cycle Experiments",
     description:
-      "Executable experiments that surface hidden assumptions with direct human relevance.",
+      "An exhaustive index of short-cycle experiments surfacing hidden assumptions with direct human relevance.",
     url: "https://moralclarity.ai/edge-of-practice",
     siteName: "Moral Clarity AI",
     type: "article",
@@ -35,11 +35,11 @@ export default function EdgeOfPracticeIndexPage() {
 
         <p>
           <em>Edge of Practice</em> is a public index of small, decisive
-          experiments that can be executed using standard laboratory tools,
-          commodity materials, and short timelines. These experiments are not
-          designed to optimize systems or invent products. They exist to test
-          hidden assumptions that quietly govern health, safety, materials use,
-          energy capture, and daily human environments.
+          experiments executable using standard laboratory tools, commodity
+          materials, and short timelines. These experiments are not designed to
+          optimize systems or invent products. They exist to test hidden
+          assumptions governing health, safety, materials use, energy capture,
+          automation, and daily human environments.
         </p>
 
         <p>
@@ -58,16 +58,12 @@ export default function EdgeOfPracticeIndexPage() {
             <strong>Short-Cycle</strong> — rapid falsification (this index)
           </li>
           <li>
-            <Link href="/edge-of-practice/extended-cycle">
-              Extended Cycle
-            </Link>{" "}
+            <Link href="/edge-of-practice/extended-cycle">Extended Cycle</Link>{" "}
             — durability, fatigue, and repetition after short-cycle survival
           </li>
           <li>
-            <Link href="/edge-of-practice/persistence">
-              Persistence
-            </Link>{" "}
-            — long-duration, time-dominated failure modes
+            <Link href="/edge-of-practice/persistence">Persistence</Link> —
+            long-duration, time-dominated failure modes
           </li>
         </ul>
 
@@ -93,74 +89,48 @@ export default function EdgeOfPracticeIndexPage() {
 
         <hr />
 
-        <h2>Founding Experiments</h2>
+        <h2>Complete Short-Cycle Experiment Index</h2>
 
+        <h3>Automation, Cognition, and Control</h3>
         <ul>
-          {/* FOUNDATIONAL CONSTRAINT CLUSTER */}
+          <li><Link href="/edge-of-practice/agentic-normalization-drift">Agentic Normalization Drift in Adaptive AI Systems</Link></li>
+          <li><Link href="/edge-of-practice/alarm-parsing-collapse-threshold">The Alarm Parsing Collapse Threshold in Automated Medical Care</Link></li>
+          <li><Link href="/edge-of-practice/autonomous-handoff-blackout">Irreversible Takeover Blackout Intervals in Autonomous Vehicle Handoffs</Link></li>
+          <li><Link href="/edge-of-practice/irreversible-cognitive-dead-zones">Irreversible Cognitive Dead Zones in Human–Automation Handoffs</Link></li>
+          <li><Link href="/edge-of-practice/irreversible-normalization-drift">Irreversible Normalization Drift in Human Feedback Systems</Link></li>
+        </ul>
 
-          <li>
-            <Link href="/edge-of-practice/irreversible-cognitive-dead-zones">
-              Irreversible Cognitive Dead Zones in Human–Automation Handoffs
-            </Link>
-          </li>
+        <h3>Materials, Polymers, and Surface Effects</h3>
+        <ul>
+          <li><Link href="/edge-of-practice/antibiotic-resistance-gene-cleaning">Antibiotic Resistance Gene Persistence Under Cleaning Regimes</Link></li>
+          <li><Link href="/edge-of-practice/compostable-packaging-microfragments">Compostable Packaging Microfragment Persistence</Link></li>
+          <li><Link href="/edge-of-practice/glove-additive-leaching-alcohol-sanitizer">Glove Additive Leaching Under Alcohol Sanitizer Exposure</Link></li>
+          <li><Link href="/edge-of-practice/hdpe-ldpe-interfacial-toughening">HDPE–LDPE Interfacial Toughening Limits</Link></li>
+          <li><Link href="/edge-of-practice/pc-abs-interfacial-microdamping">PC–ABS Interfacial Microdamping Under Vibration</Link></li>
+          <li><Link href="/edge-of-practice/pc-pmma-scratch-resistance">PC–PMMA Scratch Resistance Degradation</Link></li>
+          <li><Link href="/edge-of-practice/pe-paraffin-thermal-buffering">PE–Paraffin Thermal Buffering Limits</Link></li>
+          <li><Link href="/edge-of-practice/ps-pdms-surface-lubricity">PS–PDMS Surface Lubricity Decay</Link></li>
+        </ul>
 
-          <li>
-            <Link href="/edge-of-practice/irreversible-normalization-drift">
-              Irreversible Normalization Drift in Human Feedback Systems
-            </Link>
-          </li>
+        <h3>Energy, Physics, and Passive Systems</h3>
+        <ul>
+          <li><Link href="/edge-of-practice/constructive-physics">Constructive Physics — Where Reality Still Has Gifts to Give</Link></li>
+          <li><Link href="/edge-of-practice/phase-locked-capillary-oscillation">Phase-Locked Capillary Oscillation for Enhanced Solar Desalination</Link></li>
+          <li><Link href="/edge-of-practice/radiative-tension-rectification">Radiative Tension Rectification for Passive Energy Storage</Link></li>
+          <li><Link href="/edge-of-practice/spectral-boundary-layer-destabilization">Spectral Gradient–Induced Boundary Layer Destabilization for Enhanced Passive Evaporation</Link></li>
+        </ul>
 
-          <li>
-            <Link href="/edge-of-practice/agentic-normalization-drift">
-              Agentic Normalization Drift in Adaptive AI Systems
-            </Link>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/autonomous-handoff-blackout">
-              Irreversible Takeover Blackout Intervals in Autonomous Vehicle Handoffs
-            </Link>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/alarm-parsing-collapse-threshold">
-              The Alarm Parsing Collapse Threshold in Automated Medical Care
-            </Link>
-          </li>
-
-          {/* CONSTRUCTIVE PHYSICS / POSITIVE-SUM INTERVENTIONS */}
-
-          <li>
-            <Link href="/edge-of-practice/constructive-physics">
-              Constructive Physics — Where Reality Still Has Gifts to Give
-            </Link>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/phase-locked-capillary-oscillation">
-              Phase-Locked Capillary Oscillation for Enhanced Solar Desalination
-            </Link>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/radiative-tension-rectification">
-              Radiative Tension Rectification for Passive Energy Storage
-            </Link>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/spectral-boundary-layer-destabilization">
-              Spectral Gradient–Induced Boundary Layer Destabilization for Enhanced Passive Evaporation
-            </Link>
-          </li>
-
-          {/* ORIGINAL FOUNDING EXPERIMENTS */}
-
-          <li>
-            <Link href="/edge-of-practice/viral-viability-indoor-surfaces">
-              Longevity of Viral Viability on Common Indoor Surfaces
-            </Link>
-          </li>
+        <h3>Environment, Exposure, and Human Health</h3>
+        <ul>
+          <li><Link href="/edge-of-practice/air-ionizer-electrostatic-charge">Air Ionizer Electrostatic Charge Accumulation</Link></li>
+          <li><Link href="/edge-of-practice/heavy-metal-remobilization-urban-soils">Heavy Metal Remobilization in Urban Soils</Link></li>
+          <li><Link href="/edge-of-practice/hot-water-ph-metal-leaching">Hot Water pH–Driven Metal Leaching</Link></li>
+          <li><Link href="/edge-of-practice/indoor-lighting-circadian-expression">Indoor Lighting Effects on Circadian Expression</Link></li>
+          <li><Link href="/edge-of-practice/microplastics">Indoor Microplastic Accumulation Pathways</Link></li>
+          <li><Link href="/edge-of-practice/uv-sterilization-shadows">UV Sterilization Shadow Persistence</Link></li>
+          <li><Link href="/edge-of-practice/viral-viability-indoor-surfaces">Longevity of Viral Viability on Common Indoor Surfaces</Link></li>
+          <li><Link href="/edge-of-practice/vitamin-loss-refrigerated-juice">Vitamin Loss in Refrigerated Juices</Link></li>
+          <li><Link href="/edge-of-practice/sweat-driven-device-corrosion">Sweat-Driven Corrosion in Wearable Devices</Link></li>
         </ul>
 
         <hr />
@@ -175,9 +145,9 @@ export default function EdgeOfPracticeIndexPage() {
         </p>
 
         <p className="text-sm text-muted-foreground">
-          Edge of Practice is a public research index. Experiments are fixed at
-          publication and revised only by explicit versioning to preserve
-          epistemic continuity.
+          This page is the authoritative index of all short-cycle experiments.
+          Experiments are fixed at publication and revised only by explicit
+          versioning to preserve epistemic continuity.
         </p>
       </article>
     </main>
