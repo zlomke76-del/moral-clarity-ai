@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import type { OutletOverview } from "../types";
+import type { OutletOverview } from "../../types";
 
 type Props = {
   outlet: OutletOverview;
@@ -17,7 +17,7 @@ type Props = {
  * Human-readable outlet name.
  * IMPORTANT:
  * - Display-only
- * - Does NOT affect canonical_outlet
+ * - Does NOT affect outlet identity
  * - Does NOT merge outlets
  */
 function formatOutletDisplay(domain: string): string {
@@ -36,13 +36,16 @@ export default function OutletCard({
   badge,
   onSelect,
 }: Props) {
-  const domain = outlet.canonical_outlet;
+  const domain = outlet.outlet;
 
   // ✅ SAFE favicon source
   const logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 
-  // 🔒 CANONICAL PI DISPLAY (percent, 2 decimals)
-  const piDisplay = (outlet.avg_pi * 100).toFixed(2);
+  // 🔒 WEIGHTED PI DISPLAY (percent, guarded)
+  const piDisplay =
+    typeof outlet.avg_pi_weighted === "number"
+      ? (outlet.avg_pi_weighted * 100).toFixed(2)
+      : "—";
 
   return (
     <button
