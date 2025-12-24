@@ -11,6 +11,8 @@
 
 export type NewsroomTab =
   | "anchor"
+  | "analyst"
+  | "coach"
   | "cabinet"
   | "timeline"
   | "history";
