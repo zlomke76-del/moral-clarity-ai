@@ -21,10 +21,10 @@ export type NewsDigestStory = {
   /** Stable identifier for UI selection */
   ledger_id: string;
 
-  /** Optional story identifiers */
+  /** Story identifiers */
   story_id?: string;
 
-  /** Outlet */
+  /** Outlet info */
   outlet: string;
   canonical_outlet?: string;
 
@@ -32,8 +32,9 @@ export type NewsDigestStory = {
   story_title?: string;
   title?: string;
 
-  /** URL */
-  url: string;
+  /** URLs (both are intentionally supported) */
+  story_url?: string;
+  url?: string;
 
   /** Classification */
   category?: string;
