@@ -96,7 +96,8 @@ export default function EdgeOfPracticeIndexPage() {
         <h2>Founding Experiments</h2>
 
         <ul>
-          {/* NEW ENTRY */}
+          {/* FOUNDATIONAL CONSTRAINT CLUSTER */}
+
           <li>
             <Link href="/edge-of-practice/irreversible-cognitive-dead-zones">
               Irreversible Cognitive Dead Zones in Human–Automation Handoffs
@@ -108,6 +109,30 @@ export default function EdgeOfPracticeIndexPage() {
               impossible
             </span>
           </li>
+
+          <li>
+            <Link href="/edge-of-practice/autonomous-handoff-blackout">
+              Irreversible Takeover Blackout Intervals in Autonomous Vehicle Handoffs
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Demonstrates biologically enforced takeover intervals in mixed-control
+              autonomous driving where human intervention cannot succeed
+            </span>
+          </li>
+
+          <li>
+            <Link href="/edge-of-practice/alarm-parsing-collapse-threshold">
+              The Alarm Parsing Collapse Threshold in Automated Medical Care
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Identifies a cognitive saturation threshold in ICU and anesthetic alarm
+              systems beyond which additional alerts reduce safety rather than improve it
+            </span>
+          </li>
+
+          {/* ORIGINAL FOUNDING EXPERIMENTS */}
 
           <li>
             <Link href="/edge-of-practice/viral-viability-indoor-surfaces">
