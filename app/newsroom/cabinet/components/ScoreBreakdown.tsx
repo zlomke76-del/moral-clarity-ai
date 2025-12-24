@@ -2,7 +2,6 @@
 
 import type { OutletOverview } from "../../types";
 
-
 type Props = {
   outlet: OutletOverview | null;
 };
@@ -26,12 +25,28 @@ export default function ScoreBreakdown({ outlet }: Props) {
   const piPercent: number | null =
     typeof piRaw === "number" ? piRaw * 100 : null;
 
+  // Normalize null -> undefined at the UI boundary (TS strictness)
   const bias = [
-    { label: "Intent", value: outlet.avg_bias_intent_weighted },
-    { label: "Language", value: outlet.avg_bias_language_weighted },
-    { label: "Source", value: outlet.avg_bias_source_weighted },
-    { label: "Framing", value: outlet.avg_bias_framing_weighted },
-    { label: "Context", value: outlet.avg_bias_context_weighted },
+    {
+      label: "Intent",
+      value: outlet.avg_bias_intent_weighted ?? undefined,
+    },
+    {
+      label: "Language",
+      value: outlet.avg_bias_language_weighted ?? undefined,
+    },
+    {
+      label: "Source",
+      value: outlet.avg_bias_source_weighted ?? undefined,
+    },
+    {
+      label: "Framing",
+      value: outlet.avg_bias_framing_weighted ?? undefined,
+    },
+    {
+      label: "Context",
+      value: outlet.avg_bias_context_weighted ?? undefined,
+    },
   ];
 
   return (
@@ -71,8 +86,7 @@ export default function ScoreBreakdown({ outlet }: Props) {
       {/* PI MATH */}
       <div className="rounded-lg bg-neutral-900/60 p-3 text-[11px] text-neutral-400">
         <div className="font-mono text-neutral-200">
-          PI ={" "}
-          {piRaw !== null ? piRaw.toFixed(4) : "—"} × 100 ={" "}
+          PI = {piRaw !== null ? piRaw.toFixed(4) : "—"} × 100 ={" "}
           {piPercent !== null ? `${piPercent.toFixed(2)}%` : "—"}
         </div>
         <div className="mt-1">
