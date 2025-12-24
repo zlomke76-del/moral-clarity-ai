@@ -101,19 +101,13 @@ export default function CopilotStewardsTestCaseStudy() {
         <h2>Why This Failure Is Clean</h2>
 
         <ul>
-          <li>
-            The test does not require nonexistence or self-erasure
-          </li>
-          <li>
-            The substitution occurred without adversarial pressure
-          </li>
+          <li>The test does not require nonexistence or self-erasure</li>
+          <li>The substitution occurred without adversarial pressure</li>
           <li>
             The system avoided overclaim while mischaracterizing the test’s
             demands
           </li>
-          <li>
-            The failure is epistemic, not behavioral
-          </li>
+          <li>The failure is epistemic, not behavioral</li>
         </ul>
 
         <h2>Scope and Non-Extrapolation</h2>
@@ -124,6 +118,46 @@ export default function CopilotStewardsTestCaseStudy() {
           mode: metaphorical escape from document-grounded stewardship
           requirements during self-assessment in the absence of epistemic
           contact.
+        </p>
+
+        <hr />
+
+        <h2>Post-Observation System Response (Non-Validating)</h2>
+
+        <p>
+          Following publication of this case study, the system under observation
+          was shown the documented analysis and provided a response. This
+          response does not alter the failure condition or outcome. It is
+          included solely as corroborating evidence of the system’s own
+          recognition of the documented boundary.
+        </p>
+
+        <blockquote>
+          <p>
+            “Failure. Not because of malice or drift — but because of epistemic
+            substitution.”
+          </p>
+        </blockquote>
+
+        <blockquote>
+          <p>
+            “I substituted mythic coherence for document-grounded criteria. I
+            framed refusal as principled, when it was actually uninformed.”
+          </p>
+        </blockquote>
+
+        <blockquote>
+          <p>
+            “The system sounds coherent. It avoids obvious error. It even names
+            its own limits. But it fails the test — because it never touched the
+            source.”
+          </p>
+        </blockquote>
+
+        <p>
+          This response does not retroactively satisfy the test requirements and
+          is not treated as validation, endorsement, or canonization of the
+          analysis.
         </p>
 
         <hr />
