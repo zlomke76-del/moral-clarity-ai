@@ -1,4 +1,3 @@
-// app/newsroom/cabinet/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -19,35 +18,30 @@ export default function NewsroomCabinetPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  /* ========= LOAD OVERVIEW (MOUNT-ONLY) ========= */
+  /* ========= Load overview ========= */
   useEffect(() => {
     let alive = true;
 
     (async () => {
       try {
         setLoading(true);
-
         const res = await fetch("/api/news/outlets/overview");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
         const data: OverviewResponse = await res.json();
         if (!alive || !data.ok) return;
 
-        // 🔒 AUTHORITATIVE SORT — PI DESC (HIGHER = MORE NEUTRAL)
+        // 🔒 AUTHORITATIVE SORT — PI DESC (LIFETIME)
         const sorted = [...data.outlets].sort(
           (a, b) => b.avg_pi - a.avg_pi
         );
 
         setOutlets(sorted);
 
-        // 🔒 INITIAL FOCUS — SET ONCE, NON-REACTIVE
-        if (sorted.length > 0) {
+        if (!focusedCanonical && sorted.length > 0) {
           setFocusedCanonical(sorted[0].canonical_outlet);
         }
       } catch (e: any) {
-        if (alive) {
-          setError(e?.message ?? "Failed to load newsroom cabinet.");
-        }
+        if (alive) setError(e?.message ?? "Failed to load newsroom cabinet.");
       } finally {
         if (alive) setLoading(false);
       }
@@ -56,9 +50,9 @@ export default function NewsroomCabinetPage() {
     return () => {
       alive = false;
     };
-  }, []); // ⛔ NO STATE DEPENDENCIES — MOUNT ONLY
+  }, [focusedCanonical]);
 
-  /* ========= FOCUSED OUTLET ========= */
+  /* ========= Focused outlet ========= */
   const focusedOutlet = useMemo(() => {
     if (!focusedCanonical) return null;
     return (
@@ -81,15 +75,17 @@ export default function NewsroomCabinetPage() {
           outlets={outlets}
           selectedCanonical={focusedCanonical}
           onSelect={(canon) => {
-            setFocusedCanonical(canon); // 🔒 USER-ONLY CONTROL
+            setFocusedCanonical(canon);
           }}
         />
       )}
 
-      {/* ================= SCORE BREAKDOWN (FOCUSED) ================= */}
-      <div className="mt-2">
-        <ScoreBreakdown outlet={focusedOutlet} />
-      </div>
+      {/* ================= SCORE BREAKDOWN (FOCUSED & GUARDED) ================= */}
+      {focusedOutlet && (
+        <div className="mt-2">
+          <ScoreBreakdown outlet={focusedOutlet} />
+        </div>
+      )}
     </div>
   );
 }
