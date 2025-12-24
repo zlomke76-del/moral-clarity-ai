@@ -1,11 +1,37 @@
+// app/newsroom/types.ts
+
+/* ============================================================
+   NEWSROOM — SHARED TYPES
+   Single source of truth for Newsroom UI contracts
+   ============================================================ */
+
+/* =========================
+   Outlet Overview (Cabinet)
+   ========================= */
+
+export type OutletOverview = {
+  /** Canonical outlet identifier (domain) */
+  canonical_outlet: string;
+
+  /** Total number of scored stories */
+  total_stories: number;
+
+  /** Weighted Predictability Index (0–1) */
+  avg_pi: number;
+};
+
+/* =========================
+   News Digest Story (Anchor)
+   ========================= */
+
 export type NewsDigestStory = {
-  /** Stable identifier for UI selection */
+  /** Stable ledger identifier */
   ledger_id: string;
 
-  /** Story identifiers */
+  /** Story identity */
   story_id?: string;
 
-  /** Outlet info */
+  /** Outlet */
   outlet: string;
   canonical_outlet?: string;
 
@@ -23,14 +49,14 @@ export type NewsDigestStory = {
   /** Classification */
   category?: string;
 
-  /** Timing */
-  published_at?: string;
-  created_at?: string;
-
   /** Scoring */
   pi_score?: number | null;
   bias_intent_score?: number | null;
 
   /** Confidence */
   confidence_level?: string | null;
+
+  /** Timing */
+  published_at?: string;
+  created_at?: string;
 };
