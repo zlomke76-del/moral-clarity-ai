@@ -1,6 +1,7 @@
 "use client";
 
-import type { OutletOverview } from "../types";
+import type { OutletOverview } from "../../types";
+
 
 type Props = {
   outlet: OutletOverview | null;
