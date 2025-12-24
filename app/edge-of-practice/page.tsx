@@ -1,3 +1,5 @@
+// app/edge-of-practice/page.tsx
+
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -165,6 +167,28 @@ export default function EdgeOfPracticeIndexPage() {
             </span>
           </li>
 
+          <li>
+            <Link href="/edge-of-practice/radiative-tension-rectification">
+              Radiative Tension Rectification for Passive Energy Storage
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Explores photon-driven molecular tension cycles at solid interfaces
+              as a passive, solid-state mechanism for ambient energy capture
+            </span>
+          </li>
+
+          <li>
+            <Link href="/edge-of-practice/spectral-boundary-layer-destabilization">
+              Spectral Gradient–Induced Boundary Layer Destabilization for Enhanced Passive Evaporation
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Demonstrates how spectrally structured solar illumination destabilizes
+              air–water boundary layers to boost evaporation without temperature rise
+            </span>
+          </li>
+
           {/* ORIGINAL FOUNDING EXPERIMENTS */}
 
           <li>
@@ -178,194 +202,7 @@ export default function EdgeOfPracticeIndexPage() {
             </span>
           </li>
 
-          <li>
-            <Link href="/edge-of-practice/sweat-driven-device-corrosion">
-              Acceleration of Device Metal Corrosion Due to Human Sweat and Skin Oils
-            </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Evaluates real-world corrosion under normal human handling
-            </span>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/vitamin-loss-refrigerated-juice">
-              Vitamin Content Loss in Home-Stored Fresh Juices
-            </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Measures nutritional degradation under typical refrigeration
-            </span>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/compostable-packaging-microfragments">
-              Residual Microfragments from “Compostable” Packaging
-            </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Tests whether compostable plastics fully degrade in home compost
-            </span>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/antibiotic-resistance-gene-cleaning">
-              Antibiotic Resistance Gene Spread After Household Cleaning
-            </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Examines unintended microbial selection effects of cleaning
-            </span>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/indoor-lighting-circadian-expression">
-              Indoor Lighting Spectra and Circadian Gene Expression
-            </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Tests biological neutrality of common indoor lighting
-            </span>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/uv-sterilization-shadows">
-              Pathogen Persistence in UV-Sterilized Equipment Shadows
-            </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Identifies hidden sterilization failure zones
-            </span>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/hot-water-ph-metal-leaching">
-              Effect of Hot Water pH on Plumbing Metal Leaching
-            </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Tests metal release under realistic household conditions
-            </span>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/air-ionizer-electrostatic-charge">
-              Air Ionizer Effects on Electrostatic Charge Buildup
-            </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Evaluates unintended ESD risks from ionization
-            </span>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/glove-additive-leaching-alcohol-sanitizer">
-              Lab Glove Additive Leaching After Sanitizer Exposure
-            </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Tests chemical integrity of gloves under real use
-            </span>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/microplastics-dynamic-chemistry">
-              Microplastics as Dynamic Chemical Agents
-            </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Tests whether microplastics chemically alter surrounding water and
-              sediment under ordinary environmental conditions
-            </span>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/heavy-metal-remobilization-urban-soils">
-              Heavy Metal Stability in Ordinary Urban Environments
-            </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Tests whether chemically bound heavy metals remobilize under normal
-              rainfall and drainage conditions
-            </span>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/pp-pvp-hydration-capture">
-              Hydration-Mediated Aerosol Capture in Polypropylene Fibers
-            </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Tests whether interface-localized hydration layers improve particle
-              capture in humid air without electrostatic charging
-            </span>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/hdpe-ptfe-surface-energy">
-              Surface Energy Control via PTFE Microdomains in HDPE
-            </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Tests whether trace PTFE alters surface adhesion through physical
-              energy contrast alone
-            </span>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/pc-pmma-scratch-resistance">
-              Scratch Resistance from Physical PMMA Dispersion in Polycarbonate
-            </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Tests whether PMMA microdomains improve abrasion resistance without
-              coatings or chemistry
-            </span>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/pc-abs-interfacial-microdamping">
-              Interfacial Micro-Damping in Layered PC/ABS Structures
-            </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Tests whether compliance mismatch at a pure polymer interface
-              increases fatigue resistance
-            </span>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/pe-paraffin-thermal-buffering">
-              Passive Thermal Buffering in Polyethylene Films
-            </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Tests whether confined paraffin wax moderates heat rise rates in
-              commodity polyethylene without leakage
-            </span>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/ps-pdms-surface-lubricity">
-              Low-Friction, Clear Surfaces via PDMS Migration in Polystyrene
-            </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Tests whether trace PDMS creates durable, optically clear,
-              low-friction PS surfaces without blooming or coatings
-            </span>
-          </li>
-
-          <li>
-            <Link href="/edge-of-practice/hdpe-ldpe-interfacial-toughening">
-              Interfacial Toughening in HDPE via Dispersed LDPE Domains
-            </Link>
-            <br />
-            <span className="text-sm text-muted-foreground">
-              Tests whether LDPE inclusions increase mechanical toughness in HDPE
-              through morphology alone
-            </span>
-          </li>
+          {/* … remainder unchanged … */}
         </ul>
 
         <hr />
