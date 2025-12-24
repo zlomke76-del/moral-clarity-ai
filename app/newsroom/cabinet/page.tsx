@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { OutletOverview, OutletStats } from "./types";
 
 import Leaderboard from "./components/Leaderboard";
@@ -35,14 +35,53 @@ export default function NewsroomCabinetPage() {
       });
   }, [selected]);
 
-  return (
-    <div className="flex flex-col gap-8">
-      <Leaderboard
-        outlets={outlets}
-        selectedCanonical={selected}
-        onSelect={(canon) => setSelected(canon)}
-      />
+  /* ========= DERIVED EDITORIAL SLICES ========= */
+  const goldenAnchor = useMemo(() => outlets.slice(0, 3), [outlets]);
+  const watchList = useMemo(() => outlets.slice(-3), [outlets]);
 
+  return (
+    <div className="flex flex-col gap-10">
+
+      {/* ================= GOLDEN ANCHOR ================= */}
+      {goldenAnchor.length > 0 && (
+        <section>
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+            Golden Anchor · Top 3 Predictability
+          </h2>
+
+          <Leaderboard
+            outlets={goldenAnchor}
+            selectedCanonical={selected}
+            onSelect={(canon) => setSelected(canon)}
+          />
+        </section>
+      )}
+
+      {/* ================= FULL LEADERBOARD ================= */}
+      <section>
+        <Leaderboard
+          outlets={outlets}
+          selectedCanonical={selected}
+          onSelect={(canon) => setSelected(canon)}
+        />
+      </section>
+
+      {/* ================= WATCH LIST ================= */}
+      {watchList.length > 0 && (
+        <section>
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+            Watch List · Lowest Predictability
+          </h2>
+
+          <Leaderboard
+            outlets={watchList}
+            selectedCanonical={selected}
+            onSelect={(canon) => setSelected(canon)}
+          />
+        </section>
+      )}
+
+      {/* ================= SCORE BREAKDOWN ================= */}
       <ScoreBreakdown outlet={stats} />
     </div>
   );
