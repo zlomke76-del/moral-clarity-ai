@@ -18,7 +18,7 @@ export default function Leaderboard({
   const GOLD_COUNT = 3;
   const WATCH_COUNT = 3;
 
-  // 🔒 AUTHORITATIVE SORT — WEIGHTED PI DESC
+  // 🔒 AUTHORITATIVE SORT — WEIGHTED PI DESC, SAFE FALLBACK
   const sorted = [...outlets].sort((a, b) => {
     const aPi = a.avg_pi_weighted ?? -1;
     const bPi = b.avg_pi_weighted ?? -1;
@@ -27,7 +27,8 @@ export default function Leaderboard({
       return bPi - aPi;
     }
 
-    return a.outlet.localeCompare(b.outlet);
+    // ✅ RUNTIME-SAFE STRING COMPARE
+    return (a.outlet ?? "").localeCompare(b.outlet ?? "");
   });
 
   const golden = sorted.slice(0, GOLD_COUNT);
@@ -60,12 +61,12 @@ export default function Leaderboard({
         <div className="flex gap-4">
           {golden.map((o, i) => (
             <OutletCard
-              key={o.outlet}
+              key={o.outlet ?? `gold-${i}`}
               outlet={o}
               rank={i + 1}
               selected={selectedOutlet === o.outlet}
               badge="golden"
-              onSelect={() => handleSelect(o.outlet)}
+              onSelect={() => handleSelect(o.outlet ?? "")}
             />
           ))}
         </div>
@@ -80,12 +81,12 @@ export default function Leaderboard({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {neutral.map((o, i) => (
             <OutletCard
-              key={o.outlet}
+              key={o.outlet ?? `neutral-${i}`}
               outlet={o}
               rank={GOLD_COUNT + i + 1}
               selected={selectedOutlet === o.outlet}
               badge="neutral"
-              onSelect={() => handleSelect(o.outlet)}
+              onSelect={() => handleSelect(o.outlet ?? "")}
             />
           ))}
         </div>
@@ -100,12 +101,12 @@ export default function Leaderboard({
         <div className="flex gap-4">
           {watchlist.map((o, i) => (
             <OutletCard
-              key={o.outlet}
+              key={o.outlet ?? `watch-${i}`}
               outlet={o}
               rank={sorted.length - WATCH_COUNT + i + 1}
               selected={selectedOutlet === o.outlet}
               badge="watchlist"
-              onSelect={() => handleSelect(o.outlet)}
+              onSelect={() => handleSelect(o.outlet ?? "")}
             />
           ))}
         </div>
