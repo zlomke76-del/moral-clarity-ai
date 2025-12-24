@@ -1,28 +1,33 @@
 // app/newsroom/cabinet/types.ts
 
-/**
- * AUTHORITATIVE CABINET TYPE
- * Source: outlet_bias_pi_overview (Supabase view)
- *
- * Lifetime aggregates only.
- * No trends. No temporal inference.
- * No derived UI math that Supabase already computed.
- */
+/* ============================================================
+   LEADERBOARD CONTRACT (LIGHTWEIGHT)
+   Source: /api/news/outlets/overview
+   ============================================================ */
+
 export type OutletOverview = {
   canonical_outlet: string;
+  total_stories: number;
+  avg_pi: number;
+};
 
-  // Lifetime counts
+/* ============================================================
+   SCORE BREAKDOWN CONTRACT (HEAVY / ANALYTICAL)
+   Source: breakdown view or breakdown API
+   ============================================================ */
+
+export type OutletStats = {
+  outlet: string;
+
   total_stories: number;
   days_active: number;
   last_story_day: string | null;
 
-  // Predictability Index (0–1, lifetime)
-  avg_pi: number;
+  avg_pi_weighted: number | null;
 
-  // Bias components (0–3, lifetime directional magnitude)
-  avg_bias_intent: number;
-  bias_language: number;
-  bias_source: number;
-  bias_framing: number;
-  bias_context: number;
+  avg_bias_intent_weighted: number | null;
+  avg_bias_language_weighted: number | null;
+  avg_bias_source_weighted: number | null;
+  avg_bias_framing_weighted: number | null;
+  avg_bias_context_weighted: number | null;
 };
