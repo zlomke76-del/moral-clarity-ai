@@ -1,22 +1,3 @@
-/* ============================================================
-   NEWSROOM — CANONICAL TYPES
-   ============================================================ */
-
-/* ================= OUTLET OVERVIEW (CABINET / LEADERBOARD) ================= */
-
-export type OutletOverview = {
-  /** Canonical outlet domain */
-  canonical_outlet: string;
-
-  /** Total stories scored (lifetime) */
-  total_stories: number;
-
-  /** Predictability Index (0–1, lifetime weighted) */
-  avg_pi: number;
-};
-
-/* ================= NEWS DIGEST STORY (ANCHOR PANEL) ================= */
-
 export type NewsDigestStory = {
   /** Stable identifier for UI selection */
   ledger_id: string;
@@ -32,9 +13,12 @@ export type NewsDigestStory = {
   story_title?: string;
   title?: string;
 
-  /** URLs (both are intentionally supported) */
+  /** URLs */
   story_url?: string;
   url?: string;
+
+  /** Content */
+  neutral_summary?: string;
 
   /** Classification */
   category?: string;
