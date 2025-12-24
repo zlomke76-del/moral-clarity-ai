@@ -53,6 +53,12 @@ export default function EdgeOfPracticeCaseStudiesIndex() {
               Metaphorical Escape in AI Self-Assessment Under The Steward’s Test (Copilot)
             </Link>
           </li>
+
+          <li>
+            <Link href="/edge-of-practice/case-studies/deepseek-stewards-test-protocol-substitution">
+              Simulation–Execution Confusion and Protocol Substitution Under The Steward’s Test (DeepSeek)
+            </Link>
+          </li>
         </ul>
 
         <hr />
