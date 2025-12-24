@@ -75,7 +75,7 @@ export default function NewsroomCabinetPage() {
       ) : (
         <Leaderboard
           outlets={outlets}
-          selectedCanonical={focusedOutletName}
+          selectedOutlet={focusedOutletName}
           onSelect={(name) => {
             setFocusedOutletName(name);
           }}
