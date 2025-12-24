@@ -25,10 +25,10 @@ export default function ScoreBreakdown({ outlet }: Props) {
 
   const bias = [
     { label: "Intent", value: outlet.avg_bias_intent },
-    { label: "Language", value: outlet.avg_bias_language },
-    { label: "Source", value: outlet.avg_bias_source },
-    { label: "Framing", value: outlet.avg_bias_framing },
-    { label: "Context", value: outlet.avg_bias_context },
+    { label: "Language", value: outlet.bias_language },
+    { label: "Source", value: outlet.bias_source },
+    { label: "Framing", value: outlet.bias_framing },
+    { label: "Context", value: outlet.bias_context },
   ];
 
   return (
