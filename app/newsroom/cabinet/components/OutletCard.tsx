@@ -13,10 +13,6 @@ type Props = {
 
 /* ========= DISPLAY HELPERS (UI ONLY) ========= */
 
-/**
- * Human-readable outlet name.
- * Display-only. Does not affect canonical identity.
- */
 function formatOutletDisplay(domain: string): string {
   if (!domain) return "UNKNOWN";
 
@@ -35,16 +31,16 @@ export default function OutletCard({
   badge,
   onSelect,
 }: Props) {
-  // 🔒 CANONICAL DOMAIN (single source of truth)
+  // 🔒 CANONICAL DOMAIN
   const domain = outlet.canonical_outlet;
 
   // ✅ SAFE favicon source
   const logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 
-  // 🔒 PI DISPLAY (weighted, percent)
+  // 🔒 PI DISPLAY — OVERVIEW CONTRACT
   const pi =
-    typeof outlet.avg_pi_weighted === "number"
-      ? (outlet.avg_pi_weighted * 100).toFixed(2)
+    typeof outlet.avg_pi === "number"
+      ? (outlet.avg_pi * 100).toFixed(2)
       : null;
 
   return (
@@ -59,10 +55,8 @@ export default function OutletCard({
       `}
     >
       <div className="flex flex-col items-start gap-1">
-        {/* Rank */}
         <div className="text-xs text-neutral-400">#{rank}</div>
 
-        {/* Logo */}
         <Image
           src={logoUrl}
           alt={`${domain} logo`}
@@ -72,17 +66,14 @@ export default function OutletCard({
           unoptimized
         />
 
-        {/* Outlet Name */}
         <div className="text-sm font-medium text-neutral-100">
           {formatOutletDisplay(domain)}
         </div>
 
-        {/* PI */}
         <div className="text-xs text-amber-300">
           PI {pi ?? "—"}
         </div>
 
-        {/* Story Count */}
         <div className="text-xs text-neutral-400">
           {outlet.total_stories.toLocaleString()} stories analyzed
         </div>
