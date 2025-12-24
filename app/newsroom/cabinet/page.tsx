@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { OutletOverview } from "./types";
+import type { OutletOverview } from "../types";
 
 import Leaderboard from "./components/Leaderboard";
 import ScoreBreakdown from "./components/ScoreBreakdown";
@@ -14,7 +14,7 @@ type OverviewResponse = {
 
 export default function NewsroomCabinetPage() {
   const [outlets, setOutlets] = useState<OutletOverview[]>([]);
-  const [focusedCanonical, setFocusedCanonical] = useState<string | null>(null);
+  const [focusedOutletName, setFocusedOutletName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,18 +30,22 @@ export default function NewsroomCabinetPage() {
         const data: OverviewResponse = await res.json();
         if (!alive || !data.ok) return;
 
-        // 🔒 AUTHORITATIVE SORT — PI DESC (LIFETIME)
-        const sorted = [...data.outlets].sort(
-          (a, b) => b.avg_pi - a.avg_pi
-        );
+        // 🔒 AUTHORITATIVE SORT — PI DESC (WEIGHTED, LIFETIME)
+        const sorted = [...data.outlets].sort((a, b) => {
+          const aPi = a.avg_pi_weighted ?? -1;
+          const bPi = b.avg_pi_weighted ?? -1;
+          return bPi - aPi;
+        });
 
         setOutlets(sorted);
 
-        if (!focusedCanonical && sorted.length > 0) {
-          setFocusedCanonical(sorted[0].canonical_outlet);
+        if (!focusedOutletName && sorted.length > 0) {
+          setFocusedOutletName(sorted[0].outlet);
         }
       } catch (e: any) {
-        if (alive) setError(e?.message ?? "Failed to load newsroom cabinet.");
+        if (alive) {
+          setError(e?.message ?? "Failed to load newsroom cabinet.");
+        }
       } finally {
         if (alive) setLoading(false);
       }
@@ -50,15 +54,13 @@ export default function NewsroomCabinetPage() {
     return () => {
       alive = false;
     };
-  }, [focusedCanonical]);
+  }, [focusedOutletName]);
 
   /* ========= Focused outlet ========= */
   const focusedOutlet = useMemo(() => {
-    if (!focusedCanonical) return null;
-    return (
-      outlets.find((o) => o.canonical_outlet === focusedCanonical) ?? null
-    );
-  }, [outlets, focusedCanonical]);
+    if (!focusedOutletName) return null;
+    return outlets.find((o) => o.outlet === focusedOutletName) ?? null;
+  }, [outlets, focusedOutletName]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -73,9 +75,9 @@ export default function NewsroomCabinetPage() {
       ) : (
         <Leaderboard
           outlets={outlets}
-          selectedCanonical={focusedCanonical}
-          onSelect={(canon) => {
-            setFocusedCanonical(canon);
+          selectedCanonical={focusedOutletName}
+          onSelect={(name) => {
+            setFocusedOutletName(name);
           }}
         />
       )}
