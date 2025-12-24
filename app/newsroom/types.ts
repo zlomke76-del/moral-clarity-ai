@@ -55,6 +55,28 @@ export interface OutletNeutralityRow {
 }
 
 /**
+ * Shape of a single outlet overview row as returned from
+ * the `outlet_bias_pi_overview` database view.
+ *
+ * This is the authoritative contract for the Newsroom Cabinet.
+ */
+export interface OutletOverview {
+  outlet: string;
+
+  total_stories: number;
+  days_active: number;
+  last_story_day: string | null;
+
+  avg_pi_weighted: number | null;
+
+  avg_bias_intent_weighted: number | null;
+  avg_bias_language_weighted: number | null;
+  avg_bias_source_weighted: number | null;
+  avg_bias_framing_weighted: number | null;
+  avg_bias_context_weighted: number | null;
+}
+
+/**
  * Generic shape for a Solace newsroom response, so you can
  * type Anchor / Analyst / Coach calls as you refine them.
  */
