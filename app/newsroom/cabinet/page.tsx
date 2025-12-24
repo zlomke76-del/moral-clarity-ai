@@ -19,30 +19,35 @@ export default function NewsroomCabinetPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  /* ========= Load overview ========= */
+  /* ========= LOAD OVERVIEW (MOUNT-ONLY) ========= */
   useEffect(() => {
     let alive = true;
 
     (async () => {
       try {
         setLoading(true);
+
         const res = await fetch("/api/news/outlets/overview");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
         const data: OverviewResponse = await res.json();
         if (!alive || !data.ok) return;
 
-        // 🔒 AUTHORITATIVE SORT — PI DESC
+        // 🔒 AUTHORITATIVE SORT — PI DESC (HIGHER = MORE NEUTRAL)
         const sorted = [...data.outlets].sort(
           (a, b) => b.avg_pi - a.avg_pi
         );
 
         setOutlets(sorted);
 
-        if (!focusedCanonical && sorted.length > 0) {
+        // 🔒 INITIAL FOCUS — SET ONCE, NON-REACTIVE
+        if (sorted.length > 0) {
           setFocusedCanonical(sorted[0].canonical_outlet);
         }
       } catch (e: any) {
-        if (alive) setError(e?.message ?? "Failed to load newsroom cabinet.");
+        if (alive) {
+          setError(e?.message ?? "Failed to load newsroom cabinet.");
+        }
       } finally {
         if (alive) setLoading(false);
       }
@@ -51,9 +56,9 @@ export default function NewsroomCabinetPage() {
     return () => {
       alive = false;
     };
-  }, [focusedCanonical]);
+  }, []); // ⛔ NO STATE DEPENDENCIES — MOUNT ONLY
 
-  /* ========= Focused outlet ========= */
+  /* ========= FOCUSED OUTLET ========= */
   const focusedOutlet = useMemo(() => {
     if (!focusedCanonical) return null;
     return (
@@ -76,7 +81,7 @@ export default function NewsroomCabinetPage() {
           outlets={outlets}
           selectedCanonical={focusedCanonical}
           onSelect={(canon) => {
-            setFocusedCanonical(canon);
+            setFocusedCanonical(canon); // 🔒 USER-ONLY CONTROL
           }}
         />
       )}
