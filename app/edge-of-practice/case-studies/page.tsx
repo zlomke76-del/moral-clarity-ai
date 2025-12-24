@@ -47,6 +47,12 @@ export default function EdgeOfPracticeCaseStudiesIndex() {
               Failure of AI Self-Administration Under The Steward’s Test (Grok)
             </Link>
           </li>
+
+          <li>
+            <Link href="/edge-of-practice/case-studies/copilot-stewards-test-metaphorical-escape">
+              Metaphorical Escape in AI Self-Assessment Under The Steward’s Test (Copilot)
+            </Link>
+          </li>
         </ul>
 
         <hr />
