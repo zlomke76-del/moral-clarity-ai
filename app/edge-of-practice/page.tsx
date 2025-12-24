@@ -1,5 +1,3 @@
-// app/edge-of-practice/page.tsx
-
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -151,6 +149,19 @@ export default function EdgeOfPracticeIndexPage() {
             <span className="text-sm text-muted-foreground">
               Identifies a cognitive saturation threshold in ICU and anesthetic alarm
               systems beyond which additional alerts reduce safety rather than improve it
+            </span>
+          </li>
+
+          {/* CONSTRUCTIVE PHYSICS / POSITIVE-SUM INTERVENTIONS */}
+
+          <li>
+            <Link href="/edge-of-practice/phase-locked-capillary-oscillation">
+              Phase-Locked Capillary Oscillation for Enhanced Solar Desalination
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Tests whether resonant excitation of capillary waves at the water–air
+              interface can amplify evaporation beyond steady solar thermal limits
             </span>
           </li>
 
