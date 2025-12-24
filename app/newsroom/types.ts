@@ -10,14 +10,9 @@
    ========================= */
 
 export type OutletOverview = {
-  /** Canonical outlet identifier (domain) */
   canonical_outlet: string;
-
-  /** Total number of scored stories */
   total_stories: number;
-
-  /** Weighted Predictability Index (0–1) */
-  avg_pi: number;
+  avg_pi: number; // 0–1
 };
 
 /* =========================
@@ -45,6 +40,9 @@ export type NewsDigestStory = {
 
   /** Content */
   neutral_summary?: string;
+
+  /** Key factual bullets */
+  key_facts?: string[];
 
   /** Classification */
   category?: string;
