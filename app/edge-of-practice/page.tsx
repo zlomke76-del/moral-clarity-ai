@@ -111,6 +111,28 @@ export default function EdgeOfPracticeIndexPage() {
           </li>
 
           <li>
+            <Link href="/edge-of-practice/irreversible-normalization-drift">
+              Irreversible Normalization Drift in Human Feedback Systems
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Reveals slow-time safety collapse driven by baseline erosion, where
+              unsafe conditions become perceptually invisible before failure
+            </span>
+          </li>
+
+          <li>
+            <Link href="/edge-of-practice/agentic-normalization-drift">
+              Agentic Normalization Drift in Adaptive AI Systems
+            </Link>
+            <br />
+            <span className="text-sm text-muted-foreground">
+              Identifies irreversible policy-space collapse in adaptive agents,
+              eliminating corrigibility before external failure is observable
+            </span>
+          </li>
+
+          <li>
             <Link href="/edge-of-practice/autonomous-handoff-blackout">
               Irreversible Takeover Blackout Intervals in Autonomous Vehicle Handoffs
             </Link>
