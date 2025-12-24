@@ -17,15 +17,18 @@ export default function ScoreBreakdown({ outlet }: Props) {
 
   /* ================= CANONICAL VALUES ================= */
 
-  const piRaw = outlet.avg_pi;       // 0–1 (lifetime)
-  const piPercent = piRaw * 100;     // 0–100%
+  const piRaw: number | null =
+    typeof outlet.avg_pi === "number" ? outlet.avg_pi : null;
+
+  const piPercent: number | null =
+    typeof piRaw === "number" ? piRaw * 100 : null;
 
   const bias = [
     { label: "Intent", value: outlet.avg_bias_intent },
-    { label: "Language", value: outlet.bias_language },
-    { label: "Source", value: outlet.bias_source },
-    { label: "Framing", value: outlet.bias_framing },
-    { label: "Context", value: outlet.bias_context },
+    { label: "Language", value: outlet.avg_bias_language },
+    { label: "Source", value: outlet.avg_bias_source },
+    { label: "Framing", value: outlet.avg_bias_framing },
+    { label: "Context", value: outlet.avg_bias_context },
   ];
 
   return (
@@ -54,7 +57,7 @@ export default function ScoreBreakdown({ outlet }: Props) {
             Predictability Index
           </div>
           <div className="font-mono text-2xl text-emerald-300">
-            {piPercent.toFixed(2)}%
+            {piPercent !== null ? `${piPercent.toFixed(2)}%` : "—"}
           </div>
           <div className="text-[11px] text-neutral-400">
             PI = avg(lifetime story stability)
@@ -65,7 +68,8 @@ export default function ScoreBreakdown({ outlet }: Props) {
       {/* PI MATH */}
       <div className="rounded-lg bg-neutral-900/60 p-3 text-[11px] text-neutral-400">
         <div className="font-mono text-neutral-200">
-          PI = {piRaw.toFixed(4)} × 100 = {piPercent.toFixed(2)}%
+          PI = {piRaw !== null ? piRaw.toFixed(4) : "—"} × 100 ={" "}
+          {piPercent !== null ? `${piPercent.toFixed(2)}%` : "—"}
         </div>
         <div className="mt-1">
           Predictability measures consistency, not correctness.
@@ -87,15 +91,22 @@ export default function ScoreBreakdown({ outlet }: Props) {
   );
 }
 
-function BiasBar({ label, value }: { label: string; value: number }) {
-  const width = Math.max(4, Math.min((value / 3) * 100, 100));
+function BiasBar({
+  label,
+  value,
+}: {
+  label: string;
+  value?: number;
+}) {
+  const safe = typeof value === "number" ? value : 0;
+  const width = Math.max(4, Math.min((safe / 3) * 100, 100));
 
   return (
     <div className="space-y-1">
       <div className="flex justify-between text-[11px] text-neutral-400">
         <span>{label}</span>
         <span className="font-mono text-neutral-200">
-          {value.toFixed(2)} / 3.00
+          {safe.toFixed(2)} / 3.00
         </span>
       </div>
       <div className="h-1.5 w-full rounded-full bg-neutral-900">
