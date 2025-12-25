@@ -21,7 +21,6 @@ function pickOrigin(req: NextRequest): string | null {
   const origin = req.headers.get('origin');
   if (!origin) return null;
   try {
-    // Loosened a bit; this is an internal maintenance endpoint.
     const u = new URL(origin);
     if (
       u.hostname.endsWith('moralclarity.ai') ||
@@ -39,10 +38,11 @@ function pickOrigin(req: NextRequest): string | null {
 async function handleRefresh(req: NextRequest) {
   const origin = pickOrigin(req);
 
-  // Optional: simple shared-secret gate
+  // Shared-secret gate
   if (NEWS_REFRESH_SECRET) {
     const url = new URL(req.url);
-    const token = url.searchParams.get('secret') || req.headers.get('x-news-secret');
+    const token =
+      url.searchParams.get('secret') || req.headers.get('x-news-secret');
     if (token !== NEWS_REFRESH_SECRET) {
       return NextResponse.json(
         { ok: false, error: 'Unauthorized' },
@@ -51,26 +51,29 @@ async function handleRefresh(req: NextRequest) {
     }
   }
 
-  try {
-    const result = await runNewsFetchRefresh();
-    return NextResponse.json(result, { status: 200, headers: corsHeaders(origin) });
-  } catch (err: any) {
-    console.error('[news/refresh] fatal error', err);
-    return NextResponse.json(
-      {
-        ok: false,
-        error: err?.message || String(err),
-      },
-      { status: 500, headers: corsHeaders(origin) }
-    );
-  }
+  // 🔑 IMPORTANT: fire-and-forget
+  runNewsFetchRefresh()
+    .then(() => {
+      console.log('[news/refresh] completed');
+    })
+    .catch((err) => {
+      console.error('[news/refresh] async failure', err);
+    });
+
+  // ✅ Respond immediately
+  return NextResponse.json(
+    {
+      ok: true,
+      status: 'refresh_started',
+    },
+    { status: 202, headers: corsHeaders(origin) }
+  );
 }
 
 export async function POST(req: NextRequest) {
   return handleRefresh(req);
 }
 
-// Convenience so you can hit it from the browser
 export async function GET(req: NextRequest) {
   return handleRefresh(req);
 }
