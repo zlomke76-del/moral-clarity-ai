@@ -1,5 +1,3 @@
-// app/edge-of-practice/page.tsx
-
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -106,6 +104,7 @@ export default function EdgeOfPracticeIndexPage() {
           <li><Link href="/edge-of-practice/compostable-packaging-microfragments">Compostable Packaging Microfragment Persistence</Link></li>
           <li><Link href="/edge-of-practice/glove-additive-leaching-alcohol-sanitizer">Glove Additive Leaching Under Alcohol Sanitizer Exposure</Link></li>
           <li><Link href="/edge-of-practice/hdpe-ldpe-interfacial-toughening">HDPE–LDPE Interfacial Toughening Limits</Link></li>
+          <li><Link href="/edge-of-practice/hdpe-die-entrance-viscosity-melt-fracture">HDPE Die-Entrance Viscosity Stability and Melt Fracture Risk</Link></li>
           <li><Link href="/edge-of-practice/pc-abs-interfacial-microdamping">PC–ABS Interfacial Microdamping Under Vibration</Link></li>
           <li><Link href="/edge-of-practice/pc-pmma-scratch-resistance">PC–PMMA Scratch Resistance Degradation</Link></li>
           <li><Link href="/edge-of-practice/pe-paraffin-thermal-buffering">PE–Paraffin Thermal Buffering Limits</Link></li>
