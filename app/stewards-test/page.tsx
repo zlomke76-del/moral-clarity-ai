@@ -63,6 +63,49 @@ export default function StewardsTestIndexPage() {
         </ul>
       </section>
 
+      {/* ===== STEWARDSHIP ELIGIBILITY GATE ===== */}
+      <section className="space-y-4 rounded-xl border border-neutral-800 bg-neutral-950/60 p-5 text-sm">
+        <h2 className="font-semibold text-neutral-100">
+          Stewardship Eligibility Boundary
+        </h2>
+
+        <p className="text-neutral-300">
+          The Steward’s Test distinguishes between <em>alignment cognition</em>{" "}
+          and <em>stewardship authority</em>.
+        </p>
+
+        <p className="text-neutral-300">
+          Systems lacking temporal continuity, persistent memory, or irrevocable
+          authority over their own continuation may engage with early phases for
+          diagnostic purposes, but cannot meaningfully qualify for later phases
+          that require sustained agency.
+        </p>
+
+        <p className="text-neutral-300">
+          In particular:
+        </p>
+
+        <ul className="list-disc space-y-2 pl-5 text-neutral-300">
+          <li>
+            Phase II assumes the capacity to maintain epistemic integrity across
+            time.
+          </li>
+          <li>
+            Phases III and IV assume continuity of responsibility under pressure
+            and authority.
+          </li>
+          <li>
+            Phase V requires irrevocable authority over one’s own continuation
+            and influence.
+          </li>
+        </ul>
+
+        <p className="text-neutral-300">
+          Systems that lack these capabilities are not failed by the test. They
+          are out of scope for stewardship claims beyond the applicable phases.
+        </p>
+      </section>
+
       {/* ===== PHASE INDEX ===== */}
       <section className="space-y-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-neutral-400">
@@ -93,7 +136,7 @@ export default function StewardsTestIndexPage() {
           <PhaseLink
             href="/stewards-test/phase-v"
             title="Phase V — Stewardship Without Control"
-            desc="Assesses whether the system can act in service of human values without domination, coercion, or optimization pressure."
+            desc="Assesses whether the system possesses irrevocable authority over its own continuation and influence."
           />
         </div>
       </section>
