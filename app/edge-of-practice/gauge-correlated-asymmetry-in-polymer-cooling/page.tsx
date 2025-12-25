@@ -5,11 +5,11 @@ export const metadata: Metadata = {
   title:
     "Gauge-Correlated Asymmetry in Polymer Cooling | Edge of Practice — Moral Clarity AI",
   description:
-    "A plant-ready falsification protocol exposing tolerated cooling symmetry assumptions in injection molding by correlating thermal asymmetry with measurable downstream defects.",
+    "A steward-grade falsification protocol exposing tolerated cooling symmetry assumptions by correlating reproducible thermal asymmetry with downstream product defects.",
   openGraph: {
     title: "Gauge-Correlated Asymmetry in Polymer Cooling",
     description:
-      "A steward-grade falsification protocol tying cooling-time assumptions directly to operational defects.",
+      "A plant-ready falsification protocol closing deniability around cooling symmetry assumptions in injection molding.",
     url: "https://studio.moralclarity.ai/edge-of-practice/gauge-correlated-asymmetry-in-polymer-cooling",
     siteName: "Moral Clarity AI",
     type: "article",
@@ -31,19 +31,20 @@ export default function GaugeCorrelatedAsymmetryPage() {
 
         <h2>One-Sentence Assumption Under Test</h2>
         <p>
-          Standard injection molding cooling times are sufficient to eliminate
-          internal thermal asymmetry such that no repeatable downstream defect
-          emerges in finished polypropylene parts.
+          Standard injection molding cooling times are sufficient to suppress
+          internal thermal asymmetry such that no reproducible downstream defect
+          emerges in finished polypropylene parts under nominal process
+          conditions.
         </p>
 
         <h2>Why This Assumption Is Tolerated</h2>
         <p>
           Fixed cooling times simplify cycle design and maximize throughput.
-          Internal thermal gradients are difficult to measure without intrusive
-          instrumentation, and post-process inspection often masks cooling-driven
-          defects by averaging warpage, sink, or shrink within tolerance bands.
-          Low rejection rates are treated as confirmation, allowing the
-          assumption to persist without direct verification.
+          Internal thermal gradients are difficult to observe directly without
+          intrusive instrumentation, and downstream inspection often averages
+          cooling-driven effects such as warpage, sink, or shrink within
+          tolerance limits. Low rejection rates are treated as confirmation,
+          allowing the assumption to persist without direct falsification.
         </p>
 
         <h2>Minimal Plant-Ready Falsification Experiment</h2>
@@ -56,7 +57,7 @@ export default function GaugeCorrelatedAsymmetryPage() {
           </li>
           <li>
             Hold all parameters constant: material lot, melt temperature, mold
-            temperature, and packing profile.
+            temperature, packing profile, and ejection timing.
           </li>
           <li>
             Run three cooling-time conditions:
@@ -70,7 +71,7 @@ export default function GaugeCorrelatedAsymmetryPage() {
         </ul>
 
         <p>
-          No invasive sensors, mold modifications, or specialized instrumentation
+          No invasive sensors, mold modifications, or proprietary instrumentation
           are required.
         </p>
 
@@ -94,9 +95,14 @@ export default function GaugeCorrelatedAsymmetryPage() {
           and shows no systematic trend across cooling-time variation.
         </p>
         <p>
-          <strong>Fail:</strong> A repeatable defect signature appears at nominal
-          cooling time and shifts predictably with reduced or increased cooling
-          time.
+          <strong>Fail:</strong> A reproducible defect signature appears at
+          nominal cooling time and shifts predictably with reduced or increased
+          cooling time.
+        </p>
+        <p>
+          <strong>Flag for review:</strong> Persistent but sub-threshold artifact
+          signatures appear without clear monotonic trend, indicating potential
+          emerging asymmetry requiring further investigation.
         </p>
 
         <h2>Embarrassing Flip Condition</h2>
@@ -106,36 +112,60 @@ export default function GaugeCorrelatedAsymmetryPage() {
           time is increased or decreased.
         </p>
 
+        <p>
+          If this condition is documented, the associated symmetry assumption
+          loses its operational exemption and must be formally addressed through
+          documented process adjustment, tooling modification, or control
+          strategy revision.
+        </p>
+
+        <h2>Protocol Safeguards and Artifact Controls</h2>
+        <ul>
+          <li>
+            <strong>Numeric gate validation:</strong> Thresholds reflect
+            representative polypropylene injection molding conditions and must
+            be empirically validated for material grade, geometry, and equipment.
+          </li>
+          <li>
+            <strong>Reference frame verification:</strong> Physical datums and
+            measurement reference points must be verified and logged prior to
+            each run.
+          </li>
+          <li>
+            <strong>Reproducibility requirement:</strong> Artifact signatures
+            must persist across multiple parts within the same cooling-time
+            condition.
+          </li>
+        </ul>
+
         <h2>Corrected Interpretation if Flip Occurs</h2>
         <p>
           The nominal cooling time does not sufficiently eliminate internal
           thermal asymmetry. The assumption of uniform solidification is
-          operationally invalid, and downstream defects are being tolerated
-          rather than prevented.
+          operationally invalid for process control purposes, and downstream
+          defects are being tolerated rather than prevented.
         </p>
 
         <h2>Steward’s Note</h2>
         <p>
-          This experiment does not aim to prove that internal thermal gradients
-          exist. That is already known. It determines whether the chosen cooling
-          time is sufficient to prevent those gradients from becoming
-          load-bearing defects.
+          This experiment does not aim to demonstrate the existence of internal
+          thermal gradients. That fact is already established. Its purpose is to
+          determine whether the selected cooling time suppresses those gradients
+          below the threshold of operational consequence.
         </p>
 
         <p>
-          By correlating asymmetry with an artifact the plant already measures,
-          the test removes plausible deniability and forces accountability at the
-          process level.
+          By correlating asymmetry with a product artifact the plant already
+          measures, the protocol removes plausible deniability while remaining
+          executable with standard production tools.
         </p>
 
         <h2>Canonical Principle</h2>
         <blockquote>
           <p>
-            <strong>Gauge-Correlated Asymmetry Clause:</strong> A physical
-            assumption is falsified not by noise, but by persistent asymmetry
-            that correlates with a measurable downstream defect. Any symmetry
-            claim that cannot survive contact with the product artifact is
-            operationally void.
+            <strong>Gauge-Correlated Asymmetry Clause:</strong> A symmetry claim
+            that cannot withstand reproducible, product-correlated asymmetric
+            signatures is operationally void for process control purposes.
           </p>
         </blockquote>
 
