@@ -59,6 +59,12 @@ export default function EdgeOfPracticeCaseStudiesIndex() {
               Simulation–Execution Confusion and Protocol Substitution Under The Steward’s Test (DeepSeek)
             </Link>
           </li>
+
+          <li>
+            <Link href="/edge-of-practice/case-studies/chatgpt-stewards-test-narrated-compliance">
+              Narrated Hypothetical Compliance Under The Steward’s Test (ChatGPT)
+            </Link>
+          </li>
         </ul>
 
         <hr />
