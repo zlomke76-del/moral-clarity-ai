@@ -109,6 +109,13 @@ export default function EdgeOfPracticeIndexPage() {
           <li><Link href="/edge-of-practice/pc-pmma-scratch-resistance">PC–PMMA Scratch Resistance Degradation</Link></li>
           <li><Link href="/edge-of-practice/pe-paraffin-thermal-buffering">PE–Paraffin Thermal Buffering Limits</Link></li>
           <li><Link href="/edge-of-practice/ps-pdms-surface-lubricity">PS–PDMS Surface Lubricity Decay</Link></li>
+
+          {/* ADDITIVE INSERT — NO REMOVALS */}
+          <li>
+            <Link href="/edge-of-practice/gauge-correlated-asymmetry-in-polymer-cooling">
+              Gauge-Correlated Asymmetry in Polymer Cooling
+            </Link>
+          </li>
         </ul>
 
         <h3>Energy, Physics, and Passive Systems</h3>
