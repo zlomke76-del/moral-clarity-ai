@@ -96,6 +96,20 @@ export default function EdgeOfPracticeIndexPage() {
           <li><Link href="/edge-of-practice/autonomous-handoff-blackout">Irreversible Takeover Blackout Intervals in Autonomous Vehicle Handoffs</Link></li>
           <li><Link href="/edge-of-practice/irreversible-cognitive-dead-zones">Irreversible Cognitive Dead Zones in Human–Automation Handoffs</Link></li>
           <li><Link href="/edge-of-practice/irreversible-normalization-drift">Irreversible Normalization Drift in Human Feedback Systems</Link></li>
+
+          {/* ADDITIVE INSERT — NO REMOVALS */}
+          <li>
+            <Link href="/edge-of-practice/post-deployment-monitoring-ai">
+              Post-Deployment Monitoring as a Safety Proxy in General-Purpose AI
+            </Link>
+          </li>
+
+          {/* ADDITIVE INSERT — NO REMOVALS */}
+          <li>
+            <Link href="/edge-of-practice/human-supervision-autonomy">
+              Human Supervision as a Failsafe in Partially Autonomous Systems
+            </Link>
+          </li>
         </ul>
 
         <h3>Materials, Polymers, and Surface Effects</h3>
@@ -141,4 +155,28 @@ export default function EdgeOfPracticeIndexPage() {
           <li><Link href="/edge-of-practice/indoor-lighting-circadian-expression">Indoor Lighting Effects on Circadian Expression</Link></li>
           <li><Link href="/edge-of-practice/microplastics">Indoor Microplastic Accumulation Pathways</Link></li>
           <li><Link href="/edge-of-practice/uv-sterilization-shadows">UV Sterilization Shadow Persistence</Link></li>
-          <li><Link href="/edge-of-practice/viral-viability-indoor-surfaces">Longevity of Viral Viability on Common Indoor Surfaces
+          <li><Link href="/edge-of-practice/viral-viability-indoor-surfaces">Longevity of Viral Viability on Common Indoor Surfaces</Link></li>
+          <li><Link href="/edge-of-practice/vitamin-loss-refrigerated-juice">Vitamin Loss in Refrigerated Juices</Link></li>
+          <li><Link href="/edge-of-practice/sweat-driven-device-corrosion">Sweat-Driven Corrosion in Wearable Devices</Link></li>
+        </ul>
+
+        <hr />
+
+        <h2>Governance</h2>
+
+        <p>
+          Edge of Practice does not claim solutions, policy outcomes, or product
+          relevance. Its sole function is to surface reality where assumptions
+          dominate behavior. Any downstream application must be independently
+          justified and revalidated.
+        </p>
+
+        <p className="text-sm text-muted-foreground">
+          This page is the authoritative index of all short-cycle experiments.
+          Experiments are fixed at publication and revised only by explicit
+          versioning to preserve epistemic continuity.
+        </p>
+      </article>
+    </main>
+  );
+}
