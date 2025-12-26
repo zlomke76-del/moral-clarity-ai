@@ -211,7 +211,38 @@ export default function ActivityEncodedNeuralScaffoldPolymersPage() {
 
         <hr />
 
-        <h2>IX. Edge of Knowledge Judgment</h2>
+        <h2>IX. Invariant Framework Declaration</h2>
+
+        <p>
+          <strong>Symmetry group (𝑮):</strong> Reparameterizations of scaffold
+          composition, bulk mechanical properties, and measurement basis that
+          preserve overall material identity but permit arbitrary relabeling of
+          endpoint descriptors.
+        </p>
+
+        <p>
+          <strong>Conserved quantity (𝑸):</strong> Total scaffold connectivity
+          and crosslink continuity; no polymer backbone or network bonds are
+          created or destroyed during activity encoding.
+        </p>
+
+        <p>
+          <strong>Invariant spectrum (𝑺):</strong> The spatial distribution of
+          irreversible conformational states across the scaffold network,
+          corresponding to the set of activity-induced architectural constraints
+          imposed on neural growth and remodeling.
+        </p>
+
+        <p>
+          <strong>Failure signature on 𝑺:</strong> Two scaffolds exhibiting
+          identical endpoint properties but non-identical invariant spectra,
+          demonstrating that activity history is physically encoded and cannot
+          be transformed away by any permitted symmetry operation.
+        </p>
+
+        <hr />
+
+        <h2>X. Edge of Knowledge Judgment</h2>
 
         <p>
           This system does not propose enhancement, therapy, or intervention. It
@@ -222,8 +253,8 @@ export default function ActivityEncodedNeuralScaffoldPolymersPage() {
 
         <p>
           By relocating memory from biochemical signaling to physical scaffold
-          geometry, this material class defines a new boundary condition for
-          neural engineering and closes a longstanding gap between developmental
+          geometry, this material class defines a hard boundary for neural
+          engineering claims and closes a longstanding gap between developmental
           history and material qualification.
         </p>
 
