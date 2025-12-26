@@ -170,6 +170,76 @@ export default function AirIonizerElectrostaticChargePage() {
           binary falsification, and direct laboratory reproducibility. No
           interpretation beyond stated thresholds is allowed.
         </p>
+
+        {/* ========================================================= */}
+        {/* BELOW THE EDGE — CONNECTIVITY-CONTROLLED ELECTROSTATIC RISK */}
+        {/* ADDITIVE ONLY — NO REMOVALS                                */}
+        {/* ========================================================= */}
+
+        <hr />
+
+        <h2>Below the Edge: Connectivity-Controlled Electrostatic Risk</h2>
+
+        <h3>Frozen Assumption</h3>
+        <p>
+          System-wide electrostatic risk can be inferred from the mean voltage
+          across board measurement nodes, presuming that no single node or set of
+          strongly coupled nodes and edges can generate localized extremes that
+          dominate the risk profile.
+        </p>
+
+        <h3>Structural Decomposition</h3>
+        <p>
+          Electrostatic charge behavior in ionized environments is spatially
+          heterogeneous due to non-uniform ionizer plume structure, airflow
+          boundaries, and surface geometry. Measurement nodes experience
+          distinct local charge accumulation and dissipation timescales.
+          Localized high-potential nodes may persist despite stable mean voltage
+          across the network. When such nodes are linked by physical coupling
+          pathways—defined by proximity, geometry, or airflow alignment—their
+          interaction can dominate system-level risk.
+        </p>
+
+        <h3>Regime Boundary</h3>
+        <p>
+          The frozen assumption holds only while no edge connecting measurement
+          nodes develops a potential difference (ΔV) exceeding its
+          path-specific critical threshold. The regime boundary is crossed when
+          one or more node-to-node couplings exhibit ΔV above threshold,
+          independent of the mean node voltage.
+        </p>
+
+        <h3>Failure Signature</h3>
+        <p>
+          The abrupt emergence during a run of a high-ΔV edge or persistently
+          elevated node voltage—directly observable in the measured dataset—
+          while the average network voltage remains stable. This signature
+          cannot be reconstructed from gradual or independent local variations.
+        </p>
+
+        <h3>Disentitlements</h3>
+        <ul>
+          <li>
+            Electrostatic risk cannot be inferred from mean voltage or average
+            ion neutralization.
+          </li>
+          <li>
+            Claims of uniform charge control via ionization are invalid.
+          </li>
+          <li>
+            Any safety model excluding node–edge extremes and coupling geometry
+            is epistemically unsound.
+          </li>
+        </ul>
+
+        <h3>Corrected Interpretation</h3>
+        <p>
+          Electrostatic risk is governed by the presence and connectivity of
+          nodes and edges exhibiting extreme voltage or edge ΔV within the
+          measurement network. These localized extremes—not global averages—
+          control the possibility of abrupt, system-relevant electrostatic
+          hazards.
+        </p>
       </article>
     </main>
   );
