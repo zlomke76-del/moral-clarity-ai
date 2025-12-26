@@ -150,6 +150,13 @@ export default function EdgeOfPracticeIndexPage() {
           <li><Link href="/edge-of-practice/phase-locked-capillary-oscillation">Phase-Locked Capillary Oscillation for Enhanced Solar Desalination</Link></li>
           <li><Link href="/edge-of-practice/radiative-tension-rectification">Radiative Tension Rectification for Passive Energy Storage</Link></li>
           <li><Link href="/edge-of-practice/spectral-boundary-layer-destabilization">Spectral Gradient–Induced Boundary Layer Destabilization for Enhanced Passive Evaporation</Link></li>
+
+          {/* ADDITIVE INSERT — NEW EDGE OF PRACTICE ENTRY */}
+          <li>
+            <Link href="/edge-of-practice/thermomechanical-phase-aligned-insulation">
+              Thermomechanical Phase-Aligned Insulation — Falsification of Static R-Value Sufficiency Under Time-Translated Thermal Forcing
+            </Link>
+          </li>
         </ul>
 
         <h3>Environment, Exposure, and Human Health</h3>
