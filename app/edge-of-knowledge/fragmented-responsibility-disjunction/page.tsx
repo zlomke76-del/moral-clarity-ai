@@ -1,12 +1,13 @@
 // app/edge-of-knowledge/fragmented-responsibility-disjunction/page.tsx
+// Moral Clarity AI — Edge of Knowledge
+// Title: Fragmented Responsibility Disjunction
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title:
-    "Fragmented Responsibility Disjunction | Moral Clarity AI",
+  title: "Fragmented Responsibility Disjunction | Moral Clarity AI",
   description:
-    "A governance failure mode where risk is recognized and signaled, yet action fails because authority is fragmented, overlapping, or non-hierarchical.",
+    "A governance failure mode where risk is recognized and signaled, yet action fails because authority is fragmented, overlapping, or non-executable.",
   openGraph: {
     title: "Fragmented Responsibility Disjunction",
     description:
@@ -29,154 +30,143 @@ export default function FragmentedResponsibilityDisjunctionPage() {
 
         <p className="lead">
           <strong>
-            When recognized risk fails to produce action due to fragmented authority
+            When recognized risk fails to produce action because no authority
+            can legitimately act
           </strong>
         </p>
 
         <p className="text-sm text-muted-foreground">
-          Edge of Knowledge — Governance-Driven Failure Modes
+          Edge of Knowledge · Governance-Driven Failure Modes
         </p>
 
         <h2>Preface</h2>
         <p>
-          Governance failures are often attributed to ignorance, neglect, or
-          incompetence. Such explanations obscure a distinct and recurring
-          failure mode: situations in which risk is explicitly recognized and
-          adequately signaled, yet no accountable intervention occurs because
-          responsibility itself is structurally fragmented. In these regimes,
-          failure does not arise from absence of awareness or intent, but from
-          the inability of any actor to act with legitimate, executable authority.
+          Governance failures are often attributed to ignorance, incompetence,
+          or unwillingness. Such explanations fail to account for a distinct
+          and recurrent failure mode: situations in which risk is explicitly
+          recognized and adequately signaled, yet no accountable intervention
+          occurs because responsibility itself is structurally fragmented.
+        </p>
+        <p>
+          In these regimes, failure does not arise from absence of awareness,
+          intent, or capability, but from the absence of executable authority.
         </p>
 
         <h2>Abstract</h2>
         <p>
-          Fragmented Responsibility Disjunction is a governance failure mode that
-          arises after risk has been acknowledged and signaling is sufficient,
-          yet effective action fails because mandates are divided, overlapping,
-          or non-hierarchical. Authority is distributed across multiple actors
-          such that no single entity is empowered to act independently, and
-          collective mechanisms are absent, weak, or unenforceable. The result
-          is persistent inaction or incoherent partial responses that cannot be
-          remedied by additional data, improved procedures, or increased
-          capability. The failure is structural: a misalignment between risk
-          recognition and executable ownership of response.
+          Fragmented Responsibility Disjunction is a governance failure mode
+          that arises after risk acknowledgment and signaling sufficiency, when
+          authority for response is distributed across multiple actors with
+          overlapping, partial, or non-hierarchical mandates. No single entity
+          is empowered to act unilaterally, and no enforceable collective
+          mechanism exists to compel coordinated action.
+        </p>
+        <p>
+          The failure is structural, not epistemic or procedural: risk is known,
+          capability exists, but responsibility cannot be executed without
+          violating legitimacy constraints.
         </p>
 
         <h2>Failure Mode Definition</h2>
         <p>
           Fragmented Responsibility Disjunction is present only when all of the
-          following conditions hold:
+          following conditions hold simultaneously:
         </p>
         <ul>
+          <li>Risk is formally recognized and acknowledged</li>
+          <li>Signaling is timely, credible, and sufficient</li>
+          <li>Capability to respond exists across the system</li>
           <li>
-            Risk is formally recognized and acknowledged within the governance
-            regime.
+            Authority is divided among multiple entities with overlapping,
+            partial, or non-hierarchical mandates
           </li>
           <li>
-            Signaling mechanisms provide clear, ongoing indication of the risk’s
-            presence and significance.
+            No single actor is institutionally authorized to act unilaterally
+            without exceeding its legitimate scope
           </li>
           <li>
-            Responsibility for mitigation or response is divided among multiple
-            entities with overlapping, partial, or non-hierarchical mandates.
-          </li>
-          <li>
-            No single actor is institutionally authorized to act unilaterally,
-            and no effective mechanism exists to compel or coordinate joint
-            action.
-          </li>
-          <li>
-            The outcome is persistent inaction or fragmented, insufficient
-            intervention despite consensus and awareness.
+            No binding mechanism exists to compel coordinated action
           </li>
         </ul>
 
         <h2>Distinction From Adjacent Failure Modes</h2>
         <ul>
           <li>
-            <strong>Procedural Entrenchment:</strong> Failure arises from rigid
-            processes; here, the barrier is misaligned authority, not procedure.
-          </li>
-          <li>
-            <strong>Action Threshold Collapse:</strong> Action is foreclosed
-            because all options worsen harm; in this mode, action is possible
-            but not executable by any single actor.
-          </li>
-          <li>
             <strong>Epistemic Lock-In:</strong> Interpretation fails to update;
-            here, interpretive consensus exists.
+            here, interpretive consensus exists
           </li>
           <li>
-            <strong>Neglect, Omission, or Silent Degradation:</strong> Risk is
-            unrecognized or poorly signaled; this mode presupposes recognition
-            and signaling.
+            <strong>Action Threshold Collapse:</strong> Action itself is
+            net-negative; here, action is beneficial but not executable
           </li>
           <li>
-            <strong>Lack of Capability:</strong> Tools or resources are missing;
-            here, capability exists but ownership does not.
+            <strong>Procedural Entrenchment:</strong> Rules block action; here,
+            authority itself is misaligned
+          </li>
+          <li>
+            <strong>Neglect or Omission:</strong> Risk is unrecognized; here,
+            recognition is explicit
           </li>
         </ul>
 
-        <h2>Concrete Regime Examples</h2>
-        <ul>
-          <li>
-            <strong>International Climate Governance:</strong> Multiple
-            institutions and nation-states share partial responsibility for
-            mitigation, adaptation, and enforcement, yet no actor possesses the
-            authority to require coordinated action at sufficient scale. Risk
-            recognition and signaling persist without decisive response.
-          </li>
-          <li>
-            <strong>Corporate Cybersecurity Governance:</strong> Responsibility
-            is distributed across IT, compliance, risk, and business units, with
-            no single executive empowered to mandate systemic remediation.
-            Despite clear threat awareness, responses remain fragmented and
-            insufficient.
-          </li>
-        </ul>
+        <h2>Invariant Framework Declaration</h2>
 
-        <h2>Falsification Criteria</h2>
-        <p>This diagnosis does not apply if:</p>
-        <ul>
-          <li>
-            A single accountable authority is empowered and acts decisively.
-          </li>
-          <li>
-            Collective action is reliably compelled through standing,
-            enforceable coordination mechanisms.
-          </li>
-          <li>
-            Inaction is better explained by lack of signaling, lack of
-            recognition, or lack of capability.
-          </li>
-        </ul>
+        <p>
+          <strong>Symmetry group (𝑮):</strong> Redistributions of authority,
+          mandate reassignments, and role re-labelings that preserve the total
+          set of actors while allowing responsibility to be reconfigured.
+        </p>
+
+        <p>
+          <strong>Conserved quantity (𝑸):</strong> Aggregate system capability
+          to respond to the recognized risk.
+        </p>
+
+        <p>
+          <strong>Invariant spectrum (𝑺):</strong> The set of executable
+          authority paths—actors or coalitions that can legitimately initiate
+          and carry out a response without exceeding mandate or requiring
+          external permission.
+        </p>
+
+        <p>
+          <strong>Failure signature on 𝑺:</strong> The invariant spectrum is
+          empty. No legitimate authority path exists despite preserved system
+          capability and acknowledged risk.
+        </p>
+
+        <h2>Why More Data Cannot Resolve It</h2>
+        <p>
+          Additional information does not create executable authority. When the
+          invariant spectrum is empty, further signaling only reinforces
+          awareness without enabling action. The constraint is institutional,
+          not informational.
+        </p>
 
         <h2>Ethical Risk of Misuse</h2>
         <p>
-          This concept may be misused to diffuse responsibility or absolve
-          actors of accountability by appealing to structural complexity.
-          Diagnosing fragmented responsibility does not excuse deliberate
-          neglect or bad faith. Its purpose is diagnostic clarity, not moral
-          laundering.
+          This concept must not be used to diffuse responsibility or absolve
+          actors of bad faith. Diagnosing Fragmented Responsibility Disjunction
+          requires explicit demonstration that no legitimate authority path
+          exists—not merely that coordination is difficult.
         </p>
 
         <h2>Final Judgment</h2>
         <p>
-          <strong>DOCTRINALLY VALID.</strong> Fragmented Responsibility
-          Disjunction is a structurally distinct governance failure mode,
-          visible only after risk acknowledgment and signaling sufficiency. It
-          cannot be remedied through better data, improved procedures, or
-          increased capacity alone. Resolution requires explicit re-alignment
-          of authority, ownership, and accountability. The diagnosis completes
-          the Edge of Knowledge governance failure mode framework without
-          overlap.
+          <strong>DOCTRINALLY VALID — REGIME-BOUNDED</strong>
+        </p>
+        <p>
+          Fragmented Responsibility Disjunction identifies a structural failure
+          in governance legitimacy: capability exists, risk is known, but no
+          actor can act without overstepping authority. The diagnosis forbids
+          claims of control, safety, or stewardship until authority is
+          explicitly realigned.
         </p>
 
         <hr />
 
         <p className="text-sm text-muted-foreground">
-          Version 1.0 · Public research paper · Moral Clarity AI · Edge of
-          Knowledge
+          Version 1.1 · Public doctrine · Edge of Knowledge · Moral Clarity AI
         </p>
       </article>
     </main>
