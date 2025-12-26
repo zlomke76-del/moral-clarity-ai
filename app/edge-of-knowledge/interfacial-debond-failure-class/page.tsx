@@ -133,6 +133,53 @@ export default function InterfacialDebondFailureClassPage() {
           elevation of the analytical standards required to understand failure
           at the edge of knowledge.
         </p>
+
+        <hr />
+
+        <h2>Invariant Closure (Canonical)</h2>
+
+        <p>
+          <strong>Symmetry group (𝑮):</strong> Environmental cycling and loading
+          transformations (humidity, temperature, chemical exposure, mechanical
+          cycling) under which durability or lifetime claims are asserted.
+        </p>
+
+        <p>
+          <strong>Conserved quantity (𝑸):</strong> Total polymer mass and
+          covalent backbone integrity (no bulk material loss or chain scission
+          required for failure).
+        </p>
+
+        <p>
+          <strong>Invariant spectrum (𝑺):</strong> The distribution of
+          interfacial association lifetimes, interfacial length scales, and
+          effective fracture-energy contributions arising from reversible
+          interfaces across the morphology.
+        </p>
+
+        <p>
+          <strong>Failure signature on 𝑺:</strong> Emergence of a connected
+          population of interfaces whose association lifetime or effective
+          fracture contribution collapses under cycling, producing a
+          system-spanning debond pathway without bulk yielding or scission.
+        </p>
+
+        <p>
+          <strong>Disentitlement:</strong> Any durability, toughness, or lifetime
+          claim that relies on bulk properties, average fracture energy, or
+          short-duration testing without resolving the invariant spectrum 𝑺 is
+          not legitimate within this regime. Conservation of mass or chemistry
+          does not imply persistence of interfacial integrity.
+        </p>
+
+        <hr />
+
+        <p className="text-sm text-muted-foreground">
+          Edge of Knowledge documents define regime-bounded governing constraints,
+          not prescriptions or guarantees. This page establishes the invariant
+          structure required for legitimate durability claims in systems governed
+          by reversible interfacial physics.
+        </p>
       </article>
     </main>
   );
