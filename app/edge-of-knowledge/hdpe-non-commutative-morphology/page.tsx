@@ -230,7 +230,42 @@ export default function HDPENonCommutativeMorphologyPage() {
 
         <hr />
 
-        <h2>VII. Edge of Knowledge Judgment</h2>
+        <h2>VII. Invariant Closure (Canonical)</h2>
+
+        <p>
+          <strong>Symmetry group (𝑮):</strong> Permutations of exposure sequence
+          (strain ↔ anneal) that preserve identical endpoint observables
+          (density, crystallinity, elastic modulus).
+        </p>
+
+        <p>
+          <strong>Conserved quantity (𝑸):</strong> Total crystalline mass
+          fraction and bulk thermodynamic state.
+        </p>
+
+        <p>
+          <strong>Invariant spectrum (𝑺):</strong> The irreducible set of
+          morphology descriptors encoding exposure order, including lamellar
+          orientation field eigenmodes, tie-molecule connectivity topology, and
+          birefringence or anisotropic scattering spectra.
+        </p>
+
+        <p>
+          <strong>Failure signature on 𝑺:</strong> Existence of two or more
+          non-isomorphic morphology spectra under identical conserved endpoints,
+          demonstrating non-commutativity of exposure operations.
+        </p>
+
+        <p>
+          <strong>Disentitlement:</strong> Any durability, dimensional stability,
+          or lifetime claim relying solely on endpoint observables is invalid
+          within this regime. Authority collapses because endpoint metrics do not
+          span the invariant spectrum governing load-bearing morphology.
+        </p>
+
+        <hr />
+
+        <h2>VIII. Edge of Knowledge Judgment</h2>
 
         <p>
           This regime does not propose a new chemistry or predictive lifetime
