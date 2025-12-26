@@ -140,6 +140,85 @@ export default function AntibioticResistanceGeneCleaning() {
           Any detected change challenges assumptions about the neutrality of
           routine cleaning with respect to resistance gene ecology.
         </p>
+
+        <hr />
+
+        <h2>Below the Edge: Connectivity-Controlled Persistence</h2>
+
+        <h3>Frozen Assumption</h3>
+        <p>
+          All regions of the system contribute to genetic persistence in
+          proportion to their average properties, with no spatially connected
+          subset able to disproportionately reweight antibiotic resistance gene
+          abundance regardless of size or response rate.
+        </p>
+
+        <h3>Structural Decomposition</h3>
+        <p>
+          Persistence of antibiotic resistance genes on cleaned surfaces is
+          governed by a heterogeneous distribution of local survival,
+          recolonization, and horizontal gene transfer timescales. These
+          timescales are spatially and functionally correlated through shared
+          microenvironments, contact patterns, and surface topology. Local
+          fast-response regions—ARG-bearing organisms or mobile genetic
+          elements—may survive disturbance and dominate recolonization despite
+          low overall abundance. System behavior is dictated not by mean biomass
+          reduction, but by the weight and connectivity of the fastest
+          persisting genetic tail.
+        </p>
+
+        <h3>Regime Boundary</h3>
+        <p>
+          The assumption holds only if fast-response ARG-bearing regions remain
+          below the percolation threshold for system-spanning influence:
+        </p>
+        <p>
+          (fraction of fast-response ARG reservoirs) × (spatial or functional
+          correlation length) &lt; (percolation threshold)
+        </p>
+        <p>
+          Crossing this boundary enables a connected network of resistance gene
+          persistence to dominate post-cleaning genetic composition, independent
+          of total microbial reduction.
+        </p>
+
+        <h3>Failure Signature</h3>
+        <p>
+          A categorical shift in normalized ARG or integron marker abundance
+          following a single non-antimicrobial cleaning event—observable as a
+          ≥0.5 log<sub>10</sub> change on any surface—indicating dominance of a
+          connected fast-response genetic subset rather than proportional
+          disturbance.
+        </p>
+
+        <h3>Disentitlements</h3>
+        <ul>
+          <li>
+            ARG persistence can no longer be assumed to scale with total
+            microbial load.
+          </li>
+          <li>
+            Non-antimicrobial cleaning cannot be treated as ecologically neutral
+            with respect to resistance gene distribution.
+          </li>
+          <li>
+            Mean cleanliness metrics are invalid predictors of resistance gene
+            dynamics.
+          </li>
+          <li>
+            Resistance enrichment can no longer be attributed solely to
+            antimicrobial exposure.
+          </li>
+        </ul>
+
+        <h3>Corrected Interpretation</h3>
+        <p>
+          System-scale persistence of antibiotic resistance genes following
+          routine cleaning is controlled by the presence or absence of a
+          percolating network of fast-response genetic reservoirs. When such
+          regions survive and reconnect, these rare but connected domains—not
+          average microbial reduction—govern post-disturbance genetic outcomes.
+        </p>
       </article>
     </main>
   );
