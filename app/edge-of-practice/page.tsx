@@ -85,6 +85,15 @@ export default function EdgeOfPracticeIndexPage() {
           <li>Failure is as valuable as success</li>
         </ul>
 
+        {/* ADDITIVE INSERT — NO REMOVALS */}
+        <p className="text-sm">
+          All experiments in this index follow a single governing framework. See{" "}
+          <Link href="/edge-of-practice/canon">
+            the Edge Canon: Invariants, Not Interpretations
+          </Link>
+          .
+        </p>
+
         <hr />
 
         <h2>Complete Short-Cycle Experiment Index</h2>
@@ -97,14 +106,12 @@ export default function EdgeOfPracticeIndexPage() {
           <li><Link href="/edge-of-practice/irreversible-cognitive-dead-zones">Irreversible Cognitive Dead Zones in Human–Automation Handoffs</Link></li>
           <li><Link href="/edge-of-practice/irreversible-normalization-drift">Irreversible Normalization Drift in Human Feedback Systems</Link></li>
 
-          {/* ADDITIVE INSERT — NO REMOVALS */}
           <li>
             <Link href="/edge-of-practice/post-deployment-monitoring-ai">
               Post-Deployment Monitoring as a Safety Proxy in General-Purpose AI
             </Link>
           </li>
 
-          {/* ADDITIVE INSERT — NO REMOVALS */}
           <li>
             <Link href="/edge-of-practice/human-supervision-autonomy">
               Human Supervision as a Failsafe in Partially Autonomous Systems
@@ -124,14 +131,12 @@ export default function EdgeOfPracticeIndexPage() {
           <li><Link href="/edge-of-practice/pe-paraffin-thermal-buffering">PE–Paraffin Thermal Buffering Limits</Link></li>
           <li><Link href="/edge-of-practice/ps-pdms-surface-lubricity">PS–PDMS Surface Lubricity Decay</Link></li>
 
-          {/* ADDITIVE INSERT — NO REMOVALS */}
           <li>
             <Link href="/edge-of-practice/gauge-correlated-asymmetry-in-polymer-cooling">
               Gauge-Correlated Asymmetry in Polymer Cooling
             </Link>
           </li>
 
-          {/* ADDITIVE INSERT — NO REMOVALS */}
           <li>
             <Link href="/edge-of-practice/pet-pvdf-electret-humidity-edge-case">
               Edge Case: PET + PVDF Electret Filtration Under Humidity
