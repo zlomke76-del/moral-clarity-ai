@@ -98,6 +98,33 @@ export default function PetPvdfElectretHumidityEdgeCasePage() {
           </li>
         </ul>
 
+        {/* ADDITIVE INSERT — KNEE CRITERION (NO SCOPE EXPANSION) */}
+        <h2>Addendum: Non-Monotonic Failure Signature (“Knee” Criterion)</h2>
+        <p>
+          Electrostatic charge decay under sustained humidity is often assumed to
+          proceed as a smooth, monotonic process governed by average material
+          behavior. This edge case explicitly allows for the possibility that
+          charge loss is instead controlled by connectivity of localized
+          fast-release regions, producing a non-monotonic or step-like failure
+          signature.
+        </p>
+        <p>
+          In this framing, charge-retention curves may exhibit a distinct “knee”:
+          an abrupt acceleration in decay after a finite exposure period rather
+          than gradual, continuous loss. The presence of such a knee indicates a
+          qualitative regime change in electrostatic persistence, consistent
+          with loss of global constraint connectivity rather than uniform
+          degradation.
+        </p>
+        <p>
+          Accordingly, this edge case treats the shape of the charge-retention
+          curve over time—not only its final magnitude—as diagnostically
+          relevant. A reproducible knee observed in PET + PVDF media, whether
+          stabilizing or destabilizing relative to PET-only or polypropylene
+          electrets, constitutes evidence that humidity-driven performance is
+          governed by connectivity effects rather than mean decay alone.
+        </p>
+
         <h2>Pass / Fail Boundary</h2>
         <p>
           <strong>Pass (assumption survives):</strong> PET + PVDF media shows no
