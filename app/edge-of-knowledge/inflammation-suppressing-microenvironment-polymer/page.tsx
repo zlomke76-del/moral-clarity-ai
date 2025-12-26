@@ -1,3 +1,5 @@
+// app/edge-of-knowledge/inflammation-suppressing-microenvironment-polymer/page.tsx
+
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -224,6 +226,44 @@ export default function InflammationSuppressingPolymerPage() {
           activation without behavior change, it enables cumulative health
           protection across sleep, work, recovery, and care settings—an effect
           unreachable by filters, ventilation, or episodic interventions.
+        </p>
+
+        <hr />
+
+        <h2>X. Invariant Closure (Canonical)</h2>
+
+        <p>
+          <strong>Symmetry group (𝑮):</strong> Indoor environmental cycling
+          transformations (humidity, occupancy, cleaning, airflow fluctuations)
+          under which system legitimacy is claimed.
+        </p>
+
+        <p>
+          <strong>Conserved quantity (𝑸):</strong> Total chemically active
+          inflammatory driver load within the micro-environment (oxidant
+          equivalents + transferable bioactive fragment potential).
+        </p>
+
+        <p>
+          <strong>Invariant spectrum (𝑺):</strong> The measurable set of
+          irreducible chemical states retained or neutralized by the polymer:
+          bound endotoxin/allergen fragment load, consumed oxidant capacity, and
+          aldehyde adduct population—observable via MTI-1 state variables.
+        </p>
+
+        <p>
+          <strong>Failure signature on 𝑺:</strong> Re-emergence, transfer, or
+          regeneration of any targeted inflammatory driver despite unchanged
+          conserved totals elsewhere in the room; or loss of monotonicity in the
+          MTI-1 vector.
+        </p>
+
+        <p>
+          <strong>Disentitlement:</strong> Any claim of inflammation suppression,
+          health benefit, or environmental control that does not map directly to
+          persistence and monotonic evolution of 𝑺 is illegitimate. Bulk air
+          metrics, proxy comfort indicators, or subjective outcomes cannot
+          substitute for invariant-state verification.
         </p>
 
         <hr />
