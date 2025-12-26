@@ -105,9 +105,7 @@ export default function IGRCPage() {
         </p>
 
         <ul>
-          <li>
-            Mechanophoric interfacial bonds rupture at localized sites
-          </li>
+          <li>Mechanophoric interfacial bonds rupture at localized sites</li>
           <li>
             Latent reactive groups are exposed and irreversibly re-bond in a new
             topology
@@ -165,25 +163,9 @@ export default function IGRCPage() {
 
         <p>
           IGRC architectures are intrinsically non-commutative. Identical
-          endpoint conditions reached via different exposure sequences (e.g.,
-          thermal soak versus thermal gradient plus vibration) do not yield
-          equivalent internal states.
+          endpoint conditions reached via different exposure sequences do not
+          yield equivalent internal states.
         </p>
-
-        <p>
-          Integrity requires demonstrating that:
-        </p>
-
-        <ul>
-          <li>
-            Gradient-history exposure produces state vectors unattainable by any
-            endpoint-only treatment
-          </li>
-          <li>
-            Removal of gradients halts further evolution but does not restore
-            prior disorder
-          </li>
-        </ul>
 
         <p>
           If endpoint treatments reproduce the same internal state, the system
@@ -196,28 +178,7 @@ export default function IGRCPage() {
 
         <p>
           If the IGRC architecture is invalid, failure manifests first at the
-          polymer–secondary phase interface. The most probable early failures
-          include:
-        </p>
-
-        <ul>
-          <li>
-            Reversible or incomplete mechanophore cleavage without permanent
-            rebonding
-          </li>
-          <li>
-            Interfacial debonding or sliding instead of ratcheted strengthening
-          </li>
-          <li>
-            Accumulation of microvoids or microcracks concurrent with stagnant
-            state-vector evolution
-          </li>
-        </ul>
-
-        <p>
-          Observation of progressive interfacial damage without monotonic
-          ψ<sub>if</sub> accumulation falsifies the architecture prior to any
-          bulk failure.
+          polymer–secondary phase interface.
         </p>
 
         <hr />
@@ -225,100 +186,70 @@ export default function IGRCPage() {
         <h2>VII. Single Decisive Falsification Test</h2>
 
         <p>
-          A standardized composite coupon is subjected to:
+          A standardized composite coupon is subjected to directional gradients
+          and mechanical cycling. The system fails if ratcheted internal state
+          variables do not evolve irreversibly or are reproducible by endpoint
+          treatments.
         </p>
-
-        <ul>
-          <li>
-            Directional thermal cycling below matrix melting temperature
-          </li>
-          <li>
-            Superimposed mechanical vibration within service-relevant frequency
-            and strain regimes
-          </li>
-          <li>
-            Sustained compressive or tensile stress aligned with the gradient
-            axis
-          </li>
-        </ul>
-
-        <p>
-          The system fails if:
-        </p>
-
-        <ul>
-          <li>
-            ψ<sub>if</sub>, Φ<sub>al</sub>, and Λ<sub>cr</sub> do not change
-            irreversibly relative to controls
-          </li>
-          <li>
-            Endpoint-only thermal or mechanical exposure reproduces the same
-            internal state
-          </li>
-          <li>
-            Interfacial degradation precedes or replaces ratcheted ordering
-          </li>
-        </ul>
 
         <hr />
 
         <h2>VIII. Regime Boundaries</h2>
 
         <p>
-          <strong>Applies to:</strong>
+          Applies only where persistent gradients dominate lifetime behavior.
         </p>
-
-        <ul>
-          <li>
-            Aerospace, automotive, and industrial composites exposed to
-            persistent gradients
-          </li>
-          <li>
-            Systems where interfaces dominate load transfer and lifetime
-            behavior
-          </li>
-        </ul>
-
-        <p>
-          <strong>Does not apply to:</strong>
-        </p>
-
-        <ul>
-          <li>
-            Fully amorphous or fully crystalline materials lacking interfacial
-            adaptability
-          </li>
-          <li>
-            Systems relying on reversible self-healing or active control
-          </li>
-          <li>
-            Claims based solely on equilibrium or endpoint testing
-          </li>
-        </ul>
 
         <hr />
 
         <h2>IX. Edge of Knowledge Judgment</h2>
 
         <p>
-          IGRC does not assert that materials must improve with use. It asserts
-          that when irreversible, gradient-activated interfacial evolution is
-          physically present, durability and performance claims must be
+          IGRC asserts that when irreversible, gradient-driven interfacial
+          evolution is physically present, durability claims must be
           trajectory-accounted or considered structurally invalid.
         </p>
 
+        <hr />
+
+        <h2>Invariant Closure (Canonical)</h2>
+
         <p>
-          This framework closes a long-standing epistemic gap between laboratory
-          qualification and service reality by elevating exposure history from
-          an implicit assumption to an explicit, enforceable material state.
+          <strong>Symmetry group (𝑮):</strong> Gradient-preserving exposure
+          transformations (thermal, mechanical, vibrational) under which
+          internal structure evolves.
+        </p>
+
+        <p>
+          <strong>Conserved quantity (𝑸):</strong> Total material mass and
+          chemical inventory. No energy gain, healing, or reversible ordering
+          is conserved across transformations.
+        </p>
+
+        <p>
+          <strong>Invariant spectrum (𝑺):</strong> The set of irreversible
+          internal state variables {ψ<sub>if</sub>, Φ<sub>al</sub>, Λ<sub>cr</sub>}
+          encoding gradient history.
+        </p>
+
+        <p>
+          <strong>Failure signature on 𝑺:</strong> Either (a) absence of
+          monotonic, path-dependent evolution, or (b) reproducibility of the
+          same spectrum through endpoint-only treatments.
+        </p>
+
+        <p>
+          <strong>Legitimacy boundary:</strong> Any durability, improvement, or
+          safety claim not explicitly grounded in the invariant spectrum is not
+          legitimate within this regime and must be rejected.
         </p>
 
         <hr />
 
         <p className="text-sm text-muted-foreground">
           Edge of Knowledge papers define governing constraints, not products,
-          predictions, or prescriptions. This document establishes a boundary
-          condition for credible claims in gradient-exposed composite systems.
+          predictions, or prescriptions. This document establishes a binary
+          legitimacy boundary for claims in gradient-exposed composite systems.
         </p>
       </article>
     </main>
