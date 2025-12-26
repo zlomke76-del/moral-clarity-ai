@@ -2,18 +2,9 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "High-Crystallinity Polyamide Fibers | Edge of Knowledge",
+    "High-Crystallinity Polyamide Fibers: Morphology-Driven Mechanical and Thermal Regime — Edge of Knowledge",
   description:
-    "A validation-first analysis of high-crystallinity polyamide fibers examining morphology-driven mechanical and thermal behavior.",
-  openGraph: {
-    title:
-      "High-Crystallinity Polyamide Fibers: Morphology-Driven Mechanical and Thermal Regime",
-    description:
-      "Regime-bounded analysis of conventional polyamide fibers emphasizing crystallinity, orientation, and environmental limits.",
-    url: "https://moralclarity.ai/edge-of-knowledge/high-crystallinity-polyamide-fibers",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
+    "A regime-bounded validation analysis of high-crystallinity polyamide fibers, examining morphology-driven mechanical performance, environmental drift, and invariant failure boundaries.",
   robots: {
     index: true,
     follow: true,
@@ -29,14 +20,11 @@ export default function HighCrystallinityPolyamideFibersPage() {
           Thermal Regime
         </h1>
 
-        <p className="lead">
-          <strong>Regime-Bounded Validation Analysis</strong>
+        <p className="text-sm opacity-70">
+          Edge of Knowledge · Regime-Bounded Validation Analysis
         </p>
 
-        <hr />
-
         <h2>1. Problem Framing</h2>
-
         <p>
           This regime addresses the persistent challenge of supplying robust
           mechanical strength and moderate thermal stability in polymeric fibers
@@ -45,17 +33,15 @@ export default function HighCrystallinityPolyamideFibersPage() {
           polyesters—exhibit insufficient tensile properties, increased creep,
           or reduced heat resistance under load.
         </p>
-
         <p>
           Alternatives such as aramids, high-performance polyesters, or
           composite-reinforced fibers improve selected properties but introduce
           higher cost, processing complexity, or reduced ductility. The
           high-crystallinity polyamide fiber regime offers a balanced,
-          industrially established solution using widely available materials.
+          industrially established option using widely available materials.
         </p>
 
         <h2>2. Candidate Polymer Regime (Class-Level Only)</h2>
-
         <ul>
           <li>
             <strong>Polymer family:</strong> Conventional polyamides, primarily
@@ -73,7 +59,6 @@ export default function HighCrystallinityPolyamideFibersPage() {
         </ul>
 
         <h2>3. Physical Plausibility Rationale</h2>
-
         <p>
           Crystalline regions enable dense chain packing and strong hydrogen
           bonding between amide groups, restricting molecular mobility and
@@ -82,7 +67,6 @@ export default function HighCrystallinityPolyamideFibersPage() {
           polymer backbones along the fiber axis and supports efficient load
           transfer.
         </p>
-
         <p>
           Amorphous regions provide toughness and strain accommodation; however,
           insufficient crystallinity reduces strength, while excessive
@@ -92,7 +76,6 @@ export default function HighCrystallinityPolyamideFibersPage() {
         </p>
 
         <h2>4. Cost &amp; Scale Considerations</h2>
-
         <ul>
           <li>
             Commodity monomers and mature global production infrastructure
@@ -113,12 +96,10 @@ export default function HighCrystallinityPolyamideFibersPage() {
         </ul>
 
         <h2>5. Environmental Sensitivity &amp; Drift</h2>
-
         <ul>
           <li>
-            Moisture uptake is intrinsic; absorbed water plasticizes the
-            polymer, reducing modulus and increasing creep and dimensional
-            change
+            Moisture uptake is intrinsic; absorbed water plasticizes the polymer,
+            reducing modulus and increasing creep and dimensional change
           </li>
           <li>
             Thermal cycling near glass transition or melting temperatures
@@ -136,11 +117,8 @@ export default function HighCrystallinityPolyamideFibersPage() {
         </ul>
 
         <h2>6. Failure Modes &amp; No-Go Boundaries</h2>
-
         <ul>
-          <li>
-            Structural collapse above melting transitions
-          </li>
+          <li>Structural collapse above melting transitions</li>
           <li>
             Rapid weakening under prolonged water or high-humidity exposure
           </li>
@@ -159,7 +137,6 @@ export default function HighCrystallinityPolyamideFibersPage() {
         </ul>
 
         <h2>7. Ethical / Misuse Considerations</h2>
-
         <ul>
           <li>
             Overclaiming performance based on dry laboratory data without
@@ -178,29 +155,43 @@ export default function HighCrystallinityPolyamideFibersPage() {
           </li>
         </ul>
 
-        <h2>8. Summary Judgment</h2>
+        <h2>8. Invariant Framework Declaration</h2>
+        <ul>
+          <li>
+            <strong>Symmetry group (𝑮):</strong> Processing-preserving
+            morphological transformations of semi-crystalline polyamide fibers
+            (drawing, annealing, conditioning within defined windows)
+          </li>
+          <li>
+            <strong>Conserved quantity (𝑸):</strong> Polymer backbone continuity
+            and hydrogen-bond network integrity
+          </li>
+          <li>
+            <strong>Invariant spectrum (𝑺):</strong> Distribution of crystalline
+            fraction, chain orientation factor, and moisture-conditioned modulus
+            across the fiber population
+          </li>
+          <li>
+            <strong>Failure signature on 𝑺:</strong> Abrupt, non-gradual loss of
+            load-bearing modulus or creep resistance under humidity or thermal
+            cycling not inferable from dry-state or mean property values
+          </li>
+        </ul>
 
+        <h2>9. Status Statement</h2>
         <p>
-          <strong>GO — Strong Section V Candidate</strong>
+          <strong>Status:</strong> Regime documented.
         </p>
-
         <p>
-          High-crystallinity polyamide fibers earn their position through a
-          rigorously understood linkage between process, morphology, and
-          performance. Supply chains, cost structure, and scalability are
-          established, while limitations related to humidity, temperature,
-          fracture, and drift are intrinsic and well characterized.
-        </p>
-
-        <p>
-          The regime’s value lies not in novelty but in disciplined matching of
-          structure to functional need, with transparent operational boundaries
-          that support validation-first analysis.
+          No authority, suitability, or deployment claim is asserted. Any
+          application, qualification, or safety relevance requires independent
+          validation under explicit environmental and loading boundary
+          conditions.
         </p>
 
         <hr />
 
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm opacity-70">
           Edge of Knowledge documents are regime-bounded analyses. They do not
           prescribe implementation and are updated only by explicit revision.
         </p>
