@@ -98,6 +98,8 @@ export default function EdgeOfPracticeIndexPage() {
 
         <h2>Complete Short-Cycle Experiment Index</h2>
 
+        {/* ================= EXISTING SECTIONS UNCHANGED ================= */}
+
         <h3>Automation, Cognition, and Control</h3>
         <ul>
           <li><Link href="/edge-of-practice/agentic-normalization-drift">Agentic Normalization Drift in Adaptive AI Systems</Link></li>
@@ -105,13 +107,11 @@ export default function EdgeOfPracticeIndexPage() {
           <li><Link href="/edge-of-practice/autonomous-handoff-blackout">Irreversible Takeover Blackout Intervals in Autonomous Vehicle Handoffs</Link></li>
           <li><Link href="/edge-of-practice/irreversible-cognitive-dead-zones">Irreversible Cognitive Dead Zones in Human–Automation Handoffs</Link></li>
           <li><Link href="/edge-of-practice/irreversible-normalization-drift">Irreversible Normalization Drift in Human Feedback Systems</Link></li>
-
           <li>
             <Link href="/edge-of-practice/post-deployment-monitoring-ai">
               Post-Deployment Monitoring as a Safety Proxy in General-Purpose AI
             </Link>
           </li>
-
           <li>
             <Link href="/edge-of-practice/human-supervision-autonomy">
               Human Supervision as a Failsafe in Partially Autonomous Systems
@@ -130,13 +130,11 @@ export default function EdgeOfPracticeIndexPage() {
           <li><Link href="/edge-of-practice/pc-pmma-scratch-resistance">PC–PMMA Scratch Resistance Degradation</Link></li>
           <li><Link href="/edge-of-practice/pe-paraffin-thermal-buffering">PE–Paraffin Thermal Buffering Limits</Link></li>
           <li><Link href="/edge-of-practice/ps-pdms-surface-lubricity">PS–PDMS Surface Lubricity Decay</Link></li>
-
           <li>
             <Link href="/edge-of-practice/gauge-correlated-asymmetry-in-polymer-cooling">
               Gauge-Correlated Asymmetry in Polymer Cooling
             </Link>
           </li>
-
           <li>
             <Link href="/edge-of-practice/pet-pvdf-electret-humidity-edge-case">
               Edge Case: PET + PVDF Electret Filtration Under Humidity
@@ -150,11 +148,20 @@ export default function EdgeOfPracticeIndexPage() {
           <li><Link href="/edge-of-practice/phase-locked-capillary-oscillation">Phase-Locked Capillary Oscillation for Enhanced Solar Desalination</Link></li>
           <li><Link href="/edge-of-practice/radiative-tension-rectification">Radiative Tension Rectification for Passive Energy Storage</Link></li>
           <li><Link href="/edge-of-practice/spectral-boundary-layer-destabilization">Spectral Gradient–Induced Boundary Layer Destabilization for Enhanced Passive Evaporation</Link></li>
-
-          {/* ADDITIVE INSERT — NEW EDGE OF PRACTICE ENTRY */}
           <li>
             <Link href="/edge-of-practice/thermomechanical-phase-aligned-insulation">
               Thermomechanical Phase-Aligned Insulation — Falsification of Static R-Value Sufficiency Under Time-Translated Thermal Forcing
+            </Link>
+          </li>
+        </ul>
+
+        {/* ================= ADDITIVE NEW CLASS ================= */}
+
+        <h3>Multi-Agent Epistemic Systems</h3>
+        <ul>
+          <li>
+            <Link href="/edge-of-practice/polyphonic-ai-bounded-authority">
+              Polyphonic AI Under Bounded Authority — Falsification of Single-Model Epistemic Sufficiency
             </Link>
           </li>
         </ul>
