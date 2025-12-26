@@ -146,6 +146,42 @@ export default function IIEMPage() {
 
         <hr />
 
+        <h2>Invariant Closure (Canonical)</h2>
+
+        <p>
+          <strong>Symmetry group (𝑮):</strong> Exposure-preserving transformations
+          of the infrastructure environment (time, duty cycle, hazard intensity)
+          under which inspection records and administrative representations may
+          vary.
+        </p>
+
+        <p>
+          <strong>Conserved quantity (𝑸):</strong> Total cumulative exposure to
+          the targeted hazard class. Exposure may be distributed or unrecorded,
+          but it is not negated by documentation, repainting, or administrative
+          action.
+        </p>
+
+        <p>
+          <strong>Invariant spectrum (𝑺):</strong> The irreversible physical state
+          of the marker encoding threshold-crossing exposure (e.g., color change,
+          phase transition, morphology shift).
+        </p>
+
+        <p>
+          <strong>Failure signature on 𝑺:</strong> Either (a) absence of
+          irreversible change after verified threshold exposure, or (b)
+          irreversible change occurring outside the defined exposure regime.
+        </p>
+
+        <p>
+          <strong>Legitimacy boundary:</strong> Any claim of compliance, safety,
+          or stewardship that contradicts the marker’s invariant state is not
+          legitimate by formal or ethical criteria and must be rejected.
+        </p>
+
+        <hr />
+
         <p className="text-sm text-muted-foreground">
           Version 1.0 · Public research note · Moral Clarity AI · Edge of Knowledge
         </p>
