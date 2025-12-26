@@ -1,3 +1,5 @@
+// app/edge-of-knowledge/mineral-filled-polyolefin-barrier-films/page.tsx
+
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -190,6 +192,45 @@ export default function MineralFilledPolyolefinBarrierFilmsPage() {
           Their value is system-level rather than molecular, and validation must
           rigorously assess dispersion stability, interface durability, and
           true barrier performance within clearly bounded applications.
+        </p>
+
+        <hr />
+
+        <h2>Invariant Closure (Canonical)</h2>
+
+        <p>
+          <strong>Symmetry group (𝑮):</strong> Spatial and compositional
+          averaging transformations under which films are treated as
+          homogeneous media (e.g., effective medium assumptions, average filler
+          loading, isotropic diffusion models).
+        </p>
+
+        <p>
+          <strong>Conserved quantity (𝑸):</strong> Total polymer continuity and
+          filler volume fraction within the film, preserved across processing
+          and use absent fracture or phase separation.
+        </p>
+
+        <p>
+          <strong>Invariant spectrum (𝑺):</strong> The distribution of local
+          diffusion path lengths and interfacial integrity states created by
+          filler geometry, orientation, and dispersion—irreducible to a single
+          average permeability value.
+        </p>
+
+        <p>
+          <strong>Failure signature on 𝑺:</strong> Emergence of connected,
+          low-tortuosity diffusion pathways or mechanically weak percolation
+          zones that dominate transport or failure despite unchanged bulk
+          averages.
+        </p>
+
+        <p>
+          <strong>Legitimacy boundary:</strong> Any claim of barrier performance
+          or mechanical reliability based solely on average filler loading or
+          endpoint permeability measurements, without accounting for the
+          invariant spectrum of dispersion and connectivity, is not legitimate
+          by formal or ethical criteria.
         </p>
 
         <hr />
