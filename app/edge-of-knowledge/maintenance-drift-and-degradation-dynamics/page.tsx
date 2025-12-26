@@ -1,3 +1,5 @@
+// app/edge-of-knowledge/maintenance-drift-and-degradation-dynamics/page.tsx
+
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -181,6 +183,45 @@ export default function MaintenanceDriftAndDegradationDynamicsPage() {
           necessary for structural completeness of the Edge of Knowledge
           framework. Its absence would under-represent the primary pathway by
           which systems and institutions degrade under uncertainty.
+        </p>
+
+        <hr />
+
+        <h2>Invariant Closure (Canonical)</h2>
+
+        <p>
+          <strong>Symmetry group (𝑮):</strong> Time-translation and
+          representation-preserving transformations under which systems are
+          assumed to remain equivalent between validation and operation
+          (e.g., documentation updates, personnel changes, procedural revisions
+          that claim continuity).
+        </p>
+
+        <p>
+          <strong>Conserved quantity (𝑸):</strong> Cumulative operational
+          exposure and wear (mechanical, procedural, epistemic) that accrues
+          irreversibly with use, regardless of recordkeeping or institutional
+          narrative.
+        </p>
+
+        <p>
+          <strong>Invariant spectrum (𝑺):</strong> The distribution of internal
+          degradation states (fatigue, tolerance drift, procedural entropy,
+          knowledge loss) that cannot be transformed away by administrative,
+          symbolic, or representational updates.
+        </p>
+
+        <p>
+          <strong>Failure signature on 𝑺:</strong> A knee or step change where
+          latent degradation modes become system-dominant despite stable
+          external validation metrics.
+        </p>
+
+        <p>
+          <strong>Legitimacy boundary:</strong> Any claim of continued safety,
+          reliability, or equivalence to the validated state that does not
+          explicitly account for accumulated drift in the invariant spectrum
+          is not legitimate by formal or ethical criteria.
         </p>
 
         <hr />
