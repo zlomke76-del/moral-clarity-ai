@@ -228,7 +228,7 @@ export default function IGRCPage() {
 
         <p>
           <strong>Invariant spectrum (𝑺):</strong> The set of irreversible
-          internal state variables {ψ<sub>if</sub>, Φ<sub>al</sub>, Λ<sub>cr</sub>}
+          internal state variables {"{"}ψ<sub>if</sub>, Φ<sub>al</sub>, Λ<sub>cr</sub>{"}"}
           encoding gradient history.
         </p>
 
