@@ -158,8 +158,44 @@ export default function CognitiveDriftMaterialsPage() {
 
         <hr />
 
+        <h2>Invariant Closure (Canonical)</h2>
+
+        <p>
+          <strong>Symmetry group (𝑮):</strong> Repeated human–material interaction
+          transformations (force application, timing, rhythm, use frequency)
+          under which interface stability and response are evaluated.
+        </p>
+
+        <p>
+          <strong>Conserved quantity (𝑸):</strong> Human agency and autonomy.
+          No informational extraction, scoring, diagnosis, or authority transfer
+          is permitted or conserved across transformations.
+        </p>
+
+        <p>
+          <strong>Invariant spectrum (𝑺):</strong> The irreversible material
+          response states encoding cumulative interaction quality
+          (hysteresis state, tactile drift, mechanical ratchet position).
+        </p>
+
+        <p>
+          <strong>Failure signature on 𝑺:</strong> Either (a) absence of
+          monotonic, interaction-correlated state evolution, or (b) emergence
+          of responses that require interpretation, inference, or institutional
+          authority to act upon.
+        </p>
+
+        <p>
+          <strong>Legitimacy boundary:</strong> Any claim that infers cognitive
+          state, diagnoses impairment, enforces compliance, or asserts authority
+          beyond passive self-awareness is not legitimate within this regime.
+          The material may signal; it may not judge, score, or command.
+        </p>
+
+        <hr />
+
         <p className="text-sm text-muted-foreground">
-          Version 1.0 · Public white paper · Moral Clarity AI · Edge of Knowledge
+          Version 1.0 · Public white paper · Edge of Knowledge · Moral Clarity AI
         </p>
       </article>
     </main>
