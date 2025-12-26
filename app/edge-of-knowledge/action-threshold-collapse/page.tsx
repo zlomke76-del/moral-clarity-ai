@@ -184,19 +184,41 @@ export default function ActionThresholdCollapsePage() {
           Without this transparency, the concept collapses into excuse-making.
         </p>
 
+        <h2>Invariant Framework Declaration</h2>
+        <ul>
+          <li>
+            <strong>Symmetry group (𝑮):</strong> Permissible governance
+            interventions under existing authority, mandate, and legal bounds
+          </li>
+          <li>
+            <strong>Conserved quantity (𝑸):</strong> System legitimacy and
+            stability under intervention
+          </li>
+          <li>
+            <strong>Invariant spectrum (𝑺):</strong> Net harm induced by each
+            available action, measured across coupled domains (stability,
+            legitimacy, cascading risk)
+          </li>
+          <li>
+            <strong>Failure signature on 𝑺:</strong> All admissible actions
+            occupy a strictly worse harm region than inaction, producing a
+            categorical gap rather than a gradient tradeoff
+          </li>
+        </ul>
+
         <h2>Final Judgment</h2>
         <p>
           <strong>CONDITIONAL VALIDITY.</strong> Action Threshold Collapse is a
-          distinct and doctrinally relevant governance failure mode arising only
-          when action is foreclosed by irreducible harm tradeoffs. It does not
-          absolve responsibility; it exposes the moral weight of delay when
-          neither action nor inaction is neutral.
+          distinct and structurally falsifiable governance failure mode arising
+          only when action is foreclosed by irreducible harm tradeoffs. It does
+          not absolve responsibility; it defines the boundary where legitimacy
+          cannot be claimed by action or inaction alone.
         </p>
 
         <hr />
 
         <p className="text-sm text-muted-foreground">
-          Version 1.0 · Public doctrine · Edge of Knowledge · Moral Clarity AI
+          Version 1.1 · Public doctrine · Edge of Knowledge · Moral Clarity AI
         </p>
       </article>
     </main>
