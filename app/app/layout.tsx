@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense } from "react";
-import LayoutShell from "@/app/LayoutShell";
 import SolaceGuard from "@/app/components/SolaceGuard";
 import SolaceDockWrapper from "@/app/components/SolaceDockWrapper";
 
@@ -17,9 +16,10 @@ export default function AppSectionLayout({
         <SolaceGuard />
       </Suspense>
 
-      <LayoutShell>{children}</LayoutShell>
+      {/* 🔒 Do NOT re-render LayoutShell here */}
+      {children}
 
-      {/* 🔒 Dock is also /app-only */}
+      {/* 🔒 Dock is /app-only */}
       <SolaceDockWrapper />
     </>
   );
