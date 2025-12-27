@@ -1,19 +1,15 @@
 import MemoryWorkspaceClient from "./MemoryWorkspaceClient";
 
-export default function WorkspaceMemoryPage() {
-  // Read workspaceId from DOM boundary set by layout
-  // (Next guarantees layout renders before page)
-  // @ts-ignore – resolved at runtime
-  const workspaceId =
-    typeof document !== "undefined"
-      ? document
-          .querySelector("[data-workspace-id]")
-          ?.getAttribute("data-workspace-id")
-      : null;
+export default function WorkspaceMemoryPage({
+  params,
+}: {
+  params: { workspaceId: string };
+}) {
+  const { workspaceId } = params;
 
   if (!workspaceId) {
     console.error(
-      "[WorkspaceMemoryPage] workspaceId unavailable from layout boundary"
+      "[WorkspaceMemoryPage] workspaceId missing from route params"
     );
 
     return (
