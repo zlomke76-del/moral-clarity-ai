@@ -8,8 +8,6 @@ import { buildNewsNeutralityLedger } from '@/lib/news/ledgerBuilder';
 
 const NEWS_REFRESH_SECRET = process.env.NEWS_REFRESH_SECRET || '';
 
-/* ================= CORS ================= */
-
 function corsHeaders(origin: string | null): Headers {
   const h = new Headers();
   h.set('Vary', 'Origin');
@@ -33,18 +31,13 @@ function pickOrigin(req: NextRequest): string | null {
     ) {
       return origin;
     }
-  } catch {
-    // ignore
-  }
+  } catch {}
   return null;
 }
-
-/* ================= HANDLER ================= */
 
 async function handleRefresh(req: NextRequest) {
   const origin = pickOrigin(req);
 
-  // ---- Shared secret gate ----
   if (NEWS_REFRESH_SECRET) {
     const url = new URL(req.url);
     const token =
@@ -58,71 +51,43 @@ async function handleRefresh(req: NextRequest) {
     }
   }
 
-  try {
-    // ================= Phase 1: Fetch / Ingest =================
-    console.log('[news/refresh] phase 1: fetch start');
-    const fetchResult = await runNewsFetchRefresh();
+  // 🔑 Fire-and-monitor (NOT fire-and-forget)
+  Promise.resolve()
+    .then(async () => {
+      console.log('[news/refresh] phase 1: fetch start');
+      const fetchResult = await runNewsFetchRefresh();
 
-    if (!fetchResult.ok) {
-      throw new Error('[news/refresh] fetch failed');
-    }
+      if (!fetchResult.ok || fetchResult.totalInserted === 0) {
+        throw new Error('fetch failed or produced zero inserts');
+      }
 
-    if (fetchResult.totalInserted === 0) {
-      throw new Error(
-        '[news/refresh] fetch completed with ZERO inserts — aborting'
-      );
-    }
+      console.log('[news/refresh] phase 1 complete', fetchResult.totalInserted);
 
-    console.log('[news/refresh] phase 1 complete', {
-      totalInserted: fetchResult.totalInserted,
+      console.log('[news/refresh] phase 2: ledger build start');
+      const ledgerResult = await buildNewsNeutralityLedger({ limit: 500 });
+
+      if (!ledgerResult || ledgerResult.inserted === 0) {
+        throw new Error('ledger build failed or empty');
+      }
+
+      console.log('[news/refresh] completed successfully');
+    })
+    .catch((err) => {
+      console.error('[news/refresh] async failure', err);
     });
 
-    // ================= Phase 2: Ledger Build =================
-    console.log('[news/refresh] phase 2: ledger build start');
-    const ledgerResult = await buildNewsNeutralityLedger({ limit: 500 });
-
-    if (!ledgerResult || ledgerResult.inserted === 0) {
-      throw new Error(
-        '[news/refresh] ledger build produced ZERO inserts — aborting'
-      );
-    }
-
-    console.log('[news/refresh] phase 2 complete', {
-      ledgerInserted: ledgerResult.inserted,
-    });
-
-    // ================= Success =================
-    console.log('[news/refresh] completed successfully');
-
-    return NextResponse.json(
-      {
-        ok: true,
-        status: 'refresh_completed',
-        fetchInserted: fetchResult.totalInserted,
-        ledgerInserted: ledgerResult.inserted,
-      },
-      { status: 200, headers: corsHeaders(origin) }
-    );
-  } catch (err: any) {
-    console.error('[news/refresh] FAILURE', err);
-
-    return NextResponse.json(
-      {
-        ok: false,
-        error: err?.message || 'refresh_failed',
-      },
-      { status: 500, headers: corsHeaders(origin) }
-    );
-  }
-}
-
-/* ================= METHODS ================= */
-
-export async function POST(req: NextRequest) {
-  return handleRefresh(req);
+  // ✅ Return immediately
+  return NextResponse.json(
+    { ok: true, status: 'refresh_started' },
+    { status: 202, headers: corsHeaders(origin) }
+  );
 }
 
 export async function GET(req: NextRequest) {
+  return handleRefresh(req);
+}
+
+export async function POST(req: NextRequest) {
   return handleRefresh(req);
 }
 
