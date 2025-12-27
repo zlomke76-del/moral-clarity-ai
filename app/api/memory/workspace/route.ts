@@ -1,3 +1,7 @@
+// app/api/memory/workspace/route.ts
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { createClientServer } from "@/lib/supabase/server";
 
@@ -19,13 +23,14 @@ export async function GET(req: Request) {
     console.log("[MEMORY-API] supabase client created");
 
     const { data, error } = await supabase
+      .schema("memory")
       .from("memories")
       .select("*")
       .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: false });
 
     console.log("[MEMORY-API] query result", {
-      count: data?.length,
+      rows: data?.length ?? 0,
       error,
     });
 
@@ -36,9 +41,13 @@ export async function GET(req: Request) {
       );
     }
 
-    return NextResponse.json({ items: data ?? [] });
+    return NextResponse.json({
+      ok: true,
+      items: data ?? [],
+    });
   } catch (err: any) {
     console.error("[MEMORY-API] fatal error", err);
+
     return NextResponse.json(
       { error: err?.message ?? String(err) },
       { status: 500 }
