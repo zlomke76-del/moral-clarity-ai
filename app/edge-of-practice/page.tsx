@@ -153,6 +153,13 @@ export default function EdgeOfPracticeIndexPage() {
               Thermomechanical Phase-Aligned Insulation — Falsification of Static R-Value Sufficiency Under Time-Translated Thermal Forcing
             </Link>
           </li>
+
+          {/* ADDITIVE ENTRY — NO REMOVALS */}
+          <li>
+            <Link href="/edge-of-practice/embedded-osmotic-power">
+              Embedded Osmotic Power from Waste Salinity Gradients — Falsification of Salinity-as-Waste Assumption
+            </Link>
+          </li>
         </ul>
 
         {/* ================= ADDITIVE NEW CLASS ================= */}
