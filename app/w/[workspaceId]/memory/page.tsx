@@ -1,16 +1,16 @@
+"use client";
+
+import { useParams } from "next/navigation";
 import MemoryWorkspaceClient from "./MemoryWorkspaceClient";
 
-export default function WorkspaceMemoryPage({
-  params,
-}: {
-  params: { workspaceId: string };
-}) {
-  const { workspaceId } = params;
+export default function WorkspaceMemoryPage() {
+  const params = useParams<{ workspaceId?: string }>();
+  const workspaceId = params?.workspaceId;
 
-  if (!workspaceId) {
-    console.error(
-      "[WorkspaceMemoryPage] workspaceId missing from route params"
-    );
+  if (!workspaceId || typeof workspaceId !== "string") {
+    console.error("[WorkspaceMemoryPage] workspaceId missing from useParams()", {
+      params,
+    });
 
     return (
       <section className="w-full h-full flex items-center justify-center text-sm text-neutral-500">
@@ -28,16 +28,11 @@ export default function WorkspaceMemoryPage({
         <h1 className="text-2xl font-semibold tracking-tight">
           Workspace Memories
         </h1>
-        <p className="text-sm text-neutral-400">
-          Long-term factual memory only
-        </p>
+        <p className="text-sm text-neutral-400">Long-term factual memory only</p>
       </header>
 
       <div className="flex-1 min-h-0">
-        <MemoryWorkspaceClient
-          workspaceId={workspaceId}
-          initialItems={[]}
-        />
+        <MemoryWorkspaceClient workspaceId={workspaceId} initialItems={[]} />
       </div>
     </section>
   );
