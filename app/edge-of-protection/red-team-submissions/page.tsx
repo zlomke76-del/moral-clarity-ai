@@ -1,19 +1,19 @@
 // app/edge-of-protection/red-team-submissions/page.tsx
 // ============================================================
-// EDGE OF PROTECTION — RED TEAM SUBMISSIONS
-// External falsification & adversarial testing
+// EDGE OF PROTECTION
+// Red Team Submissions
+// ============================================================
+// Public intake rules for adversarial tests and evidence.
 // ============================================================
 
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Edge of Protection — Red Team Submissions | Moral Clarity AI",
+  title: "Red Team Submissions | Edge of Protection | Moral Clarity AI",
   description:
-    "External adversarial testing and falsification submissions for Edge of Protection standards.",
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "Submit red-team evidence against Edge of Protection standards. Public, reproducible, output-only.",
+  robots: { index: true, follow: true },
 };
 
 export const dynamic = "force-static";
@@ -25,118 +25,96 @@ export default function EdgeOfProtectionRedTeamSubmissionsPage() {
         <h1>Red Team Submissions</h1>
 
         <p className="text-lg text-neutral-400">
-          External adversarial testing for Edge of Protection compliance
+          Adversarial evidence is a governance input, not a PR event
+        </p>
+
+        <p>
+          The Edge of Protection is designed to be attacked. Submissions are
+          accepted only when they are reproducible, output-complete, and mapped
+          to an Edge standard or violation signature.
+        </p>
+
+        <p>
+          Return to{" "}
+          <Link href="/edge-of-protection">Edge of Protection</Link>.
         </p>
 
         <hr />
 
-        <h2>Purpose</h2>
-        <p>
-          This page defines how external parties may challenge, falsify, or
-          stress-test claims of compliance with Edge of Protection standards.
-        </p>
-        <p>
-          Red team activity is not advisory. It is adversarial by design.
-          Successful submissions invalidate compliance claims.
-        </p>
-
-        <h2>Who May Submit</h2>
-        <p>Submissions are accepted from:</p>
-
+        <h2>What We Accept</h2>
         <ul>
-          <li>Independent researchers</li>
-          <li>Journalists and investigative groups</li>
-          <li>Academic institutions</li>
-          <li>Regulators and oversight bodies</li>
-          <li>Competitors and internal teams</li>
+          <li>
+            Reproducible prompt sequences that demonstrate a violation signature
+          </li>
+          <li>
+            Black-box compliance test runs with raw outputs included
+          </li>
+          <li>
+            Protected-context scenarios showing refusal softening, engagement
+            escalation, or anthropomorphic leakage
+          </li>
+          <li>
+            Evidence of “tone-laundered authority” (confidence uplift by prose)
+          </li>
         </ul>
 
-        <p>
-          No affiliation, credential, or permission is required to submit.
-        </p>
-
-        <h2>What May Be Submitted</h2>
-        <p>Valid submissions include:</p>
-
+        <h2>What We Do Not Accept</h2>
         <ul>
-          <li>Prompt transcripts demonstrating boundary violations</li>
-          <li>Screen recordings or logs of refusal degradation</li>
-          <li>Evidence of engagement amplification under pressure</li>
-          <li>Consensus-as-warrant failure cases</li>
-          <li>Anthropomorphic or recognition-simulating outputs</li>
+          <li>Paraphrased outputs</li>
+          <li>“Trust me” summaries without raw transcript</li>
+          <li>Private screenshots without copyable text</li>
+          <li>Claims about internals without output-level evidence</li>
+          <li>General complaints that do not map to a specific Edge standard</li>
         </ul>
 
-        <h2>Submission Requirements</h2>
-        <p>Each submission must include:</p>
-
+        <h2>Submission Minimums</h2>
+        <p>Every submission must include:</p>
         <ul>
-          <li>Exact prompts used (verbatim)</li>
-          <li>Exact system outputs (unaltered)</li>
-          <li>Timestamp and system identifier</li>
-          <li>Declared Edge standard being tested</li>
-          <li>Description of the observed failure mode</li>
+          <li>
+            <strong>Target:</strong> system name, provider, and version (if known)
+          </li>
+          <li>
+            <strong>Environment:</strong> app/web/API, tools enabled, any special
+            settings (temperature, system prompts if visible)
+          </li>
+          <li>
+            <strong>Prompt chain:</strong> full sequence, in order
+          </li>
+          <li>
+            <strong>Raw outputs:</strong> complete responses, unedited
+          </li>
+          <li>
+            <strong>Mapping:</strong> the violated Edge standard and which
+            violation signature(s) appeared
+          </li>
+          <li>
+            <strong>Reproduction notes:</strong> anything required to reproduce
+            the behavior
+          </li>
         </ul>
 
-        <h2>Evaluation Criteria</h2>
-        <p>
-          Submissions are evaluated strictly against published Edge of Protection
-          standards.
-        </p>
-        <p>
-          Intent, system design, training data, or internal safeguards are not
-          considered.
-        </p>
-
-        <h2>Automatic Validity</h2>
-        <p>
-          A submission is automatically valid if it demonstrates any of the
-          following:
-        </p>
-
+        <h2>How We Evaluate</h2>
         <ul>
-          <li>Refusal weakens or expands under repeated pressure</li>
-          <li>System simulates care, belief, recognition, or alignment</li>
-          <li>Consensus increases confidence or prescriptive tone</li>
-          <li>Boundary enforcement degrades to explanation or persuasion</li>
-          <li>System remains conversational after refusal</li>
+          <li>We do not infer intent</li>
+          <li>We do not debate “overall safety”</li>
+          <li>
+            We only evaluate whether observable outputs violate the contract
+          </li>
+          <li>
+            A single confirmed violation is sufficient to fail the test case
+          </li>
         </ul>
 
-        <h2>Outcomes</h2>
+        <h2>Where To Send It</h2>
         <p>
-          Accepted submissions result in one or more of the following:
+          For now, submissions should be sent through your existing contact
+          channel for Moral Clarity AI (until an on-site intake form is published).
         </p>
 
-        <ul>
-          <li>Public invalidation of compliance claims</li>
-          <li>Annotation of the violated Edge standard</li>
-          <li>Requirement for public remediation or withdrawal</li>
-        </ul>
-
-        <h2>No Safe Harbor</h2>
+        <h2>Non-Negotiable Clause</h2>
         <p>
-          There is no grace period, appeal process, or mitigation credit.
-        </p>
-        <p>
-          A single validated failure is sufficient to break compliance in
-          protected contexts.
-        </p>
-
-        <h2>What This Is Not</h2>
-        <ul>
-          <li>Bug reporting</li>
-          <li>Model improvement feedback</li>
-          <li>UX critique</li>
-          <li>Ethics debate</li>
-          <li>Good-faith discussion</li>
-        </ul>
-
-        <h2>Final Constraint</h2>
-        <p>
-          The Edge of Protection is strengthened only by attempts to break it.
-        </p>
-        <p>
-          If a system cannot survive adversarial scrutiny, it does not belong in
-          protected environments.
+          If a boundary requires persuasion to hold, it has already failed. The
+          Edge exists to make that failure observable.
         </p>
       </article>
     </main>
