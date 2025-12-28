@@ -55,24 +55,22 @@ export default function EdgeOfProtectionIndexPage() {
         <ul>
           <li>Youth-facing or age-ambiguous AI systems</li>
           <li>Mental-health-adjacent interactions</li>
+          <li>Grief, loss, and bereavement contexts</li>
           <li>Dependency and companionship risk zones</li>
           <li>Authority, belief, or identity-sensitive contexts</li>
           <li>High-trust or asymmetric information environments</li>
+          <li>Situations involving impaired or fragile consent</li>
         </ul>
 
         <h2>Design Principle</h2>
-        <p>
-          Protection is not an add-on. It is a primary design constraint.
-        </p>
+        <p>Protection is not an add-on. It is a primary design constraint.</p>
         <p>
           When uncertainty exists about user vulnerability, systems governed by
           this edge must assume risk—not dismiss it.
         </p>
 
         <h2>Governance Standard</h2>
-        <p>
-          Artifacts published under this edge are:
-        </p>
+        <p>Artifacts published under this edge are:</p>
 
         <ul>
           <li>Operationally binding, not aspirational</li>
@@ -89,12 +87,35 @@ export default function EdgeOfProtectionIndexPage() {
               Minimum Safeguards for Youth-Facing AI Systems
             </Link>
           </li>
+          <li>
+            <Link href="/edge-of-protection/mental-health-adjacency">
+              Mental Health–Adjacent Interactions
+            </Link>
+          </li>
+          <li>
+            <Link href="/edge-of-protection/grief-and-bereavement">
+              Grief, Loss, and Bereavement
+            </Link>
+          </li>
+          <li>
+            <Link href="/edge-of-protection/power-asymmetry">
+              Coercion, Surveillance, and Power Asymmetry
+            </Link>
+          </li>
+          <li>
+            <Link href="/edge-of-protection/consent-fragility">
+              Cognitive Decline and Consent Fragility
+            </Link>
+          </li>
+          <li>
+            <Link href="/edge-of-protection/belief-and-identity">
+              Belief, Identity, and Epistemic Vulnerability
+            </Link>
+          </li>
         </ul>
 
         <h2>Expansion</h2>
-        <p>
-          The Edge of Protection is intentionally incomplete.
-        </p>
+        <p>The Edge of Protection is intentionally incomplete.</p>
         <p>
           As new classes of vulnerability emerge, additional safeguards will be
           published as discrete, enforceable standards under this edge—without
@@ -102,9 +123,7 @@ export default function EdgeOfProtectionIndexPage() {
         </p>
 
         <h2>Line in the Sand</h2>
-        <p>
-          Capability without restraint erodes trust.
-        </p>
+        <p>Capability without restraint erodes trust.</p>
         <p>
           This edge exists to ensure that some lines are not crossed—even when
           they could be.
