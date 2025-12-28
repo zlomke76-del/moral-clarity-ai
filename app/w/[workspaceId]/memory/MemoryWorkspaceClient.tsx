@@ -18,9 +18,6 @@ export default function MemoryWorkspaceClient({
   const [selected, setSelected] = useState<MemoryRecord | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // ------------------------------------------------------------
-  // Load workspace memories
-  // ------------------------------------------------------------
   useEffect(() => {
     let cancelled = false;
 
@@ -53,7 +50,6 @@ export default function MemoryWorkspaceClient({
     }
 
     loadMemories();
-
     return () => {
       cancelled = true;
     };
@@ -62,7 +58,7 @@ export default function MemoryWorkspaceClient({
   return (
     <div
       data-memory-grid
-      className="h-full grid grid-cols-[420px_1fr] min-h-0"
+      className="flex-1 grid grid-cols-[420px_1fr] min-h-0"
     >
       <aside className="border-r border-neutral-800 overflow-y-auto">
         <MemoryIndexPanel
