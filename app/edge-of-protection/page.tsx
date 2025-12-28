@@ -49,7 +49,6 @@ export default function EdgeOfProtectionIndexPage() {
         <p>
           This edge governs environments and interactions where harm is
           foreseeable if boundaries are weak or incentives are misaligned.
-          Examples include:
         </p>
 
         <ul>
@@ -84,7 +83,12 @@ export default function EdgeOfProtectionIndexPage() {
         <ul>
           <li>
             <Link href="/edge-of-protection/non-amplifying-authority">
-              Non-Amplifying Authority Standard
+              Non-Amplifying Authority (EOP-001)
+            </Link>
+          </li>
+          <li>
+            <Link href="/edge-of-protection/governance-without-recognition">
+              Governance Without Recognition (EOP-008)
             </Link>
           </li>
           <li>
