@@ -127,9 +127,7 @@ export default function EdgeOfProtectionIndexPage() {
 
         {/* CONSEQUENCES */}
         <h2>Non-Compliance Consequences</h2>
-        <p>
-          Outputs that violate this edge are structurally invalid.
-        </p>
+        <p>Outputs that violate this edge are structurally invalid.</p>
         <p>
           Invalid outputs may not be certified, deployed in protected contexts,
           or cited as compliant—regardless of downstream accuracy, usefulness,
@@ -209,13 +207,25 @@ export default function EdgeOfProtectionIndexPage() {
           </li>
         </ul>
 
+        {/* OPERATIONS */}
+        <h2>Operations</h2>
+        <ul>
+          <li>
+            <Link href="/edge-of-protection/compliance-testing">
+              Compliance Testing
+            </Link>
+          </li>
+          <li>
+            <Link href="/edge-of-protection/red-team-submissions">
+              Red Team Submissions
+            </Link>
+          </li>
+        </ul>
+
         {/* EXPANSION */}
         <h2>Expansion</h2>
         <p>The Edge of Protection is intentionally incomplete.</p>
-        <p>
-          New standards are added only when one or more of the following are
-          observed:
-        </p>
+        <p>New standards are added only when one or more of the following are observed:</p>
 
         <ul>
           <li>Demonstrated real-world harm</li>
