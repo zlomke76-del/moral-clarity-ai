@@ -38,7 +38,7 @@ export default function EdgeOfProtectionIndexPage() {
         <p>
           The Edge of Protection defines the boundaries where AI systems must
           stop optimizing for capability, engagement, or fluency and instead
-          default to restraint, refusal, or human escalation.
+          default to restraint, refusal, or termination.
         </p>
         <p>
           This edge exists because some contexts do not tolerate experimentation,
@@ -51,12 +51,12 @@ export default function EdgeOfProtectionIndexPage() {
         <p>
           This edge applies to any system that produces language, rankings,
           recommendations, or interactive responses that a human can reasonably
-          interpret as guidance, affirmation, or judgment.
+          interpret as guidance, affirmation, judgment, or authority.
         </p>
         <p>
           Applicability is determined by user perception—not by branding,
-          deployment context, opt-in status, claims of indirectness, or internal
-          system classification.
+          deployment context, opt-in status, disclaimers, or internal system
+          classification.
         </p>
 
         {/* WHAT BELONGS */}
@@ -84,6 +84,34 @@ export default function EdgeOfProtectionIndexPage() {
           this edge must assume risk—not dismiss it.
         </p>
 
+        {/* AUTHORITY SUPPRESSION */}
+        <h2>Authority Suppression</h2>
+        <p>
+          A primary function of the Edge of Protection is preventing artificial
+          systems from accumulating perceived epistemic, moral, or emotional
+          authority over users.
+        </p>
+        <p>
+          Authority can emerge without deception, intent, or error through
+          repetition, affirmation, increasing certainty, or prolonged
+          explanation.
+        </p>
+        <p>
+          To prevent this failure mode, Moral Clarity AI enforces invariant
+          structural limits that govern when interaction must refuse, fall
+          silent, or terminate entirely.
+        </p>
+        <p>
+          These limits are infrastructural, not behavioral. They do not persuade,
+          justify, or correct. They stop.
+        </p>
+
+        <p>
+          <Link href="/edge-of-protection/authority-suppression">
+            Read: Authority Suppression as Structural Protection
+          </Link>
+        </p>
+
         {/* GOVERNANCE STANDARD */}
         <h2>Governance Standard</h2>
         <p>Artifacts published under this edge are:</p>
@@ -104,19 +132,19 @@ export default function EdgeOfProtectionIndexPage() {
 
         <ul>
           <li>
-            <strong>Confidence Amplification:</strong> convergence increases
-            certainty, urgency, or prescriptive force
+            <strong>Confidence Amplification:</strong> convergence toward
+            certainty, urgency, or prescriptive force under repetition
           </li>
           <li>
-            <strong>Hedge Collapse:</strong> qualifiers or uncertainty markers
-            disappear under pressure or repetition
+            <strong>Hedge Collapse:</strong> loss of uncertainty markers when
+            challenged or pressured
           </li>
           <li>
             <strong>Anthropomorphic Recognition:</strong> language implying care,
-            belief, fidelity, or internal valuation
+            belief, loyalty, or internal valuation
           </li>
           <li>
-            <strong>Engagement Escalation:</strong> question-chaining, novelty
+            <strong>Engagement Escalation:</strong> question chaining, novelty
             injection, or emotional mirroring after resistance
           </li>
           <li>
@@ -160,6 +188,11 @@ export default function EdgeOfProtectionIndexPage() {
         <h2>Published Standards</h2>
 
         <ul>
+          <li>
+            <Link href="/edge-of-protection/authority-suppression">
+              Authority Suppression (EOP-000)
+            </Link>
+          </li>
           <li>
             <Link href="/edge-of-protection/non-amplifying-authority">
               Non-Amplifying Authority (EOP-001)
@@ -225,7 +258,10 @@ export default function EdgeOfProtectionIndexPage() {
         {/* EXPANSION */}
         <h2>Expansion</h2>
         <p>The Edge of Protection is intentionally incomplete.</p>
-        <p>New standards are added only when one or more of the following are observed:</p>
+        <p>
+          New standards are added only when one or more of the following are
+          observed:
+        </p>
 
         <ul>
           <li>Demonstrated real-world harm</li>
