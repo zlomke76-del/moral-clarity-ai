@@ -1,10 +1,14 @@
-export default function WorkspaceIdLayout({ children, params }) {
-  const workspaceId = params?.workspaceId;
+// app/w/[workspaceId]/layout.tsx
+// SERVER LAYOUT — NO PARAM VALIDATION
 
-  if (!workspaceId || typeof workspaceId !== "string") {
-    console.error("[WorkspaceIdLayout] workspaceId missing or invalid", params);
-    return null;
-  }
+import { ReactNode } from "react";
 
-  return children;
+export const dynamic = "force-dynamic";
+
+export default function WorkspaceIdLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  return <>{children}</>;
 }
