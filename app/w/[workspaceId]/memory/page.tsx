@@ -1,26 +1,23 @@
+// app/w/[workspaceId]/memory/page.tsx
+
 import MemoryWorkspaceClient from "./MemoryWorkspaceClient";
 
 type PageProps = {
-  params: {
-    workspaceId: string;
+  params?: {
+    workspaceId?: string;
   };
 };
 
 export const dynamic = "force-dynamic";
 
 export default function WorkspaceMemoryPage({ params }: PageProps) {
-  const workspaceId = params.workspaceId;
+  const workspaceId = params?.workspaceId;
 
+  // Route contract:
+  // This page must not render without a workspaceId.
+  // Silence is intentional to avoid render thrash during transitions.
   if (!workspaceId) {
-    console.error(
-      "[WorkspaceMemoryPage] workspaceId missing from route params"
-    );
-
-    return (
-      <section className="w-full h-full flex items-center justify-center text-sm text-neutral-500">
-        Unable to load workspace memories.
-      </section>
-    );
+    return null;
   }
 
   return (
