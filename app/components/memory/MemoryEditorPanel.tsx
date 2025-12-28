@@ -1,50 +1,31 @@
 "use client";
 
+import { useState } from "react";
 import type { MemoryRecord } from "./types";
 
 type Props = {
-  items: MemoryRecord[];
-  selectedId: string | null;
-  onSelect: (record: MemoryRecord) => void;
+  workspaceId: string;
+  record: MemoryRecord;
 };
 
-function renderPreview(content: unknown): string {
-  if (typeof content === "string") return content;
-  if (content && typeof content === "object") return "[Structured memory]";
-  return "";
-}
-
-export default function MemoryIndexPanel({
-  items,
-  selectedId,
-  onSelect,
+export default function MemoryEditorPanel({
+  workspaceId,
+  record,
 }: Props) {
-  return (
-    <div className="h-full overflow-y-auto">
-      <ul className="divide-y divide-neutral-800">
-        {items.map((m) => {
-          const active = m.id === selectedId;
+  const [value, setValue] = useState(record.content);
 
-          return (
-            <li
-              key={m.id}
-              onClick={() => onSelect(m)}
-              className={`cursor-pointer px-4 py-3 ${
-                active
-                  ? "bg-neutral-900 text-white"
-                  : "hover:bg-neutral-900/60 text-neutral-300"
-              }`}
-            >
-              <div className="truncate text-sm">
-                {renderPreview(m.content)}
-              </div>
-              <div className="mt-1 text-xs text-neutral-500">
-                {new Date(m.updated_at).toLocaleString()}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+  return (
+    <div className="h-full flex flex-col p-6">
+      <textarea
+        className="flex-1 w-full bg-neutral-900 border border-neutral-800 rounded-md p-3 text-sm"
+        value={typeof value === "string" ? value : JSON.stringify(value, null, 2)}
+        onChange={(e) => setValue(e.target.value)}
+      />
+
+      {/* Workspace context intentionally retained for future save / audit */}
+      <div className="mt-2 text-xs text-neutral-600">
+        Workspace: {workspaceId}
+      </div>
     </div>
   );
 }
