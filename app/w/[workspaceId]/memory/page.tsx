@@ -1,25 +1,13 @@
 // app/w/[workspaceId]/memory/page.tsx
-
 import MemoryWorkspaceClient from "./MemoryWorkspaceClient";
 
-type PageProps = {
-  params: {
-    workspaceId: string;
-  };
-};
-
-export const dynamic = "force-dynamic";
-
-export default function WorkspaceMemoryPage({ params }: PageProps) {
-  // 🔒 Do NOT guard against undefined here
-  // App Router guarantees this once the route is valid
-  const { workspaceId } = params;
-
+export default function WorkspaceMemoryPage({
+  params,
+}: {
+  params: { workspaceId: string };
+}) {
   return (
-    <section
-      data-layout-boundary="WorkspaceMemoryPage"
-      className="w-full h-full flex flex-col"
-    >
+    <section className="w-full h-full flex flex-col">
       <header className="px-8 py-6 border-b border-neutral-800">
         <h1 className="text-2xl font-semibold tracking-tight">
           Workspace Memories
@@ -31,7 +19,7 @@ export default function WorkspaceMemoryPage({ params }: PageProps) {
 
       <div className="flex-1 min-h-0">
         <MemoryWorkspaceClient
-          workspaceId={workspaceId}
+          workspaceId={params.workspaceId}
           initialItems={[]}
         />
       </div>
