@@ -1,9 +1,10 @@
 // app/w/[workspaceId]/memory/page.tsx
 
+import { notFound } from "next/navigation";
 import MemoryWorkspaceClient from "./MemoryWorkspaceClient";
 
 type PageProps = {
-  params?: {
+  params: {
     workspaceId?: string;
   };
 };
@@ -13,11 +14,8 @@ export const dynamic = "force-dynamic";
 export default function WorkspaceMemoryPage({ params }: PageProps) {
   const workspaceId = params?.workspaceId;
 
-  // Route contract:
-  // This page must not render without a workspaceId.
-  // Silence is intentional to avoid render thrash during transitions.
   if (!workspaceId) {
-    return null;
+    notFound(); // 🔒 never return null
   }
 
   return (
