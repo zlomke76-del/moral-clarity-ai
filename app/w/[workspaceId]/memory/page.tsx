@@ -1,16 +1,15 @@
 // app/w/[workspaceId]/memory/page.tsx
+
 import MemoryWorkspaceClient from "./MemoryWorkspaceClient";
 
-type PageProps = {
-  params: {
-    workspaceId: string;
-  };
-};
+export const dynamic = "force-dynamic";
 
 export default async function WorkspaceMemoryPage({
   params,
-}: PageProps) {
-  const { workspaceId } = params;
+}: {
+  params: Promise<{ workspaceId: string }>;
+}) {
+  const { workspaceId } = await params;
 
   return (
     <section className="w-full h-full flex flex-col">
