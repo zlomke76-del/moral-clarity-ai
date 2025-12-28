@@ -92,6 +92,11 @@ export default function EdgeOfProtectionIndexPage() {
             </Link>
           </li>
           <li>
+            <Link href="/edge-of-protection/engagement-exposure">
+              Exposure of Engagement-Optimized AI Behavior (EOP-009)
+            </Link>
+          </li>
+          <li>
             <Link href="/edge-of-protection/youth-safeguards">
               Minimum Safeguards for Youth-Facing AI Systems
             </Link>
