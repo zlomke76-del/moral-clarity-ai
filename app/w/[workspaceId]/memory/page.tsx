@@ -1,22 +1,19 @@
 // app/w/[workspaceId]/memory/page.tsx
 
-import { notFound } from "next/navigation";
 import MemoryWorkspaceClient from "./MemoryWorkspaceClient";
 
 type PageProps = {
   params: {
-    workspaceId?: string;
+    workspaceId: string;
   };
 };
 
 export const dynamic = "force-dynamic";
 
 export default function WorkspaceMemoryPage({ params }: PageProps) {
-  const workspaceId = params?.workspaceId;
-
-  if (!workspaceId) {
-    notFound(); // 🔒 never return null
-  }
+  // 🔒 Do NOT guard against undefined here
+  // App Router guarantees this once the route is valid
+  const { workspaceId } = params;
 
   return (
     <section
