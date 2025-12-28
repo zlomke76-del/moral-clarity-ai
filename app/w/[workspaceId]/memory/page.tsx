@@ -1,11 +1,17 @@
 // app/w/[workspaceId]/memory/page.tsx
 import MemoryWorkspaceClient from "./MemoryWorkspaceClient";
 
-export default function WorkspaceMemoryPage({
+type PageProps = {
+  params: {
+    workspaceId: string;
+  };
+};
+
+export default async function WorkspaceMemoryPage({
   params,
-}: {
-  params: { workspaceId: string };
-}) {
+}: PageProps) {
+  const { workspaceId } = params;
+
   return (
     <section className="w-full h-full flex flex-col">
       <header className="px-8 py-6 border-b border-neutral-800">
@@ -19,7 +25,7 @@ export default function WorkspaceMemoryPage({
 
       <div className="flex-1 min-h-0">
         <MemoryWorkspaceClient
-          workspaceId={params.workspaceId}
+          workspaceId={workspaceId}
           initialItems={[]}
         />
       </div>
