@@ -1,11 +1,4 @@
 // app/w/[workspaceId]/memory/layout.tsx
-// ============================================================
-// WORKSPACE MEMORY LAYOUT
-// Structural param validation & refusal boundary
-// ============================================================
-// This layout is the ONLY place workspaceId is validated.
-// Pages beneath this layer must assume workspaceId is valid.
-// ============================================================
 
 import { ReactNode } from "react";
 
