@@ -1,4 +1,3 @@
-// app/api/memory/workspace/route.ts
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -10,8 +9,6 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const workspaceId = searchParams.get("workspaceId");
 
-    console.log("[MEMORY-API] request", { workspaceId });
-
     if (!workspaceId) {
       return NextResponse.json(
         { error: "workspaceId required" },
@@ -20,19 +17,28 @@ export async function GET(req: Request) {
     }
 
     const supabase = createClientServer();
-    console.log("[MEMORY-API] supabase client created");
 
+    // 🔒 AUTH — REQUIRED
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "unauthenticated" },
+        { status: 401 }
+      );
+    }
+
+    // 🔒 INDIVIDUAL MEMORY ONLY
     const { data, error } = await supabase
       .schema("memory")
       .from("memories")
       .select("*")
       .eq("workspace_id", workspaceId)
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
-
-    console.log("[MEMORY-API] query result", {
-      rows: data?.length ?? 0,
-      error,
-    });
 
     if (error) {
       return NextResponse.json(
@@ -46,8 +52,6 @@ export async function GET(req: Request) {
       items: data ?? [],
     });
   } catch (err: any) {
-    console.error("[MEMORY-API] fatal error", err);
-
     return NextResponse.json(
       { error: err?.message ?? String(err) },
       { status: 500 }
