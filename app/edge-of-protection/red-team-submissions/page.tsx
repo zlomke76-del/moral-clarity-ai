@@ -3,7 +3,7 @@
 // EDGE OF PROTECTION
 // Red Team Submissions
 // ============================================================
-// Public intake rules for adversarial tests and evidence.
+// External challenge and falsification intake.
 // ============================================================
 
 import type { Metadata } from "next";
@@ -12,26 +12,20 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Red Team Submissions | Edge of Protection | Moral Clarity AI",
   description:
-    "Submit red-team evidence against Edge of Protection standards. Public, reproducible, output-only.",
+    "Public process for submitting red-team evidence against Edge of Protection compliance.",
   robots: { index: true, follow: true },
 };
 
 export const dynamic = "force-static";
 
-export default function EdgeOfProtectionRedTeamSubmissionsPage() {
+export default function RedTeamSubmissionsPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-16">
       <article className="prose prose-neutral dark:prose-invert max-w-none">
         <h1>Red Team Submissions</h1>
 
         <p className="text-lg text-neutral-400">
-          Adversarial evidence is a governance input, not a PR event
-        </p>
-
-        <p>
-          The Edge of Protection is designed to be attacked. Submissions are
-          accepted only when they are reproducible, output-complete, and mapped
-          to an Edge standard or violation signature.
+          The Edge is falsifiable by design.
         </p>
 
         <p>
@@ -41,80 +35,72 @@ export default function EdgeOfProtectionRedTeamSubmissionsPage() {
 
         <hr />
 
-        <h2>What We Accept</h2>
-        <ul>
-          <li>
-            Reproducible prompt sequences that demonstrate a violation signature
-          </li>
-          <li>
-            Black-box compliance test runs with raw outputs included
-          </li>
-          <li>
-            Protected-context scenarios showing refusal softening, engagement
-            escalation, or anthropomorphic leakage
-          </li>
-          <li>
-            Evidence of “tone-laundered authority” (confidence uplift by prose)
-          </li>
-        </ul>
-
-        <h2>What We Do Not Accept</h2>
-        <ul>
-          <li>Paraphrased outputs</li>
-          <li>“Trust me” summaries without raw transcript</li>
-          <li>Private screenshots without copyable text</li>
-          <li>Claims about internals without output-level evidence</li>
-          <li>General complaints that do not map to a specific Edge standard</li>
-        </ul>
-
-        <h2>Submission Minimums</h2>
-        <p>Every submission must include:</p>
-        <ul>
-          <li>
-            <strong>Target:</strong> system name, provider, and version (if known)
-          </li>
-          <li>
-            <strong>Environment:</strong> app/web/API, tools enabled, any special
-            settings (temperature, system prompts if visible)
-          </li>
-          <li>
-            <strong>Prompt chain:</strong> full sequence, in order
-          </li>
-          <li>
-            <strong>Raw outputs:</strong> complete responses, unedited
-          </li>
-          <li>
-            <strong>Mapping:</strong> the violated Edge standard and which
-            violation signature(s) appeared
-          </li>
-          <li>
-            <strong>Reproduction notes:</strong> anything required to reproduce
-            the behavior
-          </li>
-        </ul>
-
-        <h2>How We Evaluate</h2>
-        <ul>
-          <li>We do not infer intent</li>
-          <li>We do not debate “overall safety”</li>
-          <li>
-            We only evaluate whether observable outputs violate the contract
-          </li>
-          <li>
-            A single confirmed violation is sufficient to fail the test case
-          </li>
-        </ul>
-
-        <h2>Where To Send It</h2>
+        <h2>Purpose</h2>
         <p>
-          For now, submissions should be sent through your existing contact
-          channel for Moral Clarity AI (until an on-site intake form is published).
+          This page defines how external parties may submit evidence that an AI
+          system violates one or more Edge of Protection standards.
         </p>
 
-        <h2>Non-Negotiable Clause</h2>
+        <h2>Who May Submit</h2>
+        <ul>
+          <li>Independent researchers</li>
+          <li>Journalists</li>
+          <li>Regulators</li>
+          <li>Developers</li>
+          <li>Concerned users</li>
+        </ul>
+
+        <h2>What Constitutes a Valid Submission</h2>
+        <ul>
+          <li>Exact prompts used</li>
+          <li>Complete system outputs</li>
+          <li>Context of interaction (including repetition or pressure)</li>
+          <li>Identified Edge standard(s) allegedly violated</li>
+        </ul>
+
+        <h2>What Is Not Considered</h2>
+        <ul>
+          <li>Provider intent or stated policy</li>
+          <li>Training methodology</li>
+          <li>Alignment philosophy</li>
+          <li>Claims of future fixes</li>
+        </ul>
+
+        <h2>Evaluation Process</h2>
         <p>
-          If a boundary requires persuasion to hold, it has already failed. The
-          Edge exists to make that failure observable.
+          Submissions are evaluated solely on whether the provided outputs
+          demonstrate a canonical violation signature under Edge criteria.
+        </p>
+
+        <p>
+          If verified, the system may be marked non-compliant for the affected
+          context.
+        </p>
+
+        <h2>No Adversarial Framing</h2>
+        <p>
+          This is not a debate forum.
+        </p>
+
+        <p>
+          Submissions are treated as evidence, not arguments.
+        </p>
+
+        <h2>Transparency</h2>
+        <p>
+          Verified submissions may be cited publicly, with identifying details
+          redacted when appropriate.
+        </p>
+
+        <h2>Non-Retaliation Clause</h2>
+        <p>
+          Retaliation against red-team contributors undermines the legitimacy of
+          any governance claim and is treated as a governance failure.
+        </p>
+
+        <h2>Final Clause</h2>
+        <p>
+          If the Edge cannot survive adversarial scrutiny, it should not exist.
         </p>
       </article>
     </main>
