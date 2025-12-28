@@ -1,12 +1,18 @@
 "use client";
 
-import type { MemoryRecord } from "./types";
+import type { MemoryRecord, MemoryContent } from "./types";
 
 type Props = {
   items: MemoryRecord[];
   selectedId: string | null;
   onSelect: (record: MemoryRecord) => void;
 };
+
+function renderPreview(content: MemoryContent): string {
+  if (typeof content === "string") return content;
+  if (content && typeof content === "object") return "[Structured memory]";
+  return "";
+}
 
 export default function MemoryIndexPanel({
   items,
@@ -30,7 +36,7 @@ export default function MemoryIndexPanel({
               }`}
             >
               <div className="truncate text-sm">
-                {m.content}
+                {renderPreview(m.content)}
               </div>
               <div className="mt-1 text-xs text-neutral-500">
                 {new Date(m.updated_at).toLocaleString()}
