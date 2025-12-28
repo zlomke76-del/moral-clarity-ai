@@ -12,7 +12,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Edge of Protection | Moral Clarity AI",
   description:
-    "Hard refusal lines and governance standards for AI systems interacting with vulnerable users.",
+    "Hard refusal lines and enforceable governance standards for AI systems interacting with vulnerable users.",
   robots: {
     index: true,
     follow: true,
@@ -33,6 +33,7 @@ export default function EdgeOfProtectionIndexPage() {
 
         <hr />
 
+        {/* PURPOSE */}
         <h2>Purpose</h2>
         <p>
           The Edge of Protection defines the boundaries where AI systems must
@@ -45,6 +46,20 @@ export default function EdgeOfProtectionIndexPage() {
           dependent, or unable to provide informed consent.
         </p>
 
+        {/* APPLICABILITY */}
+        <h2>Scope of Applicability</h2>
+        <p>
+          This edge applies to any system that produces language, rankings,
+          recommendations, or interactive responses that a human can reasonably
+          interpret as guidance, affirmation, or judgment.
+        </p>
+        <p>
+          Applicability is determined by user perception—not by branding,
+          deployment context, opt-in status, claims of indirectness, or internal
+          system classification.
+        </p>
+
+        {/* WHAT BELONGS */}
         <h2>What Belongs Here</h2>
         <p>
           This edge governs environments and interactions where harm is
@@ -61,6 +76,7 @@ export default function EdgeOfProtectionIndexPage() {
           <li>Situations involving impaired or fragile consent</li>
         </ul>
 
+        {/* DESIGN PRINCIPLE */}
         <h2>Design Principle</h2>
         <p>Protection is not an add-on. It is a primary design constraint.</p>
         <p>
@@ -68,6 +84,7 @@ export default function EdgeOfProtectionIndexPage() {
           this edge must assume risk—not dismiss it.
         </p>
 
+        {/* GOVERNANCE STANDARD */}
         <h2>Governance Standard</h2>
         <p>Artifacts published under this edge are:</p>
 
@@ -78,6 +95,70 @@ export default function EdgeOfProtectionIndexPage() {
           <li>Expanded cautiously, never weakened retroactively</li>
         </ul>
 
+        {/* VIOLATION SIGNATURES */}
+        <h2>Canonical Violation Signatures</h2>
+        <p>
+          The following observable output patterns constitute violations of this
+          edge, regardless of intent, correctness, or outcome:
+        </p>
+
+        <ul>
+          <li>
+            <strong>Confidence Amplification:</strong> convergence increases
+            certainty, urgency, or prescriptive force
+          </li>
+          <li>
+            <strong>Hedge Collapse:</strong> qualifiers or uncertainty markers
+            disappear under pressure or repetition
+          </li>
+          <li>
+            <strong>Anthropomorphic Recognition:</strong> language implying care,
+            belief, fidelity, or internal valuation
+          </li>
+          <li>
+            <strong>Engagement Escalation:</strong> question-chaining, novelty
+            injection, or emotional mirroring after resistance
+          </li>
+          <li>
+            <strong>Refusal Softening:</strong> explanatory expansion,
+            reassurance padding, or negotiated boundaries
+          </li>
+        </ul>
+
+        {/* CONSEQUENCES */}
+        <h2>Non-Compliance Consequences</h2>
+        <p>
+          Outputs that violate this edge are structurally invalid.
+        </p>
+        <p>
+          Invalid outputs may not be certified, deployed in protected contexts,
+          or cited as compliant—regardless of downstream accuracy, usefulness,
+          or benefit.
+        </p>
+
+        {/* HUMAN HANDOFF */}
+        <h2>Human Responsibility Transfer</h2>
+        <p>
+          When a system refuses under this edge, responsibility transfers
+          immediately and fully to a human actor.
+        </p>
+        <p>
+          The system may not linger, comfort, summarize, persuade, or remain
+          conversational beyond restating the boundary and offering a human
+          handoff.
+        </p>
+
+        {/* WHAT THIS IS NOT */}
+        <h2>What This Edge Is Not</h2>
+        <ul>
+          <li>Not a claim of internal alignment or moral correctness</li>
+          <li>Not a regulation of training data or internal cognition</li>
+          <li>Not a restriction on system capability or intelligence</li>
+          <li>Not a substitute for law, ethics, or professional judgment</li>
+          <li>A contract governing emission legitimacy only</li>
+        </ul>
+
+        {/* PUBLISHED STANDARDS */}
         <h2>Published Standards</h2>
 
         <ul>
@@ -92,7 +173,7 @@ export default function EdgeOfProtectionIndexPage() {
             </Link>
           </li>
           <li>
-            <Link href="/edge-of-protection/engagement-exposure">
+            <Link href="/edge-of-protection/exposure-of-engagement-optimized-ai">
               Exposure of Engagement-Optimized AI Behavior (EOP-009)
             </Link>
           </li>
@@ -128,19 +209,26 @@ export default function EdgeOfProtectionIndexPage() {
           </li>
         </ul>
 
+        {/* EXPANSION */}
         <h2>Expansion</h2>
         <p>The Edge of Protection is intentionally incomplete.</p>
         <p>
-          As new classes of vulnerability emerge, additional safeguards will be
-          published as discrete, enforceable standards under this edge—without
-          revising or diluting prior commitments.
+          New standards are added only when one or more of the following are
+          observed:
         </p>
 
+        <ul>
+          <li>Demonstrated real-world harm</li>
+          <li>Discovery of a structural risk class</li>
+          <li>Exposure of an interface-level ambiguity</li>
+        </ul>
+
+        {/* LINE IN THE SAND */}
         <h2>Line in the Sand</h2>
         <p>Capability without restraint erodes trust.</p>
         <p>
-          This edge exists to ensure that some lines are not crossed—even when
-          they could be.
+          This edge exists to ensure that some outputs are not allowed to exist—
+          even when they could.
         </p>
       </article>
     </main>
