@@ -83,6 +83,11 @@ export default function EdgeOfProtectionIndexPage() {
 
         <ul>
           <li>
+            <Link href="/edge-of-protection/non-amplifying-authority">
+              Non-Amplifying Authority Standard
+            </Link>
+          </li>
+          <li>
             <Link href="/edge-of-protection/youth-safeguards">
               Minimum Safeguards for Youth-Facing AI Systems
             </Link>
@@ -132,4 +137,3 @@ export default function EdgeOfProtectionIndexPage() {
     </main>
   );
 }
-
