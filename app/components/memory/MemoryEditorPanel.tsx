@@ -1,38 +1,50 @@
 "use client";
 
-import { useState } from "react";
 import type { MemoryRecord } from "./types";
 
 type Props = {
-  workspaceId: string;
-  record: MemoryRecord;
+  items: MemoryRecord[];
+  selectedId: string | null;
+  onSelect: (record: MemoryRecord) => void;
 };
 
-function normalizeContent(content: unknown): string {
+function renderPreview(content: unknown): string {
   if (typeof content === "string") return content;
-
-  if (content && typeof content === "object") {
-    return JSON.stringify(content, null, 2);
-  }
-
+  if (content && typeof content === "object") return "[Structured memory]";
   return "";
 }
 
-export default function MemoryEditorPanel({
-  workspaceId,
-  record,
+export default function MemoryIndexPanel({
+  items,
+  selectedId,
+  onSelect,
 }: Props) {
-  const [value, setValue] = useState<string>(
-    normalizeContent(record.content)
-  );
-
   return (
-    <div className="h-full flex flex-col p-6">
-      <textarea
-        className="flex-1 w-full bg-neutral-900 border border-neutral-800 rounded-md p-3 text-sm font-mono"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-      />
+    <div className="h-full overflow-y-auto">
+      <ul className="divide-y divide-neutral-800">
+        {items.map((m) => {
+          const active = m.id === selectedId;
+
+          return (
+            <li
+              key={m.id}
+              onClick={() => onSelect(m)}
+              className={`cursor-pointer px-4 py-3 ${
+                active
+                  ? "bg-neutral-900 text-white"
+                  : "hover:bg-neutral-900/60 text-neutral-300"
+              }`}
+            >
+              <div className="truncate text-sm">
+                {renderPreview(m.content)}
+              </div>
+              <div className="mt-1 text-xs text-neutral-500">
+                {new Date(m.updated_at).toLocaleString()}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
