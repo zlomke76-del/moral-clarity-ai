@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
-import { createClientServer } from "@/lib/supabase/server";
+import { supabaseServer } from "@/lib/supabase/session";
 
 export async function GET() {
   const start = Date.now();
@@ -9,11 +8,7 @@ export async function GET() {
   let errorMessage: string | null = null;
 
   try {
-    // Next.js 16: headers() must be awaited
-    const hdr = await headers();
-    const cookieHeader = hdr.get("cookie") ?? "";
-
-    const sb = createClientServer(cookieHeader);
+    const sb = await supabaseServer();
 
     const { error } = await sb
       .from("health_check")
