@@ -1,33 +1,25 @@
 // lib/supabase/server.ts
-// ------------------------------------------------
-// Supabase SSR factory — cookie-header injection
-// Safe for Next.js 16 + Turbopack
-// ------------------------------------------------
+// ============================================================
+// SUPABASE SERVER CLIENT — BEARER OR COOKIE
+// ============================================================
 
-import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 
-export function createSupabaseServerClient(cookieHeader: string = "") {
-  return createServerClient(
+export function createSupabaseServerClient(accessToken?: string) {
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      cookies: {
-        get(name: string) {
-          const match = cookieHeader
-            .split(";")
-            .map((v) => v.trim())
-            .find((x) => x.startsWith(name + "="));
-
-          return match ? match.split("=")[1] : undefined;
-        },
-
-        set() {
-          // SSR cannot mutate cookies — no-op
-        },
-
-        remove() {
-          // SSR cannot mutate cookies — no-op
-        },
+      global: accessToken
+        ? {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        : undefined,
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
       },
     }
   );
