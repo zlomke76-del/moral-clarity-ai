@@ -11,10 +11,7 @@ export async function GET(
 ) {
   const url = new URL(req.url);
 
-  // Canonical plan resolution:
-  // 1. Route param (/buy/[plan])
-  // 2. ?plan=standard
-  // 3. ?nxtPlan=standard (observed in staging logs)
+  // Canonical plan resolution
   const rawPlan =
     params?.plan ??
     url.searchParams.get("plan") ??
@@ -59,7 +56,9 @@ export async function GET(
         plan,
         tier: meta.tier,
         seats: String(meta.seats),
-        memoryGB: meta.memoryGB ? String(meta.memoryGB) : undefined,
+        memoryGB: meta.memoryGB !== undefined
+          ? String(meta.memoryGB)
+          : null,
       },
     });
 
