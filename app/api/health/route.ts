@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { headers } from "next/headers";
+import { createClientServer } from "@/lib/supabase/server";
 
 export async function GET() {
   const start = Date.now();
@@ -7,10 +9,11 @@ export async function GET() {
   let errorMessage: string | null = null;
 
   try {
-    // Lazy import inside the handler — required for Next 16
-    const { supabaseServer } = await import("@/lib/supabase");
+    // Next.js 16: headers() must be awaited
+    const hdr = await headers();
+    const cookieHeader = hdr.get("cookie") ?? "";
 
-    const sb = await supabaseServer();
+    const sb = createClientServer(cookieHeader);
 
     const { error } = await sb
       .from("health_check")
@@ -23,7 +26,7 @@ export async function GET() {
     }
   } catch (err: any) {
     supabaseStatus = "error";
-    errorMessage = err?.message || "Unknown error";
+    errorMessage = err?.message ?? "Unknown error";
   }
 
   return NextResponse.json(
