@@ -1,63 +1,55 @@
 // lib/memory/fetchWorkspaceMemories.ts
 // ============================================================
-// WORKSPACE MEMORY FETCH (CLIENT)
-// Cookie-authenticated, same-origin, RLS enforced
+// Fetch workspace memories via server API
+// Schema-safe: works with memory.memories
 // ============================================================
 
-export type WorkspaceMemoryRecord = {
+import { createClientBrowser } from "@/lib/supabase/browser";
+
+export type WorkspaceMemory = {
   id: string;
   workspace_id: string;
   title: string | null;
   content: string | null;
   created_at: string;
-  updated_at: string | null;
 };
 
 export async function fetchWorkspaceMemories(
   workspaceId: string
-): Promise<WorkspaceMemoryRecord[]> {
-  if (!workspaceId) {
-    throw new Error("workspaceId is required");
+): Promise<WorkspaceMemory[]> {
+  if (!workspaceId) return [];
+
+  const supabase = createClientBrowser();
+
+  // 🔐 Get active session
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  if (sessionError || !session?.access_token) {
+    throw new Error("Not authenticated");
   }
 
+  // 🔁 Call server API (NOT Supabase REST)
   const res = await fetch(
     `/api/memory/workspace?workspaceId=${encodeURIComponent(workspaceId)}`,
     {
       method: "GET",
-
-      // 🔑 THIS IS THE FIX
-      // Forces browser to forward Supabase auth cookies
-      credentials: "include",
-
       headers: {
-        Accept: "application/json",
+        Authorization: `Bearer ${session.access_token}`,
       },
+      cache: "no-store",
     }
   );
 
   if (!res.ok) {
-    let detail: any = null;
-    try {
-      detail = await res.json();
-    } catch {
-      /* noop */
-    }
-
-    const message =
-      detail?.error ??
-      `Failed to load workspace memories (status ${res.status})`;
-
-    const err = new Error(message);
-    (err as any).status = res.status;
-    throw err;
+    const body = await res.text();
+    throw new Error(
+      `Failed to load workspace memories (${res.status}): ${body}`
+    );
   }
 
   const json = await res.json();
-
-  // API contract: { items: [...] }
-  if (!json || !Array.isArray(json.items)) {
-    throw new Error("Malformed response from memory API");
-  }
-
-  return json.items as WorkspaceMemoryRecord[];
+  return json.items ?? [];
 }
