@@ -5,9 +5,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/news/outlet-stats?outlet=wsj.com
+ * GET /api/news/outlet-stats?outlet=<canonical_outlet>
  *
- * Returns a single outlet row from outlet_bias_pi_overview.
+ * Canonical-only stats endpoint.
+ * Domain-style identifiers (e.g. wsj.com) are explicitly rejected.
  */
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -20,12 +21,23 @@ export async function GET(req: Request) {
     );
   }
 
+  // 🔒 Enforce canonical outlet keys only
+  if (outlet.includes(".")) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Invalid outlet identifier. Expected canonical_outlet.",
+      },
+      { status: 400 }
+    );
+  }
+
   const supabase = createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("outlet_bias_pi_overview")
     .select(`
-      outlet,
+      canonical_outlet,
       total_stories,
       days_active,
       last_story_day,
@@ -36,8 +48,7 @@ export async function GET(req: Request) {
       avg_bias_framing_weighted,
       avg_bias_context_weighted
     `)
-    .eq("outlet", outlet)
-    .limit(1)
+    .eq("canonical_outlet", outlet)
     .maybeSingle();
 
   if (error) {
