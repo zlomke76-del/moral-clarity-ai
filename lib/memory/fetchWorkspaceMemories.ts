@@ -1,7 +1,7 @@
 // lib/memory/fetchWorkspaceMemories.ts
 // ============================================================
-// Fetch workspace memories via server API
-// Schema-safe: works with memory.memories
+// Client-side workspace memory fetch
+// Auth: forwards Supabase access token to API
 // ============================================================
 
 import { createClientBrowser } from "@/lib/supabase/browser";
@@ -14,24 +14,24 @@ export type WorkspaceMemory = {
   created_at: string;
 };
 
-export async function fetchWorkspaceMemories(
-  workspaceId: string
-): Promise<WorkspaceMemory[]> {
-  if (!workspaceId) return [];
-
+export async function fetchWorkspaceMemories(workspaceId: string) {
   const supabase = createClientBrowser();
 
-  // 🔐 Get active session
+  // ----------------------------------------------------------
+  // Get active session
+  // ----------------------------------------------------------
   const {
     data: { session },
     error: sessionError,
   } = await supabase.auth.getSession();
 
   if (sessionError || !session?.access_token) {
-    throw new Error("Not authenticated");
+    throw new Error("No active session");
   }
 
-  // 🔁 Call server API (NOT Supabase REST)
+  // ----------------------------------------------------------
+  // Call API with Bearer token
+  // ----------------------------------------------------------
   const res = await fetch(
     `/api/memory/workspace?workspaceId=${encodeURIComponent(workspaceId)}`,
     {
@@ -39,17 +39,14 @@ export async function fetchWorkspaceMemories(
       headers: {
         Authorization: `Bearer ${session.access_token}`,
       },
-      cache: "no-store",
     }
   );
 
   if (!res.ok) {
-    const body = await res.text();
-    throw new Error(
-      `Failed to load workspace memories (${res.status}): ${body}`
-    );
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error ?? `Request failed (${res.status})`);
   }
 
   const json = await res.json();
-  return json.items ?? [];
+  return (json.items ?? []) as WorkspaceMemory[];
 }
