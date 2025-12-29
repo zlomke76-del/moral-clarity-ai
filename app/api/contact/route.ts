@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     await resend.emails.send({
       from: "Moral Clarity AI <support@moralclarity.ai>",
       to: process.env.SUPPORT_INBOX ?? "support@moralclarity.ai",
-      reply_to: email,
+      replyTo: email,
       subject: `New contact message from ${name}`,
       text: message,
     });
