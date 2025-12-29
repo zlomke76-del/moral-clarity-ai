@@ -49,7 +49,7 @@ export default function NewsroomCabinetPage() {
     () =>
       outlets.slice(3, outlets.length - 3).map((o, i) => ({
         ...o,
-        rank: i + 4, // continues after top 3
+        rank: i + 4,
       })),
     [outlets]
   );
@@ -63,8 +63,22 @@ export default function NewsroomCabinetPage() {
     [outlets]
   );
 
+  /* ========= TOTAL STORIES ========= */
+  const totalStoriesEvaluated = useMemo(
+    () =>
+      outlets.reduce((sum, o) => sum + (o.total_stories ?? 0), 0),
+    [outlets]
+  );
+
   return (
-    <div className="flex flex-col gap-12">
+    <div className="flex flex-col gap-14">
+
+      {/* ================= TOTAL STORIES ================= */}
+      {totalStoriesEvaluated > 0 && (
+        <div className="text-xs uppercase tracking-wide text-neutral-400">
+          {totalStoriesEvaluated.toLocaleString()} stories evaluated
+        </div>
+      )}
 
       {/* ================= GOLDEN ANCHOR ================= */}
       {goldenAnchor.length > 0 && (
@@ -76,14 +90,17 @@ export default function NewsroomCabinetPage() {
           <Leaderboard
             outlets={goldenAnchor}
             selectedCanonical={selected}
-            onSelect={(canon) => setSelected(canon)}
+            onSelect={setSelected}
             useProvidedRank
           />
         </section>
       )}
 
-      {/* ================= NEUTRAL CATEGORY BREAK ================= */}
-      <section className="border-t border-neutral-700 pt-6">
+      {/* ================= HARD SEPARATION ================= */}
+      <div className="border-t border-neutral-700" />
+
+      {/* ================= NEUTRAL FIELD ================= */}
+      <section>
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">
           Neutral Category · Full Field
         </h2>
@@ -91,7 +108,7 @@ export default function NewsroomCabinetPage() {
         <Leaderboard
           outlets={neutralField}
           selectedCanonical={selected}
-          onSelect={(canon) => setSelected(canon)}
+          onSelect={setSelected}
           useProvidedRank
         />
       </section>
@@ -106,7 +123,7 @@ export default function NewsroomCabinetPage() {
           <Leaderboard
             outlets={watchList}
             selectedCanonical={selected}
-            onSelect={(canon) => setSelected(canon)}
+            onSelect={setSelected}
             useProvidedRank
           />
         </section>
