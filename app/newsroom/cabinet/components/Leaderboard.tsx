@@ -1,132 +1,38 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import type { OutletOverview, OutletStats } from "./types";
+import type { OutletOverview } from "../types";
+import OutletCard from "./OutletCard";
 
-import Leaderboard from "./components/Leaderboard";
-import ScoreBreakdown from "./components/ScoreBreakdown";
+type Props = {
+  outlets: OutletOverview[];
+  selectedCanonical: string | null;
+  onSelect: (canonical: string) => void;
+};
 
-export default function NewsroomCabinetPage() {
-  const [outlets, setOutlets] = useState<OutletOverview[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [stats, setStats] = useState<OutletStats | null>(null);
-
-  /* ========= LOAD LEADERBOARD ========= */
-  useEffect(() => {
-    fetch("/api/news/outlets/overview")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.ok) {
-          setOutlets(d.outlets);
-          setSelected(d.outlets?.[0]?.canonical_outlet ?? null);
-        }
-      });
-  }, []);
-
-  /* ========= LOAD STATS (ON SELECTION) ========= */
-  useEffect(() => {
-    if (!selected) return;
-
-    fetch(`/api/news/outlets/${encodeURIComponent(selected)}/stats`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.ok) setStats(d.outlet);
-        else setStats(null);
-      });
-  }, [selected]);
-
-  /* ========= POSITION-AWARE SLICES ========= */
-  const goldenAnchor = useMemo(
-    () =>
-      outlets.slice(0, 3).map((o, i) => ({
-        ...o,
-        rank: i + 1,
-      })),
-    [outlets]
-  );
-
-  const neutralField = useMemo(
-    () =>
-      outlets.slice(3, outlets.length - 3).map((o, i) => ({
-        ...o,
-        rank: i + 4,
-      })),
-    [outlets]
-  );
-
-  const watchList = useMemo(
-    () =>
-      outlets.slice(-3).map((o, i) => ({
-        ...o,
-        rank: outlets.length - 2 + i,
-      })),
-    [outlets]
-  );
-
-  /* ========= TOTAL STORIES ========= */
-  const totalStoriesEvaluated = useMemo(
-    () => outlets.reduce((sum, o) => sum + (o.total_stories ?? 0), 0),
-    [outlets]
-  );
-
+export default function Leaderboard({
+  outlets,
+  selectedCanonical,
+  onSelect,
+}: Props) {
   return (
-    <div className="flex flex-col gap-14">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {outlets.map((o) => {
+        let badge: "golden" | "neutral" | "watchlist" = "neutral";
 
-      {/* ================= TOTAL STORIES ================= */}
-      {totalStoriesEvaluated > 0 && (
-        <div className="text-xs uppercase tracking-wide text-neutral-400">
-          {totalStoriesEvaluated.toLocaleString()} stories evaluated
-        </div>
-      )}
+        if (o.rank && o.rank <= 3) badge = "golden";
+        else if (o.rank && o.rank > outlets.length - 3) badge = "watchlist";
 
-      {/* ================= GOLDEN ANCHOR ================= */}
-      {goldenAnchor.length > 0 && (
-        <section>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-amber-400">
-            Golden Anchor · Top 3 Predictability
-          </h2>
-
-          <Leaderboard
-            outlets={goldenAnchor}
-            selectedCanonical={selected}
-            onSelect={setSelected}
+        return (
+          <OutletCard
+            key={o.canonical_outlet}
+            outlet={o}
+            rank={o.rank ?? undefined}
+            selected={o.canonical_outlet === selectedCanonical}
+            badge={badge}
+            onSelect={() => onSelect(o.canonical_outlet)}
           />
-        </section>
-      )}
-
-      {/* ================= HARD SEPARATION ================= */}
-      <div className="border-t border-neutral-700" />
-
-      {/* ================= NEUTRAL FIELD ================= */}
-      <section>
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-          Neutral Category · Full Field
-        </h2>
-
-        <Leaderboard
-          outlets={neutralField}
-          selectedCanonical={selected}
-          onSelect={setSelected}
-        />
-      </section>
-
-      {/* ================= WATCH LIST ================= */}
-      {watchList.length > 0 && (
-        <section className="border-t border-neutral-800 pt-6">
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-red-400">
-            Watch List · Lowest Predictability
-          </h2>
-
-          <Leaderboard
-            outlets={watchList}
-            selectedCanonical={selected}
-            onSelect={setSelected}
-          />
-        </section>
-      )}
-
-      {/* ================= SCORE BREAKDOWN ================= */}
-      <ScoreBreakdown outlet={stats} />
+        );
+      })}
     </div>
   );
 }
