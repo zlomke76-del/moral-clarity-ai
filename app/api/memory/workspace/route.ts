@@ -1,3 +1,5 @@
+// app/api/memory/workspace/route.ts
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -16,8 +18,7 @@ export async function GET(req: Request) {
       );
     }
 
-    const supabase = createSupabaseServerClient(cookieHeader);
-
+    const supabase = createSupabaseServerClient();
 
     // 🔒 AUTH — REQUIRED
     const {
