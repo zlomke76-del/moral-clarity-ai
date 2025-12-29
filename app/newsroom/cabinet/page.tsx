@@ -6,6 +6,10 @@ import type { OutletOverview, OutletStats } from "./types";
 import Leaderboard from "./components/Leaderboard";
 import ScoreBreakdown from "./components/ScoreBreakdown";
 
+type RankedOutlet = OutletOverview & {
+  rank: number;
+};
+
 export default function NewsroomCabinetPage() {
   const [outlets, setOutlets] = useState<OutletOverview[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
@@ -35,8 +39,13 @@ export default function NewsroomCabinetPage() {
       });
   }, [selected]);
 
-  /* ========= DERIVED, POSITION-AWARE SLICES ========= */
-  const goldenAnchor = useMemo(
+  const totalStoriesEvaluated = useMemo(
+    () => outlets.reduce((sum, o) => sum + (o.total_stories ?? 0), 0),
+    [outlets]
+  );
+
+  /* ========= POSITION-AWARE SLICES ========= */
+  const goldenAnchor: RankedOutlet[] = useMemo(
     () =>
       outlets.slice(0, 3).map((o, i) => ({
         ...o,
@@ -45,7 +54,7 @@ export default function NewsroomCabinetPage() {
     [outlets]
   );
 
-  const neutralField = useMemo(
+  const neutralField: RankedOutlet[] = useMemo(
     () =>
       outlets.slice(3, outlets.length - 3).map((o, i) => ({
         ...o,
@@ -54,7 +63,7 @@ export default function NewsroomCabinetPage() {
     [outlets]
   );
 
-  const watchList = useMemo(
+  const watchList: RankedOutlet[] = useMemo(
     () =>
       outlets.slice(-3).map((o, i) => ({
         ...o,
@@ -63,22 +72,13 @@ export default function NewsroomCabinetPage() {
     [outlets]
   );
 
-  /* ========= TOTAL STORIES ========= */
-  const totalStoriesEvaluated = useMemo(
-    () =>
-      outlets.reduce((sum, o) => sum + (o.total_stories ?? 0), 0),
-    [outlets]
-  );
-
   return (
-    <div className="flex flex-col gap-14">
+    <div className="flex flex-col gap-12">
 
-      {/* ================= TOTAL STORIES ================= */}
-      {totalStoriesEvaluated > 0 && (
-        <div className="text-xs uppercase tracking-wide text-neutral-400">
-          {totalStoriesEvaluated.toLocaleString()} stories evaluated
-        </div>
-      )}
+      {/* ================= META ================= */}
+      <div className="text-xs text-neutral-400">
+        {totalStoriesEvaluated.toLocaleString()} stories evaluated · PI based on lifetime
+      </div>
 
       {/* ================= GOLDEN ANCHOR ================= */}
       {goldenAnchor.length > 0 && (
@@ -91,16 +91,12 @@ export default function NewsroomCabinetPage() {
             outlets={goldenAnchor}
             selectedCanonical={selected}
             onSelect={setSelected}
-            useProvidedRank
           />
         </section>
       )}
 
-      {/* ================= HARD SEPARATION ================= */}
-      <div className="border-t border-neutral-700" />
-
-      {/* ================= NEUTRAL FIELD ================= */}
-      <section>
+      {/* ================= NEUTRAL CATEGORY ================= */}
+      <section className="border-t border-neutral-700 pt-6">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">
           Neutral Category · Full Field
         </h2>
@@ -109,7 +105,6 @@ export default function NewsroomCabinetPage() {
           outlets={neutralField}
           selectedCanonical={selected}
           onSelect={setSelected}
-          useProvidedRank
         />
       </section>
 
@@ -124,7 +119,6 @@ export default function NewsroomCabinetPage() {
             outlets={watchList}
             selectedCanonical={selected}
             onSelect={setSelected}
-            useProvidedRank
           />
         </section>
       )}
