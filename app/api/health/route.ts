@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClientServer } from "@/lib/supabase";
+import { createSupabaseServerClient } from "@/lib/supabase";
 
 export async function GET() {
   const start = Date.now();
