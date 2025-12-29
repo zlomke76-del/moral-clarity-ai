@@ -1,17 +1,10 @@
 // lib/memory/fetchWorkspaceMemories.ts
-// ------------------------------------------------------------
-// CLIENT-SIDE workspace memory fetcher
-//
-// ARCHITECTURAL CONTRACT:
-// - Auth is COOKIE-BASED ONLY
-// - No Bearer tokens
-// - No Supabase client here
-// - Server enforces auth + RLS
-//
-// This file MUST remain browser-safe.
-// ------------------------------------------------------------
+// ============================================================
+// WORKSPACE MEMORY FETCH (CLIENT)
+// Cookie-authenticated, same-origin, RLS enforced
+// ============================================================
 
-export type WorkspaceMemory = {
+export type WorkspaceMemoryRecord = {
   id: string;
   workspace_id: string;
   title: string | null;
@@ -22,7 +15,7 @@ export type WorkspaceMemory = {
 
 export async function fetchWorkspaceMemories(
   workspaceId: string
-): Promise<WorkspaceMemory[]> {
+): Promise<WorkspaceMemoryRecord[]> {
   if (!workspaceId) {
     throw new Error("workspaceId is required");
   }
@@ -31,24 +24,40 @@ export async function fetchWorkspaceMemories(
     `/api/memory/workspace?workspaceId=${encodeURIComponent(workspaceId)}`,
     {
       method: "GET",
-      credentials: "include", // 🔑 REQUIRED: sends Supabase cookies
-      cache: "no-store",
+
+      // 🔑 THIS IS THE FIX
+      // Forces browser to forward Supabase auth cookies
+      credentials: "include",
+
+      headers: {
+        Accept: "application/json",
+      },
     }
   );
 
   if (!res.ok) {
-    let detail = "";
+    let detail: any = null;
     try {
-      const body = await res.json();
-      detail = body?.error ? `: ${body.error}` : "";
+      detail = await res.json();
     } catch {
-      /* ignore */
+      /* noop */
     }
 
-    throw new Error(`Failed to load workspace memories (${res.status})${detail}`);
+    const message =
+      detail?.error ??
+      `Failed to load workspace memories (status ${res.status})`;
+
+    const err = new Error(message);
+    (err as any).status = res.status;
+    throw err;
   }
 
   const json = await res.json();
 
-  return Array.isArray(json.items) ? json.items : [];
+  // API contract: { items: [...] }
+  if (!json || !Array.isArray(json.items)) {
+    throw new Error("Malformed response from memory API");
+  }
+
+  return json.items as WorkspaceMemoryRecord[];
 }
