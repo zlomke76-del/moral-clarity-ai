@@ -10,9 +10,21 @@ export async function GET(
 ) {
   const outlet = params.outlet;
 
+  // 🔒 Contract enforcement — outlet must be a canonical key
   if (!outlet) {
     return NextResponse.json(
       { ok: false, error: "Missing outlet parameter" },
+      { status: 400 }
+    );
+  }
+
+  // 🔒 Explicit rejection of domain-style identifiers
+  if (outlet.includes(".")) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Invalid outlet identifier. Expected canonical_outlet, not domain.",
+      },
       { status: 400 }
     );
   }
@@ -36,9 +48,12 @@ export async function GET(
     .eq("canonical_outlet", outlet)
     .single();
 
-  if (error) {
+  if (error || !data) {
     return NextResponse.json(
-      { ok: false, error: error.message },
+      {
+        ok: false,
+        error: "Outlet not found for provided canonical_outlet",
+      },
       { status: 404 }
     );
   }
