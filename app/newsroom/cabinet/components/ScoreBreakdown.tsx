@@ -22,6 +22,23 @@ type Props = {
   outlet: OutletBreakdown | null;
 };
 
+/* =========================
+   DIMENSION EXPLANATIONS
+   ========================= */
+
+const DIMENSION_EXPLANATIONS: Record<string, string> = {
+  Intent:
+    "Measures whether reporting is informational or attempts to persuade the reader.",
+  Language:
+    "Evaluates emotionally loaded, biased, or suggestive wording.",
+  Source:
+    "Assesses sourcing quality, attribution clarity, and consistency.",
+  Framing:
+    "Examines how facts are emphasized, omitted, or positioned.",
+  Context:
+    "Checks whether sufficient background is provided for accurate understanding.",
+};
+
 export default function ScoreBreakdown({ outlet }: Props) {
   if (!outlet) {
     return (
@@ -48,18 +65,22 @@ export default function ScoreBreakdown({ outlet }: Props) {
   ];
 
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-950/80 p-5 space-y-5">
+    <div className="rounded-xl border border-neutral-800 bg-neutral-950/80 p-5 space-y-6">
+
+      {/* ================= IDENTITY & SCOPE ================= */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-sm font-semibold text-neutral-100">
             {outlet.outlet}
           </h2>
+
           <p className="mt-1 text-xs text-neutral-400">
             Lifetime aggregation across{" "}
             <span className="font-medium">{outlet.total_stories}</span> stories
             over{" "}
             <span className="font-medium">{outlet.days_active}</span> days.
           </p>
+
           {outlet.last_story_day && (
             <p className="mt-1 text-[11px] text-neutral-500">
               Last scored: {outlet.last_story_day}
@@ -69,7 +90,7 @@ export default function ScoreBreakdown({ outlet }: Props) {
 
         <div className="text-right">
           <div className="text-[11px] uppercase tracking-[0.16em] text-neutral-400">
-            Predictability Index (Weighted)
+            Predictability Index
           </div>
           <div className="font-mono text-2xl text-emerald-300">
             {piPercent !== null ? `${piPercent.toFixed(2)}%` : "—"}
@@ -77,9 +98,21 @@ export default function ScoreBreakdown({ outlet }: Props) {
         </div>
       </div>
 
-      <div className="space-y-3">
+      {/* ================= PI EXPLANATION ================= */}
+      <div className="text-xs text-neutral-400">
+        Predictability Index is computed from a weighted combination of the
+        following dimensions.
+      </div>
+
+      {/* ================= DIMENSION BREAKDOWN ================= */}
+      <div className="space-y-4">
         {bias.map((b) => (
-          <BiasBar key={b.label} label={b.label} value={b.value} />
+          <BiasBar
+            key={b.label}
+            label={b.label}
+            description={DIMENSION_EXPLANATIONS[b.label]}
+            value={b.value}
+          />
         ))}
       </div>
     </div>
@@ -88,9 +121,11 @@ export default function ScoreBreakdown({ outlet }: Props) {
 
 function BiasBar({
   label,
+  description,
   value,
 }: {
   label: string;
+  description: string;
   value?: number;
 }) {
   const hasValue = typeof value === "number";
@@ -98,13 +133,18 @@ function BiasBar({
   const width = Math.max(4, Math.min((safe / 3) * 100, 100));
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <div className="flex justify-between text-[11px] text-neutral-400">
-        <span>{label}</span>
+        <span className="font-medium text-neutral-200">{label}</span>
         <span className="font-mono text-neutral-200">
           {hasValue ? safe.toFixed(2) : "—"} / 3.00
         </span>
       </div>
+
+      <p className="text-[11px] text-neutral-500 leading-snug">
+        {description}
+      </p>
+
       <div className="h-1.5 w-full rounded-full bg-neutral-900">
         <div
           className="h-full rounded-full bg-neutral-200"
