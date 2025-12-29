@@ -35,9 +35,21 @@ export default function NewsroomCabinetPage() {
       });
   }, [selected]);
 
-  /* ========= DERIVED EDITORIAL SLICES ========= */
-  const goldenAnchor = useMemo(() => outlets.slice(0, 3), [outlets]);
-  const watchList = useMemo(() => outlets.slice(-3), [outlets]);
+  /* ========= DERIVED, NON-OVERLAPPING SLICES ========= */
+  const goldenAnchor = useMemo(
+    () => outlets.slice(0, 3),
+    [outlets]
+  );
+
+  const watchList = useMemo(
+    () => outlets.slice(-3),
+    [outlets]
+  );
+
+  const middleLeaderboard = useMemo(
+    () => outlets.slice(3, Math.max(outlets.length - 3, 3)),
+    [outlets]
+  );
 
   return (
     <div className="flex flex-col gap-10">
@@ -57,10 +69,10 @@ export default function NewsroomCabinetPage() {
         </section>
       )}
 
-      {/* ================= FULL LEADERBOARD ================= */}
+      {/* ================= MAIN LEADERBOARD ================= */}
       <section>
         <Leaderboard
-          outlets={outlets}
+          outlets={middleLeaderboard}
           selectedCanonical={selected}
           onSelect={(canon) => setSelected(canon)}
         />
