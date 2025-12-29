@@ -1,23 +1,25 @@
+// app/api/memory/workspace/route.ts
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 
 export async function GET(req: Request) {
   try {
-    // 🔐 Extract Bearer token
-    const auth = req.headers.get("authorization");
-    if (!auth || !auth.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { error: "Missing authorization token" },
-        { status: 401 }
-      );
-    }
+    const cookieStore = cookies();
 
-    const accessToken = auth.replace("Bearer ", "").trim();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+        },
+      }
+    );
 
-    // 🔐 Create Supabase client bound to this token
-    const supabase = createSupabaseServerClient(accessToken);
-
-    // 🔐 Validate session
+    // 🔐 Validate session (COOKIE BASED)
     const {
       data: { user },
       error: authError,
@@ -25,12 +27,11 @@ export async function GET(req: Request) {
 
     if (authError || !user) {
       return NextResponse.json(
-        { error: "Invalid or expired session" },
+        { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    // 🔎 Read workspaceId
     const { searchParams } = new URL(req.url);
     const workspaceId = searchParams.get("workspaceId");
 
@@ -41,7 +42,7 @@ export async function GET(req: Request) {
       );
     }
 
-    // 📥 Fetch memories (RLS enforced)
+    // 📥 RLS enforced read
     const { data, error } = await supabase
       .from("workspace_memories")
       .select("*")
