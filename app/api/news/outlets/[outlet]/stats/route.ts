@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClientServer } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,7 +17,7 @@ export async function GET(
     );
   }
 
-  const supabase = createClientServer();
+  const supabase = createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("outlet_bias_pi_overview")
