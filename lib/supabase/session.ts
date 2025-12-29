@@ -11,7 +11,7 @@
 // ------------------------------------------------------------
 
 import { headers } from "next/headers";
-import { createClientServer } from "./server";
+import { createSupabaseServerClient } from "./server";
 
 /**
  * Load the session in a SERVER environment.
@@ -32,7 +32,7 @@ export async function getServerSession() {
   const hdr = await headers();
   const cookieHeader = hdr.get("cookie") ?? "";
 
-  const supabase = createClientServer(cookieHeader);
+  const supabase = createSupabaseServerClient(cookieHeader);
 
   const {
     data: { session },
@@ -40,7 +40,6 @@ export async function getServerSession() {
   } = await supabase.auth.getSession();
 
   if (error) {
-    // Server code may decide how to handle missing/invalid sessions
     return null;
   }
 
