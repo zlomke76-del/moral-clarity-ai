@@ -5,7 +5,8 @@ import { createServerClient } from "@supabase/ssr";
 
 export async function GET(req: Request) {
   try {
-    const cookieStore = cookies();
+    // ✅ NEXT 16: cookies() MUST be awaited
+    const cookieStore = await cookies();
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,7 +20,7 @@ export async function GET(req: Request) {
       }
     );
 
-    // 🔐 Validate session (COOKIE BASED)
+    // 🔐 Validate session via cookies
     const {
       data: { user },
       error: authError,
@@ -42,7 +43,7 @@ export async function GET(req: Request) {
       );
     }
 
-    // 📥 RLS enforced read
+    // 📥 RLS-protected read
     const { data, error } = await supabase
       .from("workspace_memories")
       .select("*")
