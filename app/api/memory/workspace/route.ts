@@ -1,11 +1,17 @@
 // app/api/memory/workspace/route.ts
+// ============================================================
+// WORKSPACE MEMORY API
+// Cookie-authenticated (Next.js 16 compatible)
+// RLS enforced via Supabase session
+// ============================================================
+
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
 export async function GET(req: Request) {
   try {
-    // ✅ NEXT 16: cookies() MUST be awaited
+    // ✅ Next.js 16 — cookies() IS ASYNC
     const cookieStore = await cookies();
 
     const supabase = createServerClient(
@@ -20,7 +26,7 @@ export async function GET(req: Request) {
       }
     );
 
-    // 🔐 Validate session via cookies
+    // 🔐 Validate session
     const {
       data: { user },
       error: authError,
@@ -33,6 +39,7 @@ export async function GET(req: Request) {
       );
     }
 
+    // 🔎 Read workspaceId
     const { searchParams } = new URL(req.url);
     const workspaceId = searchParams.get("workspaceId");
 
@@ -43,7 +50,7 @@ export async function GET(req: Request) {
       );
     }
 
-    // 📥 RLS-protected read
+    // 📥 Fetch memories (RLS enforced)
     const { data, error } = await supabase
       .from("workspace_memories")
       .select("*")
