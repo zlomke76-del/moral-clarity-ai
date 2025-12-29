@@ -1,4 +1,13 @@
 // app/api/memory/workspace/route.ts
+// ============================================================
+// WORKSPACE MEMORY API — TOKEN AUTH ONLY
+// Individual user memory boundary
+// ============================================================
+// - Explicit Authorization: Bearer <access_token>
+// - No cookies
+// - No implicit session recovery
+// - Edge-safe, gateway-safe
+// ============================================================
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,22 +27,37 @@ export async function GET(req: Request) {
       );
     }
 
-    const supabase = createSupabaseServerClient();
+    // ------------------------------------------------------------
+    // 🔒 EXPLICIT TOKEN AUTH
+    // ------------------------------------------------------------
+    const authHeader = req.headers.get("authorization");
 
-    // 🔒 AUTH — REQUIRED
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json(
         { error: "unauthenticated" },
         { status: 401 }
       );
     }
 
+    const accessToken = authHeader.replace("Bearer ", "").trim();
+
+    const supabase = createSupabaseServerClient();
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser(accessToken);
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: "unauthenticated" },
+        { status: 401 }
+      );
+    }
+
+    // ------------------------------------------------------------
     // 🔒 INDIVIDUAL MEMORY ONLY
+    // ------------------------------------------------------------
     const { data, error } = await supabase
       .schema("memory")
       .from("memories")
