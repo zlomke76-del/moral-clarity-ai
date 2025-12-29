@@ -3,10 +3,6 @@
 import type { OutletOverview } from "../types";
 import OutletCard from "./OutletCard";
 
-/**
- * View-model extension for ranked leaderboards.
- * Rank is computed upstream (page.tsx), not inferred here.
- */
 type RankedOutlet = OutletOverview & {
   rank: number;
 };
