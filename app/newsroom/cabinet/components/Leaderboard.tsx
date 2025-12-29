@@ -3,8 +3,16 @@
 import type { OutletOverview } from "../types";
 import OutletCard from "./OutletCard";
 
+/**
+ * View-model extension for ranked leaderboards.
+ * Rank is computed upstream (page.tsx), not inferred here.
+ */
+type RankedOutlet = OutletOverview & {
+  rank: number;
+};
+
 type Props = {
-  outlets: OutletOverview[];
+  outlets: RankedOutlet[];
   selectedCanonical: string | null;
   onSelect: (canonical: string) => void;
 };
@@ -19,14 +27,14 @@ export default function Leaderboard({
       {outlets.map((o) => {
         let badge: "golden" | "neutral" | "watchlist" = "neutral";
 
-        if (o.rank && o.rank <= 3) badge = "golden";
-        else if (o.rank && o.rank > outlets.length - 3) badge = "watchlist";
+        if (o.rank <= 3) badge = "golden";
+        else if (o.rank > outlets.length - 3) badge = "watchlist";
 
         return (
           <OutletCard
             key={o.canonical_outlet}
             outlet={o}
-            rank={o.rank ?? undefined}
+            rank={o.rank}
             selected={o.canonical_outlet === selectedCanonical}
             badge={badge}
             onSelect={() => onSelect(o.canonical_outlet)}
