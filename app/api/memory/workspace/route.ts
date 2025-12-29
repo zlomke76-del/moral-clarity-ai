@@ -1,32 +1,33 @@
 // app/api/memory/workspace/route.ts
 // ============================================================
-// WORKSPACE MEMORY API
-// Cookie-authenticated (Next.js 16 compatible)
-// RLS enforced via Supabase session
+// Workspace memory fetch
+// Schema: memory.memories
+// Auth: Bearer token (user-bound, RLS enforced)
 // ============================================================
 
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET(req: Request) {
   try {
-    // ✅ Next.js 16 — cookies() IS ASYNC
-    const cookieStore = await cookies();
+    // ----------------------------------------------------------
+    // Auth: Bearer token
+    // ----------------------------------------------------------
+    const auth = req.headers.get("authorization");
+    if (!auth || !auth.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { error: "Missing authorization token" },
+        { status: 401 }
+      );
+    }
 
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value;
-          },
-        },
-      }
-    );
+    const accessToken = auth.replace("Bearer ", "").trim();
 
-    // 🔐 Validate session
+    const supabase = createSupabaseServerClient(accessToken);
+
+    // ----------------------------------------------------------
+    // Validate session
+    // ----------------------------------------------------------
     const {
       data: { user },
       error: authError,
@@ -34,12 +35,14 @@ export async function GET(req: Request) {
 
     if (authError || !user) {
       return NextResponse.json(
-        { error: "Unauthorized" },
+        { error: "Invalid or expired session" },
         { status: 401 }
       );
     }
 
-    // 🔎 Read workspaceId
+    // ----------------------------------------------------------
+    // Params
+    // ----------------------------------------------------------
     const { searchParams } = new URL(req.url);
     const workspaceId = searchParams.get("workspaceId");
 
@@ -50,14 +53,24 @@ export async function GET(req: Request) {
       );
     }
 
-    // 📥 Fetch memories (RLS enforced)
+    // ----------------------------------------------------------
+    // Query: memory.memories  ✅ THIS WAS THE BUG
+    // ----------------------------------------------------------
     const { data, error } = await supabase
-      .from("workspace_memories")
-      .select("*")
+      .schema("memory")
+      .from("memories")
+      .select(`
+        id,
+        workspace_id,
+        title,
+        content,
+        created_at
+      `)
       .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: true });
 
     if (error) {
+      console.error("[MEMORY API] query error", error);
       return NextResponse.json(
         { error: error.message },
         { status: 500 }
@@ -66,6 +79,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ items: data ?? [] });
   } catch (err: any) {
+    console.error("[MEMORY API] fatal", err);
     return NextResponse.json(
       { error: err?.message ?? "Server error" },
       { status: 500 }
