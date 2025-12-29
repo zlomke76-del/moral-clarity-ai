@@ -13,15 +13,24 @@ type Props = {
 
 /* ========= DISPLAY HELPERS (UI ONLY) ========= */
 
-function formatOutletDisplay(domain: string): string {
-  if (!domain) return "UNKNOWN";
+function formatOutletDisplay(key: string): string {
+  if (!key) return "UNKNOWN";
 
-  return domain
-    .replace(/^amp\./i, "")
-    .replace(/^www\./i, "")
-    .replace(/\.co\.uk$/i, "")
-    .replace(/\.(com|org|net)$/i, "")
-    .toUpperCase();
+  return key
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Derive a stable pseudo-domain for favicon display only.
+ * This is NOT used for routing or API calls.
+ */
+function deriveFaviconDomain(canonical: string): string | null {
+  if (!canonical) return null;
+
+  // Minimal deterministic mapping
+  // Keeps UI working without expanding data contracts
+  return `${canonical.replace(/_/g, "")}.com`;
 }
 
 export default function OutletCard({
@@ -31,15 +40,17 @@ export default function OutletCard({
   badge,
   onSelect,
 }: Props) {
-  // 🔒 CANONICAL KEY (API / DB ONLY)
+  // 🔒 CANONICAL KEY — API / DB / IDENTITY
   const canonical = outlet.canonical_outlet;
 
-  // 🌐 DOMAIN (UI / BRANDING ONLY)
-  const domain = outlet.domain ?? "";
+  // 🎨 DISPLAY LABEL
+  const displayName = formatOutletDisplay(canonical);
 
-  // ✅ SAFE favicon source (requires REAL domain)
-  const logoUrl = domain
-    ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
+  // 🖼️ FAVICON DOMAIN (UI ONLY)
+  const faviconDomain = deriveFaviconDomain(canonical);
+
+  const logoUrl = faviconDomain
+    ? `https://www.google.com/s2/favicons?domain=${faviconDomain}&sz=64`
     : undefined;
 
   // 🔒 PI DISPLAY — OVERVIEW CONTRACT
@@ -65,7 +76,7 @@ export default function OutletCard({
         {logoUrl && (
           <Image
             src={logoUrl}
-            alt={`${domain} logo`}
+            alt={`${displayName} logo`}
             width={20}
             height={20}
             className="rounded-sm"
@@ -74,7 +85,7 @@ export default function OutletCard({
         )}
 
         <div className="text-sm font-medium text-neutral-100">
-          {formatOutletDisplay(domain || canonical)}
+          {displayName}
         </div>
 
         <div className="text-xs text-amber-300">
