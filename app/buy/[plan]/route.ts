@@ -37,10 +37,8 @@ export async function GET(
   }
 
   const priceId = PLAN_TO_PRICE[plan];
-  const meta = PLAN_META[plan];
+  const meta = PLAN_META[plan]; // { tier, seats, memoryGB? }
 
-  // ✅ Let Stripe use the account’s default API version
-  // This avoids TS literal mismatches and future build breaks
   const stripe = new Stripe(
     process.env.STRIPE_SECRET_KEY as string
   );
@@ -59,7 +57,9 @@ export async function GET(
       cancel_url: `${url.origin}/pricing`,
       metadata: {
         plan,
-        label: meta.label,
+        tier: meta.tier,
+        seats: String(meta.seats),
+        memoryGB: meta.memoryGB ? String(meta.memoryGB) : undefined,
       },
     });
 
