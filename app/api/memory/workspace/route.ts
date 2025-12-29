@@ -1,58 +1,52 @@
-// app/api/memory/workspace/route.ts
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET(req: Request) {
   try {
+    // 🔐 Extract Bearer token
+    const auth = req.headers.get("authorization");
+    if (!auth || !auth.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { error: "Missing authorization token" },
+        { status: 401 }
+      );
+    }
+
+    const accessToken = auth.replace("Bearer ", "").trim();
+
+    // 🔐 Create Supabase client bound to this token
+    const supabase = createSupabaseServerClient(accessToken);
+
+    // 🔐 Validate session
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Invalid or expired session" },
+        { status: 401 }
+      );
+    }
+
+    // 🔎 Read workspaceId
     const { searchParams } = new URL(req.url);
     const workspaceId = searchParams.get("workspaceId");
 
     if (!workspaceId) {
       return NextResponse.json(
-        { error: "workspaceId required" },
+        { error: "Missing workspaceId" },
         { status: 400 }
       );
     }
 
-    // 🔐 Extract bearer token
-    const authHeader = req.headers.get("authorization");
-    const token = authHeader?.startsWith("Bearer ")
-      ? authHeader.slice(7)
-      : null;
-
-    if (!token) {
-      return NextResponse.json(
-        { error: "unauthenticated" },
-        { status: 401 }
-      );
-    }
-
-    const supabase = createSupabaseServerClient(token);
-
-    // 🔒 Validate user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json(
-        { error: "unauthenticated" },
-        { status: 401 }
-      );
-    }
-
-    // 🔒 Individual memory only
+    // 📥 Fetch memories (RLS enforced)
     const { data, error } = await supabase
-      .schema("memory")
-      .from("memories")
+      .from("workspace_memories")
       .select("*")
       .eq("workspace_id", workspaceId)
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: true });
 
     if (error) {
       return NextResponse.json(
@@ -61,13 +55,10 @@ export async function GET(req: Request) {
       );
     }
 
-    return NextResponse.json({
-      ok: true,
-      items: data ?? [],
-    });
+    return NextResponse.json({ items: data ?? [] });
   } catch (err: any) {
     return NextResponse.json(
-      { error: err?.message ?? "server error" },
+      { error: err?.message ?? "Server error" },
       { status: 500 }
     );
   }
