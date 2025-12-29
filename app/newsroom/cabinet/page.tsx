@@ -35,29 +35,41 @@ export default function NewsroomCabinetPage() {
       });
   }, [selected]);
 
-  /* ========= DERIVED, NON-OVERLAPPING SLICES ========= */
+  /* ========= DERIVED, POSITION-AWARE SLICES ========= */
   const goldenAnchor = useMemo(
-    () => outlets.slice(0, 3),
+    () =>
+      outlets.slice(0, 3).map((o, i) => ({
+        ...o,
+        rank: i + 1,
+      })),
+    [outlets]
+  );
+
+  const neutralField = useMemo(
+    () =>
+      outlets.slice(3, outlets.length - 3).map((o, i) => ({
+        ...o,
+        rank: i + 4, // continues after top 3
+      })),
     [outlets]
   );
 
   const watchList = useMemo(
-    () => outlets.slice(-3),
-    [outlets]
-  );
-
-  const middleLeaderboard = useMemo(
-    () => outlets.slice(3, Math.max(outlets.length - 3, 3)),
+    () =>
+      outlets.slice(-3).map((o, i) => ({
+        ...o,
+        rank: outlets.length - 2 + i,
+      })),
     [outlets]
   );
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex flex-col gap-12">
 
       {/* ================= GOLDEN ANCHOR ================= */}
       {goldenAnchor.length > 0 && (
         <section>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-amber-400">
             Golden Anchor · Top 3 Predictability
           </h2>
 
@@ -65,23 +77,29 @@ export default function NewsroomCabinetPage() {
             outlets={goldenAnchor}
             selectedCanonical={selected}
             onSelect={(canon) => setSelected(canon)}
+            useProvidedRank
           />
         </section>
       )}
 
-      {/* ================= MAIN LEADERBOARD ================= */}
-      <section>
+      {/* ================= NEUTRAL CATEGORY BREAK ================= */}
+      <section className="border-t border-neutral-700 pt-6">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+          Neutral Category · Full Field
+        </h2>
+
         <Leaderboard
-          outlets={middleLeaderboard}
+          outlets={neutralField}
           selectedCanonical={selected}
           onSelect={(canon) => setSelected(canon)}
+          useProvidedRank
         />
       </section>
 
       {/* ================= WATCH LIST ================= */}
       {watchList.length > 0 && (
-        <section>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+        <section className="border-t border-neutral-800 pt-6">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-red-400">
             Watch List · Lowest Predictability
           </h2>
 
@@ -89,6 +107,7 @@ export default function NewsroomCabinetPage() {
             outlets={watchList}
             selectedCanonical={selected}
             onSelect={(canon) => setSelected(canon)}
+            useProvidedRank
           />
         </section>
       )}
