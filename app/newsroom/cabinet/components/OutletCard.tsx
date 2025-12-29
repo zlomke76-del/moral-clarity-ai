@@ -31,16 +31,11 @@ export default function OutletCard({
   badge,
   onSelect,
 }: Props) {
-  // 🔒 CANONICAL KEY (API / DB ONLY)
-  const canonical = outlet.canonical_outlet;
+  // 🔒 CANONICAL DOMAIN
+  const domain = outlet.canonical_outlet;
 
-  // 🌐 DOMAIN (UI / BRANDING ONLY)
-  const domain = outlet.domain ?? "";
-
-  // ✅ SAFE favicon source (requires REAL domain)
-  const logoUrl = domain
-    ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
-    : undefined;
+  // ✅ SAFE favicon source
+  const logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 
   // 🔒 PI DISPLAY — OVERVIEW CONTRACT
   const pi =
@@ -62,19 +57,17 @@ export default function OutletCard({
       <div className="flex flex-col items-start gap-1">
         <div className="text-xs text-neutral-400">#{rank}</div>
 
-        {logoUrl && (
-          <Image
-            src={logoUrl}
-            alt={`${domain} logo`}
-            width={20}
-            height={20}
-            className="rounded-sm"
-            unoptimized
-          />
-        )}
+        <Image
+          src={logoUrl}
+          alt={`${domain} logo`}
+          width={20}
+          height={20}
+          className="rounded-sm"
+          unoptimized
+        />
 
         <div className="text-sm font-medium text-neutral-100">
-          {formatOutletDisplay(domain || canonical)}
+          {formatOutletDisplay(domain)}
         </div>
 
         <div className="text-xs text-amber-300">
