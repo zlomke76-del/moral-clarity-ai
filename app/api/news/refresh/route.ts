@@ -4,9 +4,10 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 
 const NEWS_REFRESH_SECRET = process.env.NEWS_REFRESH_SECRET || "";
+
+// 🔒 Canonical production ingest worker endpoint
 const INGEST_WORKER_URL =
-  process.env.NEWS_INGEST_WORKER_URL ||
-  "http://localhost:3000/api/news/ingest-worker";
+  "https://studio.moralclarity.ai/api/news/ingest-worker";
 
 function corsHeaders(origin: string | null): Headers {
   const h = new Headers();
@@ -52,7 +53,6 @@ async function handleRefresh(req: NextRequest) {
     }
   }
 
-  // 🔑 Explicit worker invocation (NO background promises)
   let workerResult: any = null;
 
   try {
