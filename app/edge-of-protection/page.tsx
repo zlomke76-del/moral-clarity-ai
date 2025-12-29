@@ -189,6 +189,11 @@ export default function EdgeOfProtectionIndexPage() {
 
         <ul>
           <li>
+            <Link href="/edge-of-protection/preparedness">
+              The Edge of Preparedness — Capability-Aware Governance
+            </Link>
+          </li>
+          <li>
             <Link href="/edge-of-protection/authority-suppression">
               Authority Suppression (EOP-000)
             </Link>
