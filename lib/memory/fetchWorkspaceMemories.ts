@@ -1,23 +1,17 @@
-"use client";
-
-// ============================================================
-// FETCH WORKSPACE MEMORIES (CLIENT → API, TOKEN-BOUND)
+// lib/memory/fetchWorkspaceMemories.ts
+// ------------------------------------------------------------
+// CLIENT-SIDE workspace memory fetcher
 //
-// Architectural guarantees:
-// - Runs ONLY in the browser
-// - Uses the active Supabase session
-// - Sends explicit Bearer token to API
-// - API enforces auth + RLS
-// - Zero cookie dependence
-// ============================================================
+// ARCHITECTURAL CONTRACT:
+// - Auth is COOKIE-BASED ONLY
+// - No Bearer tokens
+// - No Supabase client here
+// - Server enforces auth + RLS
+//
+// This file MUST remain browser-safe.
+// ------------------------------------------------------------
 
-import { createClientBrowser } from "@/lib/supabase/browser";
-
-/**
- * Canonical memory record shape returned by the API.
- * This is intentionally local to avoid fragile cross-route imports.
- */
-export type MemoryRecord = {
+export type WorkspaceMemory = {
   id: string;
   workspace_id: string;
   title: string | null;
@@ -26,56 +20,35 @@ export type MemoryRecord = {
   updated_at: string | null;
 };
 
-/**
- * Fetch all memories for a workspace the user has access to.
- *
- * Auth model:
- * - Browser owns session
- * - Access token sent via Authorization header
- * - API validates token + applies RLS
- */
 export async function fetchWorkspaceMemories(
   workspaceId: string
-): Promise<MemoryRecord[]> {
-  const supabase = createClientBrowser();
-
-  // 🔐 Resolve active session
-  const {
-    data: { session },
-    error: sessionError,
-  } = await supabase.auth.getSession();
-
-  if (sessionError || !session?.access_token) {
-    throw new Error("No active session");
+): Promise<WorkspaceMemory[]> {
+  if (!workspaceId) {
+    throw new Error("workspaceId is required");
   }
 
-  // 🌐 Call protected API with explicit Bearer token
   const res = await fetch(
     `/api/memory/workspace?workspaceId=${encodeURIComponent(workspaceId)}`,
     {
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        "Content-Type": "application/json",
-      },
+      credentials: "include", // 🔑 REQUIRED: sends Supabase cookies
       cache: "no-store",
     }
   );
 
   if (!res.ok) {
-    let detail: any = null;
+    let detail = "";
     try {
-      detail = await res.json();
+      const body = await res.json();
+      detail = body?.error ? `: ${body.error}` : "";
     } catch {
-      // ignore
+      /* ignore */
     }
 
-    throw new Error(
-      detail?.error || `Failed to load workspace memories (${res.status})`
-    );
+    throw new Error(`Failed to load workspace memories (${res.status})${detail}`);
   }
 
   const json = await res.json();
 
-  return (json?.items ?? []) as MemoryRecord[];
+  return Array.isArray(json.items) ? json.items : [];
 }
