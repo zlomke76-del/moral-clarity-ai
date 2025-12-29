@@ -1,14 +1,4 @@
 // app/api/memory/workspace/route.ts
-// ============================================================
-// WORKSPACE MEMORY API — TOKEN AUTH ONLY
-// Individual user memory boundary
-// ============================================================
-// - Explicit Authorization: Bearer <access_token>
-// - No cookies
-// - No implicit session recovery
-// - Edge-safe, gateway-safe
-// ============================================================
-
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -27,26 +17,26 @@ export async function GET(req: Request) {
       );
     }
 
-    // ------------------------------------------------------------
-    // 🔒 EXPLICIT TOKEN AUTH
-    // ------------------------------------------------------------
+    // 🔐 Extract bearer token
     const authHeader = req.headers.get("authorization");
+    const token = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : null;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!token) {
       return NextResponse.json(
         { error: "unauthenticated" },
         { status: 401 }
       );
     }
 
-    const accessToken = authHeader.replace("Bearer ", "").trim();
+    const supabase = createSupabaseServerClient(token);
 
-    const supabase = createSupabaseServerClient();
-
+    // 🔒 Validate user
     const {
       data: { user },
       error: userError,
-    } = await supabase.auth.getUser(accessToken);
+    } = await supabase.auth.getUser();
 
     if (userError || !user) {
       return NextResponse.json(
@@ -55,9 +45,7 @@ export async function GET(req: Request) {
       );
     }
 
-    // ------------------------------------------------------------
-    // 🔒 INDIVIDUAL MEMORY ONLY
-    // ------------------------------------------------------------
+    // 🔒 Individual memory only
     const { data, error } = await supabase
       .schema("memory")
       .from("memories")
@@ -79,7 +67,7 @@ export async function GET(req: Request) {
     });
   } catch (err: any) {
     return NextResponse.json(
-      { error: err?.message ?? String(err) },
+      { error: err?.message ?? "server error" },
       { status: 500 }
     );
   }
