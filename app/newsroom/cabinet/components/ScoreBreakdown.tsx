@@ -28,15 +28,15 @@ type Props = {
 
 const DIMENSION_EXPLANATIONS: Record<string, string> = {
   Intent:
-    "Measures whether reporting is informational or attempts to persuade the reader.",
+    "Whether reporting primarily informs or attempts to persuade the reader.",
   Language:
-    "Evaluates emotionally loaded, biased, or suggestive wording.",
+    "Use of emotionally loaded, biased, or suggestive wording.",
   Source:
-    "Assesses sourcing quality, attribution clarity, and consistency.",
+    "Quality and clarity of sourcing and attribution.",
   Framing:
-    "Examines how facts are emphasized, omitted, or positioned.",
+    "How facts are emphasized, ordered, or omitted.",
   Context:
-    "Checks whether sufficient background is provided for accurate understanding.",
+    "Whether sufficient background is provided for accurate understanding.",
 };
 
 export default function ScoreBreakdown({ outlet }: Props) {
@@ -56,7 +56,7 @@ export default function ScoreBreakdown({ outlet }: Props) {
   const piPercent =
     typeof piRaw === "number" ? piRaw * 100 : null;
 
-  const bias = [
+  const dimensions = [
     { label: "Intent", value: outlet.avg_bias_intent_weighted ?? undefined },
     { label: "Language", value: outlet.avg_bias_language_weighted ?? undefined },
     { label: "Source", value: outlet.avg_bias_source_weighted ?? undefined },
@@ -100,18 +100,18 @@ export default function ScoreBreakdown({ outlet }: Props) {
 
       {/* ================= PI EXPLANATION ================= */}
       <div className="text-xs text-neutral-400">
-        Predictability Index is computed from a weighted combination of the
-        following dimensions.
+        Predictability Index shows how consistent an outlet’s reporting style is
+        over time. The dimensions below describe how that style appears.
       </div>
 
       {/* ================= DIMENSION BREAKDOWN ================= */}
       <div className="space-y-4">
-        {bias.map((b) => (
+        {dimensions.map((d) => (
           <BiasBar
-            key={b.label}
-            label={b.label}
-            description={DIMENSION_EXPLANATIONS[b.label]}
-            value={b.value}
+            key={d.label}
+            label={d.label}
+            description={DIMENSION_EXPLANATIONS[d.label]}
+            value={d.value}
           />
         ))}
       </div>
