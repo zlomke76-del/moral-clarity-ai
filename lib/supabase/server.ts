@@ -1,7 +1,11 @@
-// BEFORE
-export function createClientServer(cookieHeader: string = "") { ... }
+// lib/supabase/server.ts
+// ------------------------------------------------
+// Supabase SSR factory — cookie-header injection
+// Safe for Next.js 16 + Turbopack
+// ------------------------------------------------
 
-// AFTER
+import { createServerClient } from "@supabase/ssr";
+
 export function createSupabaseServerClient(cookieHeader: string = "") {
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,8 +20,14 @@ export function createSupabaseServerClient(cookieHeader: string = "") {
 
           return match ? match.split("=")[1] : undefined;
         },
-        set() {},
-        remove() {},
+
+        set() {
+          // SSR cannot mutate cookies — no-op
+        },
+
+        remove() {
+          // SSR cannot mutate cookies — no-op
+        },
       },
     }
   );
