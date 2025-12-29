@@ -14,7 +14,7 @@ export async function GET(
   // Canonical plan resolution:
   // 1. Route param (/buy/[plan])
   // 2. ?plan=standard
-  // 3. ?nxtPlan=standard  (observed in staging logs)
+  // 3. ?nxtPlan=standard (observed in staging logs)
   const rawPlan =
     params?.plan ??
     url.searchParams.get("plan") ??
@@ -39,9 +39,11 @@ export async function GET(
   const priceId = PLAN_TO_PRICE[plan];
   const meta = PLAN_META[plan];
 
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-    apiVersion: "2024-06-20",
-  });
+  // ✅ Let Stripe use the account’s default API version
+  // This avoids TS literal mismatches and future build breaks
+  const stripe = new Stripe(
+    process.env.STRIPE_SECRET_KEY as string
+  );
 
   try {
     const session = await stripe.checkout.sessions.create({
