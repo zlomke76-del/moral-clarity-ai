@@ -1,5 +1,5 @@
-import { createClientServer } from "@/lib/supabase";
 import { headers } from "next/headers";
+import { createClientServer } from "@/lib/supabase/server";
 
 export async function canonicalUserKey() {
   const hdr = await headers();
