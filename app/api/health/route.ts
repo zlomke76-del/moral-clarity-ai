@@ -1,30 +1,35 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET() {
   const start = Date.now();
 
+  let supabaseStatus: "ok" | "error" = "ok";
+  let errorMessage: string | null = null;
+
   try {
-    const sb = createClientServer();
+    const sb = createSupabaseServerClient();
 
     const { error } = await sb
       .from("health_check")
       .select("id")
       .limit(1);
 
-    return NextResponse.json({
-      uptime_ms: Date.now() - start,
-      supabase: error ? "error" : "ok",
-      error: error?.message ?? null,
-    });
+    if (error) {
+      supabaseStatus = "error";
+      errorMessage = error.message;
+    }
   } catch (err: any) {
-    return NextResponse.json(
-      {
-        uptime_ms: Date.now() - start,
-        supabase: "error",
-        error: err?.message ?? "Unknown error",
-      },
-      { status: 500 }
-    );
+    supabaseStatus = "error";
+    errorMessage = err?.message ?? "Unknown error";
   }
+
+  return NextResponse.json(
+    {
+      uptime_ms: Date.now() - start,
+      supabase: supabaseStatus,
+      error: errorMessage,
+    },
+    { status: supabaseStatus === "ok" ? 200 : 500 }
+  );
 }
