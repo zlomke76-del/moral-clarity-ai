@@ -1,45 +1,74 @@
-// app/buy/[plan]/route.ts
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { PLAN_TO_PRICE, PLAN_META, type PlanSlug } from "@/lib/pricing";
 
-// Make sure this route runs on Node (Stripe needs raw Node runtime, not edge)
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  _req: Request,
-  { params }: { params: { plan: string } }
+  req: Request,
+  { params }: { params: { plan?: string } }
 ) {
-  const plan = params.plan?.toLowerCase() as PlanSlug | undefined;
+  const url = new URL(req.url);
+
+  // Canonical plan resolution:
+  // 1. Route param (/buy/[plan])
+  // 2. ?plan=standard
+  // 3. ?nxtPlan=standard  (observed in staging logs)
+  const rawPlan =
+    params?.plan ??
+    url.searchParams.get("plan") ??
+    url.searchParams.get("nxtPlan");
+
+  const plan = rawPlan?.toLowerCase() as PlanSlug | undefined;
+
   if (!plan || !(plan in PLAN_TO_PRICE)) {
-    return NextResponse.json({ error: "Unknown plan" }, { status: 400 });
+    return NextResponse.json(
+      {
+        error: "Unknown plan",
+        received: {
+          routeParam: params?.plan ?? null,
+          planQuery: url.searchParams.get("plan"),
+          nxtPlanQuery: url.searchParams.get("nxtPlan"),
+        },
+      },
+      { status: 400 }
+    );
   }
 
   const priceId = PLAN_TO_PRICE[plan];
   const meta = PLAN_META[plan];
 
-  // Let Stripe use the account's default API version (avoids TS literal mismatch).
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
-  // Point to your app domain (set this per-environment in Vercel):
-  //  - Staging:  https://staging.moralclarity.ai
-  //  - Prod app: https://app.moralclarity.ai  (or https://moralclarity.ai if the app serves the apex)
-  const site =
-    process.env.NEXT_PUBLIC_SITE_URL || "https://staging.moralclarity.ai";
-
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    allow_promotion_codes: true,
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${site}/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${site}/subscribe`,
-    metadata: {
-      tier: meta.tier,
-      seats: String(meta.seats),
-      memoryGB: String(meta.memoryGB ?? 0),
-    },
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+    apiVersion: "2024-06-20",
   });
 
-  return NextResponse.redirect(session.url!, { status: 303 });
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      success_url: `${url.origin}/app/billing/success?plan=${plan}`,
+      cancel_url: `${url.origin}/pricing`,
+      metadata: {
+        plan,
+        label: meta.label,
+      },
+    });
+
+    return NextResponse.redirect(session.url as string, 303);
+  } catch (err: any) {
+    return NextResponse.json(
+      {
+        error: "Stripe session creation failed",
+        message: err?.message ?? "Unknown Stripe error",
+      },
+      { status: 500 }
+    );
+  }
 }
