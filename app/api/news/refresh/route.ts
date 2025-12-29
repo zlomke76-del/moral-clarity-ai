@@ -1,37 +1,38 @@
-// app/api/news/refresh/route.ts
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-import { NextRequest, NextResponse } from 'next/server';
-import { runNewsFetchRefresh } from '@/lib/news/fetcher';
-import { buildNewsNeutralityLedger } from '@/lib/news/ledgerBuilder';
+import { NextRequest, NextResponse } from "next/server";
 
-const NEWS_REFRESH_SECRET = process.env.NEWS_REFRESH_SECRET || '';
+const NEWS_REFRESH_SECRET = process.env.NEWS_REFRESH_SECRET || "";
+const INGEST_WORKER_URL =
+  process.env.NEWS_INGEST_WORKER_URL ||
+  "http://localhost:3000/api/news/ingest-worker";
 
 function corsHeaders(origin: string | null): Headers {
   const h = new Headers();
-  h.set('Vary', 'Origin');
-  h.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  h.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  h.set('Access-Control-Max-Age', '86400');
-  if (origin) h.set('Access-Control-Allow-Origin', origin);
+  h.set("Vary", "Origin");
+  h.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  h.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  h.set("Access-Control-Max-Age", "86400");
+  if (origin) h.set("Access-Control-Allow-Origin", origin);
   return h;
 }
 
 function pickOrigin(req: NextRequest): string | null {
-  const origin = req.headers.get('origin');
+  const origin = req.headers.get("origin");
   if (!origin) return null;
 
   try {
     const u = new URL(origin);
     if (
-      u.hostname.endsWith('moralclarity.ai') ||
-      u.hostname.endsWith('moralclarityai.com') ||
-      u.hostname === 'localhost'
+      u.hostname.endsWith("moralclarity.ai") ||
+      u.hostname.endsWith("moralclarityai.com") ||
+      u.hostname === "localhost"
     ) {
       return origin;
     }
   } catch {}
+
   return null;
 }
 
@@ -41,45 +42,57 @@ async function handleRefresh(req: NextRequest) {
   if (NEWS_REFRESH_SECRET) {
     const url = new URL(req.url);
     const token =
-      url.searchParams.get('secret') || req.headers.get('x-news-secret');
+      url.searchParams.get("secret") || req.headers.get("x-news-secret");
 
     if (token !== NEWS_REFRESH_SECRET) {
       return NextResponse.json(
-        { ok: false, error: 'Unauthorized' },
+        { ok: false, error: "Unauthorized" },
         { status: 401, headers: corsHeaders(origin) }
       );
     }
   }
 
-  // 🔑 Fire-and-monitor (NOT fire-and-forget)
-  Promise.resolve()
-    .then(async () => {
-      console.log('[news/refresh] phase 1: fetch start');
-      const fetchResult = await runNewsFetchRefresh();
+  // 🔑 Explicit worker invocation (NO background promises)
+  let workerResult: any = null;
 
-      if (!fetchResult.ok || fetchResult.totalInserted === 0) {
-        throw new Error('fetch failed or produced zero inserts');
-      }
-
-      console.log('[news/refresh] phase 1 complete', fetchResult.totalInserted);
-
-      console.log('[news/refresh] phase 2: ledger build start');
-      const ledgerResult = await buildNewsNeutralityLedger({ limit: 500 });
-
-      if (!ledgerResult || ledgerResult.inserted === 0) {
-        throw new Error('ledger build failed or empty');
-      }
-
-      console.log('[news/refresh] completed successfully');
-    })
-    .catch((err) => {
-      console.error('[news/refresh] async failure', err);
+  try {
+    const workerResponse = await fetch(INGEST_WORKER_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(NEWS_REFRESH_SECRET
+          ? { "x-news-secret": NEWS_REFRESH_SECRET }
+          : {}),
+      },
     });
 
-  // ✅ Return immediately
+    if (!workerResponse.ok) {
+      const text = await workerResponse.text();
+      throw new Error(
+        `Ingest worker failed (${workerResponse.status}): ${text}`
+      );
+    }
+
+    workerResult = await workerResponse.json();
+  } catch (err: any) {
+    console.error("[news/refresh] ingest-worker invocation failed", err);
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Ingest worker invocation failed",
+        message: err?.message || String(err),
+      },
+      { status: 500, headers: corsHeaders(origin) }
+    );
+  }
+
   return NextResponse.json(
-    { ok: true, status: 'refresh_started' },
-    { status: 202, headers: corsHeaders(origin) }
+    {
+      ok: true,
+      status: "refresh_completed",
+      worker: workerResult,
+    },
+    { status: 200, headers: corsHeaders(origin) }
   );
 }
 
