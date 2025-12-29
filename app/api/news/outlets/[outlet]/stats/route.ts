@@ -6,9 +6,10 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   _req: Request,
-  { params }: { params: { outlet: string } }
+  { params }: { params: { outlet: string[] } }
 ) {
-  const outlet = params.outlet?.toLowerCase();
+  // Join catch-all segments back into domain
+  const outlet = params.outlet?.join(".")?.toLowerCase();
 
   if (!outlet) {
     return NextResponse.json(
@@ -50,17 +51,5 @@ export async function GET(
     );
   }
 
-  return NextResponse.json({
-    outlet: data.outlet,
-    total_stories: data.total_stories,
-    days_active: data.days_active,
-    last_story_day: data.last_story_day,
-
-    avg_pi_weighted: data.avg_pi_weighted,
-    avg_bias_intent_weighted: data.avg_bias_intent_weighted,
-    avg_bias_language_weighted: data.avg_bias_language_weighted,
-    avg_bias_source_weighted: data.avg_bias_source_weighted,
-    avg_bias_framing_weighted: data.avg_bias_framing_weighted,
-    avg_bias_context_weighted: data.avg_bias_context_weighted,
-  });
+  return NextResponse.json(data);
 }
