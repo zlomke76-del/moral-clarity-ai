@@ -1,12 +1,25 @@
 import { createClientBrowser } from "@/lib/supabase/browser";
-import type { MemoryRecord } from "@/types/memory"; // adjust path if needed
+
+/**
+ * Minimal memory record shape used by the UI.
+ * This avoids importing app-route types,
+ * which are not available at build time.
+ */
+export type MemoryRecord = {
+  id: string;
+  content: string;
+  created_at: string;
+  workspace_id: string;
+  user_id: string;
+  type?: string | null;
+};
 
 export async function fetchWorkspaceMemories(
   workspaceId: string
 ): Promise<MemoryRecord[]> {
   const supabase = createClientBrowser();
 
-  // 🔐 Get session explicitly
+  // 🔐 Explicit session resolution (browser-owned)
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -27,7 +40,7 @@ export async function fetchWorkspaceMemories(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error ?? "Failed to load memories");
+    throw new Error(err?.error ?? "Failed to load workspace memories");
   }
 
   const json = await res.json();
