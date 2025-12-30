@@ -204,6 +204,11 @@ export default function EdgeOfProtectionIndexPage() {
             </Link>
           </li>
           <li>
+            <Link href="/edge-of-protection/representation-boundary">
+              Representation Boundary — Assistance vs. Overreach
+            </Link>
+          </li>
+          <li>
             <Link href="/edge-of-protection/governance-without-recognition">
               Governance Without Recognition (EOP-008)
             </Link>
