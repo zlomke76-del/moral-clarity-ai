@@ -36,9 +36,9 @@ export default function EdgeOfProtectionIndexPage() {
         {/* PURPOSE */}
         <h2>Purpose</h2>
         <p>
-          The Edge of Protection defines the boundaries where AI systems must stop
-          optimizing for capability, engagement, or fluency and instead default
-          to restraint, refusal, or termination.
+          The Edge of Protection defines the boundaries where AI systems must
+          stop optimizing for capability, engagement, or fluency and instead
+          default to restraint, refusal, or termination.
         </p>
         <p>
           This edge exists because some contexts do not tolerate experimentation,
@@ -201,6 +201,11 @@ export default function EdgeOfProtectionIndexPage() {
           <li>
             <Link href="/edge-of-protection/non-amplifying-authority">
               Non-Amplifying Authority (EOP-001)
+            </Link>
+          </li>
+          <li>
+            <Link href="/edge-of-protection/compliant-refusal">
+              Compliant Refusal — Closure as Governance
             </Link>
           </li>
           <li>
