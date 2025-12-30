@@ -67,7 +67,7 @@ async function fetchViaTavily(url: string): Promise<string | null> {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${TAVILY_API_KEY}`,
+      "x-api-key": TAVILY_API_KEY, // ✅ FIX
     },
     body: JSON.stringify({
       urls: [url],
@@ -95,8 +95,16 @@ async function fetchViaBrowserless(url: string): Promise<string | null> {
     const r = await fetch(
       `https://chrome.browserless.io/content?token=${encodeURIComponent(
         BROWSERLESS_TOKEN
-      )}&url=${encodeURIComponent(url)}`
+      )}`,
+      {
+        method: "POST", // ✅ FIX
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url }),
+      }
     );
+
     if (!r.ok) return null;
 
     const text = await r.text();
