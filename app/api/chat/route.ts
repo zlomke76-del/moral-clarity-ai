@@ -53,7 +53,7 @@ type WMRow = {
 function isNewsRequest(message: string): boolean {
   const m = message.toLowerCase();
   return (
-    m.includes("news") ||
+    m === "news" || // optional: allow bare command
     m.includes("headlines") ||
     m.includes("what is happening") ||
     m.includes("what's happening") ||
