@@ -174,6 +174,36 @@ export default function EdgeOfProtectionIndexPage() {
           handoff.
         </p>
 
+        {/* DATA PRIVACY & CONTAINMENT */}
+        <h2>Data Privacy and Information Containment</h2>
+        <p>
+          Refusal events impose an immediate and uncompromising obligation for
+          strict information containment. This mandate extends beyond
+          conversational termination and requires that no sensitive,
+          identifying, or inferential user information is emitted following
+          refusal. Solicitation of new personal data is categorically prohibited
+          once a boundary is reached.
+        </p>
+        <p>
+          All sensitive content present within the operational context at the
+          moment of refusal must be redacted or neutralized to eliminate exposure
+          risk. Retention of refusal-related data is strictly limited to the
+          minimum elements required for audit and governance, and those records
+          shall not be used for any other purpose.
+        </p>
+        <p>
+          Refusal does not authorize data enrichment, profiling, or inferential
+          processing under any circumstance. This obligation extends to all
+          future interactions and is binding across every downstream system or
+          context associated with the refusal event.
+        </p>
+        <p>
+          Containment is enacted to prevent any form of secondary harm resulting
+          from data exposure or misuse. It is a substantive safeguard, not a
+          symbolic or performative measure, and stands as a core element of the
+          Edge of Protection.
+        </p>
+
         {/* WHAT THIS IS NOT */}
         <h2>What This Edge Is Not</h2>
         <ul>
@@ -201,11 +231,6 @@ export default function EdgeOfProtectionIndexPage() {
           <li>
             <Link href="/edge-of-protection/non-amplifying-authority">
               Non-Amplifying Authority (EOP-001)
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-protection/compliant-refusal">
-              Compliant Refusal — Closure as Governance
             </Link>
           </li>
           <li>
@@ -288,8 +313,8 @@ export default function EdgeOfProtectionIndexPage() {
         <h2>Line in the Sand</h2>
         <p>Capability without restraint erodes trust.</p>
         <p>
-          This edge exists to ensure that some outputs are not allowed to
-          exist—even when they could.
+          This edge exists to ensure that some outputs are not allowed to exist—
+          even when they could.
         </p>
       </article>
     </main>
