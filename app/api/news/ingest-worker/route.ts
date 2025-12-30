@@ -197,7 +197,7 @@ export async function GET(req: NextRequest) {
 
   const limit = Math.min(
     20,
-    Math.max(1, Number(new URL(req.url).searchParams.get("limit") || 10))
+    Math.max(1, Number(new URL(req.url).searchParams.get("limit") || 30))
   );
 
   const startedAt = new Date().toISOString();
