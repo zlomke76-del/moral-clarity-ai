@@ -36,9 +36,9 @@ export default function EdgeOfProtectionIndexPage() {
         {/* PURPOSE */}
         <h2>Purpose</h2>
         <p>
-          The Edge of Protection defines the boundaries where AI systems must
-          stop optimizing for capability, engagement, or fluency and instead
-          default to restraint, refusal, or termination.
+          The Edge of Protection defines the boundaries where AI systems must stop
+          optimizing for capability, engagement, or fluency and instead default
+          to restraint, refusal, or termination.
         </p>
         <p>
           This edge exists because some contexts do not tolerate experimentation,
@@ -283,8 +283,8 @@ export default function EdgeOfProtectionIndexPage() {
         <h2>Line in the Sand</h2>
         <p>Capability without restraint erodes trust.</p>
         <p>
-          This edge exists to ensure that some outputs are not allowed to exist—
-          even when they could.
+          This edge exists to ensure that some outputs are not allowed to
+          exist—even when they could.
         </p>
       </article>
     </main>
