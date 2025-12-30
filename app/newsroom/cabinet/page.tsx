@@ -31,7 +31,8 @@ export default function NewsroomCabinetPage() {
   useEffect(() => {
     if (!selected) return;
 
-    fetch(`/api/news/outlets/${encodeURIComponent(selected)}/stats`)
+    // ✅ Canonical-only stats endpoint (query-based)
+    fetch(`/api/news/outlet-stats?outlet=${encodeURIComponent(selected)}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.ok) setStats(d.outlet);
@@ -74,7 +75,6 @@ export default function NewsroomCabinetPage() {
 
   return (
     <div className="flex flex-col gap-12">
-
       {/* ================= META ================= */}
       <div className="text-xs text-neutral-400">
         {totalStoriesEvaluated.toLocaleString()} stories evaluated · PI based on lifetime
