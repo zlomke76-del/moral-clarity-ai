@@ -1,11 +1,18 @@
 // app/edge-of-knowledge/page.tsx
+// ============================================================
+// EDGE OF KNOWLEDGE
+// Governing action where certainty breaks
+// ============================================================
+// This edge defines epistemic boundaries, not applications.
+// ============================================================
 
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Governing Action at the Edge of Knowledge | Moral Clarity AI",
   description:
-    "A public doctrine for AI safety and responsible intelligence when certainty breaks. Governing action under uncertainty across human and automated systems.",
+    "A public doctrine for governing action under uncertainty. Boundary exposure, regime limits, and failure characterization without actionability.",
   openGraph: {
     title: "Governing Action at the Edge of Knowledge",
     description:
@@ -20,183 +27,193 @@ export const metadata: Metadata = {
   },
 };
 
+export const dynamic = "force-static";
+
 export default function EdgeOfKnowledgePage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-16">
       <article className="prose prose-neutral dark:prose-invert max-w-none">
         <h1>Governing Action at the Edge of Knowledge</h1>
+
         <p className="lead">
           <strong>
             A doctrine for responsible intelligence when certainty breaks
           </strong>
         </p>
 
+        {/* PREFACE */}
         <h2>Preface</h2>
         <p>
-          This document describes how intelligent systems—human or artificial—should
+          This document defines how intelligent systems—human or artificial—must
           behave when assumptions no longer hold and confidence becomes unsafe.
-          It is offered as a public doctrine for governing action under uncertainty,
-          not as a product specification or policy mandate. The intent is to make
-          uncertainty visible, governable, and survivable.
+          It is a public doctrine for governing action under uncertainty, not a
+          policy, product specification, or design template.
         </p>
-
         <p>
-          This doctrine addresses failures in AI safety, automation, and decision-making
-          under uncertainty, where systems act with high confidence outside their
-          training or validity regimes. It is relevant to engineers, researchers, and
-          leaders concerned with unexpected model behavior, robustness, and safe
-          human–machine collaboration.
+          The Edge of Knowledge exists to make uncertainty visible, governable,
+          and survivable—without converting exposure into prescription.
         </p>
 
+        {/* INTERPRETATION LIMITS */}
+        <h2>Interpretation Limits</h2>
+        <p>
+          Material published under the Edge of Knowledge is non-actionable. It
+          must not be interpreted as advice, instruction, recommendation, or
+          design guidance.
+        </p>
+        <p>
+          Exposure of boundary failure does not constitute endorsement,
+          assurance of safety, or readiness for application. Misuse or
+          misinterpretation by readers is an inherent risk that this edge does
+          not attempt to mitigate through persuasion or clarification.
+        </p>
+        <p>
+          Emission legitimacy and refusal enforcement are governed by the{" "}
+          <Link href="/edge-of-protection">Edge of Protection</Link>.
+        </p>
+
+        {/* ABSTRACT */}
         <h2>Abstract</h2>
         <p>
-          Many catastrophic failures in human and automated systems do not arise
-          from lack of intelligence or data, but from confident action taken after
-          underlying assumptions silently cease to hold. This paper proposes a
-          general doctrine for governing action under irreducible uncertainty.
-          The doctrine distinguishes between fixed-causality regimes—where simplified
-          models and centralized control are valid—and contextual-causality regimes—where
-          assumptions break, feedback reactivates, and confidence becomes dangerous.
-          We outline how systems can detect transitions between these regimes, adapt
-          authority and action responsibly, maintain legitimacy, communicate uncertainty
-          to humans, and preserve continuity across time and institutions. The aim is
-          not to replace optimization or automation, but to govern their limits.
+          Many catastrophic failures arise not from lack of intelligence, but
+          from confident action taken after underlying assumptions silently
+          cease to hold. This doctrine governs action under irreducible
+          uncertainty by distinguishing fixed-causality regimes from contextual
+          causality regimes, defining detection signals, and enforcing limits on
+          authority, action, and interpretation.
         </p>
 
-        <h2>1. The Problem: Confidence Beyond Validity</h2>
+        {/* REGIME DISTINCTION */}
+        <h2>1. Fixed vs. Contextual Causality</h2>
         <p>
-          Modern systems—technical, organizational, and computational—are optimized
-          for performance under assumed conditions. Failure often occurs not because
-          systems are wrong, but because they act confidently outside the regime where
-          their reasoning is valid.
+          In stable environments, causal relationships collapse into fixed,
+          unidirectional arrows. Optimization and centralized control are valid.
         </p>
+        <p>
+          In feedback-rich, non-stationary systems, causality becomes contextual.
+          Treating these regimes as fixed produces brittle behavior and hidden
+          failure modes.
+        </p>
+
+        {/* REGIME EXIT */}
+        <h2>2. Detecting Regime Exit</h2>
         <ul>
-          <li>Reliance on simplified causal assumptions beyond their domain</li>
-          <li>Suppression or averaging of conflicting signals</li>
-          <li>Escalation of automated authority when stabilization fails</li>
-          <li>Inability to recognize when uncertainty has become dominant</li>
-        </ul>
-        <p>These failures are epistemic, not computational.</p>
-
-        <h2>2. Fixed vs. Contextual Causality</h2>
-        <p>
-          In stable environments with weak coupling, clear scale separation, and minimal
-          feedback, cause–effect relationships collapse into fixed, unidirectional causal
-          arrows. In such regimes, centralized control and optimized automation are appropriate.
-        </p>
-        <p>
-          In tightly coupled, nonstationary, or feedback-rich systems, causality becomes
-          contextual. Which variable “causes” another depends on how the system is perturbed
-          or observed. Treating such systems as if causality were fixed produces brittle
-          behavior and hidden failure modes.
-        </p>
-        <p>
-          The core risk is mistaking a regime-dependent simplification for a universal truth.
-        </p>
-
-        <h2>3. Detecting Regime Exit</h2>
-        <p>
-          A system can detect imminent exit from a fixed-causality regime by monitoring early
-          indicators of causal instability, including:
-        </p>
-        <ul>
-          <li>Rising variance or autocorrelation in outputs</li>
-          <li>Increased sensitivity to previously negligible variables</li>
-          <li>Deviations from assumed causal dependencies</li>
-          <li>Slowing recovery following interventions</li>
-          <li>Changes in connectivity or information flow among components</li>
+          <li>Rising variance or autocorrelation</li>
+          <li>Unexpected sensitivity to minor variables</li>
+          <li>Deviation from assumed causal dependencies</li>
+          <li>Slowed recovery after intervention</li>
+          <li>Shifts in information flow or coupling</li>
         </ul>
 
-        <h2>4. Adaptive Governance Under Uncertainty</h2>
+        {/* ADAPTIVE GOVERNANCE */}
+        <h2>3. Adaptive Governance Under Uncertainty</h2>
 
         <h3>Authority</h3>
         <p>
-          Temporarily shift from centralized control to bounded, decentralized authority
-          closer to emerging sources of variability. Authority should be conditional,
-          time-limited, and revocable.
+          Authority must become conditional, time-limited, and revocable.
+          Accumulation of authority under uncertainty is invalid.
         </p>
 
         <h3>Action</h3>
         <p>
-          Favor reversible, information-seeking actions over aggressive optimization.
-          Distinguish probing actions from stabilizing actions, and log all actions
-          for auditability.
+          Favor reversible, information-seeking actions. All actions must be
+          logged and auditable.
         </p>
 
         <h3>Trust</h3>
         <p>
-          Reassign trust dynamically based on real-time adaptive performance rather than
-          historical status. Trust is treated as a provisional allocation of risk, not
-          a fixed entitlement.
+          Trust is provisional and dynamically reassigned based on present
+          performance—not history or status.
         </p>
 
-        <h2>5. Legitimacy and Invariants</h2>
+        {/* REVIEW & CURATION */}
+        <h2>4. Review Criteria and Curation Process</h2>
         <p>
-          Certain principles—such as limits on authority, reversibility of action, and
-          transparency—function as invariants. An invariant may be declared broken only
-          by explicitly authorized human or automated roles defined by governance.
+          Material qualifies for inclusion only if it exposes regime boundaries,
+          characterizes failure, or delineates epistemic limits.
         </p>
         <p>
-          Legitimacy derives from adherence to documented procedures, evidence recording,
-          secondary validation, and reference to governing standards. Unauthorized or
-          informal suspension of invariants is invalid by definition.
-        </p>
-
-        <h2>6. Human Communication</h2>
-        <ol>
-          <li>The change is a planned, safety-driven adjustment</li>
-          <li>Temporary redistribution of authority is normal in adaptive systems</li>
-          <li>Oversight and safeguards remain active and heightened</li>
-        </ol>
-        <p>
-          Communication should avoid jargon, invite questions, and specify conditions
-          for return to normal operation.
+          Novelty, usefulness, or applicability are insufficient grounds for
+          inclusion. Evaluation is governed by role-based protocols and
+          standardized procedures, not individual discretion.
         </p>
 
-        <h2>7. Continuity Across Time</h2>
-        <ul>
-          <li>Modular, versioned, and redundantly stored</li>
-          <li>Reinforced through training, mentorship, and scenario practice</li>
-          <li>Periodically reviewed and updated</li>
-          <li>Explicit about invariant principles versus adaptable practices</li>
-        </ul>
-
-        <h2>8. Embodiment: The Deliberate Pause</h2>
+        {/* EPISTEMIC INTEGRITY */}
+        <h2>5. Epistemic Integrity and Correction Path</h2>
         <p>
-          Before acting or responding, pause briefly—such as one measured breath—while
-          signaling attentiveness.
+          Errors, contradictions, and misjudgments require immediate correction.
+          Corrections are governance acts, not admissions of failure.
         </p>
         <p>
-          This micro-ritual interrupts automaticity, surfaces uncertainty, and models
-          accountable authority. Small, repeatable practices transmit norms more reliably
-          than formal rules.
+          All amendments are publicly traceable. Silent edits are prohibited.
         </p>
 
-        <h2>9. Scope and Intent</h2>
+        {/* CITATION */}
+        <h2>6. Citation and Attribution Protocol</h2>
         <p>
-          This doctrine is not a replacement for automation, optimization, or expertise.
-          It is a governance layer invoked only when certainty breaks. Its highest success
-          state is invisibility: when systems remain within valid regimes, it stays dormant.
+          All prior work—internal or external—must be explicitly cited.
+          Attribution prevents epistemic enclosure and boundary drift.
+        </p>
+        <p>
+          Attribution conveys acknowledgment only. It does not imply endorsement
+          or readiness.
         </p>
 
-        <h2>Conclusion</h2>
+        {/* REGIME CROSSOVER */}
+        <h2>7. Boundary Adjacency and Regime Crossover Control</h2>
         <p>
-          Responsible intelligence is defined not by confidence, but by the ability to
-          recognize when confidence is no longer justified. Governing action at the edge
-          of knowledge requires detecting regime shifts, adapting authority and action,
-          preserving legitimacy, communicating uncertainty, and embedding these behaviors
-          culturally.
+          Research near regime boundaries is continuously evaluated for
+          crossover. Any drift toward application, usability, or deployment
+          constitutes a failure condition.
+        </p>
+        <p>
+          Proximity to usability invalidates inquiry and triggers cessation.
+        </p>
+
+        {/* VERSION CONTROL */}
+        <h2>8. Knowledge Drift and Version Control</h2>
+        <p>
+          All material is versioned and historically accessible. Silent or
+          undocumented changes constitute failure.
+        </p>
+
+        {/* COMMUNITY INPUT */}
+        <h2>9. Community and Peer Contribution</h2>
+        <p>
+          External submissions may be reviewed but confer no authority or right
+          of inclusion. All submissions and dispositions are logged.
+        </p>
+
+        {/* OPEN QUESTIONS */}
+        <h2>10. Open Questions and Forward Limits</h2>
+        <p>
+          Unresolved questions are preserved as formal boundaries. Closure,
+          synthesis, or speculative resolution is prohibited.
+        </p>
+
+        {/* RELATION TO EDGE OF PROTECTION */}
+        <h2>Relation to the Edge of Protection</h2>
+        <p>
+          The Edge of Knowledge governs exposure of uncertainty and failure. The{" "}
+          <Link href="/edge-of-protection">Edge of Protection</Link> governs
+          emission legitimacy, refusal, human handoff, and data containment.
+        </p>
+        <p>
+          Together, they separate understanding from action and exposure from
+          authority.
+        </p>
+
+        {/* SEAL */}
+        <h2>Canonical Seal</h2>
+        <p>
+          The Edge of Knowledge is sealed. It is regime-bounded, non-actionable,
+          versioned, and resistant to drift.
         </p>
 
         <hr />
 
-        <p>
-          <strong>Note:</strong> This doctrine informs how <em>Solace</em> reasons, but does
-          not require Solace to be used.
-        </p>
-
-        <p className="text-sm text-muted-foreground">
-          Version 1.0 · Public reference · Updated only by revision
+        <p className="text-sm text-neutral-400">
+          Version 1.0 · Canonical · Public reference · Updated only by revision
         </p>
       </article>
     </main>
