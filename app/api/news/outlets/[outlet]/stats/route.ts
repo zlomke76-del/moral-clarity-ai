@@ -1,3 +1,5 @@
+// app/api/news/outlets/[outlet]/stats/route.ts
+
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -27,7 +29,7 @@ export async function GET(
         ok: false,
         error: "Legacy domain-based outlet route permanently removed",
       },
-      { status: 410 } // ← THIS IS THE FIX
+      { status: 410 }
     );
   }
 
