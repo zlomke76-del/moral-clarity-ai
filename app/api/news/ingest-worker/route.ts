@@ -8,8 +8,12 @@ import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
 const TAVILY_API_KEY = process.env.TAVILY_API_KEY || "";
 const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN || "";
+
+// Optional override (defaults to 10)
+const INGEST_BATCH_LIMIT = Number(process.env.NEWS_INGEST_BATCH_LIMIT || 10);
 
 const supabaseAdmin =
   SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
@@ -66,17 +70,24 @@ async function fetchViaBrowserless(url: string): Promise<string | null> {
   if (!BROWSERLESS_TOKEN) return null;
 
   try {
-    const r = await fetch("https://chrome.browserless.io/content", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${BROWSERLESS_TOKEN}`,
-      },
-      body: JSON.stringify({ url, waitFor: 2000 }),
-    });
+    const r = await fetch(
+      `https://chrome.browserless.io/content?token=${BROWSERLESS_TOKEN}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          url,
+          waitFor: 2000,
+        }),
+      }
+    );
 
     if (!r.ok) return null;
-    return clampText(stripHtml(await r.text()));
+
+    const html = await r.text();
+    return clampText(stripHtml(html));
   } catch {
     return null;
   }
@@ -95,7 +106,7 @@ async function fetchDirect(url: string): Promise<string | null> {
 /* ========= INGEST ========= */
 
 async function ingest(row: any, stats: any): Promise<boolean> {
-  if (!row.story_url || !supabaseAdmin) return false;
+  if (!row?.story_url || !supabaseAdmin) return false;
 
   let body: string | null = null;
 
@@ -135,13 +146,14 @@ async function ingest(row: any, stats: any): Promise<boolean> {
   });
 
   await supabaseAdmin.from("news_backfill_queue").delete().eq("id", row.id);
+
   stats.ingested++;
   return true;
 }
 
 /* ========= HANDLER ========= */
 
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   if (!supabaseAdmin) {
     return NextResponse.json({ ok: false, error: "Supabase not initialized" });
   }
@@ -150,7 +162,7 @@ export async function POST(req: NextRequest) {
     .from("news_backfill_queue")
     .select("*")
     .order("created_at", { ascending: true })
-    .limit(10);
+    .limit(INGEST_BATCH_LIMIT);
 
   const stats = {
     tavily_attempted: 0,
