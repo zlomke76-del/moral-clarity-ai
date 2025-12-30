@@ -14,6 +14,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const outlet = searchParams.get("outlet");
 
+  // 🔒 Hard guard — missing param
   if (!outlet) {
     return NextResponse.json(
       { ok: false, error: "Missing outlet parameter" },
@@ -21,7 +22,7 @@ export async function GET(req: Request) {
     );
   }
 
-  // 🔒 Enforce canonical outlet keys only
+  // 🔒 Canonical enforcement
   if (outlet.includes(".")) {
     return NextResponse.json(
       {
