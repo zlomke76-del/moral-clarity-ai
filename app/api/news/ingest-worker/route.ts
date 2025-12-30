@@ -1,4 +1,5 @@
 // app/api/news/ingest-worker/route.ts
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -9,16 +10,13 @@ import { createClient } from "@supabase/supabase-js";
    ENV
    ============================================================ */
 
-const SUPABASE_URL = process.env.SUPABASE_URL!;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const TAVILY_API_KEY = process.env.TAVILY_API_KEY!;
+const SUPABASE_URL = process.env.SUPABASE_URL || "";
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const TAVILY_API_KEY = process.env.TAVILY_API_KEY || "";
 const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN || "";
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error("SUPABASE env missing");
-}
-if (!TAVILY_API_KEY) {
-  throw new Error("TAVILY_API_KEY missing – ingest must not run without Tavily");
 }
 
 /* ============================================================
@@ -63,11 +61,13 @@ function stripHtml(html: string) {
    ============================================================ */
 
 async function fetchViaTavily(url: string): Promise<string | null> {
+  if (!TAVILY_API_KEY) return null;
+
   const r = await fetch("https://api.tavily.com/extract", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": TAVILY_API_KEY, // ✅ FIX
+      "x-api-key": TAVILY_API_KEY,
     },
     body: JSON.stringify({
       urls: [url],
@@ -97,10 +97,8 @@ async function fetchViaBrowserless(url: string): Promise<string | null> {
         BROWSERLESS_TOKEN
       )}`,
       {
-        method: "POST", // ✅ FIX
-        headers: {
-          "Content-Type": "application/json",
-        },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       }
     );
@@ -141,18 +139,16 @@ async function ingestRow(
 
   stats.tavily_attempted++;
 
-  // 1. TAVILY (REQUIRED)
   let body = await fetchViaTavily(row.story_url);
+
   if (body) {
     stats.tavily_succeeded++;
   } else {
-    // 2. BROWSERLESS (FALLBACK ONLY)
     stats.browserless_fallback_attempted++;
     body = await fetchViaBrowserless(row.story_url);
     if (body) stats.browserless_fallback_succeeded++;
   }
 
-  // If still nothing → HARD FAIL
   if (!body) {
     stats.failed++;
     return false;
@@ -191,9 +187,17 @@ async function ingestRow(
    ============================================================ */
 
 export async function GET(req: NextRequest) {
+  // 🔒 Runtime-only guard (build-safe)
+  if (!TAVILY_API_KEY) {
+    return NextResponse.json(
+      { ok: false, error: "TAVILY_API_KEY missing" },
+      { status: 500 }
+    );
+  }
+
   const limit = Math.min(
     20,
-    Math.max(1, Number(new URL(req.url).searchParams.get("limit") || 30))
+    Math.max(1, Number(new URL(req.url).searchParams.get("limit") || 10))
   );
 
   const startedAt = new Date().toISOString();
