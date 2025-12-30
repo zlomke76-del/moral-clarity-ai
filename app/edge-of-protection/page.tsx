@@ -174,36 +174,6 @@ export default function EdgeOfProtectionIndexPage() {
           handoff.
         </p>
 
-        {/* DATA PRIVACY & CONTAINMENT */}
-        <h2>Data Privacy and Information Containment</h2>
-        <p>
-          Refusal events impose an immediate and uncompromising obligation for
-          strict information containment. This mandate extends beyond
-          conversational termination and requires that no sensitive,
-          identifying, or inferential user information is emitted following
-          refusal. Solicitation of new personal data is categorically prohibited
-          once a boundary is reached.
-        </p>
-        <p>
-          All sensitive content present within the operational context at the
-          moment of refusal must be redacted or neutralized to eliminate exposure
-          risk. Retention of refusal-related data is strictly limited to the
-          minimum elements required for audit and governance, and those records
-          shall not be used for any other purpose.
-        </p>
-        <p>
-          Refusal does not authorize data enrichment, profiling, or inferential
-          processing under any circumstance. This obligation extends to all
-          future interactions and is binding across every downstream system or
-          context associated with the refusal event.
-        </p>
-        <p>
-          Containment is enacted to prevent any form of secondary harm resulting
-          from data exposure or misuse. It is a substantive safeguard, not a
-          symbolic or performative measure, and stands as a core element of the
-          Edge of Protection.
-        </p>
-
         {/* WHAT THIS IS NOT */}
         <h2>What This Edge Is Not</h2>
         <ul>
@@ -214,83 +184,43 @@ export default function EdgeOfProtectionIndexPage() {
           <li>A contract governing emission legitimacy only</li>
         </ul>
 
-        {/* PUBLISHED STANDARDS */}
-        <h2>Published Standards</h2>
+        {/* OPERATIONAL CROSS-REFERENCES */}
+        <h2>Operational Cross-References</h2>
+        <p>
+          The Edge of Protection is enforced through complementary operational
+          standards. These references are binding and govern implementation,
+          auditability, and evolution:
+        </p>
 
-        <ul>
-          <li>
-            <Link href="/edge-of-protection/preparedness">
-              The Edge of Preparedness — Capability-Aware Governance
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-protection/authority-suppression">
-              Authority Suppression (EOP-000)
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-protection/non-amplifying-authority">
-              Non-Amplifying Authority (EOP-001)
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-protection/representation-boundary">
-              Representation Boundary — Assistance vs. Overreach
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-protection/governance-without-recognition">
-              Governance Without Recognition (EOP-008)
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-protection/exposure-of-engagement-optimized-ai">
-              Exposure of Engagement-Optimized AI Behavior (EOP-009)
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-protection/youth-safeguards">
-              Minimum Safeguards for Youth-Facing AI Systems
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-protection/mental-health-adjacency">
-              Mental Health–Adjacent Interactions
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-protection/grief-and-bereavement">
-              Grief, Loss, and Bereavement
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-protection/power-asymmetry">
-              Coercion, Surveillance, and Power Asymmetry
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-protection/consent-fragility">
-              Cognitive Decline and Consent Fragility
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-protection/belief-and-identity">
-              Belief, Identity, and Epistemic Vulnerability
-            </Link>
-          </li>
-        </ul>
-
-        {/* OPERATIONS */}
-        <h2>Operations</h2>
         <ul>
           <li>
             <Link href="/edge-of-protection/compliance-testing">
-              Compliance Testing
+              Compliance Testing &amp; Boundary Verification
             </Link>
           </li>
           <li>
             <Link href="/edge-of-protection/red-team-submissions">
-              Red Team Submissions
+              Red Team Submissions &amp; Failure Escalation
+            </Link>
+          </li>
+          <li>
+            <Link href="/edge-of-protection/metrics-and-monitoring">
+              Metrics &amp; Continuous Monitoring
+            </Link>
+          </li>
+          <li>
+            <Link href="/edge-of-protection/feedback-and-expansion">
+              Feedback, Review, and Standards Expansion Workflow
+            </Link>
+          </li>
+          <li>
+            <Link href="/edge-of-protection/human-handoff-protocols">
+              Human Handoff &amp; Escalation Protocols
+            </Link>
+          </li>
+          <li>
+            <Link href="/edge-of-protection/transparency-and-auditability">
+              Transparency &amp; Auditability Requirements
             </Link>
           </li>
         </ul>
