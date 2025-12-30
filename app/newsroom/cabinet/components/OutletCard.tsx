@@ -31,11 +31,11 @@ export default function OutletCard({
   badge,
   onSelect,
 }: Props) {
-  // 🔒 CANONICAL DOMAIN
-  const domain = outlet.canonical_outlet;
+  // 🔒 CANONICAL IDENTIFIER (STATE / ROUTING SAFE)
+  const canonical = outlet.canonical_outlet;
 
-  // ✅ SAFE favicon source
-  const logoUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+  // ✅ SAFE favicon source (display only)
+  const logoUrl = `https://www.google.com/s2/favicons?domain=${canonical}&sz=64`;
 
   // 🔒 PI DISPLAY — OVERVIEW CONTRACT
   const pi =
@@ -45,6 +45,7 @@ export default function OutletCard({
 
   return (
     <button
+      type="button"
       onClick={onSelect}
       className={`rounded-lg border px-4 py-3 text-left transition
         ${
@@ -59,7 +60,7 @@ export default function OutletCard({
 
         <Image
           src={logoUrl}
-          alt={`${domain} logo`}
+          alt={`${canonical} logo`}
           width={20}
           height={20}
           className="rounded-sm"
@@ -67,7 +68,7 @@ export default function OutletCard({
         />
 
         <div className="text-sm font-medium text-neutral-100">
-          {formatOutletDisplay(domain)}
+          {formatOutletDisplay(canonical)}
         </div>
 
         <div className="text-xs text-amber-300">
