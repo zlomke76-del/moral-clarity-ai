@@ -12,7 +12,6 @@ export default function NewsroomCabinetPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [stats, setStats] = useState<OutletStats | null>(null);
 
-  // Load leaderboard data
   useEffect(() => {
     fetch("/api/news/outlets/overview")
       .then((r) => r.json())
@@ -24,7 +23,6 @@ export default function NewsroomCabinetPage() {
       });
   }, []);
 
-  // Load stats for selected outlet
   useEffect(() => {
     if (!selected) return;
     fetch(`/api/news/outlet-stats?outlet=${encodeURIComponent(selected)}`)
@@ -35,11 +33,11 @@ export default function NewsroomCabinetPage() {
       });
   }, [selected]);
 
-  // Sorting and ranking: PI high-to-low (desc). Only 5+ stories.
-  const filteredSorted = useMemo(() => {
+  // Strict PI-high-to-low sorting with 5+ filter
+  const ranked = useMemo(() => {
     return outlets
       .filter((o) => Number(o.total_stories) >= 5)
-      .slice() // avoid mutation
+      .slice()
       .sort((a, b) => {
         const piA = typeof (a as any).avg_pi_weighted === "number"
           ? (a as any).avg_pi_weighted
@@ -49,19 +47,13 @@ export default function NewsroomCabinetPage() {
           : Number((b as any).avg_pi_weighted);
         if (piB !== piA) return piB - piA;
         return a.outlet.localeCompare(b.outlet);
-      });
+      })
+      .map((o, i) => ({ ...o, rank: i + 1 }));
   }, [outlets]);
 
-  // Assign overall rank
-  const ranked = useMemo(
-    () => filteredSorted.map((o, i) => ({ ...o, rank: i + 1 })),
-    [filteredSorted]
-  );
-
-  // Partition into categories
+  // Category slices with preserved absolute rank
   const goldenAnchor = ranked.slice(0, 3);
-  const neutralField =
-    ranked.length > 6 ? ranked.slice(3, -3) : ranked.slice(3, ranked.length - 3);
+  const neutralField = ranked.slice(3, ranked.length - 3);
   const watchList = ranked.slice(-3);
 
   const totalStoriesEvaluated = useMemo(
