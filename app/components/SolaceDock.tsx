@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSolaceStore } from "@/app/providers/solace-store";
-
 import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
 import { useDockStyles } from "./useDockStyles";
 import { useSolaceMemory } from "./useSolaceMemory";
@@ -60,6 +59,9 @@ type PendingFile = {
 const POS_KEY = "solace:pos:v4";
 const MINISTRY_KEY = "solace:ministry";
 const PAD = 12;
+
+const GOLD = "#FFD700";
+const ORB_SIZE = 48; // px
 
 /* ------------------------------------------------------------------
    Image intent gate
@@ -121,7 +123,18 @@ export default function SolaceDock() {
     if (canRender && !isMobile && !visible) setVisible(true);
   }, [canRender, isMobile, visible, setVisible]);
 
+  // Minimize/orb logic
   const [minimized, setMinimized] = useState(false);
+  const [minimizing, setMinimizing] = useState(false); // for animation
+
+  // Calculate orb position (bottom right corner, desktop only)
+  const orbPos = useMemo(() => {
+    if (!viewport.w || !viewport.h) return { x: 0, y: 0 };
+    return {
+      x: viewport.w - ORB_SIZE - PAD,
+      y: viewport.h - ORB_SIZE - PAD,
+    };
+  }, [viewport]);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -194,7 +207,7 @@ export default function SolaceDock() {
     };
   }, []);
 
-  const { posReady, onHeaderMouseDown } = useDockPosition({
+  const { posReady, onHeaderMouseDown, onHeaderTouchStart } = useDockPosition({
     canRender,
     visible,
     viewport,
@@ -206,6 +219,8 @@ export default function SolaceDock() {
     x,
     y,
     setPos,
+    // Below: to reduce abrupt position snap, add drag deadzone
+    minDragPx: 16,
   });
 
   const { dockW, dockH, setDockW, setDockH } = useDockSize();
@@ -224,13 +239,35 @@ export default function SolaceDock() {
   const txDesktop = Math.min(Math.max(0, x - PAD), vw - panelW - PAD);
   const tyDesktop = Math.min(Math.max(0, y - PAD), vh - panelH - PAD);
 
-  const tx = isMobile ? PAD : txDesktop;
-  const ty = isMobile ? Math.max(PAD, vh - mobileH - PAD) : tyDesktop;
+  // Clamp jump: on touch, don't snap left until real drag is recognized
+  const tx =
+    isMobile || minimized
+      ? PAD
+      : minimizing
+      ? // Animate toward orb
+        orbPos.x
+      : txDesktop;
+  const ty =
+    isMobile || minimized
+      ? Math.max(PAD, vh - mobileH - PAD)
+      : minimizing
+      ? orbPos.y
+      : tyDesktop;
+
+  const transitionStyle =
+    minimizing || minimized
+      ? {
+          transition:
+            "all 0.4s cubic-bezier(0.77, 0, 0.18, 1), opacity 0.3s linear",
+        }
+      : {};
+
+  const panelVisibility = minimized ? "hidden" : "visible";
 
   const { panelStyle, transcriptStyle, textareaStyle, composerWrapStyle } =
     useDockStyles({
-      dockW: isMobile ? mobileW : dockW,
-      dockH: isMobile ? mobileH : dockH,
+      dockW: isMobile || minimized ? mobileW : dockW,
+      dockH: isMobile || minimized ? mobileH : dockH,
       tx,
       ty,
       invisible: isMobile ? false : !posReady,
@@ -247,16 +284,56 @@ export default function SolaceDock() {
       }
     : transcriptStyle;
 
-  // Hard clamp at the container level too (prevents iOS “wider than viewport” weirdness)
-  const panelStyleSafe: React.CSSProperties = isMobile
-    ? {
-        ...panelStyle,
-        width: mobileW,
-        height: mobileH,
-        maxWidth: vw - PAD * 2,
-        maxHeight: vh - PAD * 2,
-      }
-    : panelStyle;
+  // Hard clamp at the container level too (prevents iOS ?wider than viewport? weirdness)
+  const panelStyleSafe: React.CSSProperties = {
+    ...panelStyle,
+    width: isMobile || minimized ? mobileW : dockW,
+    height: isMobile || minimized ? mobileH : dockH,
+    maxWidth: vw - PAD * 2,
+    maxHeight: vh - PAD * 2,
+    ...transitionStyle,
+    position: "fixed",
+    zIndex: 1000,
+    opacity: minimized || minimizing ? 0 : 1,
+    visibility: panelVisibility,
+    pointerEvents: minimized ? "none" : undefined,
+  };
+
+  // ------------------------------
+  // Orb (Desktop, Minimized)
+  // ------------------------------
+  const showOrb = !isMobile && (minimized || minimizing);
+
+  const orbStyle: React.CSSProperties = {
+    position: "fixed",
+    left: orbPos.x,
+    top: orbPos.y,
+    width: ORB_SIZE,
+    height: ORB_SIZE,
+    borderRadius: "50%",
+    background: GOLD,
+    boxShadow: "0 0 20px 1px " + GOLD,
+    display: showOrb ? "flex" : "none",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1002,
+    cursor: "pointer",
+    transition: "all 0.4s cubic-bezier(0.77,0,0.18,1)",
+    border: "3px solid white",
+  };
+
+  // Panel minimize animation: triggers animation before hiding actual panel
+  function minimizeDock() {
+    setMinimizing(true);
+    setTimeout(() => {
+      setMinimizing(false);
+      setMinimized(true);
+    }, 400);
+  }
+
+  function restoreDock() {
+    setMinimized(false);
+  }
 
   if (!canRender || !visible) return null;
 
@@ -264,72 +341,93 @@ export default function SolaceDock() {
      PAYLOAD INGEST (AUTHORITATIVE)
   ------------------------------------------------------------------- */
   function ingestPayload(data: any) {
-    if (!data) throw new Error("Empty response payload");
+    try {
+      if (!data) throw new Error("Empty response payload");
 
-    // EXPORT DELIVERY — MUST PREEMPT EVERYTHING
-    if ((data.export as SolaceExport)?.kind === "export") {
-      const exp = data.export as SolaceExport;
+      // EXPORT DELIVERY ? MUST PREEMPT EVERYTHING
+      if ((data.export as SolaceExport)?.kind === "export") {
+        const exp = data.export as SolaceExport;
+        setMessages((m) => [
+          ...m,
+          {
+            role: "assistant",
+            content:
+              `Your document is ready.\n\n` +
+              `File: ${exp.filename}\n` +
+              `Download: ${exp.url}`,
+          },
+        ]);
+        return;
+      }
+
+      // IMAGE (base64)
+      if (
+        Array.isArray(data.data) &&
+        data.data[0] &&
+        typeof data.data[0].b64_json === "string"
+      ) {
+        const imageUrl = `data:image/png;base64,${data.data[0].b64_json}`;
+        setMessages((m) => [
+          ...m,
+          { role: "assistant", content: " ", imageUrl },
+        ]);
+        return;
+      }
+
+      // IMAGE (url)
+      if (typeof data.imageUrl === "string" || typeof data.image === "string") {
+        const image = data.imageUrl ?? data.image;
+        setMessages((m) => [
+          ...m,
+          { role: "assistant", content: " ", imageUrl: image },
+        ]);
+        return;
+      }
+
+      // MULTI-MESSAGE
+      if (Array.isArray(data.messages)) {
+        setMessages((m) => [...m, ...data.messages]);
+        return;
+      }
+
+      // STRING RESPONSE
+      if (data.ok === true && typeof data.response === "string") {
+        setMessages((m) => [
+          ...m,
+          { role: "assistant", content: data.response },
+        ]);
+        return;
+      }
+
+      // EVIDENCE
+      if (Array.isArray(data.evidence)) {
+        const evMsgs: Message[] = data.evidence.map((e: EvidenceBlock) => ({
+          role: "assistant",
+          content:
+            `Evidence` +
+            (e.source ? ` (${e.source})` : "") +
+            `\n\n${e.summary || e.text || "[no content]"}`,
+        }));
+        setMessages((m) => [...m, ...evMsgs]);
+        return;
+      }
 
       setMessages((m) => [
         ...m,
         {
           role: "assistant",
-          content:
-            `Your document is ready.\n\n` +
-            `File: ${exp.filename}\n` +
-            `Download: ${exp.url}`,
+          content: "Sorry, response format not recognized.",
         },
       ]);
-      return;
-    }
-
-    // IMAGE (base64)
-    if (
-      Array.isArray(data.data) &&
-      data.data[0] &&
-      typeof data.data[0].b64_json === "string"
-    ) {
-      const imageUrl = `data:image/png;base64,${data.data[0].b64_json}`;
-      setMessages((m) => [...m, { role: "assistant", content: " ", imageUrl }]);
-      return;
-    }
-
-    // IMAGE (url)
-    if (typeof data.imageUrl === "string" || typeof data.image === "string") {
-      const image = data.imageUrl ?? data.image;
+    } catch (err: any) {
       setMessages((m) => [
         ...m,
-        { role: "assistant", content: " ", imageUrl: image },
+        {
+          role: "assistant",
+          content: `? ${err?.message || "Request failed"}`,
+        },
       ]);
-      return;
     }
-
-    // MULTI-MESSAGE
-    if (Array.isArray(data.messages)) {
-      setMessages((m) => [...m, ...data.messages]);
-      return;
-    }
-
-    // STRING RESPONSE
-    if (data.ok === true && typeof data.response === "string") {
-      setMessages((m) => [...m, { role: "assistant", content: data.response }]);
-      return;
-    }
-
-    // EVIDENCE
-    if (Array.isArray(data.evidence)) {
-      const evMsgs: Message[] = data.evidence.map((e: EvidenceBlock) => ({
-        role: "assistant",
-        content:
-          `Evidence` +
-          (e.source ? ` (${e.source})` : "") +
-          `\n\n${e.summary || e.text || "[no content]"}`,
-      }));
-      setMessages((m) => [...m, ...evMsgs]);
-      return;
-    }
-
-    throw new Error("Unrecognized response payload");
   }
 
   /* ------------------------------------------------------------------
@@ -392,7 +490,10 @@ export default function SolaceDock() {
     } catch (err: any) {
       setMessages((m) => [
         ...m,
-        { role: "assistant", content: `⚠ ${err?.message || "Request failed"}` },
+        {
+          role: "assistant",
+          content: `? ${err?.message || "Request failed"}`,
+        },
       ]);
     } finally {
       setStreaming(false);
@@ -408,7 +509,12 @@ export default function SolaceDock() {
   };
 
   const panel = (
-    <section ref={containerRef} style={panelStyleSafe}>
+    <section
+      ref={containerRef}
+      style={panelStyleSafe}
+      tabIndex={-1}
+      aria-label="Solace conversation panel"
+    >
       <SolaceDockHeaderLite
         ministryOn={ministryOn}
         memReady={memReady}
@@ -425,11 +531,16 @@ export default function SolaceDock() {
           }
           setFilters(next);
         }}
-        onMinimize={() => setMinimized(true)}
-       onDragStart={(e) => {
-  if (!isMobile) onHeaderMouseDown(e);
-}}
-
+        onMinimize={() => minimizeDock()}
+        onDragStart={(e) => {
+          if (!isMobile && !minimized && !minimizing) onHeaderMouseDown(e);
+        }}
+        // touch support: pass through to custom logic if needed
+        onTouchStart={
+          !isMobile && !minimized && !minimizing
+            ? (e) => onHeaderTouchStart?.(e)
+            : undefined
+        }
       />
 
       <SolaceTranscript
@@ -439,12 +550,41 @@ export default function SolaceDock() {
       />
 
       <div
-        style={composerWrapStyle}
+        style={{ ...composerWrapStyle, paddingTop: 2, paddingBottom: 2 }}
         onPaste={(e) => handlePaste(e, { prefix: "solace" })}
       >
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <label style={{ width: 38, height: 38, cursor: "pointer" }}>
-            <IconPaperclip />
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            minHeight: 44,
+            paddingLeft: 2,
+            paddingRight: 2,
+          }}
+        >
+          <label
+            style={{
+              width: 38,
+              height: 38,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              position: "relative",
+            }}
+          >
+            <span
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                height: 28,
+                width: 28,
+              }}
+            >
+              <IconPaperclip style={{ width: 24, height: 24, verticalAlign: "middle" }} />
+            </span>
             <input
               type="file"
               multiple
@@ -453,20 +593,78 @@ export default function SolaceDock() {
             />
           </label>
 
-          <button onClick={toggleMic}>
-            <IconMic />
+          <button
+            onClick={toggleMic}
+            aria-label="Toggle microphone"
+            style={{
+              width: 38,
+              height: 38,
+              border: "none",
+              background: "transparent",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 0,
+              outline: "none",
+            }}
+            tabIndex={0}
+            type="button"
+          >
+            <span
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                height: 28,
+                width: 28,
+              }}
+            >
+              <IconMic style={{ width: 24, height: 24, verticalAlign: "middle" }} />
+            </span>
           </button>
 
           <textarea
-            style={textareaStyle}
+            style={{
+              ...textareaStyle,
+              minHeight: 38,
+              maxHeight: 80,
+              fontSize: 16,
+              lineHeight: 1.4,
+              borderRadius: 6,
+              border: "1px solid #ddd",
+              padding: "7px 10px",
+              flex: 1,
+              resize: "none",
+            }}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onEnterSend}
             placeholder="Ask Solace..."
             rows={1}
+            aria-label="Input for Solace"
           />
 
-          <button onClick={send} disabled={streaming}>
+          <button
+            onClick={send}
+            disabled={streaming}
+            style={{
+              minWidth: 54,
+              height: 38,
+              border: "none",
+              borderRadius: 7,
+              background: GOLD,
+              color: "#333",
+              fontWeight: 600,
+              fontSize: 16,
+              boxShadow: "0 1.5px 4px #0001",
+              cursor: streaming ? "not-allowed" : "pointer",
+              opacity: streaming ? 0.6 : 1,
+              transition: "background 0.15s, color 0.15s, box-shadow 0.2s",
+              marginLeft: 2,
+            }}
+            type="button"
+            aria-label="Send"
+          >
             Ask
           </button>
         </div>
@@ -476,5 +674,20 @@ export default function SolaceDock() {
     </section>
   );
 
-  return createPortal(panel, document.body);
+  return createPortal(
+    <>
+      {showOrb && (
+        <div
+          style={orbStyle}
+          onClick={restoreDock}
+          aria-label="Restore Solace dock"
+        >
+          {/* Golden orb (can be replaced with an SVG logo/animation if preferred) */}
+          <span style={{ fontWeight: "bold", fontSize: 28, color: "#fff", userSelect: "none" }}>●</span>
+        </div>
+      )}
+      {panel}
+    </>,
+    document.body
+  );
 }
