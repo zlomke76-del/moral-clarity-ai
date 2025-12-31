@@ -31,9 +31,9 @@ declare global {
   }
 }
 
-/* ------------------------------------------------------------------ */
-/* Types */
-/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------
+   Types
+------------------------------------------------------------------- */
 type Message = {
   role: "user" | "assistant";
   content: string;
@@ -54,16 +54,16 @@ type PendingFile = {
   size?: number;
 };
 
-/* ------------------------------------------------------------------ */
-/* Constants */
-/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------
+   Constants
+------------------------------------------------------------------- */
 const POS_KEY = "solace:pos:v4";
 const MINISTRY_KEY = "solace:ministry";
 const PAD = 12;
 
-/* ------------------------------------------------------------------ */
-/* Image intent gate */
-/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------
+   Image intent gate
+------------------------------------------------------------------- */
 function isImageIntent(message: string): boolean {
   const m = (message || "").toLowerCase().trim();
   return (
@@ -77,13 +77,12 @@ function isImageIntent(message: string): boolean {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* MAIN */
-/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------
+   MAIN
+------------------------------------------------------------------- */
 export default function SolaceDock() {
   const [canRender, setCanRender] = useState(false);
 
-  /* ---------- SINGLE INSTANCE GUARD ---------- */
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.__solaceDockMounted) return;
@@ -96,7 +95,6 @@ export default function SolaceDock() {
     };
   }, []);
 
-  /* ---------- CONVERSATION ID ---------- */
   const conversationIdRef = useRef<string | null>(null);
   if (!conversationIdRef.current) {
     conversationIdRef.current = crypto.randomUUID();
@@ -108,7 +106,6 @@ export default function SolaceDock() {
 
   const modeHint = "Neutral" as const;
 
-  /* ---------- VIEWPORT ---------- */
   const [viewport, setViewport] = useState({ w: 0, h: 0 });
   useEffect(() => {
     const update = () =>
@@ -124,19 +121,11 @@ export default function SolaceDock() {
     if (canRender && !isMobile && !visible) setVisible(true);
   }, [canRender, isMobile, visible, setVisible]);
 
-  /* ------------------------------------------------------------------ */
-  /* STATE */
-  /* ------------------------------------------------------------------ */
   const [minimized, setMinimized] = useState(false);
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
-
-  /* ---------- HARD SEND LOCK (CRITICAL) ---------- */
-  const sendLockRef = useRef(false);
-
-  /* ---------- DRAG / RESIZE LOCK ---------- */
-  const interactionLockRef = useRef(false);
 
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -152,8 +141,7 @@ export default function SolaceDock() {
     });
 
   const { listening, toggleMic } = useSpeechInput({
-    onText: (text) =>
-      setInput((p) => (p ? p + " " : "") + text),
+    onText: (text) => setInput((p) => (p ? p + " " : "") + text),
     onError: (msg) =>
       setMessages((m) => [...m, { role: "assistant", content: msg }]),
   });
@@ -180,11 +168,9 @@ export default function SolaceDock() {
     }
   }, [messages.length]);
 
-  /* ------------------------------------------------------------------ */
-  /* MEASURE */
-  /* ------------------------------------------------------------------ */
   const [panelW, setPanelW] = useState(0);
   const [panelH, setPanelH] = useState(0);
+
   const containerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -225,16 +211,133 @@ export default function SolaceDock() {
   const { dockW, dockH, setDockW, setDockH } = useDockSize();
   const startResize = createResizeController(dockW, dockH, setDockW, setDockH);
 
-  /* ------------------------------------------------------------------ */
-  /* SEND (HARDENED) */
-  /* ------------------------------------------------------------------ */
-  async function send(): Promise<void> {
-    if (sendLockRef.current) return;
-    if (interactionLockRef.current) return;
-    if (streaming) return;
-    if (!input.trim() && pendingFiles.length === 0) return;
+  const vw = viewport.w || 1;
+  const vh = viewport.h || 1;
 
-    sendLockRef.current = true;
+  // ------------------------------
+  // MOBILE CLAMP (no drift)
+  // ------------------------------
+  const mobileW = Math.max(280, Math.min(dockW, vw - PAD * 2));
+  const mobileH = Math.max(360, Math.min(dockH, vh - PAD * 2));
+
+  // Desktop: use stored x/y. Mobile: pin inside viewport.
+  const txDesktop = Math.min(Math.max(0, x - PAD), vw - panelW - PAD);
+  const tyDesktop = Math.min(Math.max(0, y - PAD), vh - panelH - PAD);
+
+  const tx = isMobile ? PAD : txDesktop;
+  const ty = isMobile ? Math.max(PAD, vh - mobileH - PAD) : tyDesktop;
+
+  const { panelStyle, transcriptStyle, textareaStyle, composerWrapStyle } =
+    useDockStyles({
+      dockW: isMobile ? mobileW : dockW,
+      dockH: isMobile ? mobileH : dockH,
+      tx,
+      ty,
+      invisible: isMobile ? false : !posReady,
+      ministryOn,
+      PAD,
+    });
+
+  // iOS scroll polish without changing desktop styling
+  const transcriptStyleSafe: React.CSSProperties = isMobile
+    ? {
+        ...transcriptStyle,
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
+      }
+    : transcriptStyle;
+
+  // Hard clamp at the container level too (prevents iOS “wider than viewport” weirdness)
+  const panelStyleSafe: React.CSSProperties = isMobile
+    ? {
+        ...panelStyle,
+        width: mobileW,
+        height: mobileH,
+        maxWidth: vw - PAD * 2,
+        maxHeight: vh - PAD * 2,
+      }
+    : panelStyle;
+
+  if (!canRender || !visible) return null;
+
+  /* ------------------------------------------------------------------
+     PAYLOAD INGEST (AUTHORITATIVE)
+  ------------------------------------------------------------------- */
+  function ingestPayload(data: any) {
+    if (!data) throw new Error("Empty response payload");
+
+    // EXPORT DELIVERY — MUST PREEMPT EVERYTHING
+    if ((data.export as SolaceExport)?.kind === "export") {
+      const exp = data.export as SolaceExport;
+
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content:
+            `Your document is ready.\n\n` +
+            `File: ${exp.filename}\n` +
+            `Download: ${exp.url}`,
+        },
+      ]);
+      return;
+    }
+
+    // IMAGE (base64)
+    if (
+      Array.isArray(data.data) &&
+      data.data[0] &&
+      typeof data.data[0].b64_json === "string"
+    ) {
+      const imageUrl = `data:image/png;base64,${data.data[0].b64_json}`;
+      setMessages((m) => [...m, { role: "assistant", content: " ", imageUrl }]);
+      return;
+    }
+
+    // IMAGE (url)
+    if (typeof data.imageUrl === "string" || typeof data.image === "string") {
+      const image = data.imageUrl ?? data.image;
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: " ", imageUrl: image },
+      ]);
+      return;
+    }
+
+    // MULTI-MESSAGE
+    if (Array.isArray(data.messages)) {
+      setMessages((m) => [...m, ...data.messages]);
+      return;
+    }
+
+    // STRING RESPONSE
+    if (data.ok === true && typeof data.response === "string") {
+      setMessages((m) => [...m, { role: "assistant", content: data.response }]);
+      return;
+    }
+
+    // EVIDENCE
+    if (Array.isArray(data.evidence)) {
+      const evMsgs: Message[] = data.evidence.map((e: EvidenceBlock) => ({
+        role: "assistant",
+        content:
+          `Evidence` +
+          (e.source ? ` (${e.source})` : "") +
+          `\n\n${e.summary || e.text || "[no content]"}`,
+      }));
+      setMessages((m) => [...m, ...evMsgs]);
+      return;
+    }
+
+    throw new Error("Unrecognized response payload");
+  }
+
+  /* ------------------------------------------------------------------
+     SEND
+  ------------------------------------------------------------------- */
+  async function send(): Promise<void> {
+    if (!input.trim() && pendingFiles.length === 0) return;
+    if (streaming) return;
 
     const userMsg = input.trim() || "Attachments:";
     setInput("");
@@ -294,30 +397,15 @@ export default function SolaceDock() {
     } finally {
       setStreaming(false);
       clearPending();
-      sendLockRef.current = false;
     }
   }
 
-  /* ---------- KEYDOWN HARDENING ---------- */
   const onEnterSend = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (
-      e.key !== "Enter" ||
-      e.shiftKey ||
-      e.repeat ||
-      (e.nativeEvent as any)?.isComposing ||
-      !e.isTrusted
-    ) {
-      return;
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
     }
-
-    e.preventDefault();
-    send();
   };
-
-  /* ------------------------------------------------------------------ */
-  /* RENDER */
-  /* ------------------------------------------------------------------ */
-  if (!canRender || !visible) return null;
 
   const panel = (
     <section ref={containerRef} style={panelStyleSafe}>
@@ -338,13 +426,10 @@ export default function SolaceDock() {
           setFilters(next);
         }}
         onMinimize={() => setMinimized(true)}
-        onDragStart={(e) => {
-          interactionLockRef.current = true;
-          if (!isMobile) onHeaderMouseDown(e);
-        }}
-        onDragEnd={() => {
-          interactionLockRef.current = false;
-        }}
+       onDragStart={(e) => {
+  if (!isMobile) onHeaderMouseDown(e);
+}}
+
       />
 
       <SolaceTranscript
@@ -364,9 +449,7 @@ export default function SolaceDock() {
               type="file"
               multiple
               hidden
-              onChange={(e) =>
-                handleFiles(e.target.files, { prefix: "solace" })
-              }
+              onChange={(e) => handleFiles(e.target.files, { prefix: "solace" })}
             />
           </label>
 
@@ -381,7 +464,6 @@ export default function SolaceDock() {
             onKeyDown={onEnterSend}
             placeholder="Ask Solace..."
             rows={1}
-            disabled={interactionLockRef.current}
           />
 
           <button onClick={send} disabled={streaming}>
@@ -390,16 +472,7 @@ export default function SolaceDock() {
         </div>
       </div>
 
-      {!isMobile && (
-        <ResizeHandle
-          onResizeStart={() => {
-            interactionLockRef.current = true;
-          }}
-          onResizeEnd={() => {
-            interactionLockRef.current = false;
-          }}
-        />
-      )}
+      {!isMobile && <ResizeHandle onResizeStart={startResize} />}
     </section>
   );
 
