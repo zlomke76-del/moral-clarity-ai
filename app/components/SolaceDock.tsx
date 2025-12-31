@@ -207,7 +207,7 @@ export default function SolaceDock() {
   }, []);
 
   // Only desktop: minDragPx to reduce quick snaps; touch support omitted for MVP
-  const { posReady, onHeaderMouseDown } = useDockPosition({
+    const { posReady, onHeaderMouseDown } = useDockPosition({
     canRender,
     visible,
     viewport,
@@ -218,8 +218,8 @@ export default function SolaceDock() {
     posKey: POS_KEY,
     x,
     y,
-    setPos,
-    minDragPx: 16,
+    setPos
+    // minDragPx: 16,  // <--- REMOVED
   });
 
   const { dockW, dockH, setDockW, setDockH } = useDockSize();
