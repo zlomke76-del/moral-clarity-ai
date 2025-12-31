@@ -15,36 +15,29 @@ export async function GET(req: Request) {
     );
   }
 
-  // Canonical domain: only dotless, lowercase, opaque IDs allowed (enforced by constraint)
-  if (outlet.includes(".")) {
-    return NextResponse.json(
-      { ok: false, error: "Invalid outlet identifier. Expected canonical_domain (no dot)." },
-      { status: 400 }
-    );
-  }
-
   const supabase = createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("outlet_bias_pi_overview")
     .select(`
-      canonical_domain,
+      outlet,
       total_stories,
       days_active,
       last_story_day,
-      avg_pi_weighted,
       avg_bias_intent_weighted,
+      avg_pi_weighted,
       avg_bias_language_weighted,
       avg_bias_source_weighted,
       avg_bias_framing_weighted,
       avg_bias_context_weighted
     `)
-    .eq("canonical_domain", outlet)
+    .eq("outlet", outlet)
     .maybeSingle();
 
   if (error) {
+    console.error("API error at /api/news/outlet-stats", error);
     return NextResponse.json(
-      { ok: false, error: error.message },
+      { ok: false, error: String(error) },
       { status: 500 }
     );
   }
