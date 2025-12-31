@@ -3,7 +3,7 @@
 import Image from "next/image";
 import type { OutletOverview } from "../types";
 
-// Known outlet-name to actual domain mapping
+// Mapping for known org names to domains for favicon fetching
 const OutletDomainMap: Record<string, string> = {
   "Washington Post": "washingtonpost.com",
   "Mother Jones": "motherjones.com",
@@ -18,11 +18,11 @@ const OutletDomainMap: Record<string, string> = {
   "CNN": "cnn.com",
   "USA Today": "usatoday.com",
   "Bloomberg": "bloomberg.com",
-  // expand as needed
+  // add others as you encounter them
 };
 
 function getDomainForOutlet(outlet: string): string {
-  // Heuristic: real domain is easy if it contains a dot, no spaces, and not a URL
+  // Heuristically check if the string is already a plausible domain
   if (
     outlet.includes(".") &&
     !outlet.includes(" ") &&
@@ -30,7 +30,7 @@ function getDomainForOutlet(outlet: string): string {
   ) {
     return outlet.trim().toLowerCase();
   }
-  // Otherwise, try mapping
+  // If not, try the known map
   return OutletDomainMap[outlet.trim()] || "";
 }
 
@@ -44,7 +44,6 @@ type Props = {
 
 function formatOutletDisplay(outlet: string): string {
   if (!outlet) return "UNKNOWN";
-  // Remove common prefixes and TLDs for display value
   return outlet
     .replace(/^amp\./i, "")
     .replace(/^www\./i, "")
@@ -61,7 +60,6 @@ export default function OutletCard({
   badge,
   onSelect,
 }: Props) {
-  // Find canonical domain
   const domain = getDomainForOutlet(outlet.outlet);
   const logoUrl = domain
     ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
@@ -94,7 +92,6 @@ export default function OutletCard({
           className="rounded-sm"
           unoptimized
           onError={(e) => {
-            // fallback to generic icon if favicon fetch fails
             (e.currentTarget as HTMLImageElement).src = "/default-favicon.png";
           }}
         />
