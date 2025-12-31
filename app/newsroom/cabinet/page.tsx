@@ -19,7 +19,7 @@ export default function NewsroomCabinetPage() {
       .then((d) => {
         if (d.ok) {
           setOutlets(d.outlets);
-          setSelected(d.outlets?.[0]?.canonical_domain ?? null);
+          setSelected(d.outlets?.[0]?.outlet ?? null); // FIXED: use "outlet", not "canonical_domain"
         }
       });
   }, []);
@@ -36,7 +36,7 @@ export default function NewsroomCabinetPage() {
   }, [selected]);
 
   const totalStoriesEvaluated = useMemo(
-    () => outlets.reduce((sum, o) => sum + (o.total_stories ?? 0), 0),
+    () => outlets.reduce((sum, o) => sum + (Number(o.total_stories) ?? 0), 0),
     [outlets]
   );
 
@@ -65,7 +65,7 @@ export default function NewsroomCabinetPage() {
           </h2>
           <Leaderboard
             outlets={goldenAnchor}
-            selectedCanonical={selected}
+            selectedOutlet={selected} // FIXED: was selectedCanonical
             onSelect={setSelected}
           />
         </section>
@@ -76,7 +76,7 @@ export default function NewsroomCabinetPage() {
         </h2>
         <Leaderboard
           outlets={neutralField}
-          selectedCanonical={selected}
+          selectedOutlet={selected} // FIXED: was selectedCanonical
           onSelect={setSelected}
         />
       </section>
@@ -87,7 +87,7 @@ export default function NewsroomCabinetPage() {
           </h2>
           <Leaderboard
             outlets={watchList}
-            selectedCanonical={selected}
+            selectedOutlet={selected} // FIXED: was selectedCanonical
             onSelect={setSelected}
           />
         </section>
