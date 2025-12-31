@@ -11,10 +11,13 @@ import ScoreBreakdown from "./components/ScoreBreakdown";
  * All values are the desired leaderboard name, as you want it displayed.
  */
 const OUTLET_MERGE_CANON: Record<string, string> = {
-  // Time and related
+  // Time and related, including .com variants
   "nation.time": "Time",
   "newsweek.time": "Time",
   "time": "Time",
+  "nation.time.com": "Time",
+  "newsfeed.time.com": "Time",
+  "time.com": "Time",
   // Bloomberg, BNA
   "bna.content.cirrus.bloomberg.com": "Bloomberg",
   "bna content - bloomberg": "Bloomberg",
@@ -55,8 +58,6 @@ function mergeDuplicateOutlets(outlets: OutletOverview[]): OutletOverview[] {
     const orig = outlet.outlet || "";
     const norm = normalizeKey(orig);
     const canonical = OUTLET_MERGE_CANON[norm] || outlet.outlet.trim();
-
-    // Use canonical name as key for all deduplication
     const key = normalizeKey(canonical);
 
     const stories = Number(outlet.total_stories) || 0;
@@ -154,10 +155,10 @@ export default function NewsroomCabinetPage() {
       .map((o, i) => ({ ...o, rank: i + 1 }));
   }, [mergedOutlets]);
 
-  // Split into leaderboard categories; ranks are never recalculated or local-indexed
+  // Category slices: Golden (top 3), Neutral (middle), Watch List (bottom 3)—all using *global* ranks
   const goldenAnchor = ranked.slice(0, 3);
   const neutralField = ranked.slice(3, ranked.length - 3);
-  const watchList = ranked.slice(-3);
+  const watchList = ranked.slice(-3); // These will display rank: 42, 43, 44 if N=44, NOT 1,2,3
 
   const totalStoriesEvaluated = useMemo(
     () => ranked.reduce((sum, o) => sum + (Number(o.total_stories) ?? 0), 0),
