@@ -1,5 +1,3 @@
-// app/api/news/outlets/[outlet]/stats/route.ts
-
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -12,7 +10,7 @@ export async function GET(
 ) {
   const outlet = params.outlet;
 
-  // 🔒 Hard guard — missing param
+  // Hard guard: missing param
   if (!outlet) {
     return NextResponse.json(
       { ok: false, error: "Missing outlet parameter" },
@@ -20,7 +18,7 @@ export async function GET(
     );
   }
 
-  // 🧨 LEGACY ROUTE KILL SWITCH
+  // LEGACY ROUTE KILL SWITCH
   // Domain-style identifiers are permanently unsupported.
   // 410 tells Next.js + browser to STOP retrying.
   if (outlet.includes(".")) {
@@ -64,6 +62,6 @@ export async function GET(
 
   return NextResponse.json({
     ok: true,
-    outlet: data,
+    outlet: data, // PATCH: do not remap field, keep canonical_outlet
   });
 }
