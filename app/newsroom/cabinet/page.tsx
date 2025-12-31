@@ -5,64 +5,89 @@ import type { OutletOverview, OutletStats } from "./types";
 import Leaderboard from "./components/Leaderboard";
 import ScoreBreakdown from "./components/ScoreBreakdown";
 
-// Merge rules for known special cases
+// Canonical merge map: all keys and values lowercase, trimmed
 const OUTLET_MERGE_CANON: Record<string, string> = {
-  "BNA Content - Bloomberg": "Bloomberg",
-  "BNA Content": "Bloomberg",
-  "Bloomberg": "Bloomberg",
-  "Newsletters Washington Examiner": "Washington Examiner",
-  "Washington Examiner": "Washington Examiner",
-  // Extend as needed for new merge rules
+  // Time magazine and related
+  "nation.time": "Time",
+  "newsweek.time": "Time",
+  "time": "Time",
+  // Bloomberg and related
+  "bna.content.cirrus.bloomberg.com": "Bloomberg",
+  "bna content - bloomberg": "Bloomberg",
+  "bna content": "Bloomberg",
+  "bloomberg": "Bloomberg",
+  // DW and related
+  "amp.dw.com": "DW",
+  "dw.com": "DW",
+  "dw": "DW",
+  // Newsmax and related
+  "ir.newsmax": "Newsmax",
+  "newsmax": "Newsmax",
+  // RFERL and related
+  "about.refrl": "RFERL",
+  "rferl": "RFERL",
+  // Washington Examiner and related
+  "wp.washingtonexaminer.com": "Washington Examiner",
+  "washingtonexaminer.com": "Washington Examiner",
+  "newsletters.washingtonexaminer.com": "Washington Examiner",
+  "washington examiner": "Washington Examiner",
 };
 
-// General normalization for deduplication
-function normalizeOutletKey(outlet: string): string {
-  // Special case: explicit canonical mapping first
-  if (OUTLET_MERGE_CANON[outlet.trim()]) {
-    return OUTLET_MERGE_CANON[outlet.trim()].toLowerCase();
-  }
-  // Fallback to lower/trim/basic
-  return outlet.trim().toLowerCase();
+function normalizeKey(raw: string): string {
+  return (raw || "").trim().toLowerCase();
 }
 
-// Combines duplicates per canonical outlet key, does PI-weighted average
 function mergeDuplicateOutlets(outlets: OutletOverview[]): OutletOverview[] {
-  const map = new Map<string, OutletOverview & { _pi_numerator?: number; _stories?: number }>();
+  const map = new Map<
+    string,
+    OutletOverview & { __stories?: number; __pi_numerator?: number }
+  >();
 
   for (const outlet of outlets) {
-    const canonicalName = OUTLET_MERGE_CANON[outlet.outlet.trim()] || outlet.outlet.trim();
-    const key = normalizeOutletKey(outlet.outlet); // Canonical merge key
+    const orig = outlet.outlet || "";
+    const norm = normalizeKey(orig);
+    const canonical = OUTLET_MERGE_CANON[norm] || outlet.outlet.trim();
 
-    const t = Number(outlet.total_stories) || 0;
+    const key = canonical.toLowerCase();
+
+    const stories = Number(outlet.total_stories) || 0;
     const pi = Number((outlet as any).avg_pi_weighted) || 0;
 
     if (map.has(key)) {
       const existing = map.get(key)!;
-      const existingT = Number(existing.total_stories) || 0;
-      const existingNumerator = Number(existing._pi_numerator) || (Number((existing as any).avg_pi_weighted) * existingT) || 0;
+      const existingStories = Number(existing.total_stories) || 0;
+      const existingPiNumerator =
+        Number(existing.__pi_numerator) ||
+        (Number((existing as any).avg_pi_weighted) * existingStories) ||
+        0;
 
-      const totalStories = t + existingT;
-      const totalNumerator = pi * t + existingNumerator;
+      const combinedStories = existingStories + stories;
+      const combinedPiNumerator = existingPiNumerator + pi * stories;
 
       map.set(key, {
         ...existing,
-        outlet: canonicalName, // Use readable/canonical
-        total_stories: totalStories,
-        avg_pi_weighted: totalStories > 0 ? totalNumerator / totalStories : 0,
-        _pi_numerator: totalNumerator,
-        _stories: totalStories,
+        outlet: canonical,
+        total_stories: combinedStories,
+        avg_pi_weighted:
+          combinedStories > 0 ? combinedPiNumerator / combinedStories : 0,
+        __stories: combinedStories,
+        __pi_numerator: combinedPiNumerator,
       });
     } else {
       map.set(key, {
         ...outlet,
-        outlet: canonicalName,
-        _pi_numerator: pi * t,
-        _stories: t,
+        outlet: canonical,
+        __stories: stories,
+        __pi_numerator: pi * stories,
       });
     }
   }
-  // Clean up helper fields before returning
-  return Array.from(map.values()).map(({ _pi_numerator, _stories, ...o }) => o);
+  // Clean up helper fields
+  return Array.from(map.values()).map((o) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { __stories, __pi_numerator, ...clean } = o;
+    return clean;
+  });
 }
 
 type RankedOutlet = OutletOverview & { rank: number };
@@ -72,7 +97,7 @@ export default function NewsroomCabinetPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [stats, setStats] = useState<OutletStats | null>(null);
 
-  // Load data
+  // Fetch data
   useEffect(() => {
     fetch("/api/news/outlets/overview")
       .then((r) => r.json())
@@ -98,31 +123,37 @@ export default function NewsroomCabinetPage() {
   // Merge/aggregate duplicate outlets per canonical rules FIRST, then filter/sort/rank
   const mergedOutlets = useMemo(() => mergeDuplicateOutlets(outlets), [outlets]);
 
-  // PI sort, rank assignment
+  // PI sort, global rank assignment
   const ranked: RankedOutlet[] = useMemo(() => {
     return mergedOutlets
       .filter((o) => Number(o.total_stories) >= 5)
       .slice()
       .sort((a, b) => {
-        const piA = typeof (a as any).avg_pi_weighted === "number"
-          ? (a as any).avg_pi_weighted
-          : Number((a as any).avg_pi_weighted);
-        const piB = typeof (b as any).avg_pi_weighted === "number"
-          ? (b as any).avg_pi_weighted
-          : Number((b as any).avg_pi_weighted);
+        const piA =
+          typeof (a as any).avg_pi_weighted === "number"
+            ? (a as any).avg_pi_weighted
+            : Number((a as any).avg_pi_weighted);
+        const piB =
+          typeof (b as any).avg_pi_weighted === "number"
+            ? (b as any).avg_pi_weighted
+            : Number((b as any).avg_pi_weighted);
         if (piB !== piA) return piB - piA;
         return a.outlet.localeCompare(b.outlet);
       })
-      .map((o, i) => ({ ...o, rank: i + 1 })); // Assign global ranking ONCE
+      .map((o, i) => ({ ...o, rank: i + 1 })); // Assign global ranks once
   }, [mergedOutlets]);
 
-  // Category slices: no renumbering, preserves correct (e.g. 42-44) for watch list
+  // Category splits (preserve rank: last 3 get e.g. 42,43,44)
   const goldenAnchor = ranked.slice(0, 3);
   const neutralField = ranked.slice(3, ranked.length - 3);
   const watchList = ranked.slice(-3);
 
   const totalStoriesEvaluated = useMemo(
-    () => ranked.reduce((sum, o) => sum + (Number(o.total_stories) ?? 0), 0),
+    () =>
+      ranked.reduce(
+        (sum, o) => sum + (Number(o.total_stories) ?? 0),
+        0,
+      ),
     [ranked]
   );
 
