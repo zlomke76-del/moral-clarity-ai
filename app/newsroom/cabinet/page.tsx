@@ -5,32 +5,40 @@ import type { OutletOverview, OutletStats } from "./types";
 import Leaderboard from "./components/Leaderboard";
 import ScoreBreakdown from "./components/ScoreBreakdown";
 
-// Canonical merge map: all keys and values lowercase, trimmed
+/**
+ * Canonical outlet merge map.
+ * All keys must be lowercase, trimmed, and (if domain) without http(s)://.
+ * All values are the desired leaderboard name, as you want it displayed.
+ */
 const OUTLET_MERGE_CANON: Record<string, string> = {
-  // Time magazine and related
+  // Time and related
   "nation.time": "Time",
   "newsweek.time": "Time",
   "time": "Time",
-  // Bloomberg and related
+  // Bloomberg, BNA
   "bna.content.cirrus.bloomberg.com": "Bloomberg",
   "bna content - bloomberg": "Bloomberg",
   "bna content": "Bloomberg",
   "bloomberg": "Bloomberg",
-  // DW and related
+  // DW
   "amp.dw.com": "DW",
   "dw.com": "DW",
   "dw": "DW",
-  // Newsmax and related
+  // Newsmax
   "ir.newsmax": "Newsmax",
   "newsmax": "Newsmax",
-  // RFERL and related
+  // RFERL
   "about.refrl": "RFERL",
   "rferl": "RFERL",
-  // Washington Examiner and related
+  // Washington Examiner
   "wp.washingtonexaminer.com": "Washington Examiner",
   "washingtonexaminer.com": "Washington Examiner",
   "newsletters.washingtonexaminer.com": "Washington Examiner",
   "washington examiner": "Washington Examiner",
+  // Fox News
+  "radio.foxnews.com": "Fox News",
+  "fox news": "Fox News",
+  "foxnews.com": "Fox News",
 };
 
 function normalizeKey(raw: string): string {
@@ -48,7 +56,8 @@ function mergeDuplicateOutlets(outlets: OutletOverview[]): OutletOverview[] {
     const norm = normalizeKey(orig);
     const canonical = OUTLET_MERGE_CANON[norm] || outlet.outlet.trim();
 
-    const key = canonical.toLowerCase();
+    // Use canonical name as key for all deduplication
+    const key = normalizeKey(canonical);
 
     const stories = Number(outlet.total_stories) || 0;
     const pi = Number((outlet as any).avg_pi_weighted) || 0;
@@ -82,7 +91,7 @@ function mergeDuplicateOutlets(outlets: OutletOverview[]): OutletOverview[] {
       });
     }
   }
-  // Clean up helper fields
+  // Remove __fields before returning
   return Array.from(map.values()).map((o) => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { __stories, __pi_numerator, ...clean } = o;
@@ -97,7 +106,7 @@ export default function NewsroomCabinetPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [stats, setStats] = useState<OutletStats | null>(null);
 
-  // Fetch data
+  // Fetch all outlet overviews (includes duplicates, if present in API)
   useEffect(() => {
     fetch("/api/news/outlets/overview")
       .then((r) => r.json())
@@ -109,7 +118,7 @@ export default function NewsroomCabinetPage() {
       });
   }, []);
 
-  // Fetch stats for currently selected entry
+  // Fetch stats for currently selected outlet
   useEffect(() => {
     if (!selected) return;
     fetch(`/api/news/outlet-stats?outlet=${encodeURIComponent(selected)}`)
@@ -120,10 +129,12 @@ export default function NewsroomCabinetPage() {
       });
   }, [selected]);
 
-  // Merge/aggregate duplicate outlets per canonical rules FIRST, then filter/sort/rank
-  const mergedOutlets = useMemo(() => mergeDuplicateOutlets(outlets), [outlets]);
+  // Merge, filter, sort, and globally rank (all logic in this order)
+  const mergedOutlets = useMemo(
+    () => mergeDuplicateOutlets(outlets),
+    [outlets]
+  );
 
-  // PI sort, global rank assignment
   const ranked: RankedOutlet[] = useMemo(() => {
     return mergedOutlets
       .filter((o) => Number(o.total_stories) >= 5)
@@ -140,20 +151,16 @@ export default function NewsroomCabinetPage() {
         if (piB !== piA) return piB - piA;
         return a.outlet.localeCompare(b.outlet);
       })
-      .map((o, i) => ({ ...o, rank: i + 1 })); // Assign global ranks once
+      .map((o, i) => ({ ...o, rank: i + 1 }));
   }, [mergedOutlets]);
 
-  // Category splits (preserve rank: last 3 get e.g. 42,43,44)
+  // Split into leaderboard categories; ranks are never recalculated or local-indexed
   const goldenAnchor = ranked.slice(0, 3);
   const neutralField = ranked.slice(3, ranked.length - 3);
   const watchList = ranked.slice(-3);
 
   const totalStoriesEvaluated = useMemo(
-    () =>
-      ranked.reduce(
-        (sum, o) => sum + (Number(o.total_stories) ?? 0),
-        0,
-      ),
+    () => ranked.reduce((sum, o) => sum + (Number(o.total_stories) ?? 0), 0),
     [ranked]
   );
 
