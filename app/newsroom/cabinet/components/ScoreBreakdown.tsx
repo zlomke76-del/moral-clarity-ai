@@ -1,7 +1,7 @@
 "use client";
 import type { OutletStats } from "../types";
 
-// --- Reuse from your codebase --- //
+// Reuse these if defined elsewhere to keep logic DRY:
 const OutletDomainMap: Record<string, string> = {
   "Washington Post": "washingtonpost.com",
   "Mother Jones": "motherjones.com",
@@ -22,7 +22,7 @@ const OutletDomainMap: Record<string, string> = {
   "Newsmax": "newsmax.com",
   "Washington Examiner": "washingtonexaminer.com",
   "Time": "time.com",
-  // Add more as needed
+  // Extend as needed
 };
 
 function getDomainForOutlet(outlet: string): string {
@@ -37,13 +37,14 @@ function getDomainForOutlet(outlet: string): string {
   return OutletDomainMap[outlet.trim()] || "";
 }
 
+// Metric explanations
 const METRIC_EXPLAINERS: Record<string, string> = {
-  avg_pi_weighted: "Personal Influence (PI) score reflecting reach and predictive impact.",
-  avg_bias_intent_weighted: "Measures intent behind bias: higher means more intentional slant.",
-  avg_bias_language_weighted: "Assesses use of biased or loaded language.",
-  avg_bias_source_weighted: "Evaluates how credible and unbiased the information sources are.",
-  avg_bias_framing_weighted: "Scores how facts/events are framed to promote a narrative.",
-  avg_bias_context_weighted: "Checks for selective or out-of-context reporting.",
+  avg_pi_weighted: "Personal Influence (PI): Reflects reach and predictive impact.",
+  avg_bias_intent_weighted: "Bias Intent: Measures how purposeful the observed bias is.",
+  avg_bias_language_weighted: "Bias Language: Detects use of strongly polarized language.",
+  avg_bias_source_weighted: "Bias Source: Evaluates the credibility and objectivity of sources.",
+  avg_bias_framing_weighted: "Bias Framing: Scores how coverage favors a particular perspective via framing.",
+  avg_bias_context_weighted: "Bias Context: Measures omission or skew in context/presentation.",
 };
 
 type Props = {
@@ -51,64 +52,103 @@ type Props = {
 };
 
 export default function ScoreBreakdown({ outlet }: Props) {
-  if (!outlet) return <div>No outlet selected.</div>;
+  if (!outlet) {
+    return (
+      <div className="max-w-2xl mx-auto my-10 p-6 bg-white border rounded-lg shadow text-center text-gray-500">
+        No outlet selected.
+      </div>
+    );
+  }
 
-  // Compute logo domain (same logic as OutletCard)
   const domain = getDomainForOutlet(outlet.outlet);
   const logoUrl = domain
-    ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
+    ? `https://www.google.com/s2/favicons?domain=${domain}&sz=96`
     : "/default-favicon.png";
 
   return (
-    <section className="mt-8 p-4 border rounded-lg bg-white shadow-md max-w-xl mx-auto">
-      <header className="flex items-center mb-5">
-        <img
-          src={logoUrl}
-          alt={`${outlet.outlet} logo`}
-          className="w-12 h-12 rounded mr-4 border object-contain bg-neutral-50"
-          onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/default-favicon.png"; }}
-        />
-        <h3 className="text-xl font-semibold leading-tight">
-          <span className="block">Score Breakdown</span>
-          <span className="block text-base text-neutral-600">{outlet.outlet}</span>
-        </h3>
-      </header>
-
-      <ul className="space-y-3 text-base">
-        <li>
-          <strong>Total stories:</strong> {outlet.total_stories ?? "N/A"}
-        </li>
-        <li>
-          <strong>Days active:</strong> {outlet.days_active ?? "N/A"}
-        </li>
-        <li>
-          <strong>Last story day:</strong> {outlet.last_story_day ?? "N/A"}
-        </li>
-        <li>
-          <strong>PI Weighted:</strong> <span>{outlet.avg_pi_weighted ?? "N/A"}</span>
-          <div className="text-xs text-gray-500">{METRIC_EXPLAINERS.avg_pi_weighted}</div>
-        </li>
-        <li>
-          <strong>Bias Intent:</strong> <span>{outlet.avg_bias_intent_weighted ?? "N/A"}</span>
-          <div className="text-xs text-gray-500">{METRIC_EXPLAINERS.avg_bias_intent_weighted}</div>
-        </li>
-        <li>
-          <strong>Bias Language:</strong> <span>{outlet.avg_bias_language_weighted ?? "N/A"}</span>
-          <div className="text-xs text-gray-500">{METRIC_EXPLAINERS.avg_bias_language_weighted}</div>
-        </li>
-        <li>
-          <strong>Bias Source:</strong> <span>{outlet.avg_bias_source_weighted ?? "N/A"}</span>
-          <div className="text-xs text-gray-500">{METRIC_EXPLAINERS.avg_bias_source_weighted}</div>
-        </li>
-        <li>
-          <strong>Bias Framing:</strong> <span>{outlet.avg_bias_framing_weighted ?? "N/A"}</span>
-          <div className="text-xs text-gray-500">{METRIC_EXPLAINERS.avg_bias_framing_weighted}</div>
-        </li>
-        <li>
-          <strong>Bias Context:</strong> <span>{outlet.avg_bias_context_weighted ?? "N/A"}</span>
-          <div className="text-xs text-gray-500">{METRIC_EXPLAINERS.avg_bias_context_weighted}</div>
-        </li>
-      </ul>
+    <section className="max-w-2xl mx-auto my-10">
+      <div className="bg-white border rounded-lg shadow-lg p-8 flex flex-col gap-6">
+        {/* Card Heading */}
+        <div className="flex items-center gap-4 border-b pb-4">
+          <img
+            src={logoUrl}
+            alt={`${outlet.outlet} logo`}
+            className="w-14 h-14 rounded border object-contain bg-neutral-50"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/default-favicon.png"; }}
+          />
+          <div>
+            <div className="font-bold text-2xl">Score Breakdown</div>
+            <div className="text-lg text-neutral-700">{outlet.outlet}</div>
+          </div>
+        </div>
+        {/* Stats Section */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+          <StatItem label="Total stories" value={outlet.total_stories} />
+          <StatItem label="Days active" value={outlet.days_active} />
+          <StatItem label="Last story day" value={outlet.last_story_day ?? "N/A"} />
+        </div>
+        {/* Metric Section */}
+        <div className="divide-y">
+          <MetricItem
+            label="PI Weighted"
+            value={outlet.avg_pi_weighted}
+            explainer={METRIC_EXPLAINERS.avg_pi_weighted}
+          />
+          <MetricItem
+            label="Bias Intent"
+            value={outlet.avg_bias_intent_weighted}
+            explainer={METRIC_EXPLAINERS.avg_bias_intent_weighted}
+          />
+          <MetricItem
+            label="Bias Language"
+            value={outlet.avg_bias_language_weighted}
+            explainer={METRIC_EXPLAINERS.avg_bias_language_weighted}
+          />
+          <MetricItem
+            label="Bias Source"
+            value={outlet.avg_bias_source_weighted}
+            explainer={METRIC_EXPLAINERS.avg_bias_source_weighted}
+          />
+          <MetricItem
+            label="Bias Framing"
+            value={outlet.avg_bias_framing_weighted}
+            explainer={METRIC_EXPLAINERS.avg_bias_framing_weighted}
+          />
+          <MetricItem
+            label="Bias Context"
+            value={outlet.avg_bias_context_weighted}
+            explainer={METRIC_EXPLAINERS.avg_bias_context_weighted}
+          />
+        </div>
+      </div>
     </section>
+  );
+}
+
+// Stateless helper to keep layout clean
+function StatItem({ label, value }: { label: string; value: any }) {
+  return (
+    <div className="flex flex-col">
+      <span className="font-semibold text-gray-600">{label}</span>
+      <span className="text-gray-900">{value ?? "N/A"}</span>
+    </div>
+  );
+}
+
+function MetricItem({
+  label,
+  value,
+  explainer,
+}: {
+  label: string;
+  value: any;
+  explainer: string;
+}) {
+  return (
+    <div className="py-4 flex flex-col">
+      <span className="font-semibold">{label}:</span>
+      <span className="text-lg text-blue-900 font-mono mb-1">{value ?? "N/A"}</span>
+      <span className="text-xs text-gray-500">{explainer}</span>
+    </div>
   );
 }
