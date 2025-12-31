@@ -1,5 +1,4 @@
-// app/newsroom/cabinet/types.ts
-
+`app/newsroom/cabinet/types.ts`
 /* ============================================================
    LEADERBOARD CONTRACT (LIGHTWEIGHT)
    Source: /api/news/outlets/overview
@@ -17,7 +16,7 @@ export type OutletOverview = {
    ============================================================ */
 
 export type OutletStats = {
-  outlet: string;
+  canonical_outlet: string; // PATCH: was `outlet: string`
 
   total_stories: number;
   days_active: number;
