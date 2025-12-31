@@ -25,7 +25,7 @@ export default function Leaderboard({
         return (
           <OutletCard
             key={o.canonical_domain}
-            outlet={o}
+            outlet={o} // must have canonical_domain, not canonical_outlet
             rank={o.rank}
             selected={o.canonical_domain === selectedCanonical}
             badge={badge}
