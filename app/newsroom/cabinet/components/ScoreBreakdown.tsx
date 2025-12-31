@@ -12,7 +12,7 @@ export default function ScoreBreakdown({ outlet }: Props) {
   return (
     <section className="mt-8">
       <h3 className="text-lg font-semibold mb-2">
-        Score Breakdown: {outlet.canonical_outlet}
+        Score Breakdown: {outlet.canonical_domain}
       </h3>
       <ul>
         <li>Total stories: {outlet.total_stories}</li>
