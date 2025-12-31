@@ -5,13 +5,13 @@
    ============================================================ */
 
 export type OutletOverview = {
-  canonical_domain: string;
+  outlet: string;
   total_stories: number;
-  avg_pi: number;
+  avg_pi_weighted: number;
 };
 
 export type OutletStats = {
-  canonical_domain: string;
+  outlet: string;
   total_stories: number;
   days_active: number;
   last_story_day: string | null;
@@ -22,4 +22,3 @@ export type OutletStats = {
   avg_bias_framing_weighted: number | null;
   avg_bias_context_weighted: number | null;
 };
-
