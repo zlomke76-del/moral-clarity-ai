@@ -53,7 +53,7 @@ type WMRow = {
 function isNewsRequest(message: string): boolean {
   const m = message.toLowerCase();
   return (
-    m === "news" || // optional: allow bare command
+    m === "news" ||
     m.includes("headlines") ||
     m.includes("what is happening") ||
     m.includes("what's happening") ||
@@ -62,14 +62,35 @@ function isNewsRequest(message: string): boolean {
   );
 }
 
-function isImageRequest(message: string): boolean {
-  const m = message.toLowerCase().trim();
+/**
+ * Detect obvious code / review payloads and veto image routing
+ */
+function looksLikeCode(text: string): boolean {
   return (
-    m.startsWith("generate an image") ||
-    m.startsWith("create an image") ||
-    m.startsWith("draw ") ||
-    m.includes("image of") ||
-    m.includes("picture of")
+    text.includes("```") ||
+    /function\s+\w+\s*\(/.test(text) ||
+    /=>/.test(text) ||
+    /const\s+\w+/.test(text) ||
+    /;\s*$/.test(text)
+  );
+}
+
+/**
+ * Image intent must be explicit human language,
+ * never triggered by code or reviews
+ */
+function isImageRequest(message: string): boolean {
+  const m = message.trim().toLowerCase();
+
+  // HARD VETO — code review / pasted source
+  if (looksLikeCode(message)) return false;
+
+  return (
+    /^generate (an )?image\b/.test(m) ||
+    /^create (an )?image\b/.test(m) ||
+    /^draw\b/.test(m) ||
+    /^make (an )?(image|picture)\b/.test(m) ||
+    /\b(image|picture) of\b/.test(m)
   );
 }
 
@@ -236,7 +257,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // IMAGE PIPELINE
+    // IMAGE PIPELINE (SAFE)
     // --------------------------------------------------------
     if (message && isImageRequest(message)) {
       const base64Image = await generateImage(message);
@@ -303,38 +324,36 @@ export async function POST(req: Request) {
       }
     );
 
- // --------------------------------------------------------
-// NEWSROOM (RESTORED, ISOLATED)
-// --------------------------------------------------------
-if (message && isNewsRequest(message)) {
-  // Derive absolute origin from the incoming request (Node-safe)
-  const origin = new URL(req.url).origin;
+    // --------------------------------------------------------
+    // NEWSROOM (RESTORED, ISOLATED)
+    // --------------------------------------------------------
+    if (message && isNewsRequest(message)) {
+      const origin = new URL(req.url).origin;
 
-  const digestRes = await fetch(
-    `${origin}/api/news/digest?limit=3`,
-    { cache: "no-store" }
-  );
+      const digestRes = await fetch(
+        `${origin}/api/news/digest?limit=3`,
+        { cache: "no-store" }
+      );
 
-  if (!digestRes.ok) {
-    throw new Error("NEWS_DIGEST_FETCH_FAILED");
-  }
+      if (!digestRes.ok) {
+        throw new Error("NEWS_DIGEST_FETCH_FAILED");
+      }
 
-  const digestJson = await digestRes.json();
+      const digestJson = await digestRes.json();
+      const stories = Array.isArray(digestJson?.stories)
+        ? digestJson.stories
+        : [];
 
-  const stories = Array.isArray(digestJson?.stories)
-    ? digestJson.stories
-    : [];
+      console.log("[NEWSROOM] digest fetched", { count: stories.length });
 
-  console.log("[NEWSROOM] digest fetched", { count: stories.length });
+      const newsroomResponse = await runNewsroomExecutor(stories);
 
-  const newsroomResponse = await runNewsroomExecutor(stories);
-
-  return NextResponse.json({
-    ok: true,
-    response: newsroomResponse,
-    messages: [{ role: "assistant", content: newsroomResponse }],
-  });
-}
+      return NextResponse.json({
+        ok: true,
+        response: newsroomResponse,
+        messages: [{ role: "assistant", content: newsroomResponse }],
+      });
+    }
 
     // --------------------------------------------------------
     // HYBRID PIPELINE
