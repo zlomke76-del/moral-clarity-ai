@@ -10,14 +10,22 @@ export async function GET() {
   const { data, error } = await supabase
     .from("outlet_bias_pi_overview")
     .select(`
-      canonical_domain,
+      outlet,
       total_stories,
-      avg_pi
+      days_active,
+      last_story_day,
+      avg_bias_intent_weighted,
+      avg_pi_weighted,
+      avg_bias_language_weighted,
+      avg_bias_source_weighted,
+      avg_bias_framing_weighted,
+      avg_bias_context_weighted
     `);
 
   if (error) {
+    console.error("API error at /api/news/outlets/overview", error);
     return NextResponse.json(
-      { ok: false, error: error.message },
+      { ok: false, error: String(error) },
       { status: 500 }
     );
   }
