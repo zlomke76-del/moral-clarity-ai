@@ -22,7 +22,7 @@ export default function NewsroomCabinetPage() {
       .then((d) => {
         if (d.ok) {
           setOutlets(d.outlets);
-          setSelected(d.outlets?.[0]?.canonical_outlet ?? null);
+          setSelected(d.outlets?.[0]?.canonical_outlet ?? null); // PATCH for canonical_outlet
         }
       });
   }, []);
@@ -31,7 +31,7 @@ export default function NewsroomCabinetPage() {
   useEffect(() => {
     if (!selected) return;
 
-    // ✅ Canonical-only stats endpoint (query-based)
+    // Canonical-only stats endpoint (query-based)
     fetch(`/api/news/outlet-stats?outlet=${encodeURIComponent(selected)}`)
       .then((r) => r.json())
       .then((d) => {
