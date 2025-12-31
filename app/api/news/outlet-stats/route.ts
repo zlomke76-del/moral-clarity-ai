@@ -14,7 +14,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const outlet = searchParams.get("outlet");
 
-  // 🔒 Hard guard — missing param
+  // Hard guard: missing param
   if (!outlet) {
     return NextResponse.json(
       { ok: false, error: "Missing outlet parameter" },
@@ -22,7 +22,7 @@ export async function GET(req: Request) {
     );
   }
 
-  // 🔒 Canonical enforcement
+  // Canonical enforcement
   if (outlet.includes(".")) {
     return NextResponse.json(
       {
@@ -61,6 +61,6 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     ok: true,
-    outlet: data ?? null,
+    outlet: data ?? null, // PATCH: do not remap field, keep canonical_outlet
   });
 }
