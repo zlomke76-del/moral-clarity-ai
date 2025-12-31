@@ -12,17 +12,19 @@ export default function NewsroomCabinetPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [stats, setStats] = useState<OutletStats | null>(null);
 
+  // Load leaderboard
   useEffect(() => {
     fetch("/api/news/outlets/overview")
       .then((r) => r.json())
       .then((d) => {
         if (d.ok) {
           setOutlets(d.outlets);
-          setSelected(d.outlets?.[0]?.canonical_outlet ?? null);
+          setSelected(d.outlets?.[0]?.canonical_domain ?? null);
         }
       });
   }, []);
 
+  // Load stats for selected outlet
   useEffect(() => {
     if (!selected) return;
     fetch(`/api/news/outlet-stats?outlet=${encodeURIComponent(selected)}`)
@@ -90,7 +92,6 @@ export default function NewsroomCabinetPage() {
           />
         </section>
       )}
-      {/* Unified: use OutletStats type */}
       <ScoreBreakdown outlet={stats} />
     </div>
   );
