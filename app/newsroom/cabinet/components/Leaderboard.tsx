@@ -3,9 +3,7 @@
 import type { OutletOverview } from "../types";
 import OutletCard from "./OutletCard";
 
-type RankedOutlet = OutletOverview & {
-  rank: number;
-};
+type RankedOutlet = OutletOverview & { rank: number };
 
 type Props = {
   outlets: RankedOutlet[];
@@ -22,18 +20,16 @@ export default function Leaderboard({
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       {outlets.map((o) => {
         let badge: "golden" | "neutral" | "watchlist" = "neutral";
-
         if (o.rank <= 3) badge = "golden";
         else if (o.rank > outlets.length - 3) badge = "watchlist";
-
         return (
           <OutletCard
-            key={o.canonical_outlet}
+            key={o.canonical_domain}
             outlet={o}
             rank={o.rank}
-            selected={o.canonical_outlet === selectedCanonical}
+            selected={o.canonical_domain === selectedCanonical}
             badge={badge}
-            onSelect={() => onSelect(o.canonical_outlet)}
+            onSelect={() => onSelect(o.canonical_domain)}
           />
         );
       })}
