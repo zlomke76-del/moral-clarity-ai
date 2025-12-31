@@ -11,9 +11,9 @@ type Props = {
   onSelect: () => void;
 };
 
-function formatOutletDisplay(domain: string): string {
-  if (!domain) return "UNKNOWN";
-  return domain
+function formatOutletDisplay(outlet: string): string {
+  if (!outlet) return "UNKNOWN";
+  return outlet
     .replace(/^amp\./i, "")
     .replace(/^www\./i, "")
     .replace(/\.co\.uk$/i, "")
@@ -28,13 +28,13 @@ export default function OutletCard({
   badge,
   onSelect,
 }: Props) {
-  const canonical = outlet.canonical_domain;
+  const canonical = outlet.outlet;  // FIXED: Use `outlet.outlet`
   const logoUrl = `https://www.google.com/s2/favicons?domain=${canonical}&sz=64`;
 
   const pi =
-    typeof outlet.avg_pi === "number"
-      ? (outlet.avg_pi * 100).toFixed(2)
-      : null;
+    typeof (outlet as any).avg_pi_weighted === "number"
+      ? ((outlet as any).avg_pi_weighted * 100).toFixed(2)
+      : undefined;
 
   return (
     <button
@@ -65,7 +65,7 @@ export default function OutletCard({
           PI {pi ?? "?"}
         </div>
         <div className="text-xs text-neutral-400">
-          {outlet.total_stories.toLocaleString()} stories analyzed
+          {Number(outlet.total_stories).toLocaleString()} stories analyzed
         </div>
       </div>
     </button>
