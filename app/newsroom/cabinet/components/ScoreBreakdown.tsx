@@ -1,11 +1,41 @@
 "use client";
 import type { OutletStats } from "../types";
 
-// You may wish to import an icon fallback or use initials instead if logo isn't found
-
-type Props = {
-  outlet: (OutletStats & { logoUrl?: string }) | null;
+// --- Reuse from your codebase --- //
+const OutletDomainMap: Record<string, string> = {
+  "Washington Post": "washingtonpost.com",
+  "Mother Jones": "motherjones.com",
+  "PBS": "pbs.org",
+  "NPR": "npr.org",
+  "Reuters": "reuters.com",
+  "Politico": "politico.com",
+  "The Hill": "thehill.com",
+  "France 24": "france24.com",
+  "AP News": "apnews.com",
+  "The Guardian": "theguardian.com",
+  "CNN": "cnn.com",
+  "USA Today": "usatoday.com",
+  "Bloomberg": "bloomberg.com",
+  "Fox News": "foxnews.com",
+  "DW": "dw.com",
+  "RFERL": "rferl.org",
+  "Newsmax": "newsmax.com",
+  "Washington Examiner": "washingtonexaminer.com",
+  "Time": "time.com",
+  // Add more as needed
 };
+
+function getDomainForOutlet(outlet: string): string {
+  if (
+    outlet &&
+    outlet.includes(".") &&
+    !outlet.includes(" ") &&
+    !outlet.startsWith("http")
+  ) {
+    return outlet.trim().toLowerCase();
+  }
+  return OutletDomainMap[outlet.trim()] || "";
+}
 
 const METRIC_EXPLAINERS: Record<string, string> = {
   avg_pi_weighted: "Personal Influence (PI) score reflecting reach and predictive impact.",
@@ -16,20 +46,19 @@ const METRIC_EXPLAINERS: Record<string, string> = {
   avg_bias_context_weighted: "Checks for selective or out-of-context reporting.",
 };
 
+type Props = {
+  outlet: OutletStats | null;
+};
+
 export default function ScoreBreakdown({ outlet }: Props) {
   if (!outlet) return <div>No outlet selected.</div>;
 
-  // Fallback logo/icon/initial if not provided
-  const logoUrl = outlet.logoUrl || (
-    // Example fallback: get from Google (like cards) or use a placeholder
-    typeof window !== "undefined"
-      ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(
-          (outlet.domain || outlet.outlet).toLowerCase()
-        )}&sz=64`
-      : "/default-favicon.png"
-  );
+  // Compute logo domain (same logic as OutletCard)
+  const domain = getDomainForOutlet(outlet.outlet);
+  const logoUrl = domain
+    ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
+    : "/default-favicon.png";
 
-  // Optionally strip domain logic for display if needed, or pass canonical display name
   return (
     <section className="mt-8 p-4 border rounded-lg bg-white shadow-md max-w-xl mx-auto">
       <header className="flex items-center mb-5">
