@@ -5,6 +5,9 @@ import type { OutletOverview, OutletStats } from "./types";
 import Leaderboard from "./components/Leaderboard";
 import ScoreBreakdown from "./components/ScoreBreakdown";
 
+/**
+ * A RankedOutlet has all the OutletOverview fields, plus its global PI-based rank.
+ */
 type RankedOutlet = OutletOverview & { rank: number };
 
 export default function NewsroomCabinetPage() {
@@ -12,6 +15,7 @@ export default function NewsroomCabinetPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [stats, setStats] = useState<OutletStats | null>(null);
 
+  // Fetch all outlet overviews once.
   useEffect(() => {
     fetch("/api/news/outlets/overview")
       .then((r) => r.json())
@@ -23,6 +27,7 @@ export default function NewsroomCabinetPage() {
       });
   }, []);
 
+  // Fetch outlet stats for the selected outlet.
   useEffect(() => {
     if (!selected) return;
     fetch(`/api/news/outlet-stats?outlet=${encodeURIComponent(selected)}`)
@@ -33,11 +38,16 @@ export default function NewsroomCabinetPage() {
       });
   }, [selected]);
 
-  // Strict PI-high-to-low sorting with 5+ filter
-  const ranked = useMemo(() => {
+  /**
+   * Rank all eligible outlets globally by PI (descending).
+   * - Must have at least 5 stories.
+   * - If PI values tie, order alphabetically by outlet string.
+   * - Assign global rank (1...N) once, before category slicing.
+   */
+  const ranked: RankedOutlet[] = useMemo(() => {
     return outlets
       .filter((o) => Number(o.total_stories) >= 5)
-      .slice()
+      .slice() // avoid direct mutation
       .sort((a, b) => {
         const piA = typeof (a as any).avg_pi_weighted === "number"
           ? (a as any).avg_pi_weighted
@@ -48,13 +58,13 @@ export default function NewsroomCabinetPage() {
         if (piB !== piA) return piB - piA;
         return a.outlet.localeCompare(b.outlet);
       })
-      .map((o, i) => ({ ...o, rank: i + 1 }));
+      .map((o, i) => ({ ...o, rank: i + 1 })); // Global rank assignment
   }, [outlets]);
 
-  // Category slices with preserved absolute rank
-  const goldenAnchor = ranked.slice(0, 3);
-  const neutralField = ranked.slice(3, ranked.length - 3);
-  const watchList = ranked.slice(-3);
+  // Slice into categories WITHOUT re-ranking.
+  const goldenAnchor = ranked.slice(0, 3); // rank 1,2,3
+  const neutralField = ranked.slice(3, ranked.length - 3); // rank 4..(N-3) if exists
+  const watchList = ranked.slice(-3); // last 3: rank N-2,N-1,N
 
   const totalStoriesEvaluated = useMemo(
     () => ranked.reduce((sum, o) => sum + (Number(o.total_stories) ?? 0), 0),
