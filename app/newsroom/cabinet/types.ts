@@ -5,13 +5,13 @@
    ============================================================ */
 
 export type OutletOverview = {
-  canonical_outlet: string;
+  canonical_domain: string;
   total_stories: number;
   avg_pi: number;
 };
 
 export type OutletStats = {
-  canonical_outlet: string;
+  canonical_domain: string;
   total_stories: number;
   days_active: number;
   last_story_day: string | null;
@@ -22,6 +22,3 @@ export type OutletStats = {
   avg_bias_framing_weighted: number | null;
   avg_bias_context_weighted: number | null;
 };
-
-// Remove any other outlet/breakdown types or make OutletBreakdown a type alias:
-// export type OutletBreakdown = OutletStats;
