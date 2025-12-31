@@ -59,9 +59,8 @@ type PendingFile = {
 const POS_KEY = "solace:pos:v4";
 const MINISTRY_KEY = "solace:ministry";
 const PAD = 12;
-
 const GOLD = "#FFD700";
-const ORB_SIZE = 48; // px
+const ORB_SIZE = 48;
 
 /* ------------------------------------------------------------------
    Image intent gate
@@ -125,9 +124,9 @@ export default function SolaceDock() {
 
   // Minimize/orb logic
   const [minimized, setMinimized] = useState(false);
-  const [minimizing, setMinimizing] = useState(false); // for animation
+  const [minimizing, setMinimizing] = useState(false);
 
-  // Calculate orb position (bottom right corner, desktop only)
+  // Calculate orb position (bottom right, desktop only)
   const orbPos = useMemo(() => {
     if (!viewport.w || !viewport.h) return { x: 0, y: 0 };
     return {
@@ -207,7 +206,8 @@ export default function SolaceDock() {
     };
   }, []);
 
-  const { posReady, onHeaderMouseDown, onHeaderTouchStart } = useDockPosition({
+  // Only desktop: minDragPx to reduce quick snaps; touch support omitted for MVP
+  const { posReady, onHeaderMouseDown } = useDockPosition({
     canRender,
     visible,
     viewport,
@@ -219,7 +219,6 @@ export default function SolaceDock() {
     x,
     y,
     setPos,
-    // Below: to reduce abrupt position snap, add drag deadzone
     minDragPx: 16,
   });
 
@@ -229,9 +228,7 @@ export default function SolaceDock() {
   const vw = viewport.w || 1;
   const vh = viewport.h || 1;
 
-  // ------------------------------
-  // MOBILE CLAMP (no drift)
-  // ------------------------------
+  // MOBILE CLAMP
   const mobileW = Math.max(280, Math.min(dockW, vw - PAD * 2));
   const mobileH = Math.max(360, Math.min(dockH, vh - PAD * 2));
 
@@ -239,13 +236,12 @@ export default function SolaceDock() {
   const txDesktop = Math.min(Math.max(0, x - PAD), vw - panelW - PAD);
   const tyDesktop = Math.min(Math.max(0, y - PAD), vh - panelH - PAD);
 
-  // Clamp jump: on touch, don't snap left until real drag is recognized
+  // Clamp jump: on minimize/orb
   const tx =
     isMobile || minimized
       ? PAD
       : minimizing
-      ? // Animate toward orb
-        orbPos.x
+      ? orbPos.x
       : txDesktop;
   const ty =
     isMobile || minimized
@@ -275,7 +271,6 @@ export default function SolaceDock() {
       PAD,
     });
 
-  // iOS scroll polish without changing desktop styling
   const transcriptStyleSafe: React.CSSProperties = isMobile
     ? {
         ...transcriptStyle,
@@ -284,7 +279,6 @@ export default function SolaceDock() {
       }
     : transcriptStyle;
 
-  // Hard clamp at the container level too (prevents iOS ?wider than viewport? weirdness)
   const panelStyleSafe: React.CSSProperties = {
     ...panelStyle,
     width: isMobile || minimized ? mobileW : dockW,
@@ -299,9 +293,7 @@ export default function SolaceDock() {
     pointerEvents: minimized ? "none" : undefined,
   };
 
-  // ------------------------------
   // Orb (Desktop, Minimized)
-  // ------------------------------
   const showOrb = !isMobile && (minimized || minimizing);
 
   const orbStyle: React.CSSProperties = {
@@ -322,7 +314,6 @@ export default function SolaceDock() {
     border: "3px solid white",
   };
 
-  // Panel minimize animation: triggers animation before hiding actual panel
   function minimizeDock() {
     setMinimizing(true);
     setTimeout(() => {
@@ -344,7 +335,7 @@ export default function SolaceDock() {
     try {
       if (!data) throw new Error("Empty response payload");
 
-      // EXPORT DELIVERY ? MUST PREEMPT EVERYTHING
+      // EXPORT DELIVERY
       if ((data.export as SolaceExport)?.kind === "export") {
         const exp = data.export as SolaceExport;
         setMessages((m) => [
@@ -535,12 +526,6 @@ export default function SolaceDock() {
         onDragStart={(e) => {
           if (!isMobile && !minimized && !minimizing) onHeaderMouseDown(e);
         }}
-        // touch support: pass through to custom logic if needed
-        onTouchStart={
-          !isMobile && !minimized && !minimizing
-            ? (e) => onHeaderTouchStart?.(e)
-            : undefined
-        }
       />
 
       <SolaceTranscript
@@ -682,8 +667,7 @@ export default function SolaceDock() {
           onClick={restoreDock}
           aria-label="Restore Solace dock"
         >
-          {/* Golden orb (can be replaced with an SVG logo/animation if preferred) */}
-          <span style={{ fontWeight: "bold", fontSize: 28, color: "#fff", userSelect: "none" }}>●</span>
+          <span style={{ fontWeight: "bold", fontSize: 28, color: "#fff", userSelect: "none" }}>?</span>
         </div>
       )}
       {panel}
