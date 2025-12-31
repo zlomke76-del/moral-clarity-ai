@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import type { OutletOverview } from "../types";
 
@@ -18,7 +19,13 @@ const OutletDomainMap: Record<string, string> = {
   "CNN": "cnn.com",
   "USA Today": "usatoday.com",
   "Bloomberg": "bloomberg.com",
-  // add others as you encounter them
+  "Fox News": "foxnews.com",
+  "DW": "dw.com",
+  "RFERL": "rferl.org",
+  "Newsmax": "newsmax.com",
+  "Washington Examiner": "washingtonexaminer.com",
+  "Time": "time.com",
+  // Extend as new canonical names are added in merge logic
 };
 
 function getDomainForOutlet(outlet: string): string {
@@ -30,7 +37,7 @@ function getDomainForOutlet(outlet: string): string {
   ) {
     return outlet.trim().toLowerCase();
   }
-  // If not, try the known map
+  // If not, try the known map (by canonical/capitalized name)
   return OutletDomainMap[outlet.trim()] || "";
 }
 
@@ -60,7 +67,9 @@ export default function OutletCard({
   badge,
   onSelect,
 }: Props) {
+  // Use local state to ensure once favicon fails, fallback is permanent for this card
   const domain = getDomainForOutlet(outlet.outlet);
+  const [logoError, setLogoError] = useState(false);
   const logoUrl = domain
     ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
     : "/default-favicon.png";
@@ -85,15 +94,13 @@ export default function OutletCard({
       <div className="flex flex-col items-start gap-1">
         <div className="text-xs text-neutral-400">#{rank}</div>
         <Image
-          src={logoUrl}
+          src={logoError ? "/default-favicon.png" : logoUrl}
           alt={`${outlet.outlet} logo`}
           width={20}
           height={20}
           className="rounded-sm"
           unoptimized
-          onError={(e) => {
-            (e.currentTarget as HTMLImageElement).src = "/default-favicon.png";
-          }}
+          onError={() => setLogoError(true)}
         />
         <div className="text-sm font-medium text-neutral-100">
           {formatOutletDisplay(domain || outlet.outlet)}
