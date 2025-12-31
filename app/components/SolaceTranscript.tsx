@@ -19,11 +19,25 @@ type ExportItem = {
   url: string;
 };
 
+type CodeArtifact = {
+  type: "code";
+  language: string;
+  filename?: string;
+  content: string;
+};
+
+// Extended assistant
+type AssistantMessage =
+  | { role: "assistant"; content: string }
+  | { role: "assistant"; artifact: CodeArtifact };
+
+// Accepts both bare legacy and code artifact messages
 type Message = {
   role: "user" | "assistant";
   content?: string | null;
   imageUrl?: string | null;
   export?: ExportItem | null;
+  artifact?: CodeArtifact | null;
 };
 
 type Props = {
@@ -40,12 +54,8 @@ export default function SolaceTranscript({
   transcriptRef,
   transcriptStyle,
 }: Props) {
-  // --------------------------------------------------
-  // DIAGNOSTIC: snapshot messages on change
-  // --------------------------------------------------
   useEffect(() => {
     if (!DEV_DIAG) return;
-
     console.log("[DIAG-TRANSCRIPT] render", {
       count: messages.length,
       messages: messages.map((m, i) => ({
@@ -54,6 +64,7 @@ export default function SolaceTranscript({
         hasImage: typeof m.imageUrl === "string",
         hasText: Boolean(m.content && m.content.trim()),
         hasExport: Boolean(m.export),
+        hasCodeArtifact: Boolean(m.artifact?.type === "code"),
         exportFormat: m.export?.format ?? null,
       })),
     });
@@ -66,13 +77,14 @@ export default function SolaceTranscript({
         const hasImage = typeof msg.imageUrl === "string";
         const hasText = Boolean(msg.content && msg.content.trim());
         const hasExport = Boolean(msg.export);
+        const hasCodeArtifact = Boolean(msg.artifact && msg.artifact.type === "code");
 
-        /**
-         * NOTE:
-         * Still index-based, but stable for append-only streams.
-         * Upgrade to message.id when available.
-         */
-        const renderKey = `${i}-${msg.role}-${hasImage ? "img" : hasExport ? "export" : "txt"}`;
+        const renderKey = `${i}-${msg.role}-${
+          hasImage ? "img"
+          : hasExport ? "export"
+          : hasCodeArtifact ? "code"
+          : "txt"
+        }`;
 
         if (DEV_DIAG) {
           console.log("[DIAG-MESSAGE-RENDER]", {
@@ -82,6 +94,7 @@ export default function SolaceTranscript({
             hasImage,
             hasText,
             hasExport,
+            hasCodeArtifact,
           });
         }
 
@@ -97,7 +110,7 @@ export default function SolaceTranscript({
             <div
               style={{
                 maxWidth: "80%",
-                minWidth: hasImage || hasExport ? 220 : undefined,
+                minWidth: hasImage || hasExport || hasCodeArtifact ? 220 : undefined,
                 padding: 12,
                 borderRadius: UI.radiusLg,
                 background: isUser ? UI.surface2 : UI.surface1,
@@ -112,15 +125,13 @@ export default function SolaceTranscript({
               {hasExport && <ExportCard exportItem={msg.export!} />}
 
               {/* ---------------- Image ---------------- */}
-              {hasImage && (
-                <ImageWithFallback
-                  src={msg.imageUrl!}
-                  messageIndex={i}
-                />
-              )}
+              {hasImage && <ImageWithFallback src={msg.imageUrl!} messageIndex={i} />}
+
+              {/* ---------------- Code Artifact (copyable code block) ---------------- */}
+              {hasCodeArtifact && <CodeArtifactBlock artifact={msg.artifact!} />}
 
               {/* ---------------- Text ---------------- */}
-              {hasText && (
+              {!hasCodeArtifact && hasText && (
                 <div
                   style={{
                     whiteSpace: "pre-wrap",
@@ -163,11 +174,7 @@ function ExportCard({ exportItem }: { exportItem: ExportItem }) {
       }}
     >
       <div style={{ fontWeight: 600 }}>{label}</div>
-
-      <div style={{ fontSize: 12, color: UI.sub }}>
-        {exportItem.filename}
-      </div>
-
+      <div style={{ fontSize: 12, color: UI.sub }}>{exportItem.filename}</div>
       <a
         href={exportItem.url}
         target="_blank"
@@ -253,5 +260,84 @@ function ImageWithFallback({
         display: "block",
       }}
     />
+  );
+}
+
+/* ------------------------------------------------------------------
+   Code Artifact (copyable code block)
+------------------------------------------------------------------- */
+function CodeArtifactBlock({ artifact }: { artifact: CodeArtifact }) {
+  const { language, filename, content } = artifact;
+
+  // Copy button handler
+  const copyToClipboard = () => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(content).catch(() => {
+        // Fallback if clipboard write fails
+        alert("Failed to copy code to clipboard.");
+      });
+    }
+  };
+
+  return (
+    <div
+      style={{
+        background: UI.surface2,
+        borderRadius: UI.radiusMd,
+        boxShadow: UI.shadow,
+        fontFamily: "source-code-pro, monospace, monospace",
+        fontSize: 14,
+        color: UI.text,
+        padding: 12,
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-word",
+        position: "relative",
+        userSelect: "text",
+      }}
+    >
+      {(filename || language) && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: 8,
+            fontWeight: "600",
+            fontSize: 12,
+            color: UI.sub,
+          }}
+        >
+          <div>
+            {filename ? filename : language.toUpperCase()}
+          </div>
+          <button
+            onClick={copyToClipboard}
+            aria-label="Copy code to clipboard"
+            title="Copy code"
+            style={{
+              background: "transparent",
+              border: "none",
+              color: UI.sub,
+              cursor: "pointer",
+              fontWeight: "700",
+              padding: 0,
+              margin: 0,
+              lineHeight: 1,
+              userSelect: "none",
+            }}
+          >
+            📋
+          </button>
+        </div>
+      )}
+
+      <pre
+        style={{
+          margin: 0,
+          overflowX: "auto",
+        }}
+      >
+        <code>{content}</code>
+      </pre>
+    </div>
   );
 }
