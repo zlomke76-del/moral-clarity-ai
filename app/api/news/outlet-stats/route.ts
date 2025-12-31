@@ -4,17 +4,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/**
- * GET /api/news/outlet-stats?outlet=<canonical_outlet>
- *
- * Canonical-only stats endpoint.
- * Domain-style identifiers (e.g. wsj.com) are explicitly rejected.
- */
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const outlet = searchParams.get("outlet");
 
-  // Hard guard: missing param
   if (!outlet) {
     return NextResponse.json(
       { ok: false, error: "Missing outlet parameter" },
@@ -22,13 +15,10 @@ export async function GET(req: Request) {
     );
   }
 
-  // Canonical enforcement
+  // Canonical domain: only dotless, lowercase, opaque IDs allowed (enforced by constraint)
   if (outlet.includes(".")) {
     return NextResponse.json(
-      {
-        ok: false,
-        error: "Invalid outlet identifier. Expected canonical_outlet.",
-      },
+      { ok: false, error: "Invalid outlet identifier. Expected canonical_domain (no dot)." },
       { status: 400 }
     );
   }
@@ -38,7 +28,7 @@ export async function GET(req: Request) {
   const { data, error } = await supabase
     .from("outlet_bias_pi_overview")
     .select(`
-      canonical_outlet,
+      canonical_domain,
       total_stories,
       days_active,
       last_story_day,
@@ -49,7 +39,7 @@ export async function GET(req: Request) {
       avg_bias_framing_weighted,
       avg_bias_context_weighted
     `)
-    .eq("canonical_outlet", outlet)
+    .eq("canonical_domain", outlet)
     .maybeSingle();
 
   if (error) {
@@ -61,6 +51,6 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     ok: true,
-    outlet: data ?? null, // PATCH: do not remap field, keep canonical_outlet
+    outlet: data ?? null,
   });
 }
