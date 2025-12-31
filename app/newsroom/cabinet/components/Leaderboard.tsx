@@ -7,13 +7,13 @@ type RankedOutlet = OutletOverview & { rank: number };
 
 type Props = {
   outlets: RankedOutlet[];
-  selectedCanonical: string | null;
-  onSelect: (canonical: string) => void;
+  selectedOutlet: string | null;
+  onSelect: (outlet: string) => void;
 };
 
 export default function Leaderboard({
   outlets,
-  selectedCanonical,
+  selectedOutlet,
   onSelect,
 }: Props) {
   return (
@@ -24,12 +24,12 @@ export default function Leaderboard({
         else if (o.rank > outlets.length - 3) badge = "watchlist";
         return (
           <OutletCard
-            key={o.canonical_domain}
-            outlet={o} // must have canonical_domain, not canonical_outlet
+            key={o.outlet}
+            outlet={o}
             rank={o.rank}
-            selected={o.canonical_domain === selectedCanonical}
+            selected={o.outlet === selectedOutlet}
             badge={badge}
-            onSelect={() => onSelect(o.canonical_domain)}
+            onSelect={() => onSelect(o.outlet)}
           />
         );
       })}
