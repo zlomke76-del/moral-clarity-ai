@@ -12,14 +12,14 @@ export default function NewsroomCabinetPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [stats, setStats] = useState<OutletStats | null>(null);
 
-  // Load leaderboard
+  // Load leaderboard data
   useEffect(() => {
     fetch("/api/news/outlets/overview")
       .then((r) => r.json())
       .then((d) => {
         if (d.ok) {
           setOutlets(d.outlets);
-          setSelected(d.outlets?.[0]?.outlet ?? null); // FIXED: use "outlet", not "canonical_domain"
+          setSelected(d.outlets?.[0]?.outlet ?? null);
         }
       });
   }, []);
@@ -35,22 +35,38 @@ export default function NewsroomCabinetPage() {
       });
   }, [selected]);
 
-  const totalStoriesEvaluated = useMemo(
-    () => outlets.reduce((sum, o) => sum + (Number(o.total_stories) ?? 0), 0),
-    [outlets]
+  // Sorting and ranking: PI high-to-low (desc). Only 5+ stories.
+  const filteredSorted = useMemo(() => {
+    return outlets
+      .filter((o) => Number(o.total_stories) >= 5)
+      .slice() // avoid mutation
+      .sort((a, b) => {
+        const piA = typeof (a as any).avg_pi_weighted === "number"
+          ? (a as any).avg_pi_weighted
+          : Number((a as any).avg_pi_weighted);
+        const piB = typeof (b as any).avg_pi_weighted === "number"
+          ? (b as any).avg_pi_weighted
+          : Number((b as any).avg_pi_weighted);
+        if (piB !== piA) return piB - piA;
+        return a.outlet.localeCompare(b.outlet);
+      });
+  }, [outlets]);
+
+  // Assign overall rank
+  const ranked = useMemo(
+    () => filteredSorted.map((o, i) => ({ ...o, rank: i + 1 })),
+    [filteredSorted]
   );
 
-  const goldenAnchor: RankedOutlet[] = useMemo(
-    () => outlets.slice(0, 3).map((o, i) => ({ ...o, rank: i + 1 })),
-    [outlets]
-  );
-  const neutralField: RankedOutlet[] = useMemo(
-    () => outlets.slice(3, outlets.length - 3).map((o, i) => ({ ...o, rank: i + 4 })),
-    [outlets]
-  );
-  const watchList: RankedOutlet[] = useMemo(
-    () => outlets.slice(-3).map((o, i) => ({ ...o, rank: outlets.length - 2 + i })),
-    [outlets]
+  // Partition into categories
+  const goldenAnchor = ranked.slice(0, 3);
+  const neutralField =
+    ranked.length > 6 ? ranked.slice(3, -3) : ranked.slice(3, ranked.length - 3);
+  const watchList = ranked.slice(-3);
+
+  const totalStoriesEvaluated = useMemo(
+    () => ranked.reduce((sum, o) => sum + (Number(o.total_stories) ?? 0), 0),
+    [ranked]
   );
 
   return (
@@ -65,21 +81,23 @@ export default function NewsroomCabinetPage() {
           </h2>
           <Leaderboard
             outlets={goldenAnchor}
-            selectedOutlet={selected} // FIXED: was selectedCanonical
+            selectedOutlet={selected}
             onSelect={setSelected}
           />
         </section>
       )}
-      <section className="border-t border-neutral-700 pt-6">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-          Neutral Category · Full Field
-        </h2>
-        <Leaderboard
-          outlets={neutralField}
-          selectedOutlet={selected} // FIXED: was selectedCanonical
-          onSelect={setSelected}
-        />
-      </section>
+      {neutralField.length > 0 && (
+        <section className="border-t border-neutral-700 pt-6">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+            Neutral Category · Full Field
+          </h2>
+          <Leaderboard
+            outlets={neutralField}
+            selectedOutlet={selected}
+            onSelect={setSelected}
+          />
+        </section>
+      )}
       {watchList.length > 0 && (
         <section className="border-t border-neutral-800 pt-6">
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-red-400">
@@ -87,7 +105,7 @@ export default function NewsroomCabinetPage() {
           </h2>
           <Leaderboard
             outlets={watchList}
-            selectedOutlet={selected} // FIXED: was selectedCanonical
+            selectedOutlet={selected}
             onSelect={setSelected}
           />
         </section>
