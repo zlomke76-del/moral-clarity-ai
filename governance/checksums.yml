@@ -34,12 +34,12 @@ documents:
     issued: 2025-10-14
 
   - file: governance/version_control.md
-    version: 1.0.0
-    checksum: TODO
-    approved_by:
-      - Timothy Zlomke
-      - Model Steward: Moral Clarity Model
-    issued: 2026-01-01
+  version: 1.0.0
+  checksum: 5CEDA678DB0A4ECEE9D77E53B685BCE15BACCFC23CBD4CD611746538BC6D4DC0
+  approved_by:
+    - Timothy Zlomke
+    - Model Steward: Moral Clarity Model
+  issued: 2026-01-01
 
   - file: docs/INDEX.md
     version: 1.0.0
