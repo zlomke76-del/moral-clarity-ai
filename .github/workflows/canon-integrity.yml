@@ -1,0 +1,47 @@
+name: Canon Integrity Verification
+
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "core/**"
+      - "governance/**"
+      - "tools/**"
+      - ".github/workflows/canon-integrity.yml"
+
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/**"
+      - "core/**"
+      - "governance/**"
+      - "tools/**"
+
+jobs:
+  canon-integrity:
+    name: Verify Canon Checksums
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup PowerShell 7
+        uses: PowerShell/PowerShell@v1
+        with:
+          pwsh-version: "7.4.x"
+
+      - name: Verify PowerShell version
+        run: |
+          pwsh --version
+
+      - name: Run Canon Integrity Check
+        run: |
+          pwsh ./tools/Test-CanonIntegrity.ps1
+
