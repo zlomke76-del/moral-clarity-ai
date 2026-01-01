@@ -50,7 +50,7 @@ type WMRow = {
 // ------------------------------------------------------------
 // Helpers
 // ------------------------------------------------------------
-function isNewsRequest(message: string): boolean {
+function isNewsKeywordFallback(message: string): boolean {
   const m = message.toLowerCase();
   return (
     m === "news" ||
@@ -82,7 +82,6 @@ function looksLikeCode(text: string): boolean {
 function isImageRequest(message: string): boolean {
   const m = message.trim().toLowerCase();
 
-  // HARD VETO — code review / pasted source
   if (looksLikeCode(message)) return false;
 
   return (
@@ -135,12 +134,6 @@ async function maybeRunRollingCompaction(params: {
 
   if (chunk.length === 0) return;
 
-  console.log("[WM-COMPACTION] trigger fired", {
-    conversationId,
-    wmTurns: wm.length,
-    chunkSize: chunk.length,
-  });
-
   try {
     const compaction = await runSessionCompaction(conversationId, chunk);
 
@@ -159,15 +152,7 @@ async function maybeRunRollingCompaction(params: {
       .schema("memory")
       .from("working_memory")
       .delete()
-      .in(
-        "id",
-        chunk.map((c: WMRow) => c.id)
-      );
-
-    console.log("[WM-COMPACTION] persisted and cleaned", {
-      conversationId,
-      deleted: chunk.length,
-    });
+      .in("id", chunk.map((c) => c.id));
   } catch (err) {
     console.error("[WM-COMPACTION] failed", err);
   }
@@ -187,6 +172,11 @@ export async function POST(req: Request) {
       workspaceId,
       conversationId,
       action,
+
+      // 🔒 EXPLICIT MODE FLAGS (AUTHORITATIVE)
+      newsMode = false,
+      newsLanguage, // optional, presentation-only
+
       ministryMode = false,
       founderMode = false,
       modeHint = "",
@@ -235,7 +225,7 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
-    // EXPLICIT FINALIZATION
+    // FINALIZATION
     // --------------------------------------------------------
     if (action === "finalize" && authUserId) {
       await finalizeConversation({
@@ -245,19 +235,11 @@ export async function POST(req: Request) {
         reason: "explicit",
       });
 
-      return NextResponse.json({
-        ok: true,
-        response: "",
-        messages: [],
-        diagnostics: {
-          conversationId,
-          finalized: true,
-        },
-      });
+      return NextResponse.json({ ok: true, response: "", messages: [] });
     }
 
     // --------------------------------------------------------
-    // IMAGE PIPELINE (SAFE)
+    // IMAGE PIPELINE
     // --------------------------------------------------------
     if (message && isImageRequest(message)) {
       const base64Image = await generateImage(message);
@@ -269,26 +251,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // EXPLICIT FACT MEMORY
-    // --------------------------------------------------------
-    const explicitFact = message ? extractExplicitFact(message) : null;
-
-    if (explicitFact && authUserId && user?.email) {
-      await writeMemory(
-        {
-          userId: authUserId,
-          email: user.email,
-          workspaceId: workspaceId ?? null,
-          memoryType: "fact",
-          source: "explicit",
-          content: explicitFact,
-        },
-        req.headers.get("cookie") ?? ""
-      );
-    }
-
-    // --------------------------------------------------------
-    // WRITE USER MESSAGE TO WM
+    // WRITE USER MESSAGE
     // --------------------------------------------------------
     if (authUserId && message) {
       await supabaseService.schema("memory").from("working_memory").insert({
@@ -300,9 +263,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // --------------------------------------------------------
-    // ROLLING COMPACTION (ASYNC)
-    // --------------------------------------------------------
     if (authUserId) {
       void maybeRunRollingCompaction({
         supabaseService,
@@ -312,22 +272,9 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // ASSEMBLE CONTEXT (MEMORY ONLY)
+    // NEWSROOM — LANGUAGE AGNOSTIC, MODE-DRIVEN
     // --------------------------------------------------------
-    const context = await assembleContext(
-      finalUserKey,
-      workspaceId ?? null,
-      message ?? "",
-      {
-        sessionId: conversationId,
-        sessionStartedAt: new Date().toISOString(),
-      }
-    );
-
-    // --------------------------------------------------------
-    // NEWSROOM (RESTORED, ISOLATED)
-    // --------------------------------------------------------
-    if (message && isNewsRequest(message)) {
+    if (newsMode || (message && isNewsKeywordFallback(message))) {
       const origin = new URL(req.url).origin;
 
       const digestRes = await fetch(
@@ -344,20 +291,31 @@ export async function POST(req: Request) {
         ? digestJson.stories
         : [];
 
-      console.log("[NEWSROOM] digest fetched", { count: stories.length });
-
       const newsroomResponse = await runNewsroomExecutor(stories);
 
       return NextResponse.json({
         ok: true,
         response: newsroomResponse,
         messages: [{ role: "assistant", content: newsroomResponse }],
+        meta: {
+          language: newsLanguage ?? "en",
+        },
       });
     }
 
     // --------------------------------------------------------
     // HYBRID PIPELINE
     // --------------------------------------------------------
+    const context = await assembleContext(
+      finalUserKey,
+      workspaceId ?? null,
+      message ?? "",
+      {
+        sessionId: conversationId,
+        sessionStartedAt: new Date().toISOString(),
+      }
+    );
+
     const result = await runHybridPipeline({
       userMessage: message ?? "",
       context,
