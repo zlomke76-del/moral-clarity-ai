@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
-import { createClientBrowser } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/browser';
 
 type RetryState = {
   tries: number;
@@ -10,7 +10,6 @@ type RetryState = {
 };
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
-  const supabase = createClientBrowser();
   const retryRef = useRef<RetryState>({ tries: 0 });
 
   useEffect(() => {
@@ -19,7 +18,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     const backoff = (status?: number) => {
       if (status !== 429) return 0;
       const tries = ++retryRef.current.tries;
-      return Math.min(8000, 500 * Math.pow(2, tries - 1)); // 0.5s → 8s
+      return Math.min(8000, 500 * Math.pow(2, tries - 1)); // 0.5s – 8s
     };
 
     (async () => {
@@ -65,7 +64,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         clearTimeout(retryRef.current.timer);
       }
     };
-  }, [supabase]);
+  }, []);
 
   return <>{children}</>;
 }
