@@ -4,15 +4,13 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "@/lib/toast";
-import { createClientBrowser } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/browser";
 
 interface MemoryDockProps {
   workspaceId: string | null;
 }
 
 export default function MemoryDock({ workspaceId }: MemoryDockProps) {
-  const supabase = createClientBrowser();
-
   const [memories, setMemories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -57,7 +55,7 @@ export default function MemoryDock({ workspaceId }: MemoryDockProps) {
       <h2 className="text-lg font-semibold">Recent Workspace Memories</h2>
 
       {loading ? (
-        <p className="text-neutral-400 text-sm">Loading…</p>
+        <p className="text-neutral-400 text-sm">Loading?</p>
       ) : memories.length === 0 ? (
         <p className="text-neutral-500 text-sm">No memories found.</p>
       ) : (
@@ -66,7 +64,7 @@ export default function MemoryDock({ workspaceId }: MemoryDockProps) {
             <li key={m.id} className="text-neutral-300 text-sm">
               {m.title || "(untitled)"}{" "}
               <span className="text-neutral-500 text-xs">
-                — {new Date(m.created_at).toLocaleString()}
+                • {new Date(m.created_at).toLocaleString()}
               </span>
             </li>
           ))}
