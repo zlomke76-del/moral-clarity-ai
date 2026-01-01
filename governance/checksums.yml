@@ -9,13 +9,13 @@
 # Use the official hashing process prior to ratification.
 
 documents:
-  - file: docs/user_experience_canon_v1.md
-    version: 1.0.0
-    checksum: TODO
-    approved_by:
-      - Timothy Zlomke
-      - Model Steward: Moral Clarity Model
-    issued: 2025-10-14
+ - file: docs/user_experience_canon_v1.md
+  version: 1.0.0
+  checksum: A0FAB71BC7242A02590CAE12068582306E7599207E60186DE72807A5D509419D
+  approved_by:
+    - Timothy Zlomke
+    - Model Steward: Moral Clarity Model
+  issued: 2025-10-14
 
  - file: docs/ux_canon_implementation_checklist_v1.md
   version: 1.0.0
