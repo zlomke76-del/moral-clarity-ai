@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import MemoryIndexPanel from "@/app/components/memory/MemoryIndexPanel";
 import MemoryEditorPanel from "@/app/components/memory/MemoryEditorPanel";
 import type { MemoryRecord } from "@/app/components/memory/types";
+import { createPagesBrowserClient } from "@supabase/auth-helpers-nextjs";
 
 type Props = {
   workspaceId: string;
@@ -19,24 +20,47 @@ export default function MemoryWorkspaceClient({
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Bearer Auth fetch with Supabase token
   const loadMemories = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
+      const supabase = createPagesBrowserClient();
+      const {
+        data: { session },
+        error: supabaseError,
+      } = await supabase.auth.getSession();
+
+      if (supabaseError || !session?.access_token) {
+        setError("Not authenticated. Please log in.");
+        setItems([]);
+        setLoading(false);
+        return;
+      }
+
+      const access_token = session.access_token;
       const res = await fetch(
         `/api/memory/workspace?workspaceId=${workspaceId}`,
-        { credentials: "include" }
+        {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+          },
+        }
       );
       if (!res.ok) {
         setError("Failed to load workspace memories.");
         setItems([]);
+        setLoading(false);
         return;
       }
       const data = await res.json();
       if (Array.isArray(data.items)) {
         setItems(data.items);
         // Unselect if record no longer present
-        if (selected && !data.items.find((x) => x.id === selected.id)) {
+        if (
+          selected &&
+          !data.items.find((x: MemoryRecord) => x.id === selected.id)
+        ) {
           setSelected(null);
         }
       } else {
@@ -83,29 +107,38 @@ export default function MemoryWorkspaceClient({
             onSave={async (newContent) => {
               // Try to parse string as JSON if original content was object
               let content: any = newContent;
-              if (
-                selected.content &&
-                typeof selected.content === "object"
-              ) {
+              if (selected.content && typeof selected.content === "object") {
                 try {
                   content = JSON.parse(newContent);
                 } catch {
-                  // fallback: don't update if JSON invalid
-                  // Optionally show error here
+                  // Optionally: indicate invalid JSON
                   return;
                 }
               }
+
+              // Fetch Supabase session for PATCH authorization
+              const supabase = createPagesBrowserClient();
+              const {
+                data: { session },
+              } = await supabase.auth.getSession();
+              const access_token = session?.access_token;
+              if (!access_token) {
+                // Optionally: show error
+                return;
+              }
+
               const res = await fetch(`/api/memory/${selected.id}`, {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${access_token}`,
+                },
                 body: JSON.stringify({ content }),
-                credentials: "include",
               });
+
               if (res.ok) {
                 const updated = await res.json();
                 handleUpdate(updated);
-              } else {
-                // Optionally: show error in editor or as notification
               }
             }}
           />
