@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createClientBrowser } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/browser";
 
 type Status =
   | "idle"
@@ -12,10 +12,8 @@ type Status =
   | "no-code";
 
 export default function CallbackShell() {
-  const supabase = createClientBrowser();
   const router = useRouter();
   const searchParams = useSearchParams();
-
   const [status, setStatus] = useState<Status>("idle");
 
   useEffect(() => {
@@ -54,13 +52,13 @@ export default function CallbackShell() {
     return () => {
       alive = false;
     };
-  }, [searchParams, supabase, router]);
+  }, [searchParams, router]);
 
   return (
     <div className="flex h-screen items-center justify-center text-sm text-neutral-400">
-      {status === "idle" && "Preparing sign-in…"}
-      {status === "exchanging" && "Signing you in…"}
-      {status === "success" && "Redirecting…"}
+      {status === "idle" && "Preparing sign-in?"}
+      {status === "exchanging" && "Signing you in?"}
+      {status === "success" && "Redirecting?"}
       {status === "no-code" && "Invalid sign-in link."}
       {status === "error" && "Sign-in failed."}
     </div>
