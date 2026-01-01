@@ -17,13 +17,13 @@ documents:
       - Model Steward: Moral Clarity Model
     issued: 2025-10-14
 
-  - file: docs/ux_canon_implementation_checklist_v1.md
-    version: 1.0.0
-    checksum: TODO
-    approved_by:
-      - Timothy Zlomke
-      - Model Steward: Moral Clarity Model
-    issued: 2025-10-14
+ - file: docs/ux_canon_implementation_checklist_v1.md
+  version: 1.0.0
+  checksum: 2D5E20159C3E130CA4C4A7AF146D49B0205482F33C79DCFFAAD062E246BB4381
+  approved_by:
+    - Timothy Zlomke
+    - Model Steward: Moral Clarity Model
+  issued: 2025-10-14
 
  - file: core/mode_router_spec_v1.md
   version: 1.0.0
