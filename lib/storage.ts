@@ -1,6 +1,6 @@
 'use client';
 
-import { createClientBrowser } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/browser';
 
 /**
  * Default storage bucket.
@@ -15,7 +15,6 @@ const DEFAULT_BUCKET =
  * Uses the single authoritative browser Supabase client.
  */
 export function bucket(name: string = DEFAULT_BUCKET) {
-  const supabase = createClientBrowser();
   const storage = supabase.storage.from(name);
 
   return {
