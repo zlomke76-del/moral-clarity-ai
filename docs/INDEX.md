@@ -71,3 +71,7 @@ All new or modified documents must:
 <!-- CHECKSUMS:END -->
 
 *Index v1.0 • Issued October 2025 • Moral Clarity AI Core Documentation Division*
+[CANON-RATIFIED] INDEX v1.0.0
+Approved-by: Timothy Zlomke
+Steward: Moral Clarity Model
+Checksum: C2EB583230249BF9AB4F97DE57FF92ACB4593B3B8AC6412B37A439C54CCB0611
