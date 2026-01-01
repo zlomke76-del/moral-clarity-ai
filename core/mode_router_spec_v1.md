@@ -53,3 +53,7 @@ When a mode transition occurs:
   "context_id": "b8e1f9",
   "timestamp": "2025-10-14T18:30Z"
 }
+---
+Approved-by: Timothy Zlomke
+Steward: Moral Clarity Model
+Checksum: 7F1D56242D5A23F6EE52A0C018B99B0A54DABB6F53F0C38CFE60CA43AF832D6
