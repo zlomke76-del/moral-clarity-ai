@@ -11,31 +11,18 @@ type Props = {
   initialItems: MemoryRecord[];
 };
 
-/**
- * Architectural constraints:
- * - Only ONE Supabase client instance is created per MemoryWorkspaceClient render (useMemo).
- * - Never call the Supabase client factory inside callbacks or event handlers.
- * - This eliminates GoTrueClient duplication and cookie/session race conditions.
- * - All session fetch/auth actions use this singleton instance.
- *
- * Risks:
- * - Using multiple clients would cause race conditions and browser storage errors.
- * - If this constraint is violated in any other memory-related component, the problem will recur.
- */
-
 export default function MemoryWorkspaceClient({
   workspaceId,
   initialItems,
 }: Props) {
+  // SINGLETON instance, one per component instance
+  const supabase = useMemo(() => createPagesBrowserClient(), []);
+
   const [items, setItems] = useState<MemoryRecord[]>(initialItems);
   const [selected, setSelected] = useState<MemoryRecord | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Singleton Supabase client instance (never re-created per render)
-  const supabase = useMemo(() => createPagesBrowserClient(), []);
-
-  // Bearer Auth fetch with Supabase token
   const loadMemories = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -52,14 +39,9 @@ export default function MemoryWorkspaceClient({
         return;
       }
 
-      const access_token = session.access_token;
       const res = await fetch(
         `/api/memory/workspace?workspaceId=${workspaceId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${access_token}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${session.access_token}` } }
       );
       if (!res.ok) {
         setError("Failed to load workspace memories.");
@@ -70,7 +52,6 @@ export default function MemoryWorkspaceClient({
       const data = await res.json();
       if (Array.isArray(data.items)) {
         setItems(data.items);
-        // Unselect if record no longer present
         if (
           selected &&
           !data.items.find((x: MemoryRecord) => x.id === selected.id)
@@ -124,21 +105,14 @@ export default function MemoryWorkspaceClient({
                 try {
                   content = JSON.parse(newContent);
                 } catch {
-                  // Optionally: indicate invalid JSON
                   return;
                 }
               }
-
-              // Use the singleton Supabase client
               const {
                 data: { session },
               } = await supabase.auth.getSession();
               const access_token = session?.access_token;
-              if (!access_token) {
-                // Optionally: show error
-                return;
-              }
-
+              if (!access_token) return;
               const res = await fetch(`/api/memory/${selected.id}`, {
                 method: "PATCH",
                 headers: {
@@ -147,7 +121,6 @@ export default function MemoryWorkspaceClient({
                 },
                 body: JSON.stringify({ content }),
               });
-
               if (res.ok) {
                 const updated = await res.json();
                 handleUpdate(updated);
