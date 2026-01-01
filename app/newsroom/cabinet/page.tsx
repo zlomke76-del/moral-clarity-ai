@@ -30,8 +30,10 @@ const OUTLET_MERGE_CANON: Record<string, string> = {
   // Newsmax
   "ir.newsmax": "Newsmax",
   "newsmax": "Newsmax",
-  // RFERL
-  "about.refrl": "RFERL",
+  // RFERL — unified all variants to "RFERL"
+  "about.rferl.org": "RFERL",
+  "about.rferl": "RFERL",
+  "rferl.org": "RFERL",
   "rferl": "RFERL",
   // Washington Examiner
   "wp.washingtonexaminer.com": "Washington Examiner",
@@ -155,7 +157,7 @@ export default function NewsroomCabinetPage() {
       .map((o, i) => ({ ...o, rank: i + 1 }));
   }, [mergedOutlets]);
 
-  // Category slices: Golden (top 3), Neutral (middle), Watch List (bottom 3)—all using *global* ranks
+  // Category slices: Golden (top 3), Neutral (middle), Watch List (bottom 3)?all using *global* ranks
   const goldenAnchor = ranked.slice(0, 3);
   const neutralField = ranked.slice(3, ranked.length - 3);
   const watchList = ranked.slice(-3); // These will display rank: 42, 43, 44 if N=44, NOT 1,2,3
