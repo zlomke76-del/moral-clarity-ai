@@ -5,23 +5,23 @@ import type { OutletStats } from "../types";
 const OutletDomainMap: Record<string, string> = {
   "Washington Post": "washingtonpost.com",
   "Mother Jones": "motherjones.com",
-  "PBS": "pbs.org",
-  "NPR": "npr.org",
-  "Reuters": "reuters.com",
-  "Politico": "politico.com",
+  PBS: "pbs.org",
+  NPR: "npr.org",
+  Reuters: "reuters.com",
+  Politico: "politico.com",
   "The Hill": "thehill.com",
   "France 24": "france24.com",
   "AP News": "apnews.com",
   "The Guardian": "theguardian.com",
-  "CNN": "cnn.com",
+  CNN: "cnn.com",
   "USA Today": "usatoday.com",
-  "Bloomberg": "bloomberg.com",
+  Bloomberg: "bloomberg.com",
   "Fox News": "foxnews.com",
-  "DW": "dw.com",
-  "RFERL": "rferl.org",
-  "Newsmax": "newsmax.com",
+  DW: "dw.com",
+  RFERL: "rferl.org",
+  Newsmax: "newsmax.com",
   "Washington Examiner": "washingtonexaminer.com",
-  "Time": "time.com",
+  Time: "time.com",
 };
 
 function getDomainForOutlet(outlet: string): string {
@@ -72,7 +72,7 @@ function StatItem({ label, value }: { label: string; value: any }) {
 function ScoreBreakdown({ outlet }: Props) {
   if (!outlet) {
     return (
-      <div className="max-w-2xl mx-auto my-10 p-6 bg-white border border-gray-200 rounded-xl shadow text-center text-gray-500">
+      <div className="max-w-2xl mx-auto my-10 p-6 bg-neutral-100 border border-gray-300 rounded-xl shadow-sm text-center text-gray-500">
         No outlet selected.
       </div>
     );
@@ -85,13 +85,14 @@ function ScoreBreakdown({ outlet }: Props) {
 
   return (
     <section className="max-w-2xl mx-auto my-10 px-2">
-      <div className="bg-white border border-gray-200 rounded-xl shadow-md p-8 space-y-8">
+      {/* OUTER INSPECTION PANEL */}
+      <div className="bg-neutral-100 border border-gray-300 rounded-xl shadow-sm p-8 space-y-8">
         {/* Header */}
-        <div className="flex items-center gap-4 border-b border-gray-200 pb-4">
+        <div className="flex items-center gap-4 border-b border-gray-300 pb-4">
           <img
             src={logoUrl}
             alt={`${outlet.outlet} logo`}
-            className="w-14 h-14 rounded border object-contain bg-neutral-50"
+            className="w-14 h-14 rounded border object-contain bg-white"
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).src =
                 "/default-favicon.png";
@@ -130,7 +131,7 @@ function ScoreBreakdown({ outlet }: Props) {
           />
         </div>
 
-        <hr className="border-gray-200" />
+        <hr className="border-gray-300" />
 
         {/* Bias Diagnostics — SECONDARY */}
         <div className="space-y-4">
