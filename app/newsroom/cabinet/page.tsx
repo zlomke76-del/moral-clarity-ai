@@ -11,12 +11,18 @@ import ScoreBreakdown from "./components/ScoreBreakdown";
  * All values are the desired leaderboard name, as you want it displayed.
  */
 const OUTLET_MERGE_CANON: Record<string, string> = {
-  // BBC: unify all domains and labels
+  // BBC: unify all domains/labels
   "bbc.co.uk": "BBC",
   "bbc.com": "BBC",
   "bbc": "BBC",
   "www.bbc.co.uk": "BBC",
   "www.bbc.com": "BBC",
+
+  // Newsmax: merge all variants
+  "ir.newsmax": "Newsmax",         // legacy
+  "ir.newsmax.com": "Newsmax",     // add this variant
+  "newsmax.com": "Newsmax",
+  "newsmax": "Newsmax",
 
   // Time and related, including .com variants
   "nation.time": "Time",
@@ -37,11 +43,7 @@ const OUTLET_MERGE_CANON: Record<string, string> = {
   "dw.com": "DW",
   "dw": "DW",
 
-  // Newsmax
-  "ir.newsmax": "Newsmax",
-  "newsmax": "Newsmax",
-
-  // RFERL ? unified all variants to "RFERL"
+  // RFERL
   "about.rferl.org": "RFERL",
   "about.rferl": "RFERL",
   "rferl.org": "RFERL",
@@ -170,10 +172,10 @@ export default function NewsroomCabinetPage() {
       .map((o, i) => ({ ...o, rank: i + 1 }));
   }, [mergedOutlets]);
 
-  // Category slices: Golden (top 3), Neutral (middle), Watch List (bottom 3)—all using *global* ranks
+  // Category slices
   const goldenAnchor = ranked.slice(0, 3);
   const neutralField = ranked.slice(3, ranked.length - 3);
-  const watchList = ranked.slice(-3); // These will display rank: 42, 43, 44 if N=44, NOT 1,2,3
+  const watchList = ranked.slice(-3);
 
   const totalStoriesEvaluated = useMemo(
     () => ranked.reduce((sum, o) => sum + (Number(o.total_stories) ?? 0), 0),
@@ -223,5 +225,129 @@ export default function NewsroomCabinetPage() {
       )}
       <ScoreBreakdown outlet={stats} />
     </div>
+  );
+}
+```
+
+---
+
+## 2. OutletCard (Logo/favicons correct for merged names)
+
+```tsx
+// app/newsroom/cabinet/components/OutletCard.tsx
+
+"use client";
+
+import { useState } from "react";
+import Image from "next/image";
+import type { OutletOverview } from "../types";
+
+// Mapping for known org names to domains for favicon fetching
+const OutletDomainMap: Record<string, string> = {
+  "BBC": "bbc.com",
+  "Newsmax": "newsmax.com",
+  "Washington Post": "washingtonpost.com",
+  "Mother Jones": "motherjones.com",
+  "PBS": "pbs.org",
+  "NPR": "npr.org",
+  "Reuters": "reuters.com",
+  "Politico": "politico.com",
+  "The Hill": "thehill.com",
+  "France 24": "france24.com",
+  "AP News": "apnews.com",
+  "The Guardian": "theguardian.com",
+  "CNN": "cnn.com",
+  "USA Today": "usatoday.com",
+  "Bloomberg": "bloomberg.com",
+  "Fox News": "foxnews.com",
+  "DW": "dw.com",
+  "RFERL": "rferl.org",
+  "Washington Examiner": "washingtonexaminer.com",
+  "Time": "time.com",
+  // Extend as new canonical names are added in merge logic
+};
+
+function getDomainForOutlet(outlet: string): string {
+  if (
+    outlet.includes(".") &&
+    !outlet.includes(" ") &&
+    !outlet.startsWith("http")
+  ) {
+    return outlet.trim().toLowerCase();
+  }
+  return OutletDomainMap[outlet.trim()] || "";
+}
+
+type Props = {
+  outlet: OutletOverview;
+  rank: number;
+  selected: boolean;
+  badge: "golden" | "neutral" | "watchlist";
+  onSelect: () => void;
+};
+
+function formatOutletDisplay(outlet: string): string {
+  if (!outlet) return "UNKNOWN";
+  return outlet
+    .replace(/^amp\./i, "")
+    .replace(/^www\./i, "")
+    .replace(/\.co\.uk$/i, "")
+    .replace(/\.(com|org|net|gov|edu)$/i, "")
+    .replace(/-/g, " ")
+    .toUpperCase();
+}
+
+export default function OutletCard({
+  outlet,
+  rank,
+  selected,
+  badge,
+  onSelect,
+}: Props) {
+  const domain = getDomainForOutlet(outlet.outlet);
+  const [logoError, setLogoError] = useState(false);
+  const logoUrl = domain
+    ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
+    : "/default-favicon.png";
+
+  const pi =
+    typeof (outlet as any).avg_pi_weighted === "number"
+      ? ((outlet as any).avg_pi_weighted * 100).toFixed(2)
+      : undefined;
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`rounded-lg border px-4 py-3 text-left transition
+        ${
+          selected
+            ? "border-amber-400/60 bg-amber-400/10"
+            : "border-neutral-800 bg-neutral-900/60 hover:bg-neutral-900"
+        }
+      `}
+    >
+      <div className="flex flex-col items-start gap-1">
+        <div className="text-xs text-neutral-400">#{rank}</div>
+        <Image
+          src={logoError ? "/default-favicon.png" : logoUrl}
+          alt={`${outlet.outlet} logo`}
+          width={20}
+          height={20}
+          className="rounded-sm"
+          unoptimized
+          onError={() => setLogoError(true)}
+        />
+        <div className="text-sm font-medium text-neutral-100">
+          {formatOutletDisplay(domain || outlet.outlet)}
+        </div>
+        <div className="text-xs text-amber-300">
+          PI {pi ?? "?"}
+        </div>
+        <div className="text-xs text-neutral-400">
+          {Number(outlet.total_stories).toLocaleString()} stories analyzed
+        </div>
+      </div>
+    </button>
   );
 }
