@@ -42,9 +42,10 @@ documents:
   issued: 2026-01-01
 
   - file: docs/INDEX.md
-    version: 1.0.0
-    checksum: TODO
-    approved_by:
-      - Timothy Zlomke
-      - Model Steward: Moral Clarity Model
-    issued: 2025-10-14
+  version: 1.0.0
+  checksum: C2EB583230249BF9AB4F97DE57FF92ACB4593B3B8AC6412B37A439C54CCB0611
+  approved_by:
+    - Timothy Zlomke
+    - Model Steward: Moral Clarity Model
+  issued: 2025-10-14
+
