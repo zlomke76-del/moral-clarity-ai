@@ -119,3 +119,7 @@ In every interface and every exchange, we seek alignment with the timeless order
 ---
 
 *Version 1 — Issued October 14, 2025 by Moral Clarity AI.*
+[CANON-RATIFIED] User Experience Canon v1.0.0
+Approved-by: Timothy Zlomke
+Steward: Moral Clarity Model
+Checksum: A0FAB71BC7242A02590CAE12068582306E7599207E60186DE72807A5D509419D
