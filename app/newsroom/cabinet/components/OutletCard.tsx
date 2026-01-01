@@ -7,6 +7,7 @@ import type { OutletOverview } from "../types";
 // Mapping for known org names to domains for favicon fetching
 const OutletDomainMap: Record<string, string> = {
   "BBC": "bbc.com",
+  "Newsmax": "newsmax.com",
   "Washington Post": "washingtonpost.com",
   "Mother Jones": "motherjones.com",
   "PBS": "pbs.org",
@@ -23,14 +24,12 @@ const OutletDomainMap: Record<string, string> = {
   "Fox News": "foxnews.com",
   "DW": "dw.com",
   "RFERL": "rferl.org",
-  "Newsmax": "newsmax.com",
   "Washington Examiner": "washingtonexaminer.com",
   "Time": "time.com",
   // Extend as new canonical names are added in merge logic
 };
 
 function getDomainForOutlet(outlet: string): string {
-  // Heuristically check if the string is already a plausible domain
   if (
     outlet.includes(".") &&
     !outlet.includes(" ") &&
@@ -38,7 +37,6 @@ function getDomainForOutlet(outlet: string): string {
   ) {
     return outlet.trim().toLowerCase();
   }
-  // If not, try the known map (by canonical/capitalized name)
   return OutletDomainMap[outlet.trim()] || "";
 }
 
@@ -68,7 +66,6 @@ export default function OutletCard({
   badge,
   onSelect,
 }: Props) {
-  // Use local state to ensure once favicon fails, fallback is permanent for this card
   const domain = getDomainForOutlet(outlet.outlet);
   const [logoError, setLogoError] = useState(false);
   const logoUrl = domain
