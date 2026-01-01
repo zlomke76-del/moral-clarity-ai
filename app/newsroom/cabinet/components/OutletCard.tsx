@@ -6,6 +6,7 @@ import type { OutletOverview } from "../types";
 
 // Mapping for known org names to domains for favicon fetching
 const OutletDomainMap: Record<string, string> = {
+  "BBC": "bbc.com",
   "Washington Post": "washingtonpost.com",
   "Mother Jones": "motherjones.com",
   "PBS": "pbs.org",
