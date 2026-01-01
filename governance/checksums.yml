@@ -1,5 +1,12 @@
+
+---
+
+# **File 2: `governance/checksums.yml`**
+
+```yaml
 # Moral Clarity AI • Ratified Document Checksums
-# Do not edit 'checksum' fields by hand; use the update script.
+# Do not edit checksum fields by hand.
+# Use the official hashing process prior to ratification.
 
 documents:
   - file: docs/user_experience_canon_v1.md
@@ -32,7 +39,7 @@ documents:
     approved_by:
       - Timothy Zlomke
       - Model Steward: Moral Clarity Model
-    issued: 2025-10-14
+    issued: 2026-01-01
 
   - file: docs/INDEX.md
     version: 1.0.0
