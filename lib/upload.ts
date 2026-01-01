@@ -1,6 +1,6 @@
 "use client";
 
-import { createClientBrowser } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/browser";
 
 /**
  * Uploads a File to the `uploads` bucket under:
@@ -11,8 +11,6 @@ export async function uploadToUploads(
   file: File,
   userId: string = "anon"
 ): Promise<{ key: string; url: string }> {
-  const supabase = createClientBrowser();
-
   const timestamp = Date.now();
   const safeName = file.name.replace(/\s+/g, "_");
   const key = `${userId}/${timestamp}_${safeName}`;
