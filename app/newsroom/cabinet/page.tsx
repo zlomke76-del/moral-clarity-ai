@@ -41,7 +41,7 @@ const OUTLET_MERGE_CANON: Record<string, string> = {
   "ir.newsmax": "Newsmax",
   "newsmax": "Newsmax",
 
-  // RFERL – unified all variants to "RFERL"
+  // RFERL ? unified all variants to "RFERL"
   "about.rferl.org": "RFERL",
   "about.rferl": "RFERL",
   "rferl.org": "RFERL",
