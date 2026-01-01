@@ -121,3 +121,5 @@
   "a11y": { "contrast": "AA" },
   "perf": { "fcpMsMax": 1800, "ttiMsMax": 3000 }
 }
+docs\ux_canon_implementation_checklist_v1.md
+Hash: 2D5E20159C3E130CA4C4A7AF146D49B0205482F33C79DCFFAAD062E246BB4381
