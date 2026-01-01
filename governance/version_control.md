@@ -79,5 +79,6 @@ The ratifying commit **must** use the format:
 [CANON-RATIFIED] <Title> v<version>
 Approved-by: Timothy Zlomke
 Steward: <Name>
-Checksum: <SHA256>
+Checksum: 5CEDA678DB0A4ECEE9D77E53B685BCE15BACCFC23CBD4CD611746538BC6D4DC0
+
 
