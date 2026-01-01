@@ -1,11 +1,91 @@
+import { NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+export async function GET(req: Request) {
+  try {
+    // Auth: Bearer token in Authorization header
+    const auth = req.headers.get("authorization");
+    if (!auth || !auth.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { error: "Missing authorization token" },
+        { status: 401 }
+      );
+    }
+
+    const accessToken = auth.replace("Bearer ", "").trim();
+    const supabase = createSupabaseServerClient(accessToken);
+
+    // Validate Supabase session
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Invalid or expired session" },
+        { status: 401 }
+      );
+    }
+
+    // Get workspaceId from query
+    const { searchParams } = new URL(req.url);
+    const workspaceId = searchParams.get("workspaceId");
+
+    if (!workspaceId) {
+      return NextResponse.json(
+        { error: "Missing workspaceId" },
+        { status: 400 }
+      );
+    }
+
+    // Query memory.memories relation in the memory schema
+    const { data, error } = await supabase
+      .schema("memory")
+      .from("memories")
+      .select(`
+        id,
+        workspace_id,
+        title,
+        content,
+        created_at,
+        updated_at
+      `)
+      .eq("workspace_id", workspaceId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("[MEMORY API] query error", error);
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ items: data ?? [] });
+  } catch (err: any) {
+    console.error("[MEMORY API] fatal", err);
+    return NextResponse.json(
+      { error: err?.message ?? "Server error" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+---
+
+### 2. `app/w/[workspaceId]/memory/MemoryWorkspaceClient.tsx`
+> Client logic for fetching, displaying, and editing memories.  
+> Uses Supabase client helpers to set `Authorization: Bearer` headers.
+
+```tsx
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
 import MemoryIndexPanel from "@/app/components/memory/MemoryIndexPanel";
 import MemoryEditorPanel from "@/app/components/memory/MemoryEditorPanel";
 import type { MemoryRecord } from "@/app/components/memory/types";
-
-// Import Supabase client-side helper
 import { createPagesBrowserClient } from "@supabase/auth-helpers-nextjs";
 
 type Props = {
@@ -22,15 +102,13 @@ export default function MemoryWorkspaceClient({
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Bearer Auth fetch with Supabase token
   const loadMemories = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const supabase = createPagesBrowserClient();
       const {
-        data: { session },
-        error: supabaseError,
+        data: { session }, error: supabaseError
       } = await supabase.auth.getSession();
 
       if (supabaseError || !session?.access_token) {
@@ -39,7 +117,6 @@ export default function MemoryWorkspaceClient({
         setLoading(false);
         return;
       }
-
       const access_token = session.access_token;
       const res = await fetch(
         `/api/memory/workspace?workspaceId=${workspaceId}`,
@@ -103,12 +180,9 @@ export default function MemoryWorkspaceClient({
             workspaceId={workspaceId}
             record={selected}
             onSave={async (newContent) => {
-              // Try to parse string as JSON if original content was object
+              // Parse as JSON if original was object
               let content: any = newContent;
-              if (
-                selected.content &&
-                typeof selected.content === "object"
-              ) {
+              if (selected.content && typeof selected.content === "object") {
                 try {
                   content = JSON.parse(newContent);
                 } catch {
@@ -116,19 +190,10 @@ export default function MemoryWorkspaceClient({
                   return;
                 }
               }
-
-              // Fetch Supabase session for PATCH authorization
               const supabase = createPagesBrowserClient();
-              const {
-                data: { session }
-              } = await supabase.auth.getSession();
-
+              const { data: { session } } = await supabase.auth.getSession();
               const access_token = session?.access_token;
-              if (!access_token) {
-                // Optionally: show error
-                return;
-              }
-
+              if (!access_token) return;
               const res = await fetch(`/api/memory/${selected.id}`, {
                 method: "PATCH",
                 headers: {
@@ -137,7 +202,6 @@ export default function MemoryWorkspaceClient({
                 },
                 body: JSON.stringify({ content }),
               });
-
               if (res.ok) {
                 const updated = await res.json();
                 handleUpdate(updated);
