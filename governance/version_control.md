@@ -21,10 +21,10 @@ This document establishes the governing process for issuing, amending, and archi
 Its aim is to protect **continuity, authorship integrity, and moral fidelity** across all canonical documents.
 
 These rules exist to prevent:
-- Silent drift  
-- Fragmented authorship  
-- Retroactive reinterpretation  
-- Tool-driven mutation of doctrine  
+- Silent drift
+- Fragmented authorship
+- Retroactive reinterpretation
+- Tool-driven mutation of doctrine
 
 ---
 
@@ -74,4 +74,10 @@ A document becomes **official** only when:
 - CI confirms Canon alignment and checksum integrity
 
 The ratifying commit **must** use the format:
+
+```text
+[CANON-RATIFIED] <Title> v<version>
+Approved-by: Timothy Zlomke
+Steward: <Name>
+Checksum: <SHA256>
 
