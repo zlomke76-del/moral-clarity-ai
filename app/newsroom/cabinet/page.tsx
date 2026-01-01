@@ -11,6 +11,13 @@ import ScoreBreakdown from "./components/ScoreBreakdown";
  * All values are the desired leaderboard name, as you want it displayed.
  */
 const OUTLET_MERGE_CANON: Record<string, string> = {
+  // BBC: unify all domains and labels
+  "bbc.co.uk": "BBC",
+  "bbc.com": "BBC",
+  "bbc": "BBC",
+  "www.bbc.co.uk": "BBC",
+  "www.bbc.com": "BBC",
+
   // Time and related, including .com variants
   "nation.time": "Time",
   "newsweek.time": "Time",
@@ -18,28 +25,34 @@ const OUTLET_MERGE_CANON: Record<string, string> = {
   "nation.time.com": "Time",
   "newsfeed.time.com": "Time",
   "time.com": "Time",
+
   // Bloomberg, BNA
   "bna.content.cirrus.bloomberg.com": "Bloomberg",
   "bna content - bloomberg": "Bloomberg",
   "bna content": "Bloomberg",
   "bloomberg": "Bloomberg",
+
   // DW
   "amp.dw.com": "DW",
   "dw.com": "DW",
   "dw": "DW",
+
   // Newsmax
   "ir.newsmax": "Newsmax",
   "newsmax": "Newsmax",
-  // RFERL — unified all variants to "RFERL"
+
+  // RFERL – unified all variants to "RFERL"
   "about.rferl.org": "RFERL",
   "about.rferl": "RFERL",
   "rferl.org": "RFERL",
   "rferl": "RFERL",
+
   // Washington Examiner
   "wp.washingtonexaminer.com": "Washington Examiner",
   "washingtonexaminer.com": "Washington Examiner",
   "newsletters.washingtonexaminer.com": "Washington Examiner",
   "washington examiner": "Washington Examiner",
+
   // Fox News
   "radio.foxnews.com": "Fox News",
   "fox news": "Fox News",
@@ -157,7 +170,7 @@ export default function NewsroomCabinetPage() {
       .map((o, i) => ({ ...o, rank: i + 1 }));
   }, [mergedOutlets]);
 
-  // Category slices: Golden (top 3), Neutral (middle), Watch List (bottom 3)?all using *global* ranks
+  // Category slices: Golden (top 3), Neutral (middle), Watch List (bottom 3)—all using *global* ranks
   const goldenAnchor = ranked.slice(0, 3);
   const neutralField = ranked.slice(3, ranked.length - 3);
   const watchList = ranked.slice(-3); // These will display rank: 42, 43, 44 if N=44, NOT 1,2,3
