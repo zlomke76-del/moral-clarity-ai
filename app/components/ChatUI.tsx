@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClientBrowser } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/browser";
 
 export default function ChatUI() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -11,8 +11,6 @@ export default function ChatUI() {
 
     (async () => {
       try {
-        const supabase = createClientBrowser();
-
         const { data, error } = await supabase.auth.getUser();
 
         if (cancelled) return;
@@ -20,7 +18,7 @@ export default function ChatUI() {
 
         setUserId(data.user?.id ?? null);
       } catch {
-        // silent fail — UI should not block on auth
+        // silent fail – UI should not block on auth
       }
     })();
 
