@@ -2,18 +2,16 @@
 
 import { useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { createClientBrowser } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/browser";
 
 export default function AuthShell() {
-  const supabase = createClientBrowser();
   const searchParams = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // ✅ TypeScript-safe resolution
-  const redirectTo =
-    searchParams?.get("redirect") ?? "/app";
+  // TypeScript-safe resolution
+  const redirectTo = searchParams?.get("redirect") ?? "/app";
 
   const sendMagicLink = useCallback(async () => {
     if (!email) return;
@@ -39,7 +37,7 @@ export default function AuthShell() {
     } finally {
       setLoading(false);
     }
-  }, [email, redirectTo, supabase]);
+  }, [email, redirectTo]);
 
   return (
     <div className="space-y-4">
