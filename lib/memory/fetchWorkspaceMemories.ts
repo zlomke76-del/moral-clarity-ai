@@ -1,10 +1,22 @@
+export const supabase = createBrowserClient(...);
+```
+
+**You must:**
+- Replace the import with a singleton usage.
+- Remove all references to `createClientBrowser()`.
+
+---
+
+# PHASE-ALIGNED FILE: `lib/memory/fetchWorkspaceMemories.ts`
+
+```ts
 // lib/memory/fetchWorkspaceMemories.ts
 // ============================================================
 // Client-side workspace memory fetch
-// Auth: forwards Supabase access token to API
+// Auth: forwards Supabase access token to API using singleton client
 // ============================================================
 
-import { createClientBrowser } from "@/lib/supabase/browser";
+import { supabase } from "@/lib/supabase/browser";
 
 export type WorkspaceMemory = {
   id: string;
@@ -15,8 +27,6 @@ export type WorkspaceMemory = {
 };
 
 export async function fetchWorkspaceMemories(workspaceId: string) {
-  const supabase = createClientBrowser();
-
   // ----------------------------------------------------------
   // Get active session
   // ----------------------------------------------------------
