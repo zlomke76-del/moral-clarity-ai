@@ -39,7 +39,7 @@ function getDomainForOutlet(outlet: string): string {
 
 // Metric explanations
 const METRIC_EXPLAINERS: Record<string, string> = {
-  avg_pi_weighted: "Personal Influence (PI): Reflects reach and predictive impact.",
+  avg_pi_weighted: "Predictability Index (PI): Measures how consistent and forecastable this outlet’s coverage is over time. Higher is more predictable.",
   avg_bias_intent_weighted: "Bias Intent: Measures how purposeful the observed bias is.",
   avg_bias_language_weighted: "Bias Language: Detects use of strongly polarized language.",
   avg_bias_source_weighted: "Bias Source: Evaluates the credibility and objectivity of sources.",
@@ -51,7 +51,7 @@ type Props = {
   outlet: OutletStats | null;
 };
 
-// Stateless helper to keep main stats readable
+// Stateless helper for main stats
 function StatItem({ label, value }: { label: string; value: any }) {
   return (
     <div className="flex flex-col">
@@ -148,3 +148,5 @@ function ScoreBreakdown({ outlet }: Props) {
     </section>
   );
 }
+
+export default ScoreBreakdown;
