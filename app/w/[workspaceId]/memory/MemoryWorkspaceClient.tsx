@@ -27,48 +27,40 @@ export default function MemoryWorkspaceClient({
         `/api/memory/workspace?workspaceId=${workspaceId}`,
         { credentials: "include" }
       );
-
       if (!res.ok) {
         setError("Failed to load workspace memories.");
+        setItems([]);
         return;
       }
-
       const data = await res.json();
-
       if (Array.isArray(data.items)) {
         setItems(data.items);
-        // If selected no longer exists (e.g., after delete), clear it
-        if (!data.items.find((item: MemoryRecord) => item.id === selected?.id)) {
+        // Unselect if record no longer present
+        if (selected && !data.items.find((x) => x.id === selected.id)) {
           setSelected(null);
         }
       } else {
-        setError("Unexpected response format.");
+        setError("Unexpected memory list format.");
+        setItems([]);
       }
     } catch (err) {
       setError("An error occurred while loading memories.");
+      setItems([]);
     } finally {
       setLoading(false);
     }
-  }, [workspaceId, selected?.id]);
+  }, [workspaceId, selected]);
 
   useEffect(() => {
     loadMemories();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId]);
 
-  // (Optional) Allow panels to trigger a refresh as needed
-  function handleRefresh() {
-    loadMemories();
-  }
-
-  // (Optional) Sync changes from editor panel back into list UI
   function handleUpdate(updated: MemoryRecord) {
-    setItems(items => items.map(item => (item.id === updated.id ? updated : item)));
+    setItems((prev) =>
+      prev.map((item) => (item.id === updated.id ? updated : item))
+    );
     setSelected(updated);
-  }
-  function handleDelete(deletedId: string) {
-    setItems(items => items.filter(item => item.id !== deletedId));
-    if (selected?.id === deletedId) setSelected(null);
   }
 
   return (
@@ -80,7 +72,7 @@ export default function MemoryWorkspaceClient({
           onSelect={setSelected}
           loading={loading}
           error={error}
-          refetch={handleRefresh}
+          refetch={loadMemories}
         />
       </aside>
       <main className="overflow-hidden">
@@ -88,14 +80,42 @@ export default function MemoryWorkspaceClient({
           <MemoryEditorPanel
             workspaceId={workspaceId}
             record={selected}
-            onUpdate={handleUpdate}
-            onDelete={handleDelete}
+            onSave={async (newContent) => {
+              // Try to parse string as JSON if original content was object
+              let content: any = newContent;
+              if (
+                selected.content &&
+                typeof selected.content === "object"
+              ) {
+                try {
+                  content = JSON.parse(newContent);
+                } catch {
+                  // fallback: don't update if JSON invalid
+                  // Optionally show error here
+                  return;
+                }
+              }
+              const res = await fetch(`/api/memory/${selected.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ content }),
+                credentials: "include",
+              });
+              if (res.ok) {
+                const updated = await res.json();
+                handleUpdate(updated);
+              } else {
+                // Optionally: show error in editor or as notification
+              }
+            }}
           />
         ) : (
           <div className="h-full flex items-center justify-center text-sm text-neutral-500 px-4">
-            {loading ? "Loading workspace memories..."
-            : error  ? error
-            : "Select a memory to view or edit"}
+            {loading
+              ? "Loading workspace memories..."
+              : error
+              ? error
+              : "Select a memory to view or edit"}
           </div>
         )}
       </main>
