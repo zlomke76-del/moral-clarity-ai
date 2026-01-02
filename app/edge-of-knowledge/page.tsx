@@ -212,18 +212,49 @@ export default function EdgeOfKnowledgePage() {
 
         <hr />
 
-        {/* ADDITIVE INDEX — NO REMOVALS */}
+        {/* ================= ADDITIVE CANONICAL INDEX ================= */}
+
         <h2>Included Edge of Knowledge Analyses</h2>
+
         <ul>
-          <li>
-            <Link href="/damage-activated-materials">
-              Damage-Activated Protective Materials
-            </Link>
-          </li>
+          <li><Link href="/edge-of-knowledge/action-threshold-collapse">Action Threshold Collapse</Link></li>
+          <li><Link href="/edge-of-knowledge/activity-encoded-neural-scaffold-polymers">Activity-Encoded Neural Scaffold Polymers</Link></li>
+          <li><Link href="/edge-of-knowledge/damage-activated-materials">Damage-Activated Protective Materials</Link></li>
+          <li><Link href="/edge-of-knowledge/damage-activated-nitrogen-fixation">Damage-Activated Nitrogen Fixation</Link></li>
+          <li><Link href="/edge-of-knowledge/epistemic-lock-in">Epistemic Lock-In</Link></li>
+          <li><Link href="/edge-of-knowledge/exposure-redistributing-materials">Exposure-Redistributing Materials</Link></li>
+          <li><Link href="/edge-of-knowledge/fragmented-responsibility-disjunction">Fragmented Responsibility Disjunction</Link></li>
+          <li><Link href="/edge-of-knowledge/hdpe-non-commutative-morphology">HDPE Non-Commutative Morphology</Link></li>
+          <li><Link href="/edge-of-knowledge/high-crystallinity-polyamide-fibers">High-Crystallinity Polyamide Fibers</Link></li>
+          <li><Link href="/edge-of-knowledge/inflammation-suppressing-microenvironment-polymer">Inflammation-Suppressing Microenvironment Polymer</Link></li>
+          <li><Link href="/edge-of-knowledge/interfacial-debond-failure-class">Interfacial Debond Failure Class</Link></li>
+          <li><Link href="/edge-of-knowledge/intrinsic-cognitive-drift-materials">Intrinsic Cognitive Drift Materials</Link></li>
+          <li><Link href="/edge-of-knowledge/irreversible-gradient-ratcheting-composites">Irreversible Gradient Ratcheting Composites</Link></li>
+          <li><Link href="/edge-of-knowledge/irreversible-infrastructure-exposure-marker">Irreversible Infrastructure Exposure Marker</Link></li>
+          <li><Link href="/edge-of-knowledge/maintenance-drift-and-degradation-dynamics">Maintenance Drift and Degradation Dynamics</Link></li>
+          <li><Link href="/edge-of-knowledge/material-encoded-truth">Material-Encoded Truth</Link></li>
+          <li><Link href="/edge-of-knowledge/mineral-filled-polyolefin-barrier-films">Mineral-Filled Polyolefin Barrier Films</Link></li>
+          <li><Link href="/edge-of-knowledge/morphology-trajectory-governance">Morphology Trajectory Governance</Link></li>
+          <li><Link href="/edge-of-knowledge/morphology-trajectory-integrity">Morphology Trajectory Integrity</Link></li>
+          <li><Link href="/edge-of-knowledge/neglect-impossible">Neglect Impossible</Link></li>
+          <li><Link href="/edge-of-knowledge/non-commutative-morphology-trajectories">Non-Commutative Morphology Trajectories</Link></li>
+          <li><Link href="/edge-of-knowledge/passive-infrastructure-organophosphate-interruption">Passive Infrastructure Organophosphate Interruption</Link></li>
+          <li><Link href="/edge-of-knowledge/phase-locked-wear-surfaces">Phase-Locked Wear Surfaces</Link></li>
+          <li><Link href="/edge-of-knowledge/polymer-discovery-validation">Polymer Discovery Validation</Link></li>
+          <li><Link href="/edge-of-knowledge/procedural-entrenchment">Procedural Entrenchment</Link></li>
+          <li><Link href="/edge-of-knowledge/quiet-failure">Quiet Failure</Link></li>
+          <li><Link href="/edge-of-knowledge/salt-gradient-desalination-wick">Salt Gradient Desalination Wick</Link></li>
+          <li><Link href="/edge-of-knowledge/semi-ipn-polyolefin-tpe">Semi-IPN Polyolefin TPE</Link></li>
+          <li><Link href="/edge-of-knowledge/signaling-before-failure">Signaling Before Failure</Link></li>
+          <li><Link href="/edge-of-knowledge/space-truth-encoding">Space Truth Encoding</Link></li>
+          <li><Link href="/edge-of-knowledge/suppressing-transferable-inflammatory-signaling">Suppressing Transferable Inflammatory Signaling</Link></li>
+          <li><Link href="/edge-of-knowledge/thermal-indicator-paint">Thermal Indicator Paint</Link></li>
+          <li><Link href="/edge-of-knowledge/tpu-elastomer-networks">TPU Elastomer Networks</Link></li>
+          <li><Link href="/edge-of-knowledge/untracked-configurational-energy-landscapes">Untracked Configurational Energy Landscapes</Link></li>
         </ul>
 
         <p className="text-sm text-neutral-400">
-          Version 1.0 · Canonical · Public reference · Updated only by revision
+          Version 1.1 · Canonical · Public reference · Updated only by revision
         </p>
       </article>
     </main>
