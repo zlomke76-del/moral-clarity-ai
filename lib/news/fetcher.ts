@@ -33,6 +33,10 @@ const DEFAULT_NEWS_WINDOW_DAYS = 1;
 
 const DOMAIN_MAX_OVERRIDES: Record<string, number> = {
   'rferl.org': 1,
+
+  // Local / regional outlets — intentionally sparse
+  'billingsgazette.com': 1,
+  'powelltribune.com': 1,
 };
 
 /* ========= TYPES ========= */
@@ -117,6 +121,22 @@ export const SOURCE_REGISTRY: NewsSource[] = [
   { id: 'nikkei', label: 'Nikkei Asia', domain: 'nikkei.com' },
 
   { id: 'rfe', label: 'Radio Free Europe / Radio Liberty', domain: 'rferl.org' },
+
+  // ===== Local / Regional (Low-frequency structural samples) =====
+  {
+    id: 'billingsgazette',
+    label: 'Billings Gazette',
+    domain: 'billingsgazette.com',
+    country: 'US',
+    notes: 'Local Montana newspaper (structural cadence contrast)',
+  },
+  {
+    id: 'powelltribune',
+    label: 'Powell Tribune',
+    domain: 'powelltribune.com',
+    country: 'US',
+    notes: 'Local Wyoming newspaper (semi-weekly cadence)',
+  },
 ];
 
 /* ========= HELPERS ========= */
