@@ -4,27 +4,24 @@ import { useEffect, useMemo, useState } from "react";
 import type { OutletOverview, OutletStats } from "./types";
 import Leaderboard from "./components/Leaderboard";
 import ScoreBreakdown from "./components/ScoreBreakdown";
+import Link from "next/link";
 
 /**
  * Canonical outlet merge map.
- * All keys must be lowercase, trimmed, and (if domain) without http(s)://.
- * All values are the desired leaderboard name, as you want it displayed.
+ * Normalization only. No semantic inference.
  */
 const OUTLET_MERGE_CANON: Record<string, string> = {
-  // BBC: unify all domains/labels
   "bbc.co.uk": "BBC",
   "bbc.com": "BBC",
   "bbc": "BBC",
   "www.bbc.co.uk": "BBC",
   "www.bbc.com": "BBC",
 
-  // Newsmax: merge all variants
-  "ir.newsmax": "Newsmax",         // legacy
-  "ir.newsmax.com": "Newsmax",     // add this variant
+  "ir.newsmax": "Newsmax",
+  "ir.newsmax.com": "Newsmax",
   "newsmax.com": "Newsmax",
   "newsmax": "Newsmax",
 
-  // Time and related, including .com variants
   "nation.time": "Time",
   "newsweek.time": "Time",
   "time": "Time",
@@ -32,30 +29,25 @@ const OUTLET_MERGE_CANON: Record<string, string> = {
   "newsfeed.time.com": "Time",
   "time.com": "Time",
 
-  // Bloomberg, BNA
   "bna.content.cirrus.bloomberg.com": "Bloomberg",
   "bna content - bloomberg": "Bloomberg",
   "bna content": "Bloomberg",
   "bloomberg": "Bloomberg",
 
-  // DW
   "amp.dw.com": "DW",
   "dw.com": "DW",
   "dw": "DW",
 
-  // RFERL
   "about.rferl.org": "RFERL",
   "about.rferl": "RFERL",
   "rferl.org": "RFERL",
   "rferl": "RFERL",
 
-  // Washington Examiner
   "wp.washingtonexaminer.com": "Washington Examiner",
   "washingtonexaminer.com": "Washington Examiner",
   "newsletters.washingtonexaminer.com": "Washington Examiner",
   "washington examiner": "Washington Examiner",
 
-  // Fox News
   "radio.foxnews.com": "Fox News",
   "fox news": "Fox News",
   "foxnews.com": "Fox News",
@@ -109,7 +101,7 @@ function mergeDuplicateOutlets(outlets: OutletOverview[]): OutletOverview[] {
       });
     }
   }
-  // Remove __fields before returning
+
   return Array.from(map.values()).map((o) => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { __stories, __pi_numerator, ...clean } = o;
@@ -124,7 +116,6 @@ export default function NewsroomCabinetPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [stats, setStats] = useState<OutletStats | null>(null);
 
-  // Fetch all outlet overviews (includes duplicates, if present in API)
   useEffect(() => {
     fetch("/api/news/outlets/overview")
       .then((r) => r.json())
@@ -136,7 +127,6 @@ export default function NewsroomCabinetPage() {
       });
   }, []);
 
-  // Fetch stats for currently selected outlet
   useEffect(() => {
     if (!selected) return;
     fetch(`/api/news/outlet-stats?outlet=${encodeURIComponent(selected)}`)
@@ -147,7 +137,6 @@ export default function NewsroomCabinetPage() {
       });
   }, [selected]);
 
-  // Merge, filter, sort, and globally rank (all logic in this order)
   const mergedOutlets = useMemo(
     () => mergeDuplicateOutlets(outlets),
     [outlets]
@@ -158,21 +147,14 @@ export default function NewsroomCabinetPage() {
       .filter((o) => Number(o.total_stories) >= 5)
       .slice()
       .sort((a, b) => {
-        const piA =
-          typeof (a as any).avg_pi_weighted === "number"
-            ? (a as any).avg_pi_weighted
-            : Number((a as any).avg_pi_weighted);
-        const piB =
-          typeof (b as any).avg_pi_weighted === "number"
-            ? (b as any).avg_pi_weighted
-            : Number((b as any).avg_pi_weighted);
+        const piA = Number((a as any).avg_pi_weighted);
+        const piB = Number((b as any).avg_pi_weighted);
         if (piB !== piA) return piB - piA;
         return a.outlet.localeCompare(b.outlet);
       })
       .map((o, i) => ({ ...o, rank: i + 1 }));
   }, [mergedOutlets]);
 
-  // Category slices
   const goldenAnchor = ranked.slice(0, 3);
   const neutralField = ranked.slice(3, ranked.length - 3);
   const watchList = ranked.slice(-3);
@@ -184,13 +166,24 @@ export default function NewsroomCabinetPage() {
 
   return (
     <div className="flex flex-col gap-12">
-      <div className="text-xs text-neutral-400">
-        {totalStoriesEvaluated.toLocaleString()} stories evaluated · PI based on lifetime
+      <div className="text-xs text-neutral-400 flex flex-wrap items-center gap-2">
+        <span>
+          {totalStoriesEvaluated.toLocaleString()} stories evaluated ·
+          Predictability Index based on lifetime structural patterns
+        </span>
+        <span className="opacity-60">·</span>
+        <Link
+          href="/newsroom/methodology"
+          className="underline underline-offset-2 hover:text-neutral-300"
+        >
+          Methodology (informative)
+        </Link>
       </div>
+
       {goldenAnchor.length > 0 && (
         <section>
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-amber-400">
-            Golden Anchor · Top 3 Predictability
+            Golden Anchor · Highest Structural Predictability
           </h2>
           <Leaderboard
             outlets={goldenAnchor}
@@ -199,6 +192,7 @@ export default function NewsroomCabinetPage() {
           />
         </section>
       )}
+
       {neutralField.length > 0 && (
         <section className="border-t border-neutral-700 pt-6">
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">
@@ -211,10 +205,11 @@ export default function NewsroomCabinetPage() {
           />
         </section>
       )}
+
       {watchList.length > 0 && (
         <section className="border-t border-neutral-800 pt-6">
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-red-400">
-            Watch List · Lowest Predictability
+            Watch List · Lowest Structural Predictability
           </h2>
           <Leaderboard
             outlets={watchList}
@@ -223,6 +218,7 @@ export default function NewsroomCabinetPage() {
           />
         </section>
       )}
+
       <ScoreBreakdown outlet={stats} />
     </div>
   );
