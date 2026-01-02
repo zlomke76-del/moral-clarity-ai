@@ -1,7 +1,9 @@
 "use client";
 import type { OutletStats } from "../types";
 
-// Canonical map for outlet → main domain
+/* ============================================================
+   CANONICAL: Outlet → Primary Domain
+   ============================================================ */
 const OutletDomainMap: Record<string, string> = {
   "Washington Post": "washingtonpost.com",
   "Mother Jones": "motherjones.com",
@@ -36,26 +38,37 @@ function getDomainForOutlet(outlet: string): string {
   return OutletDomainMap[outlet.trim()] || "";
 }
 
-// Metric explanations
+/* ============================================================
+   METRIC EXPLAINERS — CANON SAFE
+   Descriptive only. No intent, morality, or credibility claims.
+   ============================================================ */
 const METRIC_EXPLAINERS: Record<string, string> = {
   avg_pi_weighted:
-    "Predictability Index (PI): Measures how consistent and forecastable this outlet’s coverage is over time. Higher is more predictable.",
+    "Predictability Index (PI): Measures how structurally consistent and forecastable this outlet’s coverage patterns are over time. Higher values indicate greater structural regularity.",
+
   avg_bias_intent_weighted:
-    "Bias Intent: Measures how purposeful the observed bias is.",
+    "Structural Directionality: Measures the persistence of directional patterns in coverage over time. This signal describes consistency of direction, not motive or intent.",
+
   avg_bias_language_weighted:
-    "Bias Language: Detects use of strongly polarized language.",
+    "Linguistic Polarity Density: Measures the frequency of high-polarity language structures without evaluating meaning, correctness, or sentiment.",
+
   avg_bias_source_weighted:
-    "Bias Source: Evaluates the credibility and objectivity of sources.",
+    "Source Concentration Pattern: Measures recurrence and diversity patterns of cited sources based on presence only. No assessment of credibility or objectivity is performed.",
+
   avg_bias_framing_weighted:
-    "Bias Framing: Scores how coverage favors a particular perspective via framing.",
+    "Framing Persistence Signal: Measures repeated structural framing patterns across related coverage without evaluating viewpoint or correctness.",
+
   avg_bias_context_weighted:
-    "Bias Context: Measures omission or skew in context/presentation.",
+    "Contextual Inclusion Variance: Measures variance in contextual elements included or omitted across comparable coverage. This signal describes structure, not omission intent.",
 };
 
 type Props = {
   outlet: OutletStats | null;
 };
 
+/* ============================================================
+   ATOMIC STAT
+   ============================================================ */
 function StatItem({ label, value }: { label: string; value: any }) {
   return (
     <div className="flex flex-col">
@@ -69,6 +82,9 @@ function StatItem({ label, value }: { label: string; value: any }) {
   );
 }
 
+/* ============================================================
+   SCORE BREAKDOWN — CANON COMPLIANT
+   ============================================================ */
 function ScoreBreakdown({ outlet }: Props) {
   if (!outlet) {
     return (
@@ -85,9 +101,8 @@ function ScoreBreakdown({ outlet }: Props) {
 
   return (
     <section className="max-w-2xl mx-auto my-10 px-2">
-      {/* OUTER INSPECTION PANEL */}
       <div className="bg-neutral-100 border border-gray-300 rounded-xl shadow-sm p-8 space-y-8">
-        {/* Header */}
+        {/* HEADER */}
         <div className="flex items-center gap-4 border-b border-gray-300 pb-4">
           <img
             src={logoUrl}
@@ -100,7 +115,7 @@ function ScoreBreakdown({ outlet }: Props) {
           />
           <div>
             <div className="text-sm uppercase tracking-wide text-neutral-500">
-              Outlet Scorecard
+              Outlet Scorecard (Descriptive)
             </div>
             <div className="font-bold text-2xl text-neutral-900">
               {outlet.outlet}
@@ -108,7 +123,7 @@ function ScoreBreakdown({ outlet }: Props) {
           </div>
         </div>
 
-        {/* PI SUMMARY — PRIMARY SIGNAL */}
+        {/* PRIMARY SIGNAL */}
         <div className="rounded-xl border border-blue-200 bg-blue-50 p-6 space-y-2">
           <div className="text-sm uppercase tracking-wide text-blue-700">
             Predictability Index
@@ -121,7 +136,7 @@ function ScoreBreakdown({ outlet }: Props) {
           </div>
         </div>
 
-        {/* Operational Context */}
+        {/* OPERATIONAL CONTEXT */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <StatItem label="Total stories" value={outlet.total_stories} />
           <StatItem label="Days active" value={outlet.days_active} />
@@ -133,35 +148,35 @@ function ScoreBreakdown({ outlet }: Props) {
 
         <hr className="border-gray-300" />
 
-        {/* Bias Diagnostics — SECONDARY */}
+        {/* STRUCTURAL ASYMMETRY DIAGNOSTICS */}
         <div className="space-y-4">
           <div className="text-sm uppercase tracking-wide text-neutral-500">
-            Bias Diagnostics
+            Structural Asymmetry Diagnostics
           </div>
 
           {[
             {
-              label: "Bias Intent",
+              label: "Structural Directionality",
               value: outlet.avg_bias_intent_weighted,
               explainer: METRIC_EXPLAINERS.avg_bias_intent_weighted,
             },
             {
-              label: "Bias Language",
+              label: "Linguistic Polarity Density",
               value: outlet.avg_bias_language_weighted,
               explainer: METRIC_EXPLAINERS.avg_bias_language_weighted,
             },
             {
-              label: "Bias Source",
+              label: "Source Concentration Pattern",
               value: outlet.avg_bias_source_weighted,
               explainer: METRIC_EXPLAINERS.avg_bias_source_weighted,
             },
             {
-              label: "Bias Framing",
+              label: "Framing Persistence Signal",
               value: outlet.avg_bias_framing_weighted,
               explainer: METRIC_EXPLAINERS.avg_bias_framing_weighted,
             },
             {
-              label: "Bias Context",
+              label: "Contextual Inclusion Variance",
               value: outlet.avg_bias_context_weighted,
               explainer: METRIC_EXPLAINERS.avg_bias_context_weighted,
             },
