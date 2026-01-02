@@ -212,6 +212,16 @@ export default function EdgeOfKnowledgePage() {
 
         <hr />
 
+        {/* ADDITIVE INDEX — NO REMOVALS */}
+        <h2>Included Edge of Knowledge Analyses</h2>
+        <ul>
+          <li>
+            <Link href="/damage-activated-materials">
+              Damage-Activated Protective Materials
+            </Link>
+          </li>
+        </ul>
+
         <p className="text-sm text-neutral-400">
           Version 1.0 · Canonical · Public reference · Updated only by revision
         </p>
