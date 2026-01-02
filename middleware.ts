@@ -1,9 +1,9 @@
 // middleware.ts
-// bump: v6  <-- forces Vercel edge rebuild
+// bump: v7  <-- forces Vercel edge rebuild
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createMiddlewareClient } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 
 // --------------------------------------------------
 // Content Security Policy
@@ -38,9 +38,20 @@ export async function middleware(req: NextRequest) {
   }
 
   // --------------------------------------------------
-  // ✅ Correct Edge Supabase client
+  // 🔒 Supabase SSR client (READ-ONLY in middleware)
   // --------------------------------------------------
-  const supabase = createMiddlewareClient({ req, res });
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get: (name) => req.cookies.get(name)?.value,
+        // 🚫 DO NOT allow setting cookies in middleware
+        set: () => {},
+        remove: () => {},
+      },
+    }
+  );
 
   const {
     data: { session },
