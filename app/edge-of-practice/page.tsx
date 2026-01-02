@@ -140,6 +140,13 @@ export default function EdgeOfPracticeIndexPage() {
               Edge Case: PET + PVDF Electret Filtration Under Humidity
             </Link>
           </li>
+
+          {/* ADDITIVE ENTRY — NO REMOVALS */}
+          <li>
+            <Link href="/edge-of-practice/architected-micro-lattice-ev-battery-enclosure">
+              Replacing Laminate Composites with Failure-Governed Lattice Structures in EV Battery Enclosures
+            </Link>
+          </li>
         </ul>
 
         <h3>Energy, Physics, and Passive Systems</h3>
