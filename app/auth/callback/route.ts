@@ -1,34 +1,39 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
+  const url = new URL(request.url);
+  const code = url.searchParams.get("code");
 
   if (!code) {
-    return NextResponse.redirect(`${origin}/auth/sign-in`);
+    return NextResponse.redirect(new URL("/auth/sign-in", url.origin));
   }
 
-  const cookieStore = await cookies();
+  // ✅ Response we will mutate
+  const response = NextResponse.redirect(new URL("/app", url.origin));
 
+  // ✅ Supabase client bound to RESPONSE cookies (not request cookies)
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name) {
-          return cookieStore.get(name)?.value;
+          return request.headers
+            .get("cookie")
+            ?.split("; ")
+            .find((c) => c.startsWith(name + "="))
+            ?.split("=")[1];
         },
         set(name, value, options) {
-          cookieStore.set({
+          response.cookies.set({
             name,
             value,
             ...options,
           });
         },
         remove(name, options) {
-          cookieStore.set({
+          response.cookies.set({
             name,
             value: "",
             ...options,
@@ -43,8 +48,8 @@ export async function GET(request: Request) {
 
   if (error) {
     console.error("[auth/callback] exchange failed", error);
-    return NextResponse.redirect(`${origin}/auth/sign-in`);
+    return NextResponse.redirect(new URL("/auth/sign-in", url.origin));
   }
 
-  return NextResponse.redirect(`${origin}/app`);
+  return response;
 }
