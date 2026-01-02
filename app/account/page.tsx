@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { Session, User } from "@supabase/supabase-js";
 
-// Section container
+// Sectional card container
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-6 border border-neutral-700 rounded-lg p-4 bg-neutral-900">
@@ -14,14 +13,30 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+// Helper icons
 function CheckIcon() {
   return <span className="inline-block w-4 h-4 text-green-500 mr-1">&#10003;</span>;
 }
+
 function WarnIcon() {
   return <span className="inline-block w-4 h-4 text-yellow-400 mr-1">&#9888;</span>;
 }
 
-const initialFields = {
+// Field types
+type Title = { title: string; primary: boolean };
+type Email = { email: string; primary: boolean; verified: boolean; label: string };
+type Fields = {
+  name: string;
+  titles: Title[];
+  emails: Email[];
+  contact_info: string;
+  address: string;
+  city: string;
+  state: string;
+  special_instructions: string;
+};
+
+const initialFields: Fields = {
   name: "",
   titles: [{ title: "", primary: true }],
   emails: [{ email: "", primary: true, verified: false, label: "" }],
@@ -34,24 +49,23 @@ const initialFields = {
 
 export default function AccountPage() {
   const supabase = createClientComponentClient();
-  const [fields, setFields] = useState(initialFields);
+  const [fields, setFields] = useState<Fields>(initialFields);
 
   // Loading and error state
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-
-  // User ID
+  const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [userId, setUserId] = useState<string | null>(null);
 
-  // On mount, fetch user data
+  // Fetch user and their account info on mount
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
       setError(null);
       setSaveSuccess(false);
-      // Get user ID from auth
+
+      // Get user ID from Supabase Auth
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (!user) {
         setError("Unauthorized. Please log in.");
@@ -60,14 +74,15 @@ export default function AccountPage() {
       }
       setUserId(user.id);
 
-      // Fetch profile
+      // Get account row for this user
       const { data, error: dbError } = await supabase
         .from("account.users")
         .select("*")
         .eq("id", user.id)
         .single();
 
-      if (dbError && dbError.code !== "PGRST116") { // "No rows found" is allowed (new user)
+      // If row missing, fallback to blank initial fields (MVP: no error)
+      if (dbError && dbError.code !== "PGRST116") {
         setError("Error loading account data.");
         setLoading(false);
         return;
@@ -76,10 +91,10 @@ export default function AccountPage() {
       if (data) {
         setFields({
           name: data.name || "",
-          titles: data.titles?.length
+          titles: Array.isArray(data.titles) && data.titles.length
             ? data.titles
             : [{ title: "", primary: true }],
-          emails: data.emails?.length
+          emails: Array.isArray(data.emails) && data.emails.length
             ? data.emails
             : [{ email: "", primary: true, verified: false, label: "" }],
           contact_info: data.contact_info || "",
@@ -95,28 +110,42 @@ export default function AccountPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handler helpers
-  function mutateField<K extends keyof typeof initialFields>(field: K, value: (typeof initialFields)[K]) {
+  // General field mutation helper
+  function mutateField<K extends keyof Fields>(field: K, value: Fields[K]) {
     setFields((f) => ({ ...f, [field]: value }));
   }
 
-  function handlePrimary(arr, idx, field) {
-    mutateField(field, arr.map((item, i) => ({ ...item, primary: i === idx })));
+  // Explicitly typed handlePrimary
+  function handlePrimary(
+    arr: Array<{ [key: string]: any; primary: boolean }>,
+    idx: number,
+    field: keyof Fields
+  ) {
+    mutateField(field, arr.map((item, i) => ({ ...item, primary: i === idx })) as any);
   }
 
-  // CREATE, ADD, REMOVE helpers for multipliable
-  function updateArr(field, idx, itemObj) {
-    mutateField(field, fields[field].map((item, i) => (i === idx ? { ...item, ...itemObj } : item)));
-  }
-  function addArr(field, item) {
-    mutateField(field, [...fields[field], item]);
-  }
-  function removeArr(field, idx) {
-    mutateField(field, fields[field].filter((_, i) => i !== idx));
+  // Array helpers for titles, emails
+  function updateArr<T extends { [key: string]: any }>(
+    field: keyof Fields,
+    idx: number,
+    itemObj: Partial<T>,
+  ) {
+    mutateField(
+      field,
+      (fields[field] as Array<T>).map((item, i) => (i === idx ? { ...item, ...itemObj } : item)) as any
+    );
   }
 
-  // SAVE (Upsert) -- create or update profile
-  async function saveProfile(e) {
+  function addArr<T>(field: keyof Fields, item: T) {
+    mutateField(field, ([...(fields[field] as Array<T>), item]) as any);
+  }
+
+  function removeArr<T>(field: keyof Fields, idx: number) {
+    mutateField(field, (fields[field] as Array<T>).filter((_, i) => i !== idx) as any);
+  }
+
+  // Save handler (upsert)
+  async function saveProfile(e: React.FormEvent) {
     e.preventDefault();
     if (!userId) {
       setError("No user authenticated.");
@@ -126,7 +155,6 @@ export default function AccountPage() {
     setError(null);
     setSaveSuccess(false);
 
-    // Minimal validation
     if (!fields.name) {
       setError("Name is required.");
       setSaving(false);
@@ -140,7 +168,7 @@ export default function AccountPage() {
       setSaving(false);
       return;
     }
-    // Upsert
+    // Upsert into Supabase table
     const { error: upError } = await supabase
       .from("account.users")
       .upsert([
@@ -150,7 +178,6 @@ export default function AccountPage() {
           updated_at: new Date().toISOString(),
         },
       ]);
-
     if (upError) {
       setError("Could not save profile. " + upError.message);
     } else {
@@ -160,14 +187,14 @@ export default function AccountPage() {
     setSaving(false);
   }
 
-  // -- RENDER section helpers --
-  function renderTitle(t, i) {
+  // Title rendering
+  function renderTitle(t: Title, i: number) {
     return (
       <div key={i} className="flex items-center mb-2">
         <input
           type="text"
           value={t.title}
-          onChange={(e) => updateArr("titles", i, { title: e.target.value })}
+          onChange={(e) => updateArr<Title>("titles", i, { title: e.target.value })}
           placeholder="Enter title"
           className="w-48 p-1 mr-2 rounded bg-neutral-800 border border-neutral-700 text-white"
         />
@@ -184,7 +211,7 @@ export default function AccountPage() {
         {fields.titles.length > 1 && (
           <button
             type="button"
-            onClick={() => removeArr("titles", i)}
+            onClick={() => removeArr<Title>("titles", i)}
             className="ml-2 px-2 py-1 rounded bg-neutral-800 text-neutral-500 text-xs"
           >
             Remove
@@ -194,13 +221,14 @@ export default function AccountPage() {
     );
   }
 
-  function renderEmail(e, i) {
+  // Email rendering
+  function renderEmail(e: Email, i: number) {
     return (
       <div key={i} className="flex items-center mb-2">
         <input
           type="email"
           value={e.email}
-          onChange={(ev) => updateArr("emails", i, { email: ev.target.value })}
+          onChange={(ev) => updateArr<Email>("emails", i, { email: ev.target.value })}
           placeholder="Enter email"
           className="w-60 p-1 mr-2 rounded bg-neutral-800 border border-neutral-700 text-white"
         />
@@ -226,14 +254,14 @@ export default function AccountPage() {
         <input
           type="text"
           value={e.label}
-          onChange={(ev) => updateArr("emails", i, { label: ev.target.value })}
+          onChange={(ev) => updateArr<Email>("emails", i, { label: ev.target.value })}
           placeholder="Label (optional)"
           className="w-28 p-1 ml-2 rounded bg-neutral-800 border border-neutral-700 text-white"
         />
         {fields.emails.length > 1 && (
           <button
             type="button"
-            onClick={() => removeArr("emails", i)}
+            onClick={() => removeArr<Email>("emails", i)}
             className="ml-2 px-2 py-1 rounded bg-neutral-800 text-neutral-500 text-xs"
           >
             Remove
@@ -243,7 +271,7 @@ export default function AccountPage() {
     );
   }
 
-  // Main render
+  // Render main form
   return (
     <div className="p-8 text-white max-w-2xl mx-auto">
       <h1 className="text-2xl font-semibold mb-6">Account Settings</h1>
@@ -270,7 +298,7 @@ export default function AccountPage() {
             {fields.titles.map(renderTitle)}
             <button
               type="button"
-              onClick={() => addArr("titles", { title: "", primary: false })}
+              onClick={() => addArr<Title>("titles", { title: "", primary: false })}
               className="mt-2 px-3 py-1 rounded bg-neutral-700 text-neutral-300 text-sm"
             >
               + Add Title
@@ -282,7 +310,9 @@ export default function AccountPage() {
             {fields.emails.map(renderEmail)}
             <button
               type="button"
-              onClick={() => addArr("emails", { email: "", primary: false, verified: false, label: "" })}
+              onClick={() =>
+                addArr<Email>("emails", { email: "", primary: false, verified: false, label: "" })
+              }
               className="mt-2 px-3 py-1 rounded bg-neutral-700 text-neutral-300 text-sm"
             >
               + Add Email
