@@ -1,23 +1,21 @@
 // app/workspace/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
+// ============================================================
+// DEPRECATED ROUTE — Workspace resolution must occur via
+// authenticated, authoritative endpoints only.
+// ============================================================
 
-export const runtime = 'nodejs';
+import { NextRequest, NextResponse } from "next/server";
+
+export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
-  const url = new URL(req.url);
-  const rc = url.searchParams.get('rc'); // route code like "geljkek1"
-
-  // TODO: use rc and user session to look up the right workspace.
-  // For now, we can at least return a shape Solace can live with.
-
   return NextResponse.json(
     {
-      ok: true,
-      workspace: null,
-      rc,
-      memoriesEnabled: false,
+      ok: false,
+      error: "WORKSPACE_ROUTE_DEPRECATED",
+      message:
+        "The /workspace endpoint is deprecated. Workspace resolution must occur via authenticated memory/workspace APIs.",
     },
-    { status: 200 },
+    { status: 410 }, // Gone
   );
 }
