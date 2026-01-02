@@ -51,16 +51,20 @@ type WMRow = {
 // Helpers
 // ------------------------------------------------------------
 function isNewsKeywordFallback(message: string): boolean {
-  const m = message.toLowerCase();
+  const m = message.toLowerCase().trim();
+
   return (
     m === "news" ||
+    m.includes("what is in the news") ||
+    m.includes("what's in the news") ||
+    m.includes("news today") ||
+    m.includes("today's news") ||
+    m.includes("latest news") ||
     m.includes("headlines") ||
-    m.includes("what is happening") ||
-    m.includes("what's happening") ||
-    m.includes("current events") ||
-    m.includes("latest news")
+    m.includes("current events")
   );
 }
+
 
 /**
  * Detect obvious code / review payloads and veto image routing
