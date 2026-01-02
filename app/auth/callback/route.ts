@@ -9,12 +9,15 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/auth/sign-in", url.origin));
   }
 
+  // 🔑 This response is where cookies MUST be written
   const response = NextResponse.redirect(new URL("/app", url.origin));
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: response.cookies }
+    {
+      cookies: response.cookies, // ✅ THIS is the critical line
+    }
   );
 
   const { error } = await supabase.auth.exchangeCodeForSession(code);
