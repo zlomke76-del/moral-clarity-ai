@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
-// Sectional card container
+// Section container
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-6 border border-neutral-700 rounded-lg p-4 bg-neutral-900">
@@ -13,16 +13,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-// Helper icons
 function CheckIcon() {
   return <span className="inline-block w-4 h-4 text-green-500 mr-1">&#10003;</span>;
 }
-
 function WarnIcon() {
   return <span className="inline-block w-4 h-4 text-yellow-400 mr-1">&#9888;</span>;
 }
 
-// Field types
 type Title = { title: string; primary: boolean };
 type Email = { email: string; primary: boolean; verified: boolean; label: string };
 type Fields = {
@@ -51,22 +48,19 @@ export default function AccountPage() {
   const supabase = createClientComponentClient();
   const [fields, setFields] = useState<Fields>(initialFields);
 
-  // Loading and error state
-  const [loading, setLoading] = useState<boolean>(true);
-  const [saving, setSaving] = useState<boolean>(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
-  // Fetch user and their account info on mount
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
       setError(null);
       setSaveSuccess(false);
 
-      // Get user ID from Supabase Auth
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setError("Unauthorized. Please log in.");
         setLoading(false);
@@ -74,29 +68,22 @@ export default function AccountPage() {
       }
       setUserId(user.id);
 
-      // Get account row for this user
       const { data, error: dbError } = await supabase
         .from("account.users")
         .select("*")
         .eq("id", user.id)
         .single();
 
-      // If row missing, fallback to blank initial fields (MVP: no error)
       if (dbError && dbError.code !== "PGRST116") {
         setError("Error loading account data.");
         setLoading(false);
         return;
       }
-
       if (data) {
         setFields({
           name: data.name || "",
-          titles: Array.isArray(data.titles) && data.titles.length
-            ? data.titles
-            : [{ title: "", primary: true }],
-          emails: Array.isArray(data.emails) && data.emails.length
-            ? data.emails
-            : [{ email: "", primary: true, verified: false, label: "" }],
+          titles: Array.isArray(data.titles) && data.titles.length ? data.titles : [{ title: "", primary: true }],
+          emails: Array.isArray(data.emails) && data.emails.length ? data.emails : [{ email: "", primary: true, verified: false, label: "" }],
           contact_info: data.contact_info || "",
           address: data.address || "",
           city: data.city || "",
@@ -110,41 +97,58 @@ export default function AccountPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // General field mutation helper
+  // STRICT helpers: only operate on fields.titles and fields.emails
+
+  // Titles array mutators
+  function updateTitle(idx: number, newVals: Partial<Title>) {
+    setFields((f) => ({
+      ...f,
+      titles: f.titles.map((item, i) => (i === idx ? { ...item, ...newVals } : item))
+    }));
+  }
+  function addTitle() {
+    setFields((f) => ({ ...f, titles: [...f.titles, { title: "", primary: false }] }));
+  }
+  function removeTitle(idx: number) {
+    setFields((f) => ({ ...f, titles: f.titles.filter((_, i) => i !== idx) }));
+  }
+  function setPrimaryTitle(idx: number) {
+    setFields((f) => ({
+      ...f,
+      titles: f.titles.map((item, i) => ({ ...item, primary: i === idx }))
+    }));
+  }
+
+  // Emails array mutators
+  function updateEmail(idx: number, newVals: Partial<Email>) {
+    setFields((f) => ({
+      ...f,
+      emails: f.emails.map((item, i) => (i === idx ? { ...item, ...newVals } : item))
+    }));
+  }
+  function addEmail() {
+    setFields((f) => ({
+      ...f,
+      emails: [...f.emails, { email: "", primary: false, verified: false, label: "" }]
+    }));
+  }
+  function removeEmail(idx: number) {
+    setFields((f) => ({
+      ...f,
+      emails: f.emails.filter((_, i) => i !== idx)
+    }));
+  }
+  function setPrimaryEmail(idx: number) {
+    setFields((f) => ({
+      ...f,
+      emails: f.emails.map((item, i) => ({ ...item, primary: i === idx }))
+    }));
+  }
+
   function mutateField<K extends keyof Fields>(field: K, value: Fields[K]) {
     setFields((f) => ({ ...f, [field]: value }));
   }
 
-  // Explicitly typed handlePrimary
-  function handlePrimary(
-    arr: Array<{ [key: string]: any; primary: boolean }>,
-    idx: number,
-    field: keyof Fields
-  ) {
-    mutateField(field, arr.map((item, i) => ({ ...item, primary: i === idx })) as any);
-  }
-
-  // Array helpers for titles, emails
-  function updateArr<T extends { [key: string]: any }>(
-    field: keyof Fields,
-    idx: number,
-    itemObj: Partial<T>,
-  ) {
-    mutateField(
-      field,
-      (fields[field] as Array<T>).map((item, i) => (i === idx ? { ...item, ...itemObj } : item)) as any
-    );
-  }
-
-  function addArr<T>(field: keyof Fields, item: T) {
-    mutateField(field, ([...(fields[field] as Array<T>), item]) as any);
-  }
-
-  function removeArr<T>(field: keyof Fields, idx: number) {
-    mutateField(field, (fields[field] as Array<T>).filter((_, i) => i !== idx) as any);
-  }
-
-  // Save handler (upsert)
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault();
     if (!userId) {
@@ -160,15 +164,11 @@ export default function AccountPage() {
       setSaving(false);
       return;
     }
-    if (
-      !fields.emails.length ||
-      !fields.emails.some((e) => e.primary && e.email)
-    ) {
+    if (!fields.emails.length || !fields.emails.some((e) => e.primary && e.email)) {
       setError("At least one primary email is required.");
       setSaving(false);
       return;
     }
-    // Upsert into Supabase table
     const { error: upError } = await supabase
       .from("account.users")
       .upsert([
@@ -176,7 +176,7 @@ export default function AccountPage() {
           id: userId,
           ...fields,
           updated_at: new Date().toISOString(),
-        },
+        }
       ]);
     if (upError) {
       setError("Could not save profile. " + upError.message);
@@ -187,23 +187,21 @@ export default function AccountPage() {
     setSaving(false);
   }
 
-  // Title rendering
+  // Render helpers
   function renderTitle(t: Title, i: number) {
     return (
       <div key={i} className="flex items-center mb-2">
         <input
           type="text"
           value={t.title}
-          onChange={(e) => updateArr<Title>("titles", i, { title: e.target.value })}
+          onChange={(e) => updateTitle(i, { title: e.target.value })}
           placeholder="Enter title"
           className="w-48 p-1 mr-2 rounded bg-neutral-800 border border-neutral-700 text-white"
         />
         <button
           type="button"
-          onClick={() => handlePrimary(fields.titles, i, "titles")}
-          className={`mr-2 px-2 py-1 rounded text-xs ${
-            t.primary ? "bg-blue-700 text-white font-bold" : "bg-neutral-700 text-neutral-300"
-          }`}
+          onClick={() => setPrimaryTitle(i)}
+          className={`mr-2 px-2 py-1 rounded text-xs ${t.primary ? "bg-blue-700 text-white font-bold" : "bg-neutral-700 text-neutral-300"}`}
           title={t.primary ? "Primary" : "Set as primary"}
         >
           {t.primary ? "Primary" : "Set Primary"}
@@ -211,7 +209,7 @@ export default function AccountPage() {
         {fields.titles.length > 1 && (
           <button
             type="button"
-            onClick={() => removeArr<Title>("titles", i)}
+            onClick={() => removeTitle(i)}
             className="ml-2 px-2 py-1 rounded bg-neutral-800 text-neutral-500 text-xs"
           >
             Remove
@@ -221,47 +219,38 @@ export default function AccountPage() {
     );
   }
 
-  // Email rendering
   function renderEmail(e: Email, i: number) {
     return (
       <div key={i} className="flex items-center mb-2">
         <input
           type="email"
           value={e.email}
-          onChange={(ev) => updateArr<Email>("emails", i, { email: ev.target.value })}
+          onChange={(ev) => updateEmail(i, { email: ev.target.value })}
           placeholder="Enter email"
           className="w-60 p-1 mr-2 rounded bg-neutral-800 border border-neutral-700 text-white"
         />
         <button
           type="button"
-          onClick={() => handlePrimary(fields.emails, i, "emails")}
-          className={`mr-2 px-2 py-1 rounded text-xs ${
-            e.primary ? "bg-blue-700 text-white font-bold" : "bg-neutral-700 text-neutral-300"
-          }`}
+          onClick={() => setPrimaryEmail(i)}
+          className={`mr-2 px-2 py-1 rounded text-xs ${e.primary ? "bg-blue-700 text-white font-bold" : "bg-neutral-700 text-neutral-300"}`}
           title={e.primary ? "Primary" : "Set as primary"}
         >
           {e.primary ? "Primary" : "Set Primary"}
         </button>
         <span className="mr-2">
-          {e.verified ? (
-            <CheckIcon />
-          ) : (
-            <span title="Verification pending">
-              <WarnIcon />
-            </span>
-          )}
+          {e.verified ? (<CheckIcon />) : (<span title="Verification pending"><WarnIcon /></span>)}
         </span>
         <input
           type="text"
           value={e.label}
-          onChange={(ev) => updateArr<Email>("emails", i, { label: ev.target.value })}
+          onChange={(ev) => updateEmail(i, { label: ev.target.value })}
           placeholder="Label (optional)"
           className="w-28 p-1 ml-2 rounded bg-neutral-800 border border-neutral-700 text-white"
         />
         {fields.emails.length > 1 && (
           <button
             type="button"
-            onClick={() => removeArr<Email>("emails", i)}
+            onClick={() => removeEmail(i)}
             className="ml-2 px-2 py-1 rounded bg-neutral-800 text-neutral-500 text-xs"
           >
             Remove
@@ -271,7 +260,7 @@ export default function AccountPage() {
     );
   }
 
-  // Render main form
+  // Main render
   return (
     <div className="p-8 text-white max-w-2xl mx-auto">
       <h1 className="text-2xl font-semibold mb-6">Account Settings</h1>
@@ -281,9 +270,7 @@ export default function AccountPage() {
         <form onSubmit={saveProfile}>
           <Section title="Personal Information">
             <div className="mb-4">
-              <label className="block mb-1 text-neutral-400" htmlFor="acc-name">
-                Name
-              </label>
+              <label className="block mb-1 text-neutral-400" htmlFor="acc-name">Name</label>
               <input
                 id="acc-name"
                 type="text"
@@ -298,7 +285,7 @@ export default function AccountPage() {
             {fields.titles.map(renderTitle)}
             <button
               type="button"
-              onClick={() => addArr<Title>("titles", { title: "", primary: false })}
+              onClick={addTitle}
               className="mt-2 px-3 py-1 rounded bg-neutral-700 text-neutral-300 text-sm"
             >
               + Add Title
@@ -310,17 +297,13 @@ export default function AccountPage() {
             {fields.emails.map(renderEmail)}
             <button
               type="button"
-              onClick={() =>
-                addArr<Email>("emails", { email: "", primary: false, verified: false, label: "" })
-              }
+              onClick={addEmail}
               className="mt-2 px-3 py-1 rounded bg-neutral-700 text-neutral-300 text-sm"
             >
               + Add Email
             </button>
             <div className="mt-4">
-              <label className="block mb-1 text-neutral-400" htmlFor="acc-contact">
-                Contact Information (optional)
-              </label>
+              <label className="block mb-1 text-neutral-400" htmlFor="acc-contact">Contact Information (optional)</label>
               <input
                 id="acc-contact"
                 type="text"
@@ -334,9 +317,7 @@ export default function AccountPage() {
 
           <Section title="Location (Optional)">
             <div className="mb-4">
-              <label className="block mb-1 text-neutral-400" htmlFor="acc-address">
-                Address
-              </label>
+              <label className="block mb-1 text-neutral-400" htmlFor="acc-address">Address</label>
               <input
                 id="acc-address"
                 type="text"
@@ -349,9 +330,7 @@ export default function AccountPage() {
             </div>
             <div className="flex gap-4">
               <div className="flex-1">
-                <label className="block mb-1 text-neutral-400" htmlFor="acc-city">
-                  City
-                </label>
+                <label className="block mb-1 text-neutral-400" htmlFor="acc-city">City</label>
                 <input
                   id="acc-city"
                   type="text"
@@ -363,9 +342,7 @@ export default function AccountPage() {
                 />
               </div>
               <div className="flex-1">
-                <label className="block mb-1 text-neutral-400" htmlFor="acc-state">
-                  State
-                </label>
+                <label className="block mb-1 text-neutral-400" htmlFor="acc-state">State</label>
                 <input
                   id="acc-state"
                   type="text"
