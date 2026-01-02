@@ -1,4 +1,3 @@
-// lib/supabase/browser.ts
 import { createBrowserClient } from "@supabase/ssr";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -8,4 +7,10 @@ if (!url || !anon) {
   throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or ANON_KEY");
 }
 
-export const supabase = createBrowserClient(url, anon);
+export const supabase = createBrowserClient(url, anon, {
+  auth: {
+    persistSession: false,      // 🚫 no localStorage
+    autoRefreshToken: true,     // ✅ still refresh via cookies
+    detectSessionInUrl: false,  // callback already handled server-side
+  },
+});
