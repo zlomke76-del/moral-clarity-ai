@@ -57,7 +57,7 @@ function stripHtml(html: string) {
 }
 
 /* ============================================================
-   TAVILY — AUTHORITATIVE SOURCE
+   TAVILY — PRIMARY INGESTION SOURCE
    ============================================================ */
 
 async function fetchViaTavily(url: string): Promise<string | null> {
@@ -67,10 +67,11 @@ async function fetchViaTavily(url: string): Promise<string | null> {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": TAVILY_API_KEY,
+      // ✅ CORRECT AUTH — REQUIRED
+      Authorization: `Bearer ${TAVILY_API_KEY}`,
     },
     body: JSON.stringify({
-      urls: [url],
+      urls: [url],                 // ✅ REQUIRED ARRAY
       include_raw_content: true,
     }),
   });
@@ -78,10 +79,23 @@ async function fetchViaTavily(url: string): Promise<string | null> {
   if (!r.ok) return null;
 
   const json = await r.json();
-  const content = json?.results?.[0]?.raw_content;
-  if (!content) return null;
 
-  return clamp(stripHtml(content));
+  /**
+   * Tavily response shape (authoritative):
+   * {
+   *   results: [
+   *     {
+   *       url,
+   *       raw_content,
+   *       ...
+   *     }
+   *   ]
+   * }
+   */
+  const raw = json?.results?.[0]?.raw_content;
+  if (!raw || typeof raw !== "string") return null;
+
+  return clamp(stripHtml(raw));
 }
 
 /* ============================================================
