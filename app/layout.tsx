@@ -2,7 +2,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
-import AuthProvider from "@/components/AuthProvider";
 import LayoutShell from "./LayoutShell";
 import Toaster from "@/components/Toaster";
 
@@ -64,12 +63,12 @@ export default async function RootLayout({
         <div className="mc-bg absolute inset-0 pointer-events-none z-0" />
         <div className="mc-noise absolute inset-0 pointer-events-none z-0" />
 
-        <AuthProvider>
-          <LayoutShell>{children}</LayoutShell>
+        <LayoutShell>
+          {children}
+        </LayoutShell>
 
-          {/* 🔒 Solace mounts ONLY inside /app */}
-          {isApp && <SolaceDockWrapper />}
-        </AuthProvider>
+        {/* 🔒 Solace mounts ONLY inside /app */}
+        {isApp && <SolaceDockWrapper />}
 
         <Toaster />
       </body>
