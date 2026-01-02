@@ -1,12 +1,12 @@
 // middleware.ts
-// bump: v5  <-- forces Vercel edge rebuild
+// bump: v6  <-- forces Vercel edge rebuild
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createMiddlewareClient } from "@supabase/ssr";
 
 // --------------------------------------------------
-// Content Security Policy (required for base64 images)
+// Content Security Policy
 // --------------------------------------------------
 function applyCSP(res: NextResponse) {
   res.headers.set(
@@ -31,37 +31,16 @@ export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
   // --------------------------------------------------
-  // 🔓 ALWAYS allow auth entry + callback routes
+  // 🔓 Allow auth entry + callback
   // --------------------------------------------------
-  if (
-    pathname === "/auth/sign-in" ||
-    pathname === "/auth/callback"
-  ) {
+  if (pathname === "/auth/sign-in" || pathname === "/auth/callback") {
     return res;
   }
 
   // --------------------------------------------------
-  // Supabase SSR client
+  // ✅ Correct Edge Supabase client
   // --------------------------------------------------
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (name) => req.cookies.get(name)?.value,
-        set: (name, value, options) => {
-          try {
-            res.cookies.set(name, value, options);
-          } catch {}
-        },
-        remove: (name, options) => {
-          try {
-            res.cookies.delete(name);
-          } catch {}
-        },
-      },
-    }
-  );
+  const supabase = createMiddlewareClient({ req, res });
 
   const {
     data: { session },
