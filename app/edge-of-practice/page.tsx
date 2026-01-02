@@ -35,174 +35,83 @@ export default function EdgeOfPracticeIndexPage() {
           <em>Edge of Practice</em> is a public index of small, decisive
           experiments executable using standard laboratory tools, commodity
           materials, and short timelines. These experiments are not designed to
-          optimize systems or invent products. They exist to test hidden
-          assumptions governing health, safety, materials use, energy capture,
-          automation, and daily human environments.
-        </p>
-
-        <p>
-          Each experiment is intentionally bounded: it asks one precise
-          question, defines a minimal setup, and specifies a binary failure
-          condition. If the assumption fails, it fails cleanly. No extrapolation
-          is implied.
+          optimize systems or invent products.
         </p>
 
         <hr />
 
         <h2>Experiment Lifecycle</h2>
-
         <ul>
-          <li>
-            <strong>Short-Cycle</strong> — rapid falsification (this index)
-          </li>
-          <li>
-            <Link href="/edge-of-practice/extended-cycle">Extended Cycle</Link>{" "}
-            — durability, fatigue, and repetition after short-cycle survival
-          </li>
-          <li>
-            <Link href="/edge-of-practice/persistence">Persistence</Link> —
-            long-duration, time-dominated failure modes
-          </li>
+          <li><strong>Short-Cycle</strong> — rapid falsification (this index)</li>
+          <li><Link href="/edge-of-practice/extended-cycle">Extended Cycle</Link></li>
+          <li><Link href="/edge-of-practice/persistence">Persistence</Link></li>
         </ul>
-
-        <hr />
-
-        <h2>Founding Principle</h2>
-
-        <p>
-          <em>Edge of Practice</em> sits downstream of{" "}
-          <Link href="/edge-of-knowledge">Edge of Knowledge</Link>. Where Edge of
-          Knowledge governs the limits of certainty, Edge of Practice governs
-          where action can begin anyway—carefully, humbly, and with full
-          epistemic accountability.
-        </p>
-
-        <ul>
-          <li>Weeks, not years</li>
-          <li>Binary outcomes, not gradients</li>
-          <li>Human relevance without extrapolation</li>
-          <li>No proprietary tools or methods</li>
-          <li>Failure is as valuable as success</li>
-        </ul>
-
-        {/* ADDITIVE INSERT — NO REMOVALS */}
-        <p className="text-sm">
-          All experiments in this index follow a single governing framework. See{" "}
-          <Link href="/edge-of-practice/canon">
-            the Edge Canon: Invariants, Not Interpretations
-          </Link>
-          .
-        </p>
 
         <hr />
 
         <h2>Complete Short-Cycle Experiment Index</h2>
 
-        {/* ================= EXISTING SECTIONS UNCHANGED ================= */}
+        {/* ================= AUTOMATION ================= */}
 
         <h3>Automation, Cognition, and Control</h3>
         <ul>
-          <li><Link href="/edge-of-practice/agentic-normalization-drift">Agentic Normalization Drift in Adaptive AI Systems</Link></li>
-          <li><Link href="/edge-of-practice/alarm-parsing-collapse-threshold">The Alarm Parsing Collapse Threshold in Automated Medical Care</Link></li>
-          <li><Link href="/edge-of-practice/autonomous-handoff-blackout">Irreversible Takeover Blackout Intervals in Autonomous Vehicle Handoffs</Link></li>
-          <li><Link href="/edge-of-practice/irreversible-cognitive-dead-zones">Irreversible Cognitive Dead Zones in Human–Automation Handoffs</Link></li>
-          <li><Link href="/edge-of-practice/irreversible-normalization-drift">Irreversible Normalization Drift in Human Feedback Systems</Link></li>
-          <li>
-            <Link href="/edge-of-practice/post-deployment-monitoring-ai">
-              Post-Deployment Monitoring as a Safety Proxy in General-Purpose AI
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-practice/human-supervision-autonomy">
-              Human Supervision as a Failsafe in Partially Autonomous Systems
-            </Link>
-          </li>
+          <li><Link href="/edge-of-practice/agentic-normalization-drift">Agentic Normalization Drift</Link></li>
+          <li><Link href="/edge-of-practice/alarm-parsing-collapse-threshold">Alarm Parsing Collapse Threshold</Link></li>
+          <li><Link href="/edge-of-practice/autonomous-handoff-blackout">Autonomous Handoff Blackout</Link></li>
+          <li><Link href="/edge-of-practice/irreversible-cognitive-dead-zones">Irreversible Cognitive Dead Zones</Link></li>
+          <li><Link href="/edge-of-practice/irreversible-normalization-drift">Irreversible Normalization Drift</Link></li>
+          <li><Link href="/edge-of-practice/human-supervision-autonomy">Human Supervision as Failsafe</Link></li>
+          <li><Link href="/edge-of-practice/post-deployment-monitoring-ai">Post-Deployment Monitoring in AI</Link></li>
+          <li><Link href="/edge-of-practice/polyphonic-ai-bounded-authority">Polyphonic AI Under Bounded Authority</Link></li>
         </ul>
+
+        {/* ================= MATERIALS ================= */}
 
         <h3>Materials, Polymers, and Surface Effects</h3>
         <ul>
-          <li><Link href="/edge-of-practice/antibiotic-resistance-gene-cleaning">Antibiotic Resistance Gene Persistence Under Cleaning Regimes</Link></li>
-          <li><Link href="/edge-of-practice/compostable-packaging-microfragments">Compostable Packaging Microfragment Persistence</Link></li>
-          <li><Link href="/edge-of-practice/glove-additive-leaching-alcohol-sanitizer">Glove Additive Leaching Under Alcohol Sanitizer Exposure</Link></li>
-          <li><Link href="/edge-of-practice/hdpe-ldpe-interfacial-toughening">HDPE–LDPE Interfacial Toughening Limits</Link></li>
-          <li><Link href="/edge-of-practice/hdpe-die-entrance-viscosity-melt-fracture">HDPE Die-Entrance Viscosity Stability and Melt Fracture Risk</Link></li>
-          <li><Link href="/edge-of-practice/pc-abs-interfacial-microdamping">PC–ABS Interfacial Microdamping Under Vibration</Link></li>
-          <li><Link href="/edge-of-practice/pc-pmma-scratch-resistance">PC–PMMA Scratch Resistance Degradation</Link></li>
-          <li><Link href="/edge-of-practice/pe-paraffin-thermal-buffering">PE–Paraffin Thermal Buffering Limits</Link></li>
-          <li><Link href="/edge-of-practice/ps-pdms-surface-lubricity">PS–PDMS Surface Lubricity Decay</Link></li>
-          <li>
-            <Link href="/edge-of-practice/gauge-correlated-asymmetry-in-polymer-cooling">
-              Gauge-Correlated Asymmetry in Polymer Cooling
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-practice/pet-pvdf-electret-humidity-edge-case">
-              Edge Case: PET + PVDF Electret Filtration Under Humidity
-            </Link>
-          </li>
-
-          {/* ADDITIVE ENTRY — NO REMOVALS */}
-          <li>
-            <Link href="/edge-of-practice/architected-micro-lattice-ev-battery-enclosure">
-              Replacing Laminate Composites with Failure-Governed Lattice Structures in EV Battery Enclosures
-            </Link>
-          </li>
+          <li><Link href="/edge-of-practice/antibiotic-resistance-gene-cleaning">Antibiotic Resistance Gene Cleaning</Link></li>
+          <li><Link href="/edge-of-practice/compostable-packaging-microfragments">Compostable Packaging Microfragments</Link></li>
+          <li><Link href="/edge-of-practice/glove-additive-leaching-alcohol-sanitizer">Glove Additive Leaching</Link></li>
+          <li><Link href="/edge-of-practice/hdpe-die-entrance-viscosity-melt-fracture">HDPE Die-Entrance Melt Fracture</Link></li>
+          <li><Link href="/edge-of-practice/hdpe-ldpe-interfacial-toughening">HDPE–LDPE Interfacial Toughening</Link></li>
+          <li><Link href="/edge-of-practice/pc-abs-interfacial-microdamping">PC–ABS Interfacial Microdamping</Link></li>
+          <li><Link href="/edge-of-practice/pc-pmma-scratch-resistance">PC–PMMA Scratch Resistance</Link></li>
+          <li><Link href="/edge-of-practice/pe-paraffin-thermal-buffering">PE–Paraffin Thermal Buffering</Link></li>
+          <li><Link href="/edge-of-practice/ps-pdms-surface-lubricity">PS–PDMS Surface Lubricity</Link></li>
+          <li><Link href="/edge-of-practice/pet-pvdf-electret-humidity-edge-case">PET–PVDF Electret Humidity Edge Case</Link></li>
+          <li><Link href="/edge-of-practice/gauge-correlated-asymmetry-in-polymer-cooling">Gauge-Correlated Cooling Asymmetry</Link></li>
+          <li><Link href="/edge-of-practice/architected-micro-lattice-ev-battery-enclosure">Architected Micro-Lattice EV Battery Enclosure</Link></li>
         </ul>
+
+        {/* ================= ENERGY ================= */}
 
         <h3>Energy, Physics, and Passive Systems</h3>
         <ul>
-          <li><Link href="/edge-of-practice/constructive-physics">Constructive Physics — Where Reality Still Has Gifts to Give</Link></li>
-          <li><Link href="/edge-of-practice/phase-locked-capillary-oscillation">Phase-Locked Capillary Oscillation for Enhanced Solar Desalination</Link></li>
-          <li><Link href="/edge-of-practice/radiative-tension-rectification">Radiative Tension Rectification for Passive Energy Storage</Link></li>
-          <li><Link href="/edge-of-practice/spectral-boundary-layer-destabilization">Spectral Gradient–Induced Boundary Layer Destabilization for Enhanced Passive Evaporation</Link></li>
-          <li>
-            <Link href="/edge-of-practice/thermomechanical-phase-aligned-insulation">
-              Thermomechanical Phase-Aligned Insulation — Falsification of Static R-Value Sufficiency Under Time-Translated Thermal Forcing
-            </Link>
-          </li>
-
-          {/* ADDITIVE ENTRY — NO REMOVALS */}
-          <li>
-            <Link href="/edge-of-practice/embedded-osmotic-power">
-              Embedded Osmotic Power from Waste Salinity Gradients — Falsification of Salinity-as-Waste Assumption
-            </Link>
-          </li>
+          <li><Link href="/edge-of-practice/constructive-physics">Constructive Physics</Link></li>
+          <li><Link href="/edge-of-practice/phase-locked-capillary-oscillation">Phase-Locked Capillary Oscillation</Link></li>
+          <li><Link href="/edge-of-practice/radiative-tension-rectification">Radiative Tension Rectification</Link></li>
+          <li><Link href="/edge-of-practice/spectral-boundary-layer-destabilization">Spectral Boundary-Layer Destabilization</Link></li>
+          <li><Link href="/edge-of-practice/thermomechanical-phase-aligned-insulation">Thermomechanical Phase-Aligned Insulation</Link></li>
+          <li><Link href="/edge-of-practice/embedded-osmotic-power">Embedded Osmotic Power</Link></li>
+          <li><Link href="/edge-of-practice/phase-locked-capillary-oscillation">Phase-Locked Capillary Oscillation</Link></li>
         </ul>
 
-        {/* ================= ADDITIVE NEW CLASS ================= */}
-
-        <h3>Multi-Agent Epistemic Systems</h3>
-        <ul>
-          <li>
-            <Link href="/edge-of-practice/polyphonic-ai-bounded-authority">
-              Polyphonic AI Under Bounded Authority — Falsification of Single-Model Epistemic Sufficiency
-            </Link>
-          </li>
-        </ul>
+        {/* ================= ENVIRONMENT ================= */}
 
         <h3>Environment, Exposure, and Human Health</h3>
         <ul>
-          <li><Link href="/edge-of-practice/air-ionizer-electrostatic-charge">Air Ionizer Electrostatic Charge Accumulation</Link></li>
-          <li><Link href="/edge-of-practice/heavy-metal-remobilization-urban-soils">Heavy Metal Remobilization in Urban Soils</Link></li>
-          <li><Link href="/edge-of-practice/hot-water-ph-metal-leaching">Hot Water pH–Driven Metal Leaching</Link></li>
-          <li><Link href="/edge-of-practice/indoor-lighting-circadian-expression">Indoor Lighting Effects on Circadian Expression</Link></li>
-          <li><Link href="/edge-of-practice/microplastics">Indoor Microplastic Accumulation Pathways</Link></li>
-          <li><Link href="/edge-of-practice/uv-sterilization-shadows">UV Sterilization Shadow Persistence</Link></li>
-          <li><Link href="/edge-of-practice/viral-viability-indoor-surfaces">Longevity of Viral Viability on Common Indoor Surfaces</Link></li>
-          <li><Link href="/edge-of-practice/vitamin-loss-refrigerated-juice">Vitamin Loss in Refrigerated Juices</Link></li>
-          <li><Link href="/edge-of-practice/sweat-driven-device-corrosion">Sweat-Driven Corrosion in Wearable Devices</Link></li>
+          <li><Link href="/edge-of-practice/air-ionizer-electrostatic-charge">Air Ionizer Electrostatic Charge</Link></li>
+          <li><Link href="/edge-of-practice/heavy-metal-remobilization-urban-soils">Heavy Metal Remobilization</Link></li>
+          <li><Link href="/edge-of-practice/hot-water-ph-metal-leaching">Hot Water pH-Driven Metal Leaching</Link></li>
+          <li><Link href="/edge-of-practice/indoor-lighting-circadian-expression">Indoor Lighting Circadian Expression</Link></li>
+          <li><Link href="/edge-of-practice/microplastics">Indoor Microplastics</Link></li>
+          <li><Link href="/edge-of-practice/uv-sterilization-shadows">UV Sterilization Shadows</Link></li>
+          <li><Link href="/edge-of-practice/viral-viability-indoor-surfaces">Viral Viability on Indoor Surfaces</Link></li>
+          <li><Link href="/edge-of-practice/vitamin-loss-refrigerated-juice">Vitamin Loss in Refrigerated Juice</Link></li>
+          <li><Link href="/edge-of-practice/sweat-driven-device-corrosion">Sweat-Driven Device Corrosion</Link></li>
         </ul>
 
         <hr />
-
-        <h2>Governance</h2>
-
-        <p>
-          Edge of Practice does not claim solutions, policy outcomes, or product
-          relevance. Its sole function is to surface reality where assumptions
-          dominate behavior. Any downstream application must be independently
-          justified and revalidated.
-        </p>
 
         <p className="text-sm text-muted-foreground">
           This page is the authoritative index of all short-cycle experiments.
