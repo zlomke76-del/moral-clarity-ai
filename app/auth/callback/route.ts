@@ -17,16 +17,11 @@ export async function GET(request: Request) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      cookies: response.cookies, // ✅ writable ONLY in node runtime
+      cookies: response.cookies,
     }
   );
 
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-  if (error) {
-    console.error("[auth/callback] exchange failed", error);
-    return NextResponse.redirect(new URL("/auth/sign-in", url.origin));
-  }
+  await supabase.auth.exchangeCodeForSession(code);
 
   return response;
 }
