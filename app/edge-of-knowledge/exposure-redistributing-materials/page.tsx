@@ -1,4 +1,4 @@
-// app/exposure-redistributing-materials/page.tsx
+// app/edge-of-knowledge/exposure-redistributing-materials/page.tsx
 
 import type { Metadata } from "next";
 
