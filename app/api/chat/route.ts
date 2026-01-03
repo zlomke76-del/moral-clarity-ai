@@ -145,6 +145,12 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
+    // 🔍 DIAGNOSTIC — DO NOT REMOVE UNTIL VERIFIED
+    console.log("[CHAT BODY RAW]", JSON.stringify(body, null, 2));
+    console.log("[CHAT BODY KEYS]", Object.keys(body ?? {}));
+    console.log("[CHAT ACTION RAW]", body?.action);
+    console.log("[CHAT PAYLOAD RAW]", body?.payload);
+
     const {
       message,
       canonicalUserKey,
@@ -206,6 +212,8 @@ export async function POST(req: Request) {
     // ROLODEX — EXPLICIT WRITE ACTION (AUTHORITATIVE)
     // --------------------------------------------------------
     if (action === "rolodex.add" && authUserId) {
+      console.log("[ROLODEX ACTION FIRED]", payload);
+
       if (!payload?.name || typeof payload.name !== "string") {
         return NextResponse.json(
           { ok: false, error: "Rolodex name is required" },
