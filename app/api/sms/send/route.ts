@@ -20,29 +20,45 @@ export const revalidate = 0;
 // ENV VALIDATION (FAIL FAST)
 // ------------------------------------------------------------
 const {
-  TWILIO_ACCOUNT_SID,
-  TWILIO_AUTH_TOKEN,
-  TWILIO_FROM_NUMBER,
   NEXT_PUBLIC_SUPABASE_URL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY,
   SUPABASE_SERVICE_ROLE_KEY,
+  TWILIO_ACCOUNT_SID,
+  TWILIO_AUTH_TOKEN,
+  TWILIO_FROM_NUMBER,
 } = process.env;
 
-if (
-  !TWILIO_ACCOUNT_SID ||
-  !TWILIO_AUTH_TOKEN ||
-  !TWILIO_FROM_NUMBER ||
-  !NEXT_PUBLIC_SUPABASE_URL ||
-  !NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  !SUPABASE_SERVICE_ROLE_KEY
-) {
-  throw new Error("Missing required environment variables for SMS sending");
+if (!NEXT_PUBLIC_SUPABASE_URL) {
+  throw new Error("NEXT_PUBLIC_SUPABASE_URL is not configured");
+}
+if (!NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY is not configured");
+}
+if (!SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
+}
+if (!TWILIO_ACCOUNT_SID) {
+  throw new Error("TWILIO_ACCOUNT_SID is not configured");
+}
+if (!TWILIO_AUTH_TOKEN) {
+  throw new Error("TWILIO_AUTH_TOKEN is not configured");
+}
+if (!TWILIO_FROM_NUMBER) {
+  throw new Error("TWILIO_FROM_NUMBER is not configured");
 }
 
-const twilioClient = twilio(
-  TWILIO_ACCOUNT_SID,
-  TWILIO_AUTH_TOKEN
-);
+// Narrowed, non-optional constants (TS-safe)
+const SUPABASE_URL = NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const SUPABASE_SERVICE_KEY = SUPABASE_SERVICE_ROLE_KEY;
+const TWILIO_SID = TWILIO_ACCOUNT_SID;
+const TWILIO_TOKEN = TWILIO_AUTH_TOKEN;
+const TWILIO_FROM = TWILIO_FROM_NUMBER;
+
+// ------------------------------------------------------------
+// Twilio client
+// ------------------------------------------------------------
+const twilioClient = twilio(TWILIO_SID, TWILIO_TOKEN);
 
 // ------------------------------------------------------------
 // TYPES
@@ -89,8 +105,8 @@ export async function POST(req: Request) {
     const cookieStore = await cookies();
 
     const supabaseUser = createServerClient(
-      NEXT_PUBLIC_SUPABASE_URL,
-      NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY,
       {
         cookies: {
           get(name) {
@@ -117,8 +133,8 @@ export async function POST(req: Request) {
     // SERVICE CLIENT (AUDIT / LOGGING)
     // --------------------------------------------------------
     const supabaseService = createClient(
-      NEXT_PUBLIC_SUPABASE_URL,
-      SUPABASE_SERVICE_ROLE_KEY,
+      SUPABASE_URL,
+      SUPABASE_SERVICE_KEY,
       {
         auth: {
           persistSession: false,
@@ -128,16 +144,16 @@ export async function POST(req: Request) {
     );
 
     // --------------------------------------------------------
-    // SEND
+    // SEND MESSAGES (SEQUENTIAL, EXPLICIT)
     // --------------------------------------------------------
-    const results = [];
+    const results: any[] = [];
 
     for (const msg of body.messages) {
       if (!msg.to || !msg.body) continue;
 
       try {
         const res = await twilioClient.messages.create({
-          from: TWILIO_FROM_NUMBER,
+          from: TWILIO_FROM,
           to: msg.to,
           body: msg.body,
         });
@@ -164,7 +180,6 @@ export async function POST(req: Request) {
         });
       } catch (err: any) {
         console.error("[SMS SEND FAILED]", err?.message);
-
         results.push({
           to: msg.to,
           error: "Send failed",
@@ -179,7 +194,6 @@ export async function POST(req: Request) {
     });
   } catch (err: any) {
     console.error("[SMS SEND ROUTE ERROR]", err?.message);
-
     return NextResponse.json(
       { ok: false, error: "Internal SMS send error" },
       { status: 500 }
