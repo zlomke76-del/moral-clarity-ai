@@ -7,6 +7,7 @@
 
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 import {
@@ -52,7 +53,6 @@ type WMRow = {
 // ------------------------------------------------------------
 function isNewsKeywordFallback(message: string): boolean {
   const m = message.toLowerCase().trim();
-
   return (
     m === "news" ||
     m.includes("what is in the news") ||
@@ -89,11 +89,10 @@ function isImageRequest(message: string): boolean {
 }
 
 // ------------------------------------------------------------
-// ADDITIVE — ROLODEX INTENT (NATURAL + FOREIGN LANGUAGE)
+// ADDITIVE — ROLODEX INTENT
 // ------------------------------------------------------------
 function detectRolodexIntent(message: string): boolean {
   const m = message.toLowerCase();
-
   return (
     /(add|save|store|remember|guardar|ajouter|speichern|salva)/i.test(m) &&
     /(rolodex|contact|person|email|phone|telefono|correo|kontakt)/i.test(m)
@@ -124,13 +123,13 @@ function extractRolodexPayload(message: string) {
 // ROLLING COMPACTION (NON-BLOCKING)
 // ------------------------------------------------------------
 async function maybeRunRollingCompaction(params: {
-  supabaseService: ReturnType<typeof createServerClient>;
+  supabaseServiceSSR: ReturnType<typeof createServerClient>;
   conversationId: string;
   userId: string;
 }) {
-  const { supabaseService, conversationId, userId } = params;
+  const { supabaseServiceSSR, conversationId, userId } = params;
 
-  const wmRes = await supabaseService
+  const wmRes = await supabaseServiceSSR
     .schema("memory")
     .from("working_memory")
     .select("id, role, content, created_at")
@@ -143,13 +142,13 @@ async function maybeRunRollingCompaction(params: {
   if (wm.length <= WM_TURN_TRIGGER) return;
 
   const safeLimit = Math.max(0, wm.length - WM_TAIL_PROTECT);
-  const chunk: WMRow[] = wm.slice(0, Math.min(WM_CHUNK_SIZE, safeLimit));
+  const chunk = wm.slice(0, Math.min(WM_CHUNK_SIZE, safeLimit));
   if (chunk.length === 0) return;
 
   try {
     const compaction = await runSessionCompaction(conversationId, chunk);
 
-    await supabaseService.schema("memory").from("memories").insert({
+    await supabaseServiceSSR.schema("memory").from("memories").insert({
       user_id: userId,
       email: "system",
       workspace_id: null,
@@ -160,7 +159,7 @@ async function maybeRunRollingCompaction(params: {
       confidence: 1.0,
     });
 
-    await supabaseService
+    await supabaseServiceSSR
       .schema("memory")
       .from("working_memory")
       .delete()
@@ -197,8 +196,8 @@ export async function POST(req: Request) {
       throw new Error("userKey and conversationId are required");
     }
 
-    let parsedAction: string | undefined = action;
-    let parsedPayload: any = payload;
+    let parsedAction = action;
+    let parsedPayload = payload;
 
     if (!parsedAction && typeof message === "string") {
       try {
@@ -222,23 +221,24 @@ export async function POST(req: Request) {
 
     const cookieStore = await cookies();
 
-    const supabase = createServerClient(
+    // --------------------------------------------------------
+    // USER + SSR SERVICE CLIENTS
+    // --------------------------------------------------------
+    const supabaseSSR = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          get(name) {
-            return cookieStore.get(name)?.value;
-          },
+          get: (name) => cookieStore.get(name)?.value,
           set() {},
           remove() {},
         },
       }
     );
 
-    const supabaseService = createServerClient(
+    const supabaseServiceSSR = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           get() {
@@ -252,16 +252,30 @@ export async function POST(req: Request) {
 
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await supabaseSSR.auth.getUser();
 
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
-    // ROLODEX — SERVICE ROLE WRITE (FIXED SCHEMA)
+    // TRUE ADMIN CLIENT (RLS BYPASS)
+    // --------------------------------------------------------
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      }
+    );
+
+    // --------------------------------------------------------
+    // ROLODEX — AUTHORITATIVE ADMIN WRITE
     // --------------------------------------------------------
     if (parsedAction === "rolodex.add" && authUserId) {
-      const { data, error } = await supabaseService
-        .schema("memory") // ✅ FIX — correct schema
+      const { data, error } = await supabaseAdmin
+        .schema("memory")
         .from("rolodex")
         .insert({
           user_id: authUserId,
@@ -270,49 +284,24 @@ export async function POST(req: Request) {
         .select("id")
         .single();
 
-      if (!error && data?.id) {
-        return NextResponse.json({
-          ok: true,
-          response: "Saved to your Rolodex.",
-          meta: { rolodexId: data.id },
-          messages: [{ role: "assistant", content: "Saved to your Rolodex." }],
-        });
+      if (error) {
+        console.error("[ROLODEX WRITE FAILED]", error);
+        throw error;
       }
 
-      console.error("[ROLODEX WRITE FAILED]", error);
-    }
-
-    // --------------------------------------------------------
-    // FINALIZATION
-    // --------------------------------------------------------
-    if (parsedAction === "finalize" && authUserId) {
-      await finalizeConversation({
-        supabaseService,
-        conversationId,
-        userId: authUserId,
-        reason: "explicit",
-      });
-
-      return NextResponse.json({ ok: true, response: "", messages: [] });
-    }
-
-    // --------------------------------------------------------
-    // IMAGE PIPELINE
-    // --------------------------------------------------------
-    if (message && isImageRequest(message)) {
-      const base64Image = await generateImage(message);
       return NextResponse.json({
         ok: true,
-        response: "",
-        messages: [{ role: "assistant", content: " ", imageUrl: base64Image }],
+        response: "Saved to your Rolodex.",
+        meta: { rolodexId: data.id },
+        messages: [{ role: "assistant", content: "Saved to your Rolodex." }],
       });
     }
 
     // --------------------------------------------------------
-    // WRITE USER MESSAGE
+    // MEMORY WRITE
     // --------------------------------------------------------
     if (authUserId && message) {
-      await supabaseService.schema("memory").from("working_memory").insert({
+      await supabaseServiceSSR.schema("memory").from("working_memory").insert({
         conversation_id: conversationId,
         user_id: authUserId,
         workspace_id: workspaceId,
@@ -323,7 +312,7 @@ export async function POST(req: Request) {
 
     if (authUserId) {
       void maybeRunRollingCompaction({
-        supabaseService,
+        supabaseServiceSSR,
         conversationId,
         userId: authUserId,
       });
@@ -334,7 +323,6 @@ export async function POST(req: Request) {
     // --------------------------------------------------------
     if (newsMode || (message && isNewsKeywordFallback(message))) {
       const origin = new URL(req.url).origin;
-
       const digestRes = await fetch(
         `${origin}/api/news/digest?limit=3`,
         { cache: "no-store" }
@@ -382,7 +370,7 @@ export async function POST(req: Request) {
         : "I’m here and ready to continue.";
 
     if (authUserId) {
-      await supabaseService.schema("memory").from("working_memory").insert({
+      await supabaseServiceSSR.schema("memory").from("working_memory").insert({
         conversation_id: conversationId,
         user_id: authUserId,
         workspace_id: workspaceId,
