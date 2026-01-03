@@ -123,7 +123,7 @@ function extractRolodexPayload(message: string) {
 // ROLLING COMPACTION (NON-BLOCKING)
 // ------------------------------------------------------------
 async function maybeRunRollingCompaction(params: {
-  supabaseAdmin: ReturnType<typeof createClient>;
+  supabaseAdmin: any; // ✅ FIX: do NOT generic-bind SupabaseClient
   conversationId: string;
   userId: string;
 }) {
