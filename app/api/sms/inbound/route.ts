@@ -15,72 +15,79 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 // ------------------------------------------------------------
-// ENV
+// ENV VALIDATION (FAIL FAST)
 // ------------------------------------------------------------
 const {
-  TWILIO_AUTH_TOKEN,
-  TWILIO_WEBHOOK_BASE_URL,
   NEXT_PUBLIC_SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY,
+  TWILIO_AUTH_TOKEN,
 } = process.env;
 
-if (
-  !TWILIO_AUTH_TOKEN ||
-  !TWILIO_WEBHOOK_BASE_URL ||
-  !NEXT_PUBLIC_SUPABASE_URL ||
-  !SUPABASE_SERVICE_ROLE_KEY
-) {
-  throw new Error("Inbound SMS env not fully configured");
+if (!NEXT_PUBLIC_SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error("Supabase service environment variables missing");
 }
+
+if (!TWILIO_AUTH_TOKEN) {
+  throw new Error("TWILIO_AUTH_TOKEN is not configured");
+}
+
+// Explicitly narrowed token for crypto usage
+const TWILIO_TOKEN = TWILIO_AUTH_TOKEN;
 
 // ------------------------------------------------------------
 // Helpers — Twilio signature verification
 // ------------------------------------------------------------
 function verifyTwilioSignature(
+  url: string,
   params: Record<string, string>,
   signature: string | null
 ): boolean {
   if (!signature) return false;
 
   const sortedKeys = Object.keys(params).sort();
+
   const data =
-    TWILIO_WEBHOOK_BASE_URL +
-    sortedKeys.map((k) => `${k}${params[k]}`).join("");
+    url +
+    sortedKeys
+      .map((key) => `${key}${params[key]}`)
+      .join("");
 
   const expected = crypto
-    .createHmac("sha1", TWILIO_AUTH_TOKEN)
+    .createHmac("sha1", TWILIO_TOKEN)
     .update(Buffer.from(data, "utf-8"))
     .digest("base64");
 
-  const a = Buffer.from(expected);
-  const b = Buffer.from(signature);
-
-  if (a.length !== b.length) return false;
-
-  return crypto.timingSafeEqual(a, b);
+  return crypto.timingSafeEqual(
+    Buffer.from(expected),
+    Buffer.from(signature)
+  );
 }
 
 // ------------------------------------------------------------
-// POST
+// POST handler
 // ------------------------------------------------------------
 export async function POST(req: Request) {
   try {
+    const url = req.url;
     const bodyText = await req.text();
-    const form = Object.fromEntries(new URLSearchParams(bodyText));
+    const form = Object.fromEntries(
+      new URLSearchParams(bodyText)
+    ) as Record<string, string>;
 
     const twilioSignature =
       req.headers.get("x-twilio-signature");
 
     // --------------------------------------------------------
-    // SECURITY — Verify Twilio
+    // SECURITY — Verify Twilio signature
     // --------------------------------------------------------
     const verified = verifyTwilioSignature(
-      form as Record<string, string>,
+      url,
+      form,
       twilioSignature
     );
 
     if (!verified) {
-      console.error("[SMS INBOUND] Invalid signature");
+      console.error("[SMS INBOUND] Invalid Twilio signature");
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
@@ -91,12 +98,12 @@ export async function POST(req: Request) {
       MessageSid,
     } = form;
 
-    if (!From || !Body || !MessageSid) {
+    if (!From || !Body) {
       return NextResponse.json({ ok: true });
     }
 
     // --------------------------------------------------------
-    // Admin client (RLS bypass)
+    // Admin client (RLS bypass, server-only)
     // --------------------------------------------------------
     const supabase = createClient(
       NEXT_PUBLIC_SUPABASE_URL,
@@ -115,25 +122,31 @@ export async function POST(req: Request) {
     const { data: contact } = await supabase
       .schema("memory")
       .from("rolodex")
-      .select("id, user_id, name")
+      .select("id, name")
       .eq("primary_phone", From)
-      .maybeSingle();
+      .single();
 
     // --------------------------------------------------------
-    // Write inbound message (DURABLE)
+    // Write inbound message (NO automation)
     // --------------------------------------------------------
     await supabase
       .schema("memory")
-      .from("inbound_messages")
+      .from("working_memory")
       .insert({
-        user_id: contact?.user_id ?? null,
-        rolodex_id: contact?.id ?? null,
-        channel: "sms",
-        from: From,
-        to: To,
-        body: Body,
-        provider: "twilio",
-        provider_sid: MessageSid,
+        role: "system",
+        content: JSON.stringify({
+          type: "sms_inbound",
+          from: From,
+          to: To,
+          body: Body,
+          message_sid: MessageSid,
+          contact: contact
+            ? {
+                id: contact.id,
+                name: contact.name,
+              }
+            : null,
+        }),
       });
 
     console.log("[SMS INBOUND]", {
@@ -146,7 +159,7 @@ export async function POST(req: Request) {
     // IMPORTANT:
     // - No auto-reply
     // - No TwiML
-    // - Solace must ask for approval
+    // - Solace must explicitly approve responses
     // --------------------------------------------------------
     return NextResponse.json({ ok: true });
   } catch (err) {
