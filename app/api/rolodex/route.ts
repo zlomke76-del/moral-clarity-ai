@@ -2,27 +2,30 @@
 // ============================================================
 // Rolodex API — minimal, RLS-governed
 // ============================================================
-// - Uses user session (cookies)
+// - Uses user session (cookies) via next/headers
 // - No service role
 // - RLS enforces ownership + isolation
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /* ========= Helpers ========= */
 
-function getSupabase(req: NextRequest, res: NextResponse) {
+function getSupabase(res: NextResponse) {
+  const cookieStore = cookies();
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name) {
-          return req.cookies.get(name)?.value;
+          return cookieStore.get(name)?.value;
         },
         set(name, value, options) {
           res.cookies.set({ name, value, ...options });
@@ -41,11 +44,11 @@ function getSupabase(req: NextRequest, res: NextResponse) {
  * GET /api/rolodex?q=char
  *
  * - Lists user's contacts
- * - Optional fuzzy name search via pg_trgm
+ * - Optional fuzzy name search
  */
 export async function GET(req: NextRequest) {
   const res = NextResponse.next();
-  const supabase = getSupabase(req, res);
+  const supabase = getSupabase(res);
 
   const {
     data: { user },
@@ -61,8 +64,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from("rolodex")
-    .select(
-      `
+    .select(`
       id,
       name,
       relationship_type,
@@ -73,22 +75,17 @@ export async function GET(req: NextRequest) {
       consent_level,
       created_at,
       updated_at
-    `
-    )
+    `)
     .order("name", { ascending: true });
 
   if (q && q.trim().length > 0) {
-    // fuzzy match on name (pg_trgm)
     query = query.ilike("name", `%${q.trim()}%`);
   }
 
   const { data, error } = await query;
 
   if (error) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
   return NextResponse.json({ data });
@@ -97,23 +94,10 @@ export async function GET(req: NextRequest) {
 /* ========= POST ========= */
 /**
  * POST /api/rolodex
- *
- * Body:
- * {
- *   name: string (required)
- *   relationship_type?: string
- *   primary_email?: string
- *   primary_phone?: string
- *   birthday?: string (YYYY-MM-DD)
- *   notes?: string
- *   workspace_id?: uuid
- *   sensitivity_level?: number
- *   consent_level?: number
- * }
  */
 export async function POST(req: NextRequest) {
   const res = NextResponse.next();
-  const supabase = getSupabase(req, res);
+  const supabase = getSupabase(res);
 
   const {
     data: { user },
@@ -161,10 +145,7 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
   return NextResponse.json({ id: data.id }, { status: 201 });
