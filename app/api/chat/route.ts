@@ -65,7 +65,6 @@ function isNewsKeywordFallback(message: string): boolean {
   );
 }
 
-
 /**
  * Detect obvious code / review payloads and veto image routing
  */
@@ -176,11 +175,11 @@ export async function POST(req: Request) {
       workspaceId,
       conversationId,
       action,
+      payload,
 
       // 🔒 EXPLICIT MODE FLAGS (AUTHORITATIVE)
       newsMode = false,
-      newsLanguage, // optional, presentation-only
-
+      newsLanguage,
       ministryMode = false,
       founderMode = false,
       modeHint = "",
@@ -227,6 +226,43 @@ export async function POST(req: Request) {
     } = await supabase.auth.getUser();
 
     const authUserId = user?.id ?? null;
+
+    // --------------------------------------------------------
+    // ROLODEX — EXPLICIT WRITE ACTION (ADDITIVE)
+    // --------------------------------------------------------
+    if (action === "rolodex.add" && authUserId) {
+      if (!payload?.name || typeof payload.name !== "string") {
+        return NextResponse.json(
+          { ok: false, error: "Rolodex name is required" },
+          { status: 400 }
+        );
+      }
+
+      const origin = new URL(req.url).origin;
+
+      const rolodexRes = await fetch(`${origin}/api/rolodex`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!rolodexRes.ok) {
+        const err = await rolodexRes.json();
+        return NextResponse.json(
+          { ok: false, error: err?.error ?? "Rolodex write failed" },
+          { status: 500 }
+        );
+      }
+
+      const { id } = await rolodexRes.json();
+
+      return NextResponse.json({
+        ok: true,
+        response: "Saved to your Rolodex.",
+        meta: { rolodexId: id },
+        messages: [{ role: "assistant", content: "Saved to your Rolodex." }],
+      });
+    }
 
     // --------------------------------------------------------
     // FINALIZATION
