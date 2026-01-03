@@ -17,50 +17,6 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 // ------------------------------------------------------------
-// ENV VALIDATION (FAIL FAST)
-// ------------------------------------------------------------
-const {
-  NEXT_PUBLIC_SUPABASE_URL,
-  NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  SUPABASE_SERVICE_ROLE_KEY,
-  TWILIO_ACCOUNT_SID,
-  TWILIO_AUTH_TOKEN,
-  TWILIO_FROM_NUMBER,
-} = process.env;
-
-if (!NEXT_PUBLIC_SUPABASE_URL) {
-  throw new Error("NEXT_PUBLIC_SUPABASE_URL is not configured");
-}
-if (!NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-  throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY is not configured");
-}
-if (!SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
-}
-if (!TWILIO_ACCOUNT_SID) {
-  throw new Error("TWILIO_ACCOUNT_SID is not configured");
-}
-if (!TWILIO_AUTH_TOKEN) {
-  throw new Error("TWILIO_AUTH_TOKEN is not configured");
-}
-if (!TWILIO_FROM_NUMBER) {
-  throw new Error("TWILIO_FROM_NUMBER is not configured");
-}
-
-// Narrowed, non-optional constants (TS-safe)
-const SUPABASE_URL = NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const SUPABASE_SERVICE_KEY = SUPABASE_SERVICE_ROLE_KEY;
-const TWILIO_SID = TWILIO_ACCOUNT_SID;
-const TWILIO_TOKEN = TWILIO_AUTH_TOKEN;
-const TWILIO_FROM = TWILIO_FROM_NUMBER;
-
-// ------------------------------------------------------------
-// Twilio client
-// ------------------------------------------------------------
-const twilioClient = twilio(TWILIO_SID, TWILIO_TOKEN);
-
-// ------------------------------------------------------------
 // TYPES
 // ------------------------------------------------------------
 type ApprovedMessage = {
@@ -80,6 +36,35 @@ type SendRequestBody = {
 // ------------------------------------------------------------
 export async function POST(req: Request) {
   try {
+    // --------------------------------------------------------
+    // RUNTIME ENV VALIDATION (BUILD-SAFE)
+    // --------------------------------------------------------
+    const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    const TWILIO_SID = process.env.TWILIO_ACCOUNT_SID;
+    const TWILIO_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+    const TWILIO_FROM = process.env.TWILIO_FROM_NUMBER;
+
+    if (
+      !SUPABASE_URL ||
+      !SUPABASE_ANON_KEY ||
+      !SUPABASE_SERVICE_KEY ||
+      !TWILIO_SID ||
+      !TWILIO_TOKEN ||
+      !TWILIO_FROM
+    ) {
+      console.error("[SMS SEND] Missing required environment variables");
+      return NextResponse.json(
+        { ok: false, error: "SMS service not configured" },
+        { status: 500 }
+      );
+    }
+
+    // --------------------------------------------------------
+    // Parse request
+    // --------------------------------------------------------
     const body: SendRequestBody = await req.json();
 
     // --------------------------------------------------------
@@ -144,6 +129,11 @@ export async function POST(req: Request) {
     );
 
     // --------------------------------------------------------
+    // TWILIO CLIENT (RUNTIME ONLY)
+    // --------------------------------------------------------
+    const twilioClient = twilio(TWILIO_SID, TWILIO_TOKEN);
+
+    // --------------------------------------------------------
     // SEND MESSAGES (SEQUENTIAL, EXPLICIT)
     // --------------------------------------------------------
     const results: any[] = [];
@@ -159,7 +149,6 @@ export async function POST(req: Request) {
         });
 
         await supabaseService
-          .schema("memory")
           .from("outbound_messages")
           .insert({
             user_id: user.id,
@@ -171,7 +160,7 @@ export async function POST(req: Request) {
             provider_sid: res.sid,
             status: res.status,
             reason: body.reason ?? null,
-          });
+          } as any);
 
         results.push({
           to: msg.to,
