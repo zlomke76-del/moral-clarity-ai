@@ -18,16 +18,30 @@ function sanitizeASCII(input: string): string {
 
 // --------------------------------------------------------------
 // INTENT DETECTION — ROLODEX ENUMERATION (AUTHORITATIVE)
+// NOTE: Must handle natural language like "can you list my rolodex"
 // --------------------------------------------------------------
 function isRolodexListIntent(message: string): boolean {
   const m = message.toLowerCase().trim();
-  return (
-    m === "list my rolodex" ||
-    m === "show my rolodex" ||
-    m === "who is in my rolodex" ||
-    m === "list my contacts" ||
-    m === "show my contacts"
-  );
+
+  // Fast path keywords
+  const hasRolodexKeyword =
+    m.includes("rolodex") || m.includes("contacts") || m.includes("contact list");
+
+  if (!hasRolodexKeyword) return false;
+
+  // Enumerative verbs/phrases
+  const wantsList =
+    m.includes("list") ||
+    m.includes("show") ||
+    m.includes("view") ||
+    m.includes("display") ||
+    m.includes("who is in") ||
+    m.includes("who's in") ||
+    m.includes("what's in") ||
+    m.includes("what is in") ||
+    m.includes("see my");
+
+  return wantsList;
 }
 
 // --------------------------------------------------------------
@@ -59,8 +73,7 @@ None.
   }
 
   const lines = wm.map(
-    (m: { role: string; content: string }) =>
-      `- (${m.role}) ${m.content}`
+    (m: { role: string; content: string }) => `- (${m.role}) ${m.content}`
   );
 
   return `
@@ -122,6 +135,50 @@ ${constraintsText}
 }
 
 // --------------------------------------------------------------
+// ROLODEX FORMATTER — REFERENCE DATA (NOT MEMORY)
+// This makes Rolodex visible to the Arbiter for contact selection,
+// but does NOT force listing unless user asks.
+// --------------------------------------------------------------
+function formatRolodex(context: any): string {
+  const rolodex = context?.rolodex ?? [];
+
+  if (!Array.isArray(rolodex) || rolodex.length === 0) {
+    return `
+ROLODEX (REFERENCE DATA — NOT MEMORY):
+No contacts stored.
+`;
+  }
+
+  const lines = rolodex.map((r: any) => {
+    const parts: string[] = [];
+    parts.push(String(r?.name ?? "Unknown"));
+
+    if (r?.primary_phone) parts.push(`phone=${String(r.primary_phone)}`);
+    if (r?.primary_email) parts.push(`email=${String(r.primary_email)}`);
+
+    // Keep additional fields available without bloating output
+    if (r?.relationship_type)
+      parts.push(`rel=${String(r.relationship_type)}`);
+    if (r?.consent_level != null) parts.push(`consent=${String(r.consent_level)}`);
+    if (r?.sensitivity_level != null)
+      parts.push(`sensitivity=${String(r.sensitivity_level)}`);
+
+    return `- ${parts.join(" | ")}`;
+  });
+
+  return `
+ROLODEX (REFERENCE DATA — NOT MEMORY):
+${lines.join("\n")}
+
+RULES:
+- Rolodex is authoritative user-owned reference data.
+- DO NOT invent contacts.
+- When user requests listing, enumerate exactly from this section.
+- When user requests messaging a person, resolve ONLY from this section.
+`;
+}
+
+// --------------------------------------------------------------
 // PIPELINE
 // --------------------------------------------------------------
 export async function runHybridPipeline(args: {
@@ -150,9 +207,9 @@ export async function runHybridPipeline(args: {
 
     if (Array.isArray(rolodex) && rolodex.length > 0) {
       const lines = rolodex.map((r: any, i: number) => {
-        const parts = [r.name];
-        if (r.primary_phone) parts.push(r.primary_phone);
-        if (r.primary_email) parts.push(r.primary_email);
+        const parts = [r?.name ?? "Unknown"];
+        if (r?.primary_phone) parts.push(r.primary_phone);
+        if (r?.primary_email) parts.push(r.primary_email);
         return `${i + 1}. ${parts.join(" — ")}`;
       });
 
@@ -196,14 +253,15 @@ Mode Hint: ${modeHint}
 ABSOLUTE RULES (NON-NEGOTIABLE):
 - Speak with one unified voice.
 - Do NOT reference internal systems.
-- Do NOT fabricate memory.
+- Do NOT fabricate memory or contacts.
 - FACTUAL MEMORY IS AUTHORITATIVE.
 
-MEMORY HIERARCHY (STRICT):
+DATA HIERARCHY (STRICT):
 1. FACTUAL MEMORY
-2. SESSION STATE
-3. WORKING MEMORY
-4. USER MESSAGE
+2. ROLODEX (reference data, authoritative for contacts)
+3. SESSION STATE
+4. WORKING MEMORY
+5. USER MESSAGE
 `
   );
 
@@ -211,6 +269,8 @@ MEMORY HIERARCHY (STRICT):
 ${system}
 
 ${formatFactualMemory(context)}
+
+${formatRolodex(context)}
 
 ${formatSessionState(context)}
 
