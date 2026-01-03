@@ -88,6 +88,19 @@ function isImageRequest(message: string): boolean {
   );
 }
 
+function isExplicitSendApproval(message?: string): boolean {
+  if (!message) return false;
+  const m = message.toLowerCase().trim();
+  return (
+    m === "send" ||
+    m === "send it" ||
+    m === "yes" ||
+    m === "yes send" ||
+    m === "approve" ||
+    m === "go ahead"
+  );
+}
+
 // ------------------------------------------------------------
 // ADDITIVE — ROLODEX INTENT
 // ------------------------------------------------------------
@@ -194,34 +207,8 @@ export async function POST(req: Request) {
       throw new Error("userKey and conversationId are required");
     }
 
-    let parsedAction = action;
-    let parsedPayload = payload;
-
-    if (!parsedAction && typeof message === "string") {
-      try {
-        const maybe = JSON.parse(message);
-        if (maybe?.action && maybe?.payload) {
-          parsedAction = maybe.action;
-          parsedPayload = maybe.payload;
-        }
-      } catch {}
-    }
-
-    if (!parsedAction && typeof message === "string") {
-      if (detectRolodexIntent(message)) {
-        const extracted = extractRolodexPayload(message);
-        if (extracted?.name) {
-          parsedAction = "rolodex.add";
-          parsedPayload = extracted;
-        }
-      }
-    }
-
     const cookieStore = await cookies();
 
-    // --------------------------------------------------------
-    // USER AUTH CLIENT
-    // --------------------------------------------------------
     const supabaseSSR = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -240,60 +227,22 @@ export async function POST(req: Request) {
 
     const authUserId = user?.id ?? null;
 
-    // --------------------------------------------------------
-    // ADMIN CLIENT (SERVICE ROLE)
-    // --------------------------------------------------------
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-        },
+        auth: { persistSession: false, autoRefreshToken: false },
       }
     );
 
-    // --------------------------------------------------------
-    // ROLODEX WRITE (ADMIN, BLOCKING)
-    // --------------------------------------------------------
-    if (parsedAction === "rolodex.add" && authUserId) {
-      const { data, error } = await supabaseAdmin
-        .from("rolodex")
-        .insert({
-          user_id: authUserId,
-          ...parsedPayload,
-        } as any)
-        .select("id")
-        .single();
-
-      if (error) throw error;
-
-      return NextResponse.json({
-        ok: true,
-        response: "Saved to your Rolodex.",
-        meta: { rolodexId: data.id },
-        messages: [{ role: "assistant", content: "Saved to your Rolodex." }],
-      });
-    }
-
-    // --------------------------------------------------------
-    // WRITE USER MESSAGE (NON-BLOCKING)
-    // --------------------------------------------------------
     if (authUserId && message) {
-      void (async () => {
-        try {
-          await supabaseAdmin.from("working_memory").insert({
-            conversation_id: conversationId,
-            user_id: authUserId,
-            workspace_id: workspaceId,
-            role: "user",
-            content: message,
-          } as any);
-        } catch (e) {
-          console.error("[WM USER WRITE FAILED]", e);
-        }
-      })();
+      void supabaseAdmin.from("working_memory").insert({
+        conversation_id: conversationId,
+        user_id: authUserId,
+        workspace_id: workspaceId,
+        role: "user",
+        content: message,
+      } as any);
     }
 
     if (authUserId) {
@@ -304,9 +253,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // --------------------------------------------------------
-    // NEWSROOM
-    // --------------------------------------------------------
     if (newsMode || (message && isNewsKeywordFallback(message))) {
       const origin = new URL(req.url).origin;
       const digestRes = await fetch(
@@ -329,9 +275,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // --------------------------------------------------------
-    // HYBRID PIPELINE
-    // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
       workspaceId ?? null,
@@ -355,42 +298,72 @@ export async function POST(req: Request) {
         ? result.finalAnswer
         : "I’m here and ready to continue.";
 
-    // --------------------------------------------------------
-    // WRITE ASSISTANT MESSAGE (NON-BLOCKING)
-    // --------------------------------------------------------
     if (authUserId) {
-      void (async () => {
-        try {
-          await supabaseAdmin.from("working_memory").insert({
-            conversation_id: conversationId,
-            user_id: authUserId,
-            workspace_id: workspaceId,
-            role: "assistant",
-            content: safeResponse,
-          } as any);
-        } catch (e) {
-          console.error("[WM ASSISTANT WRITE FAILED]", e);
-        }
-      })();
+      void supabaseAdmin.from("working_memory").insert({
+        conversation_id: conversationId,
+        user_id: authUserId,
+        workspace_id: workspaceId,
+        role: "assistant",
+        content: safeResponse,
+      } as any);
     }
 
-    // --------------------------------------------------------
-    // PERSIST SMS DRAFT (ADMIN, NON-BLOCKING)
-    // --------------------------------------------------------
-    if (authUserId && (context as any).__draftSms) {
-      void (async () => {
-        try {
+    const draft = (context as any).__draftSms;
+
+    if (authUserId && draft) {
+      await supabaseAdmin.from("working_memory").insert({
+        conversation_id: conversationId,
+        user_id: authUserId,
+        workspace_id: workspaceId,
+        role: "system",
+        content: JSON.stringify(draft),
+      } as any);
+    }
+
+    if (authUserId && isExplicitSendApproval(message)) {
+      const { data } = await supabaseAdmin
+        .from("working_memory")
+        .select("content")
+        .eq("conversation_id", conversationId)
+        .eq("user_id", authUserId)
+        .eq("role", "system")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (data?.content) {
+        const parsed = JSON.parse(data.content);
+
+        if (parsed?.type === "sms_reply_draft") {
+          await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/sms/send`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              approved: true,
+              reason: "Conversational approval",
+              messages: [
+                {
+                  to: parsed.to,
+                  body: parsed.body,
+                  rolodex_id: parsed.rolodex_id ?? null,
+                },
+              ],
+            }),
+          });
+
           await supabaseAdmin.from("working_memory").insert({
             conversation_id: conversationId,
             user_id: authUserId,
             workspace_id: workspaceId,
             role: "system",
-            content: JSON.stringify((context as any).__draftSms),
+            content: JSON.stringify({
+              type: "sms_sent",
+              to: parsed.to,
+              at: new Date().toISOString(),
+            }),
           } as any);
-        } catch (e) {
-          console.error("[WM SMS DRAFT WRITE FAILED]", e);
         }
-      })();
+      }
     }
 
     return NextResponse.json({
