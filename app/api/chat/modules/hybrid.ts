@@ -17,31 +17,34 @@ function sanitizeASCII(input: string): string {
 }
 
 // --------------------------------------------------------------
-// INTENT DETECTION — ROLODEX ENUMERATION (AUTHORITATIVE)
-// NOTE: Must handle natural language like "can you list my rolodex"
+// INTENT DETECTION — SMS DRAFT
 // --------------------------------------------------------------
-function isRolodexListIntent(message: string): boolean {
-  const m = message.toLowerCase().trim();
+function isSmsDraftIntent(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes("draft a reply") ||
+    m.includes("draft a response") ||
+    m.includes("write back") ||
+    m.includes("respond to") ||
+    m.includes("reply to") ||
+    m.includes("text them back")
+  );
+}
 
-  // Fast path keywords
-  const hasRolodexKeyword =
-    m.includes("rolodex") || m.includes("contacts") || m.includes("contact list");
+// --------------------------------------------------------------
+// FIND LAST INBOUND SMS (AUTHORITATIVE)
+// --------------------------------------------------------------
+function getLastInboundSms(context: any) {
+  const wm = context?.workingMemory?.items ?? [];
 
-  if (!hasRolodexKeyword) return false;
+  for (let i = wm.length - 1; i >= 0; i--) {
+    try {
+      const parsed = JSON.parse(wm[i].content);
+      if (parsed?.type === "sms_inbound") return parsed;
+    } catch {}
+  }
 
-  // Enumerative verbs/phrases
-  const wantsList =
-    m.includes("list") ||
-    m.includes("show") ||
-    m.includes("view") ||
-    m.includes("display") ||
-    m.includes("who is in") ||
-    m.includes("who's in") ||
-    m.includes("what's in") ||
-    m.includes("what is in") ||
-    m.includes("see my");
-
-  return wantsList;
+  return null;
 }
 
 // --------------------------------------------------------------
@@ -66,115 +69,50 @@ function formatWorkingMemory(context: any): string {
   const wm = context?.workingMemory?.items ?? [];
 
   if (!Array.isArray(wm) || wm.length === 0) {
-    return `
-WORKING MEMORY:
-None.
-`;
+    return `WORKING MEMORY:\nNone.\n`;
   }
-
-  const lines = wm.map(
-    (m: { role: string; content: string }) => `- (${m.role}) ${m.content}`
-  );
 
   return `
 WORKING MEMORY (SESSION-SCOPED, NON-DURABLE):
-${lines.join("\n")}
+${wm.map((m: any) => `- (${m.role}) ${m.content}`).join("\n")}
 
 RULES:
 - Working memory MAY influence reasoning.
 - Working memory MUST NOT override factual memory.
-- Working memory MUST NOT be stated as fact.
 `;
 }
 
 function formatFactualMemory(context: any): string {
   const facts = context?.memoryPack?.facts ?? [];
 
-  if (!Array.isArray(facts) || facts.length === 0) {
-    return `
-FACTUAL MEMORY:
-None recorded.
-`;
+  if (!facts.length) {
+    return `FACTUAL MEMORY:\nNone recorded.\n`;
   }
 
-  const lines = facts.map((f: any) =>
-    typeof f === "string" ? `- ${f}` : `- ${JSON.stringify(f)}`
-  );
-
   return `
-FACTUAL MEMORY (AUTHORITATIVE, DURABLE):
-${lines.join("\n")}
-
-ABSOLUTE RULE:
-- Factual memory OVERRIDES all other context.
-- Identity facts (name, role, relationships) MUST be used unless a newer FACT contradicts them.
+FACTUAL MEMORY (AUTHORITATIVE):
+${facts.map((f: any) => `- ${f}`).join("\n")}
 `;
 }
 
-function formatSessionState(context: any): string {
-  const state = context?.memoryPack?.sessionState;
-
-  if (!state) {
-    return `
-SESSION STATE:
-None established.
-`;
-  }
-
-  const constraintsText = Array.isArray(state.constraints)
-    ? state.constraints.map((c: string) => `- ${c}`).join("\n")
-    : "None";
-
-  return `
-SESSION STATE:
-Domain: ${state.domain ?? "unspecified"}
-Intent: ${state.intent ?? "unspecified"}
-Constraints:
-${constraintsText}
-`;
-}
-
-// --------------------------------------------------------------
-// ROLODEX FORMATTER — REFERENCE DATA (NOT MEMORY)
-// This makes Rolodex visible to the Arbiter for contact selection,
-// but does NOT force listing unless user asks.
-// --------------------------------------------------------------
 function formatRolodex(context: any): string {
   const rolodex = context?.rolodex ?? [];
 
-  if (!Array.isArray(rolodex) || rolodex.length === 0) {
-    return `
-ROLODEX (REFERENCE DATA — NOT MEMORY):
-No contacts stored.
-`;
+  if (!rolodex.length) {
+    return `ROLODEX:\nNo contacts.\n`;
   }
 
-  const lines = rolodex.map((r: any) => {
-    const parts: string[] = [];
-    parts.push(String(r?.name ?? "Unknown"));
-
-    if (r?.primary_phone) parts.push(`phone=${String(r.primary_phone)}`);
-    if (r?.primary_email) parts.push(`email=${String(r.primary_email)}`);
-
-    // Keep additional fields available without bloating output
-    if (r?.relationship_type)
-      parts.push(`rel=${String(r.relationship_type)}`);
-    if (r?.consent_level != null) parts.push(`consent=${String(r.consent_level)}`);
-    if (r?.sensitivity_level != null)
-      parts.push(`sensitivity=${String(r.sensitivity_level)}`);
-
-    return `- ${parts.join(" | ")}`;
-  });
-
   return `
-ROLODEX (REFERENCE DATA — NOT MEMORY):
-${lines.join("\n")}
+ROLODEX (REFERENCE DATA):
+${rolodex
+  .map(
+    (r: any) =>
+      `- ${r.name} | phone=${r.primary_phone ?? "n/a"} | email=${r.primary_email ?? "n/a"}`
+  )
+  .join("\n")}
 
 RULES:
-- Rolodex is authoritative user-owned reference data.
-- DO NOT invent contacts.
-- When user requests listing, enumerate exactly from this section.
-- When user requests messaging a person, resolve ONLY from this section.
+- Contacts MUST resolve from this list only.
 `;
 }
 
@@ -190,59 +128,22 @@ export async function runHybridPipeline(args: {
 }) {
   const { userMessage, context, ministryMode, founderMode, modeHint } = args;
 
-  // ----------------------------------------------------------
-  // HARD DIAGNOSTIC — PROVES MEMORY VISIBILITY
-  // ----------------------------------------------------------
-  console.log("[DIAG-HYBRID-MEMORY]", {
+  console.log("[DIAG-HYBRID]", {
     facts: context?.memoryPack?.facts?.length ?? 0,
     wm: context?.workingMemory?.items?.length ?? 0,
     rolodex: context?.rolodex?.length ?? 0,
   });
 
-  // ----------------------------------------------------------
-  // ROLODEX ENUMERATION — HARD OVERRIDE (NO MODEL)
-  // ----------------------------------------------------------
-  if (userMessage && isRolodexListIntent(userMessage)) {
-    const rolodex = context?.rolodex ?? [];
-
-    if (Array.isArray(rolodex) && rolodex.length > 0) {
-      const lines = rolodex.map((r: any, i: number) => {
-        const parts = [r?.name ?? "Unknown"];
-        if (r?.primary_phone) parts.push(r.primary_phone);
-        if (r?.primary_email) parts.push(r.primary_email);
-        return `${i + 1}. ${parts.join(" — ")}`;
-      });
-
-      return {
-        finalAnswer: `Here’s your Rolodex:\n\n${lines.join("\n")}`,
-      };
-    }
-
-    return {
-      finalAnswer:
-        "Your Rolodex is currently empty. You can add a contact by saying something like: “Add Charlie Raymond to my Rolodex.”",
-    };
-  }
-
-  // ----------------------------------------------------------
-  // Optimist — memory blind
-  // ----------------------------------------------------------
   const optimist = await callModel(
     "gpt-4.1-mini",
     sanitizeASCII(`${OPTIMIST_SYSTEM}\nUser: ${userMessage}`)
   );
 
-  // ----------------------------------------------------------
-  // Skeptic — memory blind
-  // ----------------------------------------------------------
   const skeptic = await callModel(
     "gpt-4.1-mini",
     sanitizeASCII(`${SKEPTIC_SYSTEM}\nUser: ${userMessage}`)
   );
 
-  // ----------------------------------------------------------
-  // Arbiter — authoritative
-  // ----------------------------------------------------------
   const system = buildSolaceSystemPrompt(
     "core",
     `
@@ -250,18 +151,10 @@ Founder Mode: ${founderMode}
 Ministry Mode: ${ministryMode}
 Mode Hint: ${modeHint}
 
-ABSOLUTE RULES (NON-NEGOTIABLE):
-- Speak with one unified voice.
-- Do NOT reference internal systems.
-- Do NOT fabricate memory or contacts.
-- FACTUAL MEMORY IS AUTHORITATIVE.
-
-DATA HIERARCHY (STRICT):
-1. FACTUAL MEMORY
-2. ROLODEX (reference data, authoritative for contacts)
-3. SESSION STATE
-4. WORKING MEMORY
-5. USER MESSAGE
+ABSOLUTE RULES:
+- Single unified voice
+- No fabrication
+- No autonomous action
 `
   );
 
@@ -269,14 +162,10 @@ DATA HIERARCHY (STRICT):
 ${system}
 
 ${formatFactualMemory(context)}
-
 ${formatRolodex(context)}
-
-${formatSessionState(context)}
-
 ${formatWorkingMemory(context)}
 
-INTERNAL REASONING CONTEXT (DO NOT EXPOSE):
+INTERNAL CONTEXT:
 ${optimist}
 ${skeptic}
 
@@ -285,6 +174,23 @@ ${userMessage}
 `);
 
   const finalAnswer = await callModel("gpt-4.1", arbiterPrompt);
+
+  // ----------------------------------------------------------
+  // SMS DRAFT CREATION (NO STORAGE HERE)
+  // ----------------------------------------------------------
+  if (userMessage && isSmsDraftIntent(userMessage)) {
+    const inbound = getLastInboundSms(context);
+
+    if (inbound?.from && finalAnswer) {
+      (context as any).__draftSms = {
+        type: "sms_reply_draft",
+        to: inbound.from,
+        body: finalAnswer,
+        inbound_sid: inbound.message_sid ?? null,
+        rolodex_id: inbound.contact?.id ?? null,
+      };
+    }
+  }
 
   return { finalAnswer };
 }
