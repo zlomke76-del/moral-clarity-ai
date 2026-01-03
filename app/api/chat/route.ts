@@ -145,7 +145,6 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // 🔍 DIAGNOSTIC — DO NOT REMOVE UNTIL VERIFIED
     console.log("[CHAT BODY RAW]", JSON.stringify(body, null, 2));
     console.log("[CHAT BODY KEYS]", Object.keys(body ?? {}));
     console.log("[CHAT ACTION RAW]", body?.action);
@@ -170,6 +169,25 @@ export async function POST(req: Request) {
     const finalUserKey = canonicalUserKey ?? userKey;
     if (!finalUserKey || !conversationId) {
       throw new Error("userKey and conversationId are required");
+    }
+
+    // --------------------------------------------------------
+    // COMMAND PARSING — JSON-IN-MESSAGE (AUTHORITATIVE)
+    // --------------------------------------------------------
+    let parsedAction: string | undefined = action;
+    let parsedPayload: any = payload;
+
+    if (!parsedAction && typeof message === "string") {
+      try {
+        const maybe = JSON.parse(message);
+        if (maybe?.action && maybe?.payload) {
+          parsedAction = maybe.action;
+          parsedPayload = maybe.payload;
+          console.log("[COMMAND PARSED FROM MESSAGE]", parsedAction);
+        }
+      } catch {
+        // ignore
+      }
     }
 
     const cookieStore = await cookies();
@@ -211,10 +229,10 @@ export async function POST(req: Request) {
     // --------------------------------------------------------
     // ROLODEX — EXPLICIT WRITE ACTION (AUTHORITATIVE)
     // --------------------------------------------------------
-    if (action === "rolodex.add" && authUserId) {
-      console.log("[ROLODEX ACTION FIRED]", payload);
+    if (parsedAction === "rolodex.add" && authUserId) {
+      console.log("[ROLODEX ACTION FIRED]", parsedPayload);
 
-      if (!payload?.name || typeof payload.name !== "string") {
+      if (!parsedPayload?.name || typeof parsedPayload.name !== "string") {
         return NextResponse.json(
           { ok: false, error: "Rolodex name is required" },
           { status: 400 }
@@ -227,7 +245,7 @@ export async function POST(req: Request) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(payload),
+        body: JSON.stringify(parsedPayload),
       });
 
       if (!rolodexRes.ok) {
@@ -251,7 +269,7 @@ export async function POST(req: Request) {
     // --------------------------------------------------------
     // FINALIZATION
     // --------------------------------------------------------
-    if (action === "finalize" && authUserId) {
+    if (parsedAction === "finalize" && authUserId) {
       await finalizeConversation({
         supabaseService,
         conversationId,
