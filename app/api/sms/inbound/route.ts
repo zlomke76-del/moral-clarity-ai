@@ -15,38 +15,13 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 // ------------------------------------------------------------
-// ENV VALIDATION (FAIL FAST)
-// ------------------------------------------------------------
-const {
-  NEXT_PUBLIC_SUPABASE_URL,
-  SUPABASE_SERVICE_ROLE_KEY,
-  TWILIO_AUTH_TOKEN,
-} = process.env;
-
-if (!NEXT_PUBLIC_SUPABASE_URL) {
-  throw new Error("NEXT_PUBLIC_SUPABASE_URL is not configured");
-}
-
-if (!SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
-}
-
-if (!TWILIO_AUTH_TOKEN) {
-  throw new Error("TWILIO_AUTH_TOKEN is not configured");
-}
-
-// Narrowed, non-optional constants (TS-safe)
-const SUPABASE_URL = NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = SUPABASE_SERVICE_ROLE_KEY;
-const TWILIO_TOKEN = TWILIO_AUTH_TOKEN;
-
-// ------------------------------------------------------------
 // Helpers — Twilio signature verification
 // ------------------------------------------------------------
 function verifyTwilioSignature(
   url: string,
   params: Record<string, string>,
-  signature: string | null
+  signature: string | null,
+  authToken: string
 ): boolean {
   if (!signature) return false;
 
@@ -56,16 +31,14 @@ function verifyTwilioSignature(
     sortedKeys.map((key) => `${key}${params[key]}`).join("");
 
   const expected = crypto
-    .createHmac("sha1", TWILIO_TOKEN)
+    .createHmac("sha1", authToken)
     .update(Buffer.from(data, "utf-8"))
     .digest("base64");
 
   const expectedBuf = Buffer.from(expected);
   const receivedBuf = Buffer.from(signature);
 
-  if (expectedBuf.length !== receivedBuf.length) {
-    return false;
-  }
+  if (expectedBuf.length !== receivedBuf.length) return false;
 
   return crypto.timingSafeEqual(expectedBuf, receivedBuf);
 }
@@ -75,6 +48,21 @@ function verifyTwilioSignature(
 // ------------------------------------------------------------
 export async function POST(req: Request) {
   try {
+    // --------------------------------------------------------
+    // ENV VALIDATION (RUNTIME, NOT BUILD-TIME)
+    // --------------------------------------------------------
+    const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const TWILIO_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !TWILIO_TOKEN) {
+      console.error("[SMS INBOUND] Missing required env vars");
+      return NextResponse.json({ ok: false }, { status: 500 });
+    }
+
+    // --------------------------------------------------------
+    // Parse inbound request
+    // --------------------------------------------------------
     const url = req.url;
     const bodyText = await req.text();
     const form = Object.fromEntries(
@@ -90,7 +78,8 @@ export async function POST(req: Request) {
     const verified = verifyTwilioSignature(
       url,
       form,
-      twilioSignature
+      twilioSignature,
+      TWILIO_TOKEN
     );
 
     if (!verified) {
@@ -122,7 +111,6 @@ export async function POST(req: Request) {
     // Resolve sender → Rolodex
     // --------------------------------------------------------
     const { data: contact } = await supabase
-      .schema("memory")
       .from("rolodex")
       .select("id, name")
       .eq("primary_phone", From)
@@ -132,7 +120,6 @@ export async function POST(req: Request) {
     // Write inbound message (NO automation)
     // --------------------------------------------------------
     await supabase
-      .schema("memory")
       .from("working_memory")
       .insert({
         role: "system",
@@ -149,7 +136,7 @@ export async function POST(req: Request) {
               }
             : null,
         }),
-      });
+      } as any);
 
     console.log("[SMS INBOUND]", {
       from: From,
@@ -161,7 +148,7 @@ export async function POST(req: Request) {
     // IMPORTANT:
     // - No auto-reply
     // - No TwiML
-    // - Human approval required for responses
+    // - Human approval required
     // --------------------------------------------------------
     return NextResponse.json({ ok: true });
   } catch (err) {
