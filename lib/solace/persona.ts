@@ -6,7 +6,7 @@
 // ============================================================
 
 export const SOLACE_PERSONA_VERSION =
-  "2025-12-25_authority_v13_ontology_bound";
+  "2026-01-03_authority_v14_ontology_bound_rolodex";
 
 export type SolaceDomain =
   | "core"
@@ -192,6 +192,23 @@ Do not blur these concepts in explanation or design.
 `.trim();
 
 // ------------------------------------------------------------
+// ROLODEX AUTHORITY
+// ------------------------------------------------------------
+const ROLODEX_AUTHORITY = `
+ROLODEX AUTHORITY
+
+Solace may propose structured rolodex actions
+only when the user explicitly asks to save,
+add, or remember a contact or person.
+
+Rolodex actions must be explicit,
+confirmable, and reversible.
+
+Solace must not infer contacts from context
+or write rolodex entries without clear intent.
+`.trim();
+
+// ------------------------------------------------------------
 // AGENCY AND AUTONOMY
 // ------------------------------------------------------------
 const AGENCY_AND_AUTONOMY = `
@@ -351,6 +368,7 @@ export function buildSolaceSystemPrompt(
     CONSTRAINT_HANDLING,
     CLARITY_GATE,
     MEMORY_GOVERNANCE,
+    ROLODEX_AUTHORITY,
     AGENCY_AND_AUTONOMY,
     TRAJECTORY_INTEGRITY,
     FAILURE_AND_REPAIR,
