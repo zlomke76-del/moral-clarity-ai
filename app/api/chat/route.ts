@@ -298,7 +298,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // MEMORY WRITE
+    // WRITE USER MESSAGE
     // --------------------------------------------------------
     if (authUserId && message) {
       await supabaseServiceSSR.schema("memory").from("working_memory").insert({
@@ -369,6 +369,9 @@ export async function POST(req: Request) {
         ? result.finalAnswer
         : "I’m here and ready to continue.";
 
+    // --------------------------------------------------------
+    // WRITE ASSISTANT MESSAGE
+    // --------------------------------------------------------
     if (authUserId) {
       await supabaseServiceSSR.schema("memory").from("working_memory").insert({
         conversation_id: conversationId,
@@ -376,6 +379,19 @@ export async function POST(req: Request) {
         workspace_id: workspaceId,
         role: "assistant",
         content: safeResponse,
+      });
+    }
+
+    // --------------------------------------------------------
+    // PERSIST SMS DRAFT (APPROVAL REQUIRED)
+    // --------------------------------------------------------
+    if (authUserId && (context as any).__draftSms) {
+      await supabaseAdmin.schema("memory").from("working_memory").insert({
+        conversation_id: conversationId,
+        user_id: authUserId,
+        workspace_id: workspaceId,
+        role: "system",
+        content: JSON.stringify((context as any).__draftSms),
       });
     }
 
