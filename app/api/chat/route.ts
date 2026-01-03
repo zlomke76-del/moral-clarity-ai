@@ -65,9 +65,6 @@ function isNewsKeywordFallback(message: string): boolean {
   );
 }
 
-/**
- * Detect obvious code / review payloads and veto image routing
- */
 function looksLikeCode(text: string): boolean {
   return (
     text.includes("```") ||
@@ -78,13 +75,8 @@ function looksLikeCode(text: string): boolean {
   );
 }
 
-/**
- * Image intent must be explicit human language,
- * never triggered by code or reviews
- */
 function isImageRequest(message: string): boolean {
   const m = message.trim().toLowerCase();
-
   if (looksLikeCode(message)) return false;
 
   return (
@@ -94,20 +86,6 @@ function isImageRequest(message: string): boolean {
     /^make (an )?(image|picture)\b/.test(m) ||
     /\b(image|picture) of\b/.test(m)
   );
-}
-
-// ------------------------------------------------------------
-// EXPLICIT FACT REMEMBER DETECTOR
-// ------------------------------------------------------------
-function extractExplicitFact(msg: string): string | null {
-  const m = msg.trim();
-  const match = m.match(/^(remember\s+(that\s+)?)(.+)$/i);
-  if (!match) return null;
-
-  const fact = match[3]?.trim();
-  if (!fact || fact.length < 3) return null;
-
-  return fact;
 }
 
 // ------------------------------------------------------------
@@ -134,7 +112,6 @@ async function maybeRunRollingCompaction(params: {
 
   const safeLimit = Math.max(0, wm.length - WM_TAIL_PROTECT);
   const chunk: WMRow[] = wm.slice(0, Math.min(WM_CHUNK_SIZE, safeLimit));
-
   if (chunk.length === 0) return;
 
   try {
@@ -177,7 +154,6 @@ export async function POST(req: Request) {
       action,
       payload,
 
-      // 🔒 EXPLICIT MODE FLAGS (AUTHORITATIVE)
       newsMode = false,
       newsLanguage,
       ministryMode = false,
@@ -186,7 +162,6 @@ export async function POST(req: Request) {
     } = body ?? {};
 
     const finalUserKey = canonicalUserKey ?? userKey;
-
     if (!finalUserKey || !conversationId) {
       throw new Error("userKey and conversationId are required");
     }
@@ -228,7 +203,7 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
-    // ROLODEX — EXPLICIT WRITE ACTION (ADDITIVE)
+    // ROLODEX — EXPLICIT WRITE ACTION (AUTHORITATIVE)
     // --------------------------------------------------------
     if (action === "rolodex.add" && authUserId) {
       if (!payload?.name || typeof payload.name !== "string") {
@@ -243,6 +218,7 @@ export async function POST(req: Request) {
       const rolodexRes = await fetch(`${origin}/api/rolodex`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(payload),
       });
 
@@ -312,7 +288,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // NEWSROOM — LANGUAGE AGNOSTIC, MODE-DRIVEN
+    // NEWSROOM
     // --------------------------------------------------------
     if (newsMode || (message && isNewsKeywordFallback(message))) {
       const origin = new URL(req.url).origin;
@@ -337,9 +313,7 @@ export async function POST(req: Request) {
         ok: true,
         response: newsroomResponse,
         messages: [{ role: "assistant", content: newsroomResponse }],
-        meta: {
-          language: newsLanguage ?? "en",
-        },
+        meta: { language: newsLanguage ?? "en" },
       });
     }
 
