@@ -320,48 +320,61 @@ export async function POST(req: Request) {
       } as any);
     }
 
+    // --------------------------------------------------------
+    // EXPLICIT SEND APPROVAL → EXECUTE SMS
+    // --------------------------------------------------------
     if (authUserId && isExplicitSendApproval(message)) {
-      const { data } = await supabaseAdmin
+      const { data: sentAlready } = await supabaseAdmin
         .from("working_memory")
-        .select("content")
+        .select("id")
         .eq("conversation_id", conversationId)
         .eq("user_id", authUserId)
-        .eq("role", "system")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
+        .eq("content->>type", "sms_sent")
+        .limit(1);
 
-      if (data?.content) {
-        const parsed = JSON.parse(data.content);
+      if (!sentAlready?.length) {
+        const { data } = await supabaseAdmin
+          .from("working_memory")
+          .select("content")
+          .eq("conversation_id", conversationId)
+          .eq("user_id", authUserId)
+          .eq("content->>type", "sms_reply_draft")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
 
-        if (parsed?.type === "sms_reply_draft") {
-          await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/sms/send`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              approved: true,
-              reason: "Conversational approval",
-              messages: [
-                {
-                  to: parsed.to,
-                  body: parsed.body,
-                  rolodex_id: parsed.rolodex_id ?? null,
-                },
-              ],
-            }),
-          });
+        if (data?.content) {
+          const parsed = JSON.parse(data.content);
 
-          await supabaseAdmin.from("working_memory").insert({
-            conversation_id: conversationId,
-            user_id: authUserId,
-            workspace_id: workspaceId,
-            role: "system",
-            content: JSON.stringify({
-              type: "sms_sent",
-              to: parsed.to,
-              at: new Date().toISOString(),
-            }),
-          } as any);
+          if (parsed && (parsed.type === "sms_reply_draft" || (parsed.to && parsed.body))) {
+            await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/sms/send`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                approved: true,
+                reason: "Conversational approval",
+                messages: [
+                  {
+                    to: parsed.to,
+                    body: parsed.body,
+                    rolodex_id: parsed.rolodex_id ?? null,
+                  },
+                ],
+              }),
+            });
+
+            await supabaseAdmin.from("working_memory").insert({
+              conversation_id: conversationId,
+              user_id: authUserId,
+              workspace_id: workspaceId,
+              role: "system",
+              content: JSON.stringify({
+                type: "sms_sent",
+                to: parsed.to,
+                at: new Date().toISOString(),
+              }),
+            } as any);
+          }
         }
       }
     }
