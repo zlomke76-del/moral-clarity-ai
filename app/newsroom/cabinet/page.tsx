@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import type { OutletOverview, OutletStats } from "./types";
 import Leaderboard from "./components/Leaderboard";
 import ScoreBreakdown from "./components/ScoreBreakdown";
@@ -100,7 +101,7 @@ function mergeDuplicateOutlets(
 
       map.set(key, {
         ...existing,
-        outlet: canonical, // display only
+        outlet: canonical,
         total_stories: combinedStories,
         avg_pi_weighted:
           combinedStories > 0
@@ -108,13 +109,12 @@ function mergeDuplicateOutlets(
             : 0,
         __stories: combinedStories,
         __pi_numerator: combinedPiNumerator,
-        // IMPORTANT: keep original __query_key
       });
     } else {
       map.set(key, {
         ...outlet,
-        outlet: canonical,          // display name
-        __query_key: rawName,       // backend identity (UNMODIFIED)
+        outlet: canonical,
+        __query_key: rawName,
         __stories: stories,
         __pi_numerator: pi * stories,
       });
@@ -122,8 +122,6 @@ function mergeDuplicateOutlets(
   }
 
   return Array.from(map.values()).map((o) => {
-    // strip internal merge helpers ONLY
-    // keep __query_key
     const { __stories, __pi_numerator, ...clean } = o;
     return clean;
   });
@@ -139,7 +137,6 @@ export default function NewsroomCabinetPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [stats, setStats] = useState<OutletStats | null>(null);
 
-  // Fetch overview
   useEffect(() => {
     fetch("/api/news/outlets/overview")
       .then((r) => r.json())
@@ -169,7 +166,6 @@ export default function NewsroomCabinetPage() {
       .map((o, i) => ({ ...o, rank: i + 1 }));
   }, [mergedOutlets]);
 
-  // Fetch stats using BACKEND QUERY KEY
   useEffect(() => {
     if (!selected) return;
 
@@ -210,8 +206,16 @@ export default function NewsroomCabinetPage() {
   return (
     <div className="flex flex-col gap-12">
       <div className="text-xs text-neutral-400">
-        {totalStoriesEvaluated.toLocaleString()} stories evaluated ·
-        PI based on lifetime
+        {totalStoriesEvaluated.toLocaleString()} stories evaluated · PI based on lifetime
+        <span className="ml-2">
+          ·{" "}
+          <Link
+            href="/newsroom/methodology"
+            className="underline underline-offset-2 hover:text-neutral-200"
+          >
+            Methodology
+          </Link>
+        </span>
       </div>
 
       {goldenAnchor.length > 0 && (
