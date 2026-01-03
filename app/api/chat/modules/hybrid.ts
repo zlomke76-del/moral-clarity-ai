@@ -17,6 +17,20 @@ function sanitizeASCII(input: string): string {
 }
 
 // --------------------------------------------------------------
+// INTENT DETECTION — ROLODEX ENUMERATION (AUTHORITATIVE)
+// --------------------------------------------------------------
+function isRolodexListIntent(message: string): boolean {
+  const m = message.toLowerCase().trim();
+  return (
+    m === "list my rolodex" ||
+    m === "show my rolodex" ||
+    m === "who is in my rolodex" ||
+    m === "list my contacts" ||
+    m === "show my contacts"
+  );
+}
+
+// --------------------------------------------------------------
 // INTERNAL SYSTEMS (NOT USER VISIBLE)
 // --------------------------------------------------------------
 const OPTIMIST_SYSTEM = `
@@ -125,7 +139,33 @@ export async function runHybridPipeline(args: {
   console.log("[DIAG-HYBRID-MEMORY]", {
     facts: context?.memoryPack?.facts?.length ?? 0,
     wm: context?.workingMemory?.items?.length ?? 0,
+    rolodex: context?.rolodex?.length ?? 0,
   });
+
+  // ----------------------------------------------------------
+  // ROLODEX ENUMERATION — HARD OVERRIDE (NO MODEL)
+  // ----------------------------------------------------------
+  if (userMessage && isRolodexListIntent(userMessage)) {
+    const rolodex = context?.rolodex ?? [];
+
+    if (Array.isArray(rolodex) && rolodex.length > 0) {
+      const lines = rolodex.map((r: any, i: number) => {
+        const parts = [r.name];
+        if (r.primary_phone) parts.push(r.primary_phone);
+        if (r.primary_email) parts.push(r.primary_email);
+        return `${i + 1}. ${parts.join(" — ")}`;
+      });
+
+      return {
+        finalAnswer: `Here’s your Rolodex:\n\n${lines.join("\n")}`,
+      };
+    }
+
+    return {
+      finalAnswer:
+        "Your Rolodex is currently empty. You can add a contact by saying something like: “Add Charlie Raymond to my Rolodex.”",
+    };
+  }
 
   // ----------------------------------------------------------
   // Optimist — memory blind
@@ -160,7 +200,7 @@ ABSOLUTE RULES (NON-NEGOTIABLE):
 - FACTUAL MEMORY IS AUTHORITATIVE.
 
 MEMORY HIERARCHY (STRICT):
-1. FACTUAL MEMORY (supersedes all)
+1. FACTUAL MEMORY
 2. SESSION STATE
 3. WORKING MEMORY
 4. USER MESSAGE
