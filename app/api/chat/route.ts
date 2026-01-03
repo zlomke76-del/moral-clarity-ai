@@ -130,8 +130,7 @@ async function maybeRunRollingCompaction(params: {
   const { supabaseAdmin, conversationId, userId } = params;
 
   const wmRes = await supabaseAdmin
-    .schema("memory")
-    .from("working_memory")
+    .from("memory.working_memory")
     .select("id, role, content, created_at")
     .eq("conversation_id", conversationId)
     .eq("user_id", userId)
@@ -143,12 +142,12 @@ async function maybeRunRollingCompaction(params: {
 
   const safeLimit = Math.max(0, wm.length - WM_TAIL_PROTECT);
   const chunk = wm.slice(0, Math.min(WM_CHUNK_SIZE, safeLimit));
-  if (chunk.length === 0) return;
+  if (!chunk.length) return;
 
   try {
     const compaction = await runSessionCompaction(conversationId, chunk);
 
-    await supabaseAdmin.schema("memory").from("memories").insert({
+    await supabaseAdmin.from("memory.memories").insert({
       user_id: userId,
       email: "system",
       workspace_id: null,
@@ -160,8 +159,7 @@ async function maybeRunRollingCompaction(params: {
     });
 
     await supabaseAdmin
-      .schema("memory")
-      .from("working_memory")
+      .from("memory.working_memory")
       .delete()
       .in("id", chunk.map((c) => c.id));
   } catch (err) {
@@ -222,7 +220,7 @@ export async function POST(req: Request) {
     const cookieStore = await cookies();
 
     // --------------------------------------------------------
-    // USER SSR CLIENT (AUTH ONLY)
+    // USER AUTH CLIENT
     // --------------------------------------------------------
     const supabaseSSR = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -243,7 +241,7 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
-    // TRUE ADMIN CLIENT (RLS BYPASS)
+    // ADMIN CLIENT (SERVICE ROLE)
     // --------------------------------------------------------
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -257,12 +255,11 @@ export async function POST(req: Request) {
     );
 
     // --------------------------------------------------------
-    // ROLODEX — AUTHORITATIVE ADMIN WRITE
+    // ROLODEX WRITE (ADMIN, BLOCKING — CORRECT)
     // --------------------------------------------------------
     if (parsedAction === "rolodex.add" && authUserId) {
       const { data, error } = await supabaseAdmin
-        .schema("memory")
-        .from("rolodex")
+        .from("memory.rolodex")
         .insert({
           user_id: authUserId,
           ...parsedPayload,
@@ -270,10 +267,7 @@ export async function POST(req: Request) {
         .select("id")
         .single();
 
-      if (error) {
-        console.error("[ROLODEX WRITE FAILED]", error);
-        throw error;
-      }
+      if (error) throw error;
 
       return NextResponse.json({
         ok: true,
@@ -284,12 +278,11 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // WRITE USER MESSAGE (NON-BLOCKING, ADMIN)
+    // WRITE USER MESSAGE (NON-BLOCKING)
     // --------------------------------------------------------
     if (authUserId && message) {
       void supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
+        .from("memory.working_memory")
         .insert({
           conversation_id: conversationId,
           user_id: authUserId,
@@ -297,9 +290,7 @@ export async function POST(req: Request) {
           role: "user",
           content: message,
         })
-        .catch((err) =>
-          console.error("[WM USER WRITE FAILED]", err)
-        );
+        .catch((e) => console.error("[WM USER WRITE FAILED]", e));
     }
 
     if (authUserId) {
@@ -362,12 +353,11 @@ export async function POST(req: Request) {
         : "I’m here and ready to continue.";
 
     // --------------------------------------------------------
-    // WRITE ASSISTANT MESSAGE (NON-BLOCKING, ADMIN)
+    // WRITE ASSISTANT MESSAGE (NON-BLOCKING)
     // --------------------------------------------------------
     if (authUserId) {
       void supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
+        .from("memory.working_memory")
         .insert({
           conversation_id: conversationId,
           user_id: authUserId,
@@ -375,18 +365,15 @@ export async function POST(req: Request) {
           role: "assistant",
           content: safeResponse,
         })
-        .catch((err) =>
-          console.error("[WM ASSISTANT WRITE FAILED]", err)
-        );
+        .catch((e) => console.error("[WM ASSISTANT WRITE FAILED]", e));
     }
 
     // --------------------------------------------------------
-    // PERSIST SMS DRAFT (APPROVAL REQUIRED)
+    // PERSIST SMS DRAFT (ADMIN, NON-BLOCKING)
     // --------------------------------------------------------
     if (authUserId && (context as any).__draftSms) {
       void supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
+        .from("memory.working_memory")
         .insert({
           conversation_id: conversationId,
           user_id: authUserId,
@@ -394,9 +381,7 @@ export async function POST(req: Request) {
           role: "system",
           content: JSON.stringify((context as any).__draftSms),
         })
-        .catch((err) =>
-          console.error("[WM SMS DRAFT WRITE FAILED]", err)
-        );
+        .catch((e) => console.error("[WM SMS DRAFT WRITE FAILED]", e));
     }
 
     return NextResponse.json({
