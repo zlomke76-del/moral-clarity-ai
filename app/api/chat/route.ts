@@ -89,6 +89,38 @@ function isImageRequest(message: string): boolean {
 }
 
 // ------------------------------------------------------------
+// ADDITIVE — ROLODEX INTENT (NATURAL + FOREIGN LANGUAGE)
+// ------------------------------------------------------------
+function detectRolodexIntent(message: string): boolean {
+  const m = message.toLowerCase();
+
+  return (
+    /(add|save|store|remember|guardar|ajouter|speichern|salva)/i.test(m) &&
+    /(rolodex|contact|person|email|phone|telefono|correo|kontakt)/i.test(m)
+  );
+}
+
+function extractRolodexPayload(message: string) {
+  const email =
+    message.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] ?? null;
+
+  const phone =
+    message.match(/(\+?\d[\d\s\-()]{7,})/)?.[0] ?? null;
+
+  const nameMatch =
+    message.match(/(?:name|contact|person)[:\-]?\s*([A-Za-z\s]+)/i);
+
+  if (!email && !phone && !nameMatch) return null;
+
+  return {
+    name: nameMatch?.[1]?.trim() ?? "Unknown",
+    primary_email: email,
+    primary_phone: phone,
+    notes: message,
+  };
+}
+
+// ------------------------------------------------------------
 // ROLLING COMPACTION (NON-BLOCKING)
 // ------------------------------------------------------------
 async function maybeRunRollingCompaction(params: {
@@ -187,6 +219,20 @@ export async function POST(req: Request) {
         }
       } catch {
         // ignore
+      }
+    }
+
+    // --------------------------------------------------------
+    // ADDITIVE — NATURAL LANGUAGE ROLODEX BRIDGE
+    // --------------------------------------------------------
+    if (!parsedAction && typeof message === "string") {
+      if (detectRolodexIntent(message)) {
+        const extracted = extractRolodexPayload(message);
+        if (extracted?.name) {
+          parsedAction = "rolodex.add";
+          parsedPayload = extracted;
+          console.log("[ROLODEX INTENT AUTO-DETECTED]");
+        }
       }
     }
 
