@@ -251,10 +251,7 @@ export async function POST(req: Request) {
     if (parsedAction === "rolodex.add" && authUserId) {
       const { data, error } = await supabaseAdmin
         .from("memory.rolodex")
-        .insert({
-          user_id: authUserId,
-          ...parsedPayload,
-        } as any)
+        .insert({ user_id: authUserId, ...parsedPayload } as any)
         .select("id")
         .single();
 
@@ -272,16 +269,21 @@ export async function POST(req: Request) {
     // WRITE USER MESSAGE (NON-BLOCKING)
     // --------------------------------------------------------
     if (authUserId && message) {
-      void supabaseAdmin
-        .from("memory.working_memory")
-        .insert({
-          conversation_id: conversationId,
-          user_id: authUserId,
-          workspace_id: workspaceId,
-          role: "user",
-          content: message,
-        } as any)
-        .catch((e) => console.error("[WM USER WRITE FAILED]", e));
+      void (async () => {
+        try {
+          await supabaseAdmin
+            .from("memory.working_memory")
+            .insert({
+              conversation_id: conversationId,
+              user_id: authUserId,
+              workspace_id: workspaceId,
+              role: "user",
+              content: message,
+            } as any);
+        } catch (e) {
+          console.error("[WM USER WRITE FAILED]", e);
+        }
+      })();
     }
 
     if (authUserId) {
@@ -347,32 +349,42 @@ export async function POST(req: Request) {
     // WRITE ASSISTANT MESSAGE (NON-BLOCKING)
     // --------------------------------------------------------
     if (authUserId) {
-      void supabaseAdmin
-        .from("memory.working_memory")
-        .insert({
-          conversation_id: conversationId,
-          user_id: authUserId,
-          workspace_id: workspaceId,
-          role: "assistant",
-          content: safeResponse,
-        } as any)
-        .catch((e) => console.error("[WM ASSISTANT WRITE FAILED]", e));
+      void (async () => {
+        try {
+          await supabaseAdmin
+            .from("memory.working_memory")
+            .insert({
+              conversation_id: conversationId,
+              user_id: authUserId,
+              workspace_id: workspaceId,
+              role: "assistant",
+              content: safeResponse,
+            } as any);
+        } catch (e) {
+          console.error("[WM ASSISTANT WRITE FAILED]", e);
+        }
+      })();
     }
 
     // --------------------------------------------------------
     // PERSIST SMS DRAFT
     // --------------------------------------------------------
     if (authUserId && (context as any).__draftSms) {
-      void supabaseAdmin
-        .from("memory.working_memory")
-        .insert({
-          conversation_id: conversationId,
-          user_id: authUserId,
-          workspace_id: workspaceId,
-          role: "system",
-          content: JSON.stringify((context as any).__draftSms),
-        } as any)
-        .catch((e) => console.error("[WM SMS DRAFT WRITE FAILED]", e));
+      void (async () => {
+        try {
+          await supabaseAdmin
+            .from("memory.working_memory")
+            .insert({
+              conversation_id: conversationId,
+              user_id: authUserId,
+              workspace_id: workspaceId,
+              role: "system",
+              content: JSON.stringify((context as any).__draftSms),
+            } as any);
+        } catch (e) {
+          console.error("[WM SMS DRAFT WRITE FAILED]", e);
+        }
+      })();
     }
 
     return NextResponse.json({
