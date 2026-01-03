@@ -4,14 +4,14 @@
 //------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 import {
   FACTS_LIMIT,
   EPISODES_LIMIT,
+  RESEARCH_CONTEXT_LIMIT,
 } from "./context.constants";
-
-import { RESEARCH_CONTEXT_LIMIT } from "./context.constants";
 
 // ------------------------------------------------------------
 // TYPES
@@ -41,7 +41,7 @@ export type SolaceContextBundle = {
   newsDigest: any[];
   didResearch: boolean;
 
-  // ADDITIVE — reference data (non-memory)
+  // reference data (non-memory)
   rolodex?: any[];
 };
 
@@ -67,6 +67,9 @@ export async function assembleContext(
 
   const cookieStore = await cookies();
 
+  // ----------------------------------------------------------
+  // USER-SCOPED CLIENT (SSR, RLS-BOUND)
+  // ----------------------------------------------------------
   const supabaseUser = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -81,16 +84,16 @@ export async function assembleContext(
     }
   );
 
-  const supabaseService = createServerClient(
+  // ----------------------------------------------------------
+  // SERVICE / ADMIN CLIENT (RLS BYPASS)
+  // ----------------------------------------------------------
+  const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
-      cookies: {
-        get() {
-          return undefined;
-        },
-        set() {},
-        remove() {},
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
       },
     }
   );
@@ -121,9 +124,9 @@ export async function assembleContext(
   const authUserId = user.id;
 
   // ----------------------------------------------------------
-  // FACTUAL MEMORY (AUTHORITATIVE, DURABLE)
+  // FACTUAL MEMORY
   // ----------------------------------------------------------
-  const factsRes = await supabaseService
+  const factsRes = await supabaseAdmin
     .schema("memory")
     .from("memories")
     .select("content, created_at")
@@ -141,9 +144,9 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // HUBBLE / RESEARCH CONTEXT (AUTHORITATIVE, READ-ONLY)
+  // RESEARCH CONTEXT
   // ----------------------------------------------------------
-  const hubbleRes = await supabaseService
+  const hubbleRes = await supabaseAdmin
     .schema("research")
     .from("hubble_ingest_v1")
     .select("*")
@@ -159,12 +162,12 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // WORKING MEMORY (LIVE, SESSION-SCOPED)
+  // WORKING MEMORY
   // ----------------------------------------------------------
   let wmItems: WorkingMemoryItem[] = [];
 
   if (conversationId) {
-    const wmRes = await supabaseService
+    const wmRes = await supabaseAdmin
       .schema("memory")
       .from("working_memory")
       .select("id, role, content, created_at")
@@ -178,35 +181,21 @@ export async function assembleContext(
   console.log("[DIAG-ASSEMBLE-WM]", {
     conversationId,
     count: wmItems.length,
-    sample: wmItems.slice(0, 2),
   });
 
   // ----------------------------------------------------------
-  // ADDITIVE — ROLODEX (REFERENCE DATA, NOT MEMORY)
+  // ROLODEX — AUTHORITATIVE READ (FIXED)
   // ----------------------------------------------------------
-  let rolodexItems: any[] = [];
+  const rolodexRes = await supabaseAdmin
+    .schema("memory")
+    .from("rolodex")
+    .select("*")
+    .eq("user_id", authUserId)
+    .order("created_at", { ascending: false });
 
-  try {
-    const origin =
-      process.env.NEXT_PUBLIC_APP_ORIGIN ??
-      process.env.NEXT_PUBLIC_SITE_URL ??
-      "";
-
-    if (origin) {
-      const rolodexRes = await fetch(`${origin}/api/rolodex`, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-      });
-
-      if (rolodexRes.ok) {
-        const json = await rolodexRes.json();
-        rolodexItems = Array.isArray(json) ? json : json?.items ?? [];
-      }
-    }
-  } catch (err) {
-    console.error("[DIAG-ASSEMBLE-ROLODEX] read failed");
-  }
+  const rolodexItems = Array.isArray(rolodexRes.data)
+    ? rolodexRes.data
+    : [];
 
   console.log("[DIAG-ASSEMBLE-ROLODEX]", {
     count: rolodexItems.length,
