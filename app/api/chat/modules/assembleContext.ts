@@ -40,6 +40,9 @@ export type SolaceContextBundle = {
   authorities: any[];
   newsDigest: any[];
   didResearch: boolean;
+
+  // ADDITIVE — reference data (non-memory)
+  rolodex?: any[];
 };
 
 // ------------------------------------------------------------
@@ -111,6 +114,7 @@ export async function assembleContext(
       authorities: [],
       newsDigest: [],
       didResearch: false,
+      rolodex: [],
     };
   }
 
@@ -178,6 +182,37 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
+  // ADDITIVE — ROLODEX (REFERENCE DATA, NOT MEMORY)
+  // ----------------------------------------------------------
+  let rolodexItems: any[] = [];
+
+  try {
+    const origin =
+      process.env.NEXT_PUBLIC_APP_ORIGIN ??
+      process.env.NEXT_PUBLIC_SITE_URL ??
+      "";
+
+    if (origin) {
+      const rolodexRes = await fetch(`${origin}/api/rolodex`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+
+      if (rolodexRes.ok) {
+        const json = await rolodexRes.json();
+        rolodexItems = Array.isArray(json) ? json : json?.items ?? [];
+      }
+    }
+  } catch (err) {
+    console.error("[DIAG-ASSEMBLE-ROLODEX] read failed");
+  }
+
+  console.log("[DIAG-ASSEMBLE-ROLODEX]", {
+    count: rolodexItems.length,
+  });
+
+  // ----------------------------------------------------------
   // RETURN CONTEXT
   // ----------------------------------------------------------
   return {
@@ -197,5 +232,8 @@ export async function assembleContext(
     authorities: [],
     newsDigest: [],
     didResearch: researchItems.length > 0,
+
+    // reference only
+    rolodex: rolodexItems,
   };
 }
