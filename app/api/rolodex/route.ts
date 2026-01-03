@@ -1,30 +1,29 @@
+// app/api/rolodex/route.ts
 // ============================================================
 // Rolodex API — minimal, RLS-governed
 // ============================================================
 // - Uses user session (cookies)
 // - No service role
 // - RLS enforces ownership + isolation
+// - TABLE LIVES IN memory.rolodex (NOT public)
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /* ========= Helpers ========= */
 
-async function getSupabase(req: NextRequest, res: NextResponse) {
-  const cookieStore = await cookies();
-
+function getSupabase(req: NextRequest, res: NextResponse) {
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name) {
-          return cookieStore.get(name)?.value;
+          return req.cookies.get(name)?.value;
         },
         set(name, value, options) {
           res.cookies.set({ name, value, ...options });
@@ -43,11 +42,11 @@ async function getSupabase(req: NextRequest, res: NextResponse) {
  * GET /api/rolodex?q=char
  *
  * - Lists user's contacts
- * - Optional fuzzy name search
+ * - Optional fuzzy name search via pg_trgm
  */
 export async function GET(req: NextRequest) {
   const res = NextResponse.next();
-  const supabase = await getSupabase(req, res);
+  const supabase = getSupabase(req, res);
 
   const {
     data: { user },
@@ -62,8 +61,10 @@ export async function GET(req: NextRequest) {
   const q = searchParams.get("q");
 
   let query = supabase
+    .schema("memory")
     .from("rolodex")
-    .select(`
+    .select(
+      `
       id,
       name,
       relationship_type,
@@ -74,7 +75,8 @@ export async function GET(req: NextRequest) {
       consent_level,
       created_at,
       updated_at
-    `)
+    `
+    )
     .order("name", { ascending: true });
 
   if (q && q.trim().length > 0) {
@@ -93,10 +95,23 @@ export async function GET(req: NextRequest) {
 /* ========= POST ========= */
 /**
  * POST /api/rolodex
+ *
+ * Body:
+ * {
+ *   name: string (required)
+ *   relationship_type?: string
+ *   primary_email?: string
+ *   primary_phone?: string
+ *   birthday?: string (YYYY-MM-DD)
+ *   notes?: string
+ *   workspace_id?: uuid
+ *   sensitivity_level?: number
+ *   consent_level?: number
+ * }
  */
 export async function POST(req: NextRequest) {
   const res = NextResponse.next();
-  const supabase = await getSupabase(req, res);
+  const supabase = getSupabase(req, res);
 
   const {
     data: { user },
@@ -132,6 +147,7 @@ export async function POST(req: NextRequest) {
   };
 
   const { data, error } = await supabase
+    .schema("memory")
     .from("rolodex")
     .insert(insertPayload)
     .select("id")
