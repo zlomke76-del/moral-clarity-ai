@@ -23,15 +23,21 @@ const {
   TWILIO_AUTH_TOKEN,
 } = process.env;
 
-if (!NEXT_PUBLIC_SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error("Supabase service environment variables missing");
+if (!NEXT_PUBLIC_SUPABASE_URL) {
+  throw new Error("NEXT_PUBLIC_SUPABASE_URL is not configured");
+}
+
+if (!SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured");
 }
 
 if (!TWILIO_AUTH_TOKEN) {
   throw new Error("TWILIO_AUTH_TOKEN is not configured");
 }
 
-// Explicitly narrowed token for crypto usage
+// Narrowed, non-optional constants (TS-safe)
+const SUPABASE_URL = NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_SERVICE_KEY = SUPABASE_SERVICE_ROLE_KEY;
 const TWILIO_TOKEN = TWILIO_AUTH_TOKEN;
 
 // ------------------------------------------------------------
@@ -45,22 +51,23 @@ function verifyTwilioSignature(
   if (!signature) return false;
 
   const sortedKeys = Object.keys(params).sort();
-
   const data =
     url +
-    sortedKeys
-      .map((key) => `${key}${params[key]}`)
-      .join("");
+    sortedKeys.map((key) => `${key}${params[key]}`).join("");
 
   const expected = crypto
     .createHmac("sha1", TWILIO_TOKEN)
     .update(Buffer.from(data, "utf-8"))
     .digest("base64");
 
-  return crypto.timingSafeEqual(
-    Buffer.from(expected),
-    Buffer.from(signature)
-  );
+  const expectedBuf = Buffer.from(expected);
+  const receivedBuf = Buffer.from(signature);
+
+  if (expectedBuf.length !== receivedBuf.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(expectedBuf, receivedBuf);
 }
 
 // ------------------------------------------------------------
@@ -91,12 +98,7 @@ export async function POST(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const {
-      From,
-      To,
-      Body,
-      MessageSid,
-    } = form;
+    const { From, To, Body, MessageSid } = form;
 
     if (!From || !Body) {
       return NextResponse.json({ ok: true });
@@ -106,8 +108,8 @@ export async function POST(req: Request) {
     // Admin client (RLS bypass, server-only)
     // --------------------------------------------------------
     const supabase = createClient(
-      NEXT_PUBLIC_SUPABASE_URL,
-      SUPABASE_SERVICE_ROLE_KEY,
+      SUPABASE_URL,
+      SUPABASE_SERVICE_KEY,
       {
         auth: {
           persistSession: false,
@@ -159,7 +161,7 @@ export async function POST(req: Request) {
     // IMPORTANT:
     // - No auto-reply
     // - No TwiML
-    // - Solace must explicitly approve responses
+    // - Human approval required for responses
     // --------------------------------------------------------
     return NextResponse.json({ ok: true });
   } catch (err) {
