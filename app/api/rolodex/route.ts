@@ -1,8 +1,7 @@
-// app/api/rolodex/route.ts
 // ============================================================
 // Rolodex API — minimal, RLS-governed
 // ============================================================
-// - Uses user session (cookies) via next/headers
+// - Uses user session (cookies)
 // - No service role
 // - RLS enforces ownership + isolation
 // ============================================================
@@ -16,8 +15,8 @@ export const dynamic = "force-dynamic";
 
 /* ========= Helpers ========= */
 
-function getSupabase(res: NextResponse) {
-  const cookieStore = cookies();
+async function getSupabase(req: NextRequest, res: NextResponse) {
+  const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -48,7 +47,7 @@ function getSupabase(res: NextResponse) {
  */
 export async function GET(req: NextRequest) {
   const res = NextResponse.next();
-  const supabase = getSupabase(res);
+  const supabase = await getSupabase(req, res);
 
   const {
     data: { user },
@@ -97,7 +96,7 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   const res = NextResponse.next();
-  const supabase = getSupabase(res);
+  const supabase = await getSupabase(req, res);
 
   const {
     data: { user },
@@ -112,17 +111,11 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json(
-      { error: "Invalid JSON body" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
   if (!body?.name || typeof body.name !== "string") {
-    return NextResponse.json(
-      { error: "Name is required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
   const insertPayload = {
