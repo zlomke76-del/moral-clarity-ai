@@ -30,9 +30,17 @@ const DEFAULT_PER_DOMAIN_MAX = 5;
 const DEFAULT_NEWS_WINDOW_DAYS = 1;
 
 /* ========= DOMAIN-SPECIFIC THROTTLES ========= */
-
+/**
+ * Hard caps are structural sampling controls.
+ * They imply no semantic or moral judgment.
+ */
 const DOMAIN_MAX_OVERRIDES: Record<string, number> = {
+  // State-sponsored / special cases
   'rferl.org': 1,
+
+  // High-volume global broadcasters — capped to prevent dominance
+  'foxnews.com': 2,
+  'bbc.com': 2,
 
   // Local / regional outlets — intentionally sparse
   'billingsgazette.com': 1,
@@ -122,7 +130,7 @@ export const SOURCE_REGISTRY: NewsSource[] = [
 
   { id: 'rfe', label: 'Radio Free Europe / Radio Liberty', domain: 'rferl.org' },
 
-  // ===== Local / Regional (Low-frequency structural samples) =====
+  // ===== Local / Regional =====
   {
     id: 'billingsgazette',
     label: 'Billings Gazette',
