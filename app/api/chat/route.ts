@@ -177,11 +177,6 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    console.log("[CHAT BODY RAW]", JSON.stringify(body, null, 2));
-    console.log("[CHAT BODY KEYS]", Object.keys(body ?? {}));
-    console.log("[CHAT ACTION RAW]", body?.action);
-    console.log("[CHAT PAYLOAD RAW]", body?.payload);
-
     const {
       message,
       canonicalUserKey,
@@ -190,7 +185,6 @@ export async function POST(req: Request) {
       conversationId,
       action,
       payload,
-
       newsMode = false,
       newsLanguage,
       ministryMode = false,
@@ -203,9 +197,6 @@ export async function POST(req: Request) {
       throw new Error("userKey and conversationId are required");
     }
 
-    // --------------------------------------------------------
-    // COMMAND PARSING — JSON-IN-MESSAGE (AUTHORITATIVE)
-    // --------------------------------------------------------
     let parsedAction: string | undefined = action;
     let parsedPayload: any = payload;
 
@@ -215,23 +206,16 @@ export async function POST(req: Request) {
         if (maybe?.action && maybe?.payload) {
           parsedAction = maybe.action;
           parsedPayload = maybe.payload;
-          console.log("[COMMAND PARSED FROM MESSAGE]", parsedAction);
         }
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
 
-    // --------------------------------------------------------
-    // ADDITIVE — NATURAL LANGUAGE ROLODEX BRIDGE
-    // --------------------------------------------------------
     if (!parsedAction && typeof message === "string") {
       if (detectRolodexIntent(message)) {
         const extracted = extractRolodexPayload(message);
         if (extracted?.name) {
           parsedAction = "rolodex.add";
           parsedPayload = extracted;
-          console.log("[ROLODEX INTENT AUTO-DETECTED]");
         }
       }
     }
@@ -273,18 +257,35 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
-    // ROLODEX — EXPLICIT WRITE ACTION (AUTHORITATIVE)
+    // ✅ ADDITIVE — ROLODEX SERVICE ROLE FAST-PATH (AUTHORITATIVE)
     // --------------------------------------------------------
     if (parsedAction === "rolodex.add" && authUserId) {
-      console.log("[ROLODEX ACTION FIRED]", parsedPayload);
+      const { data, error } = await supabaseService
+        .from("rolodex")
+        .insert({
+          user_id: authUserId,
+          ...parsedPayload,
+        })
+        .select("id")
+        .single();
 
-      if (!parsedPayload?.name || typeof parsedPayload.name !== "string") {
-        return NextResponse.json(
-          { ok: false, error: "Rolodex name is required" },
-          { status: 400 }
-        );
+      if (!error && data?.id) {
+        return NextResponse.json({
+          ok: true,
+          response: "Saved to your Rolodex.",
+          meta: { rolodexId: data.id },
+          messages: [{ role: "assistant", content: "Saved to your Rolodex." }],
+        });
       }
 
+      console.error("[ROLODEX SERVICE WRITE FAILED]", error);
+      // fall through to HTTP fallback
+    }
+
+    // --------------------------------------------------------
+    // ROLODEX — HTTP FALLBACK (UNCHANGED)
+    // --------------------------------------------------------
+    if (parsedAction === "rolodex.add" && authUserId) {
       const origin = new URL(req.url).origin;
 
       const rolodexRes = await fetch(`${origin}/api/rolodex`, {
@@ -369,10 +370,6 @@ export async function POST(req: Request) {
         `${origin}/api/news/digest?limit=3`,
         { cache: "no-store" }
       );
-
-      if (!digestRes.ok) {
-        throw new Error("NEWS_DIGEST_FETCH_FAILED");
-      }
 
       const digestJson = await digestRes.json();
       const stories = Array.isArray(digestJson?.stories)
