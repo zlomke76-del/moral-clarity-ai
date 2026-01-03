@@ -174,6 +174,13 @@ export default function EdgeOfPracticeIndexPage() {
               POM Path-Memory Bimodal Basin Test
             </Link>
           </li>
+
+          {/* === ADDITIVE ENTRY — NO DELETIONS === */}
+          <li>
+            <Link href="/edge-of-practice/tpu-segmental-network-decoupling">
+              TPU Segmental Network Decoupling Test
+            </Link>
+          </li>
         </ul>
 
         {/* ================= ENERGY ================= */}
