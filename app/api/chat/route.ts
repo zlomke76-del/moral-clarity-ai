@@ -156,7 +156,7 @@ async function maybeRunRollingCompaction(params: {
       content: JSON.stringify(compaction),
       conversation_id: conversationId,
       confidence: 1.0,
-    });
+    } as any);
 
     await supabaseAdmin
       .from("memory.working_memory")
@@ -219,9 +219,6 @@ export async function POST(req: Request) {
 
     const cookieStore = await cookies();
 
-    // --------------------------------------------------------
-    // USER AUTH CLIENT
-    // --------------------------------------------------------
     const supabaseSSR = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -240,22 +237,16 @@ export async function POST(req: Request) {
 
     const authUserId = user?.id ?? null;
 
-    // --------------------------------------------------------
-    // ADMIN CLIENT (SERVICE ROLE)
-    // --------------------------------------------------------
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-        },
+        auth: { persistSession: false, autoRefreshToken: false },
       }
     );
 
     // --------------------------------------------------------
-    // ROLODEX WRITE (ADMIN, BLOCKING — CORRECT)
+    // ROLODEX WRITE
     // --------------------------------------------------------
     if (parsedAction === "rolodex.add" && authUserId) {
       const { data, error } = await supabaseAdmin
@@ -263,7 +254,7 @@ export async function POST(req: Request) {
         .insert({
           user_id: authUserId,
           ...parsedPayload,
-        })
+        } as any)
         .select("id")
         .single();
 
@@ -289,7 +280,7 @@ export async function POST(req: Request) {
           workspace_id: workspaceId,
           role: "user",
           content: message,
-        })
+        } as any)
         .catch((e) => console.error("[WM USER WRITE FAILED]", e));
     }
 
@@ -364,12 +355,12 @@ export async function POST(req: Request) {
           workspace_id: workspaceId,
           role: "assistant",
           content: safeResponse,
-        })
+        } as any)
         .catch((e) => console.error("[WM ASSISTANT WRITE FAILED]", e));
     }
 
     // --------------------------------------------------------
-    // PERSIST SMS DRAFT (ADMIN, NON-BLOCKING)
+    // PERSIST SMS DRAFT
     // --------------------------------------------------------
     if (authUserId && (context as any).__draftSms) {
       void supabaseAdmin
@@ -380,7 +371,7 @@ export async function POST(req: Request) {
           workspace_id: workspaceId,
           role: "system",
           content: JSON.stringify((context as any).__draftSms),
-        })
+        } as any)
         .catch((e) => console.error("[WM SMS DRAFT WRITE FAILED]", e));
     }
 
