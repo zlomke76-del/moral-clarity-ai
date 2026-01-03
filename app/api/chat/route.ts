@@ -257,10 +257,11 @@ export async function POST(req: Request) {
     const authUserId = user?.id ?? null;
 
     // --------------------------------------------------------
-    // ✅ ADDITIVE — ROLODEX SERVICE ROLE FAST-PATH (AUTHORITATIVE)
+    // ROLODEX — SERVICE ROLE WRITE (FIXED SCHEMA)
     // --------------------------------------------------------
     if (parsedAction === "rolodex.add" && authUserId) {
       const { data, error } = await supabaseService
+        .schema("memory") // ✅ FIX — correct schema
         .from("rolodex")
         .insert({
           user_id: authUserId,
@@ -278,39 +279,7 @@ export async function POST(req: Request) {
         });
       }
 
-      console.error("[ROLODEX SERVICE WRITE FAILED]", error);
-      // fall through to HTTP fallback
-    }
-
-    // --------------------------------------------------------
-    // ROLODEX — HTTP FALLBACK (UNCHANGED)
-    // --------------------------------------------------------
-    if (parsedAction === "rolodex.add" && authUserId) {
-      const origin = new URL(req.url).origin;
-
-      const rolodexRes = await fetch(`${origin}/api/rolodex`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(parsedPayload),
-      });
-
-      if (!rolodexRes.ok) {
-        const err = await rolodexRes.json();
-        return NextResponse.json(
-          { ok: false, error: err?.error ?? "Rolodex write failed" },
-          { status: 500 }
-        );
-      }
-
-      const { id } = await rolodexRes.json();
-
-      return NextResponse.json({
-        ok: true,
-        response: "Saved to your Rolodex.",
-        meta: { rolodexId: id },
-        messages: [{ role: "assistant", content: "Saved to your Rolodex." }],
-      });
+      console.error("[ROLODEX WRITE FAILED]", error);
     }
 
     // --------------------------------------------------------
