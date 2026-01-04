@@ -102,6 +102,16 @@ function isExplicitSendApproval(message?: string): boolean {
 }
 
 // ------------------------------------------------------------
+// ADDITIVE — EXECUTOR DIRECTIVE (Option A)
+// ------------------------------------------------------------
+function isExecutorDirective(message?: string): boolean {
+  if (!message) return false;
+  return /execute outbound sms|proceed with immediate outbound sms/i.test(
+    message
+  );
+}
+
+// ------------------------------------------------------------
 // ADDITIVE — ROLODEX INTENT
 // ------------------------------------------------------------
 function detectRolodexIntent(message: string): boolean {
@@ -320,7 +330,13 @@ export async function POST(req: Request) {
       } as any);
     }
 
-    if (authUserId && (isExplicitSendApproval(message) || isExecutorDirective(message))) {
+    // ------------------------------------------------------------
+    // EXECUTION GATE (Explicit OR Executor Directive)
+    // ------------------------------------------------------------
+    if (
+      authUserId &&
+      (isExplicitSendApproval(message) || isExecutorDirective(message))
+    ) {
       const { data } = await supabaseAdmin
         .from("working_memory")
         .select("content")
@@ -340,7 +356,7 @@ export async function POST(req: Request) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               approved: true,
-              reason: "Conversational approval",
+              reason: "Executor directive",
               messages: [
                 {
                   to: parsed.to,
