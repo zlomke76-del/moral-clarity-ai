@@ -46,6 +46,20 @@ export type SolaceContextBundle = {
 };
 
 // ------------------------------------------------------------
+// NON-CONTEXTUAL ARTIFACT DETECTION (ADDITIVE)
+// ------------------------------------------------------------
+function isNonContextualArtifact(content: string): boolean {
+  if (!content) return false;
+
+  const c = content.trim();
+  return (
+    c.startsWith("data:image/") ||
+    c.startsWith("<img") ||
+    c.startsWith("![")
+  );
+}
+
+// ------------------------------------------------------------
 // MAIN ASSEMBLER
 // ------------------------------------------------------------
 export async function assembleContext(
@@ -181,6 +195,23 @@ export async function assembleContext(
   console.log("[DIAG-ASSEMBLE-WM]", {
     conversationId,
     count: wmItems.length,
+  });
+
+  // ----------------------------------------------------------
+  // EXCLUDE NON-CONTEXTUAL ARTIFACTS (IMAGES, ETC.)
+  // ----------------------------------------------------------
+  wmItems = wmItems.map((item) => {
+    if (
+      item.role === "assistant" &&
+      typeof item.content === "string" &&
+      isNonContextualArtifact(item.content)
+    ) {
+      return {
+        ...item,
+        content: "[Image generated]",
+      };
+    }
+    return item;
   });
 
   // ----------------------------------------------------------
