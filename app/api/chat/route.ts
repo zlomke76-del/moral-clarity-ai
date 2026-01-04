@@ -110,37 +110,6 @@ function isExecutorDirective(text?: string): boolean {
 }
 
 // ------------------------------------------------------------
-// ADDITIVE — ROLODEX INTENT
-// ------------------------------------------------------------
-function detectRolodexIntent(message: string): boolean {
-  const m = message.toLowerCase();
-  return (
-    /(add|save|store|remember|guardar|ajouter|speichern|salva)/i.test(m) &&
-    /(rolodex|contact|person|email|phone|telefono|correo|kontakt)/i.test(m)
-  );
-}
-
-function extractRolodexPayload(message: string) {
-  const email =
-    message.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] ?? null;
-
-  const phone =
-    message.match(/(\+?\d[\d\s\-()]{7,})/)?.[0] ?? null;
-
-  const nameMatch =
-    message.match(/(?:name|contact|person)[:\-]?\s*([A-Za-z\s]+)/i);
-
-  if (!email && !phone && !nameMatch) return null;
-
-  return {
-    name: nameMatch?.[1]?.trim() ?? "Unknown",
-    primary_email: email,
-    primary_phone: phone,
-    notes: message,
-  };
-}
-
-// ------------------------------------------------------------
 // ROLLING COMPACTION (NON-BLOCKING)
 // ------------------------------------------------------------
 async function maybeRunRollingCompaction(params: {
@@ -201,8 +170,6 @@ export async function POST(req: Request) {
       userKey,
       workspaceId,
       conversationId,
-      action,
-      payload,
       newsMode = false,
       newsLanguage,
       ministryMode = false,
@@ -329,7 +296,7 @@ export async function POST(req: Request) {
     }
 
     // ------------------------------------------------------------
-    // EXECUTION GATE — SAME TURN AUTHORITY
+    // EXECUTION GATE — RELAXED DRAFT CHECK
     // ------------------------------------------------------------
     const executorApproved =
       isExplicitSendApproval(message) ||
@@ -350,13 +317,14 @@ export async function POST(req: Request) {
       if (data?.content) {
         const parsed = JSON.parse(data.content);
 
-        if (parsed?.type === "sms_reply_draft") {
+        // ✅ RELAXED: execute if draft has minimum viable SMS fields
+        if (parsed?.to && parsed?.body) {
           await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/sms/send`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               approved: true,
-              reason: "Executor directive (same-turn)",
+              reason: "Executor directive (relaxed draft gate)",
               messages: [
                 {
                   to: parsed.to,
