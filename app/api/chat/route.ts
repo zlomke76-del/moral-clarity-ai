@@ -320,7 +320,7 @@ export async function POST(req: Request) {
       } as any);
     }
 
-    if (authUserId && isExplicitSendApproval(message)) {
+    if (authUserId && (isExplicitSendApproval(message) || isExecutorDirective(message))) {
       const { data } = await supabaseAdmin
         .from("working_memory")
         .select("content")
