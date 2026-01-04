@@ -345,7 +345,7 @@ if (message && isImageRequest(message)) {
   try {
     const imageUrl = await generateImage(message);
 
-    // ✅ FIX: wrap image in Markdown so UI renders it as an image
+    // ✅ Render-safe for current UI
     const imageHtml = `<img src="${imageUrl}" alt="Generated image" style="max-width:100%;border-radius:12px;" />`;
 
     if (authUserId) {
@@ -357,14 +357,14 @@ if (message && isImageRequest(message)) {
           user_id: authUserId,
           workspace_id: workspaceId,
           role: "assistant",
-          content: imageMarkdown,
+          content: imageHtml,
         } as any);
     }
 
     return NextResponse.json({
       ok: true,
-      response: imageMarkdown,
-      messages: [{ role: "assistant", content: imageMarkdown }],
+      response: imageHtml,
+      messages: [{ role: "assistant", content: imageHtml }],
     });
   } catch (err) {
     console.error("[IMAGE ROUTE ERROR]", err);
