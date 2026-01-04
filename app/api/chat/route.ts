@@ -102,13 +102,11 @@ function isExplicitSendApproval(message?: string): boolean {
 }
 
 // ------------------------------------------------------------
-// ADDITIVE — EXECUTOR DIRECTIVE (Option A)
+// ADDITIVE — EXECUTOR DIRECTIVE (same-turn authority)
 // ------------------------------------------------------------
-function isExecutorDirective(message?: string): boolean {
-  if (!message) return false;
-  return /execute outbound sms|proceed with immediate outbound sms/i.test(
-    message
-  );
+function isExecutorDirective(text?: string): boolean {
+  if (!text) return false;
+  return /execute outbound sms|proceed with immediate outbound sms/i.test(text);
 }
 
 // ------------------------------------------------------------
@@ -331,12 +329,14 @@ export async function POST(req: Request) {
     }
 
     // ------------------------------------------------------------
-    // EXECUTION GATE (Explicit OR Executor Directive)
+    // EXECUTION GATE — SAME TURN AUTHORITY
     // ------------------------------------------------------------
-    if (
-      authUserId &&
-      (isExplicitSendApproval(message) || isExecutorDirective(message))
-    ) {
+    const executorApproved =
+      isExplicitSendApproval(message) ||
+      isExecutorDirective(message) ||
+      isExecutorDirective(safeResponse);
+
+    if (authUserId && executorApproved) {
       const { data } = await supabaseAdmin
         .from("working_memory")
         .select("content")
@@ -356,7 +356,7 @@ export async function POST(req: Request) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               approved: true,
-              reason: "Executor directive",
+              reason: "Executor directive (same-turn)",
               messages: [
                 {
                   to: parsed.to,
