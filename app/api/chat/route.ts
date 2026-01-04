@@ -329,6 +329,46 @@ if (authUserId) {
     }
 
     // ------------------------------------------------------------
+    // SAME-TURN EXECUTOR LATCH (AUTHORITATIVE)
+    // ------------------------------------------------------------
+    if (
+    authUserId &&
+    draft &&
+    isExecutorDirective(message)
+    ) {
+    await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/sms/send`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      approved: true,
+      reason: "Same-turn executor directive",
+      messages: [
+        {
+          to: draft.to,
+          body: draft.body,
+          rolodex_id: draft.rolodex_id ?? null,
+        },
+      ],
+    }),
+  });
+
+  await supabaseAdmin
+    .schema("memory")
+    .from("working_memory")
+    .insert({
+      conversation_id: conversationId,
+      user_id: authUserId,
+      workspace_id: workspaceId,
+      role: "system",
+      content: JSON.stringify({
+        type: "sms_sent",
+        to: draft.to,
+        at: new Date().toISOString(),
+      }),
+    } as any);
+}
+    
+    // ------------------------------------------------------------
     // EXECUTION GATE — RELAXED DRAFT CHECK
     // ------------------------------------------------------------
     const executorApproved =
