@@ -26,12 +26,6 @@ type CodeArtifact = {
   content: string;
 };
 
-// Extended assistant
-type AssistantMessage =
-  | { role: "assistant"; content: string }
-  | { role: "assistant"; artifact: CodeArtifact };
-
-// Accepts both bare legacy and code artifact messages
 type Message = {
   role: "user" | "assistant";
   content?: string | null;
@@ -47,47 +41,6 @@ type Props = {
 };
 
 /* ------------------------------------------------------------------
-   Helper: assistant data:image or <img src="data:image/...">
-------------------------------------------------------------------- */
-function renderAssistantImageContent(msg: Message) {
-  if (
-    msg.role === "assistant" &&
-    typeof msg.content === "string"
-  ) {
-    // Direct data:image/...
-    if (msg.content.startsWith("data:image/")) {
-      return (
-        <img
-          src={msg.content}
-          style={{ maxWidth: "100%", borderRadius: 12, margin: "6px 0" }}
-          alt="Generated content"
-        />
-      );
-    }
-    // <img src="data:image/...">
-    if (
-      msg.content.startsWith('<img src="data:image/') ||
-      msg.content.startsWith("<img src='data:image/")
-    ) {
-      const srcMatch = msg.content.match(
-        /<img\s+src=(["'])(data:image\/[^"']+)\1\s*\/?>/
-      );
-      if (srcMatch && srcMatch[2]) {
-        return (
-          <img
-            src={srcMatch[2]}
-            style={{ maxWidth: "100%", borderRadius: 12, margin: "6px 0" }}
-            alt="Generated content"
-          />
-        );
-      }
-    }
-  }
-  // Not a renderable data:image
-  return null;
-}
-
-/* ------------------------------------------------------------------
    Component
 ------------------------------------------------------------------- */
 export default function SolaceTranscript({
@@ -97,16 +50,15 @@ export default function SolaceTranscript({
 }: Props) {
   useEffect(() => {
     if (!DEV_DIAG) return;
-    console.log("[DIAG-TRANSCRIPT] render", {
+    console.log("[DIAG-TRANSCRIPT]", {
       count: messages.length,
       messages: messages.map((m, i) => ({
         i,
         role: m.role,
-        hasImage: typeof m.imageUrl === "string",
+        hasImage: Boolean(m.imageUrl),
         hasText: Boolean(m.content && m.content.trim()),
         hasExport: Boolean(m.export),
-        hasCodeArtifact: Boolean(m.artifact?.type === "code"),
-        exportFormat: m.export?.format ?? null,
+        hasCode: Boolean(m.artifact),
       })),
     });
   }, [messages]);
@@ -116,30 +68,28 @@ export default function SolaceTranscript({
       {messages.map((msg, i) => {
         const isUser = msg.role === "user";
         const hasImage = typeof msg.imageUrl === "string";
-        const hasText = Boolean(msg.content && msg.content.trim());
         const hasExport = Boolean(msg.export);
-        const hasCodeArtifact = Boolean(msg.artifact && msg.artifact.type === "code");
-        // ADDED: assistant data:image/ base64 or img tag
-        const isAssistantDataImg = (!!renderAssistantImageContent(msg));
+        const hasCode = Boolean(msg.artifact);
+        const hasText = Boolean(msg.content && msg.content.trim());
+
+        // 🔒 HARD SANITIZATION — NEVER RENDER HTML OR BASE64 FROM content
+        const safeText =
+          typeof msg.content === "string"
+            ? msg.content.replace(/<img[\s\S]*?>/gi, "").trim()
+            : "";
 
         const renderKey = `${i}-${msg.role}-${
-          hasImage ? "img"
-          : hasExport ? "export"
-          : hasCodeArtifact ? "code"
-          : isAssistantDataImg ? "datimg"
-          : "txt"
+          hasImage ? "img" : hasExport ? "export" : hasCode ? "code" : "txt"
         }`;
 
         if (DEV_DIAG) {
-          console.log("[DIAG-MESSAGE-RENDER]", {
+          console.log("[DIAG-MESSAGE]", {
             i,
-            key: renderKey,
-            role: msg.role,
+            renderKey,
             hasImage,
-            hasText,
             hasExport,
-            hasCodeArtifact,
-            isAssistantDataImg,
+            hasCode,
+            hasText,
           });
         }
 
@@ -155,7 +105,7 @@ export default function SolaceTranscript({
             <div
               style={{
                 maxWidth: "80%",
-                minWidth: hasImage || hasExport || hasCodeArtifact ? 220 : undefined,
+                minWidth: hasImage || hasExport || hasCode ? 220 : undefined,
                 padding: 12,
                 borderRadius: UI.radiusLg,
                 background: isUser ? UI.surface2 : UI.surface1,
@@ -166,22 +116,19 @@ export default function SolaceTranscript({
                 gap: 8,
               }}
             >
-              {/* ---------------- Export Card ---------------- */}
+              {/* ---------------- Export ---------------- */}
               {hasExport && <ExportCard exportItem={msg.export!} />}
 
-              {/* ---------------- Image ---------------- */}
-              {hasImage && <ImageWithFallback src={msg.imageUrl!} messageIndex={i} />}
-
-              {/* ---------------- Code Artifact (copyable code block) ---------------- */}
-              {hasCodeArtifact && <CodeArtifactBlock artifact={msg.artifact!} />}
-
-              {/* ---------------- Assistant data:image/ or img tag image ---------------- */}
-              {!hasCodeArtifact && !hasExport && !hasImage && isAssistantDataImg && (
-                <div>{renderAssistantImageContent(msg)}</div>
+              {/* ---------------- Image (ONLY from imageUrl) ---------------- */}
+              {hasImage && (
+                <ImageWithFallback src={msg.imageUrl!} messageIndex={i} />
               )}
 
-              {/* ---------------- Text (if not handled above) ---------------- */}
-              {!hasCodeArtifact && !hasExport && !hasImage && !isAssistantDataImg && hasText && (
+              {/* ---------------- Code Artifact ---------------- */}
+              {hasCode && <CodeArtifactBlock artifact={msg.artifact!} />}
+
+              {/* ---------------- Text ---------------- */}
+              {!hasExport && !hasCode && safeText && (
                 <div
                   style={{
                     whiteSpace: "pre-wrap",
@@ -189,7 +136,7 @@ export default function SolaceTranscript({
                     lineHeight: 1.35,
                   }}
                 >
-                  {msg.content}
+                  {safeText}
                 </div>
               )}
             </div>
@@ -224,7 +171,9 @@ function ExportCard({ exportItem }: { exportItem: ExportItem }) {
       }}
     >
       <div style={{ fontWeight: 600 }}>{label}</div>
-      <div style={{ fontSize: 12, color: UI.sub }}>{exportItem.filename}</div>
+      <div style={{ fontSize: 12, color: UI.sub }}>
+        {exportItem.filename}
+      </div>
       <a
         href={exportItem.url}
         target="_blank"
@@ -246,7 +195,7 @@ function ExportCard({ exportItem }: { exportItem: ExportItem }) {
 }
 
 /* ------------------------------------------------------------------
-   Image with explicit load / error visibility
+   Image with load / error handling
 ------------------------------------------------------------------- */
 function ImageWithFallback({
   src,
@@ -258,7 +207,7 @@ function ImageWithFallback({
   const [errored, setErrored] = useState(false);
 
   if (DEV_DIAG) {
-    console.log("[DIAG-IMG-MOUNT]", {
+    console.log("[DIAG-IMG]", {
       i: messageIndex,
       srcPrefix: src.slice(0, 32),
       srcLength: src.length,
@@ -288,21 +237,7 @@ function ImageWithFallback({
       src={src}
       alt="Generated"
       loading="lazy"
-      onLoad={() => {
-        if (DEV_DIAG) {
-          console.log("[DIAG-IMG-LOADED]", {
-            i: messageIndex,
-            srcPrefix: src.slice(0, 32),
-          });
-        }
-      }}
-      onError={() => {
-        console.error("[DIAG-IMG-ERROR]", {
-          i: messageIndex,
-          srcPrefix: src.slice(0, 32),
-        });
-        setErrored(true);
-      }}
+      onError={() => setErrored(true)}
       style={{
         width: "100%",
         height: "auto",
@@ -314,19 +249,15 @@ function ImageWithFallback({
 }
 
 /* ------------------------------------------------------------------
-   Code Artifact (copyable code block)
+   Code Artifact
 ------------------------------------------------------------------- */
 function CodeArtifactBlock({ artifact }: { artifact: CodeArtifact }) {
   const { language, filename, content } = artifact;
 
-  // Copy button handler
   const copyToClipboard = () => {
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(content).catch(() => {
-        // Fallback if clipboard write fails
-        alert("Failed to copy code to clipboard.");
-      });
-    }
+    navigator.clipboard?.writeText(content).catch(() => {
+      alert("Failed to copy code.");
+    });
   };
 
   return (
@@ -335,14 +266,13 @@ function CodeArtifactBlock({ artifact }: { artifact: CodeArtifact }) {
         background: UI.surface2,
         borderRadius: UI.radiusMd,
         boxShadow: UI.shadow,
-        fontFamily: "source-code-pro, monospace, monospace",
+        fontFamily: "source-code-pro, monospace",
         fontSize: 14,
         color: UI.text,
         padding: 12,
         whiteSpace: "pre-wrap",
         wordBreak: "break-word",
         position: "relative",
-        userSelect: "text",
       }}
     >
       {(filename || language) && (
@@ -351,41 +281,28 @@ function CodeArtifactBlock({ artifact }: { artifact: CodeArtifact }) {
             display: "flex",
             justifyContent: "space-between",
             marginBottom: 8,
-            fontWeight: "600",
+            fontWeight: 600,
             fontSize: 12,
             color: UI.sub,
           }}
         >
-          <div>
-            {filename ? filename : language.toUpperCase()}
-          </div>
+          <div>{filename || language.toUpperCase()}</div>
           <button
             onClick={copyToClipboard}
-            aria-label="Copy code to clipboard"
-            title="Copy code"
             style={{
               background: "transparent",
               border: "none",
               color: UI.sub,
               cursor: "pointer",
-              fontWeight: "700",
-              padding: 0,
-              margin: 0,
-              lineHeight: 1,
-              userSelect: "none",
+              fontWeight: 700,
             }}
           >
-            ??
+            ⧉
           </button>
         </div>
       )}
 
-      <pre
-        style={{
-          margin: 0,
-          overflowX: "auto",
-        }}
-      >
+      <pre style={{ margin: 0, overflowX: "auto" }}>
         <code>{content}</code>
       </pre>
     </div>
