@@ -1,16 +1,13 @@
 //--------------------------------------------------------------
 // MODEL ROUTER — RESPONSES API (STRICT STRING MODE)
-// SERVERLESS-SAFE: HARD TIMEOUT + ABORT
 //--------------------------------------------------------------
 
 import OpenAI from "openai";
 import { sanitizeForModel } from "@/lib/solace/sanitize";
 
 // -------------------------------------------------------------
-// CONFIG
+// CLIENT
 // -------------------------------------------------------------
-const MODEL_TIMEOUT_MS = 25_000; // < Vercel hard wall
-
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
@@ -19,7 +16,7 @@ const client = new OpenAI({
 // callModel(model, promptString)
 // - ALWAYS returns a string
 // - NEVER streams
-// - NEVER hangs
+// - RELIES ON PLATFORM DEFAULT TIMEOUTS
 //--------------------------------------------------------------
 export async function callModel(
   model: string,
@@ -27,21 +24,11 @@ export async function callModel(
 ): Promise<string> {
   const clean = sanitizeForModel(String(prompt || ""));
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => {
-    controller.abort();
-  }, MODEL_TIMEOUT_MS);
-
   try {
-    const res = await client.responses.create(
-      {
-        model,
-        input: clean, // STRICT STRING MODE
-      },
-      {
-        signal: controller.signal,
-      }
-    );
+    const res = await client.responses.create({
+      model,
+      input: clean, // STRICT STRING MODE
+    });
 
     // Responses API guarantees string | null
     if (typeof res.output_text === "string") {
@@ -49,17 +36,8 @@ export async function callModel(
     }
 
     return "";
-
-  } catch (err: any) {
-    if (err?.name === "AbortError") {
-      console.error("[MODEL ROUTER] Model call timed out");
-      return "[Model timeout]";
-    }
-
+  } catch (err) {
     console.error("[MODEL ROUTER ERROR]", err);
     return "[Model error]";
-
-  } finally {
-    clearTimeout(timeout);
   }
 }
