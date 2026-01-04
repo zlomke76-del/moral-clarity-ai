@@ -41,6 +41,25 @@ type Props = {
 };
 
 /* ------------------------------------------------------------------
+   IMAGE EXTRACTION (AUTHORITATIVE)
+------------------------------------------------------------------- */
+function extractImageFromContent(content?: string | null): string | null {
+  if (!content) return null;
+
+  // data:image/... anywhere
+  const dataMatch = content.match(/data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+/);
+  if (dataMatch) return dataMatch[0];
+
+  // <img src="..."> anywhere
+  const imgMatch = content.match(
+    /<img\s+[^>]*src=(["'])(data:image\/[^"']+)\1[^>]*>/i
+  );
+  if (imgMatch && imgMatch[2]) return imgMatch[2];
+
+  return null;
+}
+
+/* ------------------------------------------------------------------
    Component
 ------------------------------------------------------------------- */
 export default function SolaceTranscript({
@@ -55,10 +74,10 @@ export default function SolaceTranscript({
       messages: messages.map((m, i) => ({
         i,
         role: m.role,
-        hasImage: Boolean(m.imageUrl),
-        hasText: Boolean(m.content && m.content.trim()),
+        hasImageUrl: Boolean(m.imageUrl),
+        contentLength: m.content?.length ?? 0,
         hasExport: Boolean(m.export),
-        hasCode: Boolean(m.artifact),
+        hasArtifact: Boolean(m.artifact),
       })),
     });
   }, [messages]);
@@ -67,29 +86,35 @@ export default function SolaceTranscript({
     <div ref={transcriptRef} style={transcriptStyle}>
       {messages.map((msg, i) => {
         const isUser = msg.role === "user";
-        const hasImage = typeof msg.imageUrl === "string";
-        const hasExport = Boolean(msg.export);
-        const hasCode = Boolean(msg.artifact);
-        const hasText = Boolean(msg.content && msg.content.trim());
 
-        // 🔒 HARD SANITIZATION — NEVER RENDER HTML OR BASE64 FROM content
-        const safeText =
-          typeof msg.content === "string"
-            ? msg.content.replace(/<img[\s\S]*?>/gi, "").trim()
-            : "";
+        const extractedImage =
+          msg.imageUrl ||
+          (msg.role === "assistant"
+            ? extractImageFromContent(msg.content)
+            : null);
+
+        const hasImage = typeof extractedImage === "string";
+        const hasExport = Boolean(msg.export);
+        const hasCodeArtifact = Boolean(msg.artifact?.type === "code");
+
+        const shouldRenderText =
+          !hasImage &&
+          !hasExport &&
+          !hasCodeArtifact &&
+          Boolean(msg.content && msg.content.trim());
 
         const renderKey = `${i}-${msg.role}-${
-          hasImage ? "img" : hasExport ? "export" : hasCode ? "code" : "txt"
+          hasImage ? "img" : hasExport ? "export" : hasCodeArtifact ? "code" : "txt"
         }`;
 
         if (DEV_DIAG) {
           console.log("[DIAG-MESSAGE]", {
             i,
-            renderKey,
+            key: renderKey,
             hasImage,
             hasExport,
-            hasCode,
-            hasText,
+            hasCodeArtifact,
+            shouldRenderText,
           });
         }
 
@@ -105,7 +130,7 @@ export default function SolaceTranscript({
             <div
               style={{
                 maxWidth: "80%",
-                minWidth: hasImage || hasExport || hasCode ? 220 : undefined,
+                minWidth: hasImage || hasExport || hasCodeArtifact ? 220 : undefined,
                 padding: 12,
                 borderRadius: UI.radiusLg,
                 background: isUser ? UI.surface2 : UI.surface1,
@@ -116,19 +141,19 @@ export default function SolaceTranscript({
                 gap: 8,
               }}
             >
-              {/* ---------------- Export ---------------- */}
+              {/* EXPORT */}
               {hasExport && <ExportCard exportItem={msg.export!} />}
 
-              {/* ---------------- Image (ONLY from imageUrl) ---------------- */}
+              {/* IMAGE */}
               {hasImage && (
-                <ImageWithFallback src={msg.imageUrl!} messageIndex={i} />
+                <ImageWithFallback src={extractedImage!} messageIndex={i} />
               )}
 
-              {/* ---------------- Code Artifact ---------------- */}
-              {hasCode && <CodeArtifactBlock artifact={msg.artifact!} />}
+              {/* CODE */}
+              {hasCodeArtifact && <CodeArtifactBlock artifact={msg.artifact!} />}
 
-              {/* ---------------- Text ---------------- */}
-              {!hasExport && !hasCode && safeText && (
+              {/* TEXT */}
+              {shouldRenderText && (
                 <div
                   style={{
                     whiteSpace: "pre-wrap",
@@ -136,7 +161,7 @@ export default function SolaceTranscript({
                     lineHeight: 1.35,
                   }}
                 >
-                  {safeText}
+                  {msg.content}
                 </div>
               )}
             </div>
@@ -171,9 +196,7 @@ function ExportCard({ exportItem }: { exportItem: ExportItem }) {
       }}
     >
       <div style={{ fontWeight: 600 }}>{label}</div>
-      <div style={{ fontSize: 12, color: UI.sub }}>
-        {exportItem.filename}
-      </div>
+      <div style={{ fontSize: 12, color: UI.sub }}>{exportItem.filename}</div>
       <a
         href={exportItem.url}
         target="_blank"
@@ -195,7 +218,7 @@ function ExportCard({ exportItem }: { exportItem: ExportItem }) {
 }
 
 /* ------------------------------------------------------------------
-   Image with load / error handling
+   Image with explicit load / error visibility
 ------------------------------------------------------------------- */
 function ImageWithFallback({
   src,
@@ -205,14 +228,6 @@ function ImageWithFallback({
   messageIndex: number;
 }) {
   const [errored, setErrored] = useState(false);
-
-  if (DEV_DIAG) {
-    console.log("[DIAG-IMG]", {
-      i: messageIndex,
-      srcPrefix: src.slice(0, 32),
-      srcLength: src.length,
-    });
-  }
 
   if (errored) {
     return (
@@ -270,9 +285,6 @@ function CodeArtifactBlock({ artifact }: { artifact: CodeArtifact }) {
         fontSize: 14,
         color: UI.text,
         padding: 12,
-        whiteSpace: "pre-wrap",
-        wordBreak: "break-word",
-        position: "relative",
       }}
     >
       {(filename || language) && (
@@ -292,7 +304,6 @@ function CodeArtifactBlock({ artifact }: { artifact: CodeArtifact }) {
             style={{
               background: "transparent",
               border: "none",
-              color: UI.sub,
               cursor: "pointer",
               fontWeight: 700,
             }}
@@ -301,7 +312,6 @@ function CodeArtifactBlock({ artifact }: { artifact: CodeArtifact }) {
           </button>
         </div>
       )}
-
       <pre style={{ margin: 0, overflowX: "auto" }}>
         <code>{content}</code>
       </pre>
