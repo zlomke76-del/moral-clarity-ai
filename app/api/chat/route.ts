@@ -312,7 +312,7 @@ export async function POST(req: Request) {
         .eq("role", "system")
         .order("created_at", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (data?.content) {
         const parsed = JSON.parse(data.content);
