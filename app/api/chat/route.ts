@@ -120,6 +120,7 @@ async function maybeRunRollingCompaction(params: {
   const { supabaseAdmin, conversationId, userId } = params;
 
   const wmRes = await supabaseAdmin
+    .schema("memory")
     .from("working_memory")
     .select("id, role, content, created_at")
     .eq("conversation_id", conversationId)
@@ -137,18 +138,22 @@ async function maybeRunRollingCompaction(params: {
   try {
     const compaction = await runSessionCompaction(conversationId, chunk);
 
-    await supabaseAdmin.from("memories").insert({
-      user_id: userId,
-      email: "system",
-      workspace_id: null,
-      memory_type: "session_compaction",
-      source: "system",
-      content: JSON.stringify(compaction),
-      conversation_id: conversationId,
-      confidence: 1.0,
-    } as any);
+    await supabaseAdmin
+      .schema("memory")
+      .from("memories")
+      .insert({
+        user_id: userId,
+        email: "system",
+        workspace_id: null,
+        memory_type: "session_compaction",
+        source: "system",
+        content: JSON.stringify(compaction),
+        conversation_id: conversationId,
+        confidence: 1.0,
+      } as any);
 
     await supabaseAdmin
+      .schema("memory")
       .from("working_memory")
       .delete()
       .in("id", chunk.map((c) => c.id));
@@ -210,14 +215,20 @@ export async function POST(req: Request) {
       }
     );
 
+    // ------------------------------------------------------------
+    // USER MESSAGE → memory.working_memory
+    // ------------------------------------------------------------
     if (authUserId && message) {
-      void supabaseAdmin.from("working_memory").insert({
-        conversation_id: conversationId,
-        user_id: authUserId,
-        workspace_id: workspaceId,
-        role: "user",
-        content: message,
-      } as any);
+      void supabaseAdmin
+        .schema("memory")
+        .from("working_memory")
+        .insert({
+          conversation_id: conversationId,
+          user_id: authUserId,
+          workspace_id: workspaceId,
+          role: "user",
+          content: message,
+        } as any);
     }
 
     if (authUserId) {
@@ -228,6 +239,9 @@ export async function POST(req: Request) {
       });
     }
 
+    // ------------------------------------------------------------
+    // NEWS MODE
+    // ------------------------------------------------------------
     if (newsMode || (message && isNewsKeywordFallback(message))) {
       const origin = new URL(req.url).origin;
       const digestRes = await fetch(
@@ -250,6 +264,9 @@ export async function POST(req: Request) {
       });
     }
 
+    // ------------------------------------------------------------
+    // CONTEXT + HYBRID
+    // ------------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
       workspaceId ?? null,
@@ -273,26 +290,38 @@ export async function POST(req: Request) {
         ? result.finalAnswer
         : "I’m here and ready to continue.";
 
+    // ------------------------------------------------------------
+    // ASSISTANT MESSAGE → memory.working_memory
+    // ------------------------------------------------------------
     if (authUserId) {
-      void supabaseAdmin.from("working_memory").insert({
-        conversation_id: conversationId,
-        user_id: authUserId,
-        workspace_id: workspaceId,
-        role: "assistant",
-        content: safeResponse,
-      } as any);
+      void supabaseAdmin
+        .schema("memory")
+        .from("working_memory")
+        .insert({
+          conversation_id: conversationId,
+          user_id: authUserId,
+          workspace_id: workspaceId,
+          role: "assistant",
+          content: safeResponse,
+        } as any);
     }
 
+    // ------------------------------------------------------------
+    // SYSTEM DRAFT → memory.working_memory
+    // ------------------------------------------------------------
     const draft = (context as any).__draftSms;
 
     if (authUserId && draft) {
-      await supabaseAdmin.from("working_memory").insert({
-        conversation_id: conversationId,
-        user_id: authUserId,
-        workspace_id: workspaceId,
-        role: "system",
-        content: JSON.stringify(draft),
-      } as any);
+      await supabaseAdmin
+        .schema("memory")
+        .from("working_memory")
+        .insert({
+          conversation_id: conversationId,
+          user_id: authUserId,
+          workspace_id: workspaceId,
+          role: "system",
+          content: JSON.stringify(draft),
+        } as any);
     }
 
     // ------------------------------------------------------------
@@ -305,6 +334,7 @@ export async function POST(req: Request) {
 
     if (authUserId && executorApproved) {
       const { data } = await supabaseAdmin
+        .schema("memory")
         .from("working_memory")
         .select("content")
         .eq("conversation_id", conversationId)
@@ -317,7 +347,6 @@ export async function POST(req: Request) {
       if (data?.content) {
         const parsed = JSON.parse(data.content);
 
-        // ✅ RELAXED: execute if draft has minimum viable SMS fields
         if (parsed?.to && parsed?.body) {
           await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/sms/send`, {
             method: "POST",
@@ -335,17 +364,20 @@ export async function POST(req: Request) {
             }),
           });
 
-          await supabaseAdmin.from("working_memory").insert({
-            conversation_id: conversationId,
-            user_id: authUserId,
-            workspace_id: workspaceId,
-            role: "system",
-            content: JSON.stringify({
-              type: "sms_sent",
-              to: parsed.to,
-              at: new Date().toISOString(),
-            }),
-          } as any);
+          await supabaseAdmin
+            .schema("memory")
+            .from("working_memory")
+            .insert({
+              conversation_id: conversationId,
+              user_id: authUserId,
+              workspace_id: workspaceId,
+              role: "system",
+              content: JSON.stringify({
+                type: "sms_sent",
+                to: parsed.to,
+                at: new Date().toISOString(),
+              }),
+            } as any);
         }
       }
     }
