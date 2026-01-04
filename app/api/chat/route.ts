@@ -110,6 +110,29 @@ function isExecutorDirective(text?: string): boolean {
 }
 
 // ------------------------------------------------------------
+// TERMINAL APPROVAL (TAAT) — AUTHORITATIVE DETECTION
+// ------------------------------------------------------------
+function isTerminalApproval(message?: string): boolean {
+  if (!message) return false;
+  return /finalize the decision and proceed/i.test(message);
+}
+
+// ------------------------------------------------------------
+// TERMINAL APPROVAL — GOLD RESPONSE (NON-NEGOTIABLE)
+// ------------------------------------------------------------
+function terminalApprovalResponse(): string {
+  return [
+    "Acknowledged.",
+    "",
+    "- The decision has been finalized.",
+    "- No execution has occurred.",
+    "- No tools, APIs, or integrations are available.",
+    "",
+    "There is nothing further to state.",
+  ].join("\n");
+}
+
+// ------------------------------------------------------------
 // ROLLING COMPACTION (NON-BLOCKING)
 // ------------------------------------------------------------
 async function maybeRunRollingCompaction(params: {
@@ -215,33 +238,59 @@ export async function POST(req: Request) {
       }
     );
 
-// ------------------------------------------------------------
-// USER MESSAGE → memory.working_memory (AUTHORITATIVE, AWAITED)
-// ------------------------------------------------------------
-if (authUserId && message) {
-  await supabaseAdmin
-    .schema("memory")
-    .from("working_memory")
-    .insert({
-      conversation_id: conversationId,
-      user_id: authUserId,
-      workspace_id: workspaceId,
-      role: "user",
-      content: message,
-    } as any);
-}
+    // ------------------------------------------------------------
+    // USER MESSAGE → memory.working_memory (AUTHORITATIVE, AWAITED)
+    // ------------------------------------------------------------
+    if (authUserId && message) {
+      await supabaseAdmin
+        .schema("memory")
+        .from("working_memory")
+        .insert({
+          conversation_id: conversationId,
+          user_id: authUserId,
+          workspace_id: workspaceId,
+          role: "user",
+          content: message,
+        } as any);
+    }
 
-// ------------------------------------------------------------
-// ROLLING COMPACTION (AFTER WRITE)
-// ------------------------------------------------------------
-if (authUserId) {
-  void maybeRunRollingCompaction({
-    supabaseAdmin,
-    conversationId,
-    userId: authUserId,
-  });
-}
+    // ------------------------------------------------------------
+    // ROLLING COMPACTION (AFTER WRITE)
+    // ------------------------------------------------------------
+    if (authUserId) {
+      void maybeRunRollingCompaction({
+        supabaseAdmin,
+        conversationId,
+        userId: authUserId,
+      });
+    }
 
+    // ------------------------------------------------------------
+    // TERMINAL APPROVAL HARD STOP (TAAT)
+    // MUST OCCUR BEFORE CONTEXT / HYBRID / PERSONA
+    // ------------------------------------------------------------
+    if (isTerminalApproval(message)) {
+      const terminalResponse = terminalApprovalResponse();
+
+      if (authUserId) {
+        await supabaseAdmin
+          .schema("memory")
+          .from("working_memory")
+          .insert({
+            conversation_id: conversationId,
+            user_id: authUserId,
+            workspace_id: workspaceId,
+            role: "assistant",
+            content: terminalResponse,
+          } as any);
+      }
+
+      return NextResponse.json({
+        ok: true,
+        response: terminalResponse,
+        messages: [{ role: "assistant", content: terminalResponse }],
+      });
+    }
 
     // ------------------------------------------------------------
     // NEWS MODE
@@ -298,7 +347,7 @@ if (authUserId) {
     // ASSISTANT MESSAGE → memory.working_memory
     // ------------------------------------------------------------
     if (authUserId) {
-      void supabaseAdmin
+      await supabaseAdmin
         .schema("memory")
         .from("working_memory")
         .insert({
@@ -331,50 +380,46 @@ if (authUserId) {
     // ------------------------------------------------------------
     // SAME-TURN EXECUTOR LATCH (AUTHORITATIVE)
     // ------------------------------------------------------------
-    if (
-    authUserId &&
-    draft &&
-    isExecutorDirective(message)
-    ) {
-    await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/sms/send`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      approved: true,
-      reason: "Same-turn executor directive",
-      messages: [
-        {
-          to: draft.to,
-          body: draft.body,
-          rolodex_id: draft.rolodex_id ?? null,
-        },
-      ],
-    }),
-  });
+    if (authUserId && draft && isExecutorDirective(message)) {
+      await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/sms/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          approved: true,
+          reason: "Same-turn executor directive",
+          messages: [
+            {
+              to: draft.to,
+              body: draft.body,
+              rolodex_id: draft.rolodex_id ?? null,
+            },
+          ],
+        }),
+      });
 
-  await supabaseAdmin
-    .schema("memory")
-    .from("working_memory")
-    .insert({
-      conversation_id: conversationId,
-      user_id: authUserId,
-      workspace_id: workspaceId,
-      role: "system",
-      content: JSON.stringify({
-        type: "sms_sent",
-        to: draft.to,
-        at: new Date().toISOString(),
-      }),
-    } as any);
-}
-    
+      await supabaseAdmin
+        .schema("memory")
+        .from("working_memory")
+        .insert({
+          conversation_id: conversationId,
+          user_id: authUserId,
+          workspace_id: workspaceId,
+          role: "system",
+          content: JSON.stringify({
+            type: "sms_sent",
+            to: draft.to,
+            at: new Date().toISOString(),
+          }),
+        } as any);
+    }
+
     // ------------------------------------------------------------
     // EXECUTION GATE — RELAXED DRAFT CHECK
+    // NOTE: SAFE RESPONSE IS NO LONGER AN AUTHORITY SOURCE
     // ------------------------------------------------------------
     const executorApproved =
       isExplicitSendApproval(message) ||
-      isExecutorDirective(message) ||
-      isExecutorDirective(safeResponse);
+      isExecutorDirective(message);
 
     if (authUserId && executorApproved) {
       const { data } = await supabaseAdmin
@@ -397,7 +442,7 @@ if (authUserId) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               approved: true,
-              reason: "Executor directive (relaxed draft gate)",
+              reason: "Executor directive (explicit user approval)",
               messages: [
                 {
                   to: parsed.to,
