@@ -345,6 +345,9 @@ if (message && isImageRequest(message)) {
   try {
     const imageUrl = await generateImage(message);
 
+    // ✅ FIX: wrap image in Markdown so UI renders it as an image
+    const imageMarkdown = `![Generated image](${imageUrl})`;
+
     if (authUserId) {
       await supabaseAdmin
         .schema("memory")
@@ -354,14 +357,14 @@ if (message && isImageRequest(message)) {
           user_id: authUserId,
           workspace_id: workspaceId,
           role: "assistant",
-          content: imageUrl,
+          content: imageMarkdown,
         } as any);
     }
 
     return NextResponse.json({
       ok: true,
-      response: imageUrl,
-      messages: [{ role: "assistant", content: imageUrl }],
+      response: imageMarkdown,
+      messages: [{ role: "assistant", content: imageMarkdown }],
     });
   } catch (err) {
     console.error("[IMAGE ROUTE ERROR]", err);
