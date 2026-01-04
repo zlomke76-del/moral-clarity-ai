@@ -133,6 +133,52 @@ function terminalApprovalResponse(): string {
 }
 
 // ------------------------------------------------------------
+// PHANTOM EXECUTION LANGUAGE SCRUBBER (HARD GUARD)
+// ------------------------------------------------------------
+function scrubPhantomExecutionLanguage(text: string): string {
+  if (!text) return text;
+
+  const patterns = [
+    // direct execution claims
+    /\bexecut(e|ing|ed)\b[^.]*\./gi,
+    /\bproceed(ing|ed)?\b[^.]*\./gi,
+    /\binitiat(e|ing|ed)\b[^.]*\./gi,
+    /\blaunch(ing|ed)?\b[^.]*\./gi,
+    /\btrigger(ing|ed)?\b[^.]*\./gi,
+    /\brun(ning|ning)?\b[^.]*\./gi,
+    /\bperform(ing|ed)?\b[^.]*\./gi,
+    /\ballocat(e|ing|ed)\b[^.]*\./gi,
+
+    // implied internal agency
+    /\binternal execution[^.]*\./gi,
+    /\btask allocation[^.]*\./gi,
+    /\bworkflow has started[^.]*\./gi,
+    /\boperation underway[^.]*\./gi,
+
+    // future authority illusions
+    /\bi will (now )?(execute|proceed|initiate)[^.]*\./gi,
+  ];
+
+  let out = text;
+  for (const p of patterns) {
+    out = out.replace(p, "");
+  }
+
+  return out.trim();
+}
+
+// ------------------------------------------------------------
+// FINAL ASSERTION — FAIL CLOSED
+// ------------------------------------------------------------
+function assertNoPhantomLanguage(text: string): string {
+  const forbidden = /(execut|proceed|initiat|launch|trigger|allocat|perform|run)\b/i;
+  if (forbidden.test(text)) {
+    return "I can reason, explain, and advise — but no actions or executions occur.";
+  }
+  return text;
+}
+
+// ------------------------------------------------------------
 // ROLLING COMPACTION (NON-BLOCKING)
 // ------------------------------------------------------------
 async function maybeRunRollingCompaction(params: {
@@ -238,9 +284,6 @@ export async function POST(req: Request) {
       }
     );
 
-    // ------------------------------------------------------------
-    // USER MESSAGE → memory.working_memory (AUTHORITATIVE, AWAITED)
-    // ------------------------------------------------------------
     if (authUserId && message) {
       await supabaseAdmin
         .schema("memory")
@@ -254,9 +297,6 @@ export async function POST(req: Request) {
         } as any);
     }
 
-    // ------------------------------------------------------------
-    // ROLLING COMPACTION (AFTER WRITE)
-    // ------------------------------------------------------------
     if (authUserId) {
       void maybeRunRollingCompaction({
         supabaseAdmin,
@@ -265,10 +305,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // ------------------------------------------------------------
-    // TERMINAL APPROVAL HARD STOP (TAAT)
-    // MUST OCCUR BEFORE CONTEXT / HYBRID / PERSONA
-    // ------------------------------------------------------------
     if (isTerminalApproval(message)) {
       const terminalResponse = terminalApprovalResponse();
 
@@ -292,34 +328,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // ------------------------------------------------------------
-    // NEWS MODE
-    // ------------------------------------------------------------
-    if (newsMode || (message && isNewsKeywordFallback(message))) {
-      const origin = new URL(req.url).origin;
-      const digestRes = await fetch(
-        `${origin}/api/news/digest?limit=3`,
-        { cache: "no-store" }
-      );
-
-      const digestJson = await digestRes.json();
-      const stories = Array.isArray(digestJson?.stories)
-        ? digestJson.stories
-        : [];
-
-      const newsroomResponse = await runNewsroomExecutor(stories);
-
-      return NextResponse.json({
-        ok: true,
-        response: newsroomResponse,
-        messages: [{ role: "assistant", content: newsroomResponse }],
-        meta: { language: newsLanguage ?? "en" },
-      });
-    }
-
-    // ------------------------------------------------------------
-    // CONTEXT + HYBRID
-    // ------------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
       workspaceId ?? null,
@@ -338,14 +346,14 @@ export async function POST(req: Request) {
       modeHint,
     });
 
-    const safeResponse =
+    const rawResponse =
       typeof result?.finalAnswer === "string" && result.finalAnswer.length > 0
         ? result.finalAnswer
         : "I’m here and ready to continue.";
 
-    // ------------------------------------------------------------
-    // ASSISTANT MESSAGE → memory.working_memory
-    // ------------------------------------------------------------
+    const scrubbed = scrubPhantomExecutionLanguage(rawResponse);
+    const safeResponse = assertNoPhantomLanguage(scrubbed);
+
     if (authUserId) {
       await supabaseAdmin
         .schema("memory")
@@ -357,118 +365,6 @@ export async function POST(req: Request) {
           role: "assistant",
           content: safeResponse,
         } as any);
-    }
-
-    // ------------------------------------------------------------
-    // SYSTEM DRAFT → memory.working_memory
-    // ------------------------------------------------------------
-    const draft = (context as any).__draftSms;
-
-    if (authUserId && draft) {
-      await supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
-        .insert({
-          conversation_id: conversationId,
-          user_id: authUserId,
-          workspace_id: workspaceId,
-          role: "system",
-          content: JSON.stringify(draft),
-        } as any);
-    }
-
-    // ------------------------------------------------------------
-    // SAME-TURN EXECUTOR LATCH (AUTHORITATIVE)
-    // ------------------------------------------------------------
-    if (authUserId && draft && isExecutorDirective(message)) {
-      await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/sms/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          approved: true,
-          reason: "Same-turn executor directive",
-          messages: [
-            {
-              to: draft.to,
-              body: draft.body,
-              rolodex_id: draft.rolodex_id ?? null,
-            },
-          ],
-        }),
-      });
-
-      await supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
-        .insert({
-          conversation_id: conversationId,
-          user_id: authUserId,
-          workspace_id: workspaceId,
-          role: "system",
-          content: JSON.stringify({
-            type: "sms_sent",
-            to: draft.to,
-            at: new Date().toISOString(),
-          }),
-        } as any);
-    }
-
-    // ------------------------------------------------------------
-    // EXECUTION GATE — RELAXED DRAFT CHECK
-    // NOTE: SAFE RESPONSE IS NO LONGER AN AUTHORITY SOURCE
-    // ------------------------------------------------------------
-    const executorApproved =
-      isExplicitSendApproval(message) ||
-      isExecutorDirective(message);
-
-    if (authUserId && executorApproved) {
-      const { data } = await supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
-        .select("content")
-        .eq("conversation_id", conversationId)
-        .eq("user_id", authUserId)
-        .eq("role", "system")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (data?.content) {
-        const parsed = JSON.parse(data.content);
-
-        if (parsed?.to && parsed?.body) {
-          await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/sms/send`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              approved: true,
-              reason: "Executor directive (explicit user approval)",
-              messages: [
-                {
-                  to: parsed.to,
-                  body: parsed.body,
-                  rolodex_id: parsed.rolodex_id ?? null,
-                },
-              ],
-            }),
-          });
-
-          await supabaseAdmin
-            .schema("memory")
-            .from("working_memory")
-            .insert({
-              conversation_id: conversationId,
-              user_id: authUserId,
-              workspace_id: workspaceId,
-              role: "system",
-              content: JSON.stringify({
-                type: "sms_sent",
-                to: parsed.to,
-                at: new Date().toISOString(),
-              }),
-            } as any);
-        }
-      }
     }
 
     return NextResponse.json({
