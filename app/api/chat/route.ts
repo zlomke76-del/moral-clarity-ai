@@ -215,29 +215,33 @@ export async function POST(req: Request) {
       }
     );
 
-    // ------------------------------------------------------------
-    // USER MESSAGE → memory.working_memory
-    // ------------------------------------------------------------
-    if (authUserId && message) {
-      void supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
-        .insert({
-          conversation_id: conversationId,
-          user_id: authUserId,
-          workspace_id: workspaceId,
-          role: "user",
-          content: message,
-        } as any);
-    }
+// ------------------------------------------------------------
+// USER MESSAGE → memory.working_memory (AUTHORITATIVE, AWAITED)
+// ------------------------------------------------------------
+if (authUserId && message) {
+  await supabaseAdmin
+    .schema("memory")
+    .from("working_memory")
+    .insert({
+      conversation_id: conversationId,
+      user_id: authUserId,
+      workspace_id: workspaceId,
+      role: "user",
+      content: message,
+    } as any);
+}
 
-    if (authUserId) {
-      void maybeRunRollingCompaction({
-        supabaseAdmin,
-        conversationId,
-        userId: authUserId,
-      });
-    }
+// ------------------------------------------------------------
+// ROLLING COMPACTION (AFTER WRITE)
+// ------------------------------------------------------------
+if (authUserId) {
+  void maybeRunRollingCompaction({
+    supabaseAdmin,
+    conversationId,
+    userId: authUserId,
+  });
+}
+
 
     // ------------------------------------------------------------
     // NEWS MODE
