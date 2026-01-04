@@ -346,7 +346,7 @@ if (message && isImageRequest(message)) {
     const imageUrl = await generateImage(message);
 
     // ✅ FIX: wrap image in Markdown so UI renders it as an image
-    const imageMarkdown = `![Generated image](${imageUrl})`;
+    const imageHtml = `<img src="${imageUrl}" alt="Generated image" style="max-width:100%;border-radius:12px;" />`;
 
     if (authUserId) {
       await supabaseAdmin
