@@ -338,6 +338,44 @@ export async function POST(req: Request) {
       }
     );
 
+// ------------------------------------------------------------
+// IMAGE REQUEST — HARD BRANCH (AUTHORITATIVE)
+// ------------------------------------------------------------
+if (message && isImageRequest(message)) {
+  try {
+    const imageUrl = await generateImage(message);
+
+    if (authUserId) {
+      await supabaseAdmin
+        .schema("memory")
+        .from("working_memory")
+        .insert({
+          conversation_id: conversationId,
+          user_id: authUserId,
+          workspace_id: workspaceId,
+          role: "assistant",
+          content: imageUrl,
+        } as any);
+    }
+
+    return NextResponse.json({
+      ok: true,
+      response: imageUrl,
+      messages: [{ role: "assistant", content: imageUrl }],
+    });
+  } catch (err) {
+    console.error("[IMAGE ROUTE ERROR]", err);
+
+    return NextResponse.json({
+      ok: false,
+      response: "Image generation failed.",
+      messages: [
+        { role: "assistant", content: "Image generation failed." },
+      ],
+    });
+  }
+}
+
     const result = await runHybridPipeline({
       userMessage: message ?? "",
       context,
