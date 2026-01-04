@@ -147,10 +147,11 @@ export default function SolaceDock() {
   const { userKey, memReady } = useSolaceMemory();
 
   const { pendingFiles, handleFiles, handlePaste, clearPending } =
-    useSolaceAttachments({
-      onInfoMessage: (msg) =>
-        setMessages((m) => [...m, { role: "assistant", content: msg }]),
-    });
+  useSolaceAttachments({
+    onInfoMessage: (msg) =>
+      setMessages((m) => [...m, { role: "assistant", content: msg }]),
+  });
+
 
   const { listening, toggleMic } = useSpeechInput({
     onText: (text) => setInput((p) => (p ? p + " " : "") + text),
@@ -208,19 +209,19 @@ export default function SolaceDock() {
 
   // Only desktop: minDragPx to reduce quick snaps; touch support omitted for MVP
     const { posReady, onHeaderMouseDown } = useDockPosition({
-    canRender,
-    visible,
-    viewport,
-    panelW,
-    panelH,
-    isMobile,
-    PAD,
-    posKey: POS_KEY,
-    x,
-    y,
-    setPos
-    // minDragPx: 16,  // <--- REMOVED
-  });
+      canRender,
+      visible,
+      viewport,
+      panelW,
+      panelH,
+      isMobile,
+      PAD,
+      posKey: POS_KEY,
+      x,
+      y,
+      setPos,
+      // minDragPx: 16,  // <--- REMOVED
+});
 
   const { dockW, dockH, setDockW, setDockH } = useDockSize();
   const startResize = createResizeController(dockW, dockH, setDockW, setDockH);
@@ -351,29 +352,30 @@ export default function SolaceDock() {
         return;
       }
 
-      // IMAGE (base64)
-      if (
-        Array.isArray(data.data) &&
-        data.data[0] &&
-        typeof data.data[0].b64_json === "string"
-      ) {
-        const imageUrl = `data:image/png;base64,${data.data[0].b64_json}`;
-        setMessages((m) => [
-          ...m,
-          { role: "assistant", content: " ", imageUrl },
-        ]);
-        return;
-      }
+  // IMAGE (base64)
+if (
+  Array.isArray(data.data) &&
+  data.data[0] &&
+  typeof data.data[0].b64_json === "string"
+) {
+  const imageUrl = `data:image/png;base64,${data.data[0].b64_json}`;
+  setMessages((m) => [
+    ...m,
+    { role: "assistant", content: "", imageUrl },
+  ]);
+  return;
+}
 
-      // IMAGE (url)
-      if (typeof data.imageUrl === "string" || typeof data.image === "string") {
-        const image = data.imageUrl ?? data.image;
-        setMessages((m) => [
-          ...m,
-          { role: "assistant", content: " ", imageUrl: image },
-        ]);
-        return;
-      }
+// IMAGE (url)
+if (typeof data.imageUrl === "string" || typeof data.image === "string") {
+  const image = data.imageUrl ?? data.image;
+  setMessages((m) => [
+    ...m,
+    { role: "assistant", content: "", imageUrl: image },
+  ]);
+  return;
+}
+
 
       // MULTI-MESSAGE
       if (Array.isArray(data.messages)) {
