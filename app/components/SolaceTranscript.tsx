@@ -47,6 +47,47 @@ type Props = {
 };
 
 /* ------------------------------------------------------------------
+   Helper: assistant data:image or <img src="data:image/...">
+------------------------------------------------------------------- */
+function renderAssistantImageContent(msg: Message) {
+  if (
+    msg.role === "assistant" &&
+    typeof msg.content === "string"
+  ) {
+    // Direct data:image/...
+    if (msg.content.startsWith("data:image/")) {
+      return (
+        <img
+          src={msg.content}
+          style={{ maxWidth: "100%", borderRadius: 12, margin: "6px 0" }}
+          alt="Generated content"
+        />
+      );
+    }
+    // <img src="data:image/...">
+    if (
+      msg.content.startsWith('<img src="data:image/') ||
+      msg.content.startsWith("<img src='data:image/")
+    ) {
+      const srcMatch = msg.content.match(
+        /<img\s+src=(["'])(data:image\/[^"']+)\1\s*\/?>/
+      );
+      if (srcMatch && srcMatch[2]) {
+        return (
+          <img
+            src={srcMatch[2]}
+            style={{ maxWidth: "100%", borderRadius: 12, margin: "6px 0" }}
+            alt="Generated content"
+          />
+        );
+      }
+    }
+  }
+  // Not a renderable data:image
+  return null;
+}
+
+/* ------------------------------------------------------------------
    Component
 ------------------------------------------------------------------- */
 export default function SolaceTranscript({
@@ -78,11 +119,14 @@ export default function SolaceTranscript({
         const hasText = Boolean(msg.content && msg.content.trim());
         const hasExport = Boolean(msg.export);
         const hasCodeArtifact = Boolean(msg.artifact && msg.artifact.type === "code");
+        // ADDED: assistant data:image/ base64 or img tag
+        const isAssistantDataImg = (!!renderAssistantImageContent(msg));
 
         const renderKey = `${i}-${msg.role}-${
           hasImage ? "img"
           : hasExport ? "export"
           : hasCodeArtifact ? "code"
+          : isAssistantDataImg ? "datimg"
           : "txt"
         }`;
 
@@ -95,6 +139,7 @@ export default function SolaceTranscript({
             hasText,
             hasExport,
             hasCodeArtifact,
+            isAssistantDataImg,
           });
         }
 
@@ -130,8 +175,13 @@ export default function SolaceTranscript({
               {/* ---------------- Code Artifact (copyable code block) ---------------- */}
               {hasCodeArtifact && <CodeArtifactBlock artifact={msg.artifact!} />}
 
-              {/* ---------------- Text ---------------- */}
-              {!hasCodeArtifact && hasText && (
+              {/* ---------------- Assistant data:image/ or img tag image ---------------- */}
+              {!hasCodeArtifact && !hasExport && !hasImage && isAssistantDataImg && (
+                <div>{renderAssistantImageContent(msg)}</div>
+              )}
+
+              {/* ---------------- Text (if not handled above) ---------------- */}
+              {!hasCodeArtifact && !hasExport && !hasImage && !isAssistantDataImg && hasText && (
                 <div
                   style={{
                     whiteSpace: "pre-wrap",
@@ -325,7 +375,7 @@ function CodeArtifactBlock({ artifact }: { artifact: CodeArtifact }) {
               userSelect: "none",
             }}
           >
-            📋
+            ??
           </button>
         </div>
       )}
