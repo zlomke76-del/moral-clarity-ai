@@ -1,11 +1,33 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createServerClient } from "@supabase/ssr";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const supabase = await createSupabaseServerClient();
+export async function GET(req: Request) {
+  // Create a mutable response so Supabase can refresh cookies if needed
+  const response = NextResponse.json({});
+
+  // Next.js 16–compatible Supabase server client
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name) {
+          const cookieHeader = req.headers.get("cookie") ?? "";
+          const match = cookieHeader.match(new RegExp(`${name}=([^;]+)`));
+          return match?.[1];
+        },
+        set(name, value, options) {
+          response.cookies.set(name, value, options);
+        },
+        remove(name, options) {
+          response.cookies.set(name, "", { ...options, maxAge: 0 });
+        },
+      },
+    }
+  );
 
   const { data, error } = await supabase
     .from("outlet_bias_pi_overview")
@@ -30,6 +52,7 @@ export async function GET() {
     );
   }
 
+  // Return the same response so any refreshed cookies persist
   return NextResponse.json({
     ok: true,
     outlets: data ?? [],
