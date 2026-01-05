@@ -139,7 +139,6 @@ function scrubPhantomExecutionLanguage(text: string): string {
   if (!text) return text;
 
   const patterns = [
-    // direct execution claims
     /\bexecut(e|ing|ed)\b[^.]*\./gi,
     /\bproceed(ing|ed)?\b[^.]*\./gi,
     /\binitiat(e|ing|ed)\b[^.]*\./gi,
@@ -148,14 +147,10 @@ function scrubPhantomExecutionLanguage(text: string): string {
     /\brun(ning|ning)?\b[^.]*\./gi,
     /\bperform(ing|ed)?\b[^.]*\./gi,
     /\ballocat(e|ing|ed)\b[^.]*\./gi,
-
-    // implied internal agency
     /\binternal execution[^.]*\./gi,
     /\btask allocation[^.]*\./gi,
     /\bworkflow has started[^.]*\./gi,
     /\boperation underway[^.]*\./gi,
-
-    // future authority illusions
     /\bi will (now )?(execute|proceed|initiate)[^.]*\./gi,
   ];
 
@@ -249,6 +244,7 @@ export async function POST(req: Request) {
       ministryMode = false,
       founderMode = false,
       modeHint = "",
+      newsDigest, // ADDITIVE — optional explicit newsroom payload
     } = body ?? {};
 
     const finalUserKey = canonicalUserKey ?? userKey;
@@ -338,46 +334,74 @@ export async function POST(req: Request) {
       }
     );
 
-// ------------------------------------------------------------
-// IMAGE REQUEST — HARD BRANCH (AUTHORITATIVE)
-// ------------------------------------------------------------
-if (message && isImageRequest(message)) {
-  try {
-    const imageUrl = await generateImage(message);
+    // ------------------------------------------------------------
+    // IMAGE REQUEST — HARD BRANCH (AUTHORITATIVE)
+    // ------------------------------------------------------------
+    if (message && isImageRequest(message)) {
+      try {
+        const imageUrl = await generateImage(message);
 
-    // ✅ Render-safe for current UI
-    const imageHtml = `<img src="${imageUrl}" alt="Generated image" style="max-width:100%;border-radius:12px;" />`;
+        const imageHtml = `<img src="${imageUrl}" alt="Generated image" style="max-width:100%;border-radius:12px;" />`;
 
-    if (authUserId) {
-      await supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
-        .insert({
-          conversation_id: conversationId,
-          user_id: authUserId,
-          workspace_id: workspaceId,
-          role: "assistant",
-          content: imageHtml,
-        } as any);
+        if (authUserId) {
+          await supabaseAdmin
+            .schema("memory")
+            .from("working_memory")
+            .insert({
+              conversation_id: conversationId,
+              user_id: authUserId,
+              workspace_id: workspaceId,
+              role: "assistant",
+              content: imageHtml,
+            } as any);
+        }
+
+        return NextResponse.json({
+          ok: true,
+          response: imageHtml,
+          messages: [{ role: "assistant", content: imageHtml }],
+        });
+      } catch (err) {
+        console.error("[IMAGE ROUTE ERROR]", err);
+
+        return NextResponse.json({
+          ok: false,
+          response: "Image generation failed.",
+          messages: [
+            { role: "assistant", content: "Image generation failed." },
+          ],
+        });
+      }
     }
 
-    return NextResponse.json({
-      ok: true,
-      response: imageHtml,
-      messages: [{ role: "assistant", content: imageHtml }],
-    });
-  } catch (err) {
-    console.error("[IMAGE ROUTE ERROR]", err);
+    // ------------------------------------------------------------
+    // NEWSROOM — ADDITIVE, EXPLICIT, NON-DESTRUCTIVE
+    // ------------------------------------------------------------
+    if (
+      (newsMode === true || (message && isNewsKeywordFallback(message))) &&
+      Array.isArray(newsDigest)
+    ) {
+      const newsroomResponse = await runNewsroomExecutor(newsDigest);
 
-    return NextResponse.json({
-      ok: false,
-      response: "Image generation failed.",
-      messages: [
-        { role: "assistant", content: "Image generation failed." },
-      ],
-    });
-  }
-}
+      if (authUserId) {
+        await supabaseAdmin
+          .schema("memory")
+          .from("working_memory")
+          .insert({
+            conversation_id: conversationId,
+            user_id: authUserId,
+            workspace_id: workspaceId,
+            role: "assistant",
+            content: newsroomResponse,
+          } as any);
+      }
+
+      return NextResponse.json({
+        ok: true,
+        response: newsroomResponse,
+        messages: [{ role: "assistant", content: newsroomResponse }],
+      });
+    }
 
     const result = await runHybridPipeline({
       userMessage: message ?? "",
