@@ -1,31 +1,34 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase/browser";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 export default function ChatUI() {
+  const supabase = createClientComponentClient();
+
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    (async () => {
+    async function resolveUser() {
       try {
         const { data, error } = await supabase.auth.getUser();
-
         if (cancelled) return;
         if (error) return;
 
         setUserId(data.user?.id ?? null);
       } catch {
-        // silent fail – UI should not block on auth
+        // Silent fail — UI must not block on auth
       }
-    })();
+    }
+
+    resolveUser();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [supabase]);
 
   return (
     <div>
