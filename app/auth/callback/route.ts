@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+export const runtime = "nodejs";
+
+export async function GET(req: Request) {
+  const { searchParams, origin } = new URL(req.url);
   const code = searchParams.get("code");
 
   if (!code) {
     return NextResponse.redirect(`${origin}/auth/sign-in`);
   }
 
-  // Create a response we can mutate
+  // Create a mutable response
   const response = NextResponse.redirect(`${origin}/app`);
 
   const supabase = createServerClient(
@@ -18,7 +20,9 @@ export async function GET(request: Request) {
     {
       cookies: {
         get(name) {
-          return request.headers.get("cookie")?.match(new RegExp(`${name}=([^;]+)`))?.[1];
+          const cookieHeader = req.headers.get("cookie") ?? "";
+          const match = cookieHeader.match(new RegExp(`${name}=([^;]+)`));
+          return match?.[1];
         },
         set(name, value, options) {
           response.cookies.set(name, value, options);
@@ -37,5 +41,6 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/auth/sign-in`);
   }
 
+  // ✅ Return the same response object so cookies persist
   return response;
 }
