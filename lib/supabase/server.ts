@@ -1,29 +1,32 @@
+// lib/supabase/server.ts
+// ------------------------------------------------------------
+// SERVER-ONLY Supabase client
+// - No JSON parsing
+// - No cookie mutation
+// - No browser usage
+// ------------------------------------------------------------
+
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
-export async function createSupabaseServerClient(): Promise<SupabaseClient> {
+export async function createSupabaseServerClient() {
   const cookieStore = await cookies();
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !anon) {
-    throw new Error("Missing Supabase environment variables");
-  }
-
-  return createServerClient(url, anon, {
-    cookieEncoding: "base64url",
-    cookies: {
-      get(name) {
-        return cookieStore.get(name)?.value;
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name: string, options: any) {
+          cookieStore.delete({ name, ...options });
+        },
       },
-      set(name, value, options) {
-        cookieStore.set({ name, value, ...options });
-      },
-      remove(name, options) {
-        cookieStore.delete({ name, ...options });
-      },
-    },
-  });
+    }
+  );
 }
