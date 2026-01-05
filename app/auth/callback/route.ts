@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -10,7 +9,8 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/auth/sign-in`);
   }
 
-  const cookieStore = await cookies();
+  // Create a response we can mutate
+  const response = NextResponse.redirect(`${origin}/app`);
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,22 +18,13 @@ export async function GET(request: Request) {
     {
       cookies: {
         get(name) {
-          return cookieStore.get(name)?.value;
+          return request.headers.get("cookie")?.match(new RegExp(`${name}=([^;]+)`))?.[1];
         },
         set(name, value, options) {
-          cookieStore.set({
-            name,
-            value,
-            ...options,
-          });
+          response.cookies.set(name, value, options);
         },
         remove(name, options) {
-          cookieStore.set({
-            name,
-            value: "",
-            ...options,
-            maxAge: 0,
-          });
+          response.cookies.set(name, "", { ...options, maxAge: 0 });
         },
       },
     }
@@ -46,5 +37,5 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/auth/sign-in`);
   }
 
-  return NextResponse.redirect(`${origin}/app`);
+  return response;
 }
