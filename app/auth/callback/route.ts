@@ -7,11 +7,17 @@ export async function GET(req: Request) {
   const { searchParams, origin } = new URL(req.url);
   const code = searchParams.get("code");
 
+  // If no code, bail out early
   if (!code) {
     return NextResponse.redirect(`${origin}/auth/sign-in`);
   }
 
-  // Create a mutable response
+  // If session cookie already exists, skip exchange
+  const cookieHeader = req.headers.get("cookie") ?? "";
+  if (cookieHeader.includes("sb-access-token")) {
+    return NextResponse.redirect(`${origin}/app`);
+  }
+
   const response = NextResponse.redirect(`${origin}/app`);
 
   const supabase = createServerClient(
@@ -20,7 +26,6 @@ export async function GET(req: Request) {
     {
       cookies: {
         get(name) {
-          const cookieHeader = req.headers.get("cookie") ?? "";
           const match = cookieHeader.match(new RegExp(`${name}=([^;]+)`));
           return match?.[1];
         },
@@ -41,7 +46,5 @@ export async function GET(req: Request) {
     return NextResponse.redirect(`${origin}/auth/sign-in`);
   }
 
-  // ✅ Return the same response object so cookies persist
   return response;
 }
-
