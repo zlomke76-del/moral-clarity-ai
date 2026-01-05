@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     );
   }
 
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("outlet_bias_pi_overview")
