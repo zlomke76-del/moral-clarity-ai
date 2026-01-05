@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import MemoryIndexPanel from "@/app/components/memory/MemoryIndexPanel";
 import MemoryEditorPanel from "@/app/components/memory/MemoryEditorPanel";
 import type { MemoryRecord } from "@/app/components/memory/types";
-import { createPagesBrowserClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 
 type Props = {
   workspaceId: string;
@@ -16,7 +16,14 @@ export default function MemoryWorkspaceClient({
   initialItems,
 }: Props) {
   // SINGLETON instance, one per component instance
-  const supabase = useMemo(() => createPagesBrowserClient(), []);
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
 
   const [items, setItems] = useState<MemoryRecord[]>(initialItems);
   const [selected, setSelected] = useState<MemoryRecord | null>(null);
@@ -26,6 +33,7 @@ export default function MemoryWorkspaceClient({
   const loadMemories = useCallback(async () => {
     setLoading(true);
     setError(null);
+
     try {
       const {
         data: { session },
@@ -43,15 +51,20 @@ export default function MemoryWorkspaceClient({
         `/api/memory/workspace?workspaceId=${workspaceId}`,
         { headers: { Authorization: `Bearer ${session.access_token}` } }
       );
+
       if (!res.ok) {
         setError("Failed to load workspace memories.");
         setItems([]);
         setLoading(false);
         return;
       }
+
       const data = await res.json();
+
       if (Array.isArray(data.items)) {
         setItems(data.items);
+
+        // If the selected item no longer exists, clear it
         if (
           selected &&
           !data.items.find((x: MemoryRecord) => x.id === selected.id)
@@ -94,6 +107,7 @@ export default function MemoryWorkspaceClient({
           refetch={loadMemories}
         />
       </aside>
+
       <main className="overflow-hidden">
         {selected ? (
           <MemoryEditorPanel
@@ -101,6 +115,7 @@ export default function MemoryWorkspaceClient({
             record={selected}
             onSave={async (newContent) => {
               let content: any = newContent;
+
               if (selected.content && typeof selected.content === "object") {
                 try {
                   content = JSON.parse(newContent);
@@ -108,11 +123,14 @@ export default function MemoryWorkspaceClient({
                   return;
                 }
               }
+
               const {
                 data: { session },
               } = await supabase.auth.getSession();
+
               const access_token = session?.access_token;
               if (!access_token) return;
+
               const res = await fetch(`/api/memory/${selected.id}`, {
                 method: "PATCH",
                 headers: {
@@ -121,6 +139,7 @@ export default function MemoryWorkspaceClient({
                 },
                 body: JSON.stringify({ content }),
               });
+
               if (res.ok) {
                 const updated = await res.json();
                 handleUpdate(updated);
