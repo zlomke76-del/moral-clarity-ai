@@ -1,11 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase/browser";
 import React from "react";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 // Section container
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="mb-6 border border-neutral-700 rounded-lg p-4 bg-neutral-900">
       <h2 className="text-lg font-semibold mb-2 text-white">{title}</h2>
@@ -15,14 +21,23 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function CheckIcon() {
-  return <span className="inline-block w-4 h-4 text-green-500 mr-1">&#10003;</span>;
+  return (
+    <span className="inline-block w-4 h-4 text-green-500 mr-1">&#10003;</span>
+  );
 }
 function WarnIcon() {
-  return <span className="inline-block w-4 h-4 text-yellow-400 mr-1">&#9888;</span>;
+  return (
+    <span className="inline-block w-4 h-4 text-yellow-400 mr-1">&#9888;</span>
+  );
 }
 
 type Title = { title: string; primary: boolean };
-type Email = { email: string; primary: boolean; verified: boolean; label: string };
+type Email = {
+  email: string;
+  primary: boolean;
+  verified: boolean;
+  label: string;
+};
 type Fields = {
   name: string;
   titles: Title[];
@@ -46,6 +61,8 @@ const initialFields: Fields = {
 };
 
 export default function AccountPage() {
+  const supabase = createClientComponentClient();
+
   const [fields, setFields] = useState<Fields>(initialFields);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -59,8 +76,10 @@ export default function AccountPage() {
       setError(null);
       setSaveSuccess(false);
 
-      const { data, error: authError } = await supabase.auth.getUser();
-      const user = data?.user;
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
 
       if (authError || !user) {
         setError("Unauthorized. Please log in.");
@@ -85,12 +104,14 @@ export default function AccountPage() {
       if (profile) {
         setFields({
           name: profile.name ?? "",
-          titles: Array.isArray(profile.titles) && profile.titles.length
-            ? profile.titles
-            : [{ title: "", primary: true }],
-          emails: Array.isArray(profile.emails) && profile.emails.length
-            ? profile.emails
-            : [{ email: "", primary: true, verified: false, label: "" }],
+          titles:
+            Array.isArray(profile.titles) && profile.titles.length
+              ? profile.titles
+              : [{ title: "", primary: true }],
+          emails:
+            Array.isArray(profile.emails) && profile.emails.length
+              ? profile.emails
+              : [{ email: "", primary: true, verified: false, label: "" }],
           contact_info: profile.contact_info ?? "",
           address: profile.address ?? "",
           city: profile.city ?? "",
@@ -103,10 +124,11 @@ export default function AccountPage() {
     }
 
     fetchData();
-  }, []);
+  }, [supabase]);
 
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault();
+
     if (!userId) {
       setError("No user authenticated.");
       return;
@@ -116,9 +138,13 @@ export default function AccountPage() {
     setError(null);
     setSaveSuccess(false);
 
-    const { error: upError } = await supabase
-      .from("account.users")
-      .upsert([{ id: userId, ...fields, updated_at: new Date().toISOString() }]);
+    const { error: upError } = await supabase.from("account.users").upsert([
+      {
+        id: userId,
+        ...fields,
+        updated_at: new Date().toISOString(),
+      },
+    ]);
 
     if (upError) {
       setError("Could not save profile. " + upError.message);
