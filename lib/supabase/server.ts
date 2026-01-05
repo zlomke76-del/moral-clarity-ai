@@ -1,10 +1,4 @@
 // lib/supabase/server.ts
-// ------------------------------------------------------------
-// SERVER-ONLY Supabase client
-// - Next.js 16 compatible
-// - cookies() is async in server utilities
-// ------------------------------------------------------------
-
 import { createServerClient } from '@supabase/ssr'
 
 export function createSupabaseServerClient(req: Request, res: Response) {
@@ -14,15 +8,17 @@ export function createSupabaseServerClient(req: Request, res: Response) {
     {
       cookies: {
         get(name: string) {
-          return req.cookies.get(name)?.value
+          const cookieHeader = req.headers.get("cookie") ?? "";
+          const match = cookieHeader.match(new RegExp(`${name}=([^;]+)`));
+          return match?.[1];
         },
         set(name: string, value: string, options: any) {
-          res.cookies.set(name, value, options)
+          res.cookies.set(name, value, options);
         },
         remove(name: string, options: any) {
-          res.cookies.delete(name, options)
+          res.cookies.set(name, "", { ...options, maxAge: 0 });
         },
       },
     }
-  )
+  );
 }
