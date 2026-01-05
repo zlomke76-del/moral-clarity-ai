@@ -407,7 +407,7 @@ export async function POST(req: Request) {
 // NEWSROOM — SINGLE FETCH + EXECUTE (AUTHORITATIVE)
 // ------------------------------------------------------------
 
-// Explicit, single-source intent flag (REQUIRED)
+// Explicit, single-source intent flag
 const wantsNews =
   newsMode === true ||
   (typeof message === "string" && isNewsKeywordFallback(message));
@@ -419,7 +419,7 @@ if (wantsNews) {
         ? newsDigest
         : await fetchTodaysNeutralDigest(req);
 
-    if (digest.length < 3) {
+    if (!Array.isArray(digest) || digest.length < 3) {
       throw new Error("NEWSROOM_INSUFFICIENT_DIGEST");
     }
 
@@ -447,7 +447,6 @@ if (wantsNews) {
     console.error("[NEWSROOM EXECUTION FAILED]", err);
   }
 }
-
   
     const result = await runHybridPipeline({
       userMessage: message ?? "",
