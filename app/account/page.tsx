@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import React from "react";
 import { createBrowserClient } from "@supabase/ssr";
-import NeuralSidebar from "@/app/components/NeuralSidebar";
 
 // Clean, modern section container
 function Section({
@@ -152,126 +151,118 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full">
-      {/* SIDEBAR — 20% */}
-      <div className="w-1/5 min-w-[220px] max-w-[260px] border-r border-neutral-800 bg-neutral-950/60 backdrop-blur-xl">
-        <NeuralSidebar />
-      </div>
+    <main className="w-full flex-1 overflow-y-auto px-10 py-16 text-white">
+      <div className="max-w-3xl mx-auto space-y-10">
+        <h1 className="text-4xl font-bold tracking-tight mb-4">
+          Account Settings
+        </h1>
 
-      {/* MAIN CONTENT — 80% */}
-      <main className="w-4/5 flex-1 overflow-y-auto px-10 py-16 text-white">
-        <div className="max-w-3xl mx-auto space-y-10">
-          <h1 className="text-4xl font-bold tracking-tight mb-4">
-            Account Settings
-          </h1>
+        {loading && (
+          <div className="text-neutral-400">Loading your profile…</div>
+        )}
 
-          {loading && (
-            <div className="text-neutral-400">Loading your profile…</div>
-          )}
+        {error && (
+          <div className="p-4 rounded-lg bg-red-900/60 text-red-200 border border-red-800 shadow">
+            {error}
+          </div>
+        )}
 
-          {error && (
-            <div className="p-4 rounded-lg bg-red-900/60 text-red-200 border border-red-800 shadow">
-              {error}
-            </div>
-          )}
+        {saveSuccess && (
+          <div className="p-4 rounded-lg bg-green-900/60 text-green-200 border border-green-800 shadow">
+            Profile saved successfully
+          </div>
+        )}
 
-          {saveSuccess && (
-            <div className="p-4 rounded-lg bg-green-900/60 text-green-200 border border-green-800 shadow">
-              Profile saved successfully
-            </div>
-          )}
-
-          {!loading && (
-            <form onSubmit={saveProfile} className="space-y-10">
-              <Section title="Basic Information">
-                <label className="block">
-                  <span className="text-sm text-neutral-400">Name</span>
-                  <input
-                    type="text"
-                    value={fields.name}
-                    onChange={(e) =>
-                      setFields({ ...fields, name: e.target.value })
-                    }
-                    className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                  />
-                </label>
-              </Section>
-
-              <Section title="Contact Information">
-                <label className="block">
-                  <span className="text-sm text-neutral-400">Address</span>
-                  <input
-                    type="text"
-                    value={fields.address}
-                    onChange={(e) =>
-                      setFields({ ...fields, address: e.target.value })
-                    }
-                    className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="text-sm text-neutral-400">City</span>
-                  <input
-                    type="text"
-                    value={fields.city}
-                    onChange={(e) =>
-                      setFields({ ...fields, city: e.target.value })
-                    }
-                    className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="text-sm text-neutral-400">State</span>
-                  <input
-                    type="text"
-                    value={fields.state}
-                    onChange={(e) =>
-                      setFields({ ...fields, state: e.target.value })
-                    }
-                    className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="text-sm text-neutral-400">Contact Info</span>
-                  <input
-                    type="text"
-                    value={fields.contact_info}
-                    onChange={(e) =>
-                      setFields({ ...fields, contact_info: e.target.value })
-                    }
-                    className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                  />
-                </label>
-              </Section>
-
-              <Section title="Special Instructions">
-                <textarea
-                  value={fields.special_instructions}
+        {!loading && (
+          <form onSubmit={saveProfile} className="space-y-10">
+            <Section title="Basic Information">
+              <label className="block">
+                <span className="text-sm text-neutral-400">Name</span>
+                <input
+                  type="text"
+                  value={fields.name}
                   onChange={(e) =>
-                    setFields({
-                      ...fields,
-                      special_instructions: e.target.value,
-                    })
+                    setFields({ ...fields, name: e.target.value })
                   }
                   className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                  rows={4}
                 />
-              </Section>
+              </label>
+            </Section>
 
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold shadow transition"
-              >
-                {saving ? "Saving…" : "Save Profile"}
-              </button>
-            </form>
-          )}
-        </div>
-      </main>
-    </div>
+            <Section title="Contact Information">
+              <label className="block">
+                <span className="text-sm text-neutral-400">Address</span>
+                <input
+                  type="text"
+                  value={fields.address}
+                  onChange={(e) =>
+                    setFields({ ...fields, address: e.target.value })
+                  }
+                  className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-sm text-neutral-400">City</span>
+                <input
+                  type="text"
+                  value={fields.city}
+                  onChange={(e) =>
+                    setFields({ ...fields, city: e.target.value })
+                  }
+                  className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-sm text-neutral-400">State</span>
+                <input
+                  type="text"
+                  value={fields.state}
+                  onChange={(e) =>
+                    setFields({ ...fields, state: e.target.value })
+                  }
+                  className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-sm text-neutral-400">Contact Info</span>
+                <input
+                  type="text"
+                  value={fields.contact_info}
+                  onChange={(e) =>
+                    setFields({ ...fields, contact_info: e.target.value })
+                  }
+                  className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                />
+              </label>
+            </Section>
+
+            <Section title="Special Instructions">
+              <textarea
+                value={fields.special_instructions}
+                onChange={(e) =>
+                  setFields({
+                    ...fields,
+                    special_instructions: e.target.value,
+                  })
+                }
+                className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                rows={4}
+              />
+            </Section>
+
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold shadow transition"
+            >
+              {saving ? "Saving…" : "Save Profile"}
+            </button>
+          </form>
+        )}
+      </div>
+    </main>
   );
 }
