@@ -292,7 +292,7 @@ export async function POST(req: Request) {
     // --------------------------------------------------------
 // SSR AUTH CONTEXT (READ-ONLY) — NEXT 16 SAFE
 // --------------------------------------------------------
-const cookieStore: ReadonlyRequestCookies = await cookies();
+const cookieStore = cookies();
 
 const supabaseSSR = createServerClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -307,7 +307,6 @@ const supabaseSSR = createServerClient(
     },
   }
 );
-
 
 
     // --------------------------------------------------------
