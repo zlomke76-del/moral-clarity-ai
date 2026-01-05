@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import React from "react";
 import { createBrowserClient } from "@supabase/ssr";
 
-// Section container
+// Clean, modern section container
 function Section({
   title,
   children,
@@ -13,9 +13,11 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mb-6 border border-neutral-700 rounded-lg p-4 bg-neutral-900">
-      <h2 className="text-lg font-semibold mb-2 text-white">{title}</h2>
-      {children}
+    <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 backdrop-blur-sm p-6 shadow-sm">
+      <h2 className="text-xl font-semibold mb-4 tracking-tight text-white">
+        {title}
+      </h2>
+      <div className="space-y-4">{children}</div>
     </div>
   );
 }
@@ -149,88 +151,90 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto py-10 text-white">
-      <h1 className="text-3xl font-bold mb-8">Account Settings</h1>
+    <div className="max-w-3xl mx-auto px-6 py-16 text-white space-y-10">
+      <h1 className="text-4xl font-bold tracking-tight mb-4">
+        Account Settings
+      </h1>
 
       {loading && (
-        <div className="text-gray-300 mb-4">Loading your profile…</div>
+        <div className="text-neutral-400">Loading your profile…</div>
       )}
 
       {error && (
-        <div className="mb-4 p-3 bg-red-800 text-red-200 rounded">
+        <div className="p-4 rounded-lg bg-red-900/60 text-red-200 border border-red-800 shadow">
           {error}
         </div>
       )}
 
       {saveSuccess && (
-        <div className="mb-4 p-3 bg-green-800 text-green-200 rounded">
+        <div className="p-4 rounded-lg bg-green-900/60 text-green-200 border border-green-800 shadow">
           Profile saved successfully
         </div>
       )}
 
       {!loading && (
-        <form onSubmit={saveProfile} className="space-y-6">
+        <form onSubmit={saveProfile} className="space-y-10">
 
           <Section title="Basic Information">
-            <label className="block mb-2">
-              <span className="text-gray-300">Name</span>
+            <label className="block">
+              <span className="text-sm text-neutral-400">Name</span>
               <input
                 type="text"
                 value={fields.name}
                 onChange={(e) =>
                   setFields({ ...fields, name: e.target.value })
                 }
-                className="w-full mt-1 p-2 rounded bg-neutral-800 border border-neutral-700"
+                className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
               />
             </label>
           </Section>
 
           <Section title="Contact Information">
-            <label className="block mb-2">
-              <span className="text-gray-300">Address</span>
+            <label className="block">
+              <span className="text-sm text-neutral-400">Address</span>
               <input
                 type="text"
                 value={fields.address}
                 onChange={(e) =>
                   setFields({ ...fields, address: e.target.value })
                 }
-                className="w-full mt-1 p-2 rounded bg-neutral-800 border border-neutral-700"
+                className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
               />
             </label>
 
-            <label className="block mb-2">
-              <span className="text-gray-300">City</span>
+            <label className="block">
+              <span className="text-sm text-neutral-400">City</span>
               <input
                 type="text"
                 value={fields.city}
                 onChange={(e) =>
                   setFields({ ...fields, city: e.target.value })
                 }
-                className="w-full mt-1 p-2 rounded bg-neutral-800 border border-neutral-700"
+                className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
               />
             </label>
 
-            <label className="block mb-2">
-              <span className="text-gray-300">State</span>
+            <label className="block">
+              <span className="text-sm text-neutral-400">State</span>
               <input
                 type="text"
                 value={fields.state}
                 onChange={(e) =>
                   setFields({ ...fields, state: e.target.value })
                 }
-                className="w-full mt-1 p-2 rounded bg-neutral-800 border border-neutral-700"
+                className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
               />
             </label>
 
-            <label className="block mb-2">
-              <span className="text-gray-300">Contact Info</span>
+            <label className="block">
+              <span className="text-sm text-neutral-400">Contact Info</span>
               <input
                 type="text"
                 value={fields.contact_info}
                 onChange={(e) =>
                   setFields({ ...fields, contact_info: e.target.value })
                 }
-                className="w-full mt-1 p-2 rounded bg-neutral-800 border border-neutral-700"
+                className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
               />
             </label>
           </Section>
@@ -244,7 +248,7 @@ export default function AccountPage() {
                   special_instructions: e.target.value,
                 })
               }
-              className="w-full mt-1 p-2 rounded bg-neutral-800 border border-neutral-700"
+              className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
               rows={4}
             />
           </Section>
@@ -252,7 +256,7 @@ export default function AccountPage() {
           <button
             type="submit"
             disabled={saving}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded font-semibold"
+            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold shadow transition"
           >
             {saving ? "Saving…" : "Save Profile"}
           </button>
