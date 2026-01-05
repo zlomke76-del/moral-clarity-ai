@@ -1,6 +1,6 @@
 'use client';
 
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createBrowserClient } from '@supabase/ssr';
 
 /**
  * Default storage bucket.
@@ -15,7 +15,11 @@ const DEFAULT_BUCKET =
  * Client-safe, hydration-safe, no singleton leakage.
  */
 export function bucket(name: string = DEFAULT_BUCKET) {
-  const supabase = createClientComponentClient();
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
   const storage = supabase.storage.from(name);
 
   return {
