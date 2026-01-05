@@ -1,10 +1,33 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createServerClient } from "@supabase/ssr";
 
-export async function GET() {
+export const runtime = "nodejs";
+
+export async function GET(req: Request) {
+  // Create a mutable response so Supabase can refresh cookies if needed
+  const response = NextResponse.json({});
+
   try {
-    // ✅ MUST await the async Supabase client factory
-    const supabase = await createSupabaseServerClient();
+    // Next.js 16–compatible Supabase server client
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name) {
+            const cookieHeader = req.headers.get("cookie") ?? "";
+            const match = cookieHeader.match(new RegExp(`${name}=([^;]+)`));
+            return match?.[1];
+          },
+          set(name, value, options) {
+            response.cookies.set(name, value, options);
+          },
+          remove(name, options) {
+            response.cookies.set(name, "", { ...options, maxAge: 0 });
+          },
+        },
+      }
+    );
 
     const {
       data: { user },
@@ -18,8 +41,7 @@ export async function GET() {
       );
     }
 
-    // If this route is only checking auth / workspace access,
-    // return success once the user is confirmed.
+    // Return the same response object so cookies persist
     return NextResponse.json({
       ok: true,
       user_id: user.id,
