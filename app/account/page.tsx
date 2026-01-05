@@ -1,149 +1,267 @@
-// app/components/NeuralSidebar.tsx
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
-import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
+import { useEffect, useState } from "react";
+import React from "react";
+import { createBrowserClient } from "@supabase/ssr";
 
-/* Icons */
-import { User, BrainCircuit, Newspaper, KeyRound } from "lucide-react";
-
-export type NeuralSidebarItem = {
-  id: string;
-  label: string;
-  description?: string;
-  icon?: ReactNode;
-  href?: string;
-  onClick?: () => void;
-};
-
-type Props = {
-  items?: NeuralSidebarItem[];
-};
-
-export default function NeuralSidebar({ items }: Props) {
-  const pathname = usePathname() ?? "";
-
-  // Get workspaceId from /w/[id]
-  let workspaceId: string | null = null;
-  const parts = pathname.split("/").filter(Boolean);
-  if (parts[0] === "w" && parts[1]) workspaceId = parts[1];
-
-  const sidebarItems =
-    items && items.length > 0
-      ? items
-      : buildDefaultItems(workspaceId ?? MCA_WORKSPACE_ID);
-
+// Clean, modern section container
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    /* FIX: no <aside> wrapper here */
-    <div className="neural-sidebar">
-      {/* BRAND */}
-      <Link href="/app" className="neural-sidebar-top neural-sidebar-brand">
-        <div className="neural-sidebar-brand-mark">
-          <span>AI</span>
-        </div>
-
-        <div className="neural-sidebar-brand-text">
-          <span className="neural-sidebar-brand-line-1">Moral Clarity</span>
-          <span className="neural-sidebar-brand-line-2">Studio</span>
-        </div>
-      </Link>
-
-      {/* SECTIONS */}
-      <div className="neural-sidebar-glass">
-        <div className="neural-sidebar-section-label">Workspace</div>
-
-        <nav className="neural-sidebar-list">
-          {sidebarItems.map((item) => (
-            <SidebarChip key={item.id} item={item} />
-          ))}
-        </nav>
-      </div>
+    <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 backdrop-blur-sm p-6 shadow-sm">
+      <h2 className="text-xl font-semibold mb-4 tracking-tight text-white">
+        {title}
+      </h2>
+      <div className="space-y-4">{children}</div>
     </div>
   );
 }
 
-/* CHIP */
-function SidebarChip({ item }: { item: NeuralSidebarItem }) {
-  const pathname = usePathname() ?? "";
-  const href = item.href ?? "";
+type Title = { title: string; primary: boolean };
+type Email = {
+  email: string;
+  primary: boolean;
+  verified: boolean;
+  label: string;
+};
+type Fields = {
+  name: string;
+  titles: Title[];
+  emails: Email[];
+  contact_info: string;
+  address: string;
+  city: string;
+  state: string;
+  special_instructions: string;
+};
 
-  const isActive =
-    href.length > 0 &&
-    (pathname === href || pathname.startsWith(href + "/"));
+const initialFields: Fields = {
+  name: "",
+  titles: [{ title: "", primary: true }],
+  emails: [{ email: "", primary: true, verified: false, label: "" }],
+  contact_info: "",
+  address: "",
+  city: "",
+  state: "",
+  special_instructions: "",
+};
 
-  const inner = (
-    <div className={`neural-sidebar-chip ${isActive ? "active" : ""}`}>
-      <div className="neural-sidebar-chip-inner">
-        {item.icon && (
-          <div className="neural-sidebar-chip-icon">{item.icon}</div>
-        )}
-
-        <div>
-          <div className="neural-sidebar-chip-label">{item.label}</div>
-          {item.description && (
-            <div className="neural-sidebar-chip-description">
-              {item.description}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+export default function AccountPage() {
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  if (href) {
-    return (
-      <Link
-        href={href}
-        className={`neural-sidebar-link ${isActive ? "active" : ""}`}
-      >
-        {inner}
-      </Link>
-    );
+  const [fields, setFields] = useState<Fields>(initialFields);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      setError(null);
+      setSaveSuccess(false);
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        setError("Unauthorized. Please log in.");
+        setLoading(false);
+        return;
+      }
+
+      setUserId(user.id);
+
+      const { data: profile, error: dbError } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (dbError && dbError.code !== "PGRST116") {
+        setError("Error loading account data.");
+        setLoading(false);
+        return;
+      }
+
+      if (profile) {
+        setFields({
+          name: profile.name ?? "",
+          titles:
+            Array.isArray(profile.titles) && profile.titles.length
+              ? profile.titles
+              : [{ title: "", primary: true }],
+          emails:
+            Array.isArray(profile.emails) && profile.emails.length
+              ? profile.emails
+              : [{ email: "", primary: true, verified: false, label: "" }],
+          contact_info: profile.contact_info ?? "",
+          address: profile.address ?? "",
+          city: profile.city ?? "",
+          state: profile.state ?? "",
+          special_instructions: profile.special_instructions ?? "",
+        });
+      }
+
+      setLoading(false);
+    }
+
+    fetchData();
+  }, [supabase]);
+
+  async function saveProfile(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!userId) {
+      setError("No user authenticated.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    setSaveSuccess(false);
+
+    const { error: upError } = await supabase.from("users").upsert([
+      {
+        id: userId,
+        ...fields,
+        updated_at: new Date().toISOString(),
+      },
+    ]);
+
+    if (upError) {
+      setError("Could not save profile. " + upError.message);
+    } else {
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
+    }
+
+    setSaving(false);
   }
 
   return (
-    <button
-      type="button"
-      onClick={item.onClick}
-      className={`neural-sidebar-link ${isActive ? "active" : ""}`}
-    >
-      {inner}
-    </button>
-  );
-}
+    <div className="max-w-3xl mx-auto px-6 py-16 text-white space-y-10">
+      <h1 className="text-4xl font-bold tracking-tight mb-4">
+        Account Settings
+      </h1>
 
-/* DEFAULT PAGES */
-function buildDefaultItems(workspaceId: string): NeuralSidebarItem[] {
-  return [
-    {
-      id: "account",
-      label: "Account",
-      description: "Profile & billing",
-      href: "/account",
-      icon: <User className="neural-icon" size={18} />,
-    },
-    {
-      id: "memory",
-      label: "Memory",
-      description: "Review & edit Solace memory",
-      href: `/w/${workspaceId}/memory`,
-      icon: <BrainCircuit className="neural-icon" size={18} />,
-    },
-    {
-      id: "newsroom",
-      label: "Newsroom Cabinet",
-      description: "Neutrality & outlet metrics",
-      href: "/newsroom/cabinet",
-      icon: <Newspaper className="neural-icon" size={18} />,
-    },
-    {
-      id: "magic-key",
-      label: "Magic Key",
-      description: "Generate a new secure key",
-      href: "/auth/sign-in",
-      icon: <KeyRound className="neural-icon" size={18} />,
-    },
-  ];
+      {loading && (
+        <div className="text-neutral-400">Loading your profile…</div>
+      )}
+
+      {error && (
+        <div className="p-4 rounded-lg bg-red-900/60 text-red-200 border border-red-800 shadow">
+          {error}
+        </div>
+      )}
+
+      {saveSuccess && (
+        <div className="p-4 rounded-lg bg-green-900/60 text-green-200 border border-green-800 shadow">
+          Profile saved successfully
+        </div>
+      )}
+
+      {!loading && (
+        <form onSubmit={saveProfile} className="space-y-10">
+
+          <Section title="Basic Information">
+            <label className="block">
+              <span className="text-sm text-neutral-400">Name</span>
+              <input
+                type="text"
+                value={fields.name}
+                onChange={(e) =>
+                  setFields({ ...fields, name: e.target.value })
+                }
+                className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              />
+            </label>
+          </Section>
+
+          <Section title="Contact Information">
+            <label className="block">
+              <span className="text-sm text-neutral-400">Address</span>
+              <input
+                type="text"
+                value={fields.address}
+                onChange={(e) =>
+                  setFields({ ...fields, address: e.target.value })
+                }
+                className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-sm text-neutral-400">City</span>
+              <input
+                type="text"
+                value={fields.city}
+                onChange={(e) =>
+                  setFields({ ...fields, city: e.target.value })
+                }
+                className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-sm text-neutral-400">State</span>
+              <input
+                type="text"
+                value={fields.state}
+                onChange={(e) =>
+                  setFields({ ...fields, state: e.target.value })
+                }
+                className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              />
+            </label>
+
+            <label className="block">
+              <span className="text-sm text-neutral-400">Contact Info</span>
+              <input
+                type="text"
+                value={fields.contact_info}
+                onChange={(e) =>
+                  setFields({ ...fields, contact_info: e.target.value })
+                }
+                className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              />
+            </label>
+          </Section>
+
+          <Section title="Special Instructions">
+            <textarea
+              value={fields.special_instructions}
+              onChange={(e) =>
+                setFields({
+                  ...fields,
+                  special_instructions: e.target.value,
+                })
+              }
+              className="w-full mt-1 px-4 py-2 rounded-lg bg-neutral-800 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              rows={4}
+            />
+          </Section>
+
+          <button
+            type="submit"
+            disabled={saving}
+            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold shadow transition"
+          >
+            {saving ? "Saving…" : "Save Profile"}
+          </button>
+        </form>
+      )}
+    </div>
+  );
 }
