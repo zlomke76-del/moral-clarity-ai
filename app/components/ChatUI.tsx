@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 
 export default function ChatUI() {
-  const supabase = createClientComponentClient();
-
   const [userId, setUserId] = useState<string | null>(null);
+
+  // Create Supabase client once per component instance
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   useEffect(() => {
     let cancelled = false;
