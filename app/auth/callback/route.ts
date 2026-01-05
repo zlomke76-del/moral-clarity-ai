@@ -1,18 +1,21 @@
+// app/auth/callback/route.ts
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
-  const { searchParams, origin } = new URL(req.url);
-  const code = searchParams.get("code");
+  const url = new URL(req.url);
+  const code = url.searchParams.get("code");
 
   if (!code) {
-    return NextResponse.redirect(`${origin}/auth/sign-in`);
+    return NextResponse.redirect(`${url.origin}/auth/sign-in`);
   }
 
-  const response = NextResponse.redirect(`${origin}/app`);
+  // Create a mutable response BEFORE calling Supabase
+  const response = NextResponse.redirect(`${url.origin}/app`);
 
+  // Create Supabase server client using the new SSR cookie adapter
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -37,7 +40,7 @@ export async function GET(req: Request) {
 
   if (error) {
     console.error("[auth/callback] exchange failed", error);
-    return NextResponse.redirect(`${origin}/auth/sign-in`);
+    return NextResponse.redirect(`${url.origin}/auth/sign-in`);
   }
 
   return response;
