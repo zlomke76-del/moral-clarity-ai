@@ -290,23 +290,40 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-// SSR AUTH CONTEXT (READ-ONLY) — NEXT 16 SAFE
-// --------------------------------------------------------
-const cookieStore = await cookies();
+    // SSR AUTH CONTEXT (READ-ONLY) — NEXT 16 SAFE
+    // --------------------------------------------------------
+    const cookieStore = cookies();
 
-const supabaseSSR = createServerClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  {
-    cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value;
-      },
-      set() {},
-      remove() {},
-    },
-  }
-);
+    const supabaseSSR = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+          set() {},
+          remove() {},
+        },
+      }
+    );
+
+    // --------------------------------------------------------
+    // AUTH USER CONTEXT + ADMIN CLIENT (FIXED)
+    // --------------------------------------------------------
+    const {
+      data: { user },
+    } = await supabaseSSR.auth.getUser();
+
+    const authUserId = user?.id ?? finalUserKey;
+
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: { persistSession: false, autoRefreshToken: false },
+      }
+    );
 
     // --------------------------------------------------------
     // Persist user message
