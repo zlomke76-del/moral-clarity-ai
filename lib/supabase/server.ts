@@ -1,16 +1,16 @@
 // lib/supabase/server.ts
 // ------------------------------------------------------------
 // SERVER-ONLY Supabase client
-// - No JSON parsing
-// - No cookie mutation
-// - No browser usage
+// - Next.js 16 compatible
+// - cookies() is async in server utilities
 // ------------------------------------------------------------
 
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
-export function createSupabaseServerClient() {
-  const cookieStore = cookies(); // <-- FIXED: no await
+export async function createSupabaseServerClient() {
+  // FIX: cookies() must be awaited in server utilities
+  const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
