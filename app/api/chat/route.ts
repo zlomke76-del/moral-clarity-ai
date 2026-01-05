@@ -406,6 +406,12 @@ export async function POST(req: Request) {
 // ------------------------------------------------------------
 // NEWSROOM — SINGLE FETCH + EXECUTE (AUTHORITATIVE)
 // ------------------------------------------------------------
+
+// Explicit, single-source intent flag (REQUIRED)
+const wantsNews =
+  newsMode === true ||
+  (typeof message === "string" && isNewsKeywordFallback(message));
+
 if (wantsNews) {
   try {
     const digest =
