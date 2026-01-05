@@ -1,4 +1,3 @@
-// lib/supabase/browser.ts
 import { createBrowserClient } from "@supabase/ssr";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
