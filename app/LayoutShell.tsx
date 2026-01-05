@@ -17,7 +17,8 @@ export default function LayoutShell({
   const isApp =
     pathname === "/app" ||
     pathname.startsWith("/app/") ||
-    pathname.startsWith("/w/");
+    pathname.startsWith("/w/") ||
+    pathname.startsWith("/account");
 
   const isWorkspace = pathname.startsWith("/w/");
 
@@ -57,9 +58,7 @@ export default function LayoutShell({
         </main>
       )}
 
-      {/* Debug overlay is always last */}
       <LayoutDebugOverlay />
-
       <SpeedInsights />
     </>
   );
