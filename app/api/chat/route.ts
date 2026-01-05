@@ -404,62 +404,44 @@ export async function POST(req: Request) {
     }
 
 // ------------------------------------------------------------
-// NEWS DIGEST FETCHER — SERVER SIDE (ADDITIVE)
+// NEWSROOM — SINGLE FETCH + EXECUTE (AUTHORITATIVE)
 // ------------------------------------------------------------
-async function fetchTodaysNeutralDigest(req: Request) {
-  const url = new URL(req.url);
-  const digestUrl = `${url.origin}/api/news/solace-digest`;
-
-  const res = await fetch(digestUrl, {
-    headers: {
-      cookie: req.headers.get("cookie") ?? "",
-    },
-  });
-
-  if (!res.ok) {
-    throw new Error(`NEWS_DIGEST_FETCH_FAILED_${res.status}`);
-  }
-
-  const json = await res.json();
-  return Array.isArray(json?.items) ? json.items : [];
-}
-
-  // ------------------------------------------------------------
-// NEWSROOM — FALLBACK (SERVER FETCH → EXECUTE)
-// ------------------------------------------------------------
-if (
-  (newsMode === true || (message && isNewsKeywordFallback(message))) &&
-  !Array.isArray(newsDigest)
-) {
+if (wantsNews) {
   try {
-    const fetchedDigest = await fetchTodaysNeutralDigest(req);
+    const digest =
+      Array.isArray(newsDigest) && newsDigest.length >= 3
+        ? newsDigest
+        : await fetchTodaysNeutralDigest(req);
 
-    if (fetchedDigest.length >= 3) {
-      const newsroomResponse = await runNewsroomExecutor(fetchedDigest);
-
-      if (authUserId) {
-        await supabaseAdmin
-          .schema("memory")
-          .from("working_memory")
-          .insert({
-            conversation_id: conversationId,
-            user_id: authUserId,
-            workspace_id: workspaceId,
-            role: "assistant",
-            content: newsroomResponse,
-          } as any);
-      }
-
-      return NextResponse.json({
-        ok: true,
-        response: newsroomResponse,
-        messages: [{ role: "assistant", content: newsroomResponse }],
-      });
+    if (digest.length < 3) {
+      throw new Error("NEWSROOM_INSUFFICIENT_DIGEST");
     }
+
+    const newsroomResponse = await runNewsroomExecutor(digest);
+
+    if (authUserId) {
+      await supabaseAdmin
+        .schema("memory")
+        .from("working_memory")
+        .insert({
+          conversation_id: conversationId,
+          user_id: authUserId,
+          workspace_id: workspaceId,
+          role: "assistant",
+          content: newsroomResponse,
+        } as any);
+    }
+
+    return NextResponse.json({
+      ok: true,
+      response: newsroomResponse,
+      messages: [{ role: "assistant", content: newsroomResponse }],
+    });
   } catch (err) {
-    console.error("[NEWSROOM FETCH FALLBACK FAILED]", err);
+    console.error("[NEWSROOM EXECUTION FAILED]", err);
   }
 }
+
   
     const result = await runHybridPipeline({
       userMessage: message ?? "",
