@@ -3,20 +3,22 @@
 // SERVER-ONLY Supabase client factory
 //
 // Canonical rules:
-// - Do NOT stub or override cookies unless you fully implement them
-// - Let @supabase/ssr manage PKCE + base64 cookies internally
-// - Passing an empty cookies adapter causes session recovery failures
+// - Required by @supabase/ssr typings to provide `cookies`
+// - MUST be a transparent pass-through (never stubbed)
+// - MUST NOT JSON.parse or decode cookies
+// - Supabase handles base64 / PKCE internally
 // ------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 export function createSupabaseServerClient(accessToken?: string) {
+  const cookieStore = cookies();
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      // Optional Authorization header for service-to-service or
-      // explicitly forwarded access tokens
       global: accessToken
         ? {
             headers: {
@@ -25,10 +27,25 @@ export function createSupabaseServerClient(accessToken?: string) {
           }
         : undefined,
 
-      // IMPORTANT:
-      // Do NOT provide a cookies adapter here.
-      // If omitted, Supabase will correctly read and write
-      // base64-encoded auth cookies on its own.
+      // REQUIRED by @supabase/ssr types.
+      // This MUST be a real pass-through adapter.
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          // Server routes MAY set cookies (not middleware)
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name: string, options: any) {
+          cookieStore.set({
+            name,
+            value: "",
+            ...options,
+            maxAge: 0,
+          });
+        },
+      },
     }
   );
 }
