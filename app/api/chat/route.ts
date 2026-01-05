@@ -8,7 +8,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
+import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 
 // ------------------------------------------------------------
 // Context constants
@@ -289,21 +289,24 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-// SSR AUTH CONTEXT (READ-ONLY)
+// SSR AUTH CONTEXT (READ-ONLY) — NEXT 16 SAFE
 // --------------------------------------------------------
-const cookieStore = cookies();
+const cookieStore: ReadonlyRequestCookies = await cookies();
 
 const supabaseSSR = createServerClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   {
     cookies: {
-      get: (name) => cookieStore.get(name)?.value,
+      get(name: string) {
+        return cookieStore.get(name)?.value;
+      },
       set() {},
       remove() {},
     },
   }
 );
+
 
 
     // --------------------------------------------------------
