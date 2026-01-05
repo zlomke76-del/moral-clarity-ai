@@ -1,7 +1,18 @@
-return createServerClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  {
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+export function createSupabaseServerClient(): SupabaseClient {
+  const cookieStore = cookies();
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anon) {
+    throw new Error("Missing Supabase environment variables");
+  }
+
+  return createServerClient(url, anon, {
     cookieEncoding: "base64url",
     cookies: {
       get(name) {
@@ -14,5 +25,5 @@ return createServerClient(
         cookieStore.delete({ name, ...options });
       },
     },
-  }
-);
+  });
+}
