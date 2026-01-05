@@ -1,11 +1,9 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Suspense } from "react";
-import { SpeedInsights } from "@vercel/speed-insights/next";
-
 import NeuralSidebar from "@/app/components/NeuralSidebar";
 import LayoutDebugOverlay from "@/app/components/LayoutDebugOverlay";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export default function LayoutShell({
   children,
@@ -14,12 +12,22 @@ export default function LayoutShell({
 }) {
   const pathname = usePathname() ?? "";
 
+  /**
+   * APP SHELL ROUTES
+   * These routes get:
+   * - Sidebar (20%)
+   * - Grid layout
+   * - App padding
+   */
   const isApp =
     pathname === "/app" ||
     pathname.startsWith("/app/") ||
     pathname.startsWith("/w/") ||
     pathname.startsWith("/account");
 
+  /**
+   * Workspace pages get zero padding
+   */
   const isWorkspace = pathname.startsWith("/w/");
 
   return (
@@ -29,10 +37,15 @@ export default function LayoutShell({
           data-app-shell
           className="grid grid-cols-[20vw_1fr] min-h-screen relative z-10"
         >
-          <aside data-neural-sidebar className="h-full">
+          {/* SIDEBAR — fixed 20% */}
+          <aside
+            data-neural-sidebar
+            className="h-full border-r border-neutral-800 bg-neutral-950/60 backdrop-blur-xl"
+          >
             <NeuralSidebar />
           </aside>
 
+          {/* MAIN CONTENT — 80% */}
           <main
             data-app-main
             className="h-full flex flex-col items-start justify-start"
@@ -42,7 +55,7 @@ export default function LayoutShell({
               className={
                 isWorkspace
                   ? "w-full h-full px-0 py-0"
-                  : "w-full px-8 py-10"
+                  : "w-full px-10 py-12"
               }
             >
               {children}
@@ -50,6 +63,13 @@ export default function LayoutShell({
           </main>
         </div>
       ) : (
+        /**
+         * STANDALONE MODE
+         * Used for:
+         * - Auth pages
+         * - Marketing pages
+         * - Public content
+         */
         <main
           data-standalone
           className="min-h-screen w-full flex flex-col items-center justify-start px-6 py-16"
@@ -58,7 +78,9 @@ export default function LayoutShell({
         </main>
       )}
 
+      {/* Debug overlay always last */}
       <LayoutDebugOverlay />
+
       <SpeedInsights />
     </>
   );
