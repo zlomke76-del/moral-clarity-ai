@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/lib/supabase/browser";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 export function useSolaceMemory() {
+  const supabase = createClientComponentClient();
+
   const [memReady, setMemReady] = useState(false);
   const memoryCacheRef = useRef<any[]>([]);
   const [userKey, setUserKey] = useState<string | undefined>(undefined);
@@ -46,7 +48,7 @@ export function useSolaceMemory() {
       mounted = false;
       listener.subscription.unsubscribe();
     };
-  }, []);
+  }, [supabase]);
 
   return {
     userKey,
