@@ -8,8 +8,8 @@
       "schedule": "0 6,18 * * *"
     },
     {
-      "path": "/api/news/backfill-90d",
-      "schedule": "15 6,18 * * *"
+      "path": "/api/research/hubble/ingest",
+      "schedule": "30 6 * * *"
     }
   ]
 }
