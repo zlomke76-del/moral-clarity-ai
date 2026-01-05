@@ -92,8 +92,9 @@ export default function AccountPage() {
 
       setUserId(user.id);
 
+      // ⭐ UPDATED: now reads from public.users
       const { data: profile, error: dbError } = await supabase
-        .from("account.users")
+        .from("users")
         .select("*")
         .eq("id", user.id)
         .single();
@@ -141,7 +142,8 @@ export default function AccountPage() {
     setError(null);
     setSaveSuccess(false);
 
-    const { error: upError } = await supabase.from("account.users").upsert([
+    // ⭐ UPDATED: now writes to public.users
+    const { error: upError } = await supabase.from("users").upsert([
       {
         id: userId,
         ...fields,
