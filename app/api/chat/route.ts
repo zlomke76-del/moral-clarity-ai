@@ -387,10 +387,8 @@ if (wantsNews) {
   try {
     // --------------------------------------------------------
     // Resolve digest source
-    // - Prefer explicit newsDigest if valid
-    // - Otherwise fetch from public system anchor
     // --------------------------------------------------------
-    let digest = Array.isArray(newsDigest) ? newsDigest : null;
+    let digest: any[] | null = Array.isArray(newsDigest) ? newsDigest : null;
 
     if (!digest || digest.length < 3) {
       const baseUrl =
@@ -425,12 +423,18 @@ if (wantsNews) {
     }
 
     // --------------------------------------------------------
-    // Execute newsroom renderer (exactly once)
+    // HARD TYPE NARROWING (compiler-visible)
     // --------------------------------------------------------
-    const newsroomResponse = await runNewsroomExecutor(digest);
+    if (!Array.isArray(digest)) {
+      throw new Error("NEWSROOM_DIGEST_INVALID");
+    }
+
+    const newsroomResponse = await runNewsroomExecutor(
+      digest as any
+    );
 
     // --------------------------------------------------------
-    // Persist assistant response (working memory)
+    // Persist assistant response
     // --------------------------------------------------------
     if (authUserId) {
       await supabaseAdmin
@@ -454,7 +458,6 @@ if (wantsNews) {
     console.error("[NEWSROOM EXECUTION FAILED]", err);
   }
 }
-
   
     const result = await runHybridPipeline({
       userMessage: message ?? "",
