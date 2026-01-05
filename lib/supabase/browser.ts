@@ -7,4 +7,7 @@ if (!url || !anon) {
   throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or ANON_KEY");
 }
 
-export const supabase = createBrowserClient(url, anon);
+export const supabase = createBrowserClient(url, anon, {
+  cookieEncoding: "base64url",
+});
+
