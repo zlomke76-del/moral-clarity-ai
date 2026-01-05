@@ -1,10 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createBrowserClient } from "@supabase/ssr";
 
 export function useSolaceMemory() {
-  const supabase = createClientComponentClient();
+  // Create Supabase client once per hook instance
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   const [memReady, setMemReady] = useState(false);
   const memoryCacheRef = useRef<any[]>([]);
