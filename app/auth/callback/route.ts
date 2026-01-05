@@ -44,3 +44,4 @@ export async function GET(req: Request) {
   // ✅ Return the same response object so cookies persist
   return response;
 }
+
