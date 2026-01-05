@@ -374,37 +374,8 @@ export async function POST(req: Request) {
       }
     }
 
-    // ------------------------------------------------------------
-    // NEWSROOM — ADDITIVE, EXPLICIT, NON-DESTRUCTIVE
-    // ------------------------------------------------------------
-    if (
-      (newsMode === true || (message && isNewsKeywordFallback(message))) &&
-      Array.isArray(newsDigest)
-    ) {
-      const newsroomResponse = await runNewsroomExecutor(newsDigest);
-
-      if (authUserId) {
-        await supabaseAdmin
-          .schema("memory")
-          .from("working_memory")
-          .insert({
-            conversation_id: conversationId,
-            user_id: authUserId,
-            workspace_id: workspaceId,
-            role: "assistant",
-            content: newsroomResponse,
-          } as any);
-      }
-
-      return NextResponse.json({
-        ok: true,
-        response: newsroomResponse,
-        messages: [{ role: "assistant", content: newsroomResponse }],
-      });
-    }
-
 // ------------------------------------------------------------
-// NEWSROOM — SINGLE FETCH + EXECUTE (AUTHORITATIVE)
+// NEWSROOM — SINGLE AUTHORITY (PUBLIC SYSTEM ANCHOR)
 // ------------------------------------------------------------
 
 // Explicit, single-source intent flag
@@ -414,17 +385,53 @@ const wantsNews =
 
 if (wantsNews) {
   try {
-    const digest =
-      Array.isArray(newsDigest) && newsDigest.length >= 3
-        ? newsDigest
-        : await fetchTodaysNeutralDigest(req);
+    // --------------------------------------------------------
+    // Resolve digest source
+    // - Prefer explicit newsDigest if valid
+    // - Otherwise fetch from public system anchor
+    // --------------------------------------------------------
+    let digest = Array.isArray(newsDigest) ? newsDigest : null;
 
-    if (!Array.isArray(digest) || digest.length < 3) {
-      throw new Error("NEWSROOM_INSUFFICIENT_DIGEST");
+    if (!digest || digest.length < 3) {
+      const baseUrl =
+        process.env.NEXT_PUBLIC_SITE_URL ||
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+
+      if (!baseUrl) {
+        throw new Error("NEWSROOM_BASE_URL_MISSING");
+      }
+
+      const res = await fetch(
+        `${baseUrl}/api/public/news-digest?limit=3`,
+        { method: "GET", cache: "no-store" }
+      );
+
+      if (!res.ok) {
+        throw new Error("NEWSROOM_DIGEST_FETCH_FAILED");
+      }
+
+      const payload = await res.json();
+
+      if (
+        !payload ||
+        payload.ok !== true ||
+        !Array.isArray(payload.stories) ||
+        payload.stories.length < 3
+      ) {
+        throw new Error("NEWSROOM_INSUFFICIENT_DIGEST");
+      }
+
+      digest = payload.stories;
     }
 
+    // --------------------------------------------------------
+    // Execute newsroom renderer (exactly once)
+    // --------------------------------------------------------
     const newsroomResponse = await runNewsroomExecutor(digest);
 
+    // --------------------------------------------------------
+    // Persist assistant response (working memory)
+    // --------------------------------------------------------
     if (authUserId) {
       await supabaseAdmin
         .schema("memory")
@@ -447,6 +454,7 @@ if (wantsNews) {
     console.error("[NEWSROOM EXECUTION FAILED]", err);
   }
 }
+
   
     const result = await runHybridPipeline({
       userMessage: message ?? "",
