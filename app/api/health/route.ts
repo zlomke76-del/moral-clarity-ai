@@ -8,7 +8,8 @@ export async function GET() {
   let errorMessage: string | null = null;
 
   try {
-    const sb = createSupabaseServerClient();
+    // ✅ MUST await the async factory (Next.js 16 + @supabase/ssr)
+    const sb = await createSupabaseServerClient();
 
     const { error } = await sb
       .from("health_check")
