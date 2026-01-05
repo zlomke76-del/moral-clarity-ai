@@ -1,5 +1,3 @@
-// app/auth/start/route.ts
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
@@ -11,13 +9,13 @@ export async function POST(req: Request) {
     return NextResponse.redirect("/auth/error?err=Missing%20email");
   }
 
-  const cookieStore = await cookies();
+  // Create a mutable response
+  const response = NextResponse.redirect("/auth/check-email");
 
-  // Build and store callback redirect info
+  // Store callback redirect info
   const params = new URLSearchParams();
   params.set("next", "/app");
-
-  cookieStore.set("auth-callback-search", params.toString(), {
+  response.cookies.set("auth-callback-search", params.toString(), {
     path: "/",
     httpOnly: true,
     sameSite: "lax",
@@ -29,13 +27,13 @@ export async function POST(req: Request) {
     {
       cookies: {
         get(name) {
-          return cookieStore.get(name)?.value;
+          return req.headers.get("cookie")?.match(new RegExp(`${name}=([^;]+)`))?.[1];
         },
-        set(name, value, opts) {
-          cookieStore.set(name, value, opts);
+        set(name, value, options) {
+          response.cookies.set(name, value, options);
         },
-        remove(name, opts) {
-          cookieStore.set(name, "", { ...opts, maxAge: 0 });
+        remove(name, options) {
+          response.cookies.set(name, "", { ...options, maxAge: 0 });
         },
       },
     }
@@ -49,5 +47,5 @@ export async function POST(req: Request) {
     );
   }
 
-  return NextResponse.redirect("/auth/check-email");
+  return response;
 }
