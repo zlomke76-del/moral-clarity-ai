@@ -32,7 +32,7 @@ export async function getServerSession() {
   const hdr = await headers();
   const cookieHeader = hdr.get("cookie") ?? "";
 
-  const supabase = createSupabaseServerClient(cookieHeader);
+  const supabase = await createSupabaseServerClient();
 
   const {
     data: { session },
