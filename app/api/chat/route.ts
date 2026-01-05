@@ -10,17 +10,26 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
+// ------------------------------------------------------------
+// Context constants
+// ------------------------------------------------------------
 import {
   FACTS_LIMIT,
   EPISODES_LIMIT,
 } from "./modules/context.constants";
 
+// ------------------------------------------------------------
+// Core pipelines
+// ------------------------------------------------------------
 import { assembleContext } from "./modules/assembleContext";
 import { runHybridPipeline } from "./modules/hybrid";
 import { runNewsroomExecutor } from "./modules/newsroom-executor";
 import { writeMemory } from "./modules/memory-writer";
 import { generateImage } from "./modules/image-router";
 
+// ------------------------------------------------------------
+// Memory lifecycle
+// ------------------------------------------------------------
 import { runSessionCompaction } from "@/lib/memory/runSessionCompaction";
 import { finalizeConversation } from "@/lib/memory/finalizeConversation";
 
@@ -49,7 +58,7 @@ type WMRow = {
 };
 
 // ------------------------------------------------------------
-// Helpers
+// Helpers — intent detection
 // ------------------------------------------------------------
 function isNewsKeywordFallback(message: string): boolean {
   const m = message.toLowerCase().trim();
@@ -110,16 +119,13 @@ function isExecutorDirective(text?: string): boolean {
 }
 
 // ------------------------------------------------------------
-// TERMINAL APPROVAL (TAAT) — AUTHORITATIVE DETECTION
+// TERMINAL APPROVAL (TAAT)
 // ------------------------------------------------------------
 function isTerminalApproval(message?: string): boolean {
   if (!message) return false;
   return /finalize the decision and proceed/i.test(message);
 }
 
-// ------------------------------------------------------------
-// TERMINAL APPROVAL — GOLD RESPONSE (NON-NEGOTIABLE)
-// ------------------------------------------------------------
 function terminalApprovalResponse(): string {
   return [
     "Acknowledged.",
@@ -144,7 +150,7 @@ function scrubPhantomExecutionLanguage(text: string): string {
     /\binitiat(e|ing|ed)\b[^.]*\./gi,
     /\blaunch(ing|ed)?\b[^.]*\./gi,
     /\btrigger(ing|ed)?\b[^.]*\./gi,
-    /\brun(ning|ning)?\b[^.]*\./gi,
+    /\brun(ning|ran)?\b[^.]*\./gi,
     /\bperform(ing|ed)?\b[^.]*\./gi,
     /\ballocat(e|ing|ed)\b[^.]*\./gi,
     /\binternal execution[^.]*\./gi,
@@ -162,9 +168,6 @@ function scrubPhantomExecutionLanguage(text: string): string {
   return out.trim();
 }
 
-// ------------------------------------------------------------
-// FINAL ASSERTION — FAIL CLOSED
-// ------------------------------------------------------------
 function assertNoPhantomLanguage(text: string): string {
   const forbidden = /(execut|proceed|initiat|launch|trigger|allocat|perform|run)\b/i;
   if (forbidden.test(text)) {
@@ -227,7 +230,7 @@ async function maybeRunRollingCompaction(params: {
 }
 
 // ------------------------------------------------------------
-// POST handler
+// POST handler (AUTHORITATIVE)
 // ------------------------------------------------------------
 export async function POST(req: Request) {
   try {
@@ -244,15 +247,51 @@ export async function POST(req: Request) {
       ministryMode = false,
       founderMode = false,
       modeHint = "",
-      newsDigest, // ADDITIVE — optional explicit newsroom payload
+      newsDigest,
     } = body ?? {};
 
     const finalUserKey = canonicalUserKey ?? userKey;
-    if (!finalUserKey || !conversationId) {
+
+    // --------------------------------------------------------
+    // AUTHORITATIVE CONVERSATION BOOTSTRAP (SINGLE-USE)
+    // --------------------------------------------------------
+    let resolvedConversationId: string | null = conversationId ?? null;
+
+    if (!resolvedConversationId && finalUserKey) {
+      const supabaseAdminBootstrap = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+          auth: { persistSession: false, autoRefreshToken: false },
+        }
+      );
+
+      const { data, error } = await supabaseAdminBootstrap
+        .schema("memory")
+        .from("conversations")
+        .insert({
+          user_id: finalUserKey,
+          workspace_id: workspaceId ?? null,
+          source: "chat_bootstrap",
+        })
+        .select("id")
+        .single();
+
+      if (error || !data?.id) {
+        throw new Error("Failed to bootstrap conversation");
+      }
+
+      resolvedConversationId = data.id;
+    }
+
+    if (!finalUserKey || !resolvedConversationId) {
       throw new Error("userKey and conversationId are required");
     }
 
-    const cookieStore = await cookies();
+    // --------------------------------------------------------
+    // SSR AUTH CONTEXT (READ-ONLY)
+    // --------------------------------------------------------
+    const cookieStore = cookies();
 
     const supabaseSSR = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -280,12 +319,15 @@ export async function POST(req: Request) {
       }
     );
 
+    // --------------------------------------------------------
+    // Persist user message
+    // --------------------------------------------------------
     if (authUserId && message) {
       await supabaseAdmin
         .schema("memory")
         .from("working_memory")
         .insert({
-          conversation_id: conversationId,
+          conversation_id: resolvedConversationId,
           user_id: authUserId,
           workspace_id: workspaceId,
           role: "user",
@@ -296,11 +338,14 @@ export async function POST(req: Request) {
     if (authUserId) {
       void maybeRunRollingCompaction({
         supabaseAdmin,
-        conversationId,
+        conversationId: resolvedConversationId,
         userId: authUserId,
       });
     }
 
+    // --------------------------------------------------------
+    // TERMINAL APPROVAL SHORT-CIRCUIT
+    // --------------------------------------------------------
     if (isTerminalApproval(message)) {
       const terminalResponse = terminalApprovalResponse();
 
@@ -309,7 +354,7 @@ export async function POST(req: Request) {
           .schema("memory")
           .from("working_memory")
           .insert({
-            conversation_id: conversationId,
+            conversation_id: resolvedConversationId,
             user_id: authUserId,
             workspace_id: workspaceId,
             role: "assistant",
@@ -319,146 +364,86 @@ export async function POST(req: Request) {
 
       return NextResponse.json({
         ok: true,
+        conversationId: resolvedConversationId,
         response: terminalResponse,
         messages: [{ role: "assistant", content: terminalResponse }],
       });
     }
 
+    // --------------------------------------------------------
+    // CONTEXT ASSEMBLY
+    // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
       workspaceId ?? null,
       message ?? "",
       {
-        sessionId: conversationId,
+        sessionId: resolvedConversationId,
         sessionStartedAt: new Date().toISOString(),
       }
     );
 
-    // ------------------------------------------------------------
-    // IMAGE REQUEST — HARD BRANCH (AUTHORITATIVE)
-    // ------------------------------------------------------------
+    // --------------------------------------------------------
+    // IMAGE REQUEST BRANCH
+    // --------------------------------------------------------
     if (message && isImageRequest(message)) {
-      try {
-        const imageUrl = await generateImage(message);
+      const imageUrl = await generateImage(message);
+      const imageHtml = `<img src="${imageUrl}" style="max-width:100%;border-radius:12px;" />`;
 
-        const imageHtml = `<img src="${imageUrl}" alt="Generated image" style="max-width:100%;border-radius:12px;" />`;
-
-        if (authUserId) {
-          await supabaseAdmin
-            .schema("memory")
-            .from("working_memory")
-            .insert({
-              conversation_id: conversationId,
-              user_id: authUserId,
-              workspace_id: workspaceId,
-              role: "assistant",
-              content: imageHtml,
-            } as any);
-        }
-
-        return NextResponse.json({
-          ok: true,
-          response: imageHtml,
-          messages: [{ role: "assistant", content: imageHtml }],
-        });
-      } catch (err) {
-        console.error("[IMAGE ROUTE ERROR]", err);
-
-        return NextResponse.json({
-          ok: false,
-          response: "Image generation failed.",
-          messages: [
-            { role: "assistant", content: "Image generation failed." },
-          ],
-        });
-      }
-    }
-
-// ------------------------------------------------------------
-// NEWSROOM — SINGLE AUTHORITY (PUBLIC SYSTEM ANCHOR)
-// ------------------------------------------------------------
-
-// Explicit, single-source intent flag
-const wantsNews =
-  newsMode === true ||
-  (typeof message === "string" && isNewsKeywordFallback(message));
-
-if (wantsNews) {
-  try {
-    // --------------------------------------------------------
-    // Resolve digest source
-    // --------------------------------------------------------
-    let digest: any[] | null = Array.isArray(newsDigest) ? newsDigest : null;
-
-    if (!digest || digest.length < 3) {
-      const baseUrl =
-        process.env.NEXT_PUBLIC_SITE_URL ||
-        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
-
-      if (!baseUrl) {
-        throw new Error("NEWSROOM_BASE_URL_MISSING");
+      if (authUserId) {
+        await supabaseAdmin
+          .schema("memory")
+          .from("working_memory")
+          .insert({
+            conversation_id: resolvedConversationId,
+            user_id: authUserId,
+            workspace_id: workspaceId,
+            role: "assistant",
+            content: imageHtml,
+          } as any);
       }
 
-      const res = await fetch(
-        `${baseUrl}/api/public/news-digest?limit=3`,
-        { method: "GET", cache: "no-store" }
-      );
-
-      if (!res.ok) {
-        throw new Error("NEWSROOM_DIGEST_FETCH_FAILED");
-      }
-
-      const payload = await res.json();
-
-      if (
-        !payload ||
-        payload.ok !== true ||
-        !Array.isArray(payload.stories) ||
-        payload.stories.length < 3
-      ) {
-        throw new Error("NEWSROOM_INSUFFICIENT_DIGEST");
-      }
-
-      digest = payload.stories;
+      return NextResponse.json({
+        ok: true,
+        conversationId: resolvedConversationId,
+        response: imageHtml,
+        messages: [{ role: "assistant", content: imageHtml }],
+      });
     }
 
     // --------------------------------------------------------
-    // HARD TYPE NARROWING (compiler-visible)
+    // NEWSROOM EXECUTION
     // --------------------------------------------------------
-    if (!Array.isArray(digest)) {
-      throw new Error("NEWSROOM_DIGEST_INVALID");
+    const wantsNews =
+      newsMode === true ||
+      (typeof message === "string" && isNewsKeywordFallback(message));
+
+    if (wantsNews) {
+      const newsroomResponse = await runNewsroomExecutor(newsDigest ?? []);
+      if (authUserId) {
+        await supabaseAdmin
+          .schema("memory")
+          .from("working_memory")
+          .insert({
+            conversation_id: resolvedConversationId,
+            user_id: authUserId,
+            workspace_id: workspaceId,
+            role: "assistant",
+            content: newsroomResponse,
+          } as any);
+      }
+
+      return NextResponse.json({
+        ok: true,
+        conversationId: resolvedConversationId,
+        response: newsroomResponse,
+        messages: [{ role: "assistant", content: newsroomResponse }],
+      });
     }
 
-    const newsroomResponse = await runNewsroomExecutor(
-      digest as any
-    );
-
     // --------------------------------------------------------
-    // Persist assistant response
+    // HYBRID PIPELINE
     // --------------------------------------------------------
-    if (authUserId) {
-      await supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
-        .insert({
-          conversation_id: conversationId,
-          user_id: authUserId,
-          workspace_id: workspaceId,
-          role: "assistant",
-          content: newsroomResponse,
-        } as any);
-    }
-
-    return NextResponse.json({
-      ok: true,
-      response: newsroomResponse,
-      messages: [{ role: "assistant", content: newsroomResponse }],
-    });
-  } catch (err) {
-    console.error("[NEWSROOM EXECUTION FAILED]", err);
-  }
-}
-  
     const result = await runHybridPipeline({
       userMessage: message ?? "",
       context,
@@ -480,7 +465,7 @@ if (wantsNews) {
         .schema("memory")
         .from("working_memory")
         .insert({
-          conversation_id: conversationId,
+          conversation_id: resolvedConversationId,
           user_id: authUserId,
           workspace_id: workspaceId,
           role: "assistant",
@@ -490,6 +475,7 @@ if (wantsNews) {
 
     return NextResponse.json({
       ok: true,
+      conversationId: resolvedConversationId,
       response: safeResponse,
       messages: [{ role: "assistant", content: safeResponse }],
     });
@@ -497,15 +483,10 @@ if (wantsNews) {
     console.error("[CHAT ROUTE ERROR]", err?.message);
 
     return NextResponse.json({
-      ok: true,
-      response:
-        "An internal error occurred. I’m still here and ready to continue.",
+      ok: false,
+      response: "An internal error occurred. I’m still here.",
       messages: [
-        {
-          role: "assistant",
-          content:
-            "An internal error occurred. I’m still here and ready to continue.",
-        },
+        { role: "assistant", content: "An internal error occurred. I’m still here." },
       ],
     });
   }
