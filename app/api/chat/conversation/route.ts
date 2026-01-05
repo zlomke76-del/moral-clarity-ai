@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createServerClient } from "@supabase/ssr";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,9 +14,33 @@ export async function POST(req: Request) {
     );
   }
 
-  const supabase = await createSupabaseServerClient();
+  // Create a mutable response that Supabase can attach cookies to
+  const response = NextResponse.json({});
 
-  // Create a fresh conversation (no guessing, no reuse)
+  // Create a Next.js 16–compatible Supabase server client
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name) {
+          // Read cookies from the incoming request
+          const cookieHeader = req.headers.get("cookie") ?? "";
+          const match = cookieHeader.match(new RegExp(`${name}=([^;]+)`));
+          return match?.[1];
+        },
+        set(name, value, options) {
+          // Write cookies to the outgoing response
+          response.cookies.set(name, value, options);
+        },
+        remove(name, options) {
+          response.cookies.set(name, "", { ...options, maxAge: 0 });
+        },
+      },
+    }
+  );
+
+  // Insert a new conversation
   const { data, error } = await supabase
     .from("chat.conversations")
     .insert({
@@ -33,5 +57,6 @@ export async function POST(req: Request) {
     );
   }
 
+  // Return the same response object so cookies persist
   return NextResponse.json({ conversationId: data.id });
 }
