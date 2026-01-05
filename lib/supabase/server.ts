@@ -1,19 +1,19 @@
 // lib/supabase/server.ts
 // ------------------------------------------------------------
-// SERVER-ONLY Supabase client factory
+// SERVER-ONLY Supabase client factory (Next.js 16+)
 //
 // Canonical rules:
-// - Required by @supabase/ssr typings to provide `cookies`
-// - MUST be a transparent pass-through (never stubbed)
-// - MUST NOT JSON.parse or decode cookies
+// - cookies() is ASYNC in Next 16
+// - cookies adapter is REQUIRED by @supabase/ssr typings
+// - Adapter MUST be transparent (no parsing, no decoding)
 // - Supabase handles base64 / PKCE internally
 // ------------------------------------------------------------
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-export function createSupabaseServerClient(accessToken?: string) {
-  const cookieStore = cookies();
+export async function createSupabaseServerClient(accessToken?: string) {
+  const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,16 +27,15 @@ export function createSupabaseServerClient(accessToken?: string) {
           }
         : undefined,
 
-      // REQUIRED by @supabase/ssr types.
-      // This MUST be a real pass-through adapter.
       cookies: {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
+
         set(name: string, value: string, options: any) {
-          // Server routes MAY set cookies (not middleware)
           cookieStore.set({ name, value, ...options });
         },
+
         remove(name: string, options: any) {
           cookieStore.set({
             name,
