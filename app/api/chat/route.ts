@@ -254,6 +254,12 @@ export async function POST(req: Request) {
     const finalUserKey = canonicalUserKey ?? userKey;
 
     // --------------------------------------------------------
+    // DEMO SAFE — EXECUTION PROFILE DECLARATION (ADDITIVE)
+    // --------------------------------------------------------
+    const executionProfile =
+      finalUserKey === "webflow-guest" ? "demo" : "studio";
+
+    // --------------------------------------------------------
     // CANONICAL WORKSPACE RESOLUTION (DEMO SAFE)
     // --------------------------------------------------------
     const resolvedWorkspaceId =
@@ -394,6 +400,7 @@ export async function POST(req: Request) {
       {
         sessionId: resolvedConversationId,
         sessionStartedAt: new Date().toISOString(),
+        executionProfile, // DEMO SAFE — additive signal
       }
     );
 
@@ -452,6 +459,34 @@ export async function POST(req: Request) {
         conversationId: resolvedConversationId,
         response: newsroomResponse,
         messages: [{ role: "assistant", content: newsroomResponse }],
+      });
+    }
+
+    // --------------------------------------------------------
+    // DEMO SAFE — HYBRID ESCAPE HATCH (ADDITIVE)
+    // --------------------------------------------------------
+    if (executionProfile === "demo") {
+      const demoResponse =
+        "I’m here in demo mode. Ask me anything.";
+
+      if (authUserId) {
+        await supabaseAdmin
+          .schema("memory")
+          .from("working_memory")
+          .insert({
+            conversation_id: resolvedConversationId,
+            user_id: authUserId,
+            workspace_id: resolvedWorkspaceId,
+            role: "assistant",
+            content: demoResponse,
+          } as any);
+      }
+
+      return NextResponse.json({
+        ok: true,
+        conversationId: resolvedConversationId,
+        response: demoResponse,
+        messages: [{ role: "assistant", content: demoResponse }],
       });
     }
 
