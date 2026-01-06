@@ -1,5 +1,7 @@
 "use client";
 
+console.log("SOLACE DOCK MOUNT");
+
 import React, {
   useEffect,
   useMemo,
