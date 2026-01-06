@@ -159,12 +159,16 @@ function SolaceTranscript({
             <div
               key={idx}
               style={{
+                whiteSpace: "pre-wrap",
                 marginBottom: 12,
                 userSelect: "text",
                 fontSize: 15,
-                lineHeight: 1.4,
+                lineHeight: 1.5,
+                color: msg.role === "user" ? "#EDEDED" : "#D6D6D6",
+                fontWeight: msg.role === "user" ? 600 : 400,
               }}
             >
+
               {msg.content ? (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
@@ -301,10 +305,16 @@ export default function SolaceDock() {
   }, [setFilters]);
 
   useEffect(() => {
-    if (messages.length === 0) {
-      setMessages([{ role: "assistant", content: "Ready when you are." }]);
+     if (messages.length === 0) {
+      setMessages([
+        {
+          role: "assistant",
+          content: "Ready when you are.",
+        },
+      ]);
     }
   }, [messages.length]);
+
 
   const [panelW, setPanelW] = useState(0);
   const [panelH, setPanelH] = useState(0);
