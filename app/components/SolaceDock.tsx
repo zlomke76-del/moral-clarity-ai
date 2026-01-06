@@ -90,26 +90,24 @@ function isImageIntent(message: string): boolean {
 /* ------------------------------------------------------------------
    SolaceTranscript: Markdown, code highlighting, code copy
 ------------------------------------------------------------------- */
-function CodeBlock({
+const CodeBlock: Components["code"] = ({
   inline,
   className,
   children,
-}: {
-  inline?: boolean;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  const isBlock = !inline && className && className.startsWith("language-");
+}) => {
   const [copied, setCopied] = useState(false);
 
+  const text = String(children ?? "");
+
   const onCopy = useCallback(() => {
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(String(children)).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1200);
-      });
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(text.replace(/\n$/, ""));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
     }
-  }, [children]);
+  }, [text]);
+
+  const isBlock = !inline && className?.startsWith("language-");
 
   if (isBlock) {
     return (
@@ -131,10 +129,7 @@ function CodeBlock({
             borderRadius: 4,
             padding: "2px 6px",
             fontSize: 12,
-            color: "#333",
             cursor: "pointer",
-            transition: "background 0.17s",
-            userSelect: "none",
           }}
         >
           {copied ? "Copied" : "Copy"}
@@ -144,7 +139,7 @@ function CodeBlock({
   }
 
   return <code className={className}>{children}</code>;
-}
+};
 
 function SolaceTranscript({
   messages,
