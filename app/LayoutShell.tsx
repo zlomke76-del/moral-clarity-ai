@@ -20,12 +20,11 @@ export default function LayoutShell({
    * - App padding
    */
   const isApp =
-  pathname === "/app" ||
-  pathname.startsWith("/app/") ||
-  pathname.startsWith("/w/") ||
-  pathname === "/account" ||
-  pathname.startsWith("/account/");
-
+    pathname === "/app" ||
+    pathname.startsWith("/app/") ||
+    pathname.startsWith("/w/") ||
+    pathname === "/account" ||
+    pathname.startsWith("/account/");
 
   /**
    * Workspace pages get zero padding
@@ -37,7 +36,7 @@ export default function LayoutShell({
       {isApp ? (
         <div
           data-app-shell
-          className="grid grid-cols-[20vw_1fr] min-h-screen relative z-10"
+          className="grid grid-cols-[minmax(280px,20vw)_1fr] min-h-screen relative z-10"
         >
           {/* SIDEBAR — fixed 20% */}
           <aside
