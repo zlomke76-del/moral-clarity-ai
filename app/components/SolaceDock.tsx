@@ -92,13 +92,14 @@ function isImageIntent(message: string): boolean {
    SolaceTranscript: Markdown, code highlighting, code copy
 ------------------------------------------------------------------- */
 const CodeBlock: Components["code"] = ({
-  inline,
   className,
   children,
+  ...props
 }) => {
   const [copied, setCopied] = useState(false);
 
   const text = String(children ?? "");
+  const isBlock = typeof className === "string" && className.startsWith("language-");
 
   const onCopy = useCallback(() => {
     if (navigator?.clipboard) {
@@ -107,8 +108,6 @@ const CodeBlock: Components["code"] = ({
       setTimeout(() => setCopied(false), 1200);
     }
   }, [text]);
-
-  const isBlock = !inline && className?.startsWith("language-");
 
   if (isBlock) {
     return (
@@ -139,7 +138,11 @@ const CodeBlock: Components["code"] = ({
     );
   }
 
-  return <code className={className}>{children}</code>;
+  return (
+    <code className={className} {...props}>
+      {children}
+    </code>
+  );
 };
 
 function SolaceTranscript({
