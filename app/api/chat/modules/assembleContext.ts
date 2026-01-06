@@ -40,35 +40,32 @@ export type SolaceContextBundle = {
   authorities: any[];
   newsDigest: any[];
   didResearch: boolean;
-
-  // reference data (non-memory)
   rolodex?: any[];
 };
 
 // ------------------------------------------------------------
-// NON-CONTEXTUAL ARTIFACT DETECTION (ADDITIVE)
+// NON-CONTEXTUAL ARTIFACT DETECTION
 // ------------------------------------------------------------
 function isNonContextualArtifact(content: string): boolean {
   if (!content) return false;
-
   const c = content.trim();
-  return (
-    c.startsWith("data:image/") ||
-    c.startsWith("<img") ||
-    c.startsWith("![")
-  );
+  return c.startsWith("data:image/") || c.startsWith("<img") || c.startsWith("![");
 }
 
 // ------------------------------------------------------------
-// SESSION ENVELOPE (ADDITIVE — BUILD SAFE)
+// SESSION ENVELOPE
 // ------------------------------------------------------------
 type ContextSessionEnvelope = {
   sessionId: string;
   sessionStartedAt: string;
-
-  // DEMO / EXECUTION INTENT (OPTIONAL, ADDITIVE)
   executionProfile?: "studio" | "demo";
 };
+
+// ------------------------------------------------------------
+// CONSTANTS (ADDITIVE)
+// ------------------------------------------------------------
+const DEMO_USER_ID = "demo-session";
+const DEMO_WM_LIMIT = 10;
 
 // ------------------------------------------------------------
 // MAIN ASSEMBLER
@@ -92,7 +89,7 @@ export async function assembleContext(
   const cookieStore = await cookies();
 
   // ----------------------------------------------------------
-  // USER-SCOPED CLIENT (SSR, RLS-BOUND)
+  // USER-SCOPED CLIENT
   // ----------------------------------------------------------
   const supabaseUser = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -109,16 +106,13 @@ export async function assembleContext(
   );
 
   // ----------------------------------------------------------
-  // SERVICE / ADMIN CLIENT (RLS BYPASS)
+  // ADMIN CLIENT
   // ----------------------------------------------------------
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
+      auth: { persistSession: false, autoRefreshToken: false },
     }
   );
 
@@ -126,34 +120,55 @@ export async function assembleContext(
     data: { user },
   } = await supabaseUser.auth.getUser();
 
+  const isDemo = executionProfile === "demo";
+  const effectiveUserId = user?.id ?? (isDemo ? DEMO_USER_ID : null);
+
   // ----------------------------------------------------------
-  // DEMO-SAFE UNAUTHENTICATED CONTEXT (ADDITIVE)
+  // DEMO MODE — NO USER, SESSION-ONLY CONTEXT
   // ----------------------------------------------------------
-  if (!user) {
-    // If this is an intentional demo session, return a VALID but empty context
-    if (executionProfile === "demo") {
-      return {
-        persona: "Solace",
-        memoryPack: {
-          facts: [],
-          episodic: [],
-          autobiography: [],
-          sessionCompaction: null,
-          sessionState: null,
-        },
-        workingMemory: {
-          active: Boolean(conversationId),
-          items: [],
-        },
-        researchContext: [],
-        authorities: [],
-        newsDigest: [],
-        didResearch: false,
-        rolodex: [],
-      };
+  if (!user && isDemo) {
+    let demoWM: WorkingMemoryItem[] = [];
+
+    if (conversationId) {
+      const wmRes = await supabaseAdmin
+        .schema("memory")
+        .from("working_memory")
+        .select("id, role, content, created_at")
+        .eq("conversation_id", conversationId)
+        .eq("user_id", DEMO_USER_ID)
+        .order("created_at", { ascending: false })
+        .limit(DEMO_WM_LIMIT);
+
+      demoWM = Array.isArray(wmRes.data)
+        ? wmRes.data.reverse()
+        : [];
     }
 
-    // Otherwise, preserve original unauthenticated behavior
+    return {
+      persona: "Solace",
+      memoryPack: {
+        facts: [],
+        episodic: [],
+        autobiography: [],
+        sessionCompaction: null,
+        sessionState: null,
+      },
+      workingMemory: {
+        active: Boolean(conversationId),
+        items: demoWM,
+      },
+      researchContext: [],
+      authorities: [],
+      newsDigest: [],
+      didResearch: false,
+      rolodex: [],
+    };
+  }
+
+  // ----------------------------------------------------------
+  // STUDIO MODE — AUTH REQUIRED (UNCHANGED)
+  // ----------------------------------------------------------
+  if (!effectiveUserId) {
     return {
       persona: "Solace",
       memoryPack: {
@@ -172,16 +187,14 @@ export async function assembleContext(
     };
   }
 
-  const authUserId = user.id;
-
   // ----------------------------------------------------------
-  // FACTUAL MEMORY
+  // FACTUAL MEMORY (STUDIO ONLY)
   // ----------------------------------------------------------
   const factsRes = await supabaseAdmin
     .schema("memory")
     .from("memories")
     .select("content, created_at")
-    .eq("user_id", authUserId)
+    .eq("user_id", effectiveUserId)
     .eq("memory_type", "fact")
     .order("created_at", { ascending: false })
     .limit(FACTS_LIMIT);
@@ -189,10 +202,6 @@ export async function assembleContext(
   const factualMemories = Array.isArray(factsRes.data)
     ? factsRes.data.map((m) => m.content)
     : [];
-
-  console.log("[DIAG-ASSEMBLE-FACTS]", {
-    count: factualMemories.length,
-  });
 
   // ----------------------------------------------------------
   // RESEARCH CONTEXT
@@ -208,12 +217,8 @@ export async function assembleContext(
     ? hubbleRes.data
     : [];
 
-  console.log("[DIAG-ASSEMBLE-HUBBLE]", {
-    count: researchItems.length,
-  });
-
   // ----------------------------------------------------------
-  // WORKING MEMORY
+  // WORKING MEMORY (STUDIO)
   // ----------------------------------------------------------
   let wmItems: WorkingMemoryItem[] = [];
 
@@ -223,51 +228,36 @@ export async function assembleContext(
       .from("working_memory")
       .select("id, role, content, created_at")
       .eq("conversation_id", conversationId)
-      .eq("user_id", authUserId)
+      .eq("user_id", effectiveUserId)
       .order("created_at", { ascending: true });
 
     wmItems = Array.isArray(wmRes.data) ? wmRes.data : [];
   }
 
-  console.log("[DIAG-ASSEMBLE-WM]", {
-    conversationId,
-    count: wmItems.length,
-  });
-
-  // ----------------------------------------------------------
-  // EXCLUDE NON-CONTEXTUAL ARTIFACTS (IMAGES, ETC.)
-  // ----------------------------------------------------------
   wmItems = wmItems.map((item) => {
     if (
       item.role === "assistant" &&
       typeof item.content === "string" &&
       isNonContextualArtifact(item.content)
     ) {
-      return {
-        ...item,
-        content: "[Image generated]",
-      };
+      return { ...item, content: "[Image generated]" };
     }
     return item;
   });
 
   // ----------------------------------------------------------
-  // ROLODEX — AUTHORITATIVE READ
+  // ROLODEX
   // ----------------------------------------------------------
   const rolodexRes = await supabaseAdmin
     .schema("memory")
     .from("rolodex")
     .select("*")
-    .eq("user_id", authUserId)
+    .eq("user_id", effectiveUserId)
     .order("created_at", { ascending: false });
 
   const rolodexItems = Array.isArray(rolodexRes.data)
     ? rolodexRes.data
     : [];
-
-  console.log("[DIAG-ASSEMBLE-ROLODEX]", {
-    count: rolodexItems.length,
-  });
 
   // ----------------------------------------------------------
   // RETURN CONTEXT
@@ -289,8 +279,6 @@ export async function assembleContext(
     authorities: [],
     newsDigest: [],
     didResearch: researchItems.length > 0,
-
-    // reference only
     rolodex: rolodexItems,
   };
 }
