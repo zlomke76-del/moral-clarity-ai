@@ -1,7 +1,15 @@
 "use client";
-import { motion } from "framer-motion";
+
+import { useEffect, useState } from "react";
 
 export default function SuccessPage() {
+  const [mounted, setMounted] = useState(false);
+
+  // Mount-based animation (safe, deterministic)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <main
       style={{
@@ -14,10 +22,7 @@ export default function SuccessPage() {
           "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
       }}
     >
-      <motion.div
-        initial={{ opacity: 0, y: 20, scale: 0.97 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
+      <div
         style={{
           background: "rgba(255,255,255,0.04)",
           border: "1px solid rgba(255,255,255,0.1)",
@@ -26,6 +31,13 @@ export default function SuccessPage() {
           textAlign: "center",
           maxWidth: 520,
           boxShadow: "0 0 30px rgba(0,0,0,0.25)",
+
+          /* animation replacement */
+          opacity: mounted ? 1 : 0,
+          transform: mounted
+            ? "translateY(0) scale(1)"
+            : "translateY(20px) scale(0.97)",
+          transition: "opacity 600ms ease, transform 600ms ease",
         }}
       >
         <img
@@ -34,9 +46,13 @@ export default function SuccessPage() {
           style={{ width: 64, marginBottom: 16, opacity: 0.9 }}
         />
 
-        <h1 style={{ fontSize: 28, marginBottom: 8 }}>Subscription Activated</h1>
+        <h1 style={{ fontSize: 28, marginBottom: 8 }}>
+          Subscription Activated
+        </h1>
+
         <p style={{ opacity: 0.85, fontSize: 16, lineHeight: 1.6 }}>
-          Thank you for joining <strong>Moral Clarity AI</strong>.  
+          Thank you for joining <strong>Moral Clarity AI</strong>.
+          <br />
           Your account has been successfully upgraded.
         </p>
 
@@ -58,7 +74,6 @@ export default function SuccessPage() {
               color: "#fff",
               fontWeight: 600,
               textDecoration: "none",
-              transition: "background .2s",
             }}
           >
             Go to Dashboard
@@ -81,10 +96,10 @@ export default function SuccessPage() {
         </div>
 
         <p style={{ marginTop: 32, opacity: 0.5, fontSize: 12 }}>
-          “Anchored insight. Guided by principle.”  
-          — The Moral Clarity AI Team
+          “Anchored insight. Guided by principle.”
+          <br />— The Moral Clarity AI Team
         </p>
-      </motion.div>
+      </div>
     </main>
   );
 }
