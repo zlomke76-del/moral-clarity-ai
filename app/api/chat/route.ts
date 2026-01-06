@@ -398,7 +398,7 @@ export async function POST(req: Request) {
     // --------------------------------------------------------
     // DEMO SAFE — EARLY EXIT (CRITICAL FIX)
     // --------------------------------------------------------
-    if (executionProfile === "demo") {
+    if (executionProfile === "demo" && isImageRequest(message)) {
       const demoResponse = "I’m here in demo mode. Ask me anything.";
 
       return NextResponse.json({
