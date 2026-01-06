@@ -1,7 +1,5 @@
 "use client";
 
-console.log("SOLACE DOCK MOUNT");
-
 import React, {
   useEffect,
   useMemo,
@@ -89,6 +87,29 @@ function isImageIntent(message: string): boolean {
 export default function SolaceDock() {
   const canRender = true;
 
+  /* ------------------------------------------------------------
+     PORTAL OWNERSHIP (CRITICAL FIX)
+  ------------------------------------------------------------ */
+  const portalRef = useRef<HTMLDivElement | null>(null);
+
+  if (!portalRef.current && typeof document !== "undefined") {
+    portalRef.current = document.createElement("div");
+    portalRef.current.id = "solace-portal-root";
+  }
+
+  useEffect(() => {
+    const el = portalRef.current;
+    if (!el) return;
+
+    document.body.appendChild(el);
+
+    return () => {
+      el.remove();
+    };
+  }, []);
+
+  /* ------------------------------------------------------------ */
+
   const conversationIdRef = useRef<string | null>(null);
   if (!conversationIdRef.current) {
     conversationIdRef.current = crypto.randomUUID();
@@ -146,7 +167,7 @@ export default function SolaceDock() {
         setMessages((m) => [...m, { role: "assistant", content: msg }]),
     });
 
-  const { listening, toggleMic } = useSpeechInput({
+  const { toggleMic } = useSpeechInput({
     onText: (text) => setInput((p) => (p ? p + " " : "") + text),
     onError: (msg) =>
       setMessages((m) => [...m, { role: "assistant", content: msg }]),
@@ -169,20 +190,13 @@ export default function SolaceDock() {
   }, [setFilters]);
 
   useEffect(() => {
-     if (messages.length === 0) {
-      setMessages([
-        {
-          role: "assistant",
-          content: "Ready when you are.",
-        },
-      ]);
+    if (messages.length === 0) {
+      setMessages([{ role: "assistant", content: "Ready when you are." }]);
     }
   }, [messages.length]);
 
-
   const [panelW, setPanelW] = useState(0);
   const [panelH, setPanelH] = useState(0);
-
   const containerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -239,16 +253,6 @@ export default function SolaceDock() {
       ? orbPos.y
       : tyDesktop;
 
-  const transitionStyle =
-    minimizing || minimized
-      ? {
-          transition:
-            "all 0.4s cubic-bezier(0.77, 0, 0.18, 1), opacity 0.3s linear",
-        }
-      : {};
-
-  const panelVisibility = minimized ? "hidden" : "visible";
-
   const { panelStyle, transcriptStyle, textareaStyle, composerWrapStyle } =
     useDockStyles({
       dockW: isMobile || minimized ? mobileW : dockW,
@@ -260,49 +264,13 @@ export default function SolaceDock() {
       PAD,
     });
 
-  const transcriptStyleSafe: React.CSSProperties = {
-    ...transcriptStyle,
-    color: "#E6E6E6",
-    opacity: 1,
-    overflowY: isMobile ? "auto" : transcriptStyle.overflowY,
-    WebkitOverflowScrolling: isMobile ? "touch" : undefined,
-  };
-
-
   const panelStyleSafe: React.CSSProperties = {
     ...panelStyle,
-    width: isMobile || minimized ? mobileW : dockW,
-    height: isMobile || minimized ? mobileH : dockH,
-    maxWidth: vw - PAD * 2,
-    maxHeight: vh - PAD * 2,
-    ...transitionStyle,
     position: "fixed",
     zIndex: 1000,
-    opacity: minimized || minimizing ? 0 : 1,
-    visibility: panelVisibility,
-    pointerEvents: minimized ? "none" : undefined,
   };
 
   const showOrb = !isMobile && minimized;
-
-  const orbStyle: React.CSSProperties = {
-    position: "fixed",
-    left: orbPos.x,
-    top: orbPos.y,
-    width: ORB_SIZE,
-    height: ORB_SIZE,
-    borderRadius: "50%",
-    background: GOLD,
-    boxShadow: "0 0 20px 1px " + GOLD,
-    display: showOrb ? "flex" : "none",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1002,
-    cursor: "pointer",
-    transition: "all 0.4s cubic-bezier(0.77,0,0.18,1)",
-    border: "3px solid white",
-  };
-
 
   function minimizeDock() {
     setMinimizing(true);
@@ -317,6 +285,79 @@ export default function SolaceDock() {
   }
 
   if (!canRender || !visible) return null;
+
+  /* ------------------------------------------------------------
+     PANEL
+  ------------------------------------------------------------ */
+  const panel = (
+    <section
+      ref={containerRef}
+      style={panelStyleSafe}
+      aria-label="Solace conversation panel"
+    >
+      <SolaceDockHeaderLite
+        ministryOn={ministryOn}
+        memReady={memReady}
+        onMinimize={minimizeDock}
+        onDragStart={onHeaderMouseDown}
+      />
+
+      <SolaceTranscript
+        messages={messages}
+        transcriptRef={transcriptRef}
+        transcriptStyle={transcriptStyle}
+      />
+
+      {!isMobile && <ResizeHandle onResizeStart={startResize} />}
+    </section>
+  );
+
+  /* ------------------------------------------------------------
+     PORTAL RENDER (SINGLE SOURCE)
+  ------------------------------------------------------------ */
+  return portalRef.current
+    ? createPortal(
+        <>
+          {showOrb ? (
+            <div
+              style={{
+                position: "fixed",
+                left: orbPos.x,
+                top: orbPos.y,
+                width: ORB_SIZE,
+                height: ORB_SIZE,
+                borderRadius: "50%",
+                background: GOLD,
+                boxShadow: "0 0 20px 1px " + GOLD,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 1002,
+                cursor: "pointer",
+                border: "3px solid white",
+              }}
+              onClick={restoreDock}
+              aria-label="Restore Solace dock"
+            >
+              <span
+                style={{
+                  fontWeight: "bold",
+                  fontSize: 28,
+                  color: "#fff",
+                  userSelect: "none",
+                }}
+              >
+                ?
+              </span>
+            </div>
+          ) : (
+            panel
+          )}
+        </>,
+        portalRef.current
+      )
+    : null;
+}
 
   /* ------------------------------------------------------------------
      PAYLOAD INGEST (AUTHORITATIVE)
