@@ -5,8 +5,8 @@ import "./globals.css";
 import LayoutShell from "./LayoutShell";
 import Toaster from "@/components/Toaster";
 
-// ⭐ Solace wrapper (conditionally mounted)
-import SolaceDockWrapper from "@/app/components/SolaceDockWrapper";
+// ✅ Use the guard — NOT the dock directly
+import SolaceGuard from "@/app/components/SolaceGuard";
 
 import { headers } from "next/headers";
 
@@ -31,12 +31,6 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  /**
-   * 🔒 INSTITUTIONAL MODE GUARD
-   *
-   * Root layouts run on the server.
-   * In Next 16, headers() is async and must be awaited.
-   */
   const hdrs = await headers();
 
   const pathname =
@@ -45,14 +39,6 @@ export default async function RootLayout({
     hdrs.get("referer") ||
     "";
 
-  /**
-   * ✅ Solace is APP-ONLY
-   * Never mounted on:
-   * - public doctrine
-   * - white papers
-   * - newsroom
-   * - marketing
-   */
   const isApp =
     pathname.startsWith("/app") ||
     pathname.includes("/app/");
@@ -63,12 +49,10 @@ export default async function RootLayout({
         <div className="mc-bg absolute inset-0 pointer-events-none z-0" />
         <div className="mc-noise absolute inset-0 pointer-events-none z-0" />
 
-        <LayoutShell>
-          {children}
-        </LayoutShell>
+        <LayoutShell>{children}</LayoutShell>
 
-        {/* 🔒 Solace mounts ONLY inside /app */}
-        {isApp && <SolaceDockWrapper />}
+        {/* ✅ SINGLE Solace mount */}
+        {isApp && <SolaceGuard />}
 
         <Toaster />
       </body>
