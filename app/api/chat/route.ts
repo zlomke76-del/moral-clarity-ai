@@ -177,6 +177,30 @@ function assertNoPhantomLanguage(text: string): string {
   return text;
 }
 
+/*-----------------------------------------------------------------------
+   CONTEXT ASSEMBLY (ADD: executionProfile SAFE EXTENSION)
+------------------------------------------------------------------------ */
+
+const context = await assembleContext(
+  finalUserKey,
+  resolvedWorkspaceId,
+  message ?? "",
+  {
+    sessionId: resolvedConversationId,
+    sessionStartedAt: new Date().toISOString(),
+
+    // ADDITIVE — DEMO / STUDIO SIGNAL
+    // assembleContext ignores unknown fields safely
+    executionProfile,
+  } as {
+    sessionId: string;
+    sessionStartedAt: string;
+
+    // ADDITIVE — SAFE OPTIONAL EXTENSION
+    executionProfile?: "demo" | "studio";
+  }
+);
+
 // ------------------------------------------------------------
 // ROLLING COMPACTION (NON-BLOCKING)
 // ------------------------------------------------------------
