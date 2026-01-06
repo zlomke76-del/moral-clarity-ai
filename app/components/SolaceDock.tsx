@@ -648,13 +648,15 @@ const panel = (
       </div>
     </div>
 
-    {!isMobile && <ResizeHandle onResizeStart={startResize} />}
+        {!isMobile && <ResizeHandle onResizeStart={startResize} />}
   </section>
 );
 
+const showOrb = !isMobile && minimized;
+
 return createPortal(
   <>
-    {showOrb && (
+    {showOrb ? (
       <div
         style={orbStyle}
         onClick={restoreDock}
@@ -671,8 +673,9 @@ return createPortal(
           ?
         </span>
       </div>
+    ) : (
+      panel
     )}
-    {!minimized && !minimizing && panel}
   </>,
   document.body
 );
