@@ -172,10 +172,16 @@ function SolaceTranscript({
               {msg.content ? (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
-                  components={{ code: CodeBlock }}
-                >
-                  {msg.content}
-                </ReactMarkdown>
+                  components={{
+                  code: CodeBlock,
+                  p: ({ children }) => (
+                    <p style={{ margin: 0, color: "inherit" }}>{children}</p>
+                  ),
+                }}
+              >
+  {msg.content}
+</ReactMarkdown>
+
               ) : null}
               <div style={{ marginTop: 6, textAlign: "center" }}>
                 <img
@@ -396,9 +402,14 @@ export default function SolaceDock() {
       PAD,
     });
 
-  const transcriptStyleSafe: React.CSSProperties = isMobile
-    ? { ...transcriptStyle, overflowY: "auto", WebkitOverflowScrolling: "touch" }
-    : transcriptStyle;
+  const transcriptStyleSafe: React.CSSProperties = {
+    ...transcriptStyle,
+    color: "#E6E6E6",
+    opacity: 1,
+    overflowY: isMobile ? "auto" : transcriptStyle.overflowY,
+    WebkitOverflowScrolling: isMobile ? "touch" : undefined,
+  };
+
 
   const panelStyleSafe: React.CSSProperties = {
     ...panelStyle,
