@@ -41,7 +41,7 @@ export default function LayoutShell({
           {/* SIDEBAR — fixed 20% */}
           <aside
             data-neural-sidebar
-            className="h-full border-r border-neutral-800 bg-neutral-950/60 backdrop-blur-xl"
+            className="h-screen overflow-y-auto border-r border-neutral-800 bg-neutral-950/60 backdrop-blur-xl"
           >
             <NeuralSidebar />
           </aside>
