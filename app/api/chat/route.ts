@@ -281,8 +281,9 @@ export async function POST(req: Request) {
       finalUserKey === "webflow-guest" ? "demo" : "studio";
 
     // --------------------------------------------------------
-    // OPTION B — SESSION-ONLY WORKING MEMORY ENABLE
+    // OPTION B2 — DEMO SENTINEL + SESSION WM
     // --------------------------------------------------------
+    const DEMO_USER_ID = "demo-session";
     const allowSessionWM = executionProfile === "demo";
 
     // --------------------------------------------------------
