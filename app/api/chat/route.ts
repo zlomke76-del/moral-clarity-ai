@@ -295,18 +295,21 @@ export async function POST(req: Request) {
       "global_news";
 
     // --------------------------------------------------------
+    // ADMIN CLIENT (DECLARED EARLY — REQUIRED)
+    // --------------------------------------------------------
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false, autoRefreshToken: false } }
+    );
+
+    // --------------------------------------------------------
     // AUTHORITATIVE CONVERSATION BOOTSTRAP
     // --------------------------------------------------------
     let resolvedConversationId: string | null = conversationId ?? null;
 
     if (!resolvedConversationId && finalUserKey) {
-      const supabaseAdminBootstrap = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { persistSession: false, autoRefreshToken: false } }
-      );
-
-      const { data, error } = await supabaseAdminBootstrap
+      const { data, error } = await supabaseAdmin
         .schema("memory")
         .from("conversations")
         .insert({
