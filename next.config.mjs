@@ -2,29 +2,25 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  // Needed for react-pdf/pdfjs (it’s ESM and bundles worker)
+  // Needed for react-pdf/pdfjs (ESM + worker)
   transpilePackages: ["react-pdf", "pdfjs-dist"],
 
-  // 🔒 HARD GUARANTEE: single React runtime (fixes React error #310)
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      react: require.resolve("react"),
-      "react-dom": require.resolve("react-dom"),
-    };
-    return config;
+  // ✅ Turbopack-native config (NO webpack)
+  turbopack: {
+    resolveAlias: {
+      react: "react",
+      "react-dom": "react-dom",
+    },
   },
 
   async redirects() {
     return [
-      // 1) Canonicalize www → apex
       {
         source: "/:path*",
         has: [{ type: "host", value: "www.moralclarity.ai" }],
         destination: "https://moralclarity.ai/:path*",
         permanent: true,
       },
-      // 2) Hard-stop any legacy /workspace2 hits (path or nested)
       {
         source: "/workspace2/:path*",
         destination: "/app",
@@ -78,18 +74,13 @@ const nextConfig = {
             key: "Strict-Transport-Security",
             value: "max-age=63072000; includeSubDomains; preload",
           },
-          {
-            key: "Referrer-Policy",
-            value: "no-referrer-when-downgrade",
-          },
+          { key: "Referrer-Policy", value: "no-referrer-when-downgrade" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
         ],
       },
     ];
   },
-
-  // No broad /api rewrite. If you truly need one, enumerate it and scope by host.
 };
 
 export default nextConfig;
