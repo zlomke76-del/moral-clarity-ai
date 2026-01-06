@@ -157,17 +157,17 @@ function SolaceTranscript({
         if (msg.imageUrl) {
           return (
             <div
-  key={idx}
-  style={{
-    whiteSpace: "pre-wrap",
-    marginBottom: 12,
-    userSelect: "text",
-    fontSize: 15,
-    lineHeight: 1.5,
-    color: msg.role === "user" ? "#F2F2F2" : "#E0E0E0",
-    fontWeight: msg.role === "user" ? 600 : 400,
-  }}
->
+              key={idx}
+              style={{
+              whiteSpace: "pre-wrap",
+              marginBottom: 12,
+              userSelect: "text",
+              fontSize: 15,
+              lineHeight: 1.5,
+              color: msg.role === "user" ? "#FFFFFF" : "#E8E8E8",
+              fontWeight: msg.role === "user" ? 600 : 400,
+          }}
+        >
 
               {msg.content ? (
                 <ReactMarkdown
