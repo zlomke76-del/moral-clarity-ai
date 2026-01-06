@@ -28,7 +28,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import rehypeHighlight from "rehype-highlight";
+import "highlight.js/styles/github-dark.css";
 
 import type { SolaceExport } from "@/lib/exports/types";
 
@@ -176,7 +176,6 @@ function SolaceTranscript({
               {msg.content ? (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeHighlight]}
                   components={{ code: CodeBlock }}
                 >
                   {msg.content}
@@ -212,11 +211,11 @@ function SolaceTranscript({
           >
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeHighlight]}
               components={{ code: CodeBlock }}
             >
               {msg.content}
             </ReactMarkdown>
+
           </div>
         );
       })}
