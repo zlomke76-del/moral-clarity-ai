@@ -146,7 +146,7 @@ export async function assembleContext(
 
     return {
       persona: "Solace",
-        executionProfile, // 🔴 ADD THIS LINE
+        executionProfile,
         memoryPack: {
         facts: [],
         episodic: [],
