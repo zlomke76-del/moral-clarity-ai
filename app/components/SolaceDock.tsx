@@ -280,84 +280,70 @@ export default function SolaceDock() {
     }, 400);
   }
 
-  function restoreDock() {
-    setMinimized(false);
-  }
-
-  if (!canRender || !visible) return null;
-
-  /* ------------------------------------------------------------
-     PANEL
-  ------------------------------------------------------------ */
-  const panel = (
-    <section
-      ref={containerRef}
-      style={panelStyleSafe}
-      aria-label="Solace conversation panel"
-    >
-      <SolaceDockHeaderLite
-        ministryOn={ministryOn}
-        memReady={memReady}
-        onMinimize={minimizeDock}
-        onDragStart={onHeaderMouseDown}
-      />
-
-      <SolaceTranscript
-        messages={messages}
-        transcriptRef={transcriptRef}
-        transcriptStyle={transcriptStyle}
-      />
-
-      {!isMobile && <ResizeHandle onResizeStart={startResize} />}
-    </section>
-  );
-
-  /* ------------------------------------------------------------
-     PORTAL RENDER (SINGLE SOURCE)
-  ------------------------------------------------------------ */
-  return portalRef.current
-    ? createPortal(
-        <>
-          {showOrb ? (
-            <div
-              style={{
-                position: "fixed",
-                left: orbPos.x,
-                top: orbPos.y,
-                width: ORB_SIZE,
-                height: ORB_SIZE,
-                borderRadius: "50%",
-                background: GOLD,
-                boxShadow: "0 0 20px 1px " + GOLD,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                zIndex: 1002,
-                cursor: "pointer",
-                border: "3px solid white",
-              }}
-              onClick={restoreDock}
-              aria-label="Restore Solace dock"
-            >
-              <span
-                style={{
-                  fontWeight: "bold",
-                  fontSize: 28,
-                  color: "#fff",
-                  userSelect: "none",
-                }}
-              >
-                ?
-              </span>
-            </div>
-          ) : (
-            panel
-          )}
-        </>,
-        portalRef.current
-      )
-    : null;
+function restoreDock() {
+  setMinimized(false);
 }
+
+if (!canRender || !visible) return null;
+
+/* ------------------------------------------------------------
+   PANEL
+------------------------------------------------------------ */
+const panel = (
+  <section
+    ref={containerRef}
+    style={panelStyleSafe}
+    aria-label="Solace conversation panel"
+  >
+    <SolaceDockHeaderLite
+      ministryOn={ministryOn}
+      memReady={memReady}
+      onMinimize={minimizeDock}
+      onDragStart={(e) => {
+        if (!isMobile && !minimized && !minimizing) onHeaderMouseDown(e);
+      }}
+    />
+
+    <SolaceTranscript
+      messages={messages}
+      transcriptRef={transcriptRef}
+      transcriptStyle={transcriptStyleSafe}
+    />
+
+    {!isMobile && <ResizeHandle onResizeStart={startResize} />}
+  </section>
+);
+
+/* ------------------------------------------------------------
+   SINGLE RETURN (INSIDE FUNCTION)
+------------------------------------------------------------ */
+return createPortal(
+  <>
+    {showOrb ? (
+      <div
+        style={orbStyle}
+        onClick={restoreDock}
+        aria-label="Restore Solace dock"
+      >
+        <span
+          style={{
+            fontWeight: "bold",
+            fontSize: 28,
+            color: "#fff",
+            userSelect: "none",
+          }}
+        >
+          ?
+        </span>
+      </div>
+    ) : (
+      panel
+    )}
+  </>,
+  document.body
+);
+}
+
 
   /* ------------------------------------------------------------------
      PAYLOAD INGEST (AUTHORITATIVE)
