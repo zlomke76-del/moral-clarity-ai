@@ -295,7 +295,7 @@ export async function POST(req: Request) {
       "global_news";
 
     // --------------------------------------------------------
-    // ADMIN CLIENT (DECLARED EARLY — REQUIRED)
+    // ADMIN CLIENT (SINGLE AUTHORITATIVE DECLARATION)
     // --------------------------------------------------------
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -355,36 +355,42 @@ export async function POST(req: Request) {
       }
     }
 
-    // --------------------------------------------------------
-    // SSR AUTH CONTEXT
-    // --------------------------------------------------------
-    const cookieStore: ReadonlyRequestCookies = await cookies();
+// --------------------------------------------------------
+// SSR AUTH CONTEXT
+// --------------------------------------------------------
+const cookieStore: ReadonlyRequestCookies = await cookies();
 
-    const supabaseSSR = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value;
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    );
+const supabaseSSR = createServerClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  {
+    cookies: {
+      get(name: string) {
+        return cookieStore.get(name)?.value;
+      },
+      set() {},
+      remove() {},
+    },
+  }
+);
 
-    const {
-      data: { user },
-    } = await supabaseSSR.auth.getUser();
+const {
+  data: { user },
+} = await supabaseSSR.auth.getUser();
 
-    const authUserId = user?.id ?? finalUserKey;
+// --------------------------------------------------------
+// AUTH USER RESOLUTION
+// --------------------------------------------------------
+const authUserId =
+  executionProfile === "demo"
+    ? DEMO_USER_ID
+    : user?.id ?? finalUserKey;
 
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { persistSession: false, autoRefreshToken: false } }
-    );
+// --------------------------------------------------------
+// NOTE:
+// supabaseAdmin is ALREADY declared earlier in POST.
+// DO NOT redeclare it here.
+// --------------------------------------------------------
 
     // --------------------------------------------------------
     // Persist user message (STUDIO ONLY EFFECTIVE)
