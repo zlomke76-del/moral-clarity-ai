@@ -281,6 +281,11 @@ export async function POST(req: Request) {
       finalUserKey === "webflow-guest" ? "demo" : "studio";
 
     // --------------------------------------------------------
+    // OPTION B — SESSION-ONLY WORKING MEMORY ENABLE
+    // --------------------------------------------------------
+    const allowSessionWM = executionProfile === "demo";
+
+    // --------------------------------------------------------
     // CANONICAL WORKSPACE RESOLUTION
     // --------------------------------------------------------
     const resolvedWorkspaceId =
@@ -356,18 +361,19 @@ export async function POST(req: Request) {
     // --------------------------------------------------------
     // Persist user message (STUDIO ONLY EFFECTIVE)
     // --------------------------------------------------------
-    if (authUserId && message) {
-      await supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
-        .insert({
-          conversation_id: resolvedConversationId,
-          user_id: authUserId,
-          workspace_id: resolvedWorkspaceId,
-          role: "user",
-          content: message,
-        } as any);
-    }
+    if ((authUserId || allowSessionWM) && message) {
+    await supabaseAdmin
+    .schema("memory")
+    .from("working_memory")
+    .insert({
+      conversation_id: resolvedConversationId,
+      user_id: authUserId ?? finalUserKey,
+      workspace_id: resolvedWorkspaceId,
+      role: "user",
+      content: message,
+      });
+  }
+
 
     if (authUserId) {
       void maybeRunRollingCompaction({
@@ -415,18 +421,19 @@ export async function POST(req: Request) {
     if (isTerminalApproval(message)) {
       const terminalResponse = terminalApprovalResponse();
 
-      if (authUserId) {
+      if (authUserId || allowSessionWM) {
         await supabaseAdmin
-          .schema("memory")
-          .from("working_memory")
-          .insert({
-            conversation_id: resolvedConversationId,
-            user_id: authUserId,
-            workspace_id: resolvedWorkspaceId,
-            role: "assistant",
-            content: terminalResponse,
-          } as any);
-      }
+        .schema("memory")
+        .from("working_memory")
+        .insert({
+        conversation_id: resolvedConversationId,
+        user_id: authUserId ?? finalUserKey,
+        workspace_id: resolvedWorkspaceId,
+        role: "assistant",
+        content: safeResponse,
+      });
+  }
+
 
       return NextResponse.json({
         ok: true,
