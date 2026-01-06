@@ -50,21 +50,21 @@ body {
    ============================================================ */
 
 .neural-sidebar {
-  height: 100vh;
+  height: 100%;
+  max-height: 100vh;
+  overflow-y: auto;
+
   display: flex;
   flex-direction: column;
 
-  /* IMPORTANT: Remove fixed width to avoid overlap */
   width: 100%;
   max-width: 280px;
 
   position: relative;
   z-index: 30;
   isolation: isolate;
-
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.03);
 }
+
 
 .neural-sidebar-top {
   background: rgba(8, 12, 25, 0.95);
