@@ -304,11 +304,22 @@ export async function POST(req: Request) {
     );
 
     // --------------------------------------------------------
-    // AUTHORITATIVE CONVERSATION BOOTSTRAP
+    // AUTHORITATIVE CONVERSATION RESOLUTION
     // --------------------------------------------------------
     let resolvedConversationId: string | null = conversationId ?? null;
 
-    if (!resolvedConversationId && finalUserKey) {
+    // DEMO MODE — STABLE SESSION CONVERSATION (NO DB BOOTSTRAP)
+    if (executionProfile === "demo") {
+      resolvedConversationId =
+        resolvedConversationId ?? `demo-${finalUserKey}`;
+    }
+
+    // STUDIO MODE — DURABLE CONVERSATION BOOTSTRAP
+    if (
+      executionProfile === "studio" &&
+      !resolvedConversationId &&
+      finalUserKey
+    ) {
       const { data, error } = await supabaseAdmin
         .schema("memory")
         .from("conversations")
@@ -342,58 +353,51 @@ export async function POST(req: Request) {
         .from("working_memory")
         .select("role, content, created_at")
         .eq("conversation_id", resolvedConversationId)
+        .eq("user_id", DEMO_USER_ID)
         .order("created_at", { ascending: false })
         .limit(10);
 
       if (wmRows && wmRows.length > 0) {
-        sessionWM = wmRows
-          .reverse()
-          .map((r) => ({
-            role: r.role,
-            content: r.content,
-          }));
+        sessionWM = wmRows.reverse().map((r) => ({
+          role: r.role,
+          content: r.content,
+        }));
       }
     }
 
-// --------------------------------------------------------
-// SSR AUTH CONTEXT
-// --------------------------------------------------------
-const cookieStore: ReadonlyRequestCookies = await cookies();
+    // --------------------------------------------------------
+    // SSR AUTH CONTEXT
+    // --------------------------------------------------------
+    const cookieStore: ReadonlyRequestCookies = await cookies();
 
-const supabaseSSR = createServerClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  {
-    cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value;
-      },
-      set() {},
-      remove() {},
-    },
-  }
-);
+    const supabaseSSR = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+          set() {},
+          remove() {},
+        },
+      }
+    );
 
-const {
-  data: { user },
-} = await supabaseSSR.auth.getUser();
-
-// --------------------------------------------------------
-// AUTH USER RESOLUTION
-// --------------------------------------------------------
-const authUserId =
-  executionProfile === "demo"
-    ? DEMO_USER_ID
-    : user?.id ?? finalUserKey;
-
-// --------------------------------------------------------
-// NOTE:
-// supabaseAdmin is ALREADY declared earlier in POST.
-// DO NOT redeclare it here.
-// --------------------------------------------------------
+    const {
+      data: { user },
+    } = await supabaseSSR.auth.getUser();
 
     // --------------------------------------------------------
-    // Persist user message (STUDIO ONLY EFFECTIVE)
+    // AUTH USER RESOLUTION
+    // --------------------------------------------------------
+    const authUserId =
+      executionProfile === "demo"
+        ? DEMO_USER_ID
+        : user?.id ?? finalUserKey;
+
+    // --------------------------------------------------------
+    // Persist user message (STUDIO + DEMO SESSION WM)
     // --------------------------------------------------------
     if ((authUserId || allowSessionWM) && message) {
       await supabaseAdmin
@@ -482,7 +486,7 @@ const authUserId =
       const imageUrl = await generateImage(message);
       const imageHtml = `<img src="${imageUrl}" style="max-width:100%;border-radius:12px;" />`;
 
-      if (authUserId) {
+      if (authUserId || allowSessionWM) {
         await supabaseAdmin
           .schema("memory")
           .from("working_memory")
@@ -492,7 +496,7 @@ const authUserId =
             workspace_id: resolvedWorkspaceId,
             role: "assistant",
             content: imageHtml,
-          } as any);
+          });
       }
 
       return NextResponse.json({
@@ -523,7 +527,7 @@ const authUserId =
             workspace_id: resolvedWorkspaceId,
             role: "assistant",
             content: newsroomResponse,
-          } as any);
+          });
       }
 
       return NextResponse.json({
@@ -553,7 +557,7 @@ const authUserId =
     const scrubbed = scrubPhantomExecutionLanguage(rawResponse);
     const safeResponse = assertNoPhantomLanguage(scrubbed);
 
-    if (authUserId) {
+    if (authUserId || allowSessionWM) {
       await supabaseAdmin
         .schema("memory")
         .from("working_memory")
@@ -563,7 +567,7 @@ const authUserId =
           workspace_id: resolvedWorkspaceId,
           role: "assistant",
           content: safeResponse,
-        } as any);
+        });
     }
 
     return NextResponse.json({
