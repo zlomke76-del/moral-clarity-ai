@@ -25,10 +25,11 @@ import {
   createResizeController,
 } from "./dock-resize";
 
-import ReactMarkdown from "react-markdown";
-import type { Components } from "react-markdown";
-import remarkGfm from "remark-gfm";
-import "highlight.js/styles/github-dark.css";
+// ✅ Authoritative transcript renderer (dock-ui based)
+import SolaceTranscript from "./SolaceTranscript";
+
+// ❌ Removed legacy inline Markdown / highlighting pipeline
+// (readability + surfaces now owned by dock-ui transcript)
 
 import type { SolaceExport } from "@/lib/exports/types";
 
@@ -77,151 +78,6 @@ function isImageIntent(message: string): boolean {
     m.includes("picture of") ||
     m.startsWith("make an image") ||
     m.startsWith("make a picture")
-  );
-}
-
-/* ------------------------------------------------------------------
-   SolaceTranscript: Markdown, code highlighting, code copy
-------------------------------------------------------------------- */
-const CodeBlock: Components["code"] = ({
-  className,
-  children,
-  ...props
-}) => {
-  const text = String(children ?? "");
-  const isBlock =
-    typeof className === "string" && className.startsWith("language-");
-
-  const onCopy = () => {
-    if (navigator?.clipboard) {
-      navigator.clipboard.writeText(text.replace(/\n$/, ""));
-    }
-  };
-
-  if (isBlock) {
-    return (
-      <div style={{ position: "relative" }}>
-        <pre className={className} style={{ margin: 0, paddingRight: 44 }}>
-          <code className={className}>{children}</code>
-        </pre>
-        <button
-          type="button"
-          onClick={onCopy}
-          aria-label="Copy code to clipboard"
-          style={{
-            position: "absolute",
-            top: 6,
-            right: 6,
-            zIndex: 1,
-            background: "#eee",
-            border: "none",
-            borderRadius: 4,
-            padding: "2px 6px",
-            fontSize: 12,
-            cursor: "pointer",
-          }}
-        >
-          Copy
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <code className={className} {...props}>
-      {children}
-    </code>
-  );
-};
-
-
-function SolaceTranscript({
-  messages,
-  transcriptRef,
-  transcriptStyle,
-}: {
-  messages: Message[];
-  transcriptRef: React.RefObject<HTMLDivElement>;
-  transcriptStyle: React.CSSProperties;
-}) {
-  return (
-    <div
-      ref={transcriptRef}
-      style={transcriptStyle}
-      tabIndex={-1}
-      aria-live="polite"
-      aria-atomic="false"
-      aria-relevant="additions"
-    >
-      {messages.map((msg, idx) => {
-        if (msg.imageUrl) {
-          return (
-            <div
-              key={idx}
-              style={{
-              whiteSpace: "pre-wrap",
-              marginBottom: 12,
-              userSelect: "text",
-              fontSize: 15,
-              lineHeight: 1.5,
-              color: msg.role === "user" ? "#FFFFFF" : "#E8E8E8",
-              fontWeight: msg.role === "user" ? 600 : 400,
-          }}
-        >
-
-              {msg.content ? (
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                  code: CodeBlock,
-                  p: ({ children }) => (
-                    <p style={{ margin: 0, color: "inherit" }}>{children}</p>
-                  ),
-                }}
-              >
-  {msg.content}
-</ReactMarkdown>
-
-              ) : null}
-              <div style={{ marginTop: 6, textAlign: "center" }}>
-                <img
-                  src={msg.imageUrl}
-                  alt="Generated content"
-                  style={{
-                    maxWidth: "100%",
-                    borderRadius: 8,
-                    userSelect: "none",
-                  }}
-                  draggable={false}
-                />
-              </div>
-            </div>
-          );
-        }
-        return (
-          <div
-            key={idx}
-            style={{
-              whiteSpace: "pre-wrap",
-              marginBottom: 12,
-              userSelect: "text",
-              fontSize: 15,
-              lineHeight: 1.4,
-              color: msg.role === "user" ? "#111" : "#333",
-              fontWeight: msg.role === "user" ? 600 : 400,
-            }}
-          >
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{ code: CodeBlock }}
-            >
-              {msg.content}
-            </ReactMarkdown>
-
-          </div>
-        );
-      })}
-    </div>
   );
 }
 
@@ -608,195 +464,195 @@ export default function SolaceDock() {
     }
   }
 
-  /* ------------------------------------------------------------------
-     Auto-expanding textarea
-  ------------------------------------------------------------------- */
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  useLayoutEffect(() => {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    ta.style.height = "auto";
-    ta.style.overflow = "hidden";
-    const scrollHeight = ta.scrollHeight;
-    const newHeight = Math.min(scrollHeight, 80);
-    ta.style.height = newHeight + "px";
-  }, [input]);
+/* ------------------------------------------------------------------
+   Auto-expanding textarea
+------------------------------------------------------------------- */
+const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+useLayoutEffect(() => {
+  const ta = textareaRef.current;
+  if (!ta) return;
+  ta.style.height = "auto";
+  ta.style.overflow = "hidden";
+  const scrollHeight = ta.scrollHeight;
+  const newHeight = Math.min(scrollHeight, 80);
+  ta.style.height = newHeight + "px";
+}, [input]);
 
-  const onEnterSend = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      send();
-    }
-  };
+const onEnterSend = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    send();
+  }
+};
 
-  const panel = (
-    <section
-      ref={containerRef}
-      style={panelStyleSafe}
-      tabIndex={-1}
-      aria-label="Solace conversation panel"
+const panel = (
+  <section
+    ref={containerRef}
+    style={panelStyleSafe}
+    tabIndex={-1}
+    aria-label="Solace conversation panel"
+  >
+    <SolaceDockHeaderLite
+      ministryOn={ministryOn}
+      memReady={memReady}
+      onToggleMinistry={() => {
+        const next = new Set(filters);
+        if (ministryOn) {
+          next.delete("abrahamic");
+          next.delete("ministry");
+          localStorage.setItem(MINISTRY_KEY, "0");
+        } else {
+          next.add("abrahamic");
+          next.add("ministry");
+          localStorage.setItem(MINISTRY_KEY, "1");
+        }
+        setFilters(next);
+      }}
+      onMinimize={() => minimizeDock()}
+      onDragStart={(e) => {
+        if (!isMobile && !minimized && !minimizing) onHeaderMouseDown(e);
+      }}
+    />
+
+    <SolaceTranscript
+      messages={messages}
+      transcriptRef={transcriptRef}
+      transcriptStyle={transcriptStyleSafe}
+    />
+
+    <div
+      style={{ ...composerWrapStyle, paddingTop: 2, paddingBottom: 2 }}
+      onPaste={(e) => handlePaste(e, { prefix: "solace" })}
     >
-      <SolaceDockHeaderLite
-        ministryOn={ministryOn}
-        memReady={memReady}
-        onToggleMinistry={() => {
-          const next = new Set(filters);
-          if (ministryOn) {
-            next.delete("abrahamic");
-            next.delete("ministry");
-            localStorage.setItem(MINISTRY_KEY, "0");
-          } else {
-            next.add("abrahamic");
-            next.add("ministry");
-            localStorage.setItem(MINISTRY_KEY, "1");
-          }
-          setFilters(next);
-        }}
-        onMinimize={() => minimizeDock()}
-        onDragStart={(e) => {
-          if (!isMobile && !minimized && !minimizing) onHeaderMouseDown(e);
-        }}
-      />
-
-      <SolaceTranscript
-        messages={messages}
-        transcriptRef={transcriptRef}
-        transcriptStyle={transcriptStyleSafe}
-      />
-
       <div
-        style={{ ...composerWrapStyle, paddingTop: 2, paddingBottom: 2 }}
-        onPaste={(e) => handlePaste(e, { prefix: "solace" })}
+        style={{
+          display: "flex",
+          gap: 8,
+          alignItems: "center",
+          minHeight: 44,
+          paddingLeft: 2,
+          paddingRight: 2,
+        }}
       >
-        <div
+        <label
           style={{
+            width: 38,
+            height: 38,
+            cursor: "pointer",
             display: "flex",
-            gap: 8,
             alignItems: "center",
-            minHeight: 44,
-            paddingLeft: 2,
-            paddingRight: 2,
+            justifyContent: "center",
+            position: "relative",
           }}
         >
-          <label
+          <span
             style={{
-              width: 38,
-              height: 38,
-              cursor: "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              position: "relative",
+              height: 28,
+              width: 28,
             }}
           >
-            <span
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                height: 28,
-                width: 28,
-              }}
-            >
-              <IconPaperclip
-                style={{ width: 24, height: 24, verticalAlign: "middle" }}
-              />
-            </span>
-            <input
-              type="file"
-              multiple
-              hidden
-              onChange={(e) => handleFiles(e.target.files, { prefix: "solace" })}
+            <IconPaperclip
+              style={{ width: 24, height: 24, verticalAlign: "middle" }}
             />
-          </label>
+          </span>
+          <input
+            type="file"
+            multiple
+            hidden
+            onChange={(e) => handleFiles(e.target.files, { prefix: "solace" })}
+          />
+        </label>
 
-          <button
-            onClick={toggleMic}
-            aria-label="Toggle microphone"
+        <button
+          onClick={toggleMic}
+          aria-label="Toggle microphone"
+          style={{
+            width: 38,
+            height: 38,
+            border: "none",
+            background: "transparent",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 0,
+            outline: "none",
+          }}
+          tabIndex={0}
+          type="button"
+        >
+          <span
             style={{
-              width: 38,
-              height: 38,
-              border: "none",
-              background: "transparent",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              padding: 0,
-              outline: "none",
+              height: 28,
+              width: 28,
             }}
-            tabIndex={0}
-            type="button"
           >
-            <span
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                height: 28,
-                width: 28,
-              }}
-            >
-              <IconMic
-                style={{ width: 24, height: 24, verticalAlign: "middle" }}
-              />
-            </span>
-          </button>
+            <IconMic
+              style={{ width: 24, height: 24, verticalAlign: "middle" }}
+            />
+          </span>
+        </button>
 
-          <textarea
-            ref={textareaRef}
-            style={{
-              ...textareaStyle,
-              minHeight: 38,
-              maxHeight: 80,
-              fontSize: 16,
-              lineHeight: 1.4,
-              borderRadius: 6,
-              border: "1px solid #ddd",
-              padding: "7px 10px",
-              flex: 1,
-              resize: "none",
-              overflow: "hidden",
-              transition: "height 0.15s ease",
-            }}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={onEnterSend}
-            placeholder="Ask Solace..."
-            rows={1}
-            aria-label="Input for Solace"
-          />
+        <textarea
+          ref={textareaRef}
+          style={{
+            ...textareaStyle,
+            minHeight: 38,
+            maxHeight: 80,
+            fontSize: 16,
+            lineHeight: 1.4,
+            borderRadius: 6,
+            border: "1px solid #ddd",
+            padding: "7px 10px",
+            flex: 1,
+            resize: "none",
+            overflow: "hidden",
+            transition: "height 0.15s ease",
+          }}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={onEnterSend}
+          placeholder="Ask Solace..."
+          rows={1}
+          aria-label="Input for Solace"
+        />
 
-          <button
-            onClick={send}
-            disabled={streaming}
-            style={{
-              minWidth: 54,
-              height: 38,
-              border: "none",
-              borderRadius: 7,
-              background: GOLD,
-              color: "#333",
-              fontWeight: 600,
-              fontSize: 16,
-              boxShadow: "0 1.5px 4px #0001",
-              cursor: streaming ? "not-allowed" : "pointer",
-              opacity: streaming ? 0.6 : 1,
-              transition: "background 0.15s, color 0.15s, box-shadow 0.2s",
-              marginLeft: 2,
-            }}
-            type="button"
-            aria-label="Send"
-          >
-            Ask
-          </button>
-        </div>
+        <button
+          onClick={send}
+          disabled={streaming}
+          style={{
+            minWidth: 54,
+            height: 38,
+            border: "none",
+            borderRadius: 7,
+            background: GOLD,
+            color: "#333",
+            fontWeight: 600,
+            fontSize: 16,
+            boxShadow: "0 1.5px 4px #0001",
+            cursor: streaming ? "not-allowed" : "pointer",
+            opacity: streaming ? 0.6 : 1,
+            transition: "background 0.15s, color 0.15s, box-shadow 0.2s",
+            marginLeft: 2,
+          }}
+          type="button"
+          aria-label="Send"
+        >
+          Ask
+        </button>
       </div>
+    </div>
 
-      {!isMobile && <ResizeHandle onResizeStart={startResize} />}
-    </section>
-  );
+    {!isMobile && <ResizeHandle onResizeStart={startResize} />}
+  </section>
+);
 
- return createPortal(
+return createPortal(
   <>
     {showOrb && (
       <div
@@ -816,9 +672,8 @@ export default function SolaceDock() {
         </span>
       </div>
     )}
-    {!minimized && panel}
+    {!minimized && !minimizing && panel}
   </>,
   document.body
 );
 
-}
