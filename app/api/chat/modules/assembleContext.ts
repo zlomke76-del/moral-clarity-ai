@@ -60,23 +60,33 @@ function isNonContextualArtifact(content: string): boolean {
 }
 
 // ------------------------------------------------------------
+// SESSION ENVELOPE (ADDITIVE — BUILD SAFE)
+// ------------------------------------------------------------
+type ContextSessionEnvelope = {
+  sessionId: string;
+  sessionStartedAt: string;
+
+  // DEMO / EXECUTION INTENT (OPTIONAL, ADDITIVE)
+  executionProfile?: "studio" | "demo";
+};
+
+// ------------------------------------------------------------
 // MAIN ASSEMBLER
 // ------------------------------------------------------------
 export async function assembleContext(
   canonicalUserKey: string,
   workspaceId: string | null,
   userMessage: string,
-  session?: {
-    sessionId: string;
-    sessionStartedAt: string;
-  }
+  session?: ContextSessionEnvelope
 ): Promise<SolaceContextBundle> {
   const conversationId = session?.sessionId ?? null;
+  const executionProfile = session?.executionProfile ?? "studio";
 
   console.log("[DIAG-ASSEMBLE]", {
     canonicalUserKey,
     workspaceId,
     conversationId,
+    executionProfile,
   });
 
   const cookieStore = await cookies();
@@ -116,7 +126,34 @@ export async function assembleContext(
     data: { user },
   } = await supabaseUser.auth.getUser();
 
+  // ----------------------------------------------------------
+  // DEMO-SAFE UNAUTHENTICATED CONTEXT (ADDITIVE)
+  // ----------------------------------------------------------
   if (!user) {
+    // If this is an intentional demo session, return a VALID but empty context
+    if (executionProfile === "demo") {
+      return {
+        persona: "Solace",
+        memoryPack: {
+          facts: [],
+          episodic: [],
+          autobiography: [],
+          sessionCompaction: null,
+          sessionState: null,
+        },
+        workingMemory: {
+          active: Boolean(conversationId),
+          items: [],
+        },
+        researchContext: [],
+        authorities: [],
+        newsDigest: [],
+        didResearch: false,
+        rolodex: [],
+      };
+    }
+
+    // Otherwise, preserve original unauthenticated behavior
     return {
       persona: "Solace",
       memoryPack: {
@@ -215,7 +252,7 @@ export async function assembleContext(
   });
 
   // ----------------------------------------------------------
-  // ROLODEX — AUTHORITATIVE READ (FIXED)
+  // ROLODEX — AUTHORITATIVE READ
   // ----------------------------------------------------------
   const rolodexRes = await supabaseAdmin
     .schema("memory")
