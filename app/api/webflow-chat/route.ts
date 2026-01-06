@@ -89,11 +89,16 @@ export async function POST(req: Request) {
       ? "create"
       : "";
 
-    // --------------------------------------------------------
-    // Anonymous, non-persistent identity
-    // --------------------------------------------------------
-    const conversationId = crypto.randomUUID();
-    const userKey = "webflow-guest";
+   // --------------------------------------------------------
+// Anonymous, DEMO-STABLE identity
+// --------------------------------------------------------
+const userKey = "webflow-guest";
+
+// IMPORTANT:
+// Demo conversations MUST be stable across turns.
+// Do NOT generate a UUID per request.
+const conversationId = "demo-webflow-session";
+
 
     // --------------------------------------------------------
     // Forward → AUTHORITATIVE SOLACE CHAT API
