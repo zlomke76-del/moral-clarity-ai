@@ -362,18 +362,17 @@ export async function POST(req: Request) {
     // Persist user message (STUDIO ONLY EFFECTIVE)
     // --------------------------------------------------------
     if ((authUserId || allowSessionWM) && message) {
-    await supabaseAdmin
-    .schema("memory")
-    .from("working_memory")
-    .insert({
-      conversation_id: resolvedConversationId,
-      user_id: authUserId ?? finalUserKey,
-      workspace_id: resolvedWorkspaceId,
-      role: "user",
-      content: message,
-      });
-  }
-
+      await supabaseAdmin
+        .schema("memory")
+        .from("working_memory")
+        .insert({
+          conversation_id: resolvedConversationId,
+          user_id: authUserId ?? finalUserKey,
+          workspace_id: resolvedWorkspaceId,
+          role: "user",
+          content: message,
+        });
+    }
 
     if (authUserId) {
       void maybeRunRollingCompaction({
@@ -423,17 +422,16 @@ export async function POST(req: Request) {
 
       if (authUserId || allowSessionWM) {
         await supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
-        .insert({
-        conversation_id: resolvedConversationId,
-        user_id: authUserId ?? finalUserKey,
-        workspace_id: resolvedWorkspaceId,
-        role: "assistant",
-        content: safeResponse,
-      });
-  }
-
+          .schema("memory")
+          .from("working_memory")
+          .insert({
+            conversation_id: resolvedConversationId,
+            user_id: authUserId ?? finalUserKey,
+            workspace_id: resolvedWorkspaceId,
+            role: "assistant",
+            content: terminalResponse,
+          });
+      }
 
       return NextResponse.json({
         ok: true,
