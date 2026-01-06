@@ -2,35 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  // Packages that must be transpiled under Next 16
-  transpilePackages: [
-    "react-pdf",
-    "pdfjs-dist",
-    "react-markdown",
-    "remark-gfm",
-    "rehype-highlight",
-  ],
+  transpilePackages: ["react-pdf", "pdfjs-dist"],
 
-  /**
-   * 🚀 Turbopack configuration (REQUIRED in Next 16 if webpack exists)
-   * This is where React singleton enforcement now belongs.
-   */
-  turbopack: {
-    resolveAlias: {
-      react: "react",
-      "react-dom": "react-dom",
-      "react/jsx-runtime": "react/jsx-runtime",
-      "react/jsx-dev-runtime": "react/jsx-dev-runtime",
-    },
-  },
-
-  /**
-   * Webpack is still allowed — but ONLY if turbopack is present.
-   * We keep this minimal to avoid conflicts.
-   */
-  webpack: (config) => {
-    return config;
-  },
+  turbopack: {}, // 🔑 REQUIRED to silence mismatch + enforce single runtime
 
   async redirects() {
     return [
@@ -81,6 +55,13 @@ const nextConfig = {
       {
         source: "/:path*",
         headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "GET,POST,OPTIONS" },
+          {
+            key: "Access-Control-Allow-Headers",
+            value: "Content-Type, Authorization",
+          },
+          { key: "Access-Control-Allow-Credentials", value: "true" },
           { key: "Content-Security-Policy", value: csp },
           {
             key: "Strict-Transport-Security",
