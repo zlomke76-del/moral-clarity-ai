@@ -1,15 +1,7 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 
 export default function CancelPage() {
-  const [mounted, setMounted] = useState(false);
-
-  // Simple mount-based fade/slide (no React internals touched)
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   return (
     <main
       style={{
@@ -22,7 +14,10 @@ export default function CancelPage() {
           "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
       }}
     >
-      <div
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
         style={{
           background: "rgba(255,255,255,0.04)",
           border: "1px solid rgba(255,255,255,0.1)",
@@ -31,13 +26,6 @@ export default function CancelPage() {
           textAlign: "center",
           maxWidth: 520,
           boxShadow: "0 0 30px rgba(0,0,0,0.25)",
-
-          /* animation replacement */
-          opacity: mounted ? 1 : 0,
-          transform: mounted
-            ? "translateY(0) scale(1)"
-            : "translateY(20px) scale(0.97)",
-          transition: "opacity 600ms ease, transform 600ms ease",
         }}
       >
         <img
@@ -46,60 +34,12 @@ export default function CancelPage() {
           style={{ width: 64, marginBottom: 16, opacity: 0.9 }}
         />
 
-        <h1 style={{ fontSize: 28, marginBottom: 8 }}>
-          Checkout Cancelled
-        </h1>
+        <h1 style={{ fontSize: 28, marginBottom: 8 }}>Checkout Cancelled</h1>
 
         <p style={{ opacity: 0.85, fontSize: 16, lineHeight: 1.6 }}>
           No worries — your card was not charged.
-          <br />
-          You can return anytime to continue your Moral Clarity AI subscription.
         </p>
-
-        <div
-          style={{
-            marginTop: 28,
-            display: "flex",
-            justifyContent: "center",
-            gap: 16,
-            flexWrap: "wrap",
-          }}
-        >
-          <a
-            href="/subscribe"
-            style={{
-              padding: "10px 18px",
-              borderRadius: 8,
-              background: "#5c7cfa",
-              color: "#fff",
-              fontWeight: 600,
-              textDecoration: "none",
-            }}
-          >
-            Return to Plans
-          </a>
-
-          <a
-            href="/"
-            style={{
-              padding: "10px 18px",
-              borderRadius: 8,
-              background: "transparent",
-              border: "1px solid rgba(255,255,255,0.2)",
-              color: "#fff",
-              fontWeight: 500,
-              textDecoration: "none",
-            }}
-          >
-            Back Home
-          </a>
-        </div>
-
-        <p style={{ marginTop: 32, opacity: 0.5, fontSize: 12 }}>
-          “Decisions with conscience, clarity, and calm.”
-          <br />— The Moral Clarity AI Team
-        </p>
-      </div>
+      </motion.div>
     </main>
   );
 }
