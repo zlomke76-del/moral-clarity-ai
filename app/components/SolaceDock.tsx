@@ -157,17 +157,17 @@ function SolaceTranscript({
         if (msg.imageUrl) {
           return (
             <div
-              key={idx}
-              style={{
-                whiteSpace: "pre-wrap",
-                marginBottom: 12,
-                userSelect: "text",
-                fontSize: 15,
-                lineHeight: 1.5,
-                color: msg.role === "user" ? "#EDEDED" : "#D6D6D6",
-                fontWeight: msg.role === "user" ? 600 : 400,
-              }}
-            >
+  key={idx}
+  style={{
+    whiteSpace: "pre-wrap",
+    marginBottom: 12,
+    userSelect: "text",
+    fontSize: 15,
+    lineHeight: 1.5,
+    color: msg.role === "user" ? "#F2F2F2" : "#E0E0E0",
+    fontWeight: msg.role === "user" ? 600 : 400,
+  }}
+>
 
               {msg.content ? (
                 <ReactMarkdown
@@ -796,28 +796,29 @@ export default function SolaceDock() {
     </section>
   );
 
-  return createPortal(
-    <>
-      {showOrb && (
-        <div
-          style={orbStyle}
-          onClick={restoreDock}
-          aria-label="Restore Solace dock"
+ return createPortal(
+  <>
+    {showOrb && (
+      <div
+        style={orbStyle}
+        onClick={restoreDock}
+        aria-label="Restore Solace dock"
+      >
+        <span
+          style={{
+            fontWeight: "bold",
+            fontSize: 28,
+            color: "#fff",
+            userSelect: "none",
+          }}
         >
-          <span
-            style={{
-              fontWeight: "bold",
-              fontSize: 28,
-              color: "#fff",
-              userSelect: "none",
-            }}
-          >
-            ?
-          </span>
-        </div>
-      )}
-      {panel}
-    </>,
-    document.body
-  );
+          ?
+        </span>
+      </div>
+    )}
+    {!minimized && panel}
+  </>,
+  document.body
+);
+
 }
