@@ -3,26 +3,35 @@ const nextConfig = {
   reactStrictMode: true,
 
   // Needed for react-pdf/pdfjs (it’s ESM and bundles worker)
-  transpilePackages: ['react-pdf', 'pdfjs-dist'],
+  transpilePackages: ["react-pdf", "pdfjs-dist"],
 
-async redirects() {
-  return [
-    // 1) Canonicalize www → apex
-    {
-      source: '/:path*',
-      has: [{ type: 'host', value: 'www.moralclarity.ai' }],
-      destination: 'https://moralclarity.ai/:path*',
-      permanent: true,
-    },
-    // 2) Hard-stop any legacy /workspace2 hits (path or nested)
-    {
-      source: '/workspace2/:path*',
-      destination: '/app',
-      permanent: true,
-    },
-  ];
-},
+  // 🔒 HARD GUARANTEE: single React runtime (fixes React error #310)
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      react: require.resolve("react"),
+      "react-dom": require.resolve("react-dom"),
+    };
+    return config;
+  },
 
+  async redirects() {
+    return [
+      // 1) Canonicalize www → apex
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.moralclarity.ai" }],
+        destination: "https://moralclarity.ai/:path*",
+        permanent: true,
+      },
+      // 2) Hard-stop any legacy /workspace2 hits (path or nested)
+      {
+        source: "/workspace2/:path*",
+        destination: "/app",
+        permanent: true,
+      },
+    ];
+  },
 
   async headers() {
     const csp = [
@@ -39,48 +48,48 @@ async redirects() {
         "https://api.openai.com",
         "https://api.stripe.com",
         "https://vitals.vercel-insights.com",
-      ].join(' '),
+      ].join(" "),
       [
         "frame-ancestors 'self'",
         "https://*.webflow.io",
         "https://moral-clarity-ai-2-0.webflow.io",
         "https://studio.moralclarity.ai",
-      ].join(' '),
+      ].join(" "),
       "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://*.supabase.co",
       "font-src 'self' data: https:",
       "media-src 'self' blob:",
       "worker-src 'self' blob: https://cdnjs.cloudflare.com",
       "upgrade-insecure-requests",
-    ].join('; ');
+    ].join("; ");
 
     return [
       {
-        source: '/:path*',
+        source: "/:path*",
         headers: [
-          { key: 'Access-Control-Allow-Origin', value: '*' },
-          { key: 'Access-Control-Allow-Methods', value: 'GET,POST,OPTIONS' },
-          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
-          { key: 'Access-Control-Allow-Credentials', value: 'true' },
-          { key: 'Content-Security-Policy', value: csp },
-          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
-          { key: 'Referrer-Policy', value: 'no-referrer-when-downgrade' },
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "GET,POST,OPTIONS" },
+          {
+            key: "Access-Control-Allow-Headers",
+            value: "Content-Type, Authorization",
+          },
+          { key: "Access-Control-Allow-Credentials", value: "true" },
+          { key: "Content-Security-Policy", value: csp },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "no-referrer-when-downgrade",
+          },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
         ],
       },
     ];
   },
 
-  // No broad /api rewrite. If you truly need one, enumerate it and scope by host, e.g.:
-  // async rewrites() {
-  //   return [
-  //     {
-  //       source: '/api/public/:path*',
-  //       has: [{ type: 'host', value: 'studio.moralclarity.ai' }],
-  //       destination: 'https://www.moralclarity.ai/api/public/:path*',
-  //     },
-  //   ];
-  // },
+  // No broad /api rewrite. If you truly need one, enumerate it and scope by host.
 };
 
 export default nextConfig;
