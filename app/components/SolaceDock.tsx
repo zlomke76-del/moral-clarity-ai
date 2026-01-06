@@ -32,14 +32,6 @@ import "highlight.js/styles/github-dark.css";
 
 import type { SolaceExport } from "@/lib/exports/types";
 
-declare global {
-  interface Window {
-    __solaceDockMounted?: boolean;
-    webkitSpeechRecognition?: any;
-    SpeechRecognition?: any;
-  }
-}
-
 /* ------------------------------------------------------------------
    Types
 ------------------------------------------------------------------- */
@@ -226,18 +218,7 @@ function SolaceTranscript({
 /* ------------------------------------------------------------------
    MAIN
 ------------------------------------------------------------------- */
-export default function SolaceDock() {
-  const [canRender, setCanRender] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.__solaceDockMounted) return;
-    window.__solaceDockMounted = true;
-    setCanRender(true);
-    return () => {
-      window.__solaceDockMounted = false;
-    };
-  }, []);
+  const canRender = true;
 
   const conversationIdRef = useRef<string | null>(null);
   if (!conversationIdRef.current) {
