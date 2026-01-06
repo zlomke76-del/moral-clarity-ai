@@ -1,7 +1,6 @@
 export default function AccountPage() {
   return (
-    <div
-      className="w-full px-10 py-16 text-white max-w-3xl mx-auto space-y-10"
+   <div className="w-full max-w-3xl mx-auto space-y-10">
       data-layout-boundary="account-content"
     >
       <h1 className="text-4xl font-bold tracking-tight mb-4">
