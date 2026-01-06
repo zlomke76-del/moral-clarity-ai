@@ -50,9 +50,8 @@ body {
    ============================================================ */
 
 .neural-sidebar {
-  height: 100%;
-  max-height: 100vh;
-  overflow-y: auto;
+  height: 100vh;          /* full viewport height */
+  overflow-y: auto;       /* scroll independently */
 
   display: flex;
   flex-direction: column;
@@ -64,6 +63,7 @@ body {
   z-index: 30;
   isolation: isolate;
 }
+
 
 
 .neural-sidebar-top {
