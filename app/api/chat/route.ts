@@ -179,27 +179,24 @@ function assertNoPhantomLanguage(text: string): string {
 
 /*-----------------------------------------------------------------------
    CONTEXT ASSEMBLY (ADD: executionProfile SAFE EXTENSION)
+   NOTE: Disabled at top-level to preserve AUTHORITATIVE file shape.
 ------------------------------------------------------------------------ */
-
+/*
 const context = await assembleContext(
   finalUserKey,
   resolvedWorkspaceId,
   message ?? "",
-  {
+  ({
     sessionId: resolvedConversationId,
     sessionStartedAt: new Date().toISOString(),
-
-    // ADDITIVE — DEMO / STUDIO SIGNAL
-    // assembleContext ignores unknown fields safely
     executionProfile,
   } as {
     sessionId: string;
     sessionStartedAt: string;
-
-    // ADDITIVE — SAFE OPTIONAL EXTENSION
     executionProfile?: "demo" | "studio";
-  }
+  })
 );
+*/
 
 // ------------------------------------------------------------
 // ROLLING COMPACTION (NON-BLOCKING)
@@ -381,25 +378,28 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // CONTEXT ASSEMBLY
+    // CONTEXT ASSEMBLY (REQUIRED PATTERN)
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
       resolvedWorkspaceId,
       message ?? "",
-      {
+      ({
         sessionId: resolvedConversationId,
         sessionStartedAt: new Date().toISOString(),
         executionProfile,
-      }
+      } as {
+        sessionId: string;
+        sessionStartedAt: string;
+        executionProfile?: "demo" | "studio";
+      })
     );
 
     // --------------------------------------------------------
     // DEMO SAFE — EARLY EXIT (CRITICAL FIX)
     // --------------------------------------------------------
     if (executionProfile === "demo") {
-      const demoResponse =
-        "I’m here in demo mode. Ask me anything.";
+      const demoResponse = "I’m here in demo mode. Ask me anything.";
 
       return NextResponse.json({
         ok: true,
@@ -540,7 +540,10 @@ export async function POST(req: Request) {
       ok: false,
       response: "An internal error occurred. I’m still here.",
       messages: [
-        { role: "assistant", content: "An internal error occurred. I’m still here." },
+        {
+          role: "assistant",
+          content: "An internal error occurred. I’m still here.",
+        },
       ],
     });
   }
