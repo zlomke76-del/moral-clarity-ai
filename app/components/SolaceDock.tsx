@@ -281,7 +281,8 @@ export default function SolaceDock() {
     pointerEvents: minimized ? "none" : undefined,
   };
 
-  const showOrb = !isMobile && (minimized || minimizing);
+  const showOrb = !isMobile && minimized;
+
   const orbStyle: React.CSSProperties = {
     position: "fixed",
     left: orbPos.x,
@@ -299,6 +300,7 @@ export default function SolaceDock() {
     transition: "all 0.4s cubic-bezier(0.77,0,0.18,1)",
     border: "3px solid white",
   };
+
 
   function minimizeDock() {
     setMinimizing(true);
@@ -651,8 +653,6 @@ const panel = (
         {!isMobile && <ResizeHandle onResizeStart={startResize} />}
   </section>
 );
-
-const showOrb = !isMobile && minimized;
 
 return createPortal(
   <>
