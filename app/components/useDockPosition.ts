@@ -14,6 +14,9 @@ type Args = {
   x: number;
   y: number;
   setPos: (x: number, y: number) => void;
+
+  /** NEW — prevents accidental drag snapping */
+  minDragPx?: number;
 };
 
 export function useDockPosition({
@@ -27,10 +30,16 @@ export function useDockPosition({
   x,
   y,
   setPos,
+  minDragPx = 0, // default to 0 if not provided
 }: Args) {
   const [dragging, setDragging] = useState(false);
   const [posReady, setPosReady] = useState(false);
+
+  // NEW — track whether we've crossed the drag threshold
+  const [dragActivated, setDragActivated] = useState(false);
+
   const [offset, setOffset] = useState({ dx: 0, dy: 0 });
+  const startPosRef = useRef({ x: 0, y: 0 });
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -60,9 +69,7 @@ export function useDockPosition({
           return;
         }
       }
-    } catch {
-      // ignore storage errors
-    }
+    } catch {}
 
     // Fallback: center-ish default
     setPos(
@@ -91,9 +98,7 @@ export function useDockPosition({
 
     try {
       localStorage.setItem(posKey, JSON.stringify({ x, y }));
-    } catch {
-      // ignore storage errors
-    }
+    } catch {}
   }, [dragging, posReady, x, y, viewport.w, posKey]);
 
   // --------------------------------------------------
@@ -103,10 +108,16 @@ export function useDockPosition({
     if (isMobile) return;
 
     const rect = containerRef.current?.getBoundingClientRect();
+
     setOffset({
       dx: e.clientX - (rect?.left ?? 0),
       dy: e.clientY - (rect?.top ?? 0),
     });
+
+    // NEW — record starting mouse position
+    startPosRef.current = { x: e.clientX, y: e.clientY };
+
+    setDragActivated(false);
     setDragging(true);
   }
 
@@ -114,10 +125,26 @@ export function useDockPosition({
     if (!dragging) return;
 
     const onMove = (e: MouseEvent) => {
+      // NEW — threshold check
+      if (!dragActivated) {
+        const dx = Math.abs(e.clientX - startPosRef.current.x);
+        const dy = Math.abs(e.clientY - startPosRef.current.y);
+
+        if (dx < minDragPx && dy < minDragPx) {
+          return; // do not drag yet
+        }
+
+        setDragActivated(true);
+      }
+
+      // Only drag after threshold is crossed
       setPos(e.clientX - offset.dx, e.clientY - offset.dy);
     };
 
-    const onUp = () => setDragging(false);
+    const onUp = () => {
+      setDragging(false);
+      setDragActivated(false);
+    };
 
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
@@ -126,7 +153,7 @@ export function useDockPosition({
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
-  }, [dragging, offset.dx, offset.dy, setPos]);
+  }, [dragging, dragActivated, offset.dx, offset.dy, setPos, minDragPx]);
 
   return {
     containerRef,
