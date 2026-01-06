@@ -342,28 +342,30 @@ export async function POST(req: Request) {
       throw new Error("userKey and conversationId are required");
     }
 
-    // --------------------------------------------------------
-    // DEMO MODE — SESSION WM READ (10 TURN CAP)
-    // --------------------------------------------------------
-    let sessionWM: Array<{ role: "user" | "assistant"; content: string }> = [];
+  // --------------------------------------------------------
+// DEMO MODE — SESSION WM READ (10 TURN CAP)
+// --------------------------------------------------------
+let sessionWM: Array<{ role: "user" | "assistant"; content: string }> = [];
 
-    if (executionProfile === "demo") {
-      const { data: wmRows } = await supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
-        .select("role, content, created_at")
-        .eq("conversation_id", resolvedConversationId)
-        .eq("user_id", DEMO_USER_ID)
-        .order("created_at", { ascending: false })
-        .limit(10);
+if (executionProfile === "demo" && resolvedConversationId) {
+  const { data: wmRows } = await supabaseAdmin
+    .schema("memory")
+    .from("working_memory")
+    .select("role, content, created_at")
+    .eq("conversation_id", resolvedConversationId)
+    .eq("user_id", DEMO_USER_ID)
+    .order("created_at", { ascending: false })
+    .limit(10);
 
-      if (wmRows && wmRows.length > 0) {
-        sessionWM = wmRows.reverse().map((r) => ({
-          role: r.role,
-          content: r.content,
-        }));
-      }
-    }
+  if (Array.isArray(wmRows) && wmRows.length > 0) {
+    sessionWM = wmRows
+      .reverse()
+      .map((r) => ({
+        role: r.role as "user" | "assistant",
+        content: r.content,
+      }));
+  }
+}
 
     // --------------------------------------------------------
     // SSR AUTH CONTEXT
