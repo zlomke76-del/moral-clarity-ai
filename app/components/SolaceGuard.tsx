@@ -1,7 +1,8 @@
+// app/components/SolaceGuard.tsx
 "use client";
 
 import { usePathname } from "next/navigation";
-import SolaceDockLoader from "./SolaceDockLoader";
+import SolaceDockWrapper from "./SolaceDockWrapper";
 
 export default function SolaceGuard() {
   const pathname = usePathname();
@@ -13,5 +14,5 @@ export default function SolaceGuard() {
 
   if (hide) return null;
 
-  return <SolaceDockLoader />;
+  return <SolaceDockWrapper />;
 }
