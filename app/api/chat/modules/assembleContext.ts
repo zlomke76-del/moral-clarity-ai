@@ -25,6 +25,10 @@ export type WorkingMemoryItem = {
 
 export type SolaceContextBundle = {
   persona: string;
+
+  // ADDITIVE — execution authority signal
+  executionProfile?: "studio" | "demo";
+
   memoryPack: {
     facts: any[];
     episodic: any[];
@@ -49,7 +53,11 @@ export type SolaceContextBundle = {
 function isNonContextualArtifact(content: string): boolean {
   if (!content) return false;
   const c = content.trim();
-  return c.startsWith("data:image/") || c.startsWith("<img") || c.startsWith("![");
+  return (
+    c.startsWith("data:image/") ||
+    c.startsWith("<img") ||
+    c.startsWith("![")
+  );
 }
 
 // ------------------------------------------------------------
@@ -146,8 +154,8 @@ export async function assembleContext(
 
     return {
       persona: "Solace",
-        executionProfile,
-        memoryPack: {
+      executionProfile,
+      memoryPack: {
         facts: [],
         episodic: [],
         autobiography: [],
@@ -167,11 +175,12 @@ export async function assembleContext(
   }
 
   // ----------------------------------------------------------
-  // STUDIO MODE — AUTH REQUIRED (UNCHANGED)
+  // STUDIO MODE — AUTH REQUIRED
   // ----------------------------------------------------------
   if (!effectiveUserId) {
     return {
       persona: "Solace",
+      executionProfile,
       memoryPack: {
         facts: [],
         episodic: [],
@@ -189,7 +198,7 @@ export async function assembleContext(
   }
 
   // ----------------------------------------------------------
-  // FACTUAL MEMORY (STUDIO ONLY)
+  // FACTUAL MEMORY (STUDIO)
   // ----------------------------------------------------------
   const factsRes = await supabaseAdmin
     .schema("memory")
@@ -265,6 +274,7 @@ export async function assembleContext(
   // ----------------------------------------------------------
   return {
     persona: "Solace",
+    executionProfile,
     memoryPack: {
       facts: factualMemories,
       episodic: [],
