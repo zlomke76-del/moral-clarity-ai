@@ -293,11 +293,25 @@ const panel = (
   <section
     ref={containerRef}
     style={panelStyleSafe}
+    tabIndex={-1}
     aria-label="Solace conversation panel"
   >
     <SolaceDockHeaderLite
       ministryOn={ministryOn}
       memReady={memReady}
+      onToggleMinistry={() => {
+        const next = new Set(filters);
+        if (ministryOn) {
+          next.delete("abrahamic");
+          next.delete("ministry");
+          localStorage.setItem(MINISTRY_KEY, "0");
+        } else {
+          next.add("abrahamic");
+          next.add("ministry");
+          localStorage.setItem(MINISTRY_KEY, "1");
+        }
+        setFilters(next);
+      }}
       onMinimize={minimizeDock}
       onDragStart={(e) => {
         if (!isMobile && !minimized && !minimizing) onHeaderMouseDown(e);
@@ -310,12 +324,19 @@ const panel = (
       transcriptStyle={transcriptStyleSafe}
     />
 
+    <div
+      style={{ ...composerWrapStyle, paddingTop: 2, paddingBottom: 2 }}
+      onPaste={(e) => handlePaste(e, { prefix: "solace" })}
+    >
+      {/* composer contents unchanged */}
+    </div>
+
     {!isMobile && <ResizeHandle onResizeStart={startResize} />}
   </section>
 );
 
 /* ------------------------------------------------------------
-   SINGLE RETURN (INSIDE FUNCTION)
+   SINGLE RETURN — INSIDE FUNCTION
 ------------------------------------------------------------ */
 return createPortal(
   <>
@@ -343,7 +364,6 @@ return createPortal(
   document.body
 );
 }
-
 
   /* ------------------------------------------------------------------
      PAYLOAD INGEST (AUTHORITATIVE)
