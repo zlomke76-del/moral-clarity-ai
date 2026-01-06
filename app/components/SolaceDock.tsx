@@ -96,18 +96,15 @@ const CodeBlock: Components["code"] = ({
   children,
   ...props
 }) => {
-  const [copied, setCopied] = useState(false);
-
   const text = String(children ?? "");
-  const isBlock = typeof className === "string" && className.startsWith("language-");
+  const isBlock =
+    typeof className === "string" && className.startsWith("language-");
 
-  const onCopy = useCallback(() => {
+  const onCopy = () => {
     if (navigator?.clipboard) {
       navigator.clipboard.writeText(text.replace(/\n$/, ""));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1200);
     }
-  }, [text]);
+  };
 
   if (isBlock) {
     return (
@@ -124,7 +121,7 @@ const CodeBlock: Components["code"] = ({
             top: 6,
             right: 6,
             zIndex: 1,
-            background: copied ? GOLD : "#eee",
+            background: "#eee",
             border: "none",
             borderRadius: 4,
             padding: "2px 6px",
@@ -132,7 +129,7 @@ const CodeBlock: Components["code"] = ({
             cursor: "pointer",
           }}
         >
-          {copied ? "Copied" : "Copy"}
+          Copy
         </button>
       </div>
     );
@@ -144,6 +141,7 @@ const CodeBlock: Components["code"] = ({
     </code>
   );
 };
+
 
 function SolaceTranscript({
   messages,
