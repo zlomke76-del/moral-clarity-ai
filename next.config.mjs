@@ -2,23 +2,33 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // Packages that must be transpiled under Next 16
   transpilePackages: [
     "react-pdf",
     "pdfjs-dist",
     "react-markdown",
-    "rehype-highlight",
     "remark-gfm",
+    "rehype-highlight",
   ],
 
-  // 🚨 CRITICAL: force single React instance
+  /**
+   * 🚀 Turbopack configuration (REQUIRED in Next 16 if webpack exists)
+   * This is where React singleton enforcement now belongs.
+   */
+  turbopack: {
+    resolveAlias: {
+      react: "react",
+      "react-dom": "react-dom",
+      "react/jsx-runtime": "react/jsx-runtime",
+      "react/jsx-dev-runtime": "react/jsx-dev-runtime",
+    },
+  },
+
+  /**
+   * Webpack is still allowed — but ONLY if turbopack is present.
+   * We keep this minimal to avoid conflicts.
+   */
   webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      react: require.resolve("react"),
-      "react-dom": require.resolve("react-dom"),
-      "react/jsx-runtime": require.resolve("react/jsx-runtime"),
-      "react/jsx-dev-runtime": require.resolve("react/jsx-dev-runtime"),
-    };
     return config;
   },
 
@@ -72,7 +82,10 @@ const nextConfig = {
         source: "/:path*",
         headers: [
           { key: "Content-Security-Policy", value: csp },
-          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
+          },
           { key: "Referrer-Policy", value: "no-referrer-when-downgrade" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
