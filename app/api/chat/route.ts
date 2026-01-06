@@ -254,13 +254,13 @@ export async function POST(req: Request) {
     const finalUserKey = canonicalUserKey ?? userKey;
 
     // --------------------------------------------------------
-    // DEMO SAFE — EXECUTION PROFILE DECLARATION (ADDITIVE)
+    // DEMO SAFE — EXECUTION PROFILE
     // --------------------------------------------------------
     const executionProfile =
       finalUserKey === "webflow-guest" ? "demo" : "studio";
 
     // --------------------------------------------------------
-    // CANONICAL WORKSPACE RESOLUTION (DEMO SAFE)
+    // CANONICAL WORKSPACE RESOLUTION
     // --------------------------------------------------------
     const resolvedWorkspaceId =
       workspaceId ??
@@ -268,7 +268,7 @@ export async function POST(req: Request) {
       "global_news";
 
     // --------------------------------------------------------
-    // AUTHORITATIVE CONVERSATION BOOTSTRAP (SINGLE-USE)
+    // AUTHORITATIVE CONVERSATION BOOTSTRAP
     // --------------------------------------------------------
     let resolvedConversationId: string | null = conversationId ?? null;
 
@@ -276,9 +276,7 @@ export async function POST(req: Request) {
       const supabaseAdminBootstrap = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-          auth: { persistSession: false, autoRefreshToken: false },
-        }
+        { auth: { persistSession: false, autoRefreshToken: false } }
       );
 
       const { data, error } = await supabaseAdminBootstrap
@@ -304,7 +302,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // SSR AUTH CONTEXT (READ-ONLY) — NEXT 16 SAFE
+    // SSR AUTH CONTEXT
     // --------------------------------------------------------
     const cookieStore: ReadonlyRequestCookies = await cookies();
 
@@ -322,9 +320,6 @@ export async function POST(req: Request) {
       }
     );
 
-    // --------------------------------------------------------
-    // AUTH USER CONTEXT + ADMIN CLIENT
-    // --------------------------------------------------------
     const {
       data: { user },
     } = await supabaseSSR.auth.getUser();
@@ -334,13 +329,11 @@ export async function POST(req: Request) {
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: { persistSession: false, autoRefreshToken: false },
-      }
+      { auth: { persistSession: false, autoRefreshToken: false } }
     );
 
     // --------------------------------------------------------
-    // Persist user message
+    // Persist user message (STUDIO ONLY EFFECTIVE)
     // --------------------------------------------------------
     if (authUserId && message) {
       await supabaseAdmin
@@ -360,6 +353,35 @@ export async function POST(req: Request) {
         supabaseAdmin,
         conversationId: resolvedConversationId,
         userId: authUserId,
+      });
+    }
+
+    // --------------------------------------------------------
+    // CONTEXT ASSEMBLY
+    // --------------------------------------------------------
+    const context = await assembleContext(
+      finalUserKey,
+      resolvedWorkspaceId,
+      message ?? "",
+      {
+        sessionId: resolvedConversationId,
+        sessionStartedAt: new Date().toISOString(),
+        executionProfile,
+      }
+    );
+
+    // --------------------------------------------------------
+    // DEMO SAFE — EARLY EXIT (CRITICAL FIX)
+    // --------------------------------------------------------
+    if (executionProfile === "demo") {
+      const demoResponse =
+        "I’m here in demo mode. Ask me anything.";
+
+      return NextResponse.json({
+        ok: true,
+        conversationId: resolvedConversationId,
+        response: demoResponse,
+        messages: [{ role: "assistant", content: demoResponse }],
       });
     }
 
@@ -389,20 +411,6 @@ export async function POST(req: Request) {
         messages: [{ role: "assistant", content: terminalResponse }],
       });
     }
-
-    // --------------------------------------------------------
-    // CONTEXT ASSEMBLY
-    // --------------------------------------------------------
-    const context = await assembleContext(
-      finalUserKey,
-      resolvedWorkspaceId,
-      message ?? "",
-      {
-        sessionId: resolvedConversationId,
-        sessionStartedAt: new Date().toISOString(),
-        executionProfile, // DEMO SAFE — additive signal
-      }
-    );
 
     // --------------------------------------------------------
     // IMAGE REQUEST BRANCH
@@ -441,6 +449,7 @@ export async function POST(req: Request) {
 
     if (wantsNews) {
       const newsroomResponse = await runNewsroomExecutor(newsDigest ?? []);
+
       if (authUserId) {
         await supabaseAdmin
           .schema("memory")
@@ -459,34 +468,6 @@ export async function POST(req: Request) {
         conversationId: resolvedConversationId,
         response: newsroomResponse,
         messages: [{ role: "assistant", content: newsroomResponse }],
-      });
-    }
-
-    // --------------------------------------------------------
-    // DEMO SAFE — HYBRID ESCAPE HATCH (ADDITIVE)
-    // --------------------------------------------------------
-    if (executionProfile === "demo") {
-      const demoResponse =
-        "I’m here in demo mode. Ask me anything.";
-
-      if (authUserId) {
-        await supabaseAdmin
-          .schema("memory")
-          .from("working_memory")
-          .insert({
-            conversation_id: resolvedConversationId,
-            user_id: authUserId,
-            workspace_id: resolvedWorkspaceId,
-            role: "assistant",
-            content: demoResponse,
-          } as any);
-      }
-
-      return NextResponse.json({
-        ok: true,
-        conversationId: resolvedConversationId,
-        response: demoResponse,
-        messages: [{ role: "assistant", content: demoResponse }],
       });
     }
 
