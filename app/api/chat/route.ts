@@ -254,6 +254,14 @@ export async function POST(req: Request) {
     const finalUserKey = canonicalUserKey ?? userKey;
 
     // --------------------------------------------------------
+    // CANONICAL WORKSPACE RESOLUTION (DEMO SAFE)
+    // --------------------------------------------------------
+    const resolvedWorkspaceId =
+      workspaceId ??
+      process.env.MCA_WORKSPACE_ID ??
+      "global_news";
+
+    // --------------------------------------------------------
     // AUTHORITATIVE CONVERSATION BOOTSTRAP (SINGLE-USE)
     // --------------------------------------------------------
     let resolvedConversationId: string | null = conversationId ?? null;
@@ -272,7 +280,7 @@ export async function POST(req: Request) {
         .from("conversations")
         .insert({
           user_id: finalUserKey,
-          workspace_id: workspaceId ?? null,
+          workspace_id: resolvedWorkspaceId,
           source: "chat_bootstrap",
         })
         .select("id")
@@ -335,7 +343,7 @@ export async function POST(req: Request) {
         .insert({
           conversation_id: resolvedConversationId,
           user_id: authUserId,
-          workspace_id: workspaceId,
+          workspace_id: resolvedWorkspaceId,
           role: "user",
           content: message,
         } as any);
@@ -362,7 +370,7 @@ export async function POST(req: Request) {
           .insert({
             conversation_id: resolvedConversationId,
             user_id: authUserId,
-            workspace_id: workspaceId,
+            workspace_id: resolvedWorkspaceId,
             role: "assistant",
             content: terminalResponse,
           } as any);
@@ -381,7 +389,7 @@ export async function POST(req: Request) {
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
-      workspaceId ?? null,
+      resolvedWorkspaceId,
       message ?? "",
       {
         sessionId: resolvedConversationId,
@@ -403,7 +411,7 @@ export async function POST(req: Request) {
           .insert({
             conversation_id: resolvedConversationId,
             user_id: authUserId,
-            workspace_id: workspaceId,
+            workspace_id: resolvedWorkspaceId,
             role: "assistant",
             content: imageHtml,
           } as any);
@@ -433,7 +441,7 @@ export async function POST(req: Request) {
           .insert({
             conversation_id: resolvedConversationId,
             user_id: authUserId,
-            workspace_id: workspaceId,
+            workspace_id: resolvedWorkspaceId,
             role: "assistant",
             content: newsroomResponse,
           } as any);
@@ -473,7 +481,7 @@ export async function POST(req: Request) {
         .insert({
           conversation_id: resolvedConversationId,
           user_id: authUserId,
-          workspace_id: workspaceId,
+          workspace_id: resolvedWorkspaceId,
           role: "assistant",
           content: safeResponse,
         } as any);
