@@ -2,15 +2,24 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  // Needed for react-pdf/pdfjs (ESM + worker)
-  transpilePackages: ["react-pdf", "pdfjs-dist"],
+  transpilePackages: [
+    "react-pdf",
+    "pdfjs-dist",
+    "react-markdown",
+    "rehype-highlight",
+    "remark-gfm",
+  ],
 
-  // ✅ Turbopack-native config (NO webpack)
-  turbopack: {
-    resolveAlias: {
-      react: "react",
-      "react-dom": "react-dom",
-    },
+  // 🚨 CRITICAL: force single React instance
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      react: require.resolve("react"),
+      "react-dom": require.resolve("react-dom"),
+      "react/jsx-runtime": require.resolve("react/jsx-runtime"),
+      "react/jsx-dev-runtime": require.resolve("react/jsx-dev-runtime"),
+    };
+    return config;
   },
 
   async redirects() {
@@ -54,7 +63,7 @@ const nextConfig = {
       "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://*.supabase.co",
       "font-src 'self' data: https:",
       "media-src 'self' blob:",
-      "worker-src 'self' blob: https://cdnjs.cloudflare.com",
+      "worker-src 'self' blob:",
       "upgrade-insecure-requests",
     ].join("; ");
 
@@ -62,18 +71,8 @@ const nextConfig = {
       {
         source: "/:path*",
         headers: [
-          { key: "Access-Control-Allow-Origin", value: "*" },
-          { key: "Access-Control-Allow-Methods", value: "GET,POST,OPTIONS" },
-          {
-            key: "Access-Control-Allow-Headers",
-            value: "Content-Type, Authorization",
-          },
-          { key: "Access-Control-Allow-Credentials", value: "true" },
           { key: "Content-Security-Policy", value: csp },
-          {
-            key: "Strict-Transport-Security",
-            value: "max-age=63072000; includeSubDomains; preload",
-          },
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
           { key: "Referrer-Policy", value: "no-referrer-when-downgrade" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
