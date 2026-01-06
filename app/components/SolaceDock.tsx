@@ -218,6 +218,7 @@ function SolaceTranscript({
 /* ------------------------------------------------------------------
    MAIN
 ------------------------------------------------------------------- */
+export default function SolaceDock() {
   const canRender = true;
 
   const conversationIdRef = useRef<string | null>(null);
@@ -328,7 +329,6 @@ function SolaceTranscript({
     };
   }, []);
 
-  // Dock position with drag threshold (snap fix)
   const { posReady, onHeaderMouseDown } = useDockPosition({
     canRender,
     visible,
@@ -350,19 +350,14 @@ function SolaceTranscript({
   const vw = viewport.w || 1;
   const vh = viewport.h || 1;
 
-  // MOBILE CLAMP
   const mobileW = Math.max(280, Math.min(dockW, vw - PAD * 2));
   const mobileH = Math.max(360, Math.min(dockH, vh - PAD * 2));
-  // Desktop/move math
+
   const txDesktop = Math.min(Math.max(0, x - PAD), vw - panelW - PAD);
   const tyDesktop = Math.min(Math.max(0, y - PAD), vh - panelH - PAD);
 
   const tx =
-    isMobile || minimized
-      ? PAD
-      : minimizing
-      ? orbPos.x
-      : txDesktop;
+    isMobile || minimized ? PAD : minimizing ? orbPos.x : txDesktop;
   const ty =
     isMobile || minimized
       ? Math.max(PAD, vh - mobileH - PAD)
@@ -392,11 +387,7 @@ function SolaceTranscript({
     });
 
   const transcriptStyleSafe: React.CSSProperties = isMobile
-    ? {
-        ...transcriptStyle,
-        overflowY: "auto",
-        WebkitOverflowScrolling: "touch",
-      }
+    ? { ...transcriptStyle, overflowY: "auto", WebkitOverflowScrolling: "touch" }
     : transcriptStyle;
 
   const panelStyleSafe: React.CSSProperties = {
