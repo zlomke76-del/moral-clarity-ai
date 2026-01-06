@@ -109,6 +109,9 @@ export default function SolaceDock() {
 
   const { visible, setVisible, x, y, setPos, filters, setFilters } =
     useSolaceStore();
+      useEffect(() => {
+      setVisible(true);
+    }, []);
 
   const modeHint = "Neutral" as const;
 
