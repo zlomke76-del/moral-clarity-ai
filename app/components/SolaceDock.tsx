@@ -1,6 +1,13 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useLayoutEffect,
+  useCallback,
+} from "react";
 import { createPortal } from "react-dom";
 import { useSolaceStore } from "@/app/providers/solace-store";
 import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
@@ -10,8 +17,6 @@ import { useSolaceAttachments } from "./useSolaceAttachments";
 import { useSpeechInput } from "./useSpeechInput";
 import { IconPaperclip, IconMic } from "@/app/components/icons";
 import { sendWithVision } from "./sendWithVision";
-import SolaceTranscript from "./SolaceTranscript";
-import { UI } from "./dock-ui";
 import { useDockPosition } from "./useDockPosition";
 import SolaceDockHeaderLite from "./dock-header-lite";
 import {
@@ -19,6 +24,10 @@ import {
   ResizeHandle,
   createResizeController,
 } from "./dock-resize";
+
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
 
 import type { SolaceExport } from "@/lib/exports/types";
 
@@ -79,6 +88,146 @@ function isImageIntent(message: string): boolean {
 }
 
 /* ------------------------------------------------------------------
+   SolaceTranscript: Markdown, code highlighting, code copy
+------------------------------------------------------------------- */
+function CodeBlock({
+  inline,
+  className,
+  children,
+}: {
+  inline?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const isBlock = !inline && className && className.startsWith("language-");
+  const [copied, setCopied] = useState(false);
+
+  const onCopy = useCallback(() => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(String(children)).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1200);
+      });
+    }
+  }, [children]);
+
+  if (isBlock) {
+    return (
+      <div style={{ position: "relative" }}>
+        <pre className={className} style={{ margin: 0, paddingRight: 44 }}>
+          <code className={className}>{children}</code>
+        </pre>
+        <button
+          type="button"
+          onClick={onCopy}
+          aria-label="Copy code to clipboard"
+          style={{
+            position: "absolute",
+            top: 6,
+            right: 6,
+            zIndex: 1,
+            background: copied ? GOLD : "#eee",
+            border: "none",
+            borderRadius: 4,
+            padding: "2px 6px",
+            fontSize: 12,
+            color: "#333",
+            cursor: "pointer",
+            transition: "background 0.17s",
+            userSelect: "none",
+          }}
+        >
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+    );
+  }
+
+  return <code className={className}>{children}</code>;
+}
+
+function SolaceTranscript({
+  messages,
+  transcriptRef,
+  transcriptStyle,
+}: {
+  messages: Message[];
+  transcriptRef: React.RefObject<HTMLDivElement>;
+  transcriptStyle: React.CSSProperties;
+}) {
+  return (
+    <div
+      ref={transcriptRef}
+      style={transcriptStyle}
+      tabIndex={-1}
+      aria-live="polite"
+      aria-atomic="false"
+      aria-relevant="additions"
+    >
+      {messages.map((msg, idx) => {
+        if (msg.imageUrl) {
+          return (
+            <div
+              key={idx}
+              style={{
+                marginBottom: 12,
+                userSelect: "text",
+                fontSize: 15,
+                lineHeight: 1.4,
+              }}
+            >
+              {msg.content ? (
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeHighlight]}
+                  components={{ code: CodeBlock }}
+                >
+                  {msg.content}
+                </ReactMarkdown>
+              ) : null}
+              <div style={{ marginTop: 6, textAlign: "center" }}>
+                <img
+                  src={msg.imageUrl}
+                  alt="Generated content"
+                  style={{
+                    maxWidth: "100%",
+                    borderRadius: 8,
+                    userSelect: "none",
+                  }}
+                  draggable={false}
+                />
+              </div>
+            </div>
+          );
+        }
+        return (
+          <div
+            key={idx}
+            style={{
+              whiteSpace: "pre-wrap",
+              marginBottom: 12,
+              userSelect: "text",
+              fontSize: 15,
+              lineHeight: 1.4,
+              color: msg.role === "user" ? "#111" : "#333",
+              fontWeight: msg.role === "user" ? 600 : 400,
+            }}
+          >
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeHighlight]}
+              components={{ code: CodeBlock }}
+            >
+              {msg.content}
+            </ReactMarkdown>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------
    MAIN
 ------------------------------------------------------------------- */
 export default function SolaceDock() {
@@ -87,10 +236,8 @@ export default function SolaceDock() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.__solaceDockMounted) return;
-
     window.__solaceDockMounted = true;
     setCanRender(true);
-
     return () => {
       window.__solaceDockMounted = false;
     };
@@ -115,18 +262,15 @@ export default function SolaceDock() {
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
-
   const isMobile = viewport.w > 0 ? viewport.w <= 768 : false;
 
   useEffect(() => {
     if (canRender && !isMobile && !visible) setVisible(true);
   }, [canRender, isMobile, visible, setVisible]);
 
-  // Minimize/orb logic
   const [minimized, setMinimized] = useState(false);
   const [minimizing, setMinimizing] = useState(false);
 
-  // Calculate orb position (bottom right, desktop only)
   const orbPos = useMemo(() => {
     if (!viewport.w || !viewport.h) return { x: 0, y: 0 };
     return {
@@ -141,17 +285,20 @@ export default function SolaceDock() {
 
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    transcriptRef.current?.scrollTo(0, transcriptRef.current.scrollHeight);
+    if (!transcriptRef.current) return;
+    transcriptRef.current.scrollTo({
+      top: transcriptRef.current.scrollHeight,
+      behavior: "smooth",
+    });
   }, [messages]);
 
   const { userKey, memReady } = useSolaceMemory();
 
   const { pendingFiles, handleFiles, handlePaste, clearPending } =
-  useSolaceAttachments({
-    onInfoMessage: (msg) =>
-      setMessages((m) => [...m, { role: "assistant", content: msg }]),
-  });
-
+    useSolaceAttachments({
+      onInfoMessage: (msg) =>
+        setMessages((m) => [...m, { role: "assistant", content: msg }]),
+    });
 
   const { listening, toggleMic } = useSpeechInput({
     onText: (text) => setInput((p) => (p ? p + " " : "") + text),
@@ -189,39 +336,36 @@ export default function SolaceDock() {
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-
     const measure = () => {
       const r = el.getBoundingClientRect();
       setPanelW(r.width);
       setPanelH(r.height);
     };
-
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     window.addEventListener("resize", measure);
-
     return () => {
       ro.disconnect();
       window.removeEventListener("resize", measure);
     };
   }, []);
 
-  // Only desktop: minDragPx to reduce quick snaps; touch support omitted for MVP
-    const { posReady, onHeaderMouseDown } = useDockPosition({
-  canRender,
-  visible,
-  viewport,
-  panelW,
-  panelH,
-  isMobile,
-  PAD,
-  posKey: POS_KEY,
-  x,
-  y,
-  setPos,
-  minDragPx: 16,   // ← restore drag threshold
-});
+  // Dock position with drag threshold (snap fix)
+  const { posReady, onHeaderMouseDown } = useDockPosition({
+    canRender,
+    visible,
+    viewport,
+    panelW,
+    panelH,
+    isMobile,
+    PAD,
+    posKey: POS_KEY,
+    x,
+    y,
+    setPos,
+    minDragPx: 16,
+  });
 
   const { dockW, dockH, setDockW, setDockH } = useDockSize();
   const startResize = createResizeController(dockW, dockH, setDockW, setDockH);
@@ -232,12 +376,10 @@ export default function SolaceDock() {
   // MOBILE CLAMP
   const mobileW = Math.max(280, Math.min(dockW, vw - PAD * 2));
   const mobileH = Math.max(360, Math.min(dockH, vh - PAD * 2));
-
-  // Desktop: use stored x/y. Mobile: pin inside viewport.
+  // Desktop/move math
   const txDesktop = Math.min(Math.max(0, x - PAD), vw - panelW - PAD);
   const tyDesktop = Math.min(Math.max(0, y - PAD), vh - panelH - PAD);
 
-  // Clamp jump: on minimize/orb
   const tx =
     isMobile || minimized
       ? PAD
@@ -294,9 +436,7 @@ export default function SolaceDock() {
     pointerEvents: minimized ? "none" : undefined,
   };
 
-  // Orb (Desktop, Minimized)
   const showOrb = !isMobile && (minimized || minimizing);
-
   const orbStyle: React.CSSProperties = {
     position: "fixed",
     left: orbPos.x,
@@ -335,8 +475,6 @@ export default function SolaceDock() {
   function ingestPayload(data: any) {
     try {
       if (!data) throw new Error("Empty response payload");
-
-      // EXPORT DELIVERY
       if ((data.export as SolaceExport)?.kind === "export") {
         const exp = data.export as SolaceExport;
         setMessages((m) => [
@@ -351,39 +489,30 @@ export default function SolaceDock() {
         ]);
         return;
       }
-
-  // IMAGE (base64)
-if (
-  Array.isArray(data.data) &&
-  data.data[0] &&
-  typeof data.data[0].b64_json === "string"
-) {
-  const imageUrl = `data:image/png;base64,${data.data[0].b64_json}`;
-  setMessages((m) => [
-    ...m,
-    { role: "assistant", content: "", imageUrl },
-  ]);
-  return;
-}
-
-// IMAGE (url)
-if (typeof data.imageUrl === "string" || typeof data.image === "string") {
-  const image = data.imageUrl ?? data.image;
-  setMessages((m) => [
-    ...m,
-    { role: "assistant", content: "", imageUrl: image },
-  ]);
-  return;
-}
-
-
-      // MULTI-MESSAGE
+      if (
+        Array.isArray(data.data) &&
+        data.data[0] &&
+        typeof data.data[0].b64_json === "string"
+      ) {
+        const imageUrl = `data:image/png;base64,${data.data[0].b64_json}`;
+        setMessages((m) => [
+          ...m,
+          { role: "assistant", content: "", imageUrl },
+        ]);
+        return;
+      }
+      if (typeof data.imageUrl === "string" || typeof data.image === "string") {
+        const image = data.imageUrl ?? data.image;
+        setMessages((m) => [
+          ...m,
+          { role: "assistant", content: "", imageUrl: image },
+        ]);
+        return;
+      }
       if (Array.isArray(data.messages)) {
         setMessages((m) => [...m, ...data.messages]);
         return;
       }
-
-      // STRING RESPONSE
       if (data.ok === true && typeof data.response === "string") {
         setMessages((m) => [
           ...m,
@@ -391,8 +520,6 @@ if (typeof data.imageUrl === "string" || typeof data.image === "string") {
         ]);
         return;
       }
-
-      // EVIDENCE
       if (Array.isArray(data.evidence)) {
         const evMsgs: Message[] = data.evidence.map((e: EvidenceBlock) => ({
           role: "assistant",
@@ -404,7 +531,6 @@ if (typeof data.imageUrl === "string" || typeof data.image === "string") {
         setMessages((m) => [...m, ...evMsgs]);
         return;
       }
-
       setMessages((m) => [
         ...m,
         {
@@ -449,7 +575,6 @@ if (typeof data.imageUrl === "string" || typeof data.image === "string") {
             modeHint,
           }),
         });
-
         ingestPayload(await res.json());
         return;
       }
@@ -493,6 +618,20 @@ if (typeof data.imageUrl === "string" || typeof data.image === "string") {
       clearPending();
     }
   }
+
+  /* ------------------------------------------------------------------
+     Auto-expanding textarea
+  ------------------------------------------------------------------- */
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  useLayoutEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.overflow = "hidden";
+    const scrollHeight = ta.scrollHeight;
+    const newHeight = Math.min(scrollHeight, 80);
+    ta.style.height = newHeight + "px";
+  }, [input]);
 
   const onEnterSend = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -570,7 +709,9 @@ if (typeof data.imageUrl === "string" || typeof data.image === "string") {
                 width: 28,
               }}
             >
-              <IconPaperclip style={{ width: 24, height: 24, verticalAlign: "middle" }} />
+              <IconPaperclip
+                style={{ width: 24, height: 24, verticalAlign: "middle" }}
+              />
             </span>
             <input
               type="file"
@@ -606,11 +747,14 @@ if (typeof data.imageUrl === "string" || typeof data.image === "string") {
                 width: 28,
               }}
             >
-              <IconMic style={{ width: 24, height: 24, verticalAlign: "middle" }} />
+              <IconMic
+                style={{ width: 24, height: 24, verticalAlign: "middle" }}
+              />
             </span>
           </button>
 
           <textarea
+            ref={textareaRef}
             style={{
               ...textareaStyle,
               minHeight: 38,
@@ -622,6 +766,8 @@ if (typeof data.imageUrl === "string" || typeof data.image === "string") {
               padding: "7px 10px",
               flex: 1,
               resize: "none",
+              overflow: "hidden",
+              transition: "height 0.15s ease",
             }}
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -669,7 +815,16 @@ if (typeof data.imageUrl === "string" || typeof data.image === "string") {
           onClick={restoreDock}
           aria-label="Restore Solace dock"
         >
-          <span style={{ fontWeight: "bold", fontSize: 28, color: "#fff", userSelect: "none" }}>?</span>
+          <span
+            style={{
+              fontWeight: "bold",
+              fontSize: 28,
+              color: "#fff",
+              userSelect: "none",
+            }}
+          >
+            ?
+          </span>
         </div>
       )}
       {panel}
