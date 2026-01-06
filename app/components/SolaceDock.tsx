@@ -679,10 +679,13 @@ const panel = (
       </div>
     </div>
 
-        {!isMobile && <ResizeHandle onResizeStart={startResize} />}
+    {!isMobile && <ResizeHandle onResizeStart={startResize} />}
   </section>
 );
 
+/* ------------------------------------------------------------
+   SINGLE RETURN — MUST BE INSIDE SolaceDock()
+------------------------------------------------------------ */
 return createPortal(
   <>
     {showOrb ? (
@@ -708,4 +711,3 @@ return createPortal(
   </>,
   document.body
 );
-}
