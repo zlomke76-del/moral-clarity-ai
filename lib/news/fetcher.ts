@@ -34,7 +34,31 @@ const DEFAULT_NEWS_WINDOW_DAYS = 1;
 const DEFAULT_PER_DOMAIN_MAX = 5;
 
 /* ============================================================
-   SOURCE-SPECIFIC OVERRIDES (CRITICAL FIX)
+   SOURCE REGISTRY (RESTORED — AUTHORITATIVE)
+   ============================================================ */
+
+type NewsSource = {
+  id: string;
+  label: string;
+  domain: string;
+};
+
+const SOURCE_REGISTRY: NewsSource[] = [
+  { id: "wsj", label: "Wall Street Journal", domain: "wsj.com" },
+  { id: "nyt", label: "New York Times", domain: "nytimes.com" },
+  { id: "times", label: "The Times", domain: "thetimes.co.uk" },
+  { id: "reuters", label: "Reuters", domain: "reuters.com" },
+  { id: "bloomberg", label: "Bloomberg", domain: "bloomberg.com" },
+  { id: "ap", label: "AP News", domain: "apnews.com" },
+  { id: "msnbc", label: "MSNBC", domain: "msnbc.com" },
+  { id: "cnn", label: "CNN", domain: "cnn.com" },
+  { id: "fox", label: "Fox News", domain: "foxnews.com" },
+  { id: "bbc", label: "BBC", domain: "bbc.com" },
+  { id: "newsmax", label: "Newsmax", domain: "newsmax.com" },
+];
+
+/* ============================================================
+   SOURCE-SPECIFIC OVERRIDES
    ============================================================ */
 
 type SourceOverride = {
@@ -72,7 +96,7 @@ const SOURCE_OVERRIDES: Record<string, SourceOverride> = {
 };
 
 /* ============================================================
-   DOMAIN CAPS (UNCHANGED)
+   DOMAIN CAPS
    ============================================================ */
 
 const DOMAIN_MAX_OVERRIDES: Record<string, number> = {
