@@ -510,27 +510,37 @@ if (executionProfile === "demo" && resolvedConversationId) {
     }
 
     // --------------------------------------------------------
-    // NEWSROOM EXECUTION
+    // NEWSROOM EXECUTION (MINIMAL CONNECT RESTORED)
     // --------------------------------------------------------
     const wantsNews =
       newsMode === true ||
       (typeof message === "string" && isNewsKeywordFallback(message));
 
     if (wantsNews) {
-      const newsroomResponse = await runNewsroomExecutor(newsDigest ?? []);
+      const { data: digestRows, error } = await supabaseAdmin
+        .from("solace_news_digest_view")
+        .select(
+          "story_title, outlet, neutral_summary, source_url, created_at"
+        )
+        .order("created_at", { ascending: false })
+        .limit(6);
 
-      if (authUserId) {
-        await supabaseAdmin
-          .schema("memory")
-          .from("working_memory")
-          .insert({
-            conversation_id: resolvedConversationId,
-            user_id: authUserId,
-            workspace_id: resolvedWorkspaceId,
-            role: "assistant",
-            content: newsroomResponse,
-          });
+      if (error) {
+        throw new Error("NEWSROOM_DIGEST_FETCH_FAILED");
       }
+
+      const newsroomResponse = await runNewsroomExecutor(digestRows ?? []);
+
+      await supabaseAdmin
+        .schema("memory")
+        .from("working_memory")
+        .insert({
+          conversation_id: resolvedConversationId,
+          user_id: finalUserKey,
+          workspace_id: resolvedWorkspaceId,
+          role: "assistant",
+          content: newsroomResponse,
+        });
 
       return NextResponse.json({
         ok: true,
