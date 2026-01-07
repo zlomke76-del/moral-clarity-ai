@@ -520,7 +520,7 @@ if (executionProfile === "demo" && resolvedConversationId) {
       const { data: digestRows, error } = await supabaseAdmin
         .from("solace_news_digest_view")
         .select(
-          "story_title, outlet, neutral_summary, source_url, created_at"
+          "story_title, outlet, neutral_summary, story_url, created_at"
         )
         .order("created_at", { ascending: false })
         .limit(6);
