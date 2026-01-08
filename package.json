@@ -12,6 +12,8 @@
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.78.0",
     "@vercel/speed-insights": "^1.2.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "framer-motion": "^12.24.7",
     "highlight.js": "^11.11.1",
     "jsdom": "^27.1.0",
