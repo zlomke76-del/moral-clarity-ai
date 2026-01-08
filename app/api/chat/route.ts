@@ -551,55 +551,98 @@ if (executionProfile === "demo" && resolvedConversationId) {
     }
 
     // --------------------------------------------------------
-    // HYBRID PIPELINE
-    // --------------------------------------------------------
-    const result = await runHybridPipeline({
-      userMessage: message ?? "",
-      context,
-      ministryMode,
-      founderMode,
-      modeHint,
-    });
+// HYBRID PIPELINE
+// --------------------------------------------------------
+const result = await runHybridPipeline({
+  userMessage: message ?? "",
+  context,
+  ministryMode,
+  founderMode,
+  modeHint,
+});
 
-    const rawResponse =
-      typeof result?.finalAnswer === "string" && result.finalAnswer.length > 0
-        ? result.finalAnswer
-        : "I’m here and ready to continue.";
+const rawResponse =
+  typeof result?.finalAnswer === "string" && result.finalAnswer.length > 0
+    ? result.finalAnswer
+    : "I’m here and ready to continue.";
 
-    const scrubbed = scrubPhantomExecutionLanguage(rawResponse);
-    const safeResponse = assertNoPhantomLanguage(scrubbed);
+// --------------------------------------------------------
+// EPPE-01 POLICY GATE (POST-REASONING, PRE-PERSISTENCE)
+// --------------------------------------------------------
+let gatedResponse = rawResponse;
 
-    if (authUserId || allowSessionWM) {
-      await supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
-        .insert({
-          conversation_id: resolvedConversationId,
-          user_id: authUserId,
-          workspace_id: resolvedWorkspaceId,
-          role: "assistant",
-          content: safeResponse,
-        });
-    }
+if (appliesEPPE01({ message, context, founderMode })) {
+  let parsed: any;
 
-    return NextResponse.json({
-      ok: true,
-      conversationId: resolvedConversationId,
-      response: safeResponse,
-      messages: [{ role: "assistant", content: safeResponse }],
-    });
-  } catch (err: any) {
-    console.error("[CHAT ROUTE ERROR]", err?.message);
-
+  try {
+    parsed = JSON.parse(rawResponse);
+  } catch {
     return NextResponse.json({
       ok: false,
-      response: "An internal error occurred. I’m still here.",
+      conversationId: resolvedConversationId,
+      response:
+        "This evaluation must be returned as structured EPPE-01 JSON. Required fields are missing or the format is invalid.",
       messages: [
         {
           role: "assistant",
-          content: "An internal error occurred. I’m still here.",
+          content:
+            "EPPE-01 enforcement: output must be valid JSON conforming to the evaluation schema.",
         },
       ],
     });
   }
+
+  const { valid, errors } = validateEPPE01(parsed);
+
+  if (!valid) {
+    return NextResponse.json({
+      ok: false,
+      conversationId: resolvedConversationId,
+      response:
+        "This evaluation does not meet EPPE-01 requirements and cannot be finalized.",
+      messages: [
+        {
+          role: "assistant",
+          content: `EPPE-01 validation failed:\n${errors
+            ?.map((e: any) => `- ${e.instancePath || "(root)"} ${e.message}`)
+            .join("\n")}`,
+        },
+      ],
+    });
+  }
+
+  // EPPE-01 passed → safe to emit structured response
+  gatedResponse = JSON.stringify(parsed, null, 2);
 }
+
+// --------------------------------------------------------
+// SAFETY SCRUB + FINAL ASSERTION
+// --------------------------------------------------------
+const scrubbed = scrubPhantomExecutionLanguage(gatedResponse);
+const safeResponse = assertNoPhantomLanguage(scrubbed);
+
+// --------------------------------------------------------
+// PERSIST ASSISTANT MESSAGE
+// --------------------------------------------------------
+if (authUserId || allowSessionWM) {
+  await supabaseAdmin
+    .schema("memory")
+    .from("working_memory")
+    .insert({
+      conversation_id: resolvedConversationId,
+      user_id: authUserId,
+      workspace_id: resolvedWorkspaceId,
+      role: "assistant",
+      content: safeResponse,
+    });
+}
+
+// --------------------------------------------------------
+// RESPONSE
+// --------------------------------------------------------
+return NextResponse.json({
+  ok: true,
+  conversationId: resolvedConversationId,
+  response: safeResponse,
+  messages: [{ role: "assistant", content: safeResponse }],
+});
