@@ -39,7 +39,7 @@ export default function MemoryWorkspaceClient({
   const [saveError, setSaveError] = useState<string | null>(null);
 
   /* ------------------------------------------------------------
-     Load memories (authoritative fetch)
+     Load memories
   ------------------------------------------------------------ */
   const loadMemories = useCallback(async () => {
     setLoading(true);
@@ -82,7 +82,6 @@ export default function MemoryWorkspaceClient({
 
       setItems(data.items);
 
-      // Clear selection if it no longer exists
       if (
         selected &&
         !data.items.find((m: MemoryRecord) => m.id === selected.id)
@@ -95,14 +94,14 @@ export default function MemoryWorkspaceClient({
     } finally {
       setLoading(false);
     }
-  }, [workspaceId, supabase]); // intentionally NOT dependent on `selected`
+  }, [workspaceId, supabase]);
 
   useEffect(() => {
     loadMemories();
   }, [loadMemories]);
 
   /* ------------------------------------------------------------
-     Local update helper
+     Apply update locally
   ------------------------------------------------------------ */
   function applyUpdate(updated: MemoryRecord) {
     setItems((prev) =>
@@ -112,7 +111,7 @@ export default function MemoryWorkspaceClient({
   }
 
   /* ------------------------------------------------------------
-     Save handler (explicit, guarded, visible)
+     Save handler (explicit + guarded)
   ------------------------------------------------------------ */
   async function handleSave(newContent: string) {
     if (!selected) return;
@@ -122,7 +121,6 @@ export default function MemoryWorkspaceClient({
 
     let content: any = newContent;
 
-    // Preserve structured content if applicable
     if (typeof selected.content === "object") {
       try {
         content = JSON.parse(newContent);
@@ -172,10 +170,7 @@ export default function MemoryWorkspaceClient({
      Render
   ------------------------------------------------------------ */
   return (
-    <div
-      data-memory-grid
-      className="flex-1 grid grid-cols-[420px_1fr] min-h-0"
-    >
+    <div className="flex-1 grid grid-cols-[420px_1fr] min-h-0">
       <aside className="border-r border-neutral-800 overflow-y-auto">
         <MemoryIndexPanel
           items={items}
@@ -192,8 +187,6 @@ export default function MemoryWorkspaceClient({
           <MemoryEditorPanel
             workspaceId={workspaceId}
             record={selected}
-            saving={saving}
-            error={saveError}
             onSave={handleSave}
           />
         ) : (
