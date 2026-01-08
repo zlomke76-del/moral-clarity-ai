@@ -12,8 +12,9 @@ export default async function WorkspaceMemoryPage({
   const { workspaceId } = await params;
 
   return (
-    <section className="w-full h-full flex flex-col">
-      <header className="px-8 py-6 border-b border-neutral-800">
+    <section className="w-full h-full min-h-0 flex flex-col overflow-hidden">
+      {/* Fixed header */}
+      <header className="flex-shrink-0 px-8 py-6 border-b border-neutral-800">
         <h1 className="text-2xl font-semibold tracking-tight">
           Workspace Memories
         </h1>
@@ -22,7 +23,8 @@ export default async function WorkspaceMemoryPage({
         </p>
       </header>
 
-      <div className="flex-1 min-h-0">
+      {/* Client owns remaining height */}
+      <div className="flex-1 min-h-0 overflow-hidden">
         <MemoryWorkspaceClient
           workspaceId={workspaceId}
           initialItems={[]}
