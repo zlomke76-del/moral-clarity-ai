@@ -31,7 +31,7 @@ export default function MemoryWorkspaceClient({
   ------------------------------------------------------------ */
   const [items, setItems] = useState<MemoryRecord[]>(initialItems);
 
-  const [selectedId, setSelectedId] = useState<string | "">("");
+  const [selectedId, setSelectedId] = useState<string>("");
   const selected = useMemo(
     () => items.find((m) => m.id === selectedId) ?? null,
     [items, selectedId]
@@ -100,8 +100,8 @@ export default function MemoryWorkspaceClient({
   ------------------------------------------------------------ */
   function handleSelect(id: string) {
     setSelectedId(id);
-    setSaveError(null);
     setIsEditing(false);
+    setSaveError(null);
 
     const record = items.find((m) => m.id === id);
     if (!record) {
@@ -178,10 +178,11 @@ export default function MemoryWorkspaceClient({
   ------------------------------------------------------------ */
   return (
     <div className="flex-1 grid grid-cols-[420px_1fr] min-h-0">
+      {/* LEFT: Browse-only index */}
       <aside className="border-r border-neutral-800 overflow-y-auto">
         <MemoryIndexPanel
           items={items}
-          selectedId={null} // index is browse-only now
+          selectedId={null}
           onSelect={() => {}}
           loading={loading}
           error={error}
@@ -189,13 +190,15 @@ export default function MemoryWorkspaceClient({
         />
       </aside>
 
+      {/* RIGHT: Editor */}
       <main className="p-6 overflow-hidden">
-        <div className="h-full flex flex-col gap-4">
+        <div className="h-full min-h-0 flex flex-col gap-4">
           {/* Dropdown */}
           <select
             value={selectedId}
             onChange={(e) => handleSelect(e.target.value)}
-            className="bg-neutral-950 border border-neutral-800 rounded-md p-2 text-sm"
+            disabled={loading}
+            className="bg-neutral-950 border border-neutral-800 rounded-md p-2 text-sm disabled:opacity-50"
           >
             <option value="">Select a memory to edit…</option>
             {items.map((m) => (
@@ -208,17 +211,22 @@ export default function MemoryWorkspaceClient({
             ))}
           </select>
 
-          {!selected ? (
+          {/* Body */}
+          {loading ? (
             <div className="flex-1 flex items-center justify-center text-sm text-neutral-500">
-              {loading ? "Loading…" : "No memory selected"}
+              Loading memories…
+            </div>
+          ) : !selected ? (
+            <div className="flex-1 flex items-center justify-center text-sm text-neutral-500">
+              Select a memory to edit
             </div>
           ) : (
-            <div className="flex-1 flex flex-col border border-neutral-800 rounded-lg bg-neutral-950">
+            <div className="flex-1 min-h-0 flex flex-col rounded-lg bg-neutral-950 border border-neutral-800 shadow-xl">
               <div className="px-4 py-3 border-b border-neutral-800 text-sm text-neutral-400">
                 Editing memory
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4">
+              <div className="flex-1 min-h-0 overflow-y-auto p-4">
                 <textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
@@ -242,9 +250,7 @@ export default function MemoryWorkspaceClient({
                 ) : (
                   <div className="flex gap-2">
                     <button
-                      onClick={() => {
-                        handleSelect(selected.id);
-                      }}
+                      onClick={() => handleSelect(selected.id)}
                       className="px-3 py-1.5 text-sm rounded border border-neutral-700"
                     >
                       Cancel
