@@ -654,15 +654,16 @@ if (authUserId || allowSessionWM) {
       workspace_id: resolvedWorkspaceId,
       role: "assistant",
       content: safeResponse,
-    });
-}
+      });
+  }
 
-// --------------------------------------------------------
-// RESPONSE
-// --------------------------------------------------------
-return NextResponse.json({
-  ok: true,
-  conversationId: resolvedConversationId,
-  response: safeResponse,
-  messages: [{ role: "assistant", content: safeResponse }],
-});
+  // --------------------------------------------------------
+  // RESPONSE
+  // --------------------------------------------------------
+  return NextResponse.json({
+    ok: true,
+    conversationId: resolvedConversationId,
+    response: safeResponse,
+    messages: [{ role: "assistant", content: safeResponse }],
+  });
+}
