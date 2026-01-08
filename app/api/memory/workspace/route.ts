@@ -59,7 +59,8 @@ export async function GET(req: Request) {
 
     /* ------------------------------------------------------------
        AUTHORITATIVE MEMORY QUERY
-       FACT memories ONLY (explicit domain rule)
+       Return ONLY user Fact memories
+       Exclude system rows entirely
     ------------------------------------------------------------ */
     const { data: items, error: memError } = await supabase
       .from("memory.memories")
@@ -84,7 +85,9 @@ export async function GET(req: Request) {
       `)
       .eq("workspace_id", workspaceId)
       .eq("user_id", userData.user.id)
-      .eq("memory_type", "fact")
+      .eq("memory_type", "fact")      // ← Only Fact memories
+      .neq("source", "system")        // ← Exclude system rows
+      .neq("email", "system")         // ← Extra safety
       .order("updated_at", { ascending: false });
 
     if (memError) {
