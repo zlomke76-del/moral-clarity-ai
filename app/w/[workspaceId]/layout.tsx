@@ -1,5 +1,5 @@
 // app/w/[workspaceId]/layout.tsx
-// SERVER LAYOUT — NO PARAM VALIDATION
+// SERVER LAYOUT — TOOL / WORKSPACE ROOT
 
 import { ReactNode } from "react";
 
@@ -10,5 +10,15 @@ export default function WorkspaceIdLayout({
 }: {
   children: ReactNode;
 }) {
-  return <>{children}</>;
+  /**
+   * This layout intentionally breaks out of the global
+   * "standalone / marketing" container.
+   *
+   * Workspaces are full-viewport tools, not centered pages.
+   */
+  return (
+    <div className="w-screen h-screen min-h-0 flex flex-col overflow-hidden">
+      {children}
+    </div>
+  );
 }
