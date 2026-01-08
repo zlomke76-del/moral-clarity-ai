@@ -569,47 +569,51 @@ if (executionProfile === "demo" && resolvedConversationId) {
         : "I’m here and ready to continue.";
 
     // --------------------------------------------------------
-    // EPPE-01 POLICY GATE (POST-REASONING, PRE-PERSISTENCE)
-    // --------------------------------------------------------
-    let gatedResponse = rawResponse;
+// EPPE-01 POLICY GATE (POST-REASONING, PRE-PERSISTENCE)
+// --------------------------------------------------------
+let gatedResponse = rawResponse;
 
-    const policyContext = {
-      workspace: {
-        id: resolvedWorkspaceId,
-        mode: modeHint || undefined,
-      },
-      intent: {
-        domain: context?.intent?.domain,
-        keywords: context?.intent?.keywords,
-      },
-      memoryRefs: context?.memoryRefs,
-    };
+// Build a conservative, type-safe policy context
+const policyContext = {
+  workspace: {
+    id: resolvedWorkspaceId,
+    mode: modeHint || undefined,
+  },
+  intent: {
+    domain: founderMode ? "materials" : undefined,
+    keywords:
+      typeof message === "string"
+        ? message.toLowerCase().split(/\W+/).filter(Boolean)
+        : [],
+  },
+};
 
-    if (requiresEPPE01(policyContext)) {
-      let parsed: any;
+// Enforce EPPE-01 if required
+if (requiresEPPE01(policyContext)) {
+  let parsed: any;
 
-      try {
-        parsed = JSON.parse(rawResponse);
-      } catch {
-        return NextResponse.json({
-          ok: false,
-          conversationId: resolvedConversationId,
-          response:
-            "This evaluation must be returned as structured EPPE-01 JSON. Required fields are missing or the format is invalid.",
-          messages: [
-            {
-              role: "assistant",
-              content:
-                "EPPE-01 enforcement: output must be valid JSON conforming to the evaluation schema.",
-            },
-          ],
-        });
-      }
+  try {
+    parsed = JSON.parse(rawResponse);
+  } catch {
+    return NextResponse.json({
+      ok: false,
+      conversationId: resolvedConversationId,
+      response:
+        "This evaluation must be returned as structured EPPE-01 JSON. Required fields are missing or the format is invalid.",
+      messages: [
+        {
+          role: "assistant",
+          content:
+            "EPPE-01 enforcement: output must be valid JSON conforming to the evaluation schema.",
+        },
+      ],
+    });
+  }
 
-      const { valid, errors } = validateEPPE01(parsed);
+  const { valid, errors } = validateEPPE01(parsed);
 
-      if (!valid) {
-      return NextResponse.json({
+  if (!valid) {
+    return NextResponse.json({
       ok: false,
       conversationId: resolvedConversationId,
       response:
@@ -627,52 +631,38 @@ if (executionProfile === "demo" && resolvedConversationId) {
     });
   }
 
-      gatedResponse = JSON.stringify(parsed, null, 2);
+  // EPPE-01 passed → emit canonical structured output
+  gatedResponse = JSON.stringify(parsed, null, 2);
 }
 
-    // --------------------------------------------------------
-    // SAFETY SCRUB + FINAL ASSERTION
-    // --------------------------------------------------------
-    const scrubbed = scrubPhantomExecutionLanguage(gatedResponse);
-    const safeResponse = assertNoPhantomLanguage(scrubbed);
+// --------------------------------------------------------
+// SAFETY SCRUB + FINAL ASSERTION
+// --------------------------------------------------------
+const scrubbed = scrubPhantomExecutionLanguage(gatedResponse);
+const safeResponse = assertNoPhantomLanguage(scrubbed);
 
-    // --------------------------------------------------------
-    // PERSIST ASSISTANT MESSAGE
-    // --------------------------------------------------------
-    if (authUserId || allowSessionWM) {
-      await supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
-        .insert({
-          conversation_id: resolvedConversationId,
-          user_id: authUserId,
-          workspace_id: resolvedWorkspaceId,
-          role: "assistant",
-          content: safeResponse,
-        });
-    }
-
-    // --------------------------------------------------------
-    // RESPONSE
-    // --------------------------------------------------------
-    return NextResponse.json({
-      ok: true,
-      conversationId: resolvedConversationId,
-      response: safeResponse,
-      messages: [{ role: "assistant", content: safeResponse }],
+// --------------------------------------------------------
+// PERSIST ASSISTANT MESSAGE
+// --------------------------------------------------------
+if (authUserId || allowSessionWM) {
+  await supabaseAdmin
+    .schema("memory")
+    .from("working_memory")
+    .insert({
+      conversation_id: resolvedConversationId,
+      user_id: authUserId,
+      workspace_id: resolvedWorkspaceId,
+      role: "assistant",
+      content: safeResponse,
     });
-  } catch (err: any) {
-    console.error("[CHAT ROUTE ERROR]", err?.message);
-
-    return NextResponse.json({
-      ok: false,
-      response: "An internal error occurred. I’m still here.",
-      messages: [
-        {
-          role: "assistant",
-          content: "An internal error occurred. I’m still here.",
-        },
-      ],
-    });
-  }
 }
+
+// --------------------------------------------------------
+// RESPONSE
+// --------------------------------------------------------
+return NextResponse.json({
+  ok: true,
+  conversationId: resolvedConversationId,
+  response: safeResponse,
+  messages: [{ role: "assistant", content: safeResponse }],
+});
