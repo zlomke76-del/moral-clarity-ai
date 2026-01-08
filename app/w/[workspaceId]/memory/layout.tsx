@@ -27,5 +27,14 @@ export default async function WorkspaceMemoryLayout({
     return null;
   }
 
-  return <>{children}</>;
+  /**
+   * IMPORTANT:
+   * This layout establishes the height + containment contract
+   * for the workspace memory editor.
+   */
+  return (
+    <div className="w-full h-full min-h-0 flex flex-col overflow-hidden">
+      {children}
+    </div>
+  );
 }
