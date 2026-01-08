@@ -5,8 +5,11 @@ export const runtime = "nodejs";
 
 export async function GET(req: Request) {
   try {
+    /* ------------------------------------------------------------
+       AUTH: Bearer token required
+    ------------------------------------------------------------ */
     const authHeader = req.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json(
         { error: "Missing or invalid Authorization header" },
         { status: 401 }
@@ -15,7 +18,10 @@ export async function GET(req: Request) {
 
     const accessToken = authHeader.replace("Bearer ", "").trim();
 
-    // Server-side Supabase client bound to access token
+    /* ------------------------------------------------------------
+       Supabase client bound to user access token
+       (RLS-safe, no cookie mutation)
+    ------------------------------------------------------------ */
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -29,8 +35,7 @@ export async function GET(req: Request) {
     );
 
     const { data: userData, error: userError } =
-        await supabase.auth.getUser(accessToken);
-
+      await supabase.auth.getUser();
 
     if (userError || !userData?.user) {
       return NextResponse.json(
@@ -39,6 +44,9 @@ export async function GET(req: Request) {
       );
     }
 
+    /* ------------------------------------------------------------
+       Query params
+    ------------------------------------------------------------ */
     const { searchParams } = new URL(req.url);
     const workspaceId = searchParams.get("workspaceId");
 
@@ -49,21 +57,31 @@ export async function GET(req: Request) {
       );
     }
 
-    // 🔑 AUTHORITATIVE MEMORY QUERY
+    /* ------------------------------------------------------------
+       AUTHORITATIVE MEMORY QUERY
+       (Schema-verified against memory.memories)
+    ------------------------------------------------------------ */
     const { data: items, error: memError } = await supabase
       .from("memory.memories")
-      .select(
-        `
+      .select(`
         id,
-        content,
+        user_id,
+        email,
+        workspace_id,
         memory_type,
-        fact_type,
+        source,
+        content,
+        weight,
         confidence,
-        priority,
+        sensitivity,
+        emotional_weight,
+        is_active,
+        metadata,
+        promoted_at,
+        conversation_id,
         created_at,
         updated_at
-      `
-      )
+      `)
       .eq("workspace_id", workspaceId)
       .eq("user_id", userData.user.id)
       .order("updated_at", { ascending: false });
@@ -75,6 +93,9 @@ export async function GET(req: Request) {
       );
     }
 
+    /* ------------------------------------------------------------
+       Success
+    ------------------------------------------------------------ */
     return NextResponse.json({
       items: items ?? [],
     });
