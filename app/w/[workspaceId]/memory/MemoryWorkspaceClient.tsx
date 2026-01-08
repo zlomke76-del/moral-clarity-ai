@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import MemoryIndexPanel from "@/app/components/memory/MemoryIndexPanel";
-import MemoryEditorPanel from "@/app/components/memory/MemoryEditorPanel";
 import type { MemoryRecord } from "@/app/components/memory/types";
 import { createBrowserClient } from "@supabase/ssr";
 
@@ -16,7 +15,7 @@ export default function MemoryWorkspaceClient({
   initialItems,
 }: Props) {
   /* ------------------------------------------------------------
-     Supabase (singleton per component)
+     Supabase
   ------------------------------------------------------------ */
   const supabase = useMemo(
     () =>
@@ -33,8 +32,11 @@ export default function MemoryWorkspaceClient({
   const [items, setItems] = useState<MemoryRecord[]>(initialItems);
   const [selected, setSelected] = useState<MemoryRecord | null>(null);
 
-  const [loading, setLoading] = useState<boolean>(true);
-  const [saving, setSaving] = useState<boolean>(false);
+  const [draft, setDraft] = useState<string>("");
+  const [isEditing, setIsEditing] = useState(false);
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -48,11 +50,10 @@ export default function MemoryWorkspaceClient({
     try {
       const {
         data: { session },
-        error: authError,
       } = await supabase.auth.getSession();
 
-      if (authError || !session?.access_token) {
-        setError("Not authenticated. Please log in.");
+      if (!session?.access_token) {
+        setError("Not authenticated.");
         setItems([]);
         return;
       }
@@ -73,9 +74,8 @@ export default function MemoryWorkspaceClient({
       }
 
       const data = await res.json();
-
       if (!Array.isArray(data.items)) {
-        setError("Unexpected memory list format.");
+        setError("Unexpected memory format.");
         setItems([]);
         return;
       }
@@ -87,45 +87,47 @@ export default function MemoryWorkspaceClient({
         !data.items.find((m: MemoryRecord) => m.id === selected.id)
       ) {
         setSelected(null);
+        setIsEditing(false);
       }
-    } catch {
-      setError("An error occurred while loading memories.");
-      setItems([]);
     } finally {
       setLoading(false);
     }
-  }, [workspaceId, supabase]);
+  }, [workspaceId, supabase, selected]);
 
   useEffect(() => {
     loadMemories();
   }, [loadMemories]);
 
   /* ------------------------------------------------------------
-     Apply update locally
+     Selection handling
   ------------------------------------------------------------ */
-  function applyUpdate(updated: MemoryRecord) {
-    setItems((prev) =>
-      prev.map((item) => (item.id === updated.id ? updated : item))
+  function handleSelect(record: MemoryRecord) {
+    setSelected(record);
+    setDraft(
+      typeof record.content === "string"
+        ? record.content
+        : JSON.stringify(record.content, null, 2)
     );
-    setSelected(updated);
+    setIsEditing(false);
+    setSaveError(null);
   }
 
   /* ------------------------------------------------------------
-     Save handler (explicit + guarded)
+     Save
   ------------------------------------------------------------ */
-  async function handleSave(newContent: string) {
+  async function handleSave() {
     if (!selected) return;
 
     setSaving(true);
     setSaveError(null);
 
-    let content: any = newContent;
+    let content: any = draft;
 
     if (typeof selected.content === "object") {
       try {
-        content = JSON.parse(newContent);
+        content = JSON.parse(draft);
       } catch {
-        setSaveError("Invalid JSON format.");
+        setSaveError("Invalid JSON.");
         setSaving(false);
         return;
       }
@@ -135,8 +137,7 @@ export default function MemoryWorkspaceClient({
       data: { session },
     } = await supabase.auth.getSession();
 
-    const accessToken = session?.access_token;
-    if (!accessToken) {
+    if (!session?.access_token) {
       setSaveError("Authentication expired.");
       setSaving(false);
       return;
@@ -147,20 +148,23 @@ export default function MemoryWorkspaceClient({
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ content }),
       });
 
       if (!res.ok) {
-        setSaveError("Failed to save changes.");
+        setSaveError("Failed to save.");
         return;
       }
 
       const updated = await res.json();
-      applyUpdate(updated);
-    } catch {
-      setSaveError("An error occurred while saving.");
+
+      setItems((prev) =>
+        prev.map((m) => (m.id === updated.id ? updated : m))
+      );
+      setSelected(updated);
+      setIsEditing(false);
     } finally {
       setSaving(false);
     }
@@ -175,27 +179,70 @@ export default function MemoryWorkspaceClient({
         <MemoryIndexPanel
           items={items}
           selectedId={selected?.id ?? null}
-          onSelect={setSelected}
+          onSelect={handleSelect}
           loading={loading}
           error={error}
           refetch={loadMemories}
         />
       </aside>
 
-      <main className="overflow-hidden">
-        {selected ? (
-          <MemoryEditorPanel
-            workspaceId={workspaceId}
-            record={selected}
-            onSave={handleSave}
-          />
+      <main className="p-6 overflow-hidden">
+        {!selected ? (
+          <div className="h-full flex items-center justify-center text-sm text-neutral-500">
+            {loading ? "Loading…" : "Select a memory to edit"}
+          </div>
         ) : (
-          <div className="h-full flex items-center justify-center text-sm text-neutral-500 px-4">
-            {loading
-              ? "Loading workspace memories…"
-              : error
-              ? error
-              : "Select a memory to view or edit"}
+          <div className="h-full flex flex-col border border-neutral-800 rounded-lg">
+            <div className="px-4 py-3 border-b border-neutral-800 text-sm text-neutral-400">
+              Editing memory
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              <textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                className="w-full min-h-full resize-none bg-neutral-950
+                           border border-neutral-800 rounded-md
+                           p-3 text-sm leading-relaxed"
+                disabled={!isEditing}
+              />
+            </div>
+
+            <div className="px-4 py-3 border-t border-neutral-800 flex justify-between items-center">
+              <div className="text-xs text-red-400">{saveError}</div>
+
+              {!isEditing ? (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="px-3 py-1.5 text-sm rounded bg-neutral-800 hover:bg-neutral-700"
+                >
+                  Edit
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setDraft(
+                        typeof selected.content === "string"
+                          ? selected.content
+                          : JSON.stringify(selected.content, null, 2)
+                      );
+                      setIsEditing(false);
+                    }}
+                    className="px-3 py-1.5 text-sm rounded border border-neutral-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="px-3 py-1.5 text-sm rounded bg-blue-600 disabled:opacity-50"
+                  >
+                    {saving ? "Saving…" : "Save"}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </main>
