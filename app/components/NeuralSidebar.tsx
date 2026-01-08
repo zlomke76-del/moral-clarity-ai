@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
 
 /* Icons */
-import { User, BrainCircuit, Newspaper, KeyRound } from "lucide-react";
+import { BrainCircuit, Newspaper, KeyRound } from "lucide-react";
 
 export type NeuralSidebarItem = {
   id: string;
@@ -118,13 +118,6 @@ function SidebarChip({ item }: { item: NeuralSidebarItem }) {
 function buildDefaultItems(workspaceId: string): NeuralSidebarItem[] {
   return [
     {
-      id: "account",
-      label: "Account",
-      description: "Profile & billing",
-      href: "/account",
-      icon: <User className="neural-icon" size={18} />,
-    },
-    {
       id: "memory",
       label: "Memory",
       description: "Review & edit Solace memory",
@@ -147,4 +140,3 @@ function buildDefaultItems(workspaceId: string): NeuralSidebarItem[] {
     },
   ];
 }
-
