@@ -69,7 +69,7 @@ export default function AccountForm() {
         .from("user_profiles")
         .select("*")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
       if (dbError && dbError.code !== "PGRST116") {
         setError("Error loading account data.");
