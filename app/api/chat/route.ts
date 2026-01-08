@@ -29,6 +29,12 @@ import { writeMemory } from "./modules/memory-writer";
 import { generateImage } from "./modules/image-router";
 
 // ------------------------------------------------------------
+// EPPE-01 policy + validator
+// ------------------------------------------------------------
+import { requiresEPPE01 } from "@/lib/solace/policies/materials";
+import { validateEPPE01 } from "@/lib/solace/validators/eppe";
+
+// ------------------------------------------------------------
 // Memory lifecycle
 // ------------------------------------------------------------
 import { runSessionCompaction } from "@/lib/memory/runSessionCompaction";
@@ -571,7 +577,21 @@ if (executionProfile === "demo" && resolvedConversationId) {
     // --------------------------------------------------------
     let gatedResponse = rawResponse;
 
-    if (appliesEPPE01({ message, context, founderMode })) {
+    if (
+  requiresEPPE01({
+    workspace: {
+      id: resolvedWorkspaceId,
+      mode: context?.workspace?.mode,
+      policy: context?.workspace?.policy,
+    },
+    intent: {
+      domain: context?.intent?.domain,
+      keywords: context?.intent?.keywords,
+    },
+    memoryRefs: context?.memoryPack?.schemas ?? [],
+  })
+) {
+
       let parsed: any;
 
       try {
