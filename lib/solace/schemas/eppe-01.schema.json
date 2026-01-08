@@ -4,8 +4,7 @@
   "title": "Exploratory Polymer Pair Evaluation (EPPE-01)",
   "description": "Machine-checkable evaluation rubric for exploratory two-component polymer pairing with uncertainty bounds, explicit failure modeling, numeric go/no-go thresholds, and probability accountability.",
   "type": "object",
-  "additionalProperties": false
-}
+  "additionalProperties": false,
 
   "required": [
     "pair_name",
