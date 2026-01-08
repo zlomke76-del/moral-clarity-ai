@@ -27,6 +27,8 @@ import { runHybridPipeline } from "./modules/hybrid";
 import { runNewsroomExecutor } from "./modules/newsroom-executor";
 import { writeMemory } from "./modules/memory-writer";
 import { generateImage } from "./modules/image-router";
+import { requiresEPPE01 } from "@/lib/solace/policies/materials";
+import { validateEPPE01 } from "@/lib/solace/validators/eppe";
 
 // ------------------------------------------------------------
 // Memory lifecycle
@@ -566,51 +568,48 @@ if (executionProfile === "demo" && resolvedConversationId) {
         ? result.finalAnswer
         : "I’m here and ready to continue.";
 
-    import { requiresEPPE01 } from "@/lib/solace/policies/materials";
-    import { validateEPPE01 } from "@/lib/solace/validators/eppe";
+    // --------------------------------------------------------
+    // EPPE-01 POLICY GATE (POST-REASONING, PRE-PERSISTENCE)
+    // --------------------------------------------------------
+    let gatedResponse = rawResponse;
 
-// --------------------------------------------------------
-// EPPE-01 POLICY GATE (POST-REASONING, PRE-PERSISTENCE)
-// --------------------------------------------------------
-let gatedResponse = rawResponse;
+    const policyContext = {
+      workspace: {
+        id: resolvedWorkspaceId,
+        mode: modeHint || undefined,
+      },
+      intent: {
+        domain: context?.intent?.domain,
+        keywords: context?.intent?.keywords,
+      },
+      memoryRefs: context?.memoryRefs,
+    };
 
-const policyContext = {
-  workspace: {
-    id: resolvedWorkspaceId,
-    mode: modeHint || undefined,
-  },
-  intent: {
-    domain: context?.intent?.domain,
-    keywords: context?.intent?.keywords,
-  },
-  memoryRefs: context?.memoryRefs,
-};
+    if (requiresEPPE01(policyContext)) {
+      let parsed: any;
 
-if (requiresEPPE01(policyContext)) {
-  let parsed: any;
+      try {
+        parsed = JSON.parse(rawResponse);
+      } catch {
+        return NextResponse.json({
+          ok: false,
+          conversationId: resolvedConversationId,
+          response:
+            "This evaluation must be returned as structured EPPE-01 JSON. Required fields are missing or the format is invalid.",
+          messages: [
+            {
+              role: "assistant",
+              content:
+                "EPPE-01 enforcement: output must be valid JSON conforming to the evaluation schema.",
+            },
+          ],
+        });
+      }
 
-  try {
-    parsed = JSON.parse(rawResponse);
-  } catch {
-    return NextResponse.json({
-      ok: false,
-      conversationId: resolvedConversationId,
-      response:
-        "This evaluation must be returned as structured EPPE-01 JSON. Required fields are missing or the format is invalid.",
-      messages: [
-        {
-          role: "assistant",
-          content:
-            "EPPE-01 enforcement: output must be valid JSON conforming to the evaluation schema.",
-        },
-      ],
-    });
-  }
+      const { valid, errors } = validateEPPE01(parsed);
 
-  const { valid, errors } = validateEPPE01(parsed);
-
-  if (!valid) {
-    return NextResponse.json({
+      if (!valid) {
+      return NextResponse.json({
       ok: false,
       conversationId: resolvedConversationId,
       response:
@@ -628,7 +627,7 @@ if (requiresEPPE01(policyContext)) {
     });
   }
 
-  gatedResponse = JSON.stringify(parsed, null, 2);
+      gatedResponse = JSON.stringify(parsed, null, 2);
 }
 
     // --------------------------------------------------------
