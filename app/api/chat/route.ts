@@ -589,7 +589,7 @@ const policyContext = {
 };
 
 // Enforce EPPE-01 if required
-if (requiresEPPE01(policyContext)) {
+if (modeHint === "eppe") {
   let parsed: any;
 
   try {
