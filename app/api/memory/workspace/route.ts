@@ -59,7 +59,7 @@ export async function GET(req: Request) {
 
     /* ------------------------------------------------------------
        AUTHORITATIVE MEMORY QUERY
-       (Schema-verified against memory.memories)
+       FACT memories ONLY (explicit domain rule)
     ------------------------------------------------------------ */
     const { data: items, error: memError } = await supabase
       .from("memory.memories")
@@ -84,6 +84,7 @@ export async function GET(req: Request) {
       `)
       .eq("workspace_id", workspaceId)
       .eq("user_id", userData.user.id)
+      .eq("memory_type", "fact")
       .order("updated_at", { ascending: false });
 
     if (memError) {
