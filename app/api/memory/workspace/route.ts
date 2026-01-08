@@ -61,10 +61,10 @@ export async function GET(req: Request) {
        AUTHORITATIVE MEMORY QUERY
        Return ONLY user Fact memories
        Exclude system rows entirely
-       FIX: Correct schema reference
+       FIX: Correct Supabase v2 schema syntax
     ------------------------------------------------------------ */
     const { data: items, error: memError } = await supabase
-      .from("memories", { schema: "memory" })
+      .from("memory.memories")
       .select(`
         id,
         user_id,
