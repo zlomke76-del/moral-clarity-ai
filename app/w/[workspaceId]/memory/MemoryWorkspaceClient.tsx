@@ -1,4 +1,3 @@
-// app/w/[workspaceId]/memory/MemoryWorkspaceClient.tsx
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
@@ -183,9 +182,9 @@ export default function MemoryWorkspaceClient({
      Render
   ------------------------------------------------------------ */
   return (
-    <div className="flex-1 flex flex-col min-h-0 p-6">
+    <div className="w-full h-full min-h-0 flex flex-col overflow-hidden">
       {/* Memory selector */}
-      <div className="flex-shrink-0 pb-4">
+      <div className="flex-shrink-0 px-8 py-4 border-b border-neutral-800">
         <select
           value={selectedId}
           onChange={(e) => handleSelect(e.target.value)}
@@ -197,15 +196,15 @@ export default function MemoryWorkspaceClient({
             <option key={m.id} value={m.id}>
               {new Date(m.updated_at).toLocaleDateString()} —{" "}
               {typeof m.content === "string"
-                ? m.content.slice(0, 60)
+                ? m.content.slice(0, 80)
                 : "[Structured memory]"}
             </option>
           ))}
         </select>
       </div>
 
-      {/* Editor */}
-      <div className="flex-1 min-h-0">
+      {/* Editor surface — dominant */}
+      <div className="flex-1 min-h-0 overflow-hidden p-6">
         {loading ? (
           <div className="h-full flex items-center justify-center text-sm text-neutral-500">
             Loading memories…
@@ -215,8 +214,8 @@ export default function MemoryWorkspaceClient({
             Select a memory to edit
           </div>
         ) : (
-          <div className="h-full min-h-0 flex flex-col rounded-lg bg-neutral-950 border border-neutral-800 shadow-xl">
-            <div className="px-4 py-3 border-b border-neutral-800 text-sm text-neutral-400">
+          <div className="h-full min-h-0 flex flex-col bg-neutral-950 border border-neutral-800 rounded-lg">
+            <div className="flex-shrink-0 px-4 py-3 border-b border-neutral-800 text-sm text-neutral-400">
               Editing memory
             </div>
 
@@ -227,11 +226,11 @@ export default function MemoryWorkspaceClient({
                 disabled={!isEditing}
                 className="w-full h-full resize-none bg-neutral-950
                            border border-neutral-800 rounded-md
-                           p-3 text-sm leading-relaxed"
+                           p-4 text-sm leading-relaxed"
               />
             </div>
 
-            <div className="px-4 py-3 border-t border-neutral-800 flex justify-between items-center">
+            <div className="flex-shrink-0 px-4 py-3 border-t border-neutral-800 flex justify-between items-center">
               <div className="text-xs text-red-400">{saveError}</div>
 
               {!isEditing ? (
