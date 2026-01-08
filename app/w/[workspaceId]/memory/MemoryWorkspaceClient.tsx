@@ -41,7 +41,7 @@ export default function MemoryWorkspaceClient({
   const [saveError, setSaveError] = useState<string | null>(null);
 
   /* ------------------------------------------------------------
-     Load memories
+     Load memories (authoritative, selection-safe)
   ------------------------------------------------------------ */
   const loadMemories = useCallback(async () => {
     setLoading(true);
@@ -82,17 +82,20 @@ export default function MemoryWorkspaceClient({
 
       setItems(data.items);
 
-      if (
-        selected &&
-        !data.items.find((m: MemoryRecord) => m.id === selected.id)
-      ) {
-        setSelected(null);
-        setIsEditing(false);
-      }
+      // 🔒 Reconcile selection safely
+      setSelected((prevSelected) => {
+        if (!prevSelected) return prevSelected;
+
+        const stillExists = data.items.find(
+          (m: MemoryRecord) => m.id === prevSelected.id
+        );
+
+        return stillExists ?? prevSelected;
+      });
     } finally {
       setLoading(false);
     }
-  }, [workspaceId, supabase, selected]);
+  }, [workspaceId, supabase]);
 
   useEffect(() => {
     loadMemories();
