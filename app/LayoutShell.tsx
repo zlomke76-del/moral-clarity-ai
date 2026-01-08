@@ -19,8 +19,9 @@ export default function LayoutShell({
    * - Grid layout
    */
   const isApp =
-    pathname === "/app" ||
-    pathname.startsWith("/app/");
+  pathname === "/app" ||
+  pathname.startsWith("/app/") ||
+  pathname.startsWith("/w/");
 
   /**
    * Workspace pages get zero padding
