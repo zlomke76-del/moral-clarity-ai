@@ -550,7 +550,7 @@ if (executionProfile === "demo" && resolvedConversationId) {
       });
     }
 
-    // --------------------------------------------------------
+// --------------------------------------------------------
 // HYBRID PIPELINE
 // --------------------------------------------------------
 const result = await runHybridPipeline({
