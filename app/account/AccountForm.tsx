@@ -11,6 +11,7 @@ type Email = {
   verified: boolean;
   label: string;
 };
+
 type Fields = {
   name: string;
   titles: Title[];
@@ -68,7 +69,7 @@ export default function AccountForm() {
       const { data: profile, error: dbError } = await supabase
         .from("user_profiles")
         .select("*")
-        .eq("id", user.id)
+        .eq("user_id", user.id)
         .maybeSingle();
 
       if (dbError) {
@@ -116,8 +117,7 @@ export default function AccountForm() {
 
     const { error: upError } = await supabase.from("user_profiles").upsert([
       {
-        id: userId,
-        user_id: userId, // REQUIRED for RLS + uniqueness
+        user_id: userId,
         ...fields,
         updated_at: new Date().toISOString(),
       },
