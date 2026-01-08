@@ -29,12 +29,6 @@ import { writeMemory } from "./modules/memory-writer";
 import { generateImage } from "./modules/image-router";
 
 // ------------------------------------------------------------
-// EPPE-01 policy + validator
-// ------------------------------------------------------------
-import { requiresEPPE01 } from "@/lib/solace/policies/materials";
-import { validateEPPE01 } from "@/lib/solace/validators/eppe";
-
-// ------------------------------------------------------------
 // Memory lifecycle
 // ------------------------------------------------------------
 import { runSessionCompaction } from "@/lib/memory/runSessionCompaction";
@@ -572,70 +566,70 @@ if (executionProfile === "demo" && resolvedConversationId) {
         ? result.finalAnswer
         : "I’m here and ready to continue.";
 
-    // --------------------------------------------------------
-    // EPPE-01 POLICY GATE (POST-REASONING, PRE-PERSISTENCE)
-    // --------------------------------------------------------
-    let gatedResponse = rawResponse;
+    import { requiresEPPE01 } from "@/lib/solace/policies/materials";
+    import { validateEPPE01 } from "@/lib/solace/validators/eppe";
 
-    if (
-  requiresEPPE01({
-    workspace: {
-      id: resolvedWorkspaceId,
-      mode: context?.workspace?.mode,
-      policy: context?.workspace?.policy,
-    },
-    intent: {
-      domain: context?.intent?.domain,
-      keywords: context?.intent?.keywords,
-    },
-    memoryRefs: context?.memoryPack?.schemas ?? [],
-  })
-) {
+// --------------------------------------------------------
+// EPPE-01 POLICY GATE (POST-REASONING, PRE-PERSISTENCE)
+// --------------------------------------------------------
+let gatedResponse = rawResponse;
 
-      let parsed: any;
+const policyContext = {
+  workspace: {
+    id: resolvedWorkspaceId,
+    mode: modeHint || undefined,
+  },
+  intent: {
+    domain: context?.intent?.domain,
+    keywords: context?.intent?.keywords,
+  },
+  memoryRefs: context?.memoryRefs,
+};
 
-      try {
-        parsed = JSON.parse(rawResponse);
-      } catch {
-        return NextResponse.json({
-          ok: false,
-          conversationId: resolvedConversationId,
-          response:
-            "This evaluation must be returned as structured EPPE-01 JSON. Required fields are missing or the format is invalid.",
-          messages: [
-            {
-              role: "assistant",
-              content:
-                "EPPE-01 enforcement: output must be valid JSON conforming to the evaluation schema.",
-            },
-          ],
-        });
-      }
+if (requiresEPPE01(policyContext)) {
+  let parsed: any;
 
-      const { valid, errors } = validateEPPE01(parsed);
+  try {
+    parsed = JSON.parse(rawResponse);
+  } catch {
+    return NextResponse.json({
+      ok: false,
+      conversationId: resolvedConversationId,
+      response:
+        "This evaluation must be returned as structured EPPE-01 JSON. Required fields are missing or the format is invalid.",
+      messages: [
+        {
+          role: "assistant",
+          content:
+            "EPPE-01 enforcement: output must be valid JSON conforming to the evaluation schema.",
+        },
+      ],
+    });
+  }
 
-      if (!valid) {
-        return NextResponse.json({
-          ok: false,
-          conversationId: resolvedConversationId,
-          response:
-            "This evaluation does not meet EPPE-01 requirements and cannot be finalized.",
-          messages: [
-            {
-              role: "assistant",
-              content: `EPPE-01 validation failed:\n${errors
-                ?.map(
-                  (e: any) => `- ${e.instancePath || "(root)"} ${e.message}`
-                )
-                .join("\n")}`,
-            },
-          ],
-        });
-      }
+  const { valid, errors } = validateEPPE01(parsed);
 
-      // EPPE-01 passed → safe to emit structured response
-      gatedResponse = JSON.stringify(parsed, null, 2);
-    }
+  if (!valid) {
+    return NextResponse.json({
+      ok: false,
+      conversationId: resolvedConversationId,
+      response:
+        "This evaluation does not meet EPPE-01 requirements and cannot be finalized.",
+      messages: [
+        {
+          role: "assistant",
+          content: `EPPE-01 validation failed:\n${errors
+            ?.map(
+              (e: any) => `- ${e.instancePath || "(root)"} ${e.message}`
+            )
+            .join("\n")}`,
+        },
+      ],
+    });
+  }
+
+  gatedResponse = JSON.stringify(parsed, null, 2);
+}
 
     // --------------------------------------------------------
     // SAFETY SCRUB + FINAL ASSERTION
