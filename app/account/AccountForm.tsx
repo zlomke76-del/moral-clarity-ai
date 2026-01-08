@@ -71,7 +71,7 @@ export default function AccountForm() {
         .eq("id", user.id)
         .maybeSingle();
 
-      if (dbError && dbError.code !== "PGRST116") {
+      if (dbError) {
         setError("Error loading account data.");
         setLoading(false);
         return;
@@ -117,6 +117,7 @@ export default function AccountForm() {
     const { error: upError } = await supabase.from("user_profiles").upsert([
       {
         id: userId,
+        user_id: userId, // REQUIRED for RLS + uniqueness
         ...fields,
         updated_at: new Date().toISOString(),
       },
