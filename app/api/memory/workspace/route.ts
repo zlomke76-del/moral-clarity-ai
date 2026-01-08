@@ -61,9 +61,10 @@ export async function GET(req: Request) {
        AUTHORITATIVE MEMORY QUERY
        Return ONLY user Fact memories
        Exclude system rows entirely
+       FIX: Correct schema reference
     ------------------------------------------------------------ */
     const { data: items, error: memError } = await supabase
-      .from("memory.memories")
+      .from("memories", { schema: "memory" })
       .select(`
         id,
         user_id,
@@ -85,9 +86,9 @@ export async function GET(req: Request) {
       `)
       .eq("workspace_id", workspaceId)
       .eq("user_id", userData.user.id)
-      .eq("memory_type", "fact")      // ← Only Fact memories
-      .neq("source", "system")        // ← Exclude system rows
-      .neq("email", "system")         // ← Extra safety
+      .eq("memory_type", "fact")
+      .neq("source", "system")
+      .neq("email", "system")
       .order("updated_at", { ascending: false });
 
     if (memError) {
