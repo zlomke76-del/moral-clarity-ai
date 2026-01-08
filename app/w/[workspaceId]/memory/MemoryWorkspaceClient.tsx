@@ -30,9 +30,14 @@ export default function MemoryWorkspaceClient({
      State
   ------------------------------------------------------------ */
   const [items, setItems] = useState<MemoryRecord[]>(initialItems);
-  const [selected, setSelected] = useState<MemoryRecord | null>(null);
 
-  const [draft, setDraft] = useState<string>("");
+  const [selectedId, setSelectedId] = useState<string | "">("");
+  const selected = useMemo(
+    () => items.find((m) => m.id === selectedId) ?? null,
+    [items, selectedId]
+  );
+
+  const [draft, setDraft] = useState("");
   const [isEditing, setIsEditing] = useState(false);
 
   const [loading, setLoading] = useState(true);
@@ -41,7 +46,7 @@ export default function MemoryWorkspaceClient({
   const [saveError, setSaveError] = useState<string | null>(null);
 
   /* ------------------------------------------------------------
-     Load memories (authoritative, selection-safe)
+     Load memories
   ------------------------------------------------------------ */
   const loadMemories = useCallback(async () => {
     setLoading(true);
@@ -81,17 +86,6 @@ export default function MemoryWorkspaceClient({
       }
 
       setItems(data.items);
-
-      // 🔒 Reconcile selection safely
-      setSelected((prevSelected) => {
-        if (!prevSelected) return prevSelected;
-
-        const stillExists = data.items.find(
-          (m: MemoryRecord) => m.id === prevSelected.id
-        );
-
-        return stillExists ?? prevSelected;
-      });
     } finally {
       setLoading(false);
     }
@@ -102,17 +96,24 @@ export default function MemoryWorkspaceClient({
   }, [loadMemories]);
 
   /* ------------------------------------------------------------
-     Selection handling
+     Handle dropdown selection
   ------------------------------------------------------------ */
-  function handleSelect(record: MemoryRecord) {
-    setSelected(record);
+  function handleSelect(id: string) {
+    setSelectedId(id);
+    setSaveError(null);
+    setIsEditing(false);
+
+    const record = items.find((m) => m.id === id);
+    if (!record) {
+      setDraft("");
+      return;
+    }
+
     setDraft(
       typeof record.content === "string"
         ? record.content
         : JSON.stringify(record.content, null, 2)
     );
-    setIsEditing(false);
-    setSaveError(null);
   }
 
   /* ------------------------------------------------------------
@@ -166,7 +167,6 @@ export default function MemoryWorkspaceClient({
       setItems((prev) =>
         prev.map((m) => (m.id === updated.id ? updated : m))
       );
-      setSelected(updated);
       setIsEditing(false);
     } finally {
       setSaving(false);
@@ -181,8 +181,8 @@ export default function MemoryWorkspaceClient({
       <aside className="border-r border-neutral-800 overflow-y-auto">
         <MemoryIndexPanel
           items={items}
-          selectedId={selected?.id ?? null}
-          onSelect={handleSelect}
+          selectedId={null} // index is browse-only now
+          onSelect={() => {}}
           loading={loading}
           error={error}
           refetch={loadMemories}
@@ -190,64 +190,78 @@ export default function MemoryWorkspaceClient({
       </aside>
 
       <main className="p-6 overflow-hidden">
-        {!selected ? (
-          <div className="h-full flex items-center justify-center text-sm text-neutral-500">
-            {loading ? "Loading…" : "Select a memory to edit"}
-          </div>
-        ) : (
-          <div className="h-full flex flex-col border border-neutral-800 rounded-lg">
-            <div className="px-4 py-3 border-b border-neutral-800 text-sm text-neutral-400">
-              Editing memory
+        <div className="h-full flex flex-col gap-4">
+          {/* Dropdown */}
+          <select
+            value={selectedId}
+            onChange={(e) => handleSelect(e.target.value)}
+            className="bg-neutral-950 border border-neutral-800 rounded-md p-2 text-sm"
+          >
+            <option value="">Select a memory to edit…</option>
+            {items.map((m) => (
+              <option key={m.id} value={m.id}>
+                {new Date(m.updated_at).toLocaleDateString()} —{" "}
+                {typeof m.content === "string"
+                  ? m.content.slice(0, 60)
+                  : "[Structured memory]"}
+              </option>
+            ))}
+          </select>
+
+          {!selected ? (
+            <div className="flex-1 flex items-center justify-center text-sm text-neutral-500">
+              {loading ? "Loading…" : "No memory selected"}
             </div>
+          ) : (
+            <div className="flex-1 flex flex-col border border-neutral-800 rounded-lg bg-neutral-950">
+              <div className="px-4 py-3 border-b border-neutral-800 text-sm text-neutral-400">
+                Editing memory
+              </div>
 
-            <div className="flex-1 overflow-y-auto p-4">
-              <textarea
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                className="w-full min-h-full resize-none bg-neutral-950
-                           border border-neutral-800 rounded-md
-                           p-3 text-sm leading-relaxed"
-                disabled={!isEditing}
-              />
-            </div>
+              <div className="flex-1 overflow-y-auto p-4">
+                <textarea
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  className="w-full h-full resize-none bg-neutral-950
+                             border border-neutral-800 rounded-md
+                             p-3 text-sm leading-relaxed"
+                  disabled={!isEditing}
+                />
+              </div>
 
-            <div className="px-4 py-3 border-t border-neutral-800 flex justify-between items-center">
-              <div className="text-xs text-red-400">{saveError}</div>
+              <div className="px-4 py-3 border-t border-neutral-800 flex justify-between items-center">
+                <div className="text-xs text-red-400">{saveError}</div>
 
-              {!isEditing ? (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="px-3 py-1.5 text-sm rounded bg-neutral-800 hover:bg-neutral-700"
-                >
-                  Edit
-                </button>
-              ) : (
-                <div className="flex gap-2">
+                {!isEditing ? (
                   <button
-                    onClick={() => {
-                      setDraft(
-                        typeof selected.content === "string"
-                          ? selected.content
-                          : JSON.stringify(selected.content, null, 2)
-                      );
-                      setIsEditing(false);
-                    }}
-                    className="px-3 py-1.5 text-sm rounded border border-neutral-700"
+                    onClick={() => setIsEditing(true)}
+                    className="px-3 py-1.5 text-sm rounded bg-neutral-800 hover:bg-neutral-700"
                   >
-                    Cancel
+                    Edit
                   </button>
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="px-3 py-1.5 text-sm rounded bg-blue-600 disabled:opacity-50"
-                  >
-                    {saving ? "Saving…" : "Save"}
-                  </button>
-                </div>
-              )}
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        handleSelect(selected.id);
+                      }}
+                      className="px-3 py-1.5 text-sm rounded border border-neutral-700"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="px-3 py-1.5 text-sm rounded bg-blue-600 disabled:opacity-50"
+                    >
+                      {saving ? "Saving…" : "Save"}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </main>
     </div>
   );
