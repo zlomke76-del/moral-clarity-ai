@@ -66,7 +66,7 @@ export default function AccountForm() {
       setUserId(user.id);
 
       const { data: profile, error: dbError } = await supabase
-        .from("users")
+        .from("user_profiles")
         .select("*")
         .eq("id", user.id)
         .single();
@@ -114,7 +114,7 @@ export default function AccountForm() {
     setError(null);
     setSaveSuccess(false);
 
-    const { error: upError } = await supabase.from("users").upsert([
+    const { error: upError } = await supabase.from("user_profiles").upsert([
       {
         id: userId,
         ...fields,
