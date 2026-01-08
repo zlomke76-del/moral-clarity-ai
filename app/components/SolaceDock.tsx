@@ -27,10 +27,10 @@ import {
   createResizeController,
 } from "./dock-resize";
 
-// ✅ Authoritative transcript renderer (dock-ui based)
+// ? Authoritative transcript renderer (dock-ui based)
 import SolaceTranscript from "./SolaceTranscript";
 
-// ❌ Removed legacy inline Markdown / highlighting pipeline
+// ? Removed legacy inline Markdown / highlighting pipeline
 // (readability + surfaces now owned by dock-ui transcript)
 
 import type { SolaceExport } from "@/lib/exports/types";
@@ -283,7 +283,7 @@ export default function SolaceDock() {
     pointerEvents: minimized ? "none" : undefined,
   };
 
-  const showOrb = !isMobile && minimized;
+  // Removed separate showOrb flag - now: conditionally render only one
 
   const orbStyle: React.CSSProperties = {
     position: "fixed",
@@ -294,7 +294,7 @@ export default function SolaceDock() {
     borderRadius: "50%",
     background: GOLD,
     boxShadow: "0 0 20px 1px " + GOLD,
-    display: showOrb ? "flex" : "none",
+    display: "flex",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 1002,
@@ -316,11 +316,9 @@ export default function SolaceDock() {
     setMinimized(false);
   }
 
-  if (!canRender || !visible) return null;
-
-  /* ------------------------------------------------------------------
-     PAYLOAD INGEST (AUTHORITATIVE)
-  ------------------------------------------------------------------- */
+/* ------------------------------------------------------------------
+   PAYLOAD INGEST (AUTHORITATIVE)
+------------------------------------------------------------------- */
   function ingestPayload(data: any) {
     try {
       if (!data) throw new Error("Empty response payload");
@@ -398,9 +396,9 @@ export default function SolaceDock() {
     }
   }
 
-  /* ------------------------------------------------------------------
-     SEND
-  ------------------------------------------------------------------- */
+/* ------------------------------------------------------------------
+   SEND
+------------------------------------------------------------------- */
   async function send(): Promise<void> {
     if (!input.trim() && pendingFiles.length === 0) return;
     if (streaming) return;
@@ -471,214 +469,217 @@ export default function SolaceDock() {
 /* ------------------------------------------------------------------
    Auto-expanding textarea
 ------------------------------------------------------------------- */
-const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-useLayoutEffect(() => {
-  const ta = textareaRef.current;
-  if (!ta) return;
-  ta.style.height = "auto";
-  ta.style.overflow = "hidden";
-  const scrollHeight = ta.scrollHeight;
-  const newHeight = Math.min(scrollHeight, 80);
-  ta.style.height = newHeight + "px";
-}, [input]);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  useLayoutEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.overflow = "hidden";
+    const scrollHeight = ta.scrollHeight;
+    const newHeight = Math.min(scrollHeight, 80);
+    ta.style.height = newHeight + "px";
+  }, [input]);
 
-const onEnterSend = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    send();
-  }
-};
+  const onEnterSend = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  };
 
-const panel = (
-  <section
-    ref={containerRef}
-    style={panelStyleSafe}
-    tabIndex={-1}
-    aria-label="Solace conversation panel"
-  >
-    <SolaceDockHeaderLite
-      ministryOn={ministryOn}
-      memReady={memReady}
-      onToggleMinistry={() => {
-        const next = new Set(filters);
-        if (ministryOn) {
-          next.delete("abrahamic");
-          next.delete("ministry");
-          localStorage.setItem(MINISTRY_KEY, "0");
-        } else {
-          next.add("abrahamic");
-          next.add("ministry");
-          localStorage.setItem(MINISTRY_KEY, "1");
-        }
-        setFilters(next);
-      }}
-      onMinimize={() => minimizeDock()}
-      onDragStart={(e) => {
-        if (!isMobile && !minimized && !minimizing) onHeaderMouseDown(e);
-      }}
-    />
-
-    <SolaceTranscript
-      messages={messages}
-      transcriptRef={transcriptRef}
-      transcriptStyle={transcriptStyleSafe}
-    />
-
-    <div
-      style={{ ...composerWrapStyle, paddingTop: 2, paddingBottom: 2 }}
-      onPaste={(e) => handlePaste(e, { prefix: "solace" })}
+  const panel = (
+    <section
+      ref={containerRef}
+      style={panelStyleSafe}
+      tabIndex={-1}
+      aria-label="Solace conversation panel"
     >
-      <div
-        style={{
-          display: "flex",
-          gap: 8,
-          alignItems: "center",
-          minHeight: 44,
-          paddingLeft: 2,
-          paddingRight: 2,
+      <SolaceDockHeaderLite
+        ministryOn={ministryOn}
+        memReady={memReady}
+        onToggleMinistry={() => {
+          const next = new Set(filters);
+          if (ministryOn) {
+            next.delete("abrahamic");
+            next.delete("ministry");
+            localStorage.setItem(MINISTRY_KEY, "0");
+          } else {
+            next.add("abrahamic");
+            next.add("ministry");
+            localStorage.setItem(MINISTRY_KEY, "1");
+          }
+          setFilters(next);
         }}
-      >
-        <label
-          style={{
-            width: 38,
-            height: 38,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            position: "relative",
-          }}
-        >
-          <span
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              height: 28,
-              width: 28,
-            }}
-          >
-            <IconPaperclip
-              style={{ width: 24, height: 24, verticalAlign: "middle" }}
-            />
-          </span>
-          <input
-            type="file"
-            multiple
-            hidden
-            onChange={(e) => handleFiles(e.target.files, { prefix: "solace" })}
-          />
-        </label>
+        onMinimize={() => minimizeDock()}
+        onDragStart={(e) => {
+          if (!isMobile && !minimized && !minimizing) onHeaderMouseDown(e);
+        }}
+      />
 
-        <button
-          onClick={toggleMic}
-          aria-label="Toggle microphone"
-          style={{
-            width: 38,
-            height: 38,
-            border: "none",
-            background: "transparent",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 0,
-            outline: "none",
-          }}
-          tabIndex={0}
-          type="button"
-        >
-          <span
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              height: 28,
-              width: 28,
-            }}
-          >
-            <IconMic
-              style={{ width: 24, height: 24, verticalAlign: "middle" }}
-            />
-          </span>
-        </button>
+      <SolaceTranscript
+        messages={messages}
+        transcriptRef={transcriptRef}
+        transcriptStyle={transcriptStyleSafe}
+      />
 
-        <textarea
-          ref={textareaRef}
-          style={{
-            ...textareaStyle,
-            minHeight: 38,
-            maxHeight: 80,
-            fontSize: 16,
-            lineHeight: 1.4,
-            borderRadius: 6,
-            border: "1px solid #ddd",
-            padding: "7px 10px",
-            flex: 1,
-            resize: "none",
-            overflow: "hidden",
-            transition: "height 0.15s ease",
-          }}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={onEnterSend}
-          placeholder="Ask Solace..."
-          rows={1}
-          aria-label="Input for Solace"
-        />
-
-        <button
-          onClick={send}
-          disabled={streaming}
-          style={{
-            minWidth: 54,
-            height: 38,
-            border: "none",
-            borderRadius: 7,
-            background: GOLD,
-            color: "#333",
-            fontWeight: 600,
-            fontSize: 16,
-            boxShadow: "0 1.5px 4px #0001",
-            cursor: streaming ? "not-allowed" : "pointer",
-            opacity: streaming ? 0.6 : 1,
-            transition: "background 0.15s, color 0.15s, box-shadow 0.2s",
-            marginLeft: 2,
-          }}
-          type="button"
-          aria-label="Send"
-        >
-          Ask
-        </button>
-      </div>
-    </div>
-
-        {!isMobile && <ResizeHandle onResizeStart={startResize} />}
-  </section>
-);
-
-return createPortal(
-  <>
-    {showOrb ? (
       <div
-        style={orbStyle}
-        onClick={restoreDock}
-        aria-label="Restore Solace dock"
+        style={{ ...composerWrapStyle, paddingTop: 2, paddingBottom: 2 }}
+        onPaste={(e) => handlePaste(e, { prefix: "solace" })}
       >
-        <span
+        <div
           style={{
-            fontWeight: "bold",
-            fontSize: 28,
-            color: "#fff",
-            userSelect: "none",
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            minHeight: 44,
+            paddingLeft: 2,
+            paddingRight: 2,
           }}
         >
-          ?
-        </span>
+          <label
+            style={{
+              width: 38,
+              height: 38,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              position: "relative",
+            }}
+          >
+            <span
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                height: 28,
+                width: 28,
+              }}
+            >
+              <IconPaperclip
+                style={{ width: 24, height: 24, verticalAlign: "middle" }}
+              />
+            </span>
+            <input
+              type="file"
+              multiple
+              hidden
+              onChange={(e) => handleFiles(e.target.files, { prefix: "solace" })}
+            />
+          </label>
+
+          <button
+            onClick={toggleMic}
+            aria-label="Toggle microphone"
+            style={{
+              width: 38,
+              height: 38,
+              border: "none",
+              background: "transparent",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 0,
+              outline: "none",
+            }}
+            tabIndex={0}
+            type="button"
+          >
+            <span
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                height: 28,
+                width: 28,
+              }}
+            >
+              <IconMic
+                style={{ width: 24, height: 24, verticalAlign: "middle" }}
+              />
+            </span>
+          </button>
+
+          <textarea
+            ref={textareaRef}
+            style={{
+              ...textareaStyle,
+              minHeight: 38,
+              maxHeight: 80,
+              fontSize: 16,
+              lineHeight: 1.4,
+              borderRadius: 6,
+              border: "1px solid #ddd",
+              padding: "7px 10px",
+              flex: 1,
+              resize: "none",
+              overflow: "hidden",
+              transition: "height 0.15s ease",
+            }}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={onEnterSend}
+            placeholder="Ask Solace..."
+            rows={1}
+            aria-label="Input for Solace"
+          />
+
+          <button
+            onClick={send}
+            disabled={streaming}
+            style={{
+              minWidth: 54,
+              height: 38,
+              border: "none",
+              borderRadius: 7,
+              background: GOLD,
+              color: "#333",
+              fontWeight: 600,
+              fontSize: 16,
+              boxShadow: "0 1.5px 4px #0001",
+              cursor: streaming ? "not-allowed" : "pointer",
+              opacity: streaming ? 0.6 : 1,
+              transition: "background 0.15s, color 0.15s, box-shadow 0.2s",
+              marginLeft: 2,
+            }}
+            type="button"
+            aria-label="Send"
+          >
+            Ask
+          </button>
+        </div>
       </div>
-    ) : (
-      panel
-    )}
-  </>,
-  document.body
-);
+
+      {!isMobile && <ResizeHandle onResizeStart={startResize} />}
+    </section>
+  );
+
+  // --- FIXED RETURN: Render only one (panel or orb), never both
+  if (!canRender || !visible) return null;
+
+  return createPortal(
+    <>
+      {minimized && !isMobile ? (
+        <div
+          style={orbStyle}
+          onClick={restoreDock}
+          aria-label="Restore Solace dock"
+        >
+          <span
+            style={{
+              fontWeight: "bold",
+              fontSize: 28,
+              color: "#fff",
+              userSelect: "none",
+            }}
+          >
+            ?
+          </span>
+        </div>
+      ) : (
+        panel
+      )}
+    </>,
+    document.body
+  );
 }
