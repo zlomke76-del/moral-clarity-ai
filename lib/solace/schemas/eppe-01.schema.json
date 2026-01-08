@@ -1,10 +1,11 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#"
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://moralclarity.ai/schemas/eppe-01.json",
   "title": "Exploratory Polymer Pair Evaluation (EPPE-01)",
-  "description": "Machine-checkable evaluation rubric for exploratory two-component polymer pairings. Enforces simplicity, manufacturability, explicit failure modeling, numeric go/no-go thresholds, and probability accountability.",
+  "description": "Machine-checkable evaluation rubric for exploratory two-component polymer pairing with uncertainty bounds, explicit failure modeling, numeric go/no-go thresholds, and probability accountability.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": false
+}
 
   "required": [
     "pair_name",
