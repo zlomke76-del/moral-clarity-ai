@@ -67,25 +67,24 @@ export default function LayoutShell({
     );
   }
 
-  // ─────────────────────────────────────────────
-  // WORKSPACE TOOL (NO sidebar, full canvas)
-  // ─────────────────────────────────────────────
-  if (isWorkspace) {
-    return (
-      <>
-        <div
-          data-workspace-canvas
-          className="w-screen h-screen min-h-0
-                     flex flex-col overflow-hidden"
-        >
-          {children}
-        </div>
+  // LayoutShell.tsx — WORKSPACE BRANCH ONLY
 
-        <LayoutDebugOverlay />
-        <SpeedInsights />
-      </>
-    );
-  }
+if (isWorkspace) {
+  return (
+    <>
+      <div
+        data-workspace-canvas
+        className="w-screen h-screen overflow-hidden"
+      >
+        {children}
+      </div>
+
+      <LayoutDebugOverlay />
+      <SpeedInsights />
+    </>
+  );
+}
+
 
   // ─────────────────────────────────────────────
   // STANDALONE (marketing / auth)
