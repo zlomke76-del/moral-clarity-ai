@@ -115,13 +115,18 @@ export default function AccountForm() {
     setError(null);
     setSaveSuccess(false);
 
-    const { error: upError } = await supabase.from("user_profiles").upsert([
-      {
-        user_id: userId,
-        ...fields,
-        updated_at: new Date().toISOString(),
-      },
-    ]);
+    const { error: upError } = await supabase
+      .from("user_profiles")
+      .upsert(
+        [
+          {
+            user_id: userId,
+            ...fields,
+            updated_at: new Date().toISOString(),
+          },
+        ],
+        { onConflict: "user_id" }
+      );
 
     if (upError) {
       setError("Could not save profile. " + upError.message);
