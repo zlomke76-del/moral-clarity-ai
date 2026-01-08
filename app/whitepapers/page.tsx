@@ -19,7 +19,7 @@ type WhitePaper = {
   subtitle: string;
 };
 
-const WHITE_PAPERS: WhitePaper[] = [
+const CONCEPTUAL_PAPERS: WhitePaper[] = [
   {
     slug: "materials-with-causal-memory",
     title: "Materials with Causal Memory",
@@ -58,40 +58,116 @@ const WHITE_PAPERS: WhitePaper[] = [
   },
 ];
 
+const ANCHORED_PET_PAPERS: WhitePaper[] = [
+  {
+    slug: "sulfonated-aromatic-diacid-pet",
+    title: "Sulfonated Aromatic Diacid–PET Copolymer",
+    subtitle: "Anchored fixed-charge PET with durability-gated hygiene capability.",
+  },
+  {
+    slug: "phosphonate-diol-pet",
+    title: "Phosphonate-Diol–PET Copolymer",
+    subtitle: "Covalently retained phosphonate PET for non-leaching flame retardancy.",
+  },
+  {
+    slug: "carboxylic-acid-modified-pet",
+    title: "Carboxylic Acid–Modified PET",
+    subtitle: "Pendant-acid PET for enhanced chemical resistance and container life.",
+  },
+  {
+    slug: "quaternary-ammonium-grafted-pet",
+    title: "Quaternary Ammonium–Grafted PET",
+    subtitle: "Extraction-stable cationic PET surfaces with antimicrobial potential.",
+  },
+  {
+    slug: "peg-diacid-pet",
+    title: "PEG-Diacid PET Copolymer",
+    subtitle: "Hydration-stable PEG incorporation for flexible, biocompatible PET.",
+  },
+  {
+    slug: "imidazolium-functional-pet",
+    title: "Imidazolium-Functional PET Graft",
+    subtitle: "Salt-stable ionic PET for membranes and sensing.",
+  },
+  {
+    slug: "zwitterion-modified-pet",
+    title: "Zwitterion-Modified PET",
+    subtitle: "Anti-fouling PET surfaces gated by hot-water extraction stability.",
+  },
+  {
+    slug: "cyanate-ester-pet",
+    title: "Cyanate Ester–PET Copolymer",
+    subtitle: "Thermally durable PET via low-level cyanate anchoring.",
+  },
+  {
+    slug: "allyl-sulfate-grafted-pet",
+    title: "Allyl Sulfate Grafted PET",
+    subtitle: "Anchored sulfate PET for filtration and ion-exchange applications.",
+  },
+  {
+    slug: "epoxy-modified-pet",
+    title: "Epoxy-Modified PET",
+    subtitle: "Epoxy-diacid PET enabling adhesion and barrier enhancement.",
+  },
+];
+
 export default function WhitePapersIndexPage() {
   return (
     <main className="mx-auto max-w-4xl px-6 py-16">
       <header className="mb-12 text-center">
-        <h1 className="text-4xl font-serif tracking-tight">
-          White Papers
-        </h1>
+        <h1 className="text-4xl font-serif tracking-tight">White Papers</h1>
         <p className="mt-4 text-sm opacity-80">
           Public research notes from Moral Clarity AI examining where physics,
           ethics, and institutional reality diverge.
         </p>
       </header>
 
-      <section className="space-y-6">
-        {WHITE_PAPERS.map((paper) => (
-          <Link
-            key={paper.slug}
-            href={`/whitepapers/${paper.slug}`}
-            className="block rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 transition hover:border-neutral-600 hover:bg-neutral-900"
-          >
-            <h2 className="text-xl font-medium text-neutral-100">
-              {paper.title}
-            </h2>
-            <p className="mt-2 text-sm text-neutral-400">
-              {paper.subtitle}
-            </p>
-          </Link>
-        ))}
+      <section className="mb-16">
+        <h2 className="mb-6 text-2xl font-medium">Conceptual Papers</h2>
+        <div className="space-y-6">
+          {CONCEPTUAL_PAPERS.map((paper) => (
+            <Link
+              key={paper.slug}
+              href={`/whitepapers/${paper.slug}`}
+              className="block rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 transition hover:border-neutral-600 hover:bg-neutral-900"
+            >
+              <h3 className="text-xl font-medium text-neutral-100">
+                {paper.title}
+              </h3>
+              <p className="mt-2 text-sm text-neutral-400">
+                {paper.subtitle}
+              </p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-6 text-2xl font-medium">
+          Anchored PET White Papers
+        </h2>
+        <div className="space-y-6">
+          {ANCHORED_PET_PAPERS.map((paper) => (
+            <Link
+              key={paper.slug}
+              href={`/whitepapers/${paper.slug}`}
+              className="block rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 transition hover:border-neutral-600 hover:bg-neutral-900"
+            >
+              <h3 className="text-xl font-medium text-neutral-100">
+                {paper.title}
+              </h3>
+              <p className="mt-2 text-sm text-neutral-400">
+                {paper.subtitle}
+              </p>
+            </Link>
+          ))}
+        </div>
       </section>
 
       <footer className="mt-16 text-center text-xs text-neutral-500">
-        These papers are exploratory, regime-bounded, and intentionally limited.
-        They do not claim universal solutions or substitute for engineering,
-        governance, or regulation.
+        These papers are regime-bounded, survivability-gated, and intentionally
+        limited. Inclusion does not imply readiness, deployment, or universal
+        applicability.
       </footer>
     </main>
   );
