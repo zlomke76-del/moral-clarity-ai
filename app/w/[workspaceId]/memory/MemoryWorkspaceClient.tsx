@@ -192,81 +192,85 @@ export default function MemoryWorkspaceClient({
 
       {/* RIGHT: Editor */}
       <main className="p-6 overflow-hidden">
-        <div className="h-full min-h-0 flex flex-col gap-4">
-          {/* Dropdown */}
-          <select
-            value={selectedId}
-            onChange={(e) => handleSelect(e.target.value)}
-            disabled={loading}
-            className="bg-neutral-950 border border-neutral-800 rounded-md p-2 text-sm disabled:opacity-50"
-          >
-            <option value="">Select a memory to edit…</option>
-            {items.map((m) => (
-              <option key={m.id} value={m.id}>
-                {new Date(m.updated_at).toLocaleDateString()} —{" "}
-                {typeof m.content === "string"
-                  ? m.content.slice(0, 60)
-                  : "[Structured memory]"}
-              </option>
-            ))}
-          </select>
+        <div className="h-full min-h-0 flex flex-col">
+          {/* Editor Header (fixed) */}
+          <div className="flex-shrink-0 pb-4">
+            <select
+              value={selectedId}
+              onChange={(e) => handleSelect(e.target.value)}
+              disabled={loading}
+              className="w-full bg-neutral-950 border border-neutral-800 rounded-md p-2 text-sm disabled:opacity-50"
+            >
+              <option value="">Select a memory to edit…</option>
+              {items.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {new Date(m.updated_at).toLocaleDateString()} —{" "}
+                  {typeof m.content === "string"
+                    ? m.content.slice(0, 60)
+                    : "[Structured memory]"}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          {/* Body */}
-          {loading ? (
-            <div className="flex-1 flex items-center justify-center text-sm text-neutral-500">
-              Loading memories…
-            </div>
-          ) : !selected ? (
-            <div className="flex-1 flex items-center justify-center text-sm text-neutral-500">
-              Select a memory to edit
-            </div>
-          ) : (
-            <div className="flex-1 min-h-0 flex flex-col rounded-lg bg-neutral-950 border border-neutral-800 shadow-xl">
-              <div className="px-4 py-3 border-b border-neutral-800 text-sm text-neutral-400">
-                Editing memory
+          {/* Editor Body (only scrollable region) */}
+          <div className="flex-1 min-h-0">
+            {loading ? (
+              <div className="h-full flex items-center justify-center text-sm text-neutral-500">
+                Loading memories…
               </div>
-
-              <div className="flex-1 min-h-0 overflow-y-auto p-4">
-                <textarea
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  className="w-full h-full resize-none bg-neutral-950
-                             border border-neutral-800 rounded-md
-                             p-3 text-sm leading-relaxed"
-                  disabled={!isEditing}
-                />
+            ) : !selected ? (
+              <div className="h-full flex items-center justify-center text-sm text-neutral-500">
+                Select a memory to edit
               </div>
+            ) : (
+              <div className="h-full min-h-0 flex flex-col rounded-lg bg-neutral-950 border border-neutral-800 shadow-xl">
+                <div className="px-4 py-3 border-b border-neutral-800 text-sm text-neutral-400">
+                  Editing memory
+                </div>
 
-              <div className="px-4 py-3 border-t border-neutral-800 flex justify-between items-center">
-                <div className="text-xs text-red-400">{saveError}</div>
+                <div className="flex-1 min-h-0 overflow-y-auto p-4">
+                  <textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    className="w-full h-full resize-none bg-neutral-950
+                               border border-neutral-800 rounded-md
+                               p-3 text-sm leading-relaxed"
+                    disabled={!isEditing}
+                  />
+                </div>
 
-                {!isEditing ? (
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="px-3 py-1.5 text-sm rounded bg-neutral-800 hover:bg-neutral-700"
-                  >
-                    Edit
-                  </button>
-                ) : (
-                  <div className="flex gap-2">
+                <div className="px-4 py-3 border-t border-neutral-800 flex justify-between items-center">
+                  <div className="text-xs text-red-400">{saveError}</div>
+
+                  {!isEditing ? (
                     <button
-                      onClick={() => handleSelect(selected.id)}
-                      className="px-3 py-1.5 text-sm rounded border border-neutral-700"
+                      onClick={() => setIsEditing(true)}
+                      className="px-3 py-1.5 text-sm rounded bg-neutral-800 hover:bg-neutral-700"
                     >
-                      Cancel
+                      Edit
                     </button>
-                    <button
-                      onClick={handleSave}
-                      disabled={saving}
-                      className="px-3 py-1.5 text-sm rounded bg-blue-600 disabled:opacity-50"
-                    >
-                      {saving ? "Saving…" : "Save"}
-                    </button>
-                  </div>
-                )}
+                  ) : (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleSelect(selected.id)}
+                        className="px-3 py-1.5 text-sm rounded border border-neutral-700"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="px-3 py-1.5 text-sm rounded bg-blue-600 disabled:opacity-50"
+                      >
+                        {saving ? "Saving…" : "Save"}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </main>
     </div>
