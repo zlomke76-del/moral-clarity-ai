@@ -1,101 +1,66 @@
-// app/api/rolodex/workspace/route.ts
+// ------------------------------------------------------------
+// Rolodex Workspace Route (COOKIE AUTH · RLS SAFE · SCHEMA BOUND)
+// ------------------------------------------------------------
+
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 
 export const runtime = "nodejs";
 
-export async function GET(req: Request) {
-  try {
-    /* ------------------------------------------------------------
-       AUTH: Bearer token required
-    ------------------------------------------------------------ */
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { error: "Missing or invalid Authorization header" },
-        { status: 401 }
-      );
-    }
+async function getSupabase() {
+  const cookieStore = await cookies();
 
-    const accessToken = authHeader.replace("Bearer ", "").trim();
-
-    /* ------------------------------------------------------------
-       Supabase client bound to user access token
-    ------------------------------------------------------------ */
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      db: { schema: "memory" },
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
         },
-      }
-    );
-
-    const { data: userData, error: userError } =
-      await supabase.auth.getUser();
-
-    if (userError || !userData?.user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      },
     }
+  );
+}
 
-    /* ------------------------------------------------------------
-       Query params
-    ------------------------------------------------------------ */
-    const { searchParams } = new URL(req.url);
-    const workspaceId = searchParams.get("workspaceId");
+export async function GET(req: Request) {
+  const supabase = await getSupabase();
 
-    if (!workspaceId) {
-      return NextResponse.json(
-        { error: "workspaceId is required" },
-        { status: 400 }
-      );
-    }
+  const { data: { user }, error: authError } =
+    await supabase.auth.getUser();
 
-    /* ------------------------------------------------------------
-       AUTHORITATIVE ROLodex QUERY
-    ------------------------------------------------------------ */
-    const { data: items, error: rolodexError } = await supabase
-      .schema("memory")
-      .from("rolodex")
-      .select(`
-        id,
-        user_id,
-        workspace_id,
-        name,
-        relationship_type,
-        primary_email,
-        primary_phone,
-        birthday,
-        notes,
-        sensitivity_level,
-        consent_level,
-        created_at,
-        updated_at
-      `)
-      .eq("workspace_id", workspaceId)
-      .eq("user_id", userData.user.id)
-      .order("updated_at", { ascending: false });
-
-    if (rolodexError) {
-      return NextResponse.json(
-        { error: rolodexError.message },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      items: items ?? [],
-    });
-  } catch (err: any) {
+  if (authError || !user) {
     return NextResponse.json(
-      { error: err?.message ?? "Internal server error" },
-      { status: 500 }
+      { ok: false, error: "unauthenticated" },
+      { status: 401 }
     );
   }
+
+  const { searchParams } = new URL(req.url);
+  const workspaceId = searchParams.get("workspaceId");
+
+  if (!workspaceId) {
+    return NextResponse.json(
+      { ok: false, error: "workspaceId is required" },
+      { status: 400 }
+    );
+  }
+
+  const { data, error } = await supabase
+    .from("rolodex")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("user_id", user.id)
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    return NextResponse.json(
+      { ok: false, stage: "select.rolodex", error },
+      { status: 403 }
+    );
+  }
+
+  return NextResponse.json({ ok: true, items: data });
 }
