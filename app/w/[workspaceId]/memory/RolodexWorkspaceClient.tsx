@@ -13,6 +13,8 @@ type RolodexRecord = {
   notes: string | null;
   sensitivity_level: number | null;
   consent_level: number | null;
+  workspace_id: string | null;
+  created_at: string;
   updated_at: string;
 };
 
@@ -21,6 +23,9 @@ type Props = {
 };
 
 export default function RolodexWorkspaceClient({ workspaceId }: Props) {
+  /* ------------------------------------------------------------
+     Supabase (cookie-based, RLS)
+  ------------------------------------------------------------ */
   const supabase = useMemo(
     () =>
       createBrowserClient(
@@ -30,48 +35,82 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
     []
   );
 
+  /* ------------------------------------------------------------
+     State
+  ------------------------------------------------------------ */
   const [items, setItems] = useState<RolodexRecord[]>([]);
   const [selected, setSelected] = useState<RolodexRecord | null>(null);
-  const [draft, setDraft] = useState<Partial<RolodexRecord>>({});
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [draft, setDraft] = useState<Partial<RolodexRecord> | null>(null);
 
+  const [loading, setLoading] = useState<boolean>(true);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState<string>("");
+
+  /* ------------------------------------------------------------
+     Load (GET /api/rolodex?q=)
+     Workspace filtered client-side by design
+  ------------------------------------------------------------ */
   async function load() {
     setLoading(true);
     setError(null);
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    try {
+      // Ensure session exists (cookie-backed)
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    if (!session?.access_token) {
-      setError("Not authenticated.");
-      setLoading(false);
-      return;
-    }
-
-    const res = await fetch(
-      `/api/rolodex/workspace?workspaceId=${workspaceId}`,
-      {
-        headers: { Authorization: `Bearer ${session.access_token}` },
+      if (!session) {
+        setError("Not authenticated.");
+        setItems([]);
+        return;
       }
-    );
 
-    if (!res.ok) {
-      setError("Failed to load Rolodex.");
+      const url =
+        query.trim().length > 0
+          ? `/api/rolodex?q=${encodeURIComponent(query.trim())}`
+          : `/api/rolodex`;
+
+      const res = await fetch(url);
+
+      if (!res.ok) {
+        setError("Failed to load Rolodex.");
+        setItems([]);
+        return;
+      }
+
+      const json = await res.json();
+      const data: RolodexRecord[] = Array.isArray(json.data)
+        ? json.data
+        : [];
+
+      // Workspace scoping is intentional and explicit
+      const scoped = data.filter(
+        (r) => r.workspace_id === workspaceId
+      );
+
+      setItems(scoped);
+    } catch {
+      setError("An error occurred while loading Rolodex.");
+      setItems([]);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const data = await res.json();
-    setItems(data.items ?? []);
-    setLoading(false);
   }
 
   useEffect(() => {
     load();
   }, [workspaceId]);
+
+  /* ------------------------------------------------------------
+     Selection / Creation
+  ------------------------------------------------------------ */
+  function selectRecord(record: RolodexRecord) {
+    setSelected(record);
+    setDraft({ ...record });
+    setError(null);
+  }
 
   function startNew() {
     setSelected(null);
@@ -84,117 +123,156 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
       notes: "",
       sensitivity_level: 2,
       consent_level: 1,
+      workspace_id: workspaceId,
     });
+    setError(null);
   }
 
-  function select(item: RolodexRecord) {
-    setSelected(item);
-    setDraft(item);
-  }
-
+  /* ------------------------------------------------------------
+     Save (POST or PATCH)
+  ------------------------------------------------------------ */
   async function save() {
+    if (!draft || !draft.name || draft.name.trim().length === 0) {
+      setError("Name is required.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    if (!session?.access_token) {
-      setError("Authentication expired.");
+      if (!session) {
+        setError("Authentication expired.");
+        return;
+      }
+
+      const isUpdate = !!selected?.id;
+      const url = isUpdate
+        ? `/api/rolodex/${selected!.id}`
+        : `/api/rolodex`;
+
+      const method = isUpdate ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...draft,
+          workspace_id: workspaceId,
+        }),
+      });
+
+      if (!res.ok) {
+        setError("Failed to save contact.");
+        return;
+      }
+
+      await load();
+      setDraft(null);
+      setSelected(null);
+    } catch {
+      setError("An error occurred while saving.");
+    } finally {
       setSaving(false);
-      return;
     }
-
-    const method = selected ? "PATCH" : "POST";
-    const url = selected
-      ? `/api/rolodex/${selected.id}`
-      : `/api/rolodex`;
-
-    const res = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ ...draft, workspace_id: workspaceId }),
-    });
-
-    if (!res.ok) {
-      setError("Failed to save entry.");
-      setSaving(false);
-      return;
-    }
-
-    await load();
-    setSaving(false);
   }
 
+  /* ------------------------------------------------------------
+     Delete (DELETE /api/rolodex/[id])
+  ------------------------------------------------------------ */
   async function remove() {
     if (!selected) return;
     if (!confirm("Delete this contact permanently?")) return;
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    if (!session?.access_token) return;
+      if (!session) return;
 
-    await fetch(`/api/rolodex/${selected.id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    });
+      const res = await fetch(`/api/rolodex/${selected.id}`, {
+        method: "DELETE",
+      });
 
-    setSelected(null);
-    setDraft({});
-    load();
+      if (!res.ok) {
+        setError("Failed to delete contact.");
+        return;
+      }
+
+      await load();
+      setSelected(null);
+      setDraft(null);
+    } catch {
+      setError("An error occurred while deleting.");
+    }
   }
 
+  /* ------------------------------------------------------------
+     Render
+  ------------------------------------------------------------ */
   return (
     <section className="w-full border-t border-neutral-800 mt-8 pt-6">
       <h2 className="text-xl font-semibold mb-4">Rolodex</h2>
+
+      <div className="flex gap-2 mb-4">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search contacts…"
+          className="flex-1 bg-neutral-950 border border-neutral-800 rounded p-2 text-sm"
+        />
+        <button
+          onClick={load}
+          className="px-3 py-2 rounded bg-neutral-800 text-sm"
+        >
+          Search
+        </button>
+        <button
+          onClick={startNew}
+          className="px-3 py-2 rounded bg-neutral-800 text-sm"
+        >
+          + New
+        </button>
+      </div>
 
       {loading ? (
         <div className="text-sm text-neutral-500">Loading contacts…</div>
       ) : (
         <div className="flex flex-col gap-4">
-          <div className="flex gap-2">
-            <select
-              className="flex-1 bg-neutral-950 border border-neutral-800 rounded p-2 text-sm"
-              value={selected?.id ?? ""}
-              onChange={(e) =>
-                select(items.find((i) => i.id === e.target.value)!)
-              }
-            >
-              <option value="">Select a contact…</option>
-              {items.map((i) => (
-                <option key={i.id} value={i.id}>
-                  {i.name}
-                </option>
-              ))}
-            </select>
+          <select
+            value={selected?.id ?? ""}
+            onChange={(e) =>
+              selectRecord(
+                items.find((i) => i.id === e.target.value)!
+              )
+            }
+            className="bg-neutral-950 border border-neutral-800 rounded p-2 text-sm"
+          >
+            <option value="">Select a contact…</option>
+            {items.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.name}
+              </option>
+            ))}
+          </select>
 
-            <button
-              onClick={startNew}
-              className="px-3 py-2 rounded bg-neutral-800 text-sm"
-            >
-              + New
-            </button>
-          </div>
-
-          {(selected || draft.name !== undefined) && (
-            <div className="grid grid-cols-1 gap-3 bg-neutral-950 border border-neutral-800 rounded p-4">
+          {draft && (
+            <div className="grid gap-3 bg-neutral-950 border border-neutral-800 rounded p-4">
               <input
-                placeholder="Name"
                 value={draft.name ?? ""}
                 onChange={(e) =>
                   setDraft({ ...draft, name: e.target.value })
                 }
+                placeholder="Name"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
               />
 
               <input
-                placeholder="Relationship"
                 value={draft.relationship_type ?? ""}
                 onChange={(e) =>
                   setDraft({
@@ -202,11 +280,11 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
                     relationship_type: e.target.value,
                   })
                 }
+                placeholder="Relationship"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
               />
 
               <input
-                placeholder="Email"
                 value={draft.primary_email ?? ""}
                 onChange={(e) =>
                   setDraft({
@@ -214,11 +292,11 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
                     primary_email: e.target.value,
                   })
                 }
+                placeholder="Email"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
               />
 
               <input
-                placeholder="Phone"
                 value={draft.primary_phone ?? ""}
                 onChange={(e) =>
                   setDraft({
@@ -226,21 +304,21 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
                     primary_phone: e.target.value,
                   })
                 }
+                placeholder="Phone"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
               />
 
               <textarea
-                placeholder="Notes"
                 value={draft.notes ?? ""}
                 onChange={(e) =>
                   setDraft({ ...draft, notes: e.target.value })
                 }
+                placeholder="Notes"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
               />
 
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <div className="text-xs text-red-400">{error}</div>
-
                 <div className="flex gap-2">
                   {selected && (
                     <button
