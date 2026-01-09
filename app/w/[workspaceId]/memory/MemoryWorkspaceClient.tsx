@@ -16,7 +16,7 @@ export default function MemoryWorkspaceClient({
   initialItems,
 }: Props) {
   /* ------------------------------------------------------------
-     Supabase (singleton per component)
+     Supabase
   ------------------------------------------------------------ */
   const supabase = useMemo(
     () =>
@@ -31,22 +31,22 @@ export default function MemoryWorkspaceClient({
      State
   ------------------------------------------------------------ */
   const [items, setItems] = useState<MemoryRecord[]>(initialItems);
-
   const [selectedId, setSelectedId] = useState<string>("");
+
   const selected = useMemo(
     () => items.find((m) => m.id === selectedId) ?? null,
     [items, selectedId]
   );
 
-  const [draft, setDraft] = useState<string>("");
-
-  const [isEditing, setIsEditing] = useState<boolean>(false);
-  const [isCreating, setIsCreating] = useState<boolean>(false);
+  const [draft, setDraft] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const [newType, setNewType] = useState<MemoryType>("fact");
 
-  const [loading, setLoading] = useState<boolean>(true);
-  const [saving, setSaving] = useState<boolean>(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -84,7 +84,6 @@ export default function MemoryWorkspaceClient({
       }
 
       const data = await res.json();
-
       if (!Array.isArray(data.items)) {
         setError("Unexpected memory format.");
         setItems([]);
@@ -111,6 +110,7 @@ export default function MemoryWorkspaceClient({
     setSelectedId(id);
     setIsCreating(false);
     setIsEditing(false);
+    setConfirmDelete(false);
     setSaveError(null);
 
     const record = items.find((m) => m.id === id);
@@ -127,7 +127,7 @@ export default function MemoryWorkspaceClient({
   }
 
   /* ------------------------------------------------------------
-     Create new memory
+     Create memory
   ------------------------------------------------------------ */
   async function handleCreate() {
     setSaving(true);
@@ -183,7 +183,6 @@ export default function MemoryWorkspaceClient({
     setSaveError(null);
 
     let content: any = draft;
-
     if (typeof selected.content === "object") {
       try {
         content = JSON.parse(draft);
@@ -232,19 +231,62 @@ export default function MemoryWorkspaceClient({
   }
 
   /* ------------------------------------------------------------
+     Delete memory (confirmed)
+  ------------------------------------------------------------ */
+  async function handleDelete() {
+    if (!selected) return;
+
+    setSaving(true);
+    setSaveError(null);
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      setSaveError("Authentication expired.");
+      setSaving(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/memory/${selected.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (!res.ok) {
+        setSaveError("Failed to delete memory.");
+        return;
+      }
+
+      setItems((prev) => prev.filter((m) => m.id !== selected.id));
+      setSelectedId("");
+      setDraft("");
+      setConfirmDelete(false);
+    } catch {
+      setSaveError("An error occurred while deleting.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  /* ------------------------------------------------------------
      Render
   ------------------------------------------------------------ */
   return (
-    <div className="w-full h-full min-h-0 flex flex-col overflow-hidden">
+    <div className="w-full h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-8 py-4 border-b border-neutral-800">
+      <div className="flex items-center gap-4 px-8 py-4 border-b border-neutral-800">
         <select
           value={selectedId}
           onChange={(e) => handleSelect(e.target.value)}
           disabled={loading || isCreating}
-          className="flex-1 bg-neutral-950 border border-neutral-800 rounded-md p-2 text-sm disabled:opacity-50"
+          className="flex-1 bg-neutral-950 border border-neutral-800 rounded-md p-2 text-sm"
         >
-          <option value="">Select a memory to edit…</option>
+          <option value="">Select a memory…</option>
           {items.map((m) => (
             <option key={m.id} value={m.id}>
               {new Date(m.updated_at).toLocaleDateString()} —{" "}
@@ -260,23 +302,21 @@ export default function MemoryWorkspaceClient({
             setSelectedId("");
             setIsCreating(true);
             setDraft("");
-            setSaveError(null);
+            setConfirmDelete(false);
           }}
-          className="ml-4 px-3 py-1.5 text-sm rounded bg-neutral-800 hover:bg-neutral-700"
+          className="px-3 py-1.5 text-sm rounded bg-neutral-800 hover:bg-neutral-700"
         >
           Add Memory
         </button>
       </div>
 
       {/* Editor */}
-      <div className="flex-1 min-h-0 overflow-hidden p-6">
+      <div className="flex-1 p-6">
         {loading ? (
-          <div className="h-full flex items-center justify-center text-sm text-neutral-500">
-            Loading memories…
-          </div>
+          <div className="text-neutral-500">Loading memories…</div>
         ) : isCreating ? (
-          <div className="h-full flex flex-col bg-neutral-950 border border-neutral-800 rounded-lg">
-            <div className="px-4 py-3 border-b border-neutral-800 flex gap-3 items-center text-sm">
+          <div className="bg-neutral-950 border border-neutral-800 rounded-lg h-full flex flex-col">
+            <div className="px-4 py-3 border-b border-neutral-800 flex gap-3">
               <span className="text-neutral-400">New memory</span>
               <select
                 value={newType}
@@ -289,75 +329,99 @@ export default function MemoryWorkspaceClient({
               </select>
             </div>
 
-            <div className="flex-1 p-4">
-              <textarea
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                className="w-full h-full resize-none bg-neutral-950 border border-neutral-800 rounded-md p-4 text-sm"
-              />
-            </div>
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              className="flex-1 p-4 bg-neutral-950 border-t border-neutral-800 text-sm"
+            />
 
             <div className="px-4 py-3 border-t border-neutral-800 flex justify-between">
               <div className="text-xs text-red-400">{saveError}</div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setIsCreating(false)}
-                  className="px-3 py-1.5 text-sm rounded border border-neutral-700"
+                  className="px-3 py-1.5 text-sm border border-neutral-700 rounded"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleCreate}
-                  disabled={saving || !draft.trim()}
-                  className="px-3 py-1.5 text-sm rounded bg-blue-600 disabled:opacity-50"
+                  disabled={!draft.trim() || saving}
+                  className="px-3 py-1.5 text-sm bg-blue-600 rounded disabled:opacity-50"
                 >
-                  {saving ? "Creating…" : "Create"}
+                  Create
                 </button>
               </div>
             </div>
           </div>
         ) : !selected ? (
-          <div className="h-full flex items-center justify-center text-sm text-neutral-500">
-            Select a memory to edit or add a new one
+          <div className="text-neutral-500">
+            Select a memory or add a new one
           </div>
         ) : (
-          <div className="h-full flex flex-col bg-neutral-950 border border-neutral-800 rounded-lg">
-            <div className="px-4 py-3 border-b border-neutral-800 text-sm text-neutral-400">
-              Editing memory
-            </div>
+          <div className="bg-neutral-950 border border-neutral-800 rounded-lg h-full flex flex-col">
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              disabled={!isEditing}
+              className="flex-1 p-4 bg-neutral-950 text-sm"
+            />
 
-            <div className="flex-1 p-4">
-              <textarea
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                disabled={!isEditing}
-                className="w-full h-full resize-none bg-neutral-950 border border-neutral-800 rounded-md p-4 text-sm"
-              />
-            </div>
-
-            <div className="px-4 py-3 border-t border-neutral-800 flex justify-between">
+            <div className="px-4 py-3 border-t border-neutral-800 flex justify-between items-center">
               <div className="text-xs text-red-400">{saveError}</div>
-              {!isEditing ? (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="px-3 py-1.5 text-sm rounded bg-neutral-800 hover:bg-neutral-700"
-                >
-                  Edit
-                </button>
+
+              {!confirmDelete ? (
+                <div className="flex gap-2">
+                  {!isEditing ? (
+                    <>
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        className="px-3 py-1.5 text-sm bg-neutral-800 rounded"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(true)}
+                        className="px-3 py-1.5 text-sm bg-red-700 rounded"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => handleSelect(selected.id)}
+                        className="px-3 py-1.5 text-sm border border-neutral-700 rounded"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="px-3 py-1.5 text-sm bg-blue-600 rounded"
+                      >
+                        Save
+                      </button>
+                    </>
+                  )}
+                </div>
               ) : (
                 <div className="flex gap-2">
+                  <span className="text-sm text-red-400">
+                    Confirm delete?
+                  </span>
                   <button
-                    onClick={() => handleSelect(selected.id)}
-                    className="px-3 py-1.5 text-sm rounded border border-neutral-700"
+                    onClick={() => setConfirmDelete(false)}
+                    className="px-3 py-1.5 text-sm border border-neutral-700 rounded"
                   >
                     Cancel
                   </button>
                   <button
-                    onClick={handleSave}
+                    onClick={handleDelete}
                     disabled={saving}
-                    className="px-3 py-1.5 text-sm rounded bg-blue-600 disabled:opacity-50"
+                    className="px-3 py-1.5 text-sm bg-red-700 rounded"
                   >
-                    {saving ? "Saving…" : "Save"}
+                    Delete
                   </button>
                 </div>
               )}
