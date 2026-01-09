@@ -1,5 +1,6 @@
 // ------------------------------------------------------------
 // Rolodex Workspace Route (COOKIE AUTH · RLS SAFE · SCHEMA BOUND)
+// Matches new authoritative Rolodex API architecture
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -8,6 +9,9 @@ import { createServerClient } from "@supabase/ssr";
 
 export const runtime = "nodejs";
 
+/* ------------------------------------------------------------
+   Supabase (schema-bound, cookie-auth)
+------------------------------------------------------------ */
 async function getSupabase() {
   const cookieStore = await cookies();
 
@@ -25,9 +29,15 @@ async function getSupabase() {
   );
 }
 
+/* ------------------------------------------------------------
+   GET /api/rolodex/workspace?workspaceId=...
+------------------------------------------------------------ */
 export async function GET(req: Request) {
   const supabase = await getSupabase();
 
+  /* ------------------------------------------------------------
+     Auth (cookie-based)
+  ------------------------------------------------------------ */
   const { data: { user }, error: authError } =
     await supabase.auth.getUser();
 
@@ -38,6 +48,9 @@ export async function GET(req: Request) {
     );
   }
 
+  /* ------------------------------------------------------------
+     Query params
+  ------------------------------------------------------------ */
   const { searchParams } = new URL(req.url);
   const workspaceId = searchParams.get("workspaceId");
 
@@ -48,6 +61,9 @@ export async function GET(req: Request) {
     );
   }
 
+  /* ------------------------------------------------------------
+     SELECT — RLS enforced automatically
+  ------------------------------------------------------------ */
   const { data, error } = await supabase
     .from("rolodex")
     .select("*")
@@ -62,5 +78,8 @@ export async function GET(req: Request) {
     );
   }
 
-  return NextResponse.json({ ok: true, items: data });
+  return NextResponse.json({
+    ok: true,
+    items: data ?? [],
+  });
 }
