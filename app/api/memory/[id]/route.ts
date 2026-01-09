@@ -5,52 +5,49 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
+/* ------------------------------------------------------------
+   Shared auth + Supabase bootstrap
+------------------------------------------------------------ */
+async function getAuthedSupabase(req: Request) {
+  const authHeader = req.headers.get("authorization");
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return { error: "Missing or invalid Authorization header" };
+  }
+
+  const accessToken = authHeader.replace("Bearer ", "").trim();
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
+    }
+  );
+
+  const { data: userData, error: userError } =
+    await supabase.auth.getUser();
+
+  if (userError || !userData?.user) {
+    return { error: "Unauthorized" };
+  }
+
+  return { supabase, user: userData.user };
+}
+
+/* ------------------------------------------------------------
+   PATCH /api/memory/[id]
+   Update existing memory content
+------------------------------------------------------------ */
 export async function PATCH(
   req: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    /* ------------------------------------------------------------
-       AUTH: Bearer token required
-    ------------------------------------------------------------ */
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { error: "Missing or invalid Authorization header" },
-        { status: 401 }
-      );
-    }
-
-    const accessToken = authHeader.replace("Bearer ", "").trim();
-
-    /* ------------------------------------------------------------
-       Supabase client bound to user token (RLS enforced)
-    ------------------------------------------------------------ */
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        },
-      }
-    );
-
-    const { data: userData, error: userError } =
-      await supabase.auth.getUser();
-
-    if (userError || !userData?.user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    /* ------------------------------------------------------------
-       Params + body
-    ------------------------------------------------------------ */
     const memoryId = params.id;
     if (!memoryId) {
       return NextResponse.json(
@@ -58,6 +55,16 @@ export async function PATCH(
         { status: 400 }
       );
     }
+
+    const auth = await getAuthedSupabase(req);
+    if ("error" in auth) {
+      return NextResponse.json(
+        { error: auth.error },
+        { status: 401 }
+      );
+    }
+
+    const { supabase, user } = auth;
 
     const body = await req.json();
     const { content } = body;
@@ -69,9 +76,6 @@ export async function PATCH(
       );
     }
 
-    /* ------------------------------------------------------------
-       UPDATE — ownership enforced by RLS + WHERE
-    ------------------------------------------------------------ */
     const { data: updated, error: updateError } = await supabase
       .schema("memory")
       .from("memories")
@@ -80,7 +84,7 @@ export async function PATCH(
         updated_at: new Date().toISOString(),
       })
       .eq("id", memoryId)
-      .eq("user_id", userData.user.id)
+      .eq("user_id", user.id)
       .select()
       .single();
 
@@ -98,10 +102,57 @@ export async function PATCH(
       );
     }
 
-    /* ------------------------------------------------------------
-       Success
-    ------------------------------------------------------------ */
     return NextResponse.json(updated);
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err?.message ?? "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+/* ------------------------------------------------------------
+   DELETE /api/memory/[id]
+   Explicit memory removal
+------------------------------------------------------------ */
+export async function DELETE(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const memoryId = params.id;
+    if (!memoryId) {
+      return NextResponse.json(
+        { error: "Memory ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const auth = await getAuthedSupabase(req);
+    if ("error" in auth) {
+      return NextResponse.json(
+        { error: auth.error },
+        { status: 401 }
+      );
+    }
+
+    const { supabase, user } = auth;
+
+    const { error: deleteError } = await supabase
+      .schema("memory")
+      .from("memories")
+      .delete()
+      .eq("id", memoryId)
+      .eq("user_id", user.id);
+
+    if (deleteError) {
+      return NextResponse.json(
+        { error: deleteError.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ ok: true, success: true });
   } catch (err: any) {
     return NextResponse.json(
       { error: err?.message ?? "Internal server error" },
