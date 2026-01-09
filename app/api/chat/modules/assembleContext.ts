@@ -36,14 +36,26 @@ export type SolaceContextBundle = {
     sessionCompaction?: any | null;
     sessionState?: any | null;
   };
+
   workingMemory: {
     active: boolean;
     items: WorkingMemoryItem[];
   };
+
   researchContext: any[];
   authorities: any[];
   newsDigest: any[];
   didResearch: boolean;
+
+  // ----------------------------------------------------------
+  // ADDITIVE — WORKSPACE CONTEXT (REQUIRED FOR CHAT ROUTE)
+  // ----------------------------------------------------------
+  workspace?: {
+    id: string | null;
+    mode?: string | null;
+    policy?: Record<string, any> | null;
+  };
+
   rolodex?: any[];
 };
 
@@ -198,7 +210,7 @@ export async function assembleContext(
   }
 
   // ----------------------------------------------------------
-  // FACTUAL MEMORY (STUDIO)
+  // FACTUAL MEMORY
   // ----------------------------------------------------------
   const factsRes = await supabaseAdmin
     .schema("memory")
@@ -228,7 +240,7 @@ export async function assembleContext(
     : [];
 
   // ----------------------------------------------------------
-  // WORKING MEMORY (STUDIO)
+  // WORKING MEMORY
   // ----------------------------------------------------------
   let wmItems: WorkingMemoryItem[] = [];
 
