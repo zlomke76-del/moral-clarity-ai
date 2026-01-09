@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Rolodex ID Route (PATCH + DELETE)
 // Cookie auth · RLS enforced · memory schema
-// AUTHORITATIVE
+// AUTHORITATIVE — FIXED JSON HANDLING
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -10,6 +10,9 @@ import { createServerClient } from "@supabase/ssr";
 
 export const runtime = "nodejs";
 
+/* ------------------------------------------------------------
+   Supabase (schema-bound)
+------------------------------------------------------------ */
 async function getSupabase() {
   const cookieStore = await cookies();
 
@@ -29,6 +32,7 @@ async function getSupabase() {
 
 /* ------------------------------------------------------------
    PATCH /api/rolodex/[id]
+   OWNER FORCED · SAFE PAYLOAD PARSE
 ------------------------------------------------------------ */
 export async function PATCH(
   req: Request,
@@ -48,7 +52,7 @@ export async function PATCH(
     );
   }
 
-  const id = params.id;
+  const id = params?.id;
   if (!id) {
     return NextResponse.json(
       { ok: false, error: "Rolodex ID is required" },
@@ -56,34 +60,32 @@ export async function PATCH(
     );
   }
 
-  let body: Record<string, any>;
+  // ----------------------------------------------------------
+  // SAFE JSON PARSE (THIS WAS THE BUG)
+  // ----------------------------------------------------------
+  let body: Record<string, any> = {};
   try {
-    body = await req.json();
-  } catch {
+    const text = await req.text();
+    if (text) body = JSON.parse(text);
+  } catch (err) {
     return NextResponse.json(
-      { ok: false, error: "Invalid JSON body" },
+      { ok: false, error: "Invalid JSON payload" },
       { status: 400 }
     );
   }
 
-  // 🔒 SANITIZATION
+  // ----------------------------------------------------------
+  // HARD SANITIZATION
+  // ----------------------------------------------------------
   delete body.user_id;
+  delete body.id;
+  if (!body.workspace_id) delete body.workspace_id;
 
-  // Normalize workspace_id
-  if (body.workspace_id === "") {
-    body.workspace_id = null;
-  }
-
-  // Remove undefined fields
-  Object.keys(body).forEach((k) => {
-    if (body[k] === undefined) delete body[k];
-  });
-
-  // 🚫 Nothing to update
+  // Nothing to update?
   if (Object.keys(body).length === 0) {
     return NextResponse.json(
-      { ok: false, error: "No updatable fields provided" },
-      { status: 400 }
+      { ok: true, noop: true },
+      { status: 200 }
     );
   }
 
@@ -101,8 +103,8 @@ export async function PATCH(
   if (error) {
     console.error("update.rolodex error", error);
     return NextResponse.json(
-      { ok: false, stage: "update.rolodex", error },
-      { status: 400 }
+      { ok: false, stage: "update.rolodex", error: error.message },
+      { status: 403 }
     );
   }
 
@@ -111,6 +113,7 @@ export async function PATCH(
 
 /* ------------------------------------------------------------
    DELETE /api/rolodex/[id]
+   OWNER ONLY
 ------------------------------------------------------------ */
 export async function DELETE(
   req: Request,
@@ -130,7 +133,7 @@ export async function DELETE(
     );
   }
 
-  const id = params.id;
+  const id = params?.id;
   if (!id) {
     return NextResponse.json(
       { ok: false, error: "Rolodex ID is required" },
@@ -147,10 +150,10 @@ export async function DELETE(
   if (error) {
     console.error("delete.rolodex error", error);
     return NextResponse.json(
-      { ok: false, stage: "delete.rolodex", error },
-      { status: 400 }
+      { ok: false, stage: "delete.rolodex", error: error.message },
+      { status: 403 }
     );
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, success: true });
 }
