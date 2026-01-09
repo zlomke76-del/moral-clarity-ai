@@ -1,6 +1,7 @@
 // ------------------------------------------------------------
-// Rolodex Workspace Route (COOKIE AUTH · RLS SAFE · SCHEMA BOUND)
-// Matches new authoritative Rolodex API architecture
+// Rolodex Workspace Route
+// Cookie auth · RLS enforced · memory schema
+// Returns personal + workspace contacts
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -10,7 +11,7 @@ import { createServerClient } from "@supabase/ssr";
 export const runtime = "nodejs";
 
 /* ------------------------------------------------------------
-   Supabase (schema-bound, cookie-auth)
+   Supabase (schema-bound)
 ------------------------------------------------------------ */
 async function getSupabase() {
   const cookieStore = await cookies();
@@ -35,9 +36,6 @@ async function getSupabase() {
 export async function GET(req: Request) {
   const supabase = await getSupabase();
 
-  /* ------------------------------------------------------------
-     Auth (cookie-based)
-  ------------------------------------------------------------ */
   const {
     data: { user },
     error: authError,
@@ -50,9 +48,6 @@ export async function GET(req: Request) {
     );
   }
 
-  /* ------------------------------------------------------------
-     Query params
-  ------------------------------------------------------------ */
   const { searchParams } = new URL(req.url);
   const workspaceId = searchParams.get("workspaceId");
 
@@ -63,9 +58,6 @@ export async function GET(req: Request) {
     );
   }
 
-  /* ------------------------------------------------------------
-     SELECT — workspace + personal (NULL) contacts
-  ------------------------------------------------------------ */
   const { data, error } = await supabase
     .from("rolodex")
     .select("*")
@@ -74,17 +66,8 @@ export async function GET(req: Request) {
     .order("updated_at", { ascending: false });
 
   if (error) {
-    console.error("rolodex select error", {
-      code: error.code,
-      message: error.message,
-      details: error.details,
-    });
-
-    // SELECT visibility failures degrade to empty
-    return NextResponse.json({
-      ok: true,
-      items: [],
-    });
+    console.error("rolodex workspace select error", error);
+    return NextResponse.json({ ok: true, items: [] });
   }
 
   return NextResponse.json({
