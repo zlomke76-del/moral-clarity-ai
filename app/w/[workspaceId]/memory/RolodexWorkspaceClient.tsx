@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 
+/* ------------------------------------------------------------
+   Types
+------------------------------------------------------------ */
 type RolodexRecord = {
   id: string;
   name: string;
@@ -21,6 +24,9 @@ type Props = {
   workspaceId: string;
 };
 
+/* ------------------------------------------------------------
+   Component
+------------------------------------------------------------ */
 export default function RolodexWorkspaceClient({ workspaceId }: Props) {
   const [items, setItems] = useState<RolodexRecord[]>([]);
   const [selected, setSelected] = useState<RolodexRecord | null>(null);
@@ -31,7 +37,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   /* ------------------------------------------------------------
-     LOAD — WORKSPACE-SCOPED ROLODEX
+     Load contacts
   ------------------------------------------------------------ */
   async function load() {
     setLoading(true);
@@ -64,10 +70,40 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
   }, [workspaceId]);
 
   /* ------------------------------------------------------------
-     CREATE / UPDATE
+     Selection / Creation
+  ------------------------------------------------------------ */
+  function startNew() {
+    setSelected(null);
+    setDraft({
+      name: "",
+      relationship_type: "",
+      primary_email: "",
+      primary_phone: "",
+      birthday: "",
+      notes: "",
+      sensitivity_level: 2,
+      consent_level: 1,
+      workspace_id: workspaceId,
+    });
+    setError(null);
+  }
+
+  function select(record: RolodexRecord) {
+    setSelected(record);
+    setDraft({ ...record });
+    setError(null);
+  }
+
+  /* ------------------------------------------------------------
+     Save (POST or PATCH)
   ------------------------------------------------------------ */
   async function save() {
-    if (!draft?.name?.trim()) {
+    if (!draft) {
+      setError("Nothing to save.");
+      return;
+    }
+
+    if (!draft.name?.trim()) {
       setError("Name is required.");
       return;
     }
@@ -76,7 +112,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
     setError(null);
 
     try {
-      const isUpdate = !!selected?.id;
+      const isUpdate = Boolean(selected?.id);
       const url = isUpdate
         ? `/api/rolodex/${selected!.id}`
         : `/api/rolodex`;
@@ -87,7 +123,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...draft,
+          ...(draft ?? {}),
           workspace_id: workspaceId,
         }),
       });
@@ -98,8 +134,8 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
       }
 
       await load();
-      setDraft(null);
       setSelected(null);
+      setDraft(null);
     } catch {
       setError("Save failed.");
     } finally {
@@ -107,9 +143,12 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
     }
   }
 
+  /* ------------------------------------------------------------
+     Delete
+  ------------------------------------------------------------ */
   async function remove() {
     if (!selected) return;
-    if (!confirm("Delete this contact?")) return;
+    if (!confirm("Delete this contact permanently?")) return;
 
     try {
       const res = await fetch(`/api/rolodex/${selected.id}`, {
@@ -130,7 +169,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
   }
 
   /* ------------------------------------------------------------
-     RENDER
+     Render
   ------------------------------------------------------------ */
   return (
     <section className="w-full border-t border-neutral-800 mt-8 pt-6">
@@ -138,24 +177,11 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
 
       <div className="flex gap-2 mb-4">
         <button
-          onClick={() =>
-            setDraft({
-              name: "",
-              relationship_type: "",
-              primary_email: "",
-              primary_phone: "",
-              birthday: "",
-              notes: "",
-              sensitivity_level: 2,
-              consent_level: 1,
-              workspace_id: workspaceId,
-            })
-          }
+          onClick={startNew}
           className="px-3 py-2 rounded bg-neutral-800 text-sm"
         >
           + New
         </button>
-
         <button
           onClick={load}
           className="px-3 py-2 rounded bg-neutral-800 text-sm"
@@ -170,12 +196,9 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
         <>
           <select
             value={selected?.id ?? ""}
-            onChange={(e) => {
-              const record =
-                items.find((i) => i.id === e.target.value) || null;
-              setSelected(record);
-              setDraft(record ? { ...record } : null);
-            }}
+            onChange={(e) =>
+              select(items.find((i) => i.id === e.target.value)!)
+            }
             className="bg-neutral-950 border border-neutral-800 rounded p-2 text-sm w-full mb-4"
           >
             <option value="">Select a contact…</option>
@@ -187,8 +210,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
           </select>
 
           {draft && (
-            <div className="grid gap-4 bg-neutral-950 border border-neutral-800 rounded p-4">
-              {/* Name */}
+            <div className="grid gap-3 bg-neutral-950 border border-neutral-800 rounded p-4">
               <input
                 value={draft.name ?? ""}
                 onChange={(e) =>
@@ -198,7 +220,6 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
               />
 
-              {/* Relationship */}
               <input
                 value={draft.relationship_type ?? ""}
                 onChange={(e) =>
@@ -207,38 +228,34 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
                     relationship_type: e.target.value,
                   })
                 }
-                placeholder="Relationship (e.g. Advisor, Family, Colleague)"
+                placeholder="Relationship (e.g. Client, Partner)"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
               />
 
-              {/* Contact Info */}
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  value={draft.primary_email ?? ""}
-                  onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      primary_email: e.target.value,
-                    })
-                  }
-                  placeholder="Email"
-                  className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
-                />
+              <input
+                value={draft.primary_email ?? ""}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    primary_email: e.target.value,
+                  })
+                }
+                placeholder="Email"
+                className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
+              />
 
-                <input
-                  value={draft.primary_phone ?? ""}
-                  onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      primary_phone: e.target.value,
-                    })
-                  }
-                  placeholder="Phone"
-                  className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
-                />
-              </div>
+              <input
+                value={draft.primary_phone ?? ""}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    primary_phone: e.target.value,
+                  })
+                }
+                placeholder="Phone"
+                className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
+              />
 
-              {/* Birthday */}
               <input
                 type="date"
                 value={draft.birthday ?? ""}
@@ -251,19 +268,16 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
               />
 
-              {/* Notes */}
               <textarea
                 value={draft.notes ?? ""}
                 onChange={(e) =>
                   setDraft({ ...draft, notes: e.target.value })
                 }
-                placeholder="Context, history, significance…"
-                rows={4}
-                className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm resize-none"
+                placeholder="Notes"
+                className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
               />
 
-              {/* Actions */}
-              <div className="flex justify-between items-center pt-2">
+              <div className="flex justify-between items-center">
                 <div className="text-xs text-red-400">{error}</div>
                 <div className="flex gap-2">
                   {selected && (
@@ -277,7 +291,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
                   <button
                     onClick={save}
                     disabled={saving}
-                    className="px-4 py-1.5 text-sm rounded bg-blue-600 disabled:opacity-50"
+                    className="px-3 py-1.5 text-sm rounded bg-blue-600 disabled:opacity-50"
                   >
                     {saving ? "Saving…" : "Save"}
                   </button>
