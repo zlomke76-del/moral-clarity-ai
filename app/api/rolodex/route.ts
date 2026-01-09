@@ -22,7 +22,7 @@ async function getSupabase() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      db: { schema: "memory" }, // 🔥 THIS IS THE FIX
+      db: { schema: "memory" },
       cookies: {
         get(name: string) {
           return cookieStore.get(name)?.value;
@@ -38,8 +38,10 @@ async function getSupabase() {
 export async function GET(req: Request) {
   const supabase = await getSupabase();
 
-  const { data: { user }, error: authError } =
-    await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
   if (authError || !user) {
     return NextResponse.json(
@@ -63,15 +65,18 @@ export async function GET(req: Request) {
   const { data, error } = await query;
 
   if (error) {
-    return NextResponse.json(
-      {
-        ok: false,
-        stage: "select.rolodex",
-        error,
-        ...(DIAG && { diag: { user_id: user.id } }),
-      },
-      { status: 403 }
-    );
+    console.error("rolodex select error", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      user_id: user.id,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      data: [],
+      ...(DIAG && { diag: { count: 0 } }),
+    });
   }
 
   return NextResponse.json({
@@ -87,8 +92,10 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const supabase = await getSupabase();
 
-  const { data: { user }, error: authError } =
-    await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
   if (authError || !user) {
     return NextResponse.json(
