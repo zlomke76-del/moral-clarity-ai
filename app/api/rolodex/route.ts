@@ -1,13 +1,3 @@
-// app/api/rolodex/route.ts
-// ============================================================
-// Rolodex API — minimal, RLS-governed
-// ============================================================
-// - Uses user session (cookies)
-// - No service role
-// - RLS enforces ownership + isolation
-// - TABLE LIVES IN memory.rolodex (NOT public)
-// ============================================================
-
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
@@ -37,15 +27,8 @@ function getSupabase(req: NextRequest, res: NextResponse) {
 }
 
 /* ========= GET ========= */
-/**
- * GET /api/rolodex
- * GET /api/rolodex?q=char
- *
- * - Lists user's contacts
- * - Optional fuzzy name search via pg_trgm
- */
 export async function GET(req: NextRequest) {
-  const res = NextResponse.next();
+  const res = new NextResponse(); // ✅ FIX
   const supabase = getSupabase(req, res);
 
   const {
@@ -63,20 +46,21 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .schema("memory")
     .from("rolodex")
-    .select(
-      `
+    .select(`
       id,
+      user_id,
+      workspace_id,
       name,
       relationship_type,
       primary_email,
       primary_phone,
+      birthday,
       notes,
       sensitivity_level,
       consent_level,
       created_at,
       updated_at
-    `
-    )
+    `)
     .order("name", { ascending: true });
 
   if (q && q.trim().length > 0) {
@@ -86,6 +70,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query;
 
   if (error) {
+    console.error("[ROLODEX GET]", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
@@ -93,24 +78,8 @@ export async function GET(req: NextRequest) {
 }
 
 /* ========= POST ========= */
-/**
- * POST /api/rolodex
- *
- * Body:
- * {
- *   name: string (required)
- *   relationship_type?: string
- *   primary_email?: string
- *   primary_phone?: string
- *   birthday?: string (YYYY-MM-DD)
- *   notes?: string
- *   workspace_id?: uuid
- *   sensitivity_level?: number
- *   consent_level?: number
- * }
- */
 export async function POST(req: NextRequest) {
-  const res = NextResponse.next();
+  const res = new NextResponse(); // ✅ FIX
   const supabase = getSupabase(req, res);
 
   const {
@@ -154,6 +123,7 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) {
+    console.error("[ROLODEX POST]", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
