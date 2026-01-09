@@ -277,6 +277,18 @@ export async function POST(req: Request) {
     const finalUserKey = canonicalUserKey ?? userKey;
 
     // --------------------------------------------------------
+    // EXPLICIT EPPE COMMAND (HARD GATE — LOCAL ONLY)
+    // --------------------------------------------------------
+    const isEPPECommand =
+      typeof message === "string" &&
+      message.trim().toLowerCase().startsWith("/eppe");
+
+    const normalizedMessage =
+      isEPPECommand && typeof message === "string"
+        ? message.replace(/^\/eppe\s*/i, "").trim()
+        : message;
+
+    // --------------------------------------------------------
     // DEMO SAFE — EXECUTION PROFILE
     // --------------------------------------------------------
     const executionProfile =
@@ -310,13 +322,11 @@ export async function POST(req: Request) {
     // --------------------------------------------------------
     let resolvedConversationId: string | null = conversationId ?? null;
 
-    // DEMO MODE — STABLE SESSION CONVERSATION (NO DB BOOTSTRAP)
     if (executionProfile === "demo") {
       resolvedConversationId =
         resolvedConversationId ?? `demo-${finalUserKey}`;
     }
 
-    // STUDIO MODE — DURABLE CONVERSATION BOOTSTRAP
     if (
       executionProfile === "studio" &&
       !resolvedConversationId &&
@@ -344,30 +354,30 @@ export async function POST(req: Request) {
       throw new Error("userKey and conversationId are required");
     }
 
-  // --------------------------------------------------------
-// DEMO MODE — SESSION WM READ (10 TURN CAP)
-// --------------------------------------------------------
-let sessionWM: Array<{ role: "user" | "assistant"; content: string }> = [];
+    // --------------------------------------------------------
+    // DEMO MODE — SESSION WM READ (10 TURN CAP)
+    // --------------------------------------------------------
+    let sessionWM: Array<{ role: "user" | "assistant"; content: string }> = [];
 
-if (executionProfile === "demo" && resolvedConversationId) {
-  const { data: wmRows } = await supabaseAdmin
-    .schema("memory")
-    .from("working_memory")
-    .select("role, content, created_at")
-    .eq("conversation_id", resolvedConversationId)
-    .eq("user_id", DEMO_USER_ID)
-    .order("created_at", { ascending: false })
-    .limit(10);
+    if (executionProfile === "demo" && resolvedConversationId) {
+      const { data: wmRows } = await supabaseAdmin
+        .schema("memory")
+        .from("working_memory")
+        .select("role, content, created_at")
+        .eq("conversation_id", resolvedConversationId)
+        .eq("user_id", DEMO_USER_ID)
+        .order("created_at", { ascending: false })
+        .limit(10);
 
-  if (Array.isArray(wmRows) && wmRows.length > 0) {
-    sessionWM = wmRows
-      .reverse()
-      .map((r) => ({
-        role: r.role as "user" | "assistant",
-        content: r.content,
-      }));
-  }
-}
+      if (Array.isArray(wmRows) && wmRows.length > 0) {
+        sessionWM = wmRows
+          .reverse()
+          .map((r) => ({
+            role: r.role as "user" | "assistant",
+            content: r.content,
+          }));
+      }
+    }
 
     // --------------------------------------------------------
     // SSR AUTH CONTEXT
@@ -401,7 +411,7 @@ if (executionProfile === "demo" && resolvedConversationId) {
         : user?.id ?? finalUserKey;
 
     // --------------------------------------------------------
-    // Persist user message (STUDIO + DEMO SESSION WM)
+    // Persist user message
     // --------------------------------------------------------
     if ((authUserId || allowSessionWM) && message) {
       await supabaseAdmin
@@ -425,25 +435,21 @@ if (executionProfile === "demo" && resolvedConversationId) {
     }
 
     // --------------------------------------------------------
-    // CONTEXT ASSEMBLY (REQUIRED PATTERN)
+    // CONTEXT ASSEMBLY
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
       resolvedWorkspaceId,
-      message ?? "",
-      ({
+      normalizedMessage ?? "",
+      {
         sessionId: resolvedConversationId,
         sessionStartedAt: new Date().toISOString(),
         executionProfile,
-      } as {
-        sessionId: string;
-        sessionStartedAt: string;
-        executionProfile?: "demo" | "studio";
-      })
+      }
     );
 
     // --------------------------------------------------------
-    // DEMO SAFE — EARLY EXIT (CRITICAL FIX)
+    // DEMO SAFE — IMAGE BLOCK
     // --------------------------------------------------------
     if (executionProfile === "demo" && isImageRequest(message)) {
       const demoResponse = "I’m here in demo mode. Ask me anything.";
@@ -457,7 +463,7 @@ if (executionProfile === "demo" && resolvedConversationId) {
     }
 
     // --------------------------------------------------------
-    // TERMINAL APPROVAL SHORT-CIRCUIT
+    // TERMINAL APPROVAL
     // --------------------------------------------------------
     if (isTerminalApproval(message)) {
       const terminalResponse = terminalApprovalResponse();
@@ -484,7 +490,7 @@ if (executionProfile === "demo" && resolvedConversationId) {
     }
 
     // --------------------------------------------------------
-    // IMAGE REQUEST BRANCH
+    // IMAGE REQUEST
     // --------------------------------------------------------
     if (message && isImageRequest(message)) {
       const imageUrl = await generateImage(message);
@@ -512,7 +518,7 @@ if (executionProfile === "demo" && resolvedConversationId) {
     }
 
     // --------------------------------------------------------
-    // NEWSROOM EXECUTION (MINIMAL CONNECT RESTORED)
+    // NEWSROOM
     // --------------------------------------------------------
     const wantsNews =
       newsMode === true ||
@@ -527,9 +533,7 @@ if (executionProfile === "demo" && resolvedConversationId) {
         .order("created_at", { ascending: false })
         .limit(6);
 
-      if (error) {
-        throw new Error("NEWSROOM_DIGEST_FETCH_FAILED");
-      }
+      if (error) throw new Error("NEWSROOM_DIGEST_FETCH_FAILED");
 
       const newsroomResponse = await runNewsroomExecutor(digestRows ?? []);
 
@@ -552,11 +556,37 @@ if (executionProfile === "demo" && resolvedConversationId) {
       });
     }
 
-        // --------------------------------------------------------
+    // --------------------------------------------------------
+    // EPPE IMPLICIT USE REJECTION
+    // --------------------------------------------------------
+    if (!isEPPECommand && requiresEPPE01(normalizedMessage)) {
+      const rejection =
+        "EPPE-01 evaluations require explicit invocation using the `/eppe` command.";
+
+      await supabaseAdmin
+        .schema("memory")
+        .from("working_memory")
+        .insert({
+          conversation_id: resolvedConversationId,
+          user_id: authUserId,
+          workspace_id: resolvedWorkspaceId,
+          role: "assistant",
+          content: rejection,
+        });
+
+      return NextResponse.json({
+        ok: true,
+        conversationId: resolvedConversationId,
+        response: rejection,
+        messages: [{ role: "assistant", content: rejection }],
+      });
+    }
+
+    // --------------------------------------------------------
     // HYBRID PIPELINE
     // --------------------------------------------------------
     const result = await runHybridPipeline({
-      userMessage: message ?? "",
+      userMessage: normalizedMessage ?? "",
       context,
       ministryMode,
       founderMode,
@@ -569,115 +599,95 @@ if (executionProfile === "demo" && resolvedConversationId) {
         : "I’m here and ready to continue.";
 
     // --------------------------------------------------------
-// EPPE-01 POLICY GATE (POST-REASONING, PRE-PERSISTENCE)
-// --------------------------------------------------------
-let gatedResponse = rawResponse;
+    // EPPE-01 VALIDATION (COMMAND ONLY)
+    // --------------------------------------------------------
+    let gatedResponse = rawResponse;
 
-// Build a conservative, type-safe policy context
-const policyContext = {
-  workspace: {
-    id: resolvedWorkspaceId,
-    mode: modeHint || undefined,
-  },
-  intent: {
-    domain: founderMode ? "materials" : undefined,
-    keywords:
-      typeof message === "string"
-        ? message.toLowerCase().split(/\W+/).filter(Boolean)
-        : [],
-  },
-};
+    if (isEPPECommand) {
+      let parsed: any;
 
-// Enforce EPPE-01 if required
-if (modeHint === "eppe") {
-  let parsed: any;
+      try {
+        parsed = JSON.parse(rawResponse);
+      } catch {
+        return NextResponse.json({
+          ok: false,
+          conversationId: resolvedConversationId,
+          response:
+            "EPPE-01 output must be valid JSON conforming to the evaluation schema.",
+          messages: [
+            {
+              role: "assistant",
+              content:
+                "EPPE-01 enforcement: invalid or malformed JSON output.",
+            },
+          ],
+        });
+      }
 
-  try {
-    parsed = JSON.parse(rawResponse);
-  } catch {
+      const { valid, errors } = validateEPPE01(parsed);
+
+      if (!valid) {
+        return NextResponse.json({
+          ok: false,
+          conversationId: resolvedConversationId,
+          response:
+            "This evaluation does not meet EPPE-01 requirements and cannot be finalized.",
+          messages: [
+            {
+              role: "assistant",
+              content: `EPPE-01 validation failed:\n${errors
+                ?.map(
+                  (e: any) => `- ${e.instancePath || "(root)"} ${e.message}`
+                )
+                .join("\n")}`,
+            },
+          ],
+        });
+      }
+
+      gatedResponse = JSON.stringify(parsed, null, 2);
+    }
+
+    // --------------------------------------------------------
+    // SAFETY SCRUB
+    // --------------------------------------------------------
+    const scrubbed = scrubPhantomExecutionLanguage(gatedResponse);
+    const safeResponse = assertNoPhantomLanguage(scrubbed);
+
+    // --------------------------------------------------------
+    // PERSIST ASSISTANT MESSAGE
+    // --------------------------------------------------------
+    if (authUserId || allowSessionWM) {
+      await supabaseAdmin
+        .schema("memory")
+        .from("working_memory")
+        .insert({
+          conversation_id: resolvedConversationId,
+          user_id: authUserId,
+          workspace_id: resolvedWorkspaceId,
+          role: "assistant",
+          content: safeResponse,
+        });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      conversationId: resolvedConversationId,
+      response: safeResponse,
+      messages: [{ role: "assistant", content: safeResponse }],
+    });
+  } catch (err: any) {
+    console.error("[CHAT ROUTE ERROR]", err?.message);
+
     return NextResponse.json({
       ok: false,
-      conversationId: resolvedConversationId,
-      response:
-        "This evaluation must be returned as structured EPPE-01 JSON. Required fields are missing or the format is invalid.",
+      response: "An internal error occurred. I’m still here.",
       messages: [
         {
           role: "assistant",
-          content:
-            "EPPE-01 enforcement: output must be valid JSON conforming to the evaluation schema.",
+          content: "An internal error occurred. I’m still here.",
         },
       ],
     });
   }
-
-  const { valid, errors } = validateEPPE01(parsed);
-
-  if (!valid) {
-    return NextResponse.json({
-      ok: false,
-      conversationId: resolvedConversationId,
-      response:
-        "This evaluation does not meet EPPE-01 requirements and cannot be finalized.",
-      messages: [
-        {
-          role: "assistant",
-          content: `EPPE-01 validation failed:\n${errors
-            ?.map(
-              (e: any) => `- ${e.instancePath || "(root)"} ${e.message}`
-            )
-            .join("\n")}`,
-        },
-      ],
-    });
-  }
-
-  // EPPE-01 passed → emit canonical structured output
-  gatedResponse = JSON.stringify(parsed, null, 2);
-}
-
-// --------------------------------------------------------
-// SAFETY SCRUB + FINAL ASSERTION
-// --------------------------------------------------------
-const scrubbed = scrubPhantomExecutionLanguage(gatedResponse);
-const safeResponse = assertNoPhantomLanguage(scrubbed);
-
-// --------------------------------------------------------
-// PERSIST ASSISTANT MESSAGE
-// --------------------------------------------------------
-if (authUserId || allowSessionWM) {
-  await supabaseAdmin
-    .schema("memory")
-    .from("working_memory")
-    .insert({
-      conversation_id: resolvedConversationId,
-      user_id: authUserId,
-      workspace_id: resolvedWorkspaceId,
-      role: "assistant",
-      content: safeResponse,
-      });
-  }
-
-  // --------------------------------------------------------
-  // RESPONSE
-  // --------------------------------------------------------
-    return NextResponse.json({
-    ok: true,
-    conversationId: resolvedConversationId,
-    response: safeResponse,
-    messages: [{ role: "assistant", content: safeResponse }],
-  });
-} catch (err: any) {
-  console.error("[CHAT ROUTE ERROR]", err?.message);
-
-  return NextResponse.json({
-    ok: false,
-    response: "An internal error occurred. I’m still here.",
-    messages: [
-      {
-        role: "assistant",
-        content: "An internal error occurred. I’m still here.",
-      },
-    ],
-  });
-}
 }
