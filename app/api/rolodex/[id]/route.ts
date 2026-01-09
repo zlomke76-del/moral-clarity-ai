@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Rolodex ID Route (PATCH + DELETE)
 // Cookie auth · RLS enforced · memory schema
-// AUTHORITATIVE — NEXT 16 CORRECT
+// AUTHORITATIVE — DEFENSIVE + FINAL
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -35,35 +35,38 @@ async function getSupabase() {
 ------------------------------------------------------------ */
 const COLUMN_MAP: Record<string, string> = {
   name: "name",
-
   relationship: "relationship_type",
   relationship_type: "relationship_type",
-
   email: "primary_email",
   primary_email: "primary_email",
-
   phone: "primary_phone",
   primary_phone: "primary_phone",
-
   birthday: "birthday",
   notes: "notes",
-
   organization: "organization",
   title: "title",
-
   visibility: "visibility",
   sensitivity_level: "sensitivity_level",
   consent_level: "consent_level",
 };
 
 /* ------------------------------------------------------------
+   Helper: resolve ID safely
+------------------------------------------------------------ */
+function resolveId(req: Request, params?: { id?: string }) {
+  if (params?.id) return params.id;
+  const parts = new URL(req.url).pathname.split("/");
+  return parts[parts.length - 1] || null;
+}
+
+/* ------------------------------------------------------------
    PATCH /api/rolodex/[id]
 ------------------------------------------------------------ */
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id?: string } }
 ) {
-  const { id } = await params;
+  const id = resolveId(req, params);
 
   if (!id) {
     return NextResponse.json(
@@ -86,9 +89,7 @@ export async function PATCH(
     );
   }
 
-  // ----------------------------------------------------------
-  // SAFE JSON PARSE
-  // ----------------------------------------------------------
+  // Safe JSON parse
   let body: Record<string, any> = {};
   try {
     const text = await req.text();
@@ -100,25 +101,20 @@ export async function PATCH(
     );
   }
 
-  // ----------------------------------------------------------
-  // HARD SANITIZATION (IMMUTABLE FIELDS)
-  // ----------------------------------------------------------
+  // Strip immutable fields
   delete body.id;
   delete body.user_id;
   delete body.workspace_id;
   delete body.created_at;
   delete body.updated_at;
 
-  // ----------------------------------------------------------
-  // BUILD UPDATE PAYLOAD
-  // ----------------------------------------------------------
+  // Build update payload
   const updatePayload: Record<string, any> = {};
 
   for (const [key, value] of Object.entries(body)) {
     const column = COLUMN_MAP[key];
     if (!column) continue;
 
-    // Date normalization
     if (column === "birthday" && typeof value === "string") {
       const d = new Date(value);
       if (!isNaN(d.getTime())) {
@@ -127,7 +123,6 @@ export async function PATCH(
       continue;
     }
 
-    // Enum normalization (Postgres enums are case-sensitive)
     if (column === "relationship_type" && typeof value === "string") {
       updatePayload[column] = value.trim().toLowerCase();
       continue;
@@ -168,9 +163,9 @@ export async function PATCH(
 ------------------------------------------------------------ */
 export async function DELETE(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id?: string } }
 ) {
-  const { id } = await params;
+  const id = resolveId(req, params);
 
   if (!id) {
     return NextResponse.json(
