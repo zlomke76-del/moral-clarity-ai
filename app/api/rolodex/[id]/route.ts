@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Rolodex ID Route (PATCH + DELETE)
 // Cookie auth · RLS enforced · memory schema
-// AUTHORITATIVE — FIXED JSON HANDLING
+// AUTHORITATIVE — FIXED PAYLOAD → COLUMN MAPPING
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -31,8 +31,34 @@ async function getSupabase() {
 }
 
 /* ------------------------------------------------------------
+   Column mapping (UI → DB)
+------------------------------------------------------------ */
+const COLUMN_MAP: Record<string, string> = {
+  name: "name",
+
+  relationship: "relationship_type",
+  relationship_type: "relationship_type",
+
+  email: "primary_email",
+  primary_email: "primary_email",
+
+  phone: "primary_phone",
+  primary_phone: "primary_phone",
+
+  birthday: "birthday",
+  notes: "notes",
+
+  organization: "organization",
+  title: "title",
+
+  visibility: "visibility",
+  sensitivity_level: "sensitivity_level",
+  consent_level: "consent_level",
+};
+
+/* ------------------------------------------------------------
    PATCH /api/rolodex/[id]
-   OWNER FORCED · SAFE PAYLOAD PARSE
+   OWNER FORCED · SAFE PARTIAL UPDATE
 ------------------------------------------------------------ */
 export async function PATCH(
   req: Request,
@@ -61,13 +87,13 @@ export async function PATCH(
   }
 
   // ----------------------------------------------------------
-  // SAFE JSON PARSE (THIS WAS THE BUG)
+  // SAFE JSON PARSE
   // ----------------------------------------------------------
   let body: Record<string, any> = {};
   try {
     const text = await req.text();
     if (text) body = JSON.parse(text);
-  } catch (err) {
+  } catch {
     return NextResponse.json(
       { ok: false, error: "Invalid JSON payload" },
       { status: 400 }
@@ -75,14 +101,38 @@ export async function PATCH(
   }
 
   // ----------------------------------------------------------
-  // HARD SANITIZATION
+  // HARD SANITIZATION (immutable fields)
   // ----------------------------------------------------------
-  delete body.user_id;
   delete body.id;
+  delete body.user_id;
+  delete body.created_at;
+  delete body.updated_at;
   if (!body.workspace_id) delete body.workspace_id;
 
-  // Nothing to update?
-  if (Object.keys(body).length === 0) {
+  // ----------------------------------------------------------
+  // BUILD SAFE UPDATE PAYLOAD
+  // ----------------------------------------------------------
+  const updatePayload: Record<string, any> = {};
+
+  for (const [key, value] of Object.entries(body)) {
+    const column = COLUMN_MAP[key];
+    if (!column) continue;
+
+    // Normalize birthday → YYYY-MM-DD
+    if (column === "birthday" && typeof value === "string") {
+      const parsed = new Date(value);
+      if (!isNaN(parsed.getTime())) {
+        updatePayload[column] = parsed.toISOString().slice(0, 10);
+      }
+      continue;
+    }
+
+    updatePayload[column] =
+      typeof value === "string" ? value.trim() : value;
+  }
+
+  // Nothing to update
+  if (Object.keys(updatePayload).length === 0) {
     return NextResponse.json(
       { ok: true, noop: true },
       { status: 200 }
@@ -92,7 +142,7 @@ export async function PATCH(
   const { data, error } = await supabase
     .from("rolodex")
     .update({
-      ...body,
+      ...updatePayload,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
