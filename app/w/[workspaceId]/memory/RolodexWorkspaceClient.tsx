@@ -23,9 +23,6 @@ type Props = {
 };
 
 export default function RolodexWorkspaceClient({ workspaceId }: Props) {
-  /* ------------------------------------------------------------
-     Supabase (cookie-based, RLS)
-  ------------------------------------------------------------ */
   const supabase = useMemo(
     () =>
       createBrowserClient(
@@ -35,42 +32,24 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
     []
   );
 
-  /* ------------------------------------------------------------
-     State
-  ------------------------------------------------------------ */
   const [items, setItems] = useState<RolodexRecord[]>([]);
   const [selected, setSelected] = useState<RolodexRecord | null>(null);
   const [draft, setDraft] = useState<Partial<RolodexRecord> | null>(null);
 
-  const [loading, setLoading] = useState<boolean>(true);
-  const [saving, setSaving] = useState<boolean>(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   /* ------------------------------------------------------------
-     Load Rolodex entries (server-scoped by workspace + user)
+     Load Rolodex entries (cookie-auth)
   ------------------------------------------------------------ */
   async function load() {
     setLoading(true);
     setError(null);
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.access_token) {
-        setError("Not authenticated.");
-        setItems([]);
-        return;
-      }
-
       const res = await fetch(
-        `/api/rolodex/workspace?workspaceId=${workspaceId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
+        `/api/rolodex/workspace?workspaceId=${workspaceId}`
       );
 
       if (!res.ok) {
@@ -126,10 +105,10 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
   }
 
   /* ------------------------------------------------------------
-     Save (POST or PATCH)
+     Save (POST or PATCH) — cookie-auth
   ------------------------------------------------------------ */
   async function save() {
-    if (!draft || !draft.name || draft.name.trim().length === 0) {
+    if (!draft?.name?.trim()) {
       setError("Name is required.");
       return;
     }
@@ -138,15 +117,6 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
     setError(null);
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.access_token) {
-        setError("Authentication expired.");
-        return;
-      }
-
       const isUpdate = !!selected?.id;
       const url = isUpdate
         ? `/api/rolodex/${selected!.id}`
@@ -158,7 +128,6 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
         method,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           ...draft,
@@ -182,24 +151,15 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
   }
 
   /* ------------------------------------------------------------
-     Delete (DELETE /api/rolodex/[id])
+     Delete (DELETE /api/rolodex/[id]) — cookie-auth
   ------------------------------------------------------------ */
   async function remove() {
     if (!selected) return;
     if (!confirm("Delete this contact permanently?")) return;
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.access_token) return;
-
       const res = await fetch(`/api/rolodex/${selected.id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
       });
 
       if (!res.ok) {
@@ -223,16 +183,10 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
       <h2 className="text-xl font-semibold mb-4">Rolodex</h2>
 
       <div className="flex gap-2 mb-4">
-        <button
-          onClick={startNew}
-          className="px-3 py-2 rounded bg-neutral-800 text-sm"
-        >
+        <button onClick={startNew} className="px-3 py-2 rounded bg-neutral-800 text-sm">
           + New
         </button>
-        <button
-          onClick={load}
-          className="px-3 py-2 rounded bg-neutral-800 text-sm"
-        >
+        <button onClick={load} className="px-3 py-2 rounded bg-neutral-800 text-sm">
           Refresh
         </button>
       </div>
@@ -260,9 +214,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
             <div className="grid gap-3 bg-neutral-950 border border-neutral-800 rounded p-4">
               <input
                 value={draft.name ?? ""}
-                onChange={(e) =>
-                  setDraft({ ...draft, name: e.target.value })
-                }
+                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                 placeholder="Name"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
               />
@@ -270,10 +222,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
               <input
                 value={draft.relationship_type ?? ""}
                 onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    relationship_type: e.target.value,
-                  })
+                  setDraft({ ...draft, relationship_type: e.target.value })
                 }
                 placeholder="Relationship"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
@@ -282,10 +231,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
               <input
                 value={draft.primary_email ?? ""}
                 onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    primary_email: e.target.value,
-                  })
+                  setDraft({ ...draft, primary_email: e.target.value })
                 }
                 placeholder="Email"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
@@ -294,10 +240,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
               <input
                 value={draft.primary_phone ?? ""}
                 onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    primary_phone: e.target.value,
-                  })
+                  setDraft({ ...draft, primary_phone: e.target.value })
                 }
                 placeholder="Phone"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
@@ -305,9 +248,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
 
               <textarea
                 value={draft.notes ?? ""}
-                onChange={(e) =>
-                  setDraft({ ...draft, notes: e.target.value })
-                }
+                onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
                 placeholder="Notes"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
               />
