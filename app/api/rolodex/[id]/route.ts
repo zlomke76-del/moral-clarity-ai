@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Rolodex ID Route (PATCH + DELETE)
 // Cookie auth · RLS enforced · memory schema
-// AUTHORITATIVE — BUILD-SAFE FINAL
+// AUTHORITATIVE — NEXT 16 CORRECT
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -61,9 +61,9 @@ const COLUMN_MAP: Record<string, string> = {
 ------------------------------------------------------------ */
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const id = params?.id;
+  const { id } = await params;
 
   if (!id) {
     return NextResponse.json(
@@ -118,6 +118,7 @@ export async function PATCH(
     const column = COLUMN_MAP[key];
     if (!column) continue;
 
+    // Date normalization
     if (column === "birthday" && typeof value === "string") {
       const d = new Date(value);
       if (!isNaN(d.getTime())) {
@@ -126,6 +127,7 @@ export async function PATCH(
       continue;
     }
 
+    // Enum normalization (Postgres enums are case-sensitive)
     if (column === "relationship_type" && typeof value === "string") {
       updatePayload[column] = value.trim().toLowerCase();
       continue;
@@ -166,9 +168,9 @@ export async function PATCH(
 ------------------------------------------------------------ */
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const id = params?.id;
+  const { id } = await params;
 
   if (!id) {
     return NextResponse.json(
