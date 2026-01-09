@@ -1,206 +1,226 @@
 // app/api/rolodex/route.ts
-// ------------------------------------------------------------
-// Rolodex API (AUTHORITATIVE)
-// CRUD access to memory.rolodex
-// Assumes RLS policies already exist and are correct
-// ------------------------------------------------------------
+// ============================================================
+// Rolodex API — minimal, RLS-governed
+// ============================================================
+// - Uses user session (cookies)
+// - No service role
+// - RLS enforces ownership + isolation
+// - TABLE: memory.rolodex
+// ============================================================
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
-/* ------------------------------------------------------------------
-   Helpers
-------------------------------------------------------------------- */
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-function json(
-  body: unknown,
-  status: number = 200
-) {
-  return new NextResponse(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
+/* ============================================================
+   Supabase (REQUEST-SCOPED, NEXT 16 SAFE)
+============================================================ */
 
 async function getSupabase() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-      ? process.env.SUPABASE_SERVICE_ROLE_KEY
-      : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name: string) {
           return cookieStore.get(name)?.value;
+        },
+        set() {
+          // no-op (server components / route handlers)
+        },
+        remove() {
+          // no-op
         },
       },
     }
   );
 }
 
-async function requireUser(supabase: ReturnType<typeof createServerClient>) {
+/* ============================================================
+   GET /api/rolodex
+   Optional: ?q=name
+============================================================ */
+export async function GET(req: NextRequest) {
+  const supabase = await getSupabase();
+
   const {
     data: { user },
-    error,
+    error: authError,
   } = await supabase.auth.getUser();
 
-  if (error || !user) {
-    return null;
+  if (authError || !user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  return user;
-}
+  const { searchParams } = new URL(req.url);
+  const q = searchParams.get("q")?.trim();
 
-/* ------------------------------------------------------------------
-   GET — list rolodex entries
-------------------------------------------------------------------- */
+  let query = supabase
+    .schema("memory")
+    .from("rolodex")
+    .select(
+      `
+        id,
+        name,
+        relationship_type,
+        primary_email,
+        primary_phone,
+        birthday,
+        notes,
+        sensitivity_level,
+        consent_level,
+        created_at,
+        updated_at
+      `
+    )
+    .order("name", { ascending: true });
 
-export async function GET() {
-  try {
-    const supabase = await getSupabase();
-    const user = await requireUser(supabase);
-
-    if (!user) {
-      return json({ error: "unauthorized" }, 401);
-    }
-
-    const { data, error } = await supabase
-      .from("rolodex")
-      .select("*")
-      .order("name", { ascending: true });
-
-    if (error) {
-      return json(
-        { error: "rolodex_select_failed", details: error.message },
-        403
-      );
-    }
-
-    return json({ data });
-  } catch (err) {
-    console.error("[rolodex][GET]", err);
-    return json({ error: "internal_error" }, 500);
+  if (q) {
+    query = query.ilike("name", `%${q}%`);
   }
+
+  const { data, error } = await query;
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ data });
 }
 
-/* ------------------------------------------------------------------
-   POST — create new rolodex entry
-------------------------------------------------------------------- */
+/* ============================================================
+   POST /api/rolodex
+============================================================ */
+export async function POST(req: NextRequest) {
+  const supabase = await getSupabase();
 
-export async function POST(req: Request) {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let body: any;
   try {
-    const supabase = await getSupabase();
-    const user = await requireUser(supabase);
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
 
-    if (!user) {
-      return json({ error: "unauthorized" }, 401);
-    }
+  if (!body?.name || typeof body.name !== "string") {
+    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+  }
 
-    const payload = await req.json();
-
-    const insert = {
-      ...payload,
+  const { data, error } = await supabase
+    .schema("memory")
+    .from("rolodex")
+    .insert({
       user_id: user.id,
-    };
+      workspace_id: body.workspace_id ?? null,
+      name: body.name.trim(),
+      relationship_type: body.relationship_type ?? null,
+      primary_email: body.primary_email ?? null,
+      primary_phone: body.primary_phone ?? null,
+      birthday: body.birthday ?? null,
+      notes: body.notes ?? null,
+      sensitivity_level: body.sensitivity_level ?? undefined,
+      consent_level: body.consent_level ?? undefined,
+    })
+    .select()
+    .single();
 
-    const { data, error } = await supabase
-      .from("rolodex")
-      .insert(insert)
-      .select()
-      .single();
-
-    if (error) {
-      return json(
-        { error: "rolodex_insert_failed", details: error.message },
-        403
-      );
-    }
-
-    return json({ data }, 201);
-  } catch (err) {
-    console.error("[rolodex][POST]", err);
-    return json({ error: "internal_error" }, 500);
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  return NextResponse.json(data, { status: 201 });
 }
 
-/* ------------------------------------------------------------------
-   PATCH — update existing rolodex entry
-------------------------------------------------------------------- */
+/* ============================================================
+   PATCH /api/rolodex?id=UUID
+============================================================ */
+export async function PATCH(req: NextRequest) {
+  const supabase = await getSupabase();
 
-export async function PATCH(req: Request) {
-  try {
-    const supabase = await getSupabase();
-    const user = await requireUser(supabase);
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-    if (!user) {
-      return json({ error: "unauthorized" }, 401);
-    }
-
-    const payload = await req.json();
-    const { id, ...updates } = payload;
-
-    if (!id) {
-      return json({ error: "missing_id" }, 400);
-    }
-
-    const { data, error } = await supabase
-      .from("rolodex")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error) {
-      return json(
-        { error: "rolodex_update_failed", details: error.message },
-        403
-      );
-    }
-
-    return json({ data });
-  } catch (err) {
-    console.error("[rolodex][PATCH]", err);
-    return json({ error: "internal_error" }, 500);
+  if (authError || !user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+
+  if (!id) {
+    return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  }
+
+  let body: any;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const { data, error } = await supabase
+    .schema("memory")
+    .from("rolodex")
+    .update(body)
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json(data);
 }
 
-/* ------------------------------------------------------------------
-   DELETE — hard delete rolodex entry
-------------------------------------------------------------------- */
+/* ============================================================
+   DELETE /api/rolodex?id=UUID
+============================================================ */
+export async function DELETE(req: NextRequest) {
+  const supabase = await getSupabase();
 
-export async function DELETE(req: Request) {
-  try {
-    const supabase = await getSupabase();
-    const user = await requireUser(supabase);
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-    if (!user) {
-      return json({ error: "unauthorized" }, 401);
-    }
-
-    const { id } = await req.json();
-
-    if (!id) {
-      return json({ error: "missing_id" }, 400);
-    }
-
-    const { error } = await supabase
-      .from("rolodex")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      return json(
-        { error: "rolodex_delete_failed", details: error.message },
-        403
-      );
-    }
-
-    return json({ success: true });
-  } catch (err) {
-    console.error("[rolodex][DELETE]", err);
-    return json({ error: "internal_error" }, 500);
+  if (authError || !user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+
+  if (!id) {
+    return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  }
+
+  const { error } = await supabase
+    .schema("memory")
+    .from("rolodex")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
 }
