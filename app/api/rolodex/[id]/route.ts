@@ -56,14 +56,35 @@ export async function PATCH(
     );
   }
 
-  const body = await req.json();
+  let body: Record<string, any>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: "Invalid JSON body" },
+      { status: 400 }
+    );
+  }
 
   // 🔒 SANITIZATION
   delete body.user_id;
 
-  // Normalize workspace_id (null allowed)
+  // Normalize workspace_id
   if (body.workspace_id === "") {
     body.workspace_id = null;
+  }
+
+  // Remove undefined fields
+  Object.keys(body).forEach((k) => {
+    if (body[k] === undefined) delete body[k];
+  });
+
+  // 🚫 Nothing to update
+  if (Object.keys(body).length === 0) {
+    return NextResponse.json(
+      { ok: false, error: "No updatable fields provided" },
+      { status: 400 }
+    );
   }
 
   const { data, error } = await supabase
