@@ -64,13 +64,13 @@ export async function GET(req: Request) {
   }
 
   /* ------------------------------------------------------------
-     SELECT — RLS enforced automatically
+     SELECT — workspace + personal (NULL) contacts
   ------------------------------------------------------------ */
   const { data, error } = await supabase
     .from("rolodex")
     .select("*")
-    .eq("workspace_id", workspaceId)
     .eq("user_id", user.id)
+    .or(`workspace_id.eq.${workspaceId},workspace_id.is.null`)
     .order("updated_at", { ascending: false });
 
   if (error) {
@@ -80,8 +80,7 @@ export async function GET(req: Request) {
       details: error.details,
     });
 
-    // SELECT visibility failures should degrade to empty,
-    // not surface as Forbidden
+    // SELECT visibility failures degrade to empty
     return NextResponse.json({
       ok: true,
       items: [],
