@@ -111,6 +111,61 @@ const ANCHORED_PET_PAPERS: WhitePaper[] = [
   },
 ];
 
+const ADVANCED_ANCHORED_PET_PAPERS: WhitePaper[] = [
+  {
+    slug: "bio-based-diacid-pet",
+    title: "Bio-Based Diacid PET Copolymer (FDCA)",
+    subtitle: "Renewable diacid PET supporting lower-carbon polymer supply chains.",
+  },
+  {
+    slug: "biguanide-diacid-antimicrobial-pet",
+    title: "Biguanide Diacid–Functional Antimicrobial PET",
+    subtitle: "Anchored antimicrobial PET without leachable additives.",
+  },
+  {
+    slug: "citric-acid-modified-pet",
+    title: "Citric Acid–Modified PET",
+    subtitle:
+      "Controlled hydrolytic susceptibility enabling predictable end-of-life pathways.",
+  },
+  {
+    slug: "gallic-acid-antioxidant-pet",
+    title: "Gallic Acid–Antioxidant PET",
+    subtitle: "Intrinsic antioxidant PET for extended shelf life and stability.",
+  },
+  {
+    slug: "edta-ligand-functional-pet",
+    title: "EDTA-Ligand Functional PET",
+    subtitle: "Covalently anchored chelation for heavy-metal remediation.",
+  },
+  {
+    slug: "catechol-bearing-pet",
+    title: "Catechol-Bearing PET",
+    subtitle: "Adhesion-enhanced PET inspired by mussel chemistry.",
+  },
+  {
+    slug: "self-healing-diels-alder-pet",
+    title: "Self-Healing PET via Diels–Alder Chemistry",
+    subtitle: "Dynamic covalent PET enabling crack repair and life extension.",
+  },
+  {
+    slug: "polyamine-co2-capture-pet",
+    title: "Polyamine-Functional PET for CO₂ Capture",
+    subtitle:
+      "Solid-state CO₂ capture from concentrated streams or controlled air-contact systems.",
+  },
+  {
+    slug: "lignin-derived-aromatic-pet",
+    title: "Lignin-Derived Aromatic PET Copolymer",
+    subtitle: "Renewable aromatics from bio-refinery waste streams.",
+  },
+  {
+    slug: "ionic-liquid-antistatic-pet",
+    title: "Ionic Liquid–Mimic Antistatic PET",
+    subtitle: "Durable antistatic PET without migrating additives.",
+  },
+];
+
 export default function WhitePapersIndexPage() {
   return (
     <main className="mx-auto max-w-4xl px-6 py-16">
@@ -142,12 +197,34 @@ export default function WhitePapersIndexPage() {
         </div>
       </section>
 
-      <section>
+      <section className="mb-16">
         <h2 className="mb-6 text-2xl font-medium">
           Anchored PET White Papers
         </h2>
         <div className="space-y-6">
           {ANCHORED_PET_PAPERS.map((paper) => (
+            <Link
+              key={paper.slug}
+              href={`/whitepapers/${paper.slug}`}
+              className="block rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 transition hover:border-neutral-600 hover:bg-neutral-900"
+            >
+              <h3 className="text-xl font-medium text-neutral-100">
+                {paper.title}
+              </h3>
+              <p className="mt-2 text-sm text-neutral-400">
+                {paper.subtitle}
+              </p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-6 text-2xl font-medium">
+          Advanced Anchored PET Candidates
+        </h2>
+        <div className="space-y-6">
+          {ADVANCED_ANCHORED_PET_PAPERS.map((paper) => (
             <Link
               key={paper.slug}
               href={`/whitepapers/${paper.slug}`}
