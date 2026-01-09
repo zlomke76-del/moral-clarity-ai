@@ -75,6 +75,7 @@ export async function PATCH(
     .from("rolodex")
     .update(body)
     .eq("id", id)
+    .eq("user_id", user.id) // 🔒 REQUIRED FOR RLS
     .select()
     .single();
 
@@ -142,7 +143,8 @@ export async function DELETE(
     .schema("memory")
     .from("rolodex")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .eq("user_id", user.id); // 🔒 REQUIRED FOR RLS
 
   if (error) {
     return NextResponse.json(
