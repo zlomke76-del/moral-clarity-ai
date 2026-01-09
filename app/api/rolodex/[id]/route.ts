@@ -3,8 +3,10 @@
 // PATCH + DELETE
 // Matches memory.memories item routes EXACTLY
 // Cookie-based auth · RLS enforced · memory schema
-// NEXT 16 SAFE
+// NEXT 16 SAFE · NODE RUNTIME
 // ------------------------------------------------------------
+
+export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
@@ -16,12 +18,12 @@ import { createServerClient } from "@supabase/ssr";
 const DIAG = true;
 
 /* ------------------------------------------------------------
-   Helpers
+   Supabase helper
 ------------------------------------------------------------ */
 async function getSupabase() {
-  const cookieStore = await cookies(); // ✅ async (Next 16)
+  const cookieStore = await cookies();
 
-  const supabase = createServerClient(
+  return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -32,8 +34,21 @@ async function getSupabase() {
       },
     }
   );
+}
 
-  return supabase;
+/* ------------------------------------------------------------
+   OPTIONS (preflight)
+------------------------------------------------------------ */
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "https://studio.moralclarity.ai",
+      "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Credentials": "true",
+    },
+  });
 }
 
 /* ------------------------------------------------------------
@@ -67,7 +82,7 @@ export async function PATCH(
 
   const body = await req.json();
 
-  // 🔒 Enforce ownership immutability server-side
+  // 🔒 Prevent ownership reassignment
   delete body.user_id;
 
   const { data, error } = await supabase
@@ -75,7 +90,6 @@ export async function PATCH(
     .from("rolodex")
     .update(body)
     .eq("id", id)
-    .eq("user_id", user.id) // 🔒 REQUIRED FOR RLS
     .select()
     .single();
 
@@ -87,10 +101,10 @@ export async function PATCH(
         error,
         ...(DIAG && {
           diag: {
-            user_id: user.id,
-            record_id: id,
             schema: "memory",
             table: "rolodex",
+            record_id: id,
+            user_id: user.id,
           },
         }),
       },
@@ -143,8 +157,7 @@ export async function DELETE(
     .schema("memory")
     .from("rolodex")
     .delete()
-    .eq("id", id)
-    .eq("user_id", user.id); // 🔒 REQUIRED FOR RLS
+    .eq("id", id);
 
   if (error) {
     return NextResponse.json(
@@ -154,10 +167,10 @@ export async function DELETE(
         error,
         ...(DIAG && {
           diag: {
-            user_id: user.id,
-            record_id: id,
             schema: "memory",
             table: "rolodex",
+            record_id: id,
+            user_id: user.id,
           },
         }),
       },
