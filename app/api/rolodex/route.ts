@@ -1,8 +1,5 @@
 // ------------------------------------------------------------
 // Rolodex API Route (AUTHORITATIVE — LOCKED)
-// Matches memory.memories behavior EXACTLY
-// Bearer cookie auth · RLS enforced · memory schema
-// NEXT 16 SAFE
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -12,9 +9,6 @@ import { createServerClient } from "@supabase/ssr";
 export const runtime = "nodejs";
 const DIAG = true;
 
-/* ------------------------------------------------------------
-   Supabase (schema-bound)
------------------------------------------------------------- */
 async function getSupabase() {
   const cookieStore = await cookies();
 
@@ -33,15 +27,13 @@ async function getSupabase() {
 }
 
 /* ------------------------------------------------------------
-   GET /api/rolodex
+   GET /api/rolodex  (OWNER SCOPED)
 ------------------------------------------------------------ */
 export async function GET(req: Request) {
   const supabase = await getSupabase();
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+  const { data: { user }, error: authError } =
+    await supabase.auth.getUser();
 
   if (authError || !user) {
     return NextResponse.json(
@@ -56,6 +48,7 @@ export async function GET(req: Request) {
   let query = supabase
     .from("rolodex")
     .select("*")
+    .eq("user_id", user.id) // 🔥 REQUIRED
     .order("created_at", { ascending: false });
 
   if (q?.trim()) {
@@ -65,13 +58,6 @@ export async function GET(req: Request) {
   const { data, error } = await query;
 
   if (error) {
-    console.error("rolodex select error", {
-      code: error.code,
-      message: error.message,
-      details: error.details,
-      user_id: user.id,
-    });
-
     return NextResponse.json({
       ok: true,
       data: [],
@@ -87,15 +73,13 @@ export async function GET(req: Request) {
 }
 
 /* ------------------------------------------------------------
-   POST /api/rolodex
+   POST /api/rolodex  (OWNER FORCED)
 ------------------------------------------------------------ */
 export async function POST(req: Request) {
   const supabase = await getSupabase();
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+  const { data: { user }, error: authError } =
+    await supabase.auth.getUser();
 
   if (authError || !user) {
     return NextResponse.json(
@@ -105,21 +89,20 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
+  delete body.user_id; // 🔒 CRITICAL
 
   const { data, error } = await supabase
     .from("rolodex")
-    .insert({ ...body, user_id: user.id })
+    .insert({
+      ...body,
+      user_id: user.id,
+    })
     .select()
     .single();
 
   if (error) {
     return NextResponse.json(
-      {
-        ok: false,
-        stage: "insert.rolodex",
-        error,
-        ...(DIAG && { diag: { user_id: user.id } }),
-      },
+      { ok: false, stage: "insert.rolodex", error },
       { status: 403 }
     );
   }
