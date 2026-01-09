@@ -1,28 +1,11 @@
-// app/api/memory/[id]/route.ts
-
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-/* ------------------------------------------------------------
-   Helper: resolve ID defensively (router-safe)
------------------------------------------------------------- */
-function resolveId(req: Request, params?: { id?: string }) {
-  if (params?.id) return params.id;
-
-  try {
-    const url = new URL(req.url);
-    const parts = url.pathname.split("/");
-    return parts[parts.length - 1] || null;
-  } catch {
-    return null;
-  }
-}
-
-/* ------------------------------------------------------------
-   Shared auth + Supabase bootstrap
------------------------------------------------------------- */
+/* ============================================================
+   Shared auth + client bootstrap
+============================================================ */
 async function getAuthedSupabase(req: Request) {
   const authHeader = req.headers.get("authorization");
 
@@ -44,26 +27,24 @@ async function getAuthedSupabase(req: Request) {
     }
   );
 
-  const { data: userData, error: userError } =
-    await supabase.auth.getUser();
+  const { data, error } = await supabase.auth.getUser();
 
-  if (userError || !userData?.user) {
+  if (error || !data?.user) {
     return { error: "Unauthorized" };
   }
 
-  return { supabase, user: userData.user };
+  return { supabase, userId: data.user.id };
 }
 
-/* ------------------------------------------------------------
-   PATCH /api/memory/[id]
------------------------------------------------------------- */
+/* ============================================================
+   PATCH — update memory content
+============================================================ */
 export async function PATCH(
   req: Request,
   { params }: { params: { id?: string } }
 ) {
   try {
-    const memoryId = resolveId(req, params);
-
+    const memoryId = params?.id;
     if (!memoryId) {
       return NextResponse.json(
         { error: "Memory ID is required" },
@@ -73,13 +54,8 @@ export async function PATCH(
 
     const auth = await getAuthedSupabase(req);
     if ("error" in auth) {
-      return NextResponse.json(
-        { error: auth.error },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: auth.error }, { status: 401 });
     }
-
-    const { supabase, user } = auth;
 
     const body = await req.json();
     const { content } = body;
@@ -91,7 +67,7 @@ export async function PATCH(
       );
     }
 
-    const { data: updated, error: updateError } = await supabase
+    const { data, error } = await auth.supabase
       .schema("memory")
       .from("memories")
       .update({
@@ -99,25 +75,22 @@ export async function PATCH(
         updated_at: new Date().toISOString(),
       })
       .eq("id", memoryId)
-      .eq("user_id", user.id)
+      .eq("user_id", auth.userId)
       .select()
       .single();
 
-    if (updateError) {
-      return NextResponse.json(
-        { error: updateError.message },
-        { status: 500 }
-      );
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    if (!updated) {
+    if (!data) {
       return NextResponse.json(
         { error: "Memory not found or not owned by user" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(updated);
+    return NextResponse.json(data);
   } catch (err: any) {
     return NextResponse.json(
       { error: err?.message ?? "Internal server error" },
@@ -126,16 +99,15 @@ export async function PATCH(
   }
 }
 
-/* ------------------------------------------------------------
-   DELETE /api/memory/[id]
------------------------------------------------------------- */
+/* ============================================================
+   DELETE — explicit memory removal
+============================================================ */
 export async function DELETE(
   req: Request,
   { params }: { params: { id?: string } }
 ) {
   try {
-    const memoryId = resolveId(req, params);
-
+    const memoryId = params?.id;
     if (!memoryId) {
       return NextResponse.json(
         { error: "Memory ID is required" },
@@ -145,29 +117,21 @@ export async function DELETE(
 
     const auth = await getAuthedSupabase(req);
     if ("error" in auth) {
-      return NextResponse.json(
-        { error: auth.error },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: auth.error }, { status: 401 });
     }
 
-    const { supabase, user } = auth;
-
-    const { error: deleteError } = await supabase
+    const { error } = await auth.supabase
       .schema("memory")
       .from("memories")
       .delete()
       .eq("id", memoryId)
-      .eq("user_id", user.id);
+      .eq("user_id", auth.userId);
 
-    if (deleteError) {
-      return NextResponse.json(
-        { error: deleteError.message },
-        { status: 500 }
-      );
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ ok: true, success: true });
+    return NextResponse.json({ ok: true });
   } catch (err: any) {
     return NextResponse.json(
       { error: err?.message ?? "Internal server error" },
