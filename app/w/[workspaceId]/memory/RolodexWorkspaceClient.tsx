@@ -183,10 +183,16 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
       <h2 className="text-xl font-semibold mb-4">Rolodex</h2>
 
       <div className="flex gap-2 mb-4">
-        <button onClick={startNew} className="px-3 py-2 rounded bg-neutral-800 text-sm">
+        <button
+          onClick={startNew}
+          className="px-3 py-2 rounded bg-neutral-800 text-sm"
+        >
           + New
         </button>
-        <button onClick={load} className="px-3 py-2 rounded bg-neutral-800 text-sm">
+        <button
+          onClick={load}
+          className="px-3 py-2 rounded bg-neutral-800 text-sm"
+        >
           Refresh
         </button>
       </div>
@@ -214,7 +220,9 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
             <div className="grid gap-3 bg-neutral-950 border border-neutral-800 rounded p-4">
               <input
                 value={draft.name ?? ""}
-                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                onChange={(e) =>
+                  setDraft({ ...draft, name: e.target.value })
+                }
                 placeholder="Name"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
               />
@@ -222,7 +230,10 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
               <input
                 value={draft.relationship_type ?? ""}
                 onChange={(e) =>
-                  setDraft({ ...draft, relationship_type: e.target.value })
+                  setDraft({
+                    ...draft,
+                    relationship_type: e.target.value,
+                  })
                 }
                 placeholder="Relationship"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
@@ -231,7 +242,10 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
               <input
                 value={draft.primary_email ?? ""}
                 onChange={(e) =>
-                  setDraft({ ...draft, primary_email: e.target.value })
+                  setDraft({
+                    ...draft,
+                    primary_email: e.target.value,
+                  })
                 }
                 placeholder="Email"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
@@ -240,7 +254,10 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
               <input
                 value={draft.primary_phone ?? ""}
                 onChange={(e) =>
-                  setDraft({ ...draft, primary_phone: e.target.value })
+                  setDraft({
+                    ...draft,
+                    primary_phone: e.target.value,
+                  })
                 }
                 placeholder="Phone"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
@@ -248,7 +265,9 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
 
               <textarea
                 value={draft.notes ?? ""}
-                onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+                onChange={(e) =>
+                  setDraft({ ...draft, notes: e.target.value })
+                }
                 placeholder="Notes"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
               />
