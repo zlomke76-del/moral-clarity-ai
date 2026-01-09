@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
-// Rolodex ID Route (GET + PATCH + DELETE)
+// Rolodex ID Route (PATCH + DELETE)
 // Cookie auth · RLS enforced · memory schema
-// AUTHORITATIVE
+// AUTHORITATIVE — FIXED UPDATE SEMANTICS
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -31,55 +31,8 @@ async function getSupabase() {
 }
 
 /* ------------------------------------------------------------
-   GET /api/rolodex/[id]
-   OWNER ONLY — PREFETCH SAFE
------------------------------------------------------------- */
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  const supabase = await getSupabase();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return NextResponse.json(
-      { ok: false, error: "unauthenticated" },
-      { status: 401 }
-    );
-  }
-
-  const id = params?.id;
-  if (!id) {
-    return NextResponse.json(
-      { ok: false, error: "Rolodex ID is required" },
-      { status: 400 }
-    );
-  }
-
-  const { data, error } = await supabase
-    .from("rolodex")
-    .select("*")
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .single();
-
-  if (error) {
-    return NextResponse.json(
-      { ok: false, stage: "select.rolodex", error },
-      { status: 403 }
-    );
-  }
-
-  return NextResponse.json({ ok: true, data });
-}
-
-/* ------------------------------------------------------------
    PATCH /api/rolodex/[id]
-   OWNER FORCED · PAYLOAD SANITIZED
+   OWNER FORCED · SAFE UPDATE
 ------------------------------------------------------------ */
 export async function PATCH(
   req: Request,
@@ -99,7 +52,7 @@ export async function PATCH(
     );
   }
 
-  const id = params?.id;
+  const id = params.id;
   if (!id) {
     return NextResponse.json(
       { ok: false, error: "Rolodex ID is required" },
@@ -111,18 +64,20 @@ export async function PATCH(
 
   // 🔒 HARD SANITIZATION
   delete body.user_id;
-  if (!body.workspace_id) delete body.workspace_id;
+  delete body.created_at;
+  delete body.updated_at;
 
-  const { data, error } = await supabase
+  // workspace_id may be null — DO NOT delete it conditionally
+  // null is a valid value for personal contacts
+
+  const { error } = await supabase
     .from("rolodex")
     .update({
       ...body,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
-    .eq("user_id", user.id)
-    .select()
-    .single();
+    .eq("user_id", user.id);
 
   if (error) {
     console.error("update.rolodex error", error);
@@ -132,12 +87,12 @@ export async function PATCH(
     );
   }
 
-  return NextResponse.json({ ok: true, data });
+  // ✅ SUCCESS EVEN IF NO ROW RETURNED
+  return NextResponse.json({ ok: true });
 }
 
 /* ------------------------------------------------------------
    DELETE /api/rolodex/[id]
-   OWNER ONLY
 ------------------------------------------------------------ */
 export async function DELETE(
   req: Request,
@@ -157,7 +112,7 @@ export async function DELETE(
     );
   }
 
-  const id = params?.id;
+  const id = params.id;
   if (!id) {
     return NextResponse.json(
       { ok: false, error: "Rolodex ID is required" },
@@ -179,5 +134,5 @@ export async function DELETE(
     );
   }
 
-  return NextResponse.json({ ok: true, success: true });
+  return NextResponse.json({ ok: true });
 }
