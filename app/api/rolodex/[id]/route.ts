@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Rolodex ID Route (PATCH + DELETE)
 // Cookie auth · RLS enforced · memory schema
-// AUTHORITATIVE — FINAL, ACTUALLY FINAL
+// AUTHORITATIVE — BUILD-SAFE FINAL
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -61,9 +61,9 @@ const COLUMN_MAP: Record<string, string> = {
 ------------------------------------------------------------ */
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = await params;
+  const id = params?.id;
 
   if (!id) {
     return NextResponse.json(
@@ -101,7 +101,7 @@ export async function PATCH(
   }
 
   // ----------------------------------------------------------
-  // HARD SANITIZATION (IMMUTABLE)
+  // HARD SANITIZATION (IMMUTABLE FIELDS)
   // ----------------------------------------------------------
   delete body.id;
   delete body.user_id;
@@ -166,9 +166,9 @@ export async function PATCH(
 ------------------------------------------------------------ */
 export async function DELETE(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = await params;
+  const id = params?.id;
 
   if (!id) {
     return NextResponse.json(
@@ -188,7 +188,6 @@ export async function DELETE(
     return NextResponse.json(
       { ok: false, error: "unauthenticated" },
       { status: 401 }
-l
     );
   }
 
