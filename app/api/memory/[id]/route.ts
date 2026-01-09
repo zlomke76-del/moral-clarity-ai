@@ -1,20 +1,64 @@
+// app/api/memory/[id]/route.ts
+// ------------------------------------------------------------
+// Memory ID Route (PATCH + DELETE)
+// Explicit URL parsing · Bearer auth · RLS enforced
+// AUTHORITATIVE — DO NOT TRUST params
+// ------------------------------------------------------------
+
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-/* ============================================================
-   Shared auth + client bootstrap
-============================================================ */
-async function getAuthedSupabase(req: Request) {
-  const authHeader = req.headers.get("authorization");
+/* ------------------------------------------------------------
+   Helpers
+------------------------------------------------------------ */
+function extractIdFromUrl(req: Request): string | null {
+  try {
+    const url = new URL(req.url);
+    const parts = url.pathname.split("/").filter(Boolean);
+    const id = parts[parts.length - 1];
+    return id || null;
+  } catch {
+    return null;
+  }
+}
 
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return { error: "Missing or invalid Authorization header" };
+function getBearerToken(req: Request): string | null {
+  const auth = req.headers.get("authorization");
+  if (!auth || !auth.startsWith("Bearer ")) return null;
+  return auth.replace("Bearer ", "").trim();
+}
+
+/* ------------------------------------------------------------
+   PATCH /api/memory/[id]
+------------------------------------------------------------ */
+export async function PATCH(req: Request) {
+  /* ----------------------------------------------------------
+     Resolve ID (authoritative)
+  ---------------------------------------------------------- */
+  const memoryId = extractIdFromUrl(req);
+  if (!memoryId) {
+    return NextResponse.json(
+      { error: "Memory ID is required" },
+      { status: 400 }
+    );
   }
 
-  const accessToken = authHeader.replace("Bearer ", "").trim();
+  /* ----------------------------------------------------------
+     Auth
+  ---------------------------------------------------------- */
+  const accessToken = getBearerToken(req);
+  if (!accessToken) {
+    return NextResponse.json(
+      { error: "Missing or invalid Authorization header" },
+      { status: 401 }
+    );
+  }
 
+  /* ----------------------------------------------------------
+     Supabase client (RLS enforced)
+  ---------------------------------------------------------- */
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -27,115 +71,139 @@ async function getAuthedSupabase(req: Request) {
     }
   );
 
-  const { data, error } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
 
-  if (error || !data?.user) {
-    return { error: "Unauthorized" };
-  }
-
-  return { supabase, userId: data.user.id };
-}
-
-/* ============================================================
-   PATCH — update memory content
-============================================================ */
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id?: string } }
-) {
-  try {
-    const memoryId = params?.id;
-    if (!memoryId) {
-      return NextResponse.json(
-        { error: "Memory ID is required" },
-        { status: 400 }
-      );
-    }
-
-    const auth = await getAuthedSupabase(req);
-    if ("error" in auth) {
-      return NextResponse.json({ error: auth.error }, { status: 401 });
-    }
-
-    const body = await req.json();
-    const { content } = body;
-
-    if (content === undefined) {
-      return NextResponse.json(
-        { error: "content is required" },
-        { status: 400 }
-      );
-    }
-
-    const { data, error } = await auth.supabase
-      .schema("memory")
-      .from("memories")
-      .update({
-        content,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", memoryId)
-      .eq("user_id", auth.userId)
-      .select()
-      .single();
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    if (!data) {
-      return NextResponse.json(
-        { error: "Memory not found or not owned by user" },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(data);
-  } catch (err: any) {
+  if (userError || !user) {
     return NextResponse.json(
-      { error: err?.message ?? "Internal server error" },
-      { status: 500 }
+      { error: "Unauthorized" },
+      { status: 401 }
     );
   }
-}
 
-/* ============================================================
-   DELETE — explicit memory removal
-============================================================ */
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id?: string } }
-) {
+  /* ----------------------------------------------------------
+     Parse body (explicit content only)
+  ---------------------------------------------------------- */
+  let body: any;
   try {
-    const memoryId = params?.id;
-    if (!memoryId) {
-      return NextResponse.json(
-        { error: "Memory ID is required" },
-        { status: 400 }
-      );
-    }
-
-    const auth = await getAuthedSupabase(req);
-    if ("error" in auth) {
-      return NextResponse.json({ error: auth.error }, { status: 401 });
-    }
-
-    const { error } = await auth.supabase
-      .schema("memory")
-      .from("memories")
-      .delete()
-      .eq("id", memoryId)
-      .eq("user_id", auth.userId);
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ ok: true });
-  } catch (err: any) {
+    body = await req.json();
+  } catch {
     return NextResponse.json(
-      { error: err?.message ?? "Internal server error" },
-      { status: 500 }
+      { error: "Invalid JSON payload" },
+      { status: 400 }
     );
   }
+
+  if (!("content" in body)) {
+    return NextResponse.json(
+      { error: "content is required" },
+      { status: 400 }
+    );
+  }
+
+  /* ----------------------------------------------------------
+     Update (ownership enforced by RLS + WHERE)
+  ---------------------------------------------------------- */
+  const { data, error } = await supabase
+    .schema("memory")
+    .from("memories")
+    .update({
+      content: body.content,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", memoryId)
+    .eq("user_id", user.id)
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 403 }
+    );
+  }
+
+  if (!data) {
+    return NextResponse.json(
+      { error: "Memory not found or not owned by user" },
+      { status: 404 }
+    );
+  }
+
+  return NextResponse.json(data);
+}
+
+/* ------------------------------------------------------------
+   DELETE /api/memory/[id]
+------------------------------------------------------------ */
+export async function DELETE(req: Request) {
+  /* ----------------------------------------------------------
+     Resolve ID (authoritative)
+  ---------------------------------------------------------- */
+  const memoryId = extractIdFromUrl(req);
+  if (!memoryId) {
+    return NextResponse.json(
+      { error: "Memory ID is required" },
+      { status: 400 }
+    );
+  }
+
+  /* ----------------------------------------------------------
+     Auth
+  ---------------------------------------------------------- */
+  const accessToken = getBearerToken(req);
+  if (!accessToken) {
+    return NextResponse.json(
+      { error: "Missing or invalid Authorization header" },
+      { status: 401 }
+    );
+  }
+
+  /* ----------------------------------------------------------
+     Supabase client (RLS enforced)
+  ---------------------------------------------------------- */
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
+    }
+  );
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
+  /* ----------------------------------------------------------
+     Delete (ownership enforced)
+  ---------------------------------------------------------- */
+  const { error } = await supabase
+    .schema("memory")
+    .from("memories")
+    .delete()
+    .eq("id", memoryId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 403 }
+    );
+  }
+
+  return NextResponse.json({ ok: true, deleted: true });
 }
