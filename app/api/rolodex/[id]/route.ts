@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Rolodex ID Route (PATCH + DELETE)
 // Cookie auth · RLS enforced · memory schema
-// AUTHORITATIVE — FIXED UPDATE SEMANTICS
+// AUTHORITATIVE
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -10,9 +10,6 @@ import { createServerClient } from "@supabase/ssr";
 
 export const runtime = "nodejs";
 
-/* ------------------------------------------------------------
-   Supabase (schema-bound)
------------------------------------------------------------- */
 async function getSupabase() {
   const cookieStore = await cookies();
 
@@ -32,7 +29,6 @@ async function getSupabase() {
 
 /* ------------------------------------------------------------
    PATCH /api/rolodex/[id]
-   OWNER FORCED · SAFE UPDATE
 ------------------------------------------------------------ */
 export async function PATCH(
   req: Request,
@@ -62,33 +58,34 @@ export async function PATCH(
 
   const body = await req.json();
 
-  // 🔒 HARD SANITIZATION
+  // 🔒 SANITIZATION
   delete body.user_id;
-  delete body.created_at;
-  delete body.updated_at;
 
-  // workspace_id may be null — DO NOT delete it conditionally
-  // null is a valid value for personal contacts
+  // Normalize workspace_id (null allowed)
+  if (body.workspace_id === "") {
+    body.workspace_id = null;
+  }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("rolodex")
     .update({
       ...body,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .select()
+    .single();
 
   if (error) {
     console.error("update.rolodex error", error);
     return NextResponse.json(
       { ok: false, stage: "update.rolodex", error },
-      { status: 403 }
+      { status: 400 }
     );
   }
 
-  // ✅ SUCCESS EVEN IF NO ROW RETURNED
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, data });
 }
 
 /* ------------------------------------------------------------
@@ -130,7 +127,7 @@ export async function DELETE(
     console.error("delete.rolodex error", error);
     return NextResponse.json(
       { ok: false, stage: "delete.rolodex", error },
-      { status: 403 }
+      { status: 400 }
     );
   }
 
