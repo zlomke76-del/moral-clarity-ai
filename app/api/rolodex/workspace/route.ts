@@ -38,8 +38,10 @@ export async function GET(req: Request) {
   /* ------------------------------------------------------------
      Auth (cookie-based)
   ------------------------------------------------------------ */
-  const { data: { user }, error: authError } =
-    await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
   if (authError || !user) {
     return NextResponse.json(
@@ -72,10 +74,18 @@ export async function GET(req: Request) {
     .order("updated_at", { ascending: false });
 
   if (error) {
-    return NextResponse.json(
-      { ok: false, stage: "select.rolodex", error },
-      { status: 403 }
-    );
+    console.error("rolodex select error", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+    });
+
+    // SELECT visibility failures should degrade to empty,
+    // not surface as Forbidden
+    return NextResponse.json({
+      ok: true,
+      items: [],
+    });
   }
 
   return NextResponse.json({
