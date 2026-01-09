@@ -1,40 +1,101 @@
+// app/api/rolodex/workspace/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
-  const auth = req.headers.get("authorization");
-  if (!auth?.startsWith("Bearer "))
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    /* ------------------------------------------------------------
+       AUTH: Bearer token required
+    ------------------------------------------------------------ */
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { error: "Missing or invalid Authorization header" },
+        { status: 401 }
+      );
+    }
 
-  const token = auth.replace("Bearer ", "");
+    const accessToken = authHeader.replace("Bearer ", "").trim();
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  );
+    /* ------------------------------------------------------------
+       Supabase client bound to user access token
+    ------------------------------------------------------------ */
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      }
+    );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { data: userData, error: userError } =
+      await supabase.auth.getUser();
 
-  const { searchParams } = new URL(req.url);
-  const workspaceId = searchParams.get("workspaceId");
+    if (userError || !userData?.user) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
 
-  const { data, error } = await supabase
-    .schema("memory")
-    .from("rolodex")
-    .select("*")
-    .eq("workspace_id", workspaceId)
-    .eq("user_id", user.id)
-    .order("updated_at", { ascending: false });
+    /* ------------------------------------------------------------
+       Query params
+    ------------------------------------------------------------ */
+    const { searchParams } = new URL(req.url);
+    const workspaceId = searchParams.get("workspaceId");
 
-  if (error)
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!workspaceId) {
+      return NextResponse.json(
+        { error: "workspaceId is required" },
+        { status: 400 }
+      );
+    }
 
-  return NextResponse.json({ items: data ?? [] });
+    /* ------------------------------------------------------------
+       AUTHORITATIVE ROLodex QUERY
+    ------------------------------------------------------------ */
+    const { data: items, error: rolodexError } = await supabase
+      .schema("memory")
+      .from("rolodex")
+      .select(`
+        id,
+        user_id,
+        workspace_id,
+        name,
+        relationship_type,
+        primary_email,
+        primary_phone,
+        birthday,
+        notes,
+        sensitivity_level,
+        consent_level,
+        created_at,
+        updated_at
+      `)
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", userData.user.id)
+      .order("updated_at", { ascending: false });
+
+    if (rolodexError) {
+      return NextResponse.json(
+        { error: rolodexError.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      items: items ?? [],
+    });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err?.message ?? "Internal server error" },
+      { status: 500 }
+    );
+  }
 }
