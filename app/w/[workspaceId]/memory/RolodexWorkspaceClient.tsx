@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { useEffect, useState } from "react";
 
 type RolodexRecord = {
   id: string;
@@ -23,14 +22,7 @@ type Props = {
 };
 
 export default function RolodexWorkspaceClient({ workspaceId }: Props) {
-  const supabase = useMemo(
-    () =>
-      createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      ),
-    []
-  );
+  console.log("ROLodexWorkspaceClient (OWNER-SCOPED) MOUNTED", workspaceId);
 
   const [items, setItems] = useState<RolodexRecord[]>([]);
   const [selected, setSelected] = useState<RolodexRecord | null>(null);
@@ -41,7 +33,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   /* ------------------------------------------------------------
-     Load Rolodex entries (OWNER-SCOPED)
+     Load Rolodex entries (OWNER ONLY — UUID AUTHORITY)
   ------------------------------------------------------------ */
   async function load() {
     setLoading(true);
@@ -51,7 +43,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
       const res = await fetch("/api/rolodex");
 
       if (!res.ok) {
-        setError("Failed to load Rolodex.");
+        setError("Failed to load contacts.");
         setItems([]);
         return;
       }
@@ -60,14 +52,14 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
       const rows = json.data ?? [];
 
       if (!Array.isArray(rows)) {
-        setError("Unexpected Rolodex format.");
+        setError("Unexpected Rolodex response.");
         setItems([]);
         return;
       }
 
       setItems(rows);
     } catch {
-      setError("An error occurred while loading Rolodex.");
+      setError("Error loading contacts.");
       setItems([]);
     } finally {
       setLoading(false);
@@ -128,7 +120,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...draft,
-          workspace_id: null, // 🔒 ownership-only
+          workspace_id: null,
         }),
       });
 
@@ -141,7 +133,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
       setDraft(null);
       setSelected(null);
     } catch {
-      setError("An error occurred while saving.");
+      setError("Error saving contact.");
     } finally {
       setSaving(false);
     }
@@ -168,7 +160,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
       setSelected(null);
       setDraft(null);
     } catch {
-      setError("An error occurred while deleting.");
+      setError("Error deleting contact.");
     }
   }
 
@@ -221,42 +213,6 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
                   setDraft({ ...draft, name: e.target.value })
                 }
                 placeholder="Name"
-                className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
-              />
-
-              <input
-                value={draft.relationship_type ?? ""}
-                onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    relationship_type: e.target.value,
-                  })
-                }
-                placeholder="Relationship"
-                className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
-              />
-
-              <input
-                value={draft.primary_email ?? ""}
-                onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    primary_email: e.target.value,
-                  })
-                }
-                placeholder="Email"
-                className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
-              />
-
-              <input
-                value={draft.primary_phone ?? ""}
-                onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    primary_phone: e.target.value,
-                  })
-                }
-                placeholder="Phone"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
               />
 
