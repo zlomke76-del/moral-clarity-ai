@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Rolodex ID Route (PATCH + DELETE)
 // Cookie auth · RLS enforced · memory schema
-// AUTHORITATIVE — FINAL, HARD-SANITIZED
+// AUTHORITATIVE — FINAL, SEALED
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -124,6 +124,12 @@ export async function PATCH(
       if (!isNaN(parsed.getTime())) {
         updatePayload[column] = parsed.toISOString().slice(0, 10);
       }
+      continue;
+    }
+
+    // Normalize ENUM casing (Postgres enums are case-sensitive)
+    if (column === "relationship_type" && typeof value === "string") {
+      updatePayload[column] = value.trim().toLowerCase();
       continue;
     }
 
