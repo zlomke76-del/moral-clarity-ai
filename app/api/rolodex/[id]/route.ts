@@ -1,11 +1,5 @@
-// app/api/rolodex/[id]/route.ts
 // ============================================================
-// Rolodex API — UPDATE + DELETE
-// ============================================================
-// - Uses user session (cookies)
-// - No service role
-// - RLS enforces ownership
-// - TABLE: memory.rolodex
+// Rolodex Item API — PATCH / DELETE
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
@@ -38,15 +32,13 @@ function getSupabase(req: NextRequest, res: NextResponse) {
 
 /* ========= PATCH ========= */
 /**
- * PATCH /api/rolodex/[id]
- *
- * Body: any subset of rolodex fields (except user_id)
+ * PATCH /api/rolodex/:id
  */
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const res = new NextResponse();
+  const res = NextResponse.next();
   const supabase = getSupabase(req, res);
 
   const {
@@ -56,14 +48,6 @@ export async function PATCH(
 
   if (authError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const id = params?.id;
-  if (!id) {
-    return NextResponse.json(
-      { error: "Rolodex id is required" },
-      { status: 400 }
-    );
   }
 
   let body: any;
@@ -73,64 +57,38 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  // Explicit allow-list (prevents accidental column writes)
-  const updatePayload: Record<string, any> = {};
-  const allowed = [
-    "name",
-    "relationship_type",
-    "primary_email",
-    "primary_phone",
-    "birthday",
-    "notes",
-    "workspace_id",
-    "sensitivity_level",
-    "consent_level",
-  ];
-
-  for (const key of allowed) {
-    if (key in body) {
-      updatePayload[key] = body[key];
-    }
-  }
-
-  if (Object.keys(updatePayload).length === 0) {
-    return NextResponse.json(
-      { error: "No updatable fields provided" },
-      { status: 400 }
-    );
-  }
-
-  const { data, error } = await supabase
+  const { error } = await supabase
     .schema("memory")
     .from("rolodex")
     .update({
-      ...updatePayload,
-      updated_at: new Date().toISOString(),
+      name: body.name,
+      relationship_type: body.relationship_type ?? null,
+      primary_email: body.primary_email ?? null,
+      primary_phone: body.primary_phone ?? null,
+      birthday: body.birthday ?? null,
+      notes: body.notes ?? null,
+      sensitivity_level: body.sensitivity_level ?? undefined,
+      consent_level: body.consent_level ?? undefined,
     })
-    .eq("id", id)
-    .select("id")
-    .single();
+    .eq("id", params.id)
+    .eq("user_id", user.id);
 
   if (error) {
-    console.error("[ROLODEX PATCH]", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ id: data.id });
+  return NextResponse.json({ ok: true });
 }
 
 /* ========= DELETE ========= */
 /**
- * DELETE /api/rolodex/[id]
- *
- * - Hard delete
- * - RLS enforces ownership
+ * DELETE /api/rolodex/:id
  */
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const res = new NextResponse();
+  const res = NextResponse.next();
   const supabase = getSupabase(req, res);
 
   const {
@@ -142,22 +100,14 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const id = params?.id;
-  if (!id) {
-    return NextResponse.json(
-      { error: "Rolodex id is required" },
-      { status: 400 }
-    );
-  }
-
   const { error } = await supabase
     .schema("memory")
     .from("rolodex")
     .delete()
-    .eq("id", id);
+    .eq("id", params.id)
+    .eq("user_id", user.id);
 
   if (error) {
-    console.error("[ROLODEX DELETE]", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
