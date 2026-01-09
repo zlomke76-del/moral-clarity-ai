@@ -1,111 +1,121 @@
-// app/api/memory/[id]/route.ts
+// ------------------------------------------------------------
+// Rolodex API Route (AUTHORITATIVE — LOCKED)
+// Matches memory.memories behavior EXACTLY
+// Bearer cookie auth · RLS enforced · memory schema
+// NEXT 16 SAFE
+// ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 
 export const runtime = "nodejs";
+const DIAG = true;
 
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    /* ------------------------------------------------------------
-       AUTH: Bearer token required
-    ------------------------------------------------------------ */
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { error: "Missing or invalid Authorization header" },
-        { status: 401 }
-      );
-    }
+/* ------------------------------------------------------------
+   Supabase (schema-bound)
+------------------------------------------------------------ */
+async function getSupabase() {
+  const cookieStore = await cookies();
 
-    const accessToken = authHeader.replace("Bearer ", "").trim();
-
-    /* ------------------------------------------------------------
-       Supabase client bound to user token (RLS enforced)
-    ------------------------------------------------------------ */
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      db: { schema: "memory" }, // 🔥 THIS IS THE FIX
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
         },
-      }
-    );
-
-    const { data: userData, error: userError } =
-      await supabase.auth.getUser();
-
-    if (userError || !userData?.user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      },
     }
+  );
+}
 
-    /* ------------------------------------------------------------
-       Params + body
-    ------------------------------------------------------------ */
-    const memoryId = params.id;
-    if (!memoryId) {
-      return NextResponse.json(
-        { error: "Memory ID is required" },
-        { status: 400 }
-      );
-    }
+/* ------------------------------------------------------------
+   GET /api/rolodex
+------------------------------------------------------------ */
+export async function GET(req: Request) {
+  const supabase = await getSupabase();
 
-    const body = await req.json();
-    const { content } = body;
+  const { data: { user }, error: authError } =
+    await supabase.auth.getUser();
 
-    if (content === undefined) {
-      return NextResponse.json(
-        { error: "content is required" },
-        { status: 400 }
-      );
-    }
-
-    /* ------------------------------------------------------------
-       UPDATE — ownership enforced by RLS + WHERE
-    ------------------------------------------------------------ */
-    const { data: updated, error: updateError } = await supabase
-      .schema("memory")
-      .from("memories")
-      .update({
-        content,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", memoryId)
-      .eq("user_id", userData.user.id)
-      .select()
-      .single();
-
-    if (updateError) {
-      return NextResponse.json(
-        { error: updateError.message },
-        { status: 500 }
-      );
-    }
-
-    if (!updated) {
-      return NextResponse.json(
-        { error: "Memory not found or not owned by user" },
-        { status: 404 }
-      );
-    }
-
-    /* ------------------------------------------------------------
-       Success
-    ------------------------------------------------------------ */
-    return NextResponse.json(updated);
-  } catch (err: any) {
+  if (authError || !user) {
     return NextResponse.json(
-      { error: err?.message ?? "Internal server error" },
-      { status: 500 }
+      { ok: false, error: "unauthenticated" },
+      { status: 401 }
     );
   }
+
+  const { searchParams } = new URL(req.url);
+  const q = searchParams.get("q");
+
+  let query = supabase
+    .from("rolodex")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (q?.trim()) {
+    query = query.ilike("name", `%${q.trim()}%`);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        stage: "select.rolodex",
+        error,
+        ...(DIAG && { diag: { user_id: user.id } }),
+      },
+      { status: 403 }
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    data,
+    ...(DIAG && { diag: { count: data.length } }),
+  });
+}
+
+/* ------------------------------------------------------------
+   POST /api/rolodex
+------------------------------------------------------------ */
+export async function POST(req: Request) {
+  const supabase = await getSupabase();
+
+  const { data: { user }, error: authError } =
+    await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return NextResponse.json(
+      { ok: false, error: "unauthenticated" },
+      { status: 401 }
+    );
+  }
+
+  const body = await req.json();
+
+  const { data, error } = await supabase
+    .from("rolodex")
+    .insert({ ...body, user_id: user.id })
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        stage: "insert.rolodex",
+        error,
+        ...(DIAG && { diag: { user_id: user.id } }),
+      },
+      { status: 403 }
+    );
+  }
+
+  return NextResponse.json({ ok: true, data });
 }
