@@ -9,6 +9,8 @@ type Props = {
   initialItems: MemoryRecord[];
 };
 
+type MemoryType = "fact" | "episodic" | "autobiographical";
+
 export default function MemoryWorkspaceClient({
   workspaceId,
   initialItems,
@@ -37,7 +39,11 @@ export default function MemoryWorkspaceClient({
   );
 
   const [draft, setDraft] = useState<string>("");
+
   const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [isCreating, setIsCreating] = useState<boolean>(false);
+
+  const [newType, setNewType] = useState<MemoryType>("fact");
 
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
@@ -45,7 +51,7 @@ export default function MemoryWorkspaceClient({
   const [saveError, setSaveError] = useState<string | null>(null);
 
   /* ------------------------------------------------------------
-     Load memories (facts only, scoped server-side)
+     Load memories
   ------------------------------------------------------------ */
   const loadMemories = useCallback(async () => {
     setLoading(true);
@@ -103,6 +109,7 @@ export default function MemoryWorkspaceClient({
   ------------------------------------------------------------ */
   function handleSelect(id: string) {
     setSelectedId(id);
+    setIsCreating(false);
     setIsEditing(false);
     setSaveError(null);
 
@@ -120,7 +127,54 @@ export default function MemoryWorkspaceClient({
   }
 
   /* ------------------------------------------------------------
-     Save (explicit + guarded)
+     Create new memory
+  ------------------------------------------------------------ */
+  async function handleCreate() {
+    setSaving(true);
+    setSaveError(null);
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      setSaveError("Authentication expired.");
+      setSaving(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/memory`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          workspace_id: workspaceId,
+          memory_type: newType,
+          content: draft,
+        }),
+      });
+
+      if (!res.ok) {
+        setSaveError("Failed to create memory.");
+        return;
+      }
+
+      const created = await res.json();
+      setItems((prev) => [created, ...prev]);
+      setIsCreating(false);
+      setDraft("");
+    } catch {
+      setSaveError("An error occurred while creating memory.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  /* ------------------------------------------------------------
+     Save existing memory
   ------------------------------------------------------------ */
   async function handleSave() {
     if (!selected) return;
@@ -166,7 +220,6 @@ export default function MemoryWorkspaceClient({
       }
 
       const updated = await res.json();
-
       setItems((prev) =>
         prev.map((m) => (m.id === updated.id ? updated : m))
       );
@@ -183,13 +236,13 @@ export default function MemoryWorkspaceClient({
   ------------------------------------------------------------ */
   return (
     <div className="w-full h-full min-h-0 flex flex-col overflow-hidden">
-      {/* Memory selector */}
-      <div className="flex-shrink-0 px-8 py-4 border-b border-neutral-800">
+      {/* Header */}
+      <div className="flex items-center justify-between px-8 py-4 border-b border-neutral-800">
         <select
           value={selectedId}
           onChange={(e) => handleSelect(e.target.value)}
-          disabled={loading}
-          className="w-full bg-neutral-950 border border-neutral-800 rounded-md p-2 text-sm disabled:opacity-50"
+          disabled={loading || isCreating}
+          className="flex-1 bg-neutral-950 border border-neutral-800 rounded-md p-2 text-sm disabled:opacity-50"
         >
           <option value="">Select a memory to edit…</option>
           {items.map((m) => (
@@ -201,38 +254,89 @@ export default function MemoryWorkspaceClient({
             </option>
           ))}
         </select>
+
+        <button
+          onClick={() => {
+            setSelectedId("");
+            setIsCreating(true);
+            setDraft("");
+            setSaveError(null);
+          }}
+          className="ml-4 px-3 py-1.5 text-sm rounded bg-neutral-800 hover:bg-neutral-700"
+        >
+          Add Memory
+        </button>
       </div>
 
-      {/* Editor surface — dominant */}
+      {/* Editor */}
       <div className="flex-1 min-h-0 overflow-hidden p-6">
         {loading ? (
           <div className="h-full flex items-center justify-center text-sm text-neutral-500">
             Loading memories…
           </div>
+        ) : isCreating ? (
+          <div className="h-full flex flex-col bg-neutral-950 border border-neutral-800 rounded-lg">
+            <div className="px-4 py-3 border-b border-neutral-800 flex gap-3 items-center text-sm">
+              <span className="text-neutral-400">New memory</span>
+              <select
+                value={newType}
+                onChange={(e) => setNewType(e.target.value as MemoryType)}
+                className="bg-neutral-950 border border-neutral-700 rounded p-1 text-sm"
+              >
+                <option value="fact">Fact</option>
+                <option value="episodic">Episodic</option>
+                <option value="autobiographical">Autobiographical</option>
+              </select>
+            </div>
+
+            <div className="flex-1 p-4">
+              <textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                className="w-full h-full resize-none bg-neutral-950 border border-neutral-800 rounded-md p-4 text-sm"
+              />
+            </div>
+
+            <div className="px-4 py-3 border-t border-neutral-800 flex justify-between">
+              <div className="text-xs text-red-400">{saveError}</div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setIsCreating(false)}
+                  className="px-3 py-1.5 text-sm rounded border border-neutral-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreate}
+                  disabled={saving || !draft.trim()}
+                  className="px-3 py-1.5 text-sm rounded bg-blue-600 disabled:opacity-50"
+                >
+                  {saving ? "Creating…" : "Create"}
+                </button>
+              </div>
+            </div>
+          </div>
         ) : !selected ? (
           <div className="h-full flex items-center justify-center text-sm text-neutral-500">
-            Select a memory to edit
+            Select a memory to edit or add a new one
           </div>
         ) : (
-          <div className="h-full min-h-0 flex flex-col bg-neutral-950 border border-neutral-800 rounded-lg">
-            <div className="flex-shrink-0 px-4 py-3 border-b border-neutral-800 text-sm text-neutral-400">
+          <div className="h-full flex flex-col bg-neutral-950 border border-neutral-800 rounded-lg">
+            <div className="px-4 py-3 border-b border-neutral-800 text-sm text-neutral-400">
               Editing memory
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto p-4">
+            <div className="flex-1 p-4">
               <textarea
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 disabled={!isEditing}
-                className="w-full h-full resize-none bg-neutral-950
-                           border border-neutral-800 rounded-md
-                           p-4 text-sm leading-relaxed"
+                className="w-full h-full resize-none bg-neutral-950 border border-neutral-800 rounded-md p-4 text-sm"
               />
             </div>
 
-            <div className="flex-shrink-0 px-4 py-3 border-t border-neutral-800 flex justify-between items-center">
+            <div className="px-4 py-3 border-t border-neutral-800 flex justify-between">
               <div className="text-xs text-red-400">{saveError}</div>
-
               {!isEditing ? (
                 <button
                   onClick={() => setIsEditing(true)}
