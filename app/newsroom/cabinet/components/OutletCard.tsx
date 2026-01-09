@@ -9,6 +9,7 @@ import type { OutletOverview } from "../types";
  * Used only when outlet name is NOT already a domain.
  */
 const OUTLET_DOMAIN_MAP: Record<string, string> = {
+  // Core outlets
   BBC: "bbc.com",
   Reuters: "reuters.com",
   PBS: "pbs.org",
@@ -29,6 +30,10 @@ const OUTLET_DOMAIN_MAP: Record<string, string> = {
   Time: "time.com",
   Newsmax: "newsmax.com",
   "Mother Jones": "motherjones.com",
+
+  // ✅ NY Times canonical (includes Cooking, Wirecutter, etc.)
+  "NY Times": "nytimes.com",
+  "New York Times": "nytimes.com",
 };
 
 /**
@@ -42,9 +47,9 @@ function isDomain(value: string): boolean {
  * Resolve domain for favicon usage only.
  */
 function resolveDomain(outlet: string): string {
-  const trimmed = outlet.trim().toLowerCase();
-  if (isDomain(trimmed)) return trimmed;
-  return OUTLET_DOMAIN_MAP[outlet] || "";
+  const trimmed = outlet.trim();
+  if (isDomain(trimmed)) return trimmed.toLowerCase();
+  return OUTLET_DOMAIN_MAP[trimmed] || "";
 }
 
 /**
