@@ -1,5 +1,6 @@
 // ------------------------------------------------------------
-// Rolodex API Route (AUTHORITATIVE)
+// Rolodex API Route (AUTHORITATIVE — ID SCOPED)
+// PATCH + DELETE
 // Matches memory.memories route behavior EXACTLY
 // Cookie-based auth · RLS enforced · memory schema
 // NEXT 16 SAFE
@@ -36,75 +37,12 @@ async function getSupabase() {
 }
 
 /* ------------------------------------------------------------
-   GET /api/rolodex
+   PATCH /api/rolodex/[id]
 ------------------------------------------------------------ */
-export async function GET(req: Request) {
-  const supabase = await getSupabase();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return NextResponse.json(
-      { ok: false, error: "unauthenticated" },
-      { status: 401 }
-    );
-  }
-
-  const { searchParams } = new URL(req.url);
-  const q = searchParams.get("q");
-
-  let query = supabase
-    .schema("memory")
-    .from("rolodex")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  if (q && q.trim().length > 0) {
-    query = query.ilike("name", `%${q.trim()}%`);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    return NextResponse.json(
-      {
-        ok: false,
-        stage: "select.rolodex",
-        error,
-        ...(DIAG && {
-          diag: {
-            user_id: user.id,
-            schema: "memory",
-            table: "rolodex",
-            role: "authenticated",
-          },
-        }),
-      },
-      { status: 403 }
-    );
-  }
-
-  return NextResponse.json({
-    ok: true,
-    data,
-    ...(DIAG && {
-      diag: {
-        count: data?.length ?? 0,
-        user_id: user.id,
-        schema: "memory",
-        table: "rolodex",
-      },
-    }),
-  });
-}
-
-/* ------------------------------------------------------------
-   POST /api/rolodex
------------------------------------------------------------- */
-export async function POST(req: Request) {
+export async function PATCH(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
   const supabase = await getSupabase();
 
   const {
@@ -121,15 +59,12 @@ export async function POST(req: Request) {
 
   const body = await req.json();
 
-  const payload = {
-    ...body,
-    user_id: user.id, // 🔒 enforced server-side
-  };
-
   const { data, error } = await supabase
     .schema("memory")
     .from("rolodex")
-    .insert(payload)
+    .update(body)
+    .eq("id", params.id)
+    .eq("user_id", user.id) // 🔒 RLS alignment + safety
     .select()
     .single();
 
@@ -137,13 +72,15 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         ok: false,
-        stage: "insert.rolodex",
+        stage: "update.rolodex",
         error,
         ...(DIAG && {
           diag: {
             user_id: user.id,
+            rolodex_id: params.id,
             schema: "memory",
             table: "rolodex",
+            role: "authenticated",
           },
         }),
       },
@@ -156,8 +93,66 @@ export async function POST(req: Request) {
     data,
     ...(DIAG && {
       diag: {
-        inserted: true,
+        updated: true,
         id: data.id,
+      },
+    }),
+  });
+}
+
+/* ------------------------------------------------------------
+   DELETE /api/rolodex/[id]
+------------------------------------------------------------ */
+export async function DELETE(
+  _req: Request,
+  { params }: { params: { id: string } }
+) {
+  const supabase = await getSupabase();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return NextResponse.json(
+      { ok: false, error: "unauthenticated" },
+      { status: 401 }
+    );
+  }
+
+  const { error } = await supabase
+    .schema("memory")
+    .from("rolodex")
+    .delete()
+    .eq("id", params.id)
+    .eq("user_id", user.id); // 🔒 enforced
+
+  if (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        stage: "delete.rolodex",
+        error,
+        ...(DIAG && {
+          diag: {
+            user_id: user.id,
+            rolodex_id: params.id,
+            schema: "memory",
+            table: "rolodex",
+          },
+        }),
+      },
+      { status: 403 }
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    ...(DIAG && {
+      diag: {
+        deleted: true,
+        id: params.id,
       },
     }),
   });
