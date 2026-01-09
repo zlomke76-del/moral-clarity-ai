@@ -1,6 +1,5 @@
-// app/w/[workspaceId]/memory/page.tsx
-
 import MemoryWorkspaceClient from "./MemoryWorkspaceClient";
+import RolodexWorkspaceClient from "./RolodexWorkspaceClient";
 
 export const dynamic = "force-dynamic";
 
@@ -12,23 +11,23 @@ export default async function WorkspaceMemoryPage({
   const { workspaceId } = await params;
 
   return (
-    <section className="w-full h-full min-h-0 flex flex-col overflow-hidden">
-      {/* Fixed header */}
-      <header className="flex-shrink-0 px-8 py-6 border-b border-neutral-800">
+    <section className="w-full h-full min-h-0 flex flex-col overflow-hidden px-8 py-6">
+      <header className="flex-shrink-0 border-b border-neutral-800 pb-4 mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">
           Workspace Memories
         </h1>
         <p className="text-sm text-neutral-400">
-          Long-term factual memory only
+          Long-term factual memory and human-managed relationships
         </p>
       </header>
 
-      {/* Client owns remaining height */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-y-auto pr-2">
         <MemoryWorkspaceClient
           workspaceId={workspaceId}
           initialItems={[]}
         />
+
+        <RolodexWorkspaceClient workspaceId={workspaceId} />
       </div>
     </section>
   );
