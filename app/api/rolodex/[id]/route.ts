@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Rolodex ID Route (PATCH + DELETE)
 // Cookie auth · RLS enforced · memory schema
-// AUTHORITATIVE — FIXED PAYLOAD → COLUMN MAPPING
+// AUTHORITATIVE — FINAL, HARD-SANITIZED
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -101,13 +101,13 @@ export async function PATCH(
   }
 
   // ----------------------------------------------------------
-  // HARD SANITIZATION (immutable fields)
+  // HARD SANITIZATION (IMMUTABLE FIELDS)
   // ----------------------------------------------------------
   delete body.id;
   delete body.user_id;
+  delete body.workspace_id;
   delete body.created_at;
   delete body.updated_at;
-  if (!body.workspace_id) delete body.workspace_id;
 
   // ----------------------------------------------------------
   // BUILD SAFE UPDATE PAYLOAD
