@@ -1,6 +1,7 @@
 // ------------------------------------------------------------
 // Rolodex ID Route (PATCH + DELETE)
 // Cookie auth · RLS enforced · memory schema
+// AUTHORITATIVE
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -31,6 +32,7 @@ async function getSupabase() {
 
 /* ------------------------------------------------------------
    PATCH /api/rolodex/[id]
+   OWNER FORCED · PAYLOAD SANITIZED
 ------------------------------------------------------------ */
 export async function PATCH(
   req: Request,
@@ -38,8 +40,10 @@ export async function PATCH(
 ) {
   const supabase = await getSupabase();
 
-  const { data: { user }, error: authError } =
-    await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
   if (authError || !user) {
     return NextResponse.json(
@@ -57,7 +61,10 @@ export async function PATCH(
   }
 
   const body = await req.json();
+
+  // 🔒 HARD SANITIZATION
   delete body.user_id;
+  if (!body.workspace_id) delete body.workspace_id;
 
   const { data, error } = await supabase
     .from("rolodex")
@@ -71,6 +78,7 @@ export async function PATCH(
     .single();
 
   if (error) {
+    console.error("update.rolodex error", error);
     return NextResponse.json(
       { ok: false, stage: "update.rolodex", error },
       { status: 403 }
@@ -82,6 +90,7 @@ export async function PATCH(
 
 /* ------------------------------------------------------------
    DELETE /api/rolodex/[id]
+   OWNER ONLY
 ------------------------------------------------------------ */
 export async function DELETE(
   req: Request,
@@ -89,8 +98,10 @@ export async function DELETE(
 ) {
   const supabase = await getSupabase();
 
-  const { data: { user }, error: authError } =
-    await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
   if (authError || !user) {
     return NextResponse.json(
@@ -114,6 +125,7 @@ export async function DELETE(
     .eq("user_id", user.id);
 
   if (error) {
+    console.error("delete.rolodex error", error);
     return NextResponse.json(
       { ok: false, stage: "delete.rolodex", error },
       { status: 403 }
