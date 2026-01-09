@@ -1,23 +1,36 @@
-// ============================================================
-// Rolodex API — Next.js 16 App Router SAFE
-// ============================================================
+// ------------------------------------------------------------
+// Rolodex API Route (AUTHORITATIVE)
+// CRUD + Deterministic Diagnostics
+// Next.js 16 App Router Compatible
+// ------------------------------------------------------------
 
-import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+// ------------------------------------------------------------
+// Helpers
+// ------------------------------------------------------------
 
-/* ------------------------------------------------------------
-   Supabase client (Next 16 compliant)
------------------------------------------------------------- */
+function json(data: any, status = 200) {
+  return NextResponse.json(data, { status });
+}
+
+function isDiag(req: NextRequest) {
+  return req.nextUrl.searchParams.get("diag") === "1";
+}
+
+// ------------------------------------------------------------
+// Supabase factory (CORRECT for Next 16)
+// ------------------------------------------------------------
+
 async function getSupabase() {
-  const cookieStore = await cookies(); // ✅ REQUIRED in Next 16
+  const cookieStore = await cookies(); // ✅ MUST await in Next 16
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name: string) {
@@ -28,183 +41,190 @@ async function getSupabase() {
   );
 }
 
-/* ============================================================
-   GET /api/rolodex
-============================================================ */
+// ------------------------------------------------------------
+// GET /api/rolodex
+// ------------------------------------------------------------
+
 export async function GET(req: NextRequest) {
+  const diag: Record<string, any> = { route: "GET /rolodex" };
+  const DIAG = isDiag(req);
+
   try {
+    diag.stage = "init";
+
     const supabase = await getSupabase();
 
-    const { data: auth, error: authError } =
-      await supabase.auth.getUser();
+    diag.stage = "auth";
 
-    if (authError || !auth?.user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    diag.auth = {
+      user_present: !!user,
+      user_id: user?.id ?? null,
+      auth_error: authError ?? null,
+    };
+
+    if (!user) {
+      return json(
+        DIAG ? { ok: false, diag } : { error: "unauthorized" },
+        401
       );
     }
 
+    diag.stage = "query";
+
     const { data, error } = await supabase
-      .schema("memory")
       .from("rolodex")
       .select("*")
-      .eq("user_id", auth.user.id)
-      .order("name", { ascending: true });
+      .order("updated_at", { ascending: false });
 
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
-    }
+    diag.query = {
+      row_count: data?.length ?? 0,
+      error,
+    };
 
-    return NextResponse.json({ data });
-  } catch (err: any) {
-    return NextResponse.json(
-      { error: err?.message ?? "Internal Server Error" },
-      { status: 500 }
+    if (error) throw error;
+
+    return json(DIAG ? { ok: true, data, diag } : data);
+  } catch (err) {
+    diag.stage = "catch";
+    diag.exception = err;
+
+    return json(
+      DIAG ? { ok: false, diag } : { error: "internal_error" },
+      500
     );
   }
 }
 
-/* ============================================================
-   POST /api/rolodex
-============================================================ */
+// ------------------------------------------------------------
+// POST /api/rolodex
+// ------------------------------------------------------------
+
 export async function POST(req: NextRequest) {
+  const diag: Record<string, any> = { route: "POST /rolodex" };
+  const DIAG = isDiag(req);
+
   try {
     const supabase = await getSupabase();
-
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth?.user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
     const body = await req.json();
 
+    diag.stage = "auth";
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    diag.user_id = user?.id ?? null;
+
+    if (!user) return json({ error: "unauthorized" }, 401);
+
+    diag.stage = "insert";
+
     const { data, error } = await supabase
-      .schema("memory")
       .from("rolodex")
-      .insert({
-        ...body,
-        user_id: auth.user.id,
-      })
+      .insert({ ...body, user_id: user.id })
       .select()
       .single();
 
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
-    }
+    diag.insert = { error };
 
-    return NextResponse.json({ data }, { status: 201 });
-  } catch (err: any) {
-    return NextResponse.json(
-      { error: err?.message ?? "Internal Server Error" },
-      { status: 500 }
-    );
+    if (error) throw error;
+
+    return json(DIAG ? { ok: true, data, diag } : data, 201);
+  } catch (err) {
+    diag.stage = "catch";
+    diag.exception = err;
+    return json(DIAG ? { ok: false, diag } : { error: "internal_error" }, 500);
   }
 }
 
-/* ============================================================
-   PATCH /api/rolodex?id=uuid
-============================================================ */
+// ------------------------------------------------------------
+// PATCH /api/rolodex
+// ------------------------------------------------------------
+
 export async function PATCH(req: NextRequest) {
+  const diag: Record<string, any> = { route: "PATCH /rolodex" };
+  const DIAG = isDiag(req);
+
   try {
     const supabase = await getSupabase();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-
-    if (!id) {
-      return NextResponse.json(
-        { error: "id required" },
-        { status: 400 }
-      );
-    }
-
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth?.user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
     const body = await req.json();
+    const { id, ...updates } = body;
+
+    diag.stage = "auth";
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    diag.user_id = user?.id ?? null;
+
+    if (!user) return json({ error: "unauthorized" }, 401);
+    if (!id) return json({ error: "missing_id" }, 400);
+
+    diag.stage = "update";
 
     const { data, error } = await supabase
-      .schema("memory")
       .from("rolodex")
-      .update(body)
+      .update(updates)
       .eq("id", id)
-      .eq("user_id", auth.user.id)
       .select()
       .single();
 
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
-    }
+    diag.update = { error };
 
-    return NextResponse.json({ data });
-  } catch (err: any) {
-    return NextResponse.json(
-      { error: err?.message ?? "Internal Server Error" },
-      { status: 500 }
-    );
+    if (error) throw error;
+
+    return json(DIAG ? { ok: true, data, diag } : data);
+  } catch (err) {
+    diag.stage = "catch";
+    diag.exception = err;
+    return json(DIAG ? { ok: false, diag } : { error: "internal_error" }, 500);
   }
 }
 
-/* ============================================================
-   DELETE /api/rolodex?id=uuid
-============================================================ */
+// ------------------------------------------------------------
+// DELETE /api/rolodex?id=UUID
+// ------------------------------------------------------------
+
 export async function DELETE(req: NextRequest) {
+  const diag: Record<string, any> = { route: "DELETE /rolodex" };
+  const DIAG = isDiag(req);
+
   try {
     const supabase = await getSupabase();
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
+    const id = req.nextUrl.searchParams.get("id");
 
-    if (!id) {
-      return NextResponse.json(
-        { error: "id required" },
-        { status: 400 }
-      );
-    }
+    diag.stage = "auth";
 
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth?.user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    diag.user_id = user?.id ?? null;
+
+    if (!user) return json({ error: "unauthorized" }, 401);
+    if (!id) return json({ error: "missing_id" }, 400);
+
+    diag.stage = "delete";
 
     const { error } = await supabase
-      .schema("memory")
       .from("rolodex")
       .delete()
-      .eq("id", id)
-      .eq("user_id", auth.user.id);
+      .eq("id", id);
 
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
-    }
+    diag.delete = { error };
 
-    return NextResponse.json({ success: true });
-  } catch (err: any) {
-    return NextResponse.json(
-      { error: err?.message ?? "Internal Server Error" },
-      { status: 500 }
-    );
+    if (error) throw error;
+
+    return json(DIAG ? { ok: true, diag } : { ok: true });
+  } catch (err) {
+    diag.stage = "catch";
+    diag.exception = err;
+    return json(DIAG ? { ok: false, diag } : { error: "internal_error" }, 500);
   }
 }
