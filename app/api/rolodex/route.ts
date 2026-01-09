@@ -1,28 +1,29 @@
 // app/api/rolodex/route.ts
 // ============================================================
-// Rolodex API — minimal, RLS-governed
+// Rolodex API — authoritative, RLS-governed
 // ============================================================
-// - Uses user session (cookies)
-// - No service role
-// - RLS enforces ownership + isolation
-// - TABLE: memory.rolodex
+// - Next.js 16 App Router compatible
+// - Supabase SSR (cookies + response mutation safe)
+// - NO service role
+// - RLS enforces ownership
+// - Supports GET / POST / PATCH / DELETE
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/* ============================================================
-   Supabase (REQUEST-SCOPED, NEXT 16 SAFE)
-============================================================ */
-
-async function getSupabase() {
+/* ------------------------------------------------------------
+   Supabase factory (REQUIRED pattern)
+------------------------------------------------------------ */
+async function getSupabase(req: NextRequest) {
+  const res = NextResponse.next();
   const cookieStore = await cookies();
 
-  return createServerClient(
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -30,23 +31,25 @@ async function getSupabase() {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
-        set() {
-          // no-op (server components / route handlers)
+        set(name, value, options) {
+          res.cookies.set({ name, value, ...options });
         },
-        remove() {
-          // no-op
+        remove(name, options) {
+          res.cookies.set({ name, value: "", ...options });
         },
       },
     }
   );
+
+  return { supabase, res };
 }
 
 /* ============================================================
    GET /api/rolodex
-   Optional: ?q=name
+   Optional: ?q=search
 ============================================================ */
 export async function GET(req: NextRequest) {
-  const supabase = await getSupabase();
+  const { supabase } = await getSupabase(req);
 
   const {
     data: { user },
@@ -58,30 +61,31 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const q = searchParams.get("q")?.trim();
+  const q = searchParams.get("q");
 
   let query = supabase
     .schema("memory")
     .from("rolodex")
-    .select(
-      `
-        id,
-        name,
-        relationship_type,
-        primary_email,
-        primary_phone,
-        birthday,
-        notes,
-        sensitivity_level,
-        consent_level,
-        created_at,
-        updated_at
-      `
-    )
+    .select(`
+      id,
+      user_id,
+      workspace_id,
+      name,
+      relationship_type,
+      primary_email,
+      primary_phone,
+      birthday,
+      notes,
+      sensitivity_level,
+      consent_level,
+      created_at,
+      updated_at
+    `)
+    .eq("user_id", user.id)
     .order("name", { ascending: true });
 
-  if (q) {
-    query = query.ilike("name", `%${q}%`);
+  if (q && q.trim()) {
+    query = query.ilike("name", `%${q.trim()}%`);
   }
 
   const { data, error } = await query;
@@ -97,7 +101,7 @@ export async function GET(req: NextRequest) {
    POST /api/rolodex
 ============================================================ */
 export async function POST(req: NextRequest) {
-  const supabase = await getSupabase();
+  const { supabase } = await getSupabase(req);
 
   const {
     data: { user },
@@ -119,21 +123,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
+  const insertPayload = {
+    user_id: user.id,
+    workspace_id: body.workspace_id ?? null,
+    name: body.name.trim(),
+    relationship_type: body.relationship_type ?? null,
+    primary_email: body.primary_email ?? null,
+    primary_phone: body.primary_phone ?? null,
+    birthday: body.birthday ?? null,
+    notes: body.notes ?? null,
+    sensitivity_level: body.sensitivity_level ?? undefined,
+    consent_level: body.consent_level ?? undefined,
+  };
+
   const { data, error } = await supabase
     .schema("memory")
     .from("rolodex")
-    .insert({
-      user_id: user.id,
-      workspace_id: body.workspace_id ?? null,
-      name: body.name.trim(),
-      relationship_type: body.relationship_type ?? null,
-      primary_email: body.primary_email ?? null,
-      primary_phone: body.primary_phone ?? null,
-      birthday: body.birthday ?? null,
-      notes: body.notes ?? null,
-      sensitivity_level: body.sensitivity_level ?? undefined,
-      consent_level: body.consent_level ?? undefined,
-    })
+    .insert(insertPayload)
     .select()
     .single();
 
@@ -141,14 +147,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data, { status: 201 });
+  return NextResponse.json({ data }, { status: 201 });
 }
 
 /* ============================================================
    PATCH /api/rolodex?id=UUID
 ============================================================ */
 export async function PATCH(req: NextRequest) {
-  const supabase = await getSupabase();
+  const { supabase } = await getSupabase(req);
 
   const {
     data: { user },
@@ -163,7 +169,7 @@ export async function PATCH(req: NextRequest) {
   const id = searchParams.get("id");
 
   if (!id) {
-    return NextResponse.json({ error: "Missing id" }, { status: 400 });
+    return NextResponse.json({ error: "id is required" }, { status: 400 });
   }
 
   let body: any;
@@ -173,10 +179,34 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
+  const allowedFields = [
+    "name",
+    "relationship_type",
+    "primary_email",
+    "primary_phone",
+    "birthday",
+    "notes",
+    "sensitivity_level",
+    "consent_level",
+    "workspace_id",
+  ];
+
+  const updates: Record<string, any> = {};
+  for (const key of allowedFields) {
+    if (key in body) updates[key] = body[key];
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json(
+      { error: "No valid fields provided" },
+      { status: 400 }
+    );
+  }
+
   const { data, error } = await supabase
     .schema("memory")
     .from("rolodex")
-    .update(body)
+    .update(updates)
     .eq("id", id)
     .eq("user_id", user.id)
     .select()
@@ -186,14 +216,14 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json(data);
+  return NextResponse.json({ data });
 }
 
 /* ============================================================
    DELETE /api/rolodex?id=UUID
 ============================================================ */
 export async function DELETE(req: NextRequest) {
-  const supabase = await getSupabase();
+  const { supabase } = await getSupabase(req);
 
   const {
     data: { user },
@@ -208,7 +238,7 @@ export async function DELETE(req: NextRequest) {
   const id = searchParams.get("id");
 
   if (!id) {
-    return NextResponse.json({ error: "Missing id" }, { status: 400 });
+    return NextResponse.json({ error: "id is required" }, { status: 400 });
   }
 
   const { error } = await supabase
@@ -222,5 +252,5 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ success: true });
 }
