@@ -45,34 +45,33 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState<string>("");
 
   /* ------------------------------------------------------------
-     Load (GET /api/rolodex?q=)
-     Workspace filtered client-side by design
+     Load Rolodex entries (server-scoped by workspace + user)
   ------------------------------------------------------------ */
   async function load() {
     setLoading(true);
     setError(null);
 
     try {
-      // Ensure session exists (cookie-backed)
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (!session) {
+      if (!session?.access_token) {
         setError("Not authenticated.");
         setItems([]);
         return;
       }
 
-      const url =
-        query.trim().length > 0
-          ? `/api/rolodex?q=${encodeURIComponent(query.trim())}`
-          : `/api/rolodex`;
-
-      const res = await fetch(url);
+      const res = await fetch(
+        `/api/rolodex/workspace?workspaceId=${workspaceId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
 
       if (!res.ok) {
         setError("Failed to load Rolodex.");
@@ -80,17 +79,15 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
         return;
       }
 
-      const json = await res.json();
-      const data: RolodexRecord[] = Array.isArray(json.data)
-        ? json.data
-        : [];
+      const data = await res.json();
 
-      // Workspace scoping is intentional and explicit
-      const scoped = data.filter(
-        (r) => r.workspace_id === workspaceId
-      );
+      if (!Array.isArray(data.items)) {
+        setError("Unexpected Rolodex format.");
+        setItems([]);
+        return;
+      }
 
-      setItems(scoped);
+      setItems(data.items);
     } catch {
       setError("An error occurred while loading Rolodex.");
       setItems([]);
@@ -145,7 +142,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (!session) {
+      if (!session?.access_token) {
         setError("Authentication expired.");
         return;
       }
@@ -159,7 +156,10 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
 
       const res = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           ...draft,
           workspace_id: workspaceId,
@@ -193,10 +193,13 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (!session) return;
+      if (!session?.access_token) return;
 
       const res = await fetch(`/api/rolodex/${selected.id}`, {
         method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
       if (!res.ok) {
@@ -220,23 +223,17 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
       <h2 className="text-xl font-semibold mb-4">Rolodex</h2>
 
       <div className="flex gap-2 mb-4">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search contacts…"
-          className="flex-1 bg-neutral-950 border border-neutral-800 rounded p-2 text-sm"
-        />
-        <button
-          onClick={load}
-          className="px-3 py-2 rounded bg-neutral-800 text-sm"
-        >
-          Search
-        </button>
         <button
           onClick={startNew}
           className="px-3 py-2 rounded bg-neutral-800 text-sm"
         >
           + New
+        </button>
+        <button
+          onClick={load}
+          className="px-3 py-2 rounded bg-neutral-800 text-sm"
+        >
+          Refresh
         </button>
       </div>
 
@@ -247,9 +244,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
           <select
             value={selected?.id ?? ""}
             onChange={(e) =>
-              selectRecord(
-                items.find((i) => i.id === e.target.value)!
-              )
+              selectRecord(items.find((i) => i.id === e.target.value)!)
             }
             className="bg-neutral-950 border border-neutral-800 rounded p-2 text-sm"
           >
