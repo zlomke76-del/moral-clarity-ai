@@ -6,6 +6,21 @@ import { createClient } from "@supabase/supabase-js";
 export const runtime = "nodejs";
 
 /* ------------------------------------------------------------
+   Helper: resolve ID defensively (router-safe)
+------------------------------------------------------------ */
+function resolveId(req: Request, params?: { id?: string }) {
+  if (params?.id) return params.id;
+
+  try {
+    const url = new URL(req.url);
+    const parts = url.pathname.split("/");
+    return parts[parts.length - 1] || null;
+  } catch {
+    return null;
+  }
+}
+
+/* ------------------------------------------------------------
    Shared auth + Supabase bootstrap
 ------------------------------------------------------------ */
 async function getAuthedSupabase(req: Request) {
@@ -41,14 +56,14 @@ async function getAuthedSupabase(req: Request) {
 
 /* ------------------------------------------------------------
    PATCH /api/memory/[id]
-   Update existing memory content
 ------------------------------------------------------------ */
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { id?: string } }
 ) {
   try {
-    const memoryId = params.id;
+    const memoryId = resolveId(req, params);
+
     if (!memoryId) {
       return NextResponse.json(
         { error: "Memory ID is required" },
@@ -113,14 +128,14 @@ export async function PATCH(
 
 /* ------------------------------------------------------------
    DELETE /api/memory/[id]
-   Explicit memory removal
 ------------------------------------------------------------ */
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { id?: string } }
 ) {
   try {
-    const memoryId = params.id;
+    const memoryId = resolveId(req, params);
+
     if (!memoryId) {
       return NextResponse.json(
         { error: "Memory ID is required" },
