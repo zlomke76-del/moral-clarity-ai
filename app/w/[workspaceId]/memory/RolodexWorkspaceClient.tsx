@@ -41,16 +41,14 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   /* ------------------------------------------------------------
-     Load Rolodex entries (cookie-auth)
+     Load Rolodex entries (OWNER-SCOPED)
   ------------------------------------------------------------ */
   async function load() {
     setLoading(true);
     setError(null);
 
     try {
-      const res = await fetch(
-        `/api/rolodex/workspace?workspaceId=${workspaceId}`
-      );
+      const res = await fetch("/api/rolodex");
 
       if (!res.ok) {
         setError("Failed to load Rolodex.");
@@ -58,15 +56,16 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
         return;
       }
 
-      const data = await res.json();
+      const json = await res.json();
+      const rows = json.data ?? [];
 
-      if (!Array.isArray(data.items)) {
+      if (!Array.isArray(rows)) {
         setError("Unexpected Rolodex format.");
         setItems([]);
         return;
       }
 
-      setItems(data.items);
+      setItems(rows);
     } catch {
       setError("An error occurred while loading Rolodex.");
       setItems([]);
@@ -77,7 +76,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
 
   useEffect(() => {
     load();
-  }, [workspaceId]);
+  }, []);
 
   /* ------------------------------------------------------------
      Selection / Creation
@@ -99,13 +98,13 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
       notes: "",
       sensitivity_level: 2,
       consent_level: 1,
-      workspace_id: workspaceId,
+      workspace_id: null,
     });
     setError(null);
   }
 
   /* ------------------------------------------------------------
-     Save (POST or PATCH) — cookie-auth
+     Save (POST or PATCH)
   ------------------------------------------------------------ */
   async function save() {
     if (!draft?.name?.trim()) {
@@ -126,12 +125,10 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
 
       const res = await fetch(url, {
         method,
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...draft,
-          workspace_id: workspaceId,
+          workspace_id: null, // 🔒 ownership-only
         }),
       });
 
@@ -151,7 +148,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
   }
 
   /* ------------------------------------------------------------
-     Delete (DELETE /api/rolodex/[id]) — cookie-auth
+     Delete
   ------------------------------------------------------------ */
   async function remove() {
     if (!selected) return;
