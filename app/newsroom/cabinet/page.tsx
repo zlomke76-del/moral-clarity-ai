@@ -12,20 +12,26 @@ import ScoreBreakdown from "./components/ScoreBreakdown";
  * Values = canonical display name ONLY.
  */
 const OUTLET_MERGE_CANON: Record<string, string> = {
+  // ----------------------------------------------------------
   // BBC
+  // ----------------------------------------------------------
   "bbc.co.uk": "BBC",
   "bbc.com": "BBC",
   "www.bbc.co.uk": "BBC",
   "www.bbc.com": "BBC",
   "bbc": "BBC",
 
+  // ----------------------------------------------------------
   // Newsmax
+  // ----------------------------------------------------------
   "ir.newsmax": "Newsmax",
   "ir.newsmax.com": "Newsmax",
   "newsmax.com": "Newsmax",
   "newsmax": "Newsmax",
 
+  // ----------------------------------------------------------
   // Time
+  // ----------------------------------------------------------
   "nation.time": "Time",
   "newsweek.time": "Time",
   "nation.time.com": "Time",
@@ -33,33 +39,58 @@ const OUTLET_MERGE_CANON: Record<string, string> = {
   "time.com": "Time",
   "time": "Time",
 
+  // ----------------------------------------------------------
   // Bloomberg
+  // ----------------------------------------------------------
   "bna.content.cirrus.bloomberg.com": "Bloomberg",
   "bna content - bloomberg": "Bloomberg",
   "bna content": "Bloomberg",
   "bloomberg": "Bloomberg",
 
+  // ----------------------------------------------------------
   // DW
+  // ----------------------------------------------------------
   "amp.dw.com": "DW",
   "dw.com": "DW",
   "dw": "DW",
 
+  // ----------------------------------------------------------
   // RFERL
+  // ----------------------------------------------------------
   "about.rferl.org": "RFERL",
   "about.rferl": "RFERL",
   "rferl.org": "RFERL",
   "rferl": "RFERL",
 
+  // ----------------------------------------------------------
   // Washington Examiner
+  // ----------------------------------------------------------
   "wp.washingtonexaminer.com": "Washington Examiner",
   "washingtonexaminer.com": "Washington Examiner",
   "newsletters.washingtonexaminer.com": "Washington Examiner",
   "washington examiner": "Washington Examiner",
 
+  // ----------------------------------------------------------
   // Fox News
+  // ----------------------------------------------------------
   "radio.foxnews.com": "Fox News",
   "foxnews.com": "Fox News",
   "fox news": "Fox News",
+
+  // ----------------------------------------------------------
+  // NEW YORK TIMES (including NYT Cooking)
+  // ----------------------------------------------------------
+  "nytimes.com": "NY Times",
+  "www.nytimes.com": "NY Times",
+  "nyt.com": "NY Times",
+  "ny times": "NY Times",
+  "new york times": "NY Times",
+
+  // NYTimes Cooking → NY Times
+  "cooking.nytimes.com": "NY Times",
+  "nytimes cooking": "NY Times",
+  "nyt cooking": "NY Times",
+  "nytimescooking": "NY Times",
 };
 
 function normalizeKey(raw: string): string {
