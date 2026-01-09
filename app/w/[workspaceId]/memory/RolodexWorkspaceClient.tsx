@@ -31,7 +31,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   /* ------------------------------------------------------------
-     LOAD — WORKSPACE ROUTE (THIS WAS THE BUG)
+     LOAD — WORKSPACE-SCOPED ROLODEX
   ------------------------------------------------------------ */
   async function load() {
     setLoading(true);
@@ -141,6 +141,11 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
           onClick={() =>
             setDraft({
               name: "",
+              relationship_type: "",
+              primary_email: "",
+              primary_phone: "",
+              birthday: "",
+              notes: "",
               sensitivity_level: 2,
               consent_level: 1,
               workspace_id: workspaceId,
@@ -165,9 +170,12 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
         <>
           <select
             value={selected?.id ?? ""}
-            onChange={(e) =>
-              setSelected(items.find((i) => i.id === e.target.value) || null)
-            }
+            onChange={(e) => {
+              const record =
+                items.find((i) => i.id === e.target.value) || null;
+              setSelected(record);
+              setDraft(record ? { ...record } : null);
+            }}
             className="bg-neutral-950 border border-neutral-800 rounded p-2 text-sm w-full mb-4"
           >
             <option value="">Select a contact…</option>
@@ -179,7 +187,8 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
           </select>
 
           {draft && (
-            <div className="grid gap-3 bg-neutral-950 border border-neutral-800 rounded p-4">
+            <div className="grid gap-4 bg-neutral-950 border border-neutral-800 rounded p-4">
+              {/* Name */}
               <input
                 value={draft.name ?? ""}
                 onChange={(e) =>
@@ -189,16 +198,72 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
               />
 
+              {/* Relationship */}
+              <input
+                value={draft.relationship_type ?? ""}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    relationship_type: e.target.value,
+                  })
+                }
+                placeholder="Relationship (e.g. Advisor, Family, Colleague)"
+                className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
+              />
+
+              {/* Contact Info */}
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  value={draft.primary_email ?? ""}
+                  onChange={(e) =>
+                    setDraft({
+                      ...draft,
+                      primary_email: e.target.value,
+                    })
+                  }
+                  placeholder="Email"
+                  className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
+                />
+
+                <input
+                  value={draft.primary_phone ?? ""}
+                  onChange={(e) =>
+                    setDraft({
+                      ...draft,
+                      primary_phone: e.target.value,
+                    })
+                  }
+                  placeholder="Phone"
+                  className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
+                />
+              </div>
+
+              {/* Birthday */}
+              <input
+                type="date"
+                value={draft.birthday ?? ""}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    birthday: e.target.value,
+                  })
+                }
+                className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
+              />
+
+              {/* Notes */}
               <textarea
                 value={draft.notes ?? ""}
                 onChange={(e) =>
                   setDraft({ ...draft, notes: e.target.value })
                 }
-                placeholder="Notes"
-                className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
+                placeholder="Context, history, significance…"
+                rows={4}
+                className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm resize-none"
               />
 
-              <div className="flex justify-between items-center">
+              {/* Actions */}
+              <div className="flex justify-between items-center pt-2">
                 <div className="text-xs text-red-400">{error}</div>
                 <div className="flex gap-2">
                   {selected && (
@@ -212,7 +277,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
                   <button
                     onClick={save}
                     disabled={saving}
-                    className="px-3 py-1.5 text-sm rounded bg-blue-600"
+                    className="px-4 py-1.5 text-sm rounded bg-blue-600 disabled:opacity-50"
                   >
                     {saving ? "Saving…" : "Save"}
                   </button>
