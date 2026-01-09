@@ -1,39 +1,26 @@
 // ------------------------------------------------------------
 // Rolodex API Route (AUTHORITATIVE)
-// Table: memory.rolodex
-// Auth: Cookie-based Supabase (RLS enforced)
-// Runtime: Next.js 16 (cookies() is async)
+// Matches memory.memories route behavior EXACTLY
+// Cookie-based auth · RLS enforced · memory schema
+// NEXT 16 SAFE
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
-type Diag = {
-  stage: string;
-  ok: boolean;
-  detail?: any;
-};
-
-function diagFail(stage: string, detail: any, status = 500) {
-  console.error("[ROLodex][FAIL]", stage, detail);
-  return NextResponse.json(
-    { ok: false, stage, detail },
-    { status }
-  );
-}
-
-function diagOk(stage: string, detail?: any): Diag {
-  return { stage, ok: true, detail };
-}
+/* ------------------------------------------------------------
+   Diagnostics toggle
+------------------------------------------------------------ */
+const DIAG = true;
 
 /* ------------------------------------------------------------
-   Supabase Server Client (Next 16 SAFE)
+   Helpers
 ------------------------------------------------------------ */
 async function getSupabase() {
-  const cookieStore = await cookies(); // 🔑 REQUIRED IN NEXT 16
+  const cookieStore = await cookies(); // ✅ async (Next 16)
 
-  return createServerClient(
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -44,166 +31,134 @@ async function getSupabase() {
       },
     }
   );
+
+  return supabase;
 }
 
 /* ------------------------------------------------------------
-   GET /api/rolodex?q=
+   GET /api/rolodex
 ------------------------------------------------------------ */
 export async function GET(req: Request) {
-  const diag: Diag[] = [];
+  const supabase = await getSupabase();
 
-  try {
-    const supabase = await getSupabase();
-    diag.push(diagOk("supabase_client_created"));
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-    const {
-      data: { user },
-      error: userErr,
-    } = await supabase.auth.getUser();
-
-    if (userErr || !user) {
-      return diagFail(
-        "auth.getUser",
-        userErr ?? "No user session",
-        401
-      );
-    }
-
-    diag.push(diagOk("auth_user", { user_id: user.id }));
-
-    const { searchParams } = new URL(req.url);
-    const q = searchParams.get("q")?.trim();
-
-    let query = supabase
-      .from("rolodex")
-      .select("*")
-      .order("updated_at", { ascending: false });
-
-    if (q) {
-      query = query.ilike("name", `%${q}%`);
-      diag.push(diagOk("query_filter", q));
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      return diagFail("select.rolodex", error, 403);
-    }
-
-    diag.push(diagOk("rows_returned", data.length));
-
-    return NextResponse.json({
-      ok: true,
-      diag,
-      data,
-    });
-  } catch (e: any) {
-    return diagFail("unhandled_exception", e?.message ?? e);
+  if (authError || !user) {
+    return NextResponse.json(
+      { ok: false, error: "unauthenticated" },
+      { status: 401 }
+    );
   }
+
+  const { searchParams } = new URL(req.url);
+  const q = searchParams.get("q");
+
+  let query = supabase
+    .schema("memory")
+    .from("rolodex")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (q && q.trim().length > 0) {
+    query = query.ilike("name", `%${q.trim()}%`);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        stage: "select.rolodex",
+        error,
+        ...(DIAG && {
+          diag: {
+            user_id: user.id,
+            schema: "memory",
+            table: "rolodex",
+            role: "authenticated",
+          },
+        }),
+      },
+      { status: 403 }
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    data,
+    ...(DIAG && {
+      diag: {
+        count: data?.length ?? 0,
+        user_id: user.id,
+        schema: "memory",
+        table: "rolodex",
+      },
+    }),
+  });
 }
 
 /* ------------------------------------------------------------
    POST /api/rolodex
 ------------------------------------------------------------ */
 export async function POST(req: Request) {
-  try {
-    const supabase = await getSupabase();
+  const supabase = await getSupabase();
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-    if (!user) {
-      return diagFail("auth", "No session", 401);
-    }
-
-    const body = await req.json();
-
-    const { data, error } = await supabase
-      .from("rolodex")
-      .insert({
-        ...body,
-        user_id: user.id,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      return diagFail("insert.rolodex", error, 403);
-    }
-
-    return NextResponse.json({ ok: true, data });
-  } catch (e: any) {
-    return diagFail("post_exception", e?.message ?? e);
+  if (authError || !user) {
+    return NextResponse.json(
+      { ok: false, error: "unauthenticated" },
+      { status: 401 }
+    );
   }
-}
 
-/* ------------------------------------------------------------
-   PATCH /api/rolodex/[id]
------------------------------------------------------------- */
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const supabase = await getSupabase();
+  const body = await req.json();
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  const payload = {
+    ...body,
+    user_id: user.id, // 🔒 enforced server-side
+  };
 
-    if (!user) {
-      return diagFail("auth", "No session", 401);
-    }
+  const { data, error } = await supabase
+    .schema("memory")
+    .from("rolodex")
+    .insert(payload)
+    .select()
+    .single();
 
-    const body = await req.json();
-
-    const { data, error } = await supabase
-      .from("rolodex")
-      .update(body)
-      .eq("id", params.id)
-      .select()
-      .single();
-
-    if (error) {
-      return diagFail("update.rolodex", error, 403);
-    }
-
-    return NextResponse.json({ ok: true, data });
-  } catch (e: any) {
-    return diagFail("patch_exception", e?.message ?? e);
+  if (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        stage: "insert.rolodex",
+        error,
+        ...(DIAG && {
+          diag: {
+            user_id: user.id,
+            schema: "memory",
+            table: "rolodex",
+          },
+        }),
+      },
+      { status: 403 }
+    );
   }
-}
 
-/* ------------------------------------------------------------
-   DELETE /api/rolodex/[id]
------------------------------------------------------------- */
-export async function DELETE(
-  _req: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const supabase = await getSupabase();
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return diagFail("auth", "No session", 401);
-    }
-
-    const { error } = await supabase
-      .from("rolodex")
-      .delete()
-      .eq("id", params.id);
-
-    if (error) {
-      return diagFail("delete.rolodex", error, 403);
-    }
-
-    return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    return diagFail("delete_exception", e?.message ?? e);
-  }
+  return NextResponse.json({
+    ok: true,
+    data,
+    ...(DIAG && {
+      diag: {
+        inserted: true,
+        id: data.id,
+      },
+    }),
+  });
 }
