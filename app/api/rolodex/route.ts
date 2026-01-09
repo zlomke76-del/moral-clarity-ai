@@ -1,131 +1,206 @@
-import { NextRequest, NextResponse } from "next/server";
+// app/api/rolodex/route.ts
+// ------------------------------------------------------------
+// Rolodex API (AUTHORITATIVE)
+// CRUD access to memory.rolodex
+// Assumes RLS policies already exist and are correct
+// ------------------------------------------------------------
+
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+/* ------------------------------------------------------------------
+   Helpers
+------------------------------------------------------------------- */
 
-/* ========= Helpers ========= */
+function json(
+  body: unknown,
+  status: number = 200
+) {
+  return new NextResponse(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
 
-function getSupabase(req: NextRequest, res: NextResponse) {
+async function getSupabase() {
+  const cookieStore = cookies();
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+      ? process.env.SUPABASE_SERVICE_ROLE_KEY
+      : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name) {
-          return req.cookies.get(name)?.value;
-        },
-        set(name, value, options) {
-          res.cookies.set({ name, value, ...options });
-        },
-        remove(name, options) {
-          res.cookies.set({ name, value: "", ...options });
+        get(name: string) {
+          return cookieStore.get(name)?.value;
         },
       },
     }
   );
 }
 
-/* ========= GET ========= */
-export async function GET(req: NextRequest) {
-  const res = new NextResponse(); // ✅ FIX
-  const supabase = getSupabase(req, res);
-
+async function requireUser(supabase: ReturnType<typeof createServerClient>) {
   const {
     data: { user },
-    error: authError,
+    error,
   } = await supabase.auth.getUser();
 
-  if (authError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (error || !user) {
+    return null;
   }
 
-  const { searchParams } = new URL(req.url);
-  const q = searchParams.get("q");
-
-  let query = supabase
-    .schema("memory")
-    .from("rolodex")
-    .select(`
-      id,
-      user_id,
-      workspace_id,
-      name,
-      relationship_type,
-      primary_email,
-      primary_phone,
-      birthday,
-      notes,
-      sensitivity_level,
-      consent_level,
-      created_at,
-      updated_at
-    `)
-    .order("name", { ascending: true });
-
-  if (q && q.trim().length > 0) {
-    query = query.ilike("name", `%${q.trim()}%`);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error("[ROLODEX GET]", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ data });
+  return user;
 }
 
-/* ========= POST ========= */
-export async function POST(req: NextRequest) {
-  const res = new NextResponse(); // ✅ FIX
-  const supabase = getSupabase(req, res);
+/* ------------------------------------------------------------------
+   GET — list rolodex entries
+------------------------------------------------------------------- */
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  let body: any;
+export async function GET() {
   try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    const supabase = await getSupabase();
+    const user = await requireUser(supabase);
+
+    if (!user) {
+      return json({ error: "unauthorized" }, 401);
+    }
+
+    const { data, error } = await supabase
+      .from("rolodex")
+      .select("*")
+      .order("name", { ascending: true });
+
+    if (error) {
+      return json(
+        { error: "rolodex_select_failed", details: error.message },
+        403
+      );
+    }
+
+    return json({ data });
+  } catch (err) {
+    console.error("[rolodex][GET]", err);
+    return json({ error: "internal_error" }, 500);
   }
+}
 
-  if (!body?.name || typeof body.name !== "string") {
-    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+/* ------------------------------------------------------------------
+   POST — create new rolodex entry
+------------------------------------------------------------------- */
+
+export async function POST(req: Request) {
+  try {
+    const supabase = await getSupabase();
+    const user = await requireUser(supabase);
+
+    if (!user) {
+      return json({ error: "unauthorized" }, 401);
+    }
+
+    const payload = await req.json();
+
+    const insert = {
+      ...payload,
+      user_id: user.id,
+    };
+
+    const { data, error } = await supabase
+      .from("rolodex")
+      .insert(insert)
+      .select()
+      .single();
+
+    if (error) {
+      return json(
+        { error: "rolodex_insert_failed", details: error.message },
+        403
+      );
+    }
+
+    return json({ data }, 201);
+  } catch (err) {
+    console.error("[rolodex][POST]", err);
+    return json({ error: "internal_error" }, 500);
   }
+}
 
-  const insertPayload = {
-    user_id: user.id,
-    workspace_id: body.workspace_id ?? null,
-    name: body.name.trim(),
-    relationship_type: body.relationship_type ?? null,
-    primary_email: body.primary_email ?? null,
-    primary_phone: body.primary_phone ?? null,
-    birthday: body.birthday ?? null,
-    notes: body.notes ?? null,
-    sensitivity_level: body.sensitivity_level ?? undefined,
-    consent_level: body.consent_level ?? undefined,
-  };
+/* ------------------------------------------------------------------
+   PATCH — update existing rolodex entry
+------------------------------------------------------------------- */
 
-  const { data, error } = await supabase
-    .schema("memory")
-    .from("rolodex")
-    .insert(insertPayload)
-    .select("id")
-    .single();
+export async function PATCH(req: Request) {
+  try {
+    const supabase = await getSupabase();
+    const user = await requireUser(supabase);
 
-  if (error) {
-    console.error("[ROLODEX POST]", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!user) {
+      return json({ error: "unauthorized" }, 401);
+    }
+
+    const payload = await req.json();
+    const { id, ...updates } = payload;
+
+    if (!id) {
+      return json({ error: "missing_id" }, 400);
+    }
+
+    const { data, error } = await supabase
+      .from("rolodex")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      return json(
+        { error: "rolodex_update_failed", details: error.message },
+        403
+      );
+    }
+
+    return json({ data });
+  } catch (err) {
+    console.error("[rolodex][PATCH]", err);
+    return json({ error: "internal_error" }, 500);
   }
+}
 
-  return NextResponse.json({ id: data.id }, { status: 201 });
+/* ------------------------------------------------------------------
+   DELETE — hard delete rolodex entry
+------------------------------------------------------------------- */
+
+export async function DELETE(req: Request) {
+  try {
+    const supabase = await getSupabase();
+    const user = await requireUser(supabase);
+
+    if (!user) {
+      return json({ error: "unauthorized" }, 401);
+    }
+
+    const { id } = await req.json();
+
+    if (!id) {
+      return json({ error: "missing_id" }, 400);
+    }
+
+    const { error } = await supabase
+      .from("rolodex")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      return json(
+        { error: "rolodex_delete_failed", details: error.message },
+        403
+      );
+    }
+
+    return json({ success: true });
+  } catch (err) {
+    console.error("[rolodex][DELETE]", err);
+    return json({ error: "internal_error" }, 500);
+  }
 }
