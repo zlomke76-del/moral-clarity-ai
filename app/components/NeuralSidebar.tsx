@@ -25,7 +25,7 @@ type Props = {
 export default function NeuralSidebar({ items }: Props) {
   const pathname = usePathname() ?? "";
 
-  // Get workspaceId from /w/[id]
+  // Resolve workspaceId from /w/[id]
   let workspaceId: string | null = null;
   const parts = pathname.split("/").filter(Boolean);
   if (parts[0] === "w" && parts[1]) workspaceId = parts[1];
@@ -36,10 +36,28 @@ export default function NeuralSidebar({ items }: Props) {
       : buildDefaultItems(workspaceId ?? MCA_WORKSPACE_ID);
 
   return (
-    /* FIX: no <aside> wrapper here */
-    <div className="neural-sidebar">
-      {/* BRAND */}
-      <Link href="/app" className="neural-sidebar-top neural-sidebar-brand">
+    /**
+     * CRITICAL FIX:
+     * - Explicit viewport height
+     * - Internal scrolling
+     * - No dependency on parent overflow behavior
+     */
+    <div
+      className="neural-sidebar"
+      style={{
+        height: "100vh",
+        maxHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+      }}
+    >
+      {/* BRAND (non-scrolling) */}
+      <Link
+        href="/app"
+        className="neural-sidebar-top neural-sidebar-brand"
+        style={{ flexShrink: 0 }}
+      >
         <div className="neural-sidebar-brand-mark">
           <span>AI</span>
         </div>
@@ -50,8 +68,16 @@ export default function NeuralSidebar({ items }: Props) {
         </div>
       </Link>
 
-      {/* SECTIONS */}
-      <div className="neural-sidebar-glass">
+      {/* SCROLLABLE CONTENT */}
+      <div
+        className="neural-sidebar-glass"
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          overflowX: "hidden",
+          minHeight: 0, // IMPORTANT for flex scroll containers
+        }}
+      >
         <div className="neural-sidebar-section-label">Workspace</div>
 
         <nav className="neural-sidebar-list">
