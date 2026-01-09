@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Rolodex ID Route (PATCH + DELETE)
 // Cookie auth · RLS enforced · memory schema
-// AUTHORITATIVE — FINAL, SEALED
+// AUTHORITATIVE — FINAL, ACTUALLY FINAL
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -58,12 +58,20 @@ const COLUMN_MAP: Record<string, string> = {
 
 /* ------------------------------------------------------------
    PATCH /api/rolodex/[id]
-   OWNER FORCED · SAFE PARTIAL UPDATE
 ------------------------------------------------------------ */
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+
+  if (!id) {
+    return NextResponse.json(
+      { ok: false, error: "Rolodex ID is required" },
+      { status: 400 }
+    );
+  }
+
   const supabase = await getSupabase();
 
   const {
@@ -75,14 +83,6 @@ export async function PATCH(
     return NextResponse.json(
       { ok: false, error: "unauthenticated" },
       { status: 401 }
-    );
-  }
-
-  const id = params?.id;
-  if (!id) {
-    return NextResponse.json(
-      { ok: false, error: "Rolodex ID is required" },
-      { status: 400 }
     );
   }
 
@@ -101,7 +101,7 @@ export async function PATCH(
   }
 
   // ----------------------------------------------------------
-  // HARD SANITIZATION (IMMUTABLE FIELDS)
+  // HARD SANITIZATION (IMMUTABLE)
   // ----------------------------------------------------------
   delete body.id;
   delete body.user_id;
@@ -110,7 +110,7 @@ export async function PATCH(
   delete body.updated_at;
 
   // ----------------------------------------------------------
-  // BUILD SAFE UPDATE PAYLOAD
+  // BUILD UPDATE PAYLOAD
   // ----------------------------------------------------------
   const updatePayload: Record<string, any> = {};
 
@@ -118,16 +118,14 @@ export async function PATCH(
     const column = COLUMN_MAP[key];
     if (!column) continue;
 
-    // Normalize birthday → YYYY-MM-DD
     if (column === "birthday" && typeof value === "string") {
-      const parsed = new Date(value);
-      if (!isNaN(parsed.getTime())) {
-        updatePayload[column] = parsed.toISOString().slice(0, 10);
+      const d = new Date(value);
+      if (!isNaN(d.getTime())) {
+        updatePayload[column] = d.toISOString().slice(0, 10);
       }
       continue;
     }
 
-    // Normalize ENUM casing (Postgres enums are case-sensitive)
     if (column === "relationship_type" && typeof value === "string") {
       updatePayload[column] = value.trim().toLowerCase();
       continue;
@@ -137,12 +135,8 @@ export async function PATCH(
       typeof value === "string" ? value.trim() : value;
   }
 
-  // Nothing to update
   if (Object.keys(updatePayload).length === 0) {
-    return NextResponse.json(
-      { ok: true, noop: true },
-      { status: 200 }
-    );
+    return NextResponse.json({ ok: true, noop: true });
   }
 
   const { data, error } = await supabase
@@ -169,12 +163,20 @@ export async function PATCH(
 
 /* ------------------------------------------------------------
    DELETE /api/rolodex/[id]
-   OWNER ONLY
 ------------------------------------------------------------ */
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+
+  if (!id) {
+    return NextResponse.json(
+      { ok: false, error: "Rolodex ID is required" },
+      { status: 400 }
+    );
+  }
+
   const supabase = await getSupabase();
 
   const {
@@ -186,14 +188,7 @@ export async function DELETE(
     return NextResponse.json(
       { ok: false, error: "unauthenticated" },
       { status: 401 }
-    );
-  }
-
-  const id = params?.id;
-  if (!id) {
-    return NextResponse.json(
-      { ok: false, error: "Rolodex ID is required" },
-      { status: 400 }
+l
     );
   }
 
