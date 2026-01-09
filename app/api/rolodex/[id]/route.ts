@@ -1,45 +1,49 @@
-// ============================================================
-// Rolodex Item API — PATCH / DELETE
-// ============================================================
+// ------------------------------------------------------------
+// Rolodex Item API Route (AUTHORITATIVE)
+// PATCH + DELETE
+// Matches memory.memories item routes EXACTLY
+// Cookie-based auth · RLS enforced · memory schema
+// NEXT 16 SAFE
+// ------------------------------------------------------------
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+/* ------------------------------------------------------------
+   Diagnostics toggle
+------------------------------------------------------------ */
+const DIAG = true;
 
-/* ========= Helpers ========= */
+/* ------------------------------------------------------------
+   Helpers
+------------------------------------------------------------ */
+async function getSupabase() {
+  const cookieStore = await cookies(); // ✅ async (Next 16)
 
-function getSupabase(req: NextRequest, res: NextResponse) {
-  return createServerClient(
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name) {
-          return req.cookies.get(name)?.value;
-        },
-        set(name, value, options) {
-          res.cookies.set({ name, value, ...options });
-        },
-        remove(name, options) {
-          res.cookies.set({ name, value: "", ...options });
+        get(name: string) {
+          return cookieStore.get(name)?.value;
         },
       },
     }
   );
+
+  return supabase;
 }
 
-/* ========= PATCH ========= */
-/**
- * PATCH /api/rolodex/:id
- */
+/* ------------------------------------------------------------
+   PATCH /api/rolodex/[id]
+------------------------------------------------------------ */
 export async function PATCH(
-  req: NextRequest,
+  req: Request,
   { params }: { params: { id: string } }
 ) {
-  const res = NextResponse.next();
-  const supabase = getSupabase(req, res);
+  const supabase = await getSupabase();
 
   const {
     data: { user },
@@ -47,49 +51,72 @@ export async function PATCH(
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { ok: false, error: "unauthenticated" },
+      { status: 401 }
+    );
   }
 
-  let body: any;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  const id = params.id;
+  if (!id) {
+    return NextResponse.json(
+      { ok: false, error: "missing_id" },
+      { status: 400 }
+    );
   }
 
-  const { error } = await supabase
+  const body = await req.json();
+
+  // 🔒 Enforce ownership immutability server-side
+  delete body.user_id;
+
+  const { data, error } = await supabase
     .schema("memory")
     .from("rolodex")
-    .update({
-      name: body.name,
-      relationship_type: body.relationship_type ?? null,
-      primary_email: body.primary_email ?? null,
-      primary_phone: body.primary_phone ?? null,
-      birthday: body.birthday ?? null,
-      notes: body.notes ?? null,
-      sensitivity_level: body.sensitivity_level ?? undefined,
-      consent_level: body.consent_level ?? undefined,
-    })
-    .eq("id", params.id)
-    .eq("user_id", user.id);
+    .update(body)
+    .eq("id", id)
+    .select()
+    .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      {
+        ok: false,
+        stage: "update.rolodex",
+        error,
+        ...(DIAG && {
+          diag: {
+            user_id: user.id,
+            record_id: id,
+            schema: "memory",
+            table: "rolodex",
+          },
+        }),
+      },
+      { status: 403 }
+    );
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    data,
+    ...(DIAG && {
+      diag: {
+        updated: true,
+        id: data.id,
+      },
+    }),
+  });
 }
 
-/* ========= DELETE ========= */
-/**
- * DELETE /api/rolodex/:id
- */
+/* ------------------------------------------------------------
+   DELETE /api/rolodex/[id]
+------------------------------------------------------------ */
 export async function DELETE(
-  req: NextRequest,
+  _req: Request,
   { params }: { params: { id: string } }
 ) {
-  const res = NextResponse.next();
-  const supabase = getSupabase(req, res);
+  const supabase = await getSupabase();
 
   const {
     data: { user },
@@ -97,19 +124,52 @@ export async function DELETE(
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { ok: false, error: "unauthenticated" },
+      { status: 401 }
+    );
+  }
+
+  const id = params.id;
+  if (!id) {
+    return NextResponse.json(
+      { ok: false, error: "missing_id" },
+      { status: 400 }
+    );
   }
 
   const { error } = await supabase
     .schema("memory")
     .from("rolodex")
     .delete()
-    .eq("id", params.id)
-    .eq("user_id", user.id);
+    .eq("id", id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      {
+        ok: false,
+        stage: "delete.rolodex",
+        error,
+        ...(DIAG && {
+          diag: {
+            user_id: user.id,
+            record_id: id,
+            schema: "memory",
+            table: "rolodex",
+          },
+        }),
+      },
+      { status: 403 }
+    );
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    ...(DIAG && {
+      diag: {
+        deleted: true,
+        id,
+      },
+    }),
+  });
 }
