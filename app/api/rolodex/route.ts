@@ -1,5 +1,5 @@
 // ============================================================
-// Rolodex API — App Router SAFE
+// Rolodex API — Next.js 16 App Router SAFE
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
@@ -10,10 +10,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /* ------------------------------------------------------------
-   Supabase client (ROUTE HANDLER SAFE)
+   Supabase client (Next 16 compliant)
 ------------------------------------------------------------ */
-function getSupabase() {
-  const cookieStore = cookies(); // 🔴 NOT async
+async function getSupabase() {
+  const cookieStore = await cookies(); // ✅ REQUIRED in Next 16
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,7 +33,7 @@ function getSupabase() {
 ============================================================ */
 export async function GET(req: NextRequest) {
   try {
-    const supabase = getSupabase();
+    const supabase = await getSupabase();
 
     const { data: auth, error: authError } =
       await supabase.auth.getUser();
@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
 ============================================================ */
 export async function POST(req: NextRequest) {
   try {
-    const supabase = getSupabase();
+    const supabase = await getSupabase();
 
     const { data: auth } = await supabase.auth.getUser();
     if (!auth?.user) {
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
 ============================================================ */
 export async function PATCH(req: NextRequest) {
   try {
-    const supabase = getSupabase();
+    const supabase = await getSupabase();
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
@@ -167,7 +167,7 @@ export async function PATCH(req: NextRequest) {
 ============================================================ */
 export async function DELETE(req: NextRequest) {
   try {
-    const supabase = getSupabase();
+    const supabase = await getSupabase();
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
