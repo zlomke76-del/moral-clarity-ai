@@ -1,5 +1,5 @@
 // ------------------------------------------------------------
-// Rolodex ID Route (PATCH + DELETE)
+// Rolodex ID Route (GET + PATCH + DELETE)
 // Cookie auth · RLS enforced · memory schema
 // AUTHORITATIVE
 // ------------------------------------------------------------
@@ -31,6 +31,53 @@ async function getSupabase() {
 }
 
 /* ------------------------------------------------------------
+   GET /api/rolodex/[id]
+   OWNER ONLY — PREFETCH SAFE
+------------------------------------------------------------ */
+export async function GET(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  const supabase = await getSupabase();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return NextResponse.json(
+      { ok: false, error: "unauthenticated" },
+      { status: 401 }
+    );
+  }
+
+  const id = params?.id;
+  if (!id) {
+    return NextResponse.json(
+      { ok: false, error: "Rolodex ID is required" },
+      { status: 400 }
+    );
+  }
+
+  const { data, error } = await supabase
+    .from("rolodex")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .single();
+
+  if (error) {
+    return NextResponse.json(
+      { ok: false, stage: "select.rolodex", error },
+      { status: 403 }
+    );
+  }
+
+  return NextResponse.json({ ok: true, data });
+}
+
+/* ------------------------------------------------------------
    PATCH /api/rolodex/[id]
    OWNER FORCED · PAYLOAD SANITIZED
 ------------------------------------------------------------ */
@@ -52,7 +99,7 @@ export async function PATCH(
     );
   }
 
-  const id = params.id;
+  const id = params?.id;
   if (!id) {
     return NextResponse.json(
       { ok: false, error: "Rolodex ID is required" },
@@ -110,7 +157,7 @@ export async function DELETE(
     );
   }
 
-  const id = params.id;
+  const id = params?.id;
   if (!id) {
     return NextResponse.json(
       { ok: false, error: "Rolodex ID is required" },
