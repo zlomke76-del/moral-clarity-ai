@@ -36,6 +36,11 @@ import SolaceTranscript from "./SolaceTranscript";
 import type { SolaceExport } from "@/lib/exports/types";
 
 /* ------------------------------------------------------------------
+   Global singleton guard (module scope)
+------------------------------------------------------------------- */
+let SOLACE_DOCK_ACTIVE = false;
+
+/* ------------------------------------------------------------------
    Types
 ------------------------------------------------------------------- */
 type Message = {
