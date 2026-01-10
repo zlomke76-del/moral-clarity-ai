@@ -89,17 +89,41 @@ function isImageIntent(message: string): boolean {
 export default function SolaceDock() {
   const canRender = true;
 
+  // ------------------------------------------------------------------
+  // Conversation identity (stable per mounted instance)
+  // ------------------------------------------------------------------
   const conversationIdRef = useRef<string | null>(null);
   if (!conversationIdRef.current) {
     conversationIdRef.current = crypto.randomUUID();
   }
   const conversationId = conversationIdRef.current;
 
+  // ------------------------------------------------------------------
+  // StrictMode-safe singleton guard (AUTHORITATIVE)
+  // Ensures only ONE dock portals, even under double-mount
+  // ------------------------------------------------------------------
+  const singletonRef = useRef(false);
+
+  useEffect(() => {
+    if (singletonRef.current) return;
+    singletonRef.current = true;
+
+    return () => {
+      singletonRef.current = false;
+    };
+  }, []);
+
+  // ------------------------------------------------------------------
+  // Global store
+  // ------------------------------------------------------------------
   const { visible, setVisible, x, y, setPos, filters, setFilters } =
     useSolaceStore();
 
   const modeHint = "Neutral" as const;
 
+  // ------------------------------------------------------------------
+  // Viewport
+  // ------------------------------------------------------------------
   const [viewport, setViewport] = useState({ w: 0, h: 0 });
   useEffect(() => {
     const update = () =>
@@ -108,15 +132,25 @@ export default function SolaceDock() {
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
+
   const isMobile = viewport.w > 0 ? viewport.w <= 768 : false;
 
+  // ------------------------------------------------------------------
+  // Visibility bootstrap (non-mobile)
+  // ------------------------------------------------------------------
   useEffect(() => {
     if (canRender && !isMobile && !visible) setVisible(true);
   }, [canRender, isMobile, visible, setVisible]);
 
+  // ------------------------------------------------------------------
+  // Minimize state
+  // ------------------------------------------------------------------
   const [minimized, setMinimized] = useState(false);
   const [minimizing, setMinimizing] = useState(false);
 
+  // ------------------------------------------------------------------
+  // Orb position
+  // ------------------------------------------------------------------
   const orbPos = useMemo(() => {
     if (!viewport.w || !viewport.h) return { x: 0, y: 0 };
     return {
@@ -125,10 +159,16 @@ export default function SolaceDock() {
     };
   }, [viewport]);
 
+  // ------------------------------------------------------------------
+  // Conversation state
+  // ------------------------------------------------------------------
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
 
+  // ------------------------------------------------------------------
+  // Transcript auto-scroll
+  // ------------------------------------------------------------------
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!transcriptRef.current) return;
@@ -138,6 +178,9 @@ export default function SolaceDock() {
     });
   }, [messages]);
 
+  // ------------------------------------------------------------------
+  // Memory / attachments / speech
+  // ------------------------------------------------------------------
   const { userKey, memReady } = useSolaceMemory();
 
   const { pendingFiles, handleFiles, handlePaste, clearPending } =
@@ -152,6 +195,9 @@ export default function SolaceDock() {
       setMessages((m) => [...m, { role: "assistant", content: msg }]),
   });
 
+  // ------------------------------------------------------------------
+  // Ministry mode
+  // ------------------------------------------------------------------
   const ministryOn = useMemo(
     () => filters.has("abrahamic") && filters.has("ministry"),
     [filters]
@@ -168,8 +214,11 @@ export default function SolaceDock() {
     } catch {}
   }, [setFilters]);
 
+  // ------------------------------------------------------------------
+  // Initial greeting
+  // ------------------------------------------------------------------
   useEffect(() => {
-     if (messages.length === 0) {
+    if (messages.length === 0) {
       setMessages([
         {
           role: "assistant",
@@ -179,7 +228,9 @@ export default function SolaceDock() {
     }
   }, [messages.length]);
 
-
+  // ------------------------------------------------------------------
+  // Panel measurement
+  // ------------------------------------------------------------------
   const [panelW, setPanelW] = useState(0);
   const [panelH, setPanelH] = useState(0);
 
@@ -188,21 +239,27 @@ export default function SolaceDock() {
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+
     const measure = () => {
       const r = el.getBoundingClientRect();
       setPanelW(r.width);
       setPanelH(r.height);
     };
+
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     window.addEventListener("resize", measure);
+
     return () => {
       ro.disconnect();
       window.removeEventListener("resize", measure);
     };
   }, []);
 
+  // ------------------------------------------------------------------
+  // Dock position / resize
+  // ------------------------------------------------------------------
   const { posReady, onHeaderMouseDown } = useDockPosition({
     canRender,
     visible,
@@ -221,6 +278,9 @@ export default function SolaceDock() {
   const { dockW, dockH, setDockW, setDockH } = useDockSize();
   const startResize = createResizeController(dockW, dockH, setDockW, setDockH);
 
+  // ------------------------------------------------------------------
+  // Geometry
+  // ------------------------------------------------------------------
   const vw = viewport.w || 1;
   const vh = viewport.h || 1;
 
@@ -249,6 +309,9 @@ export default function SolaceDock() {
 
   const panelVisibility = minimized ? "hidden" : "visible";
 
+  // ------------------------------------------------------------------
+  // Styles
+  // ------------------------------------------------------------------
   const { panelStyle, transcriptStyle, textareaStyle, composerWrapStyle } =
     useDockStyles({
       dockW: isMobile || minimized ? mobileW : dockW,
@@ -268,7 +331,6 @@ export default function SolaceDock() {
     WebkitOverflowScrolling: isMobile ? "touch" : undefined,
   };
 
-
   const panelStyleSafe: React.CSSProperties = {
     ...panelStyle,
     width: isMobile || minimized ? mobileW : dockW,
@@ -283,8 +345,9 @@ export default function SolaceDock() {
     pointerEvents: minimized ? "none" : undefined,
   };
 
-  // Removed separate showOrb flag - now: conditionally render only one
-
+  // ------------------------------------------------------------------
+  // Orb + controls
+  // ------------------------------------------------------------------
   const orbStyle: React.CSSProperties = {
     position: "fixed",
     left: orbPos.x,
@@ -302,7 +365,6 @@ export default function SolaceDock() {
     transition: "all 0.4s cubic-bezier(0.77,0,0.18,1)",
     border: "3px solid white",
   };
-
 
   function minimizeDock() {
     setMinimizing(true);
@@ -655,31 +717,31 @@ export default function SolaceDock() {
   );
 
   // --- FIXED RETURN: Render only one (panel or orb), never both
-  if (!canRender || !visible) return null;
+  if (!canRender || !visible || singletonRef.current === false) return null;
 
-  return createPortal(
-    <>
-      {minimized && !isMobile ? (
-        <div
-          style={orbStyle}
-          onClick={restoreDock}
-          aria-label="Restore Solace dock"
+return createPortal(
+  <>
+    {minimized && !isMobile ? (
+      <div
+        style={orbStyle}
+        onClick={restoreDock}
+        aria-label="Restore Solace dock"
+      >
+        <span
+          style={{
+            fontWeight: "bold",
+            fontSize: 28,
+            color: "#fff",
+            userSelect: "none",
+          }}
         >
-          <span
-            style={{
-              fontWeight: "bold",
-              fontSize: 28,
-              color: "#fff",
-              userSelect: "none",
-            }}
-          >
-            ?
-          </span>
-        </div>
-      ) : (
-        panel
-      )}
-    </>,
-    document.body
-  );
-}
+          ?
+        </span>
+      </div>
+    ) : (
+      panel
+    )}
+  </>,
+  document.body
+);
+
