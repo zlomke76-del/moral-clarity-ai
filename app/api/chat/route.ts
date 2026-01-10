@@ -434,169 +434,181 @@ export async function POST(req: Request) {
       });
     }
 
-    // --------------------------------------------------------
-    // CONTEXT ASSEMBLY
-    // --------------------------------------------------------
-    const context = await assembleContext(
-      finalUserKey,
-      resolvedWorkspaceId,
-      normalizedMessage ?? "",
-      {
-        sessionId: resolvedConversationId,
-        sessionStartedAt: new Date().toISOString(),
-        executionProfile,
-      }
-    );
+// --------------------------------------------------------
+// CONTEXT ASSEMBLY
+// --------------------------------------------------------
+const context = await assembleContext(
+  finalUserKey,
+  resolvedWorkspaceId,
+  normalizedMessage ?? "",
+  {
+    sessionId: resolvedConversationId,
+    sessionStartedAt: new Date().toISOString(),
+    executionProfile,
+  }
+);
 
-    // --------------------------------------------------------
-    // DEMO SAFE — IMAGE BLOCK
-    // --------------------------------------------------------
-    if (executionProfile === "demo" && isImageRequest(message)) {
-      const demoResponse = "I’m here in demo mode. Ask me anything.";
+// --------------------------------------------------------
+// ATTACHMENTS — AUTHORITATIVE CONTEXT INJECTION (FIX)
+// --------------------------------------------------------
+if (Array.isArray(body.attachments) && body.attachments.length > 0) {
+  (context as any).attachments = body.attachments.map((a: any) => ({
+    name: a.name,
+    mime: a.mime,
+    url: a.url,
+    size: a.size,
+  }));
+}
 
-      return NextResponse.json({
-        ok: true,
-        conversationId: resolvedConversationId,
-        response: demoResponse,
-        messages: [{ role: "assistant", content: demoResponse }],
+// --------------------------------------------------------
+// DEMO SAFE — IMAGE BLOCK
+// --------------------------------------------------------
+if (executionProfile === "demo" && isImageRequest(message)) {
+  const demoResponse = "I’m here in demo mode. Ask me anything.";
+
+  return NextResponse.json({
+    ok: true,
+    conversationId: resolvedConversationId,
+    response: demoResponse,
+    messages: [{ role: "assistant", content: demoResponse }],
+  });
+}
+
+// --------------------------------------------------------
+// TERMINAL APPROVAL
+// --------------------------------------------------------
+if (isTerminalApproval(message)) {
+  const terminalResponse = terminalApprovalResponse();
+
+  if (authUserId || allowSessionWM) {
+    await supabaseAdmin
+      .schema("memory")
+      .from("working_memory")
+      .insert({
+        conversation_id: resolvedConversationId,
+        user_id: authUserId ?? finalUserKey,
+        workspace_id: resolvedWorkspaceId,
+        role: "assistant",
+        content: terminalResponse,
       });
-    }
+  }
 
-    // --------------------------------------------------------
-    // TERMINAL APPROVAL
-    // --------------------------------------------------------
-    if (isTerminalApproval(message)) {
-      const terminalResponse = terminalApprovalResponse();
+  return NextResponse.json({
+    ok: true,
+    conversationId: resolvedConversationId,
+    response: terminalResponse,
+    messages: [{ role: "assistant", content: terminalResponse }],
+  });
+}
 
-      if (authUserId || allowSessionWM) {
-        await supabaseAdmin
-          .schema("memory")
-          .from("working_memory")
-          .insert({
-            conversation_id: resolvedConversationId,
-            user_id: authUserId ?? finalUserKey,
-            workspace_id: resolvedWorkspaceId,
-            role: "assistant",
-            content: terminalResponse,
-          });
-      }
+// --------------------------------------------------------
+// IMAGE REQUEST
+// --------------------------------------------------------
+if (message && isImageRequest(message)) {
+  const imageUrl = await generateImage(message);
+  const imageHtml = `<img src="${imageUrl}" style="max-width:100%;border-radius:12px;" />`;
 
-      return NextResponse.json({
-        ok: true,
-        conversationId: resolvedConversationId,
-        response: terminalResponse,
-        messages: [{ role: "assistant", content: terminalResponse }],
+  if (authUserId || allowSessionWM) {
+    await supabaseAdmin
+      .schema("memory")
+      .from("working_memory")
+      .insert({
+        conversation_id: resolvedConversationId,
+        user_id: authUserId,
+        workspace_id: resolvedWorkspaceId,
+        role: "assistant",
+        content: imageHtml,
       });
-    }
+  }
 
-    // --------------------------------------------------------
-    // IMAGE REQUEST
-    // --------------------------------------------------------
-    if (message && isImageRequest(message)) {
-      const imageUrl = await generateImage(message);
-      const imageHtml = `<img src="${imageUrl}" style="max-width:100%;border-radius:12px;" />`;
+  return NextResponse.json({
+    ok: true,
+    conversationId: resolvedConversationId,
+    response: imageHtml,
+    messages: [{ role: "assistant", content: imageHtml }],
+  });
+}
 
-      if (authUserId || allowSessionWM) {
-        await supabaseAdmin
-          .schema("memory")
-          .from("working_memory")
-          .insert({
-            conversation_id: resolvedConversationId,
-            user_id: authUserId,
-            workspace_id: resolvedWorkspaceId,
-            role: "assistant",
-            content: imageHtml,
-          });
-      }
+// --------------------------------------------------------
+// NEWSROOM
+// --------------------------------------------------------
+const wantsNews =
+  newsMode === true ||
+  (typeof message === "string" && isNewsKeywordFallback(message));
 
-      return NextResponse.json({
-        ok: true,
-        conversationId: resolvedConversationId,
-        response: imageHtml,
-        messages: [{ role: "assistant", content: imageHtml }],
-      });
-    }
+if (wantsNews) {
+  const { data: digestRows, error } = await supabaseAdmin
+    .from("solace_news_digest_view")
+    .select(
+      "story_title, outlet, neutral_summary, story_url, created_at"
+    )
+    .order("created_at", { ascending: false })
+    .limit(6);
 
-    // --------------------------------------------------------
-    // NEWSROOM
-    // --------------------------------------------------------
-    const wantsNews =
-      newsMode === true ||
-      (typeof message === "string" && isNewsKeywordFallback(message));
+  if (error) throw new Error("NEWSROOM_DIGEST_FETCH_FAILED");
 
-    if (wantsNews) {
-      const { data: digestRows, error } = await supabaseAdmin
-        .from("solace_news_digest_view")
-        .select(
-          "story_title, outlet, neutral_summary, story_url, created_at"
-        )
-        .order("created_at", { ascending: false })
-        .limit(6);
+  const newsroomResponse = await runNewsroomExecutor(digestRows ?? []);
 
-      if (error) throw new Error("NEWSROOM_DIGEST_FETCH_FAILED");
-
-      const newsroomResponse = await runNewsroomExecutor(digestRows ?? []);
-
-      await supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
-        .insert({
-          conversation_id: resolvedConversationId,
-          user_id: finalUserKey,
-          workspace_id: resolvedWorkspaceId,
-          role: "assistant",
-          content: newsroomResponse,
-        });
-
-      return NextResponse.json({
-        ok: true,
-        conversationId: resolvedConversationId,
-        response: newsroomResponse,
-        messages: [{ role: "assistant", content: newsroomResponse }],
-      });
-    }
-
-    // --------------------------------------------------------
-    // EPPE IMPLICIT USE REJECTION
-    // --------------------------------------------------------
-    if (!isEPPECommand && requiresEPPE01(normalizedMessage)) {
-      const rejection =
-        "EPPE-01 evaluations require explicit invocation using the `/eppe` command.";
-
-      await supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
-        .insert({
-          conversation_id: resolvedConversationId,
-          user_id: authUserId,
-          workspace_id: resolvedWorkspaceId,
-          role: "assistant",
-          content: rejection,
-        });
-
-      return NextResponse.json({
-        ok: true,
-        conversationId: resolvedConversationId,
-        response: rejection,
-        messages: [{ role: "assistant", content: rejection }],
-      });
-    }
-
-    // --------------------------------------------------------
-    // HYBRID PIPELINE
-    // --------------------------------------------------------
-    const result = await runHybridPipeline({
-      userMessage: normalizedMessage ?? "",
-      context,
-      ministryMode,
-      founderMode,
-      modeHint,
+  await supabaseAdmin
+    .schema("memory")
+    .from("working_memory")
+    .insert({
+      conversation_id: resolvedConversationId,
+      user_id: finalUserKey,
+      workspace_id: resolvedWorkspaceId,
+      role: "assistant",
+      content: newsroomResponse,
     });
 
-    const rawResponse =
-      typeof result?.finalAnswer === "string" && result.finalAnswer.length > 0
-        ? result.finalAnswer
-        : "I’m here and ready to continue.";
+  return NextResponse.json({
+    ok: true,
+    conversationId: resolvedConversationId,
+    response: newsroomResponse,
+    messages: [{ role: "assistant", content: newsroomResponse }],
+  });
+}
+
+// --------------------------------------------------------
+// EPPE IMPLICIT USE REJECTION
+// --------------------------------------------------------
+if (!isEPPECommand && requiresEPPE01(normalizedMessage)) {
+  const rejection =
+    "EPPE-01 evaluations require explicit invocation using the `/eppe` command.";
+
+  await supabaseAdmin
+    .schema("memory")
+    .from("working_memory")
+    .insert({
+      conversation_id: resolvedConversationId,
+      user_id: authUserId,
+      workspace_id: resolvedWorkspaceId,
+      role: "assistant",
+      content: rejection,
+    });
+
+  return NextResponse.json({
+    ok: true,
+    conversationId: resolvedConversationId,
+    response: rejection,
+    messages: [{ role: "assistant", content: rejection }],
+  });
+}
+
+// --------------------------------------------------------
+// HYBRID PIPELINE
+// --------------------------------------------------------
+const result = await runHybridPipeline({
+  userMessage: normalizedMessage ?? "",
+  context,
+  ministryMode,
+  founderMode,
+  modeHint,
+});
+
+const rawResponse =
+  typeof result?.finalAnswer === "string" && result.finalAnswer.length > 0
+    ? result.finalAnswer
+    : "I’m here and ready to continue.";
 
     // --------------------------------------------------------
     // EPPE-01 VALIDATION (COMMAND ONLY)
