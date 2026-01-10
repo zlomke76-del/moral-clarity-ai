@@ -10,12 +10,14 @@ type Props = {
   initialItems: MemoryRecord[];
 };
 
+type Mode = "view" | "edit" | "create";
+
 export default function MemoryWorkspaceClient({
   workspaceId,
   initialItems,
 }: Props) {
   /* ------------------------------------------------------------
-     Supabase (singleton per component)
+     Supabase
   ------------------------------------------------------------ */
   const supabase = useMemo(
     () =>
@@ -30,8 +32,8 @@ export default function MemoryWorkspaceClient({
      State
   ------------------------------------------------------------ */
   const [items, setItems] = useState<MemoryRecord[]>(initialItems);
-
   const [selectedId, setSelectedId] = useState<string>("");
+
   const selected = useMemo(
     () => items.find((m) => m.id === selectedId) ?? null,
     [items, selectedId]
@@ -40,7 +42,7 @@ export default function MemoryWorkspaceClient({
   const [draft, setDraft] = useState<string>("");
   const originalDraftRef = useRef<string>("");
 
-  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [mode, setMode] = useState<Mode>("view");
 
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
@@ -49,7 +51,7 @@ export default function MemoryWorkspaceClient({
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   /* ------------------------------------------------------------
-     Load memories (facts only, scoped server-side)
+     Load memories
   ------------------------------------------------------------ */
   const loadMemories = useCallback(async () => {
     setLoading(true);
@@ -82,7 +84,6 @@ export default function MemoryWorkspaceClient({
       }
 
       const data = await res.json();
-
       if (!Array.isArray(data.items)) {
         setError("Unexpected memory format.");
         setItems([]);
@@ -103,11 +104,10 @@ export default function MemoryWorkspaceClient({
   }, [loadMemories]);
 
   /* ------------------------------------------------------------
-     Selection (NO mutation)
+     Select existing memory
   ------------------------------------------------------------ */
   function handleSelect(id: string) {
     setSelectedId(id);
-    setIsEditing(false);
     setSaveError(null);
     setDeleteError(null);
 
@@ -115,6 +115,7 @@ export default function MemoryWorkspaceClient({
     if (!record) {
       setDraft("");
       originalDraftRef.current = "";
+      setMode("view");
       return;
     }
 
@@ -125,33 +126,34 @@ export default function MemoryWorkspaceClient({
 
     setDraft(content);
     originalDraftRef.current = content;
+    setMode("view");
   }
 
   /* ------------------------------------------------------------
-     Save (explicit + diff-guarded)
+     Create new memory
+  ------------------------------------------------------------ */
+  function handleNew() {
+    setSelectedId("");
+    setDraft("");
+    originalDraftRef.current = "";
+    setSaveError(null);
+    setDeleteError(null);
+    setMode("create");
+  }
+
+  /* ------------------------------------------------------------
+     Save (create or edit)
   ------------------------------------------------------------ */
   async function handleSave() {
-    if (!selected) return;
-
-    // Diff guard — no-op saves are forbidden
-    if (draft === originalDraftRef.current) {
-      setIsEditing(false);
-      return;
-    }
-
     setSaving(true);
     setSaveError(null);
 
     let content: any = draft;
 
-    if (typeof selected.content === "object") {
-      try {
-        content = JSON.parse(draft);
-      } catch {
-        setSaveError("Invalid JSON format.");
-        setSaving(false);
-        return;
-      }
+    try {
+      content = JSON.parse(draft);
+    } catch {
+      // plain text is allowed
     }
 
     const {
@@ -165,63 +167,70 @@ export default function MemoryWorkspaceClient({
     }
 
     try {
-      const res = await fetch(`/api/memory/${selected.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ content }),
-      });
+      if (mode === "edit" && selected) {
+        if (draft === originalDraftRef.current) {
+          setMode("view");
+          return;
+        }
 
-      if (!res.ok) {
-        setSaveError("Failed to save memory.");
-        return;
+        const res = await fetch(`/api/memory/${selected.id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ content }),
+        });
+
+        if (!res.ok) throw new Error();
+
+        const updated = await res.json();
+        setItems((prev) =>
+          prev.map((m) => (m.id === updated.id ? updated : m))
+        );
+
+        originalDraftRef.current = draft;
+        setMode("view");
       }
 
-      const updated = await res.json();
+      if (mode === "create") {
+        const res = await fetch(`/api/memory`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            workspace_id: workspaceId,
+            content,
+          }),
+        });
 
-      setItems((prev) =>
-        prev.map((m) => (m.id === updated.id ? updated : m))
-      );
+        if (!res.ok) throw new Error();
 
-      const normalized =
-        typeof updated.content === "string"
-          ? updated.content
-          : JSON.stringify(updated.content, null, 2);
-
-      originalDraftRef.current = normalized;
-      setDraft(normalized);
-      setIsEditing(false);
+        const created = await res.json();
+        setItems((prev) => [created, ...prev]);
+        setSelectedId(created.id);
+        originalDraftRef.current = draft;
+        setMode("view");
+      }
     } catch {
-      setSaveError("An error occurred while saving.");
+      setSaveError("Failed to save memory.");
     } finally {
       setSaving(false);
     }
   }
 
   /* ------------------------------------------------------------
-     Cancel edit (restore original)
-  ------------------------------------------------------------ */
-  function handleCancel() {
-    setDraft(originalDraftRef.current);
-    setIsEditing(false);
-    setSaveError(null);
-  }
-
-  /* ------------------------------------------------------------
-     Delete (explicit + confirmed)
+     Delete
   ------------------------------------------------------------ */
   async function handleDelete() {
     if (!selected) return;
 
     const confirmed = window.confirm(
-      "Are you sure you want to permanently delete this memory? This cannot be undone."
+      "Are you sure you want to permanently delete this memory?"
     );
-
     if (!confirmed) return;
-
-    setDeleteError(null);
 
     const {
       data: { session },
@@ -240,18 +249,14 @@ export default function MemoryWorkspaceClient({
         },
       });
 
-      if (!res.ok) {
-        setDeleteError("Failed to delete memory.");
-        return;
-      }
+      if (!res.ok) throw new Error();
 
       setItems((prev) => prev.filter((m) => m.id !== selected.id));
       setSelectedId("");
       setDraft("");
-      originalDraftRef.current = "";
-      setIsEditing(false);
+      setMode("view");
     } catch {
-      setDeleteError("An error occurred while deleting.");
+      setDeleteError("Failed to delete memory.");
     }
   }
 
@@ -259,95 +264,76 @@ export default function MemoryWorkspaceClient({
      Render
   ------------------------------------------------------------ */
   return (
-    <div className="w-full h-full min-h-0 flex flex-col overflow-hidden">
-      {/* Memory selector */}
-      <div className="flex-shrink-0 px-8 py-4 border-b border-neutral-800">
+    <div className="w-full h-full flex flex-col">
+      <div className="px-8 py-4 border-b border-neutral-800 flex gap-2">
         <select
           value={selectedId}
           onChange={(e) => handleSelect(e.target.value)}
           disabled={loading}
-          className="w-full bg-neutral-950 border border-neutral-800 rounded-md p-2 text-sm disabled:opacity-50"
+          className="flex-1 bg-neutral-950 border border-neutral-800 rounded-md p-2 text-sm"
         >
-          <option value="">Select a memory to edit…</option>
+          <option value="">Select a memory…</option>
           {items.map((m) => (
             <option key={m.id} value={m.id}>
-              {new Date(m.updated_at).toLocaleDateString()} —{" "}
               {typeof m.content === "string"
-                ? m.content.slice(0, 80)
+                ? m.content.slice(0, 60)
                 : "[Structured memory]"}
             </option>
           ))}
         </select>
+
+        <button
+          onClick={handleNew}
+          className="px-3 py-2 text-sm rounded bg-neutral-800 hover:bg-neutral-700"
+        >
+          New
+        </button>
       </div>
 
-      {/* Editor */}
-      <div className="flex-1 min-h-0 overflow-hidden p-6">
-        {loading ? (
-          <div className="h-full flex items-center justify-center text-sm text-neutral-500">
-            Loading memories…
-          </div>
-        ) : !selected ? (
-          <div className="h-full flex items-center justify-center text-sm text-neutral-500">
-            Select a memory to edit
+      <div className="flex-1 p-6">
+        {!selected && mode !== "create" ? (
+          <div className="text-sm text-neutral-500">
+            Select or create a memory
           </div>
         ) : (
-          <div className="h-full min-h-0 flex flex-col bg-neutral-950 border border-neutral-800 rounded-lg">
-            <div className="flex-shrink-0 px-4 py-3 border-b border-neutral-800 text-sm text-neutral-400">
-              Editing memory
-            </div>
-
-            <div className="flex-1 min-h-0 overflow-y-auto p-4">
-              <textarea
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                disabled={!isEditing}
-                className="w-full h-full resize-none bg-neutral-950
-                           border border-neutral-800 rounded-md
-                           p-4 text-sm leading-relaxed"
-              />
-            </div>
-
-            <div className="flex-shrink-0 px-4 py-3 border-t border-neutral-800 flex justify-between items-center">
-              <div className="text-xs text-red-400">
-                {saveError || deleteError}
-              </div>
-
-              {!isEditing ? (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="px-3 py-1.5 text-sm rounded bg-neutral-800 hover:bg-neutral-700"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={handleDelete}
-                    className="px-3 py-1.5 text-sm rounded bg-red-700 hover:bg-red-600"
-                  >
-                    Delete
-                  </button>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleCancel}
-                    className="px-3 py-1.5 text-sm rounded border border-neutral-700"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="px-3 py-1.5 text-sm rounded bg-blue-600 disabled:opacity-50"
-                  >
-                    {saving ? "Saving…" : "Save"}
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            disabled={mode === "view"}
+            className="w-full h-full resize-none bg-neutral-950 border border-neutral-800 rounded-md p-4 text-sm"
+          />
         )}
       </div>
+
+      {(mode === "edit" || mode === "create") && (
+        <div className="px-6 py-3 border-t border-neutral-800 flex justify-between">
+          <div className="text-xs text-red-400">{saveError}</div>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-3 py-1.5 text-sm rounded bg-blue-600"
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </div>
+      )}
+
+      {mode === "view" && selected && (
+        <div className="px-6 py-3 border-t border-neutral-800 flex gap-2">
+          <button
+            onClick={() => setMode("edit")}
+            className="px-3 py-1.5 text-sm rounded bg-neutral-800"
+          >
+            Edit
+          </button>
+          <button
+            onClick={handleDelete}
+            className="px-3 py-1.5 text-sm rounded bg-red-700"
+          >
+            Delete
+          </button>
+        </div>
+      )}
     </div>
   );
 }
