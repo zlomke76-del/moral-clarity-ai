@@ -24,7 +24,13 @@ export const dynamic = "force-static";
 export default function EdgeOfProtectionIndexPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
+      <article
+        className="
+          prose prose-neutral dark:prose-invert max-w-none
+          prose-a:text-blue-600 dark:prose-a:text-blue-400
+          prose-a:underline prose-a:font-medium
+        "
+      >
         <h1>Edge of Protection</h1>
 
         <p className="text-lg text-neutral-400">
@@ -204,23 +210,23 @@ export default function EdgeOfProtectionIndexPage() {
             </Link>
           </li>
           <li>
-            <Link href="/edge-of-protection/metrics-and-monitoring">
-              Metrics &amp; Continuous Monitoring
+            <Link href="/edge-of-protection/governance-without-recognition">
+              Governance Without Recognition
             </Link>
           </li>
           <li>
-            <Link href="/edge-of-protection/feedback-and-expansion">
-              Feedback, Review, and Standards Expansion Workflow
+            <Link href="/edge-of-protection/non-amplifying-authority">
+              Non-Amplifying Authority
             </Link>
           </li>
           <li>
-            <Link href="/edge-of-protection/human-handoff-protocols">
-              Human Handoff &amp; Escalation Protocols
+            <Link href="/edge-of-protection/power-asymmetry">
+              Power Asymmetry
             </Link>
           </li>
           <li>
-            <Link href="/edge-of-protection/transparency-and-auditability">
-              Transparency &amp; Auditability Requirements
+            <Link href="/edge-of-protection/representation-boundary">
+              Representation Boundary
             </Link>
           </li>
         </ul>
