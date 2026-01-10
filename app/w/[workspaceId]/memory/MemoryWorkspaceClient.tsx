@@ -1,7 +1,7 @@
 // app/w/[workspaceId]/memory/MemoryWorkspaceClient.tsx
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import type { MemoryRecord } from "@/app/components/memory/types";
 import { createBrowserClient } from "@supabase/ssr";
 
@@ -38,6 +38,8 @@ export default function MemoryWorkspaceClient({
   );
 
   const [draft, setDraft] = useState<string>("");
+  const originalDraftRef = useRef<string>("");
+
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
   const [loading, setLoading] = useState<boolean>(true);
@@ -101,7 +103,7 @@ export default function MemoryWorkspaceClient({
   }, [loadMemories]);
 
   /* ------------------------------------------------------------
-     Selection
+     Selection (NO mutation)
   ------------------------------------------------------------ */
   function handleSelect(id: string) {
     setSelectedId(id);
@@ -112,21 +114,30 @@ export default function MemoryWorkspaceClient({
     const record = items.find((m) => m.id === id);
     if (!record) {
       setDraft("");
+      originalDraftRef.current = "";
       return;
     }
 
-    setDraft(
+    const content =
       typeof record.content === "string"
         ? record.content
-        : JSON.stringify(record.content, null, 2)
-    );
+        : JSON.stringify(record.content, null, 2);
+
+    setDraft(content);
+    originalDraftRef.current = content;
   }
 
   /* ------------------------------------------------------------
-     Save (explicit + guarded)
+     Save (explicit + diff-guarded)
   ------------------------------------------------------------ */
   async function handleSave() {
     if (!selected) return;
+
+    // Diff guard — no-op saves are forbidden
+    if (draft === originalDraftRef.current) {
+      setIsEditing(false);
+      return;
+    }
 
     setSaving(true);
     setSaveError(null);
@@ -173,12 +184,29 @@ export default function MemoryWorkspaceClient({
       setItems((prev) =>
         prev.map((m) => (m.id === updated.id ? updated : m))
       );
+
+      const normalized =
+        typeof updated.content === "string"
+          ? updated.content
+          : JSON.stringify(updated.content, null, 2);
+
+      originalDraftRef.current = normalized;
+      setDraft(normalized);
       setIsEditing(false);
     } catch {
       setSaveError("An error occurred while saving.");
     } finally {
       setSaving(false);
     }
+  }
+
+  /* ------------------------------------------------------------
+     Cancel edit (restore original)
+  ------------------------------------------------------------ */
+  function handleCancel() {
+    setDraft(originalDraftRef.current);
+    setIsEditing(false);
+    setSaveError(null);
   }
 
   /* ------------------------------------------------------------
@@ -220,6 +248,7 @@ export default function MemoryWorkspaceClient({
       setItems((prev) => prev.filter((m) => m.id !== selected.id));
       setSelectedId("");
       setDraft("");
+      originalDraftRef.current = "";
       setIsEditing(false);
     } catch {
       setDeleteError("An error occurred while deleting.");
@@ -301,7 +330,7 @@ export default function MemoryWorkspaceClient({
               ) : (
                 <div className="flex gap-2">
                   <button
-                    onClick={() => handleSelect(selected.id)}
+                    onClick={handleCancel}
                     className="px-3 py-1.5 text-sm rounded border border-neutral-700"
                   >
                     Cancel
