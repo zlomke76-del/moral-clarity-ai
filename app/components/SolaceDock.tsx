@@ -465,72 +465,85 @@ function isImageIntent(message: string): boolean {
 /* ------------------------------------------------------------------
    SEND
 ------------------------------------------------------------------- */
-  async function send(): Promise<void> {
-    if (!input.trim() && pendingFiles.length === 0) return;
-    if (streaming) return;
+async function send(): Promise<void> {
+  if (!input.trim() && pendingFiles.length === 0) return;
+  if (streaming) return;
 
-    const userMsg = input.trim() || "Attachments:";
-    setInput("");
-    setStreaming(true);
-    setMessages((m) => [...m, { role: "user", content: userMsg }]);
+  const userMsg = input.trim() || "Attachments:";
+  setInput("");
+  setStreaming(true);
+  setMessages((m) => [...m, { role: "user", content: userMsg }]);
 
-    try {
-      if (isImageIntent(userMsg)) {
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: userMsg,
-            canonicalUserKey: userKey,
-            workspaceId: MCA_WORKSPACE_ID,
-            conversationId,
-            ministryMode: ministryOn,
-            modeHint,
-          }),
-        });
-        ingestPayload(await res.json());
-        return;
-      }
-
-      const result = await sendWithVision({
-        userMsg,
-        pendingFiles,
-        userKey,
-        workspaceId: MCA_WORKSPACE_ID,
-        conversationId,
-        ministryOn,
-        modeHint,
+  try {
+    // ------------------------------------------------------------
+    // IMAGE-INTENT FAST PATH (NOW WITH ATTACHMENTS)
+    // ------------------------------------------------------------
+    if (isImageIntent(userMsg)) {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: userMsg,
+          canonicalUserKey: userKey,
+          workspaceId: MCA_WORKSPACE_ID,
+          conversationId,
+          ministryMode: ministryOn,
+          modeHint,
+          attachments: pendingFiles.map((f) => ({
+            name: f.name,
+            mime: f.mime,
+            url: f.url,
+            size: f.size,
+          })),
+        }),
       });
 
-      if (result?.visionResults) {
-        for (const v of result.visionResults) {
-          setMessages((m) => [
-            ...m,
-            {
-              role: "assistant",
-              content: v?.answer ?? "",
-              imageUrl: v?.imageUrl ?? null,
-            },
-          ]);
-        }
-      }
-
-      if (result?.chatPayload) {
-        ingestPayload(result.chatPayload);
-      }
-    } catch (err: any) {
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          content: `? ${err?.message || "Request failed"}`,
-        },
-      ]);
-    } finally {
-      setStreaming(false);
-      clearPending();
+      ingestPayload(await res.json());
+      return;
     }
+
+    // ------------------------------------------------------------
+    // VISION / STANDARD PATH
+    // ------------------------------------------------------------
+    const result = await sendWithVision({
+      userMsg,
+      pendingFiles,
+      userKey,
+      workspaceId: MCA_WORKSPACE_ID,
+      conversationId,
+      ministryOn,
+      modeHint,
+    });
+
+    if (result?.visionResults) {
+      for (const v of result.visionResults) {
+        setMessages((m) => [
+          ...m,
+          {
+            role: "assistant",
+            content: v?.answer ?? "",
+            imageUrl: v?.imageUrl ?? null,
+          },
+        ]);
+      }
+    }
+
+    if (result?.chatPayload) {
+      ingestPayload(result.chatPayload);
+    }
+  } catch (err: any) {
+    setMessages((m) => [
+      ...m,
+      {
+        role: "assistant",
+        content: `⚠️ ${err?.message || "Request failed"}`,
+      },
+    ]);
+  } finally {
+    setStreaming(false);
+    clearPending();
   }
+}
 
 /* ------------------------------------------------------------------
    Auto-expanding textarea
