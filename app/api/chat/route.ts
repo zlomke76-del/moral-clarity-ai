@@ -31,6 +31,11 @@ import { requiresEPPE01 } from "@/lib/solace/policies/materials";
 import { validateEPPE01 } from "@/lib/solace/validators/eppe";
 
 // ------------------------------------------------------------
+// Attachment ingestion (AUTHORITATIVE)
+// ------------------------------------------------------------
+import { processAttachments } from "@/lib/chat/attachments";
+
+// ------------------------------------------------------------
 // Memory lifecycle
 // ------------------------------------------------------------
 import { runSessionCompaction } from "@/lib/memory/runSessionCompaction";
@@ -600,11 +605,31 @@ if (!isEPPECommand && requiresEPPE01(normalizedMessage)) {
   });
 }
 
+ // --------------------------------------------------------
+// ATTACHMENT INGESTION (DETERMINISTIC)
+// --------------------------------------------------------
+let attachmentDigest = "";
+
+if (Array.isArray(body.attachments) && body.attachments.length > 0) {
+  attachmentDigest = await processAttachments(
+    body.attachments.map((a: any) => ({
+      name: a.name,
+      url: a.url,
+      type: a.mime || a.type,
+    }))
+  );
+}
+
+const hybridUserMessage =
+  attachmentDigest && attachmentDigest.length > 0
+    ? `${normalizedMessage ?? ""}\n\n${attachmentDigest}`
+    : normalizedMessage ?? "";
+   
 // --------------------------------------------------------
 // HYBRID PIPELINE
 // --------------------------------------------------------
 const result = await runHybridPipeline({
-  userMessage: normalizedMessage ?? "",
+  userMessage: hybridUserMessage,
   context,
   ministryMode,
   founderMode,
