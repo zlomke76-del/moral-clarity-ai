@@ -69,30 +69,27 @@ function formatAuthoritativeAttachments(context: any): string {
   const attachments = context?.attachments ?? [];
 
   if (!Array.isArray(attachments) || attachments.length === 0) {
-    return "";
+    return `ATTACHMENTS:\nNone.\n`;
   }
 
   return `
-AUTHORITATIVE USER-PROVIDED DOCUMENTS (MUST BE USED):
+AUTHORITATIVE USER-PROVIDED FILES:
 
-The following documents were explicitly provided by the user.
-They are authoritative context and MUST be incorporated into reasoning.
-The assistant is FORBIDDEN from claiming that no context or domain was provided.
+The user has provided the following files for this session.
+These files EXIST and MUST be acknowledged before proceeding.
 
 ${attachments
   .map(
-    (a: any, i: number) => `--- DOCUMENT ${i + 1} ---
-Source: ${a.name ?? "Unnamed document"}
-Content:
-${a.text}
-`
+    (a: any, i: number) =>
+      `${i + 1}. ${a.name ?? "Unnamed file"} (${a.mime ?? "unknown type"})`
   )
   .join("\n")}
 
 RULES:
-- These documents take precedence over inferred intent.
-- If intent is unclear, ask questions ABOUT THESE DOCUMENTS.
-- Do NOT ignore, summarize away, or disclaim their existence.
+- You DO NOT know the contents of these files yet.
+- You MUST ask which file(s) to analyze or request permission to read them.
+- You are FORBIDDEN from claiming no files or context were provided.
+- You are FORBIDDEN from fabricating file contents.
 `;
 }
 
