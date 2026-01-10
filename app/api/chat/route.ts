@@ -616,21 +616,6 @@ if (!isEPPECommand && requiresEPPE01(normalizedMessage)) {
   });
 }
 
- // --------------------------------------------------------
-// ATTACHMENT INGESTION (DETERMINISTIC)
-// --------------------------------------------------------
-let attachmentDigest = "";
-
-if (Array.isArray(body.attachments) && body.attachments.length > 0) {
-  attachmentDigest = await processAttachments(
-    body.attachments.map((a: any) => ({
-      name: a.name,
-      url: a.url,
-      type: a.mime || a.type,
-    }))
-  );
-}
-
 const hybridUserMessage =
   attachmentDigest && attachmentDigest.length > 0
     ? `${normalizedMessage ?? ""}\n\n${attachmentDigest}`
