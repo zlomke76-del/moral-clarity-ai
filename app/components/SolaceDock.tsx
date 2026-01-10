@@ -83,11 +83,28 @@ function isImageIntent(message: string): boolean {
   );
 }
 
-/* ------------------------------------------------------------------
-   MAIN
-------------------------------------------------------------------- */
-export default function SolaceDock() {
-  const canRender = true;
+  /* ------------------------------------------------------------------
+     MAIN
+  ------------------------------------------------------------------- */
+  export default function SolaceDock() {
+   const canRender = true;
+
+  // ------------------------------------------------------------------
+  // Enforce singleton (synchronous, render-safe)
+  // ------------------------------------------------------------------
+  if (SOLACE_DOCK_ACTIVE) {
+    return null;
+  }
+  SOLACE_DOCK_ACTIVE = true;
+
+  // ------------------------------------------------------------------
+  // Release singleton on unmount (StrictMode-safe cleanup)
+  // ------------------------------------------------------------------
+  useEffect(() => {
+    return () => {
+      SOLACE_DOCK_ACTIVE = false;
+    };
+  }, []);
 
   // ------------------------------------------------------------------
   // Conversation identity (stable per mounted instance)
@@ -97,21 +114,6 @@ export default function SolaceDock() {
     conversationIdRef.current = crypto.randomUUID();
   }
   const conversationId = conversationIdRef.current;
-
-  // ------------------------------------------------------------------
-  // StrictMode-safe singleton guard (AUTHORITATIVE)
-  // Ensures only ONE dock portals, even under double-mount
-  // ------------------------------------------------------------------
-  const singletonRef = useRef(false);
-
-  useEffect(() => {
-    if (singletonRef.current) return;
-    singletonRef.current = true;
-
-    return () => {
-      singletonRef.current = false;
-    };
-  }, []);
 
   // ------------------------------------------------------------------
   // Global store
@@ -716,8 +718,8 @@ export default function SolaceDock() {
     </section>
   );
 
-  // --- FIXED RETURN: Render only one (panel or orb), never both
-  if (!canRender || !visible || singletonRef.current === false) return null;
+  // --- Render only one (panel or orb), never both
+if (!canRender || !visible) return null;
 
 return createPortal(
   <>
@@ -744,4 +746,3 @@ return createPortal(
   </>,
   document.body
 );
-
