@@ -95,22 +95,19 @@ function isImageIntent(message: string): boolean {
    const canRender = true;
 
   // ------------------------------------------------------------------
-  // Enforce singleton (synchronous, render-safe)
+  // Singleton ownership (hook-safe)
   // ------------------------------------------------------------------
-  if (SOLACE_DOCK_ACTIVE) {
-    return null;
-  }
-  SOLACE_DOCK_ACTIVE = true;
+  const ownsDockRef = useRef(false);
 
-  // ------------------------------------------------------------------
-  // Release singleton on unmount (StrictMode-safe cleanup)
-  // ------------------------------------------------------------------
   useEffect(() => {
     return () => {
-      SOLACE_DOCK_ACTIVE = false;
+      if (ownsDockRef.current) {
+        SOLACE_DOCK_ACTIVE = false;
+        ownsDockRef.current = false;
+      }
     };
   }, []);
-
+  
   // ------------------------------------------------------------------
   // Conversation identity (stable per mounted instance)
   // ------------------------------------------------------------------
@@ -723,8 +720,16 @@ function isImageIntent(message: string): boolean {
     </section>
   );
 
-  // --- Render only one (panel or orb), never both
+// --- Render only one (panel or orb), never both
 if (!canRender || !visible) return null;
+
+// Acquire singleton ownership at render boundary
+if (!SOLACE_DOCK_ACTIVE) {
+  SOLACE_DOCK_ACTIVE = true;
+  ownsDockRef.current = true;
+} else if (!ownsDockRef.current) {
+  return null;
+}
 
 return createPortal(
   <>
@@ -748,9 +753,6 @@ return createPortal(
     ) : (
       panel
     )}
-   </>,
+  </>,
   document.body
 );
-}
-
-    
