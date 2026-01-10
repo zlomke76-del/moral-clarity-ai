@@ -744,3 +744,4 @@ function isImageIntent(message: string): boolean {
   </>,
   document.body
 );
+}
