@@ -462,7 +462,7 @@ export async function POST(req: Request) {
     // --------------------------------------------------------
     // ATTACHMENTS — AUTHORITATIVE CONTEXT INJECTION (FIXED)
     // --------------------------------------------------------
-    let attachmentDigest = "";
+    attachmentDigest = "";
 
     if (Array.isArray(body.attachments) && body.attachments.length > 0) {
       attachmentDigest = await processAttachments(
@@ -480,6 +480,7 @@ export async function POST(req: Request) {
         size: a.size,
       }));
     }
+
 
     // --------------------------------------------------------
     // DEMO SAFE — IMAGE BLOCK
