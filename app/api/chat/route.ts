@@ -266,10 +266,10 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     console.log("[CHAT BODY]", {
-  hasAttachments: Array.isArray(body.attachments),
-  attachmentCount: body.attachments?.length,
-  keys: Object.keys(body ?? {}),
-});
+      hasAttachments: Array.isArray(body.attachments),
+      attachmentCount: body.attachments?.length,
+      keys: Object.keys(body ?? {}),
+    });
 
     const {
       message,
@@ -445,45 +445,55 @@ export async function POST(req: Request) {
       });
     }
 
-// --------------------------------------------------------
-// CONTEXT ASSEMBLY
-// --------------------------------------------------------
-const context = await assembleContext(
-  finalUserKey,
-  resolvedWorkspaceId,
-  normalizedMessage ?? "",
-  {
-    sessionId: resolvedConversationId,
-    sessionStartedAt: new Date().toISOString(),
-    executionProfile,
-  }
-);
+    // --------------------------------------------------------
+    // CONTEXT ASSEMBLY
+    // --------------------------------------------------------
+    const context = await assembleContext(
+      finalUserKey,
+      resolvedWorkspaceId,
+      normalizedMessage ?? "",
+      {
+        sessionId: resolvedConversationId,
+        sessionStartedAt: new Date().toISOString(),
+        executionProfile,
+      }
+    );
 
-// --------------------------------------------------------
-// ATTACHMENTS — AUTHORITATIVE CONTEXT INJECTION (FIX)
-// --------------------------------------------------------
-if (Array.isArray(body.attachments) && body.attachments.length > 0) {
-  (context as any).attachments = body.attachments.map((a: any) => ({
-    name: a.name,
-    mime: a.mime,
-    url: a.url,
-    size: a.size,
-  }));
-}
+    // --------------------------------------------------------
+    // ATTACHMENTS — AUTHORITATIVE CONTEXT INJECTION (FIXED)
+    // --------------------------------------------------------
+    let attachmentDigest = "";
 
-// --------------------------------------------------------
-// DEMO SAFE — IMAGE BLOCK
-// --------------------------------------------------------
-if (executionProfile === "demo" && isImageRequest(message)) {
-  const demoResponse = "I’m here in demo mode. Ask me anything.";
+    if (Array.isArray(body.attachments) && body.attachments.length > 0) {
+      attachmentDigest = await processAttachments(
+        body.attachments.map((a: any) => ({
+          name: a.name,
+          url: a.url,
+          type: a.mime,
+        }))
+      );
 
-  return NextResponse.json({
-    ok: true,
-    conversationId: resolvedConversationId,
-    response: demoResponse,
-    messages: [{ role: "assistant", content: demoResponse }],
-  });
-}
+      (context as any).attachments = body.attachments.map((a: any) => ({
+        name: a.name,
+        mime: a.mime,
+        url: a.url,
+        size: a.size,
+      }));
+    }
+
+    // --------------------------------------------------------
+    // DEMO SAFE — IMAGE BLOCK
+    // --------------------------------------------------------
+    if (executionProfile === "demo" && isImageRequest(message)) {
+      const demoResponse = "I’m here in demo mode. Ask me anything.";
+
+      return NextResponse.json({
+        ok: true,
+        conversationId: resolvedConversationId,
+        response: demoResponse,
+        messages: [{ role: "assistant", content: demoResponse }],
+      });
+    }
 
 // --------------------------------------------------------
 // TERMINAL APPROVAL
