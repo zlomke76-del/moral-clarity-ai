@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
+import type { SolaceFile } from "@/app/components/useSolaceAttachments";
 
 export type ChatMessage = {
   role: "user" | "assistant";
@@ -14,6 +15,7 @@ type UseSolaceChatArgs = {
   modeHint: string;
   userKey: string;
   clearPending: () => void;
+  getPendingFiles: () => SolaceFile[]; // 🔒 REQUIRED
 };
 
 export function useSolaceChat({
@@ -21,6 +23,7 @@ export function useSolaceChat({
   modeHint,
   userKey,
   clearPending,
+  getPendingFiles,
 }: UseSolaceChatArgs) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: "assistant", content: "Ready when you are." },
@@ -29,12 +32,16 @@ export function useSolaceChat({
 
   const send = useCallback(
     async (input: string) => {
-      if (!input.trim() || streaming) return;
+      if ((!input.trim() && getPendingFiles().length === 0) || streaming) return;
 
       const userMsg = input.trim();
+      const attachments = getPendingFiles();
+
       setStreaming(true);
 
-      setMessages((m) => [...m, { role: "user", content: userMsg }]);
+      if (userMsg) {
+        setMessages((m) => [...m, { role: "user", content: userMsg }]);
+      }
 
       try {
         const res = await fetch("/api/chat", {
@@ -47,6 +54,15 @@ export function useSolaceChat({
             ministryMode: ministryOn,
             modeHint,
             userKey,
+
+            // 🔒 RESTORED — ATTACHMENTS ENTER THE SYSTEM
+            attachments: attachments.map((f) => ({
+              name: f.name,
+              type: f.type,
+              mime: f.mime,
+              url: f.url,
+              size: f.size,
+            })),
           }),
         });
 
@@ -74,7 +90,15 @@ export function useSolaceChat({
         clearPending();
       }
     },
-    [messages, ministryOn, modeHint, userKey, streaming, clearPending]
+    [
+      messages,
+      ministryOn,
+      modeHint,
+      userKey,
+      streaming,
+      clearPending,
+      getPendingFiles,
+    ]
   );
 
   return {
