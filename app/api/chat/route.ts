@@ -462,7 +462,7 @@ export async function POST(req: Request) {
     // --------------------------------------------------------
     // ATTACHMENTS — AUTHORITATIVE CONTEXT INJECTION (FIXED)
     // --------------------------------------------------------
-    attachmentDigest = "";
+    let attachmentDigest = "";
 
     if (Array.isArray(body.attachments) && body.attachments.length > 0) {
       attachmentDigest = await processAttachments(
