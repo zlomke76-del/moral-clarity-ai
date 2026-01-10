@@ -260,6 +260,12 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
+    console.log("[CHAT BODY]", {
+  hasAttachments: Array.isArray(body.attachments),
+  attachmentCount: body.attachments?.length,
+  keys: Object.keys(body ?? {}),
+});
+
     const {
       message,
       canonicalUserKey,
