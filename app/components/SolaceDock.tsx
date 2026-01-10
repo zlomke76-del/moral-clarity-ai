@@ -95,6 +95,23 @@ function isImageIntent(message: string): boolean {
    const canRender = true;
 
   // ------------------------------------------------------------------
+  // Enforce singleton (synchronous, render-safe)
+  // ------------------------------------------------------------------
+  if (SOLACE_DOCK_ACTIVE) {
+    return null;
+  }
+  SOLACE_DOCK_ACTIVE = true;
+
+  // ------------------------------------------------------------------
+  // Release singleton on unmount (StrictMode-safe cleanup)
+  // ------------------------------------------------------------------
+  useEffect(() => {
+    return () => {
+      SOLACE_DOCK_ACTIVE = false;
+    };
+  }, []);
+
+  // ------------------------------------------------------------------
   // Conversation identity (stable per mounted instance)
   // ------------------------------------------------------------------
   const conversationIdRef = useRef<string | null>(null);
@@ -707,20 +724,10 @@ function isImageIntent(message: string): boolean {
   );
 
   // --- Render only one (panel or orb), never both
-    if (!canRender || !visible) return null;
+if (!canRender || !visible) return null;
 
-  // Enforce singleton ONLY at portal boundary
-    if (SOLACE_DOCK_ACTIVE) return null;
-    SOLACE_DOCK_ACTIVE = true;
-
-    useEffect(() => {
-      return () => {
-        SOLACE_DOCK_ACTIVE = false;
-      };
-    }, []);
-
-    return createPortal(
-    <>
+return createPortal(
+  <>
     {minimized && !isMobile ? (
       <div
         style={orbStyle}
@@ -741,7 +748,9 @@ function isImageIntent(message: string): boolean {
     ) : (
       panel
     )}
-  </>,
+   </>,
   document.body
 );
 }
+
+    
