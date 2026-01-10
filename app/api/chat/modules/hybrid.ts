@@ -65,6 +65,37 @@ No meta commentary.
 // --------------------------------------------------------------
 // FORMATTERS
 // --------------------------------------------------------------
+function formatAuthoritativeAttachments(context: any): string {
+  const attachments = context?.attachments ?? [];
+
+  if (!Array.isArray(attachments) || attachments.length === 0) {
+    return "";
+  }
+
+  return `
+AUTHORITATIVE USER-PROVIDED DOCUMENTS (MUST BE USED):
+
+The following documents were explicitly provided by the user.
+They are authoritative context and MUST be incorporated into reasoning.
+The assistant is FORBIDDEN from claiming that no context or domain was provided.
+
+${attachments
+  .map(
+    (a: any, i: number) => `--- DOCUMENT ${i + 1} ---
+Source: ${a.name ?? "Unnamed document"}
+Content:
+${a.text}
+`
+  )
+  .join("\n")}
+
+RULES:
+- These documents take precedence over inferred intent.
+- If intent is unclear, ask questions ABOUT THESE DOCUMENTS.
+- Do NOT ignore, summarize away, or disclaim their existence.
+`;
+}
+
 function formatWorkingMemory(context: any): string {
   const wm = context?.workingMemory?.items ?? [];
 
@@ -132,6 +163,7 @@ export async function runHybridPipeline(args: {
     facts: context?.memoryPack?.facts?.length ?? 0,
     wm: context?.workingMemory?.items?.length ?? 0,
     rolodex: context?.rolodex?.length ?? 0,
+    attachments: context?.attachments?.length ?? 0,
   });
 
   const optimist = await callModel(
@@ -161,6 +193,7 @@ ABSOLUTE RULES:
   const arbiterPrompt = sanitizeASCII(`
 ${system}
 
+${formatAuthoritativeAttachments(context)}
 ${formatFactualMemory(context)}
 ${formatRolodex(context)}
 ${formatWorkingMemory(context)}
