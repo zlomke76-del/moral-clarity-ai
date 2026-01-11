@@ -802,6 +802,5 @@ return NextResponse.json({
   conversationId: resolvedConversationId,
   response: safeResponse,
   messages: [{ role: "assistant", content: safeResponse }],
-});
-  }
+  });
 }
