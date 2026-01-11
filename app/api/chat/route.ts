@@ -551,44 +551,71 @@ if (message && isImageRequest(message)) {
   });
 }
 
-// --------------------------------------------------------
-// NEWSROOM
-// --------------------------------------------------------
-const wantsNews =
-  newsMode === true ||
-  (typeof message === "string" && isNewsKeywordFallback(message));
+    // ------------------------------------------------------------
+    // EXPORT INTENT DETECTION (AUTHORITATIVE)
+    // ------------------------------------------------------------
+    function detectsExportIntent(text?: string): null | {
+      format: "docx" | "pdf" | "csv";
+      filename?: string;
+    } {
+      if (!text) return null;
 
-if (wantsNews) {
-  const { data: digestRows, error } = await supabaseAdmin
-    .from("solace_news_digest_view")
-    .select(
-      "story_title, outlet, neutral_summary, story_url, created_at"
-    )
-    .order("created_at", { ascending: false })
-    .limit(6);
+      const lower = text.toLowerCase();
 
-  if (error) throw new Error("NEWSROOM_DIGEST_FETCH_FAILED");
+      // Explicit export markers only — no guessing
+      if (lower.includes("[export:docx]")) {
+        return { format: "docx" };
+      }
 
-  const newsroomResponse = await runNewsroomExecutor(digestRows ?? []);
+      if (lower.includes("[export:pdf]")) {
+        return { format: "pdf" };
+      }
 
-  await supabaseAdmin
-    .schema("memory")
-    .from("working_memory")
-    .insert({
-      conversation_id: resolvedConversationId,
-      user_id: finalUserKey,
-      workspace_id: resolvedWorkspaceId,
-      role: "assistant",
-      content: newsroomResponse,
-    });
+      if (lower.includes("[export:csv]")) {
+        return { format: "csv" };
+      }
 
-  return NextResponse.json({
-    ok: true,
-    conversationId: resolvedConversationId,
-    response: newsroomResponse,
-    messages: [{ role: "assistant", content: newsroomResponse }],
-  });
-}
+      return null;
+    }
+
+    // --------------------------------------------------------
+    // NEWSROOM
+    // --------------------------------------------------------
+    const wantsNews =
+      newsMode === true ||
+      (typeof message === "string" && isNewsKeywordFallback(message));
+
+    if (wantsNews) {
+      const { data: digestRows, error } = await supabaseAdmin
+        .from("solace_news_digest_view")
+        .select(
+          "story_title, outlet, neutral_summary, story_url, created_at"
+        )
+        .order("created_at", { ascending: false })
+        .limit(6);
+
+      if (error) throw new Error("NEWSROOM_DIGEST_FETCH_FAILED");
+
+      const newsroomResponse = await runNewsroomExecutor(digestRows ?? []);
+
+      await supabaseAdmin
+        .schema("memory")
+        .from("working_memory")
+        .insert({
+          conversation_id: resolvedConversationId,
+          user_id: finalUserKey,
+          workspace_id: resolvedWorkspaceId,
+          role: "assistant",
+          content: newsroomResponse,
+        });
+
+      return NextResponse.json({
+        ok: true,
+        conversationId: resolvedConversationId,
+        response: newsroomResponse,
+        messages: [{ role: "assistant", content: newsroomResponse }],
+      });
+    }
 
 // --------------------------------------------------------
 // EPPE IMPLICIT USE REJECTION
