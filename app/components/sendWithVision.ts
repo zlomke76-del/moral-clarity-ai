@@ -20,6 +20,28 @@ type SendArgs = {
 };
 
 // ---------------------------------------------------------------------
+// Intent detection — VISION ONLY RUNS WHEN USER ASKS FOR IT
+// Upload = consent
+// Vision = intent
+// ---------------------------------------------------------------------
+function detectsImageIntent(text: string): boolean {
+  if (!text) return false;
+
+  const t = text.toLowerCase();
+
+  return (
+    t.includes("read") ||
+    t.includes("summarize") ||
+    t.includes("analyze") ||
+    t.includes("what does this say") ||
+    t.includes("what is in this image") ||
+    t.includes("extract") ||
+    t.includes("ocr") ||
+    t.includes("transcribe")
+  );
+}
+
+// ---------------------------------------------------------------------
 // Vision-aware send helper
 // ---------------------------------------------------------------------
 export async function sendWithVision({
@@ -38,10 +60,10 @@ export async function sendWithVision({
     answer: string;
   }[] = [];
 
-  // ---------------- Vision pass (images only) ----------------
-  const imageFiles = pendingFiles.filter((f) =>
-    f.mime.startsWith("image/")
-  );
+  // ---------------- Vision pass (images ONLY if intent is explicit) ----------------
+  const imageFiles = detectsImageIntent(userMsg)
+    ? pendingFiles.filter((f) => f.mime.startsWith("image/"))
+    : [];
 
   for (const img of imageFiles) {
     const visionRes = await fetch("/api/solace/vision", {
@@ -67,7 +89,7 @@ export async function sendWithVision({
     }
   }
 
-  // ---------------- Main chat request ----------------
+  // ---------------- Main chat request (attachments always included) ----------------
   const chatRes = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
