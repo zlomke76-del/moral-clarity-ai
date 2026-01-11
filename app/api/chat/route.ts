@@ -803,3 +803,4 @@ return NextResponse.json({
   response: safeResponse,
   messages: [{ role: "assistant", content: safeResponse }],
 });
+  }
