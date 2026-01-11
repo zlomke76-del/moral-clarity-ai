@@ -258,6 +258,13 @@ export default function EdgeOfKnowledgePage() {
               Reliability &amp; Governance Standard for CLIP-Based Virtual Drug Screening
             </Link>
           </li>
+
+          {/* ADDITIVE ENTRY */}
+          <li>
+            <Link href="/edge-of-knowledge/epistemic-failure-stress-test">
+              Canonical Edge Stress-Test: Epistemic Failure in Medical Discovery
+            </Link>
+          </li>
         </ul>
 
         <p className="text-sm text-neutral-400">
