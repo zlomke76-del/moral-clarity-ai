@@ -616,11 +616,14 @@ if (!isEPPECommand && requiresEPPE01(normalizedMessage)) {
   });
 }
 
+// --------------------------------------------------------
+// HYBRID MESSAGE (ATTACHMENTS INCLUDED)
+// --------------------------------------------------------
 const hybridUserMessage =
   attachmentDigest && attachmentDigest.length > 0
     ? `${normalizedMessage ?? ""}\n\n${attachmentDigest}`
     : normalizedMessage ?? "";
-   
+
 // --------------------------------------------------------
 // HYBRID PIPELINE
 // --------------------------------------------------------
@@ -637,65 +640,33 @@ const rawResponse =
     ? result.finalAnswer
     : "I’m here and ready to continue.";
 
-    // --------------------------------------------------------
-    // EPPE-01 VALIDATION (COMMAND ONLY)
-    // --------------------------------------------------------
-    let gatedResponse = rawResponse;
+// --------------------------------------------------------
+// EXPORT INTERCEPT (AUTHORITATIVE)
+// --------------------------------------------------------
+const exportIntent = detectsExportIntent(rawResponse);
 
-    if (isEPPECommand) {
-      let parsed: any;
-
-      try {
-        parsed = JSON.parse(rawResponse);
-      } catch {
-        return NextResponse.json({
-          ok: false,
-          conversationId: resolvedConversationId,
-          response:
-            "EPPE-01 output must be valid JSON conforming to the evaluation schema.",
-          messages: [
-            {
-              role: "assistant",
-              content:
-                "EPPE-01 enforcement: invalid or malformed JSON output.",
-            },
-          ],
-        });
-      }
-
-      const { valid, errors } = validateEPPE01(parsed);
-
-      if (!valid) {
-        return NextResponse.json({
-          ok: false,
-          conversationId: resolvedConversationId,
-          response:
-            "This evaluation does not meet EPPE-01 requirements and cannot be finalized.",
-          messages: [
-            {
-              role: "assistant",
-              content: `EPPE-01 validation failed:\n${errors
-                ?.map(
-                  (e: any) => `- ${e.instancePath || "(root)"} ${e.message}`
-                )
-                .join("\n")}`,
-            },
-          ],
-        });
-      }
-
-      gatedResponse = JSON.stringify(parsed, null, 2);
+if (exportIntent) {
+  const exportRes = await fetch(
+    `${process.env.NEXT_PUBLIC_BASE_URL}/api/exports`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        format: exportIntent.format,
+        filename: exportIntent.filename,
+        content: rawResponse,
+        workspaceId: resolvedWorkspaceId,
+      }),
     }
+  );
 
-    // --------------------------------------------------------
-    // SAFETY SCRUB
-    // --------------------------------------------------------
-    const scrubbed = scrubPhantomExecutionLanguage(gatedResponse);
-    const safeResponse = assertNoPhantomLanguage(scrubbed);
+  const exportJson = await exportRes.json();
 
-    // --------------------------------------------------------
-    // PERSIST ASSISTANT MESSAGE
-    // --------------------------------------------------------
+  if (exportJson?.ok && exportJson.export?.url) {
+    const downloadResponse =
+      `Your file is ready.\n\n` +
+      `[Download ${exportIntent.filename}](${exportJson.export.url})`;
+
     if (authUserId || allowSessionWM) {
       await supabaseAdmin
         .schema("memory")
@@ -705,28 +676,96 @@ const rawResponse =
           user_id: authUserId,
           workspace_id: resolvedWorkspaceId,
           role: "assistant",
-          content: safeResponse,
+          content: downloadResponse,
         });
     }
 
     return NextResponse.json({
       ok: true,
       conversationId: resolvedConversationId,
-      response: safeResponse,
-      messages: [{ role: "assistant", content: safeResponse }],
+      response: downloadResponse,
+      messages: [{ role: "assistant", content: downloadResponse }],
     });
-  } catch (err: any) {
-    console.error("[CHAT ROUTE ERROR]", err?.message);
+  }
+}
 
+// --------------------------------------------------------
+// EPPE-01 VALIDATION (COMMAND ONLY)
+// --------------------------------------------------------
+let gatedResponse = rawResponse;
+
+if (isEPPECommand) {
+  let parsed: any;
+
+  try {
+    parsed = JSON.parse(rawResponse);
+  } catch {
     return NextResponse.json({
       ok: false,
-      response: "An internal error occurred. I’m still here.",
+      conversationId: resolvedConversationId,
+      response:
+        "EPPE-01 output must be valid JSON conforming to the evaluation schema.",
       messages: [
         {
           role: "assistant",
-          content: "An internal error occurred. I’m still here.",
+          content:
+            "EPPE-01 enforcement: invalid or malformed JSON output.",
         },
       ],
     });
+  }
+
+  const { valid, errors } = validateEPPE01(parsed);
+
+  if (!valid) {
+    return NextResponse.json({
+      ok: false,
+      conversationId: resolvedConversationId,
+      response:
+        "This evaluation does not meet EPPE-01 requirements and cannot be finalized.",
+      messages: [
+        {
+          role: "assistant",
+          content: `EPPE-01 validation failed:\n${errors
+            ?.map(
+              (e: any) => `- ${e.instancePath || "(root)"} ${e.message}`
+            )
+            .join("\n")}`,
+        },
+      ],
+    });
+  }
+
+  gatedResponse = JSON.stringify(parsed, null, 2);
+}
+
+// --------------------------------------------------------
+// SAFETY SCRUB
+// --------------------------------------------------------
+const scrubbed = scrubPhantomExecutionLanguage(gatedResponse);
+const safeResponse = assertNoPhantomLanguage(scrubbed);
+
+// --------------------------------------------------------
+// PERSIST ASSISTANT MESSAGE
+// --------------------------------------------------------
+if (authUserId || allowSessionWM) {
+  await supabaseAdmin
+    .schema("memory")
+    .from("working_memory")
+    .insert({
+      conversation_id: resolvedConversationId,
+      user_id: authUserId,
+      workspace_id: resolvedWorkspaceId,
+      role: "assistant",
+      content: safeResponse,
+    });
+}
+
+return NextResponse.json({
+  ok: true,
+  conversationId: resolvedConversationId,
+  response: safeResponse,
+  messages: [{ role: "assistant", content: safeResponse }],
+});
   }
 }
