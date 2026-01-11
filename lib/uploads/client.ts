@@ -11,6 +11,36 @@ function getBucket() {
   return bucket(DEFAULT_BUCKET);
 }
 
+function inferMimeFromName(name: string): string {
+  const n = (name || '').toLowerCase();
+
+  if (n.endsWith('.txt')) return 'text/plain';
+  if (n.endsWith('.md') || n.endsWith('.markdown')) return 'text/markdown';
+  if (n.endsWith('.json')) return 'application/json';
+  if (n.endsWith('.csv')) return 'text/csv';
+  if (n.endsWith('.pdf')) return 'application/pdf';
+  if (n.endsWith('.docx'))
+    return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  if (n.endsWith('.doc')) return 'application/msword';
+
+  // Basic image types (common clipboard pastes)
+  if (n.endsWith('.png')) return 'image/png';
+  if (n.endsWith('.jpg') || n.endsWith('.jpeg')) return 'image/jpeg';
+  if (n.endsWith('.webp')) return 'image/webp';
+  if (n.endsWith('.gif')) return 'image/gif';
+
+  return 'application/octet-stream';
+}
+
+function resolveContentType(f: File | Blob, fileName: string): string {
+  const t = (f as any)?.type;
+  if (typeof t === 'string' && t.trim().length > 0) return t;
+
+  // Browser/OS sometimes reports "" for text files (and can misreport for clipboard sources).
+  // Fall back to extension-based inference.
+  return inferMimeFromName(fileName);
+}
+
 /**
  * Core uploader for File / Blob inputs.
  * This is the only place that talks to Supabase storage on the client.
@@ -28,14 +58,17 @@ export async function uploadFiles(
 
   for (const f of arr) {
     try {
-      const fileName = f instanceof File ? f.name || 'pasted-image.png' : 'blob.bin';
+      const fileName =
+        f instanceof File ? f.name || 'pasted-image.png' : 'blob.bin';
       const safeName = encodeURIComponent(fileName.replace(/\s+/g, '_'));
       const path = `${prefix}${crypto.randomUUID()}_${safeName}`;
+
+      const contentType = resolveContentType(f as any, fileName);
 
       const { error } = await b.upload(path, f as any, {
         upsert: false,
         cacheControl: '3600',
-        contentType: (f as any).type || 'application/octet-stream',
+        contentType,
       });
       if (error) throw error;
 
@@ -44,7 +77,7 @@ export async function uploadFiles(
       attachments.push({
         name: fileName,
         url: data.publicUrl,
-        type: (f as any).type || 'application/octet-stream',
+        type: contentType,
         size: (f as any).size ?? undefined,
       });
     } catch (e: any) {
