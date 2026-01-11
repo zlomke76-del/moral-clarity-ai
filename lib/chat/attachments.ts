@@ -1,97 +1,117 @@
 // lib/chat/attachments.ts
 
-import pdfParse from 'pdf-parse';
+import pdfParse from "pdf-parse";
 
 export type Attachment = { name: string; url: string; type?: string };
 
+/**
+ * Returns extracted text for ingestible formats only.
+ * Returns empty string for unsupported or unreadable files.
+ * NEVER returns prose describing errors or formats.
+ */
 async function fetchAttachmentAsText(att: Attachment): Promise<string> {
-  const res = await fetch(att.url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  let res: Response;
 
-  const ct = (res.headers.get('content-type') || att.type || '').toLowerCase();
-
-  // PDFs
-  if (ct.includes('pdf') || /\.pdf(?:$|\?)/i.test(att.url)) {
-    const buf = Buffer.from(await res.arrayBuffer());
-    const out = await pdfParse(buf);
-    return out.text || '';
+  try {
+    res = await fetch(att.url);
+  } catch {
+    return "";
   }
 
-  // Plain-ish text formats
+  if (!res.ok) return "";
+
+  const ct = (res.headers.get("content-type") || att.type || "").toLowerCase();
+  const name = att.name.toLowerCase();
+
+  // --------------------------------------------------
+  // PDFs (allowed)
+  // --------------------------------------------------
+  if (ct.includes("pdf") || name.endsWith(".pdf")) {
+    try {
+      const buf = Buffer.from(await res.arrayBuffer());
+      const out = await pdfParse(buf);
+      return out.text || "";
+    } catch {
+      return "";
+    }
+  }
+
+  // --------------------------------------------------
+  // Plain text formats (allowed)
+  // --------------------------------------------------
   if (
-    ct.includes('text/') ||
-    ct.includes('json') ||
-    ct.includes('csv') ||
-    /\.(?:txt|md|csv|json)$/i.test(att.name)
+    ct.startsWith("text/") ||
+    ct.includes("json") ||
+    name.endsWith(".txt") ||
+    name.endsWith(".md") ||
+    name.endsWith(".json")
   ) {
-    return await res.text();
+    try {
+      return await res.text();
+    } catch {
+      return "";
+    }
   }
 
-  // Fallback
-  return `[Unsupported file type: ${att.name} (${ct || 'unknown'})]`;
+  // --------------------------------------------------
+  // Everything else (csv, docx, xlsx, etc.)
+  // --------------------------------------------------
+  return "";
 }
 
 function clampText(s: string, n: number) {
   if (s.length <= n) return s;
-  return s.slice(0, n) + '\n[...truncated...]';
+  return s.slice(0, n) + "\n[...truncated...]";
 }
 
 /**
- * Core implementation used by the orchestrator.
- *
- * Called as:
- *   const attachmentSection = attachments?.length
- *     ? await processAttachments(attachments)
- *     : "";
+ * Builds an attachment digest consisting ONLY of valid extracted text.
+ * Unsupported or failed files are silently ignored.
  */
 export async function processAttachments(
   attachments: Attachment[],
   opts?: { maxPerFile?: number; maxTotal?: number }
 ): Promise<string> {
-  if (!attachments || !attachments.length) return '';
+  if (!attachments || attachments.length === 0) return "";
 
   const MAX_PER_FILE = opts?.maxPerFile ?? 200_000;
   const MAX_TOTAL = opts?.maxTotal ?? 350_000;
 
   const parts: string[] = [];
   let total = 0;
+  let ingestedCount = 0;
 
   for (const att of attachments) {
-    try {
-      const raw = await fetchAttachmentAsText(att);
-      const clipped = clampText(raw, MAX_PER_FILE);
+    const raw = await fetchAttachmentAsText(att);
+    if (!raw || raw.trim().length === 0) continue;
 
-      const block =
-        `\n--- Attachment: ${att.name}\n` +
-        `(source: ${att.url})\n` +
-        '```\n' +
-        clipped +
-        '\n```\n';
+    const clipped = clampText(raw, MAX_PER_FILE);
 
-      if (total + block.length > MAX_TOTAL) {
-        parts.push('\n--- [Skipping remaining attachments: token cap reached]');
-        break;
-      }
+    const block =
+      `\n--- Attachment: ${att.name}\n` +
+      `(source: ${att.url})\n` +
+      "```\n" +
+      clipped +
+      "\n```\n";
 
-      parts.push(block);
-      total += block.length;
-    } catch (e: any) {
-      parts.push(
-        `\n--- Attachment: ${att.name}\n[Error reading file: ${e?.message || String(e)}]`
-      );
-    }
+    if (total + block.length > MAX_TOTAL) break;
+
+    parts.push(block);
+    total += block.length;
+    ingestedCount++;
   }
+
+  if (parts.length === 0) return "";
 
   return (
     `\n\nATTACHMENT DIGEST\n` +
-    `The user provided ${attachments.length} attachment(s). Use the content below in your analysis.\n` +
-    parts.join('')
+    `The user provided ${ingestedCount} attachment(s). Use the content below in your analysis.\n` +
+    parts.join("")
   );
 }
 
 /**
- * Backwards-compatible alias for the old API used in app/api/chat/route.ts.
- * Keeps legacy imports working while everything migrates to processAttachments.
+ * Backwards-compatible alias.
  */
 export async function buildAttachmentSection(
   attachments: Attachment[]
