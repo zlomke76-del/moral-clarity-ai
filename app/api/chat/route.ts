@@ -797,12 +797,24 @@ if (authUserId || allowSessionWM) {
     });
 }
 
-    return NextResponse.json({
-      ok: false,
-      response: "An internal error occurred. I’m still here.",
-      messages: [
-        { role: "assistant", content: "An internal error occurred. I’m still here." },
-      ],
-    });
-  }
+return NextResponse.json({
+  ok: true,
+  conversationId: resolvedConversationId,
+  response: safeResponse,
+  messages: [{ role: "assistant", content: safeResponse }],
+});
+
+} catch (err: any) {
+  console.error("[CHAT ROUTE ERROR]", err?.message);
+
+  return NextResponse.json({
+    ok: false,
+    response: "An internal error occurred. I’m still here.",
+    messages: [
+      {
+        role: "assistant",
+        content: "An internal error occurred. I’m still here.",
+      },
+    ],
+  });
 }
