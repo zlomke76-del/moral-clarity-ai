@@ -460,41 +460,52 @@ export async function POST(req: Request) {
     );
 
     // --------------------------------------------------------
-    // ATTACHMENTS — AUTHORITATIVE CONTEXT INJECTION (FIXED)
-    // --------------------------------------------------------
-    let attachmentDigest = "";
+// ATTACHMENTS — AUTHORITATIVE CONTEXT INJECTION (FIXED)
+// --------------------------------------------------------
+let attachmentDigest = "";
+let hasImageAttachments = false;
 
-    if (Array.isArray(body.attachments) && body.attachments.length > 0) {
-      attachmentDigest = await processAttachments(
-        body.attachments.map((a: any) => ({
-          name: a.name,
-          url: a.url,
-          type: a.mime,
-        }))
-      );
+if (Array.isArray(body.attachments) && body.attachments.length > 0) {
+  attachmentDigest = await processAttachments(
+    body.attachments.map((a: any) => ({
+      name: a.name,
+      url: a.url,
+      type: a.mime,
+    }))
+  );
 
-      (context as any).attachments = body.attachments.map((a: any) => ({
-        name: a.name,
-        mime: a.mime,
-        url: a.url,
-        size: a.size,
-      }));
-    }
+  hasImageAttachments = body.attachments.some(
+    (a: any) => typeof a.mime === "string" && a.mime.startsWith("image/")
+  );
 
+  (context as any).attachments = body.attachments.map((a: any) => ({
+    name: a.name,
+    mime: a.mime,
+    url: a.url,
+    size: a.size,
+  }));
 
-    // --------------------------------------------------------
-    // DEMO SAFE — IMAGE BLOCK
-    // --------------------------------------------------------
-    if (executionProfile === "demo" && isImageRequest(message)) {
-      const demoResponse = "I’m here in demo mode. Ask me anything.";
+  // ------------------------------------------------------
+  // IMPLICIT VISION CONSENT (UPLOAD = CONSENT)
+  // ------------------------------------------------------
+  if (hasImageAttachments) {
+    (context as any).visionConsent = true;
+  }
+}
 
-      return NextResponse.json({
-        ok: true,
-        conversationId: resolvedConversationId,
-        response: demoResponse,
-        messages: [{ role: "assistant", content: demoResponse }],
-      });
-    }
+// --------------------------------------------------------
+// DEMO SAFE — IMAGE BLOCK
+// --------------------------------------------------------
+if (executionProfile === "demo" && isImageRequest(message)) {
+  const demoResponse = "I’m here in demo mode. Ask me anything.";
+
+  return NextResponse.json({
+    ok: true,
+    conversationId: resolvedConversationId,
+    response: demoResponse,
+    messages: [{ role: "assistant", content: demoResponse }],
+  });
+}
 
 // --------------------------------------------------------
 // TERMINAL APPROVAL
@@ -524,7 +535,7 @@ if (isTerminalApproval(message)) {
 }
 
 // --------------------------------------------------------
-// IMAGE REQUEST
+// IMAGE GENERATION REQUEST (NOT ANALYSIS)
 // --------------------------------------------------------
 if (message && isImageRequest(message)) {
   const imageUrl = await generateImage(message);
@@ -551,71 +562,62 @@ if (message && isImageRequest(message)) {
   });
 }
 
-    // ------------------------------------------------------------
-    // EXPORT INTENT DETECTION (AUTHORITATIVE)
-    // ------------------------------------------------------------
-    function detectsExportIntent(text?: string): null | {
-      format: "docx" | "pdf" | "csv";
-      filename?: string;
-    } {
-      if (!text) return null;
+// ------------------------------------------------------------
+// EXPORT INTENT DETECTION (AUTHORITATIVE)
+// ------------------------------------------------------------
+function detectsExportIntent(text?: string): null | {
+  format: "docx" | "pdf" | "csv";
+  filename?: string;
+} {
+  if (!text) return null;
 
-      const lower = text.toLowerCase();
+  const lower = text.toLowerCase();
 
-      // Explicit export markers only — no guessing
-      if (lower.includes("[export:docx]")) {
-        return { format: "docx" };
-      }
+  if (lower.includes("[export:docx]")) return { format: "docx" };
+  if (lower.includes("[export:pdf]")) return { format: "pdf" };
+  if (lower.includes("[export:csv]")) return { format: "csv" };
 
-      if (lower.includes("[export:pdf]")) {
-        return { format: "pdf" };
-      }
+  return null;
+}
 
-      if (lower.includes("[export:csv]")) {
-        return { format: "csv" };
-      }
+// --------------------------------------------------------
+// NEWSROOM
+// --------------------------------------------------------
+const wantsNews =
+  newsMode === true ||
+  (typeof message === "string" && isNewsKeywordFallback(message));
 
-      return null;
-    }
+if (wantsNews) {
+  const { data: digestRows, error } = await supabaseAdmin
+    .from("solace_news_digest_view")
+    .select(
+      "story_title, outlet, neutral_summary, story_url, created_at"
+    )
+    .order("created_at", { ascending: false })
+    .limit(6);
 
-    // --------------------------------------------------------
-    // NEWSROOM
-    // --------------------------------------------------------
-    const wantsNews =
-      newsMode === true ||
-      (typeof message === "string" && isNewsKeywordFallback(message));
+  if (error) throw new Error("NEWSROOM_DIGEST_FETCH_FAILED");
 
-    if (wantsNews) {
-      const { data: digestRows, error } = await supabaseAdmin
-        .from("solace_news_digest_view")
-        .select(
-          "story_title, outlet, neutral_summary, story_url, created_at"
-        )
-        .order("created_at", { ascending: false })
-        .limit(6);
+  const newsroomResponse = await runNewsroomExecutor(digestRows ?? []);
 
-      if (error) throw new Error("NEWSROOM_DIGEST_FETCH_FAILED");
+  await supabaseAdmin
+    .schema("memory")
+    .from("working_memory")
+    .insert({
+      conversation_id: resolvedConversationId,
+      user_id: finalUserKey,
+      workspace_id: resolvedWorkspaceId,
+      role: "assistant",
+      content: newsroomResponse,
+    });
 
-      const newsroomResponse = await runNewsroomExecutor(digestRows ?? []);
-
-      await supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
-        .insert({
-          conversation_id: resolvedConversationId,
-          user_id: finalUserKey,
-          workspace_id: resolvedWorkspaceId,
-          role: "assistant",
-          content: newsroomResponse,
-        });
-
-      return NextResponse.json({
-        ok: true,
-        conversationId: resolvedConversationId,
-        response: newsroomResponse,
-        messages: [{ role: "assistant", content: newsroomResponse }],
-      });
-    }
+  return NextResponse.json({
+    ok: true,
+    conversationId: resolvedConversationId,
+    response: newsroomResponse,
+    messages: [{ role: "assistant", content: newsroomResponse }],
+  });
+}
 
 // --------------------------------------------------------
 // EPPE IMPLICIT USE REJECTION
@@ -644,12 +646,19 @@ if (!isEPPECommand && requiresEPPE01(normalizedMessage)) {
 }
 
 // --------------------------------------------------------
-// HYBRID MESSAGE (ATTACHMENTS INCLUDED)
+// HYBRID MESSAGE (ATTACHMENTS + VISION AUTH)
 // --------------------------------------------------------
+const visionInstruction =
+  (context as any).visionConsent
+    ? "The user has provided image attachments. You are authorized to analyze and describe their contents directly."
+    : "";
+
 const hybridUserMessage =
-  attachmentDigest && attachmentDigest.length > 0
-    ? `${normalizedMessage ?? ""}\n\n${attachmentDigest}`
-    : normalizedMessage ?? "";
+  `${visionInstruction}\n\n${
+    attachmentDigest && attachmentDigest.length > 0
+      ? `${normalizedMessage ?? ""}\n\n${attachmentDigest}`
+      : normalizedMessage ?? ""
+  }`;
 
 // --------------------------------------------------------
 // HYBRID PIPELINE
@@ -794,18 +803,3 @@ return NextResponse.json({
   response: safeResponse,
   messages: [{ role: "assistant", content: safeResponse }],
 });
-} catch (err: any) {
-  console.error("[CHAT ROUTE ERROR]", err?.message);
-
-  return NextResponse.json({
-    ok: false,
-    response: "An internal error occurred. I’m still here.",
-    messages: [
-      {
-        role: "assistant",
-        content: "An internal error occurred. I’m still here.",
-      },
-    ],
-  });
-}
-}
