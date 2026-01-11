@@ -251,6 +251,13 @@ export default function EdgeOfKnowledgePage() {
           <li><Link href="/edge-of-knowledge/thermal-indicator-paint">Thermal Indicator Paint</Link></li>
           <li><Link href="/edge-of-knowledge/tpu-elastomer-networks">TPU Elastomer Networks</Link></li>
           <li><Link href="/edge-of-knowledge/untracked-configurational-energy-landscapes">Untracked Configurational Energy Landscapes</Link></li>
+
+          {/* ADDITIVE ENTRY */}
+          <li>
+            <Link href="/edge-of-knowledge/virtual-screening-standard">
+              Reliability &amp; Governance Standard for CLIP-Based Virtual Drug Screening
+            </Link>
+          </li>
         </ul>
 
         <p className="text-sm text-neutral-400">
