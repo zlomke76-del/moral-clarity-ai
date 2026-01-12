@@ -195,7 +195,6 @@ export default function EdgeOfProtectionIndexPage() {
           auditability, and evolution:
         </p>
 
-        {/* CANONICAL STANDARDS LIST (from Version B) */}
         <ul>
           <li>
             <Link href="/edge-of-protection/authority-suppression">
@@ -280,6 +279,11 @@ export default function EdgeOfProtectionIndexPage() {
           <li>
             <Link href="/edge-of-protection/governance-without-recognition">
               Governance Without Recognition
+            </Link>
+          </li>
+          <li>
+            <Link href="/edge-of-protection/normative-invariance-and-drift">
+              Normative Invariance and Drift
             </Link>
           </li>
           <li>
