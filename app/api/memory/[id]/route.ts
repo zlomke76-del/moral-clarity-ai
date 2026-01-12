@@ -37,7 +37,7 @@ async function getSupabase() {
 ------------------------------------------------------------ */
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   const supabase = await getSupabase();
 
@@ -53,7 +53,7 @@ export async function PATCH(
     );
   }
 
-  const memoryId = params?.id;
+  const memoryId = context.params.id;
   if (!memoryId) {
     return NextResponse.json(
       { ok: false, error: "Memory ID is required" },
@@ -61,9 +61,9 @@ export async function PATCH(
     );
   }
 
-  // ----------------------------------------------------------
-  // Parse JSON
-  // ----------------------------------------------------------
+  /* ----------------------------------------------------------
+     Parse JSON
+  ---------------------------------------------------------- */
   let body: any;
   try {
     body = await req.json();
@@ -81,9 +81,9 @@ export async function PATCH(
     );
   }
 
-  // ----------------------------------------------------------
-  // Update memory (ownership enforced)
-  // ----------------------------------------------------------
+  /* ----------------------------------------------------------
+     Update memory (ownership enforced via RLS + predicate)
+  ---------------------------------------------------------- */
   const { data, error } = await supabase
     .from("memories")
     .update({
@@ -119,7 +119,7 @@ export async function PATCH(
 ------------------------------------------------------------ */
 export async function DELETE(
   _req: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   const supabase = await getSupabase();
 
@@ -135,7 +135,7 @@ export async function DELETE(
     );
   }
 
-  const memoryId = params?.id;
+  const memoryId = context.params.id;
   if (!memoryId) {
     return NextResponse.json(
       { ok: false, error: "Memory ID is required" },
