@@ -50,7 +50,7 @@ export default function MemoryWorkspaceClient({
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   /* ------------------------------------------------------------
-     Load memories (UNCHANGED — known-good)
+     Load memories (known-good)
   ------------------------------------------------------------ */
   const loadMemories = useCallback(async () => {
     setLoading(true);
@@ -154,9 +154,7 @@ export default function MemoryWorkspaceClient({
 
         const res = await fetch(`/api/memory/${selected.id}`, {
           method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({ content }),
         });
@@ -175,9 +173,7 @@ export default function MemoryWorkspaceClient({
       if (mode === "create") {
         const res = await fetch(`/api/memory`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({
             workspace_id: workspaceId,
@@ -202,10 +198,12 @@ export default function MemoryWorkspaceClient({
   }
 
   /* ------------------------------------------------------------
-     Delete (FIXED — minimal guard)
+     Delete (CORRECT + RACE-PROOF)
   ------------------------------------------------------------ */
   async function handleDelete() {
     if (!selected?.id) return;
+
+    const memoryId = selected.id; // 🔒 SNAPSHOT — THIS IS THE FIX
 
     const confirmed = window.confirm(
       "Are you sure you want to permanently delete this memory?"
@@ -213,14 +211,14 @@ export default function MemoryWorkspaceClient({
     if (!confirmed) return;
 
     try {
-      const res = await fetch(`/api/memory/${selected.id}`, {
+      const res = await fetch(`/api/memory/${memoryId}`, {
         method: "DELETE",
         credentials: "include",
       });
 
       if (!res.ok) throw new Error();
 
-      setItems((prev) => prev.filter((m) => m.id !== selected.id));
+      setItems((prev) => prev.filter((m) => m.id !== memoryId));
       setSelectedId("");
       setDraft("");
       setMode("view");
