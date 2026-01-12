@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Memory Create Route (POST)
 // Explicit memory only · Cookie auth · RLS enforced
-// AUTHORITATIVE WRITE PATH
+// AUTHORITATIVE WRITE PATH — memory.memories
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -11,7 +11,7 @@ import { createServerClient } from "@supabase/ssr";
 export const runtime = "nodejs";
 
 /* ------------------------------------------------------------
-   Supabase (schema-bound)
+   Supabase (schema-bound to memory)
 ------------------------------------------------------------ */
 async function getSupabase() {
   const cookieStore = await cookies();
@@ -46,6 +46,9 @@ const ALLOWED_MEMORY_TYPES = new Set([
 export async function POST(req: Request) {
   const supabase = await getSupabase();
 
+  /* ----------------------------------------------------------
+     Auth (authoritative)
+  ---------------------------------------------------------- */
   const {
     data: { user },
     error: authError,
@@ -58,9 +61,16 @@ export async function POST(req: Request) {
     );
   }
 
-  // ----------------------------------------------------------
-  // Parse JSON
-  // ----------------------------------------------------------
+  if (!user.email) {
+    return NextResponse.json(
+      { ok: false, error: "authenticated user missing email" },
+      { status: 400 }
+    );
+  }
+
+  /* ----------------------------------------------------------
+     Parse JSON
+  ---------------------------------------------------------- */
   let body: any;
   try {
     body = await req.json();
@@ -73,9 +83,9 @@ export async function POST(req: Request) {
 
   const { workspace_id, memory_type, content } = body ?? {};
 
-  // ----------------------------------------------------------
-  // Validation
-  // ----------------------------------------------------------
+  /* ----------------------------------------------------------
+     Validation
+  ---------------------------------------------------------- */
   if (!workspace_id || typeof workspace_id !== "string") {
     return NextResponse.json(
       { ok: false, error: "workspace_id is required" },
@@ -105,26 +115,47 @@ export async function POST(req: Request) {
     );
   }
 
-  // ----------------------------------------------------------
-  // Insert explicit memory
-  // ----------------------------------------------------------
+  /* ----------------------------------------------------------
+     Canonical defaults for explicit human memory
+     (governance-enforced fields)
+  ---------------------------------------------------------- */
+  const memoryRecord = {
+    user_id: user.id,                 // must equal auth.uid()
+    email: user.email,                // NOT NULL
+    workspace_id,                     // nullable in schema, required by route
+    memory_type,
+    source: "explicit",               // NOT NULL
+    content,
+
+    // Governance weights (NOT NULL)
+    confidence: 1.0,
+    sensitivity: 1,
+    emotional_weight: 1,
+
+    // Metadata (NOT NULL)
+    metadata: {},
+
+    // Optional lifecycle flags
+    is_active: true,
+  };
+
+  /* ----------------------------------------------------------
+     Insert explicit memory
+  ---------------------------------------------------------- */
   const { data, error } = await supabase
     .from("memories")
-    .insert({
-      user_id: user.id,
-      workspace_id,
-      memory_type,
-      content,
-      source: "explicit",
-      source_confidence: 1,
-    })
+    .insert(memoryRecord)
     .select()
     .single();
 
   if (error) {
     console.error("insert.memory error", error);
     return NextResponse.json(
-      { ok: false, stage: "insert.memory", error: error.message },
+      {
+        ok: false,
+        stage: "insert.memory",
+        error: error.message,
+      },
       { status: 403 }
     );
   }
