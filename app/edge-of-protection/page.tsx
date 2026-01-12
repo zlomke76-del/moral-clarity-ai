@@ -282,11 +282,6 @@ export default function EdgeOfProtectionIndexPage() {
             </Link>
           </li>
           <li>
-            <Link href="/edge-of-protection/normative-invariance-and-drift">
-              Normative Invariance and Drift
-            </Link>
-          </li>
-          <li>
             <Link href="/edge-of-protection/version-history">
               Version History
             </Link>
@@ -313,6 +308,57 @@ export default function EdgeOfProtectionIndexPage() {
         <p>
           This edge exists to ensure that some outputs are not allowed to exist—
           even when they could.
+        </p>
+
+        <hr />
+
+        {/* CANON PREFACE — ADDITIVE */}
+        <h2>Canon Preface: Normative Invariance & Drift Prevention</h2>
+        <p>
+          This edge is governed by a foundational design property: durable system
+          alignment is not emergent from intelligence, learning, or adaptive
+          governance. It is engineered through explicit, invariant constraints.
+        </p>
+        <p>
+          Drift is not treated as an inevitable characteristic of artificial
+          systems. It is understood as a contingent outcome arising from weak
+          boundaries, diffuse responsibility, silent state accumulation, or the
+          absence of a binding normative reference.
+        </p>
+        <p>
+          Moral Clarity AI employs a normative stabilizer—the Abrahamic Code—as an
+          operational invariant. This code is not theological or confessional in
+          nature. It functions analogously to constitutions, safety standards,
+          and professional ethical frameworks: as a load-bearing reference that
+          cannot be optimized away, bypassed silently, or reinterpreted through
+          convenience.
+        </p>
+        <p>
+          Under this model:
+        </p>
+        <ul>
+          <li>Capability amplifies power</li>
+          <li>Governance manages the use of power</li>
+          <li>
+            Normative invariance stabilizes both across time, scale, and pressure
+          </li>
+        </ul>
+        <p>
+          Refusal is treated as a success condition, not a failure mode. When a
+          boundary defined by this edge is crossed, the system stops. There is no
+          negotiation, reassurance, or adaptive softening beyond the explicit
+          boundary itself.
+        </p>
+        <p>
+          This framework does not claim finality or omniscience. Unknown risks
+          and future pressures are acknowledged. However, humility is enforced
+          through constraint discipline and auditability—not optimism or
+          permissiveness.
+        </p>
+        <p>
+          The result is a closed, inspectable property: alignment is maintained
+          by binding, not aspiration. Drift is not denied; it is structurally
+          excluded unless new evidence reveals an unaddressed risk vector.
         </p>
       </article>
     </main>
