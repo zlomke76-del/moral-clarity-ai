@@ -62,7 +62,7 @@ export default function MemoryWorkspaceClient({
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (!session?.access_token) {
+      if (!session) {
         setError("Not authenticated.");
         setItems([]);
         return;
@@ -70,11 +70,7 @@ export default function MemoryWorkspaceClient({
 
       const res = await fetch(
         `/api/memory/workspace?workspaceId=${workspaceId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
+        { credentials: "include" }
       );
 
       if (!res.ok) {
@@ -153,17 +149,7 @@ export default function MemoryWorkspaceClient({
     try {
       content = JSON.parse(draft);
     } catch {
-      // plain text is allowed
-    }
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      setSaveError("Authentication expired.");
-      setSaving(false);
-      return;
+      // plain text allowed
     }
 
     try {
@@ -177,8 +163,8 @@ export default function MemoryWorkspaceClient({
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
           },
+          credentials: "include",
           body: JSON.stringify({ content }),
         });
 
@@ -198,8 +184,8 @@ export default function MemoryWorkspaceClient({
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
           },
+          credentials: "include",
           body: JSON.stringify({
             workspace_id: workspaceId,
             content,
@@ -232,21 +218,10 @@ export default function MemoryWorkspaceClient({
     );
     if (!confirmed) return;
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      setDeleteError("Authentication expired.");
-      return;
-    }
-
     try {
       const res = await fetch(`/api/memory/${selected.id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        credentials: "include",
       });
 
       if (!res.ok) throw new Error();
