@@ -50,7 +50,7 @@ export default function MemoryWorkspaceClient({
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   /* ------------------------------------------------------------
-     Load memories
+     Load memories (AUTHORITATIVE)
   ------------------------------------------------------------ */
   const loadMemories = useCallback(async () => {
     setLoading(true);
@@ -68,7 +68,7 @@ export default function MemoryWorkspaceClient({
       }
 
       const res = await fetch(
-        `/api/memory/workspace-v2?workspaceId=${workspaceId}`,
+        `/api/memory/workspace?workspaceId=${workspaceId}`,
         { credentials: "include" }
       );
 
@@ -138,7 +138,7 @@ export default function MemoryWorkspaceClient({
 
   /* ------------------------------------------------------------
      Save (create or edit)
-     IMPORTANT: always send STRING content (Rolodex parity)
+     IMPORTANT: always send STRING content
   ------------------------------------------------------------ */
   async function handleSave() {
     setSaving(true);
@@ -183,7 +183,7 @@ export default function MemoryWorkspaceClient({
           body: JSON.stringify({
             workspace_id: workspaceId,
             content,
-            memory_type: "fact", // ✅ REQUIRED
+            memory_type: "fact",
           }),
         });
 
@@ -203,10 +203,13 @@ export default function MemoryWorkspaceClient({
   }
 
   /* ------------------------------------------------------------
-     Delete
+     Delete (AUTHORITATIVE)
   ------------------------------------------------------------ */
   async function handleDelete() {
-    if (!selected) return;
+    if (!selected?.id || typeof selected.id !== "string") {
+      setDeleteError("Invalid memory selected.");
+      return;
+    }
 
     const confirmed = window.confirm(
       "Are you sure you want to permanently delete this memory?"
