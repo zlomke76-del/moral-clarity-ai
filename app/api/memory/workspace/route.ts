@@ -14,8 +14,8 @@ export const runtime = "nodejs";
 /* ------------------------------------------------------------
    Supabase (schema-bound, cookie auth)
 ------------------------------------------------------------ */
-function getSupabase() {
-  const cookieStore = cookies();
+async function getSupabase() {
+  const cookieStore = await cookies();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,7 +35,7 @@ function getSupabase() {
    GET /api/memory/workspace
 ------------------------------------------------------------ */
 export async function GET(req: Request) {
-  const supabase = getSupabase();
+  const supabase = await getSupabase();
 
   /* ----------------------------------------------------------
      Auth
