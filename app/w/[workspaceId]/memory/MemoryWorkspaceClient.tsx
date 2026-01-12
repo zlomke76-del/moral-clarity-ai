@@ -1,4 +1,3 @@
-// app/w/[workspaceId]/memory/MemoryWorkspaceClient.tsx
 "use client";
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
@@ -139,18 +138,13 @@ export default function MemoryWorkspaceClient({
 
   /* ------------------------------------------------------------
      Save (create or edit)
+     IMPORTANT: always send STRING content (Rolodex parity)
   ------------------------------------------------------------ */
   async function handleSave() {
     setSaving(true);
     setSaveError(null);
 
-    let content: any = draft;
-
-    try {
-      content = JSON.parse(draft);
-    } catch {
-      // plain text allowed
-    }
+    const content = draft;
 
     try {
       if (mode === "edit" && selected) {
