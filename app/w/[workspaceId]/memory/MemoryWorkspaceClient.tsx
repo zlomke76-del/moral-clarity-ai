@@ -68,10 +68,9 @@ export default function MemoryWorkspaceClient({
       }
 
       const res = await fetch(
-      `/api/memory/workspace-v2?workspaceId=${workspaceId}`,
-      { credentials: "include" }
-    );
-
+        `/api/memory/workspace-v2?workspaceId=${workspaceId}`,
+        { credentials: "include" }
+      );
 
       if (!res.ok) {
         setError("Failed to load workspace memories.");
@@ -184,6 +183,7 @@ export default function MemoryWorkspaceClient({
           body: JSON.stringify({
             workspace_id: workspaceId,
             content,
+            memory_type: "fact", // ✅ REQUIRED
           }),
         });
 
