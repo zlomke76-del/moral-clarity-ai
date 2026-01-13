@@ -208,12 +208,12 @@ export default function MemoryWorkspaceClient({
   }
 
   /* ------------------------------------------------------------
-     Delete (CORRECT + RACE-PROOF)
+     Delete (robust: always sync with backend)
   ------------------------------------------------------------ */
   async function handleDelete() {
     if (!selected?.id) return;
 
-    const memoryId = selected.id; // 🔒 SNAPSHOT — correct
+    const memoryId = selected.id;
 
     const confirmed = window.confirm(
       "Are you sure you want to permanently delete this memory?"
@@ -225,14 +225,19 @@ export default function MemoryWorkspaceClient({
         method: "DELETE",
         credentials: "include",
       });
+      const resp = await res.json();
+      // Developer trace
+      // eslint-disable-next-line no-console
+      console.log("Delete response", res.status, resp);
+      if (!res.ok) throw new Error(resp.error || "Unknown error");
 
-      if (!res.ok) throw new Error();
-
-      setItems((prev) => prev.filter((m) => m.id !== memoryId));
+      // Always reload from backend after delete to prevent state drift
+      await loadMemories();
       setSelectedId("");
       setDraft("");
       setMode("view");
-    } catch {
+      setDeleteError(null);
+    } catch (err) {
       setDeleteError("Failed to delete memory.");
     }
   }
@@ -249,7 +254,7 @@ export default function MemoryWorkspaceClient({
           disabled={loading}
           className="flex-1 bg-neutral-950 border border-neutral-800 rounded-md p-2 text-sm"
         >
-          <option value="">Select a memory…</option>
+          <option value="">Select a memory?</option>
           {items.map((m) => (
             <option key={m.id} value={m.id}>
               {typeof m.content === "string"
@@ -268,7 +273,7 @@ export default function MemoryWorkspaceClient({
       </div>
 
       <div className="flex-1 p-6">
-        {!selected && mode !== "create" ? (
+        {(!selected && mode !== "create") ? (
           <div className="text-sm text-neutral-500">
             Select or create a memory
           </div>
@@ -290,7 +295,7 @@ export default function MemoryWorkspaceClient({
             disabled={saving}
             className="px-3 py-1.5 text-sm rounded bg-blue-600"
           >
-            {saving ? "Saving…" : "Save"}
+            {saving ? "Saving..." : "Save"}
           </button>
         </div>
       )}
@@ -309,6 +314,7 @@ export default function MemoryWorkspaceClient({
           >
             Delete
           </button>
+          <div className="flex-1 text-xs text-red-400">{deleteError}</div>
         </div>
       )}
     </div>
