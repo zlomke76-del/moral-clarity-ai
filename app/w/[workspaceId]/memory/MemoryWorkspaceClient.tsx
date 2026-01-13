@@ -1,4 +1,3 @@
-// app/w/[workspaceId]/memory/MemoryWorkspaceClient.tsx
 "use client";
 
 /* ------------------------------------------------------------
@@ -118,7 +117,7 @@ export default function MemoryWorkspaceClient({
   ---------------------------------------------------------- */
   const startEdit = useCallback(() => {
     if (!selected) return;
-    setDraft(selected.content);
+    setDraft(selected.content ?? "");
     setMode("edit");
   }, [selected]);
 
@@ -206,7 +205,7 @@ export default function MemoryWorkspaceClient({
                     : "hover:bg-neutral-900"
                 }`}
               >
-                {m.content.slice(0, 40)}
+                {(m.content ?? "").slice(0, 40)}
               </button>
             </li>
           ))}
@@ -235,7 +234,7 @@ export default function MemoryWorkspaceClient({
             </div>
 
             <pre className="whitespace-pre-wrap rounded bg-neutral-900 p-4 text-sm">
-              {selected.content}
+              {selected.content ?? ""}
             </pre>
           </>
         )}
