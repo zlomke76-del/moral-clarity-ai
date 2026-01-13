@@ -65,6 +65,23 @@ type WMRow = {
   created_at?: string;
 };
 
+type CodeArtifact = {
+  type: "code";
+  language: string;
+  filename?: string;
+  content: string;
+};
+
+type TextArtifact = {
+  type: "text";
+  format: "plain" | "markdown";
+  title?: string;
+  content: string;
+};
+
+type AssistantArtifact = CodeArtifact | TextArtifact;
+
+
 // ------------------------------------------------------------
 // Helpers — intent detection
 // ------------------------------------------------------------
@@ -728,13 +745,14 @@ if (exportIntent) {
 // --------------------------------------------------------
 // EPPE-01 VALIDATION (COMMAND ONLY)
 // --------------------------------------------------------
-let gatedResponse = rawResponse;
+let gatedResponse: any = rawResponse;
 
 if (isEPPECommand) {
   let parsed: any;
 
   try {
-    parsed = JSON.parse(rawResponse);
+    parsed =
+      typeof rawResponse === "string" ? JSON.parse(rawResponse) : rawResponse;
   } catch {
     return NextResponse.json({
       ok: false,
@@ -776,13 +794,47 @@ if (isEPPECommand) {
 }
 
 // --------------------------------------------------------
-// SAFETY SCRUB
+// ARTIFACT PASSTHROUGH (TEXT)
 // --------------------------------------------------------
-const scrubbed = scrubPhantomExecutionLanguage(gatedResponse);
+if (
+  gatedResponse &&
+  typeof gatedResponse === "object" &&
+  gatedResponse.artifact?.type === "text"
+) {
+  const artifact = gatedResponse.artifact;
+
+  const safeContent = assertNoPhantomLanguage(
+    scrubPhantomExecutionLanguage(artifact.content)
+  );
+
+  return NextResponse.json({
+    ok: true,
+    conversationId: resolvedConversationId,
+    messages: [
+      {
+        role: "assistant",
+        content: null,
+        artifact: {
+          ...artifact,
+          content: safeContent,
+        },
+      },
+    ],
+  });
+}
+
+// --------------------------------------------------------
+// SAFETY SCRUB (STRING RESPONSES)
+// --------------------------------------------------------
+const scrubbed =
+  typeof gatedResponse === "string"
+    ? scrubPhantomExecutionLanguage(gatedResponse)
+    : "";
+
 const safeResponse = assertNoPhantomLanguage(scrubbed);
 
 // --------------------------------------------------------
-// PERSIST ASSISTANT MESSAGE
+// PERSIST ASSISTANT MESSAGE (STRING PATH)
 // --------------------------------------------------------
 if (authUserId || allowSessionWM) {
   await supabaseAdmin
