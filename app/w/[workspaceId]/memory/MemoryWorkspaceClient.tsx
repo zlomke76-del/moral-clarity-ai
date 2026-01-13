@@ -1,18 +1,9 @@
 "use client";
 
-/* ------------------------------------------------------------
-   Workspace Memory Client
-   View · Create · Edit · Delete
-   Authoritative UI → API contract
------------------------------------------------------------- */
-
-import { useMemo, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import type { MemoryRecord } from "@/app/components/memory/types";
 import { createBrowserClient } from "@supabase/ssr";
 
-/* ------------------------------------------------------------
-   Types
------------------------------------------------------------- */
 type Props = {
   workspaceId: string;
   initialItems: MemoryRecord[];
@@ -20,29 +11,13 @@ type Props = {
 
 type Mode = "view" | "edit" | "create";
 
-/* ------------------------------------------------------------
-   Helpers
------------------------------------------------------------- */
-function normalizeContent(content: unknown): string {
-  if (typeof content === "string") return content;
-  if (!content) return "";
-  try {
-    return JSON.stringify(content, null, 2);
-  } catch {
-    return "";
-  }
-}
-
-/* ------------------------------------------------------------
-   Component
------------------------------------------------------------- */
 export default function MemoryWorkspaceClient({
   workspaceId,
   initialItems,
 }: Props) {
-  /* ----------------------------------------------------------
-     Supabase (browser, cookie auth)
-  ---------------------------------------------------------- */
+  /* ------------------------------------------------------------
+     Supabase
+  ------------------------------------------------------------ */
   const supabase = useMemo(
     () =>
       createBrowserClient(
@@ -52,231 +27,280 @@ export default function MemoryWorkspaceClient({
     []
   );
 
-  /* ----------------------------------------------------------
+  /* ------------------------------------------------------------
      State
-  ---------------------------------------------------------- */
+  ------------------------------------------------------------ */
   const [items, setItems] = useState<MemoryRecord[]>(initialItems);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [mode, setMode] = useState<Mode>("view");
-  const [draft, setDraft] = useState<string>("");
+  const [selectedId, setSelectedId] = useState<string>("");
 
   const selected = useMemo(
     () => items.find((m) => m.id === selectedId) ?? null,
     [items, selectedId]
   );
 
-  /* ----------------------------------------------------------
-     Refresh workspace memories
-  ---------------------------------------------------------- */
-  const refresh = useCallback(async () => {
-    const res = await fetch(
-      `/api/memory/workspace?workspaceId=${workspaceId}`,
-      { credentials: "include" }
-    );
+  const [draft, setDraft] = useState<string>("");
+  const originalDraftRef = useRef<string>("");
 
-    if (!res.ok) {
-      console.error("workspace.memory.refresh failed");
-      return;
+  const [mode, setMode] = useState<Mode>("view");
+
+  const [loading, setLoading] = useState<boolean>(true);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  /* ------------------------------------------------------------
+     Load memories (known-good)
+  ------------------------------------------------------------ */
+  const loadMemories = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        setError("Not authenticated.");
+        setItems([]);
+        return;
+      }
+
+      const res = await fetch(
+        `/api/memory/workspace-v2?workspaceId=${workspaceId}`,
+        { credentials: "include" }
+      );
+
+      if (!res.ok) {
+        setError("Failed to load workspace memories.");
+        setItems([]);
+        return;
+      }
+
+      const data = await res.json();
+      if (!Array.isArray(data.items)) {
+        setError("Unexpected memory format.");
+        setItems([]);
+        return;
+      }
+
+      setItems(data.items);
+    } catch {
+      setError("An error occurred while loading memories.");
+      setItems([]);
+    } finally {
+      setLoading(false);
     }
+  }, [workspaceId, supabase]);
 
-    const json = await res.json();
-    setItems(json.items ?? []);
-  }, [workspaceId]);
+  useEffect(() => {
+    loadMemories();
+  }, [loadMemories]);
 
-  /* ----------------------------------------------------------
-     Selection handlers
-  ---------------------------------------------------------- */
-  const selectMemory = useCallback((id: string) => {
+  /* ------------------------------------------------------------
+     Select existing memory
+  ------------------------------------------------------------ */
+  function handleSelect(id: string) {
     setSelectedId(id);
-    setMode("view");
-    setDraft("");
-  }, []);
+    setSaveError(null);
+    setDeleteError(null);
 
-  /* ----------------------------------------------------------
-     Create memory
-  ---------------------------------------------------------- */
-  const startCreate = useCallback(() => {
-    setSelectedId(null);
+    const record = items.find((m) => m.id === id);
+    if (!record) {
+      setDraft("");
+      originalDraftRef.current = "";
+      setMode("view");
+      return;
+    }
+
+    const content =
+      typeof record.content === "string"
+        ? record.content
+        : JSON.stringify(record.content, null, 2);
+
+    setDraft(content);
+    originalDraftRef.current = content;
+    setMode("view");
+  }
+
+  /* ------------------------------------------------------------
+     Create new memory
+  ------------------------------------------------------------ */
+  function handleNew() {
+    setSelectedId("");
     setDraft("");
+    originalDraftRef.current = "";
+    setSaveError(null);
+    setDeleteError(null);
     setMode("create");
-  }, []);
+  }
 
-  const saveCreate = useCallback(async () => {
-    if (!draft.trim()) return;
+  /* ------------------------------------------------------------
+     Save (create or edit)
+  ------------------------------------------------------------ */
+  async function handleSave() {
+    setSaving(true);
+    setSaveError(null);
 
-    const res = await fetch("/api/memory", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        workspace_id: workspaceId,
-        memory_type: "fact",
-        content: draft.trim(),
-      }),
-    });
+    const content = draft;
 
-    if (!res.ok) {
-      console.error("create.memory failed");
-      return;
+    try {
+      if (mode === "edit" && selected) {
+        if (draft === originalDraftRef.current) {
+          setMode("view");
+          return;
+        }
+
+        const res = await fetch(`/api/memory/${selected.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ content }),
+        });
+
+        if (!res.ok) throw new Error();
+
+        const updated = await res.json();
+        setItems((prev) =>
+          prev.map((m) => (m.id === updated.id ? updated : m))
+        );
+
+        originalDraftRef.current = draft;
+        setMode("view");
+      }
+
+      if (mode === "create") {
+        const res = await fetch(`/api/memory`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            workspace_id: workspaceId,
+            content,
+            memory_type: "fact",
+          }),
+        });
+
+        if (!res.ok) throw new Error();
+
+        const created = await res.json();
+        setItems((prev) => [created, ...prev]);
+        setSelectedId(created.id);
+        originalDraftRef.current = draft;
+        setMode("view");
+      }
+    } catch {
+      setSaveError("Failed to save memory.");
+    } finally {
+      setSaving(false);
     }
+  }
 
-    setDraft("");
-    setMode("view");
-    await refresh();
-  }, [draft, workspaceId, refresh]);
+  /* ------------------------------------------------------------
+     Delete (CORRECT + RACE-PROOF)
+  ------------------------------------------------------------ */
+  async function handleDelete() {
+    if (!selected?.id) return;
 
-  /* ----------------------------------------------------------
-     Edit memory
-  ---------------------------------------------------------- */
-  const startEdit = useCallback(() => {
-    if (!selected) return;
-    setDraft(normalizeContent(selected.content));
-    setMode("edit");
-  }, [selected]);
+    const memoryId = selected.id; // 🔒 SNAPSHOT — THIS IS THE FIX
 
-  const saveEdit = useCallback(async () => {
-    if (!selected || !selected.id) return;
-
-    const res = await fetch(`/api/memory/${selected.id}`, {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: draft }),
-    });
-
-    if (!res.ok) {
-      console.error("update.memory failed");
-      return;
-    }
-
-    setDraft("");
-    setMode("view");
-    await refresh();
-  }, [selected, draft, refresh]);
-
-  /* ----------------------------------------------------------
-     Delete memory (HARD GUARDED)
-  ---------------------------------------------------------- */
-  const deleteSelected = useCallback(async () => {
-    if (!selected || !selected.id) {
-      console.error("delete.memory blocked — no id bound");
-      return;
-    }
-
-    const confirmed = confirm(
-      "Delete this memory permanently? This cannot be undone."
+    const confirmed = window.confirm(
+      "Are you sure you want to permanently delete this memory?"
     );
     if (!confirmed) return;
 
-    const res = await fetch(`/api/memory/${selected.id}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
+    try {
+      const res = await fetch(`/api/memory/${memoryId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
 
-    if (!res.ok) {
-      console.error("delete.memory failed");
-      return;
+      if (!res.ok) throw new Error();
+
+      setItems((prev) => prev.filter((m) => m.id !== memoryId));
+      setSelectedId("");
+      setDraft("");
+      setMode("view");
+    } catch {
+      setDeleteError("Failed to delete memory.");
     }
+  }
 
-    setSelectedId(null);
-    setMode("view");
-    await refresh();
-  }, [selected, refresh]);
-
-  /* ----------------------------------------------------------
+  /* ------------------------------------------------------------
      Render
-  ---------------------------------------------------------- */
+  ------------------------------------------------------------ */
   return (
-    <div className="flex h-full gap-6">
-      {/* Sidebar */}
-      <aside className="w-64 border-r border-neutral-800 pr-4">
-        <div className="mb-4 flex gap-2">
+    <div className="w-full h-full flex flex-col">
+      <div className="px-8 py-4 border-b border-neutral-800 flex gap-2">
+        <select
+          value={selectedId}
+          onChange={(e) => handleSelect(e.target.value)}
+          disabled={loading}
+          className="flex-1 bg-neutral-950 border border-neutral-800 rounded-md p-2 text-sm"
+        >
+          <option value="">Select a memory…</option>
+          {items.map((m) => (
+            <option key={m.id} value={m.id}>
+              {typeof m.content === "string"
+                ? m.content.slice(0, 60)
+                : "[Structured memory]"}
+            </option>
+          ))}
+        </select>
+
+        <button
+          onClick={handleNew}
+          className="px-3 py-2 text-sm rounded bg-neutral-800 hover:bg-neutral-700"
+        >
+          New
+        </button>
+      </div>
+
+      <div className="flex-1 p-6">
+        {!selected && mode !== "create" ? (
+          <div className="text-sm text-neutral-500">
+            Select or create a memory
+          </div>
+        ) : (
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            disabled={mode === "view"}
+            className="w-full h-full resize-none bg-neutral-950 border border-neutral-800 rounded-md p-4 text-sm"
+          />
+        )}
+      </div>
+
+      {(mode === "edit" || mode === "create") && (
+        <div className="px-6 py-3 border-t border-neutral-800 flex justify-between">
+          <div className="text-xs text-red-400">{saveError}</div>
           <button
-            onClick={startCreate}
-            className="rounded bg-blue-600 px-3 py-1 text-sm text-white"
+            onClick={handleSave}
+            disabled={saving}
+            className="px-3 py-1.5 text-sm rounded bg-blue-600"
           >
-            New
-          </button>
-          <button
-            onClick={refresh}
-            className="rounded border px-3 py-1 text-sm"
-          >
-            Refresh
+            {saving ? "Saving…" : "Save"}
           </button>
         </div>
+      )}
 
-        <ul className="space-y-1">
-          {items.map((m) => (
-            <li key={m.id}>
-              <button
-                onClick={() => selectMemory(m.id)}
-                className={`w-full rounded px-2 py-1 text-left text-sm ${
-                  selectedId === m.id
-                    ? "bg-neutral-800 text-white"
-                    : "hover:bg-neutral-900"
-                }`}
-              >
-                {normalizeContent(m.content).slice(0, 40)}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </aside>
-
-      {/* Main */}
-      <main className="flex-1">
-        {mode === "view" && selected && (
-          <>
-            <div className="mb-4 flex gap-2">
-              <button
-                onClick={startEdit}
-                className="rounded border px-3 py-1 text-sm"
-              >
-                Edit
-              </button>
-              <button
-                onClick={deleteSelected}
-                className="rounded border border-red-600 px-3 py-1 text-sm text-red-600"
-              >
-                Delete
-              </button>
-            </div>
-
-            <pre className="whitespace-pre-wrap rounded bg-neutral-900 p-4 text-sm">
-              {normalizeContent(selected.content)}
-            </pre>
-          </>
-        )}
-
-        {(mode === "edit" || mode === "create") && (
-          <>
-            <textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              className="mb-4 w-full rounded bg-neutral-900 p-3 text-sm"
-              rows={8}
-            />
-
-            <div className="flex gap-2">
-              <button
-                onClick={mode === "edit" ? saveEdit : saveCreate}
-                className="rounded bg-green-600 px-4 py-1 text-sm text-white"
-              >
-                Save
-              </button>
-              <button
-                onClick={() => {
-                  setMode("view");
-                  setDraft("");
-                }}
-                className="rounded border px-4 py-1 text-sm"
-              >
-                Cancel
-              </button>
-            </div>
-          </>
-        )}
-      </main>
+      {mode === "view" && selected && (
+        <div className="px-6 py-3 border-t border-neutral-800 flex gap-2">
+          <button
+            onClick={() => setMode("edit")}
+            className="px-3 py-1.5 text-sm rounded bg-neutral-800"
+          >
+            Edit
+          </button>
+          <button
+            onClick={handleDelete}
+            className="px-3 py-1.5 text-sm rounded bg-red-700"
+          >
+            Delete
+          </button>
+        </div>
+      )}
     </div>
   );
 }
