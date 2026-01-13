@@ -6,7 +6,7 @@
    Authoritative UI → API contract
 ------------------------------------------------------------ */
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback } from "react";
 import type { MemoryRecord } from "@/app/components/memory/types";
 import { createBrowserClient } from "@supabase/ssr";
 
@@ -19,6 +19,19 @@ type Props = {
 };
 
 type Mode = "view" | "edit" | "create";
+
+/* ------------------------------------------------------------
+   Helpers
+------------------------------------------------------------ */
+function normalizeContent(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (!content) return "";
+  try {
+    return JSON.stringify(content, null, 2);
+  } catch {
+    return "";
+  }
+}
 
 /* ------------------------------------------------------------
    Component
@@ -117,7 +130,7 @@ export default function MemoryWorkspaceClient({
   ---------------------------------------------------------- */
   const startEdit = useCallback(() => {
     if (!selected) return;
-    setDraft(selected.content ?? "");
+    setDraft(normalizeContent(selected.content));
     setMode("edit");
   }, [selected]);
 
@@ -175,9 +188,7 @@ export default function MemoryWorkspaceClient({
   ---------------------------------------------------------- */
   return (
     <div className="flex h-full gap-6">
-      {/* ------------------------------------------------------
-          Sidebar
-      ------------------------------------------------------ */}
+      {/* Sidebar */}
       <aside className="w-64 border-r border-neutral-800 pr-4">
         <div className="mb-4 flex gap-2">
           <button
@@ -205,16 +216,14 @@ export default function MemoryWorkspaceClient({
                     : "hover:bg-neutral-900"
                 }`}
               >
-                {(m.content ?? "").slice(0, 40)}
+                {normalizeContent(m.content).slice(0, 40)}
               </button>
             </li>
           ))}
         </ul>
       </aside>
 
-      {/* ------------------------------------------------------
-          Main panel
-      ------------------------------------------------------ */}
+      {/* Main */}
       <main className="flex-1">
         {mode === "view" && selected && (
           <>
@@ -234,7 +243,7 @@ export default function MemoryWorkspaceClient({
             </div>
 
             <pre className="whitespace-pre-wrap rounded bg-neutral-900 p-4 text-sm">
-              {selected.content ?? ""}
+              {normalizeContent(selected.content)}
             </pre>
           </>
         )}
