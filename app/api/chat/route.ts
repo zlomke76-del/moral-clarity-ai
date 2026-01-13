@@ -135,6 +135,52 @@ function isExplicitSendApproval(message?: string): boolean {
   );
 }
 
+/**
+ * ADDITIVE FIX — Code Artifact Detection
+ *
+ * Purpose:
+ * - Detect fenced or implicit code responses
+ * - Allow the response pipeline to emit a structured code artifact
+ * - Enables clean formatting + copy button in SolaceTranscript
+ *
+ * NOTE:
+ * - This does NOT execute code
+ * - This does NOT alter safety or governance
+ * - Purely presentational intelligence
+ */
+function extractCodeArtifact(text: string): null | {
+  type: "code";
+  language: string;
+  content: string;
+} {
+  if (!text) return null;
+
+  // ```lang ... ``` fenced blocks
+  const fenced = text.match(
+    /```([\w+-]*)\n([\s\S]*?)```/m
+  );
+
+  if (fenced) {
+    return {
+      type: "code",
+      language: fenced[1] || "text",
+      content: fenced[2].trim(),
+    };
+  }
+
+  // Heuristic fallback: looks like code but not fenced
+  if (looksLikeCode(text)) {
+    return {
+      type: "code",
+      language: "text",
+      content: text.trim(),
+    };
+  }
+
+  return null;
+}
+
+
 // ------------------------------------------------------------
 // ADDITIVE — EXECUTOR DIRECTIVE (same-turn authority)
 // ------------------------------------------------------------
@@ -824,14 +870,47 @@ if (
 }
 
 // --------------------------------------------------------
-// SAFETY SCRUB (STRING RESPONSES)
+// SAFETY SCRUB
 // --------------------------------------------------------
-const scrubbed =
-  typeof gatedResponse === "string"
-    ? scrubPhantomExecutionLanguage(gatedResponse)
-    : "";
-
+const scrubbed = scrubPhantomExecutionLanguage(gatedResponse);
 const safeResponse = assertNoPhantomLanguage(scrubbed);
+
+// --------------------------------------------------------
+// CODE ARTIFACT EXTRACTION (AUTHORITATIVE)
+// --------------------------------------------------------
+const codeArtifactResult = extractCodeArtifact(safeResponse);
+
+if (codeArtifactResult) {
+  const { artifact, residualText } = codeArtifactResult;
+
+  if (authUserId || allowSessionWM) {
+    await supabaseAdmin
+      .schema("memory")
+      .from("working_memory")
+      .insert({
+        conversation_id: resolvedConversationId,
+        user_id: authUserId,
+        workspace_id: resolvedWorkspaceId,
+        role: "assistant",
+        content: residualText || "",
+      });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    conversationId: resolvedConversationId,
+    messages: [
+      ...(residualText
+        ? [{ role: "assistant", content: residualText }]
+        : []),
+      {
+        role: "assistant",
+        artifact,
+      },
+    ],
+  });
+}
+
 
 // --------------------------------------------------------
 // PERSIST ASSISTANT MESSAGE (STRING PATH)
