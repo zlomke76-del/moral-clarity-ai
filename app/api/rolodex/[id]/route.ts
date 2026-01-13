@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Rolodex ID Route (PATCH + DELETE)
 // Cookie auth · RLS enforced · memory schema
-// AUTHORITATIVE — DEFENSIVE + FINAL
+// AUTHORITATIVE · DEFENSIVE + FINAL
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -31,7 +31,7 @@ async function getSupabase() {
 }
 
 /* ------------------------------------------------------------
-   Column mapping (UI → DB)
+   Column mapping (UI ↔ DB)
 ------------------------------------------------------------ */
 const COLUMN_MAP: Record<string, string> = {
   name: "name",
