@@ -190,11 +190,11 @@ export async function DELETE(
   }
 
   /* ----------------------------------------------------------
-     Delete memory (RLS enforced)
+     Delete memory (RLS enforced, ensure actual deletion)
   ---------------------------------------------------------- */
-  const { error } = await supabase
+  const { error, count } = await supabase
     .from("memories")
-    .delete()
+    .delete({ count: "exact" }) // <--- Key fix: Request row count
     .eq("id", memoryId)
     .eq("user_id", user.id);
 
@@ -203,6 +203,13 @@ export async function DELETE(
     return NextResponse.json(
       { ok: false, stage: "delete.memory", error: error.message },
       { status: 403 }
+    );
+  }
+
+  if (!count || count === 0) {
+    return NextResponse.json(
+      { ok: false, error: "Memory not found or not owned by user" },
+      { status: 404 }
     );
   }
 
