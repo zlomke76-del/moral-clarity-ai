@@ -1,5 +1,5 @@
 // ------------------------------------------------------------
-// Rolodex API Route (AUTHORITATIVE — LOCKED)
+// Rolodex API Route (AUTHORITATIVE · LOCKED)
 // Owner-scoped · Cookie auth · RLS enforced · memory schema
 // NEXT 16 SAFE
 // ------------------------------------------------------------
@@ -33,7 +33,7 @@ async function getSupabase() {
 
 /* ------------------------------------------------------------
    GET /api/rolodex
-   OWNER ONLY — UUID IS AUTHORITY
+   OWNER ONLY · UUID IS AUTHORITY
 ------------------------------------------------------------ */
 export async function GET(req: Request) {
   const supabase = await getSupabase();
@@ -89,7 +89,7 @@ export async function GET(req: Request) {
 
 /* ------------------------------------------------------------
    POST /api/rolodex
-   OWNER FORCED — PAYLOAD SANITIZED
+   OWNER FORCED · PAYLOAD SANITIZED
 ------------------------------------------------------------ */
 export async function POST(req: Request) {
   const supabase = await getSupabase();
@@ -106,9 +106,17 @@ export async function POST(req: Request) {
     );
   }
 
-  const body = await req.json();
+  let body: Record<string, any> = {};
+  try {
+    body = await req.json();
+  } catch (err) {
+    return NextResponse.json(
+      { ok: false, error: "Invalid JSON payload" },
+      { status: 400 }
+    );
+  }
 
-  // 🔒 HARD SANITIZATION (THIS STOPS 403s)
+  // HARD SANITIZATION — ONLY SERVER SETS USER_ID
   delete body.user_id;
   if (!body.workspace_id) delete body.workspace_id;
 
@@ -129,7 +137,7 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(
-      { ok: false, stage: "insert.rolodex", error },
+      { ok: false, stage: "insert.rolodex", error: error.message },
       { status: 403 }
     );
   }
