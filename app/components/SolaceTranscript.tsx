@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { UI } from "./dock-ui";
+import React from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { UI } from "./dock-ui";
 
 /* ------------------------------------------------------------------
    Types
@@ -62,13 +63,13 @@ export default function SolaceTranscript({
             style={{
               display: "flex",
               justifyContent: isUser ? "flex-end" : "flex-start",
-              marginBottom: 10,
+              marginBottom: 12,
             }}
           >
             <div
               style={{
                 maxWidth: "80%",
-                padding: 12,
+                padding: 14,
                 borderRadius: UI.radiusLg,
                 background: isUser ? UI.surface2 : UI.surface1,
                 color: UI.text,
@@ -84,7 +85,13 @@ export default function SolaceTranscript({
               )}
 
               {!artifactType && msg.content && (
-                <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.35 }}>
+                <div
+                  style={{
+                    whiteSpace: "pre-wrap",
+                    lineHeight: 1.55,
+                    fontSize: 15,
+                  }}
+                >
                   {msg.content}
                 </div>
               )}
@@ -109,6 +116,7 @@ function CodeArtifactBlock({ artifact }: { artifact: CodeArtifact }) {
         borderRadius: UI.radiusMd,
         padding: 12,
         fontFamily: "monospace",
+        fontSize: 13,
       }}
     >
       <Header title={artifact.filename || artifact.language} onCopy={copy} />
@@ -120,7 +128,7 @@ function CodeArtifactBlock({ artifact }: { artifact: CodeArtifact }) {
 }
 
 /* ------------------------------------------------------------------
-   Text Artifact (NEW)
+   Text Artifact (ChatGPT-clean)
 ------------------------------------------------------------------- */
 function TextArtifactBlock({ artifact }: { artifact: TextArtifact }) {
   const copy = () => navigator.clipboard.writeText(artifact.content);
@@ -130,14 +138,98 @@ function TextArtifactBlock({ artifact }: { artifact: TextArtifact }) {
       style={{
         background: UI.surface2,
         borderRadius: UI.radiusMd,
-        padding: 12,
+        padding: 14,
       }}
     >
       <Header title={artifact.title || "Response"} onCopy={copy} />
 
-      <div style={{ lineHeight: 1.45 }}>
+      <div style={{ fontSize: 15, lineHeight: 1.6 }}>
         {artifact.format === "markdown" ? (
-          <ReactMarkdown>{artifact.content}</ReactMarkdown>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              p: ({ children }) => (
+                <p style={{ margin: "0 0 12px" }}>{children}</p>
+              ),
+              h1: ({ children }) => (
+                <h1 style={{ fontSize: 20, margin: "14px 0 8px" }}>
+                  {children}
+                </h1>
+              ),
+              h2: ({ children }) => (
+                <h2 style={{ fontSize: 18, margin: "14px 0 6px" }}>
+                  {children}
+                </h2>
+              ),
+              h3: ({ children }) => (
+                <h3 style={{ fontSize: 16, margin: "12px 0 6px" }}>
+                  {children}
+                </h3>
+              ),
+              ul: ({ children }) => (
+                <ul style={{ paddingLeft: 20, margin: "6px 0 12px" }}>
+                  {children}
+                </ul>
+              ),
+              ol: ({ children }) => (
+                <ol style={{ paddingLeft: 20, margin: "6px 0 12px" }}>
+                  {children}
+                </ol>
+              ),
+              li: ({ children }) => (
+                <li style={{ marginBottom: 6 }}>{children}</li>
+              ),
+              table: ({ children }) => (
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    margin: "12px 0",
+                    fontSize: 14,
+                  }}
+                >
+                  {children}
+                </table>
+              ),
+              th: ({ children }) => (
+                <th
+                  style={{
+                    textAlign: "left",
+                    borderBottom: "1px solid #333",
+                    padding: "6px 8px",
+                    fontWeight: 600,
+                  }}
+                >
+                  {children}
+                </th>
+              ),
+              td: ({ children }) => (
+                <td
+                  style={{
+                    borderBottom: "1px solid #222",
+                    padding: "6px 8px",
+                    verticalAlign: "top",
+                  }}
+                >
+                  {children}
+                </td>
+              ),
+              code: ({ children }) => (
+                <code
+                  style={{
+                    background: "#111",
+                    padding: "2px 4px",
+                    borderRadius: 4,
+                    fontSize: 13,
+                  }}
+                >
+                  {children}
+                </code>
+              ),
+            }}
+          >
+            {artifact.content}
+          </ReactMarkdown>
         ) : (
           <div style={{ whiteSpace: "pre-wrap" }}>{artifact.content}</div>
         )}
@@ -176,6 +268,7 @@ function Header({
           cursor: "pointer",
           fontWeight: 700,
         }}
+        aria-label="Copy content"
       >
         ⧉
       </button>
