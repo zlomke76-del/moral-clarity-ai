@@ -136,50 +136,68 @@ function isExplicitSendApproval(message?: string): boolean {
 }
 
 /**
- * ADDITIVE FIX — Code Artifact Detection
+ * AUTHORITATIVE — Code Artifact Extraction
  *
- * Purpose:
- * - Detect fenced or implicit code responses
- * - Allow the response pipeline to emit a structured code artifact
- * - Enables clean formatting + copy button in SolaceTranscript
+ * Splits assistant output into:
+ * - structured code artifact (for UI copy / formatting)
+ * - residual explanatory text (if any)
  *
- * NOTE:
- * - This does NOT execute code
- * - This does NOT alter safety or governance
- * - Purely presentational intelligence
+ * Guarantees:
+ * - No execution
+ * - No markdown dependency
+ * - UI-safe separation
  */
-function extractCodeArtifact(text: string): null | {
-  type: "code";
-  language: string;
-  content: string;
+function extractCodeArtifact(
+  text: string
+): null | {
+  artifact: {
+    type: "code";
+    language: string;
+    content: string;
+  };
+  residualText: string | null;
 } {
-  if (!text) return null;
+  if (!text || typeof text !== "string") return null;
 
-  // ```lang ... ``` fenced blocks
-  const fenced = text.match(
-    /```([\w+-]*)\n([\s\S]*?)```/m
-  );
+  // --------------------------------------------------
+  // FENCED CODE BLOCK ```lang ... ```
+  // --------------------------------------------------
+  const fenced = text.match(/```([\w+-]*)\n([\s\S]*?)```/m);
 
   if (fenced) {
+    const before = text.slice(0, fenced.index).trim();
+    const after = text
+      .slice((fenced.index ?? 0) + fenced[0].length)
+      .trim();
+
+    const residual = [before, after].filter(Boolean).join("\n\n");
+
     return {
-      type: "code",
-      language: fenced[1] || "text",
-      content: fenced[2].trim(),
+      artifact: {
+        type: "code",
+        language: fenced[1] || "text",
+        content: fenced[2].trim(),
+      },
+      residualText: residual.length ? residual : null,
     };
   }
 
-  // Heuristic fallback: looks like code but not fenced
+  // --------------------------------------------------
+  // HEURISTIC CODE (no fences, still code)
+  // --------------------------------------------------
   if (looksLikeCode(text)) {
     return {
-      type: "code",
-      language: "text",
-      content: text.trim(),
+      artifact: {
+        type: "code",
+        language: "text",
+        content: text.trim(),
+      },
+      residualText: null,
     };
   }
 
   return null;
 }
-
 
 // ------------------------------------------------------------
 // ADDITIVE — EXECUTOR DIRECTIVE (same-turn authority)
