@@ -43,10 +43,33 @@ let SOLACE_DOCK_ACTIVE = false;
 /* ------------------------------------------------------------------
    Types
 ------------------------------------------------------------------- */
+type CodeArtifact = {
+  type: "code";
+  language: string;
+  filename?: string;
+  content: string;
+};
+
+type TextArtifact = {
+  type: "text";
+  format: "plain" | "markdown";
+  title?: string;
+  content: string;
+};
+
+type AssistantArtifact = CodeArtifact | TextArtifact;
+
 type Message = {
   role: "user" | "assistant";
-  content: string;
+  content?: string | null;
   imageUrl?: string | null;
+  export?: {
+    kind: "export";
+    format: "docx" | "pdf" | "csv";
+    filename: string;
+    url: string;
+  } | null;
+  artifact?: AssistantArtifact | null;
 };
 
 type EvidenceBlock = {
@@ -62,6 +85,7 @@ type PendingFile = {
   url: string;
   size?: number;
 };
+
 
 /* ------------------------------------------------------------------
    Constants
