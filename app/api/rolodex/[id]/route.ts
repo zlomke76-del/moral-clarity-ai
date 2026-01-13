@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Rolodex ID Route (PATCH + DELETE)
 // Cookie auth · RLS enforced · memory schema
-// AUTHORITATIVE — DEFENSIVE + FINAL
+// AUTHORITATIVE ? DEFENSIVE + FINAL
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -10,9 +10,9 @@ import { createServerClient } from "@supabase/ssr";
 
 export const runtime = "nodejs";
 
-/* ------------------------------------------------------------
+/* ----------------------------------------------------------
    Supabase (schema-bound)
------------------------------------------------------------- */
+----------------------------------------------------------- */
 async function getSupabase() {
   const cookieStore = await cookies();
 
@@ -30,9 +30,9 @@ async function getSupabase() {
   );
 }
 
-/* ------------------------------------------------------------
-   Column mapping (UI → DB)
------------------------------------------------------------- */
+/* ----------------------------------------------------------
+   Column mapping (UI ? DB)
+----------------------------------------------------------- */
 const COLUMN_MAP: Record<string, string> = {
   name: "name",
   relationship: "relationship_type",
@@ -50,18 +50,18 @@ const COLUMN_MAP: Record<string, string> = {
   consent_level: "consent_level",
 };
 
-/* ------------------------------------------------------------
+/* ----------------------------------------------------------
    Helper: resolve ID safely
------------------------------------------------------------- */
+----------------------------------------------------------- */
 function resolveId(req: Request, params?: { id?: string }) {
   if (params?.id) return params.id;
   const parts = new URL(req.url).pathname.split("/");
   return parts[parts.length - 1] || null;
 }
 
-/* ------------------------------------------------------------
+/* ----------------------------------------------------------
    PATCH /api/rolodex/[id]
------------------------------------------------------------- */
+----------------------------------------------------------- */
 export async function PATCH(
   req: Request,
   { params }: { params: { id?: string } }
@@ -158,9 +158,9 @@ export async function PATCH(
   return NextResponse.json({ ok: true, data });
 }
 
-/* ------------------------------------------------------------
+/* ----------------------------------------------------------
    DELETE /api/rolodex/[id]
------------------------------------------------------------- */
+----------------------------------------------------------- */
 export async function DELETE(
   req: Request,
   { params }: { params: { id?: string } }
