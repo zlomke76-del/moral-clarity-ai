@@ -1,7 +1,7 @@
 // ------------------------------------------------------------
 // Rolodex Workspace Route
 // Cookie auth · RLS enforced · memory schema
-// Returns personal + workspace contacts
+// Returns personal + workspace contacts (future scope only)
 // ------------------------------------------------------------
 
 import { NextResponse } from "next/server";
@@ -32,6 +32,7 @@ async function getSupabase() {
 
 /* ------------------------------------------------------------
    GET /api/rolodex/workspace?workspaceId=...
+   (OWNER SCOPE ONLY; SHARED CONTACTS DISABLED)
 ------------------------------------------------------------ */
 export async function GET(req: Request) {
   const supabase = await getSupabase();
@@ -58,11 +59,12 @@ export async function GET(req: Request) {
     );
   }
 
+  // Current model: only show the owner's contacts; workspace_id is a passive tag.
   const { data, error } = await supabase
     .from("rolodex")
     .select("*")
     .eq("user_id", user.id)
-    .or(`workspace_id.eq.${workspaceId},workspace_id.is.null`)
+    .eq("workspace_id", workspaceId)
     .order("updated_at", { ascending: false });
 
   if (error) {
