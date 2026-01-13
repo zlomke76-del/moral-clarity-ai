@@ -32,15 +32,40 @@ async function getSupabase() {
 }
 
 /* ------------------------------------------------------------
+   Utility: robust ID extraction
+   (guards against App Router param binding failures)
+------------------------------------------------------------ */
+function extractId(
+  req: Request,
+  params?: { id?: string }
+): string | null {
+  if (params?.id) return params.id;
+
+  try {
+    const url = new URL(req.url);
+    const parts = url.pathname.split("/").filter(Boolean);
+    const last = parts[parts.length - 1];
+    if (last && last !== "memory") return last;
+  } catch {
+    /* noop */
+  }
+
+  return null;
+}
+
+/* ------------------------------------------------------------
    PATCH /api/memory/[id]
    Explicit content update only
 ------------------------------------------------------------ */
 export async function PATCH(
   req: Request,
-  context: { params: { id: string } }
+  context: { params?: { id?: string } }
 ) {
   const supabase = await getSupabase();
 
+  /* ----------------------------------------------------------
+     Auth
+  ---------------------------------------------------------- */
   const {
     data: { user },
     error: authError,
@@ -53,8 +78,17 @@ export async function PATCH(
     );
   }
 
-  const memoryId = context.params.id;
+  /* ----------------------------------------------------------
+     ID resolution (robust)
+  ---------------------------------------------------------- */
+  const memoryId = extractId(req, context.params);
+
   if (!memoryId) {
+    console.error("PATCH memory: id missing", {
+      url: req.url,
+      params: context.params,
+    });
+
     return NextResponse.json(
       { ok: false, error: "Memory ID is required" },
       { status: 400 }
@@ -82,7 +116,7 @@ export async function PATCH(
   }
 
   /* ----------------------------------------------------------
-     Update memory (ownership enforced via RLS + predicate)
+     Update memory (RLS enforced)
   ---------------------------------------------------------- */
   const { data, error } = await supabase
     .from("memories")
@@ -118,11 +152,14 @@ export async function PATCH(
    Owner only · irreversible
 ------------------------------------------------------------ */
 export async function DELETE(
-  _req: Request,
-  context: { params: { id: string } }
+  req: Request,
+  context: { params?: { id?: string } }
 ) {
   const supabase = await getSupabase();
 
+  /* ----------------------------------------------------------
+     Auth
+  ---------------------------------------------------------- */
   const {
     data: { user },
     error: authError,
@@ -135,14 +172,26 @@ export async function DELETE(
     );
   }
 
-  const memoryId = context.params.id;
+  /* ----------------------------------------------------------
+     ID resolution (robust)
+  ---------------------------------------------------------- */
+  const memoryId = extractId(req, context.params);
+
   if (!memoryId) {
+    console.error("DELETE memory: id missing", {
+      url: req.url,
+      params: context.params,
+    });
+
     return NextResponse.json(
       { ok: false, error: "Memory ID is required" },
       { status: 400 }
     );
   }
 
+  /* ----------------------------------------------------------
+     Delete memory (RLS enforced)
+  ---------------------------------------------------------- */
   const { error } = await supabase
     .from("memories")
     .delete()
