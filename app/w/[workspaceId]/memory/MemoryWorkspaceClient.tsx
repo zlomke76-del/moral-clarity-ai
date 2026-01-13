@@ -11,6 +11,19 @@ type Props = {
 
 type Mode = "view" | "edit" | "create";
 
+/* ------------------------------------------------------------
+   Content normalization (UI boundary)
+------------------------------------------------------------ */
+function normalizeContent(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (!content) return "";
+  try {
+    return JSON.stringify(content, null, 2);
+  } catch {
+    return "";
+  }
+}
+
 export default function MemoryWorkspaceClient({
   workspaceId,
   initialItems,
@@ -114,10 +127,7 @@ export default function MemoryWorkspaceClient({
       return;
     }
 
-    const content =
-      typeof record.content === "string"
-        ? record.content
-        : JSON.stringify(record.content, null, 2);
+    const content = normalizeContent(record.content);
 
     setDraft(content);
     originalDraftRef.current = content;
@@ -203,7 +213,7 @@ export default function MemoryWorkspaceClient({
   async function handleDelete() {
     if (!selected?.id) return;
 
-    const memoryId = selected.id; // 🔒 SNAPSHOT — THIS IS THE FIX
+    const memoryId = selected.id; // 🔒 SNAPSHOT — correct
 
     const confirmed = window.confirm(
       "Are you sure you want to permanently delete this memory?"
