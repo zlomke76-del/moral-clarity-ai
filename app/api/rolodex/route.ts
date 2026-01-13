@@ -1,5 +1,5 @@
 // ------------------------------------------------------------
-// Rolodex API Route (AUTHORITATIVE · LOCKED)
+// Rolodex API Route (AUTHORITATIVE — LOCKED)
 // Owner-scoped · Cookie auth · RLS enforced · memory schema
 // NEXT 16 SAFE
 // ------------------------------------------------------------
@@ -33,7 +33,7 @@ async function getSupabase() {
 
 /* ------------------------------------------------------------
    GET /api/rolodex
-   OWNER ONLY · UUID IS AUTHORITY
+   OWNER ONLY — UUID IS AUTHORITY
 ------------------------------------------------------------ */
 export async function GET(req: Request) {
   const supabase = await getSupabase();
@@ -89,7 +89,7 @@ export async function GET(req: Request) {
 
 /* ------------------------------------------------------------
    POST /api/rolodex
-   OWNER FORCED · PAYLOAD SANITIZED
+   OWNER FORCED — PAYLOAD SANITIZED
 ------------------------------------------------------------ */
 export async function POST(req: Request) {
   const supabase = await getSupabase();
@@ -106,31 +106,11 @@ export async function POST(req: Request) {
     );
   }
 
-  let body: Record<string, any> = {};
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json(
-      { ok: false, error: "Invalid JSON payload" },
-      { status: 400 }
-    );
-  }
+  const body = await req.json();
 
-  // HARD SANITIZATION (THIS STOPS 403s)
+  // 🔒 HARD SANITIZATION (THIS STOPS 403s)
   delete body.user_id;
   if (!body.workspace_id) delete body.workspace_id;
-
-  // ---- DATE NULL CONVERSION PATCH ----
-  const dateFields = ["birthday"];
-  for (const field of dateFields) {
-    if (
-      Object.prototype.hasOwnProperty.call(body, field) &&
-      body[field] === ""
-    ) {
-      body[field] = null;
-    }
-  }
-  // ---- END PATCH ----
 
   const { data, error } = await supabase
     .from("rolodex")
