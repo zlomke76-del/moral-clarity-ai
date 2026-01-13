@@ -31,7 +31,7 @@ async function getSupabase() {
 }
 
 /* ------------------------------------------------------------
-   Column mapping (UI ↔ DB)
+   Column mapping (UI → DB)
 ------------------------------------------------------------ */
 const COLUMN_MAP: Record<string, string> = {
   name: "name",
@@ -108,6 +108,18 @@ export async function PATCH(
   delete body.created_at;
   delete body.updated_at;
 
+  // ---- DATE NULL CONVERSION PATCH ----
+  const dateFields = ["birthday"];
+  for (const field of dateFields) {
+    if (
+      Object.prototype.hasOwnProperty.call(body, field) &&
+      body[field] === ""
+    ) {
+      body[field] = null;
+    }
+  }
+  // ---- END PATCH ----
+
   // Build update payload
   const updatePayload: Record<string, any> = {};
 
@@ -119,6 +131,8 @@ export async function PATCH(
       const d = new Date(value);
       if (!isNaN(d.getTime())) {
         updatePayload[column] = d.toISOString().slice(0, 10);
+      } else if (value === null) {
+        updatePayload[column] = null;
       }
       continue;
     }
