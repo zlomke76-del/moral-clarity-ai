@@ -109,16 +109,28 @@ export async function POST(req: Request) {
   let body: Record<string, any> = {};
   try {
     body = await req.json();
-  } catch (err) {
+  } catch {
     return NextResponse.json(
       { ok: false, error: "Invalid JSON payload" },
       { status: 400 }
     );
   }
 
-  // HARD SANITIZATION — ONLY SERVER SETS USER_ID
+  // HARD SANITIZATION (THIS STOPS 403s)
   delete body.user_id;
   if (!body.workspace_id) delete body.workspace_id;
+
+  // ---- DATE NULL CONVERSION PATCH ----
+  const dateFields = ["birthday"];
+  for (const field of dateFields) {
+    if (
+      Object.prototype.hasOwnProperty.call(body, field) &&
+      body[field] === ""
+    ) {
+      body[field] = null;
+    }
+  }
+  // ---- END PATCH ----
 
   const { data, error } = await supabase
     .from("rolodex")
@@ -137,7 +149,7 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(
-      { ok: false, stage: "insert.rolodex", error: error.message },
+      { ok: false, stage: "insert.rolodex", error },
       { status: 403 }
     );
   }
