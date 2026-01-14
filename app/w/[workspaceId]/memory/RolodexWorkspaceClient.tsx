@@ -25,6 +25,14 @@ type Props = {
 };
 
 /* ------------------------------------------------------------
+   Helpers
+------------------------------------------------------------ */
+function normalize(value: unknown) {
+  if (value === "") return null;
+  return value;
+}
+
+/* ------------------------------------------------------------
    Component
 ------------------------------------------------------------ */
 export default function RolodexWorkspaceClient({ workspaceId }: Props) {
@@ -37,17 +45,14 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   /* ------------------------------------------------------------
-     Load contacts
+     Load contacts (USER-SCOPED, NULL-AWARE)
   ------------------------------------------------------------ */
   async function load() {
     setLoading(true);
     setError(null);
 
     try {
-      const res = await fetch(
-        `/api/rolodex/workspace?workspaceId=${workspaceId}`,
-        { cache: "no-store" }
-      );
+      const res = await fetch(`/api/rolodex`, { cache: "no-store" });
 
       if (!res.ok) {
         setError("Failed to load contacts.");
@@ -67,7 +72,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
 
   useEffect(() => {
     load();
-  }, [workspaceId]);
+  }, []);
 
   /* ------------------------------------------------------------
      Selection / Creation
@@ -76,14 +81,14 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
     setSelected(null);
     setDraft({
       name: "",
-      relationship_type: "",
-      primary_email: "",
-      primary_phone: "",
-      birthday: "",
-      notes: "",
+      relationship_type: null,
+      primary_email: null,
+      primary_phone: null,
+      birthday: null,
+      notes: null,
       sensitivity_level: 2,
       consent_level: 1,
-      workspace_id: workspaceId,
+      workspace_id: null, // IMPORTANT: do not force workspace
     });
     setError(null);
   }
@@ -119,13 +124,20 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
 
       const method = isUpdate ? "PATCH" : "POST";
 
+      const payload = {
+        ...draft,
+        relationship_type: normalize(draft.relationship_type),
+        primary_email: normalize(draft.primary_email),
+        primary_phone: normalize(draft.primary_phone),
+        birthday: normalize(draft.birthday),
+        notes: normalize(draft.notes),
+        workspace_id: normalize(draft.workspace_id),
+      };
+
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...(draft ?? {}),
-          workspace_id: workspaceId,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -262,7 +274,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
                 onChange={(e) =>
                   setDraft({
                     ...draft,
-                    birthday: e.target.value,
+                    birthday: e.target.value || null,
                   })
                 }
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
