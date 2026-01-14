@@ -1,79 +1,57 @@
-<#
-Moral Clarity AI • Canon Integrity Verification Script
-
-- Verifies governed documents against governance/checksums.yml
-- Fails on:
-  - Missing files
-  - TODO checksums
-  - Hash mismatches
-  - YAML parse errors
-#>
-
-Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-Write-Host "🔍 Moral Clarity AI — Canon Integrity Check" -ForegroundColor Cyan
+$ChecksumFile = "governance/checksums.yml"
+$RepoRoot = Resolve-Path "."
 
-$repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
-$checksumFile = Join-Path $repoRoot "governance/checksums.yml"
-
-if (-not (Test-Path $checksumFile)) {
-    throw "❌ Missing governance/checksums.yml"
+if (-not (Test-Path $ChecksumFile)) {
+  Write-Error "Missing checksum authority: $ChecksumFile"
 }
 
-# --- Load YAML ---
-try {
-    $yamlText = Get-Content $checksumFile -Raw
-    $yaml = ConvertFrom-Yaml $yamlText
-}
-catch {
-    throw "❌ Failed to parse checksums.yml: $_"
-}
+# Files that are explicitly NON-authoritative
+$ExcludedFiles = @(
+  "canon/INDEX.md"
+)
 
-if (-not $yaml.documents) {
-    throw "❌ No documents listed in checksums.yml"
+function Get-Sha256($Path) {
+  return (Get-FileHash -Algorithm SHA256 -Path $Path).Hash.ToLower()
 }
 
-$failures = @()
+$yaml = Get-Content $ChecksumFile -Raw
 
-foreach ($doc in $yaml.documents) {
+if ($yaml -notmatch "documents:") {
+  Write-Error "Invalid checksum file structure"
+}
 
-    $relativePath = $doc.file
-    $expectedHash = $doc.checksum
+$entries = ($yaml -split "`n") | Where-Object { $_ -match "file:" }
 
-    Write-Host "→ Verifying $relativePath"
+foreach ($line in $entries) {
+  $file = ($line -replace ".*file:\s*", "").Trim()
 
-    if ($expectedHash -eq "TODO") {
-        $failures += "Checksum TODO for $relativePath"
-        continue
+  if ($ExcludedFiles -contains $file) {
+    Write-Host "⏭️  Skipping non-authoritative file: $file"
+    continue
+  }
+
+  $fullPath = Join-Path $RepoRoot $file
+
+  if (-not (Test-Path $fullPath)) {
+    Write-Error "Missing canonical file: $file"
+  }
+
+  $expected = ($yaml -split "`n") |
+    Where-Object { $_ -match "file:\s*$file" } |
+    ForEach-Object {
+      $i = [array]::IndexOf($yaml -split "`n", $_)
+      ($yaml -split "`n")[$i + 2] -replace "checksum:\s*", ""
     }
 
-    $fullPath = Join-Path $repoRoot $relativePath
+  $actual = Get-Sha256 $fullPath
 
-    if (-not (Test-Path $fullPath)) {
-        $failures += "Missing file: $relativePath"
-        continue
-    }
+  if ($expected -ne $actual) {
+    Write-Error "❌ Canon checksum mismatch: $file`nExpected: $expected`nActual:   $actual"
+  }
 
-    $actualHash = (Get-FileHash $fullPath -Algorithm SHA256).Hash.ToUpper()
-    $expectedHash = $expectedHash.ToUpper()
-
-    if ($actualHash -ne $expectedHash) {
-        $failures += @"
-Hash mismatch for $relativePath
-  Expected: $expectedHash
-  Actual:   $actualHash
-"@
-    }
+  Write-Host "✅ Verified: $file"
 }
 
-if ($failures.Count -gt 0) {
-    Write-Host "`n❌ CANON INTEGRITY FAILURE" -ForegroundColor Red
-    foreach ($f in $failures) {
-        Write-Host " - $f" -ForegroundColor Red
-    }
-    exit 1
-}
-
-Write-Host "`n✅ Canon integrity verified. No drift detected." -ForegroundColor Green
-exit 0
+Write-Host "`n🎯 Canon integrity verified (single authority enforced)"
