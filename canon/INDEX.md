@@ -31,6 +31,7 @@ Every file listed here represents an **authoritative text** governing the design
 | **Model Access Policy v1** | Defines model-tier routing and access control across user groups. | [`/docs/policies/model_access_policy_v1.md`](policies/model_access_policy_v1.md) |
 | **Pricing & Seat Policy v1** | Outlines subscription tiers and seat allocations for individuals, families, ministries, and enterprises. | [`/docs/policies/pricing_seat_policy_v1.md`](policies/pricing_seat_policy_v1.md) |
 | **Governance & Version Control Guidelines** | Ratification process for Canon updates, version tags, and sign-off records. | [`/governance/version_control.md`](../governance/version_control.md) |
+| **Edge of Protection** | Hard refusal lines & vulnerable-user governance; defines non-negotiable emission boundaries and silence-as-refusal. | [`/app/edge-of-protection/page.tsx`](../app/edge-of-protection/page.tsx) |
 
 ---
 
@@ -65,6 +66,7 @@ All new or modified documents must:
 4. Receive sign-off by **Timothy Zlomke** and one Model Steward before merge.
 
 ---
+
 ### 7a) Integrity Badges
 <!-- CHECKSUMS:BEGIN -->
 <!-- This section is auto-generated. Do not edit by hand. -->
