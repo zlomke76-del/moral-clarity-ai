@@ -28,6 +28,33 @@ export default function EdgeOfProtectionIndexPage() {
           prose-a:text-blue-600 dark:prose-a:text-blue-400
         "
       >
+        {/* ===================================================== */}
+        {/* CANONICAL RIGOR DEFINITION — IMMUTABLE */}
+        {/* ===================================================== */}
+        <blockquote>
+          <p>
+            RIGOR is a reality-invariant governance and operational refusal
+            architecture, defined by enforced boundaries that do not yield to
+            narrative, motivation, social alignment, or interpretive drift.
+            RIGOR’s authority and persistence derive exclusively from codified,
+            auditable refusal points—where action may be structurally blocked,
+            silence maintained as a valid outcome, and override impossible
+            except by explicit regime change. RIGOR does not permit soft
+            refusals, discretionary ethics, or negotiable intervention. Its
+            assurance is mechanical, not aspirational.
+          </p>
+        </blockquote>
+
+        <p className="text-sm text-neutral-500">
+          Canonical-Locked: 2026-01-14
+        </p>
+
+        <hr />
+
+        {/* ===================================================== */}
+        {/* EXISTING CONTENT — UNCHANGED */}
+        {/* ===================================================== */}
+
         <h1>Edge of Protection</h1>
 
         <p className="text-lg text-neutral-400">
