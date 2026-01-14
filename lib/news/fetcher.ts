@@ -12,7 +12,7 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.warn(
-    "[news/fetcher] SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing – fetcher will throw at runtime."
+    "[news/fetcher] SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing — fetcher will throw at runtime."
   );
 }
 
@@ -34,7 +34,7 @@ const DEFAULT_NEWS_WINDOW_DAYS = 1;
 const DEFAULT_PER_DOMAIN_MAX = 5;
 
 /* ============================================================
-   SOURCE REGISTRY (RESTORED — AUTHORITATIVE)
+   SOURCE REGISTRY
    ============================================================ */
 
 type NewsSource = {
@@ -44,21 +44,21 @@ type NewsSource = {
 };
 
 const SOURCE_REGISTRY: NewsSource[] = [
-  { id: "wsj", label: "Wall Street Journal", domain: "wsj.com" },
-  { id: "nyt", label: "New York Times", domain: "nytimes.com" },
-  { id: "times", label: "The Times", domain: "thetimes.co.uk" },
-  { id: "reuters", label: "Reuters", domain: "reuters.com" },
-  { id: "bloomberg", label: "Bloomberg", domain: "bloomberg.com" },
-  { id: "ap", label: "AP News", domain: "apnews.com" },
-  { id: "msnbc", label: "MSNBC", domain: "msnbc.com" },
-  { id: "cnn", label: "CNN", domain: "cnn.com" },
-  { id: "fox", label: "Fox News", domain: "foxnews.com" },
-  { id: "bbc", label: "BBC", domain: "bbc.com" },
-  { id: "newsmax", label: "Newsmax", domain: "newsmax.com" },
+  { id: "wsj",       label: "Wall Street Journal",  domain: "wsj.com" },
+  { id: "nyt",       label: "New York Times",       domain: "nytimes.com" },
+  { id: "times",     label: "The Times",            domain: "thetimes.co.uk" },
+  { id: "reuters",   label: "Reuters",              domain: "reuters.com" },
+  { id: "bloomberg", label: "Bloomberg",            domain: "bloomberg.com" },
+  { id: "ap",        label: "AP News",              domain: "apnews.com" },
+  { id: "msnbc",     label: "MSNBC",                domain: "msnbc.com" },
+  { id: "cnn",       label: "CNN",                  domain: "cnn.com" },
+  { id: "fox",       label: "Fox News",             domain: "foxnews.com" },
+  { id: "bbc",       label: "BBC",                  domain: "bbc.com" },
+  { id: "newsmax",   label: "Newsmax",              domain: "newsmax.com" },
 ];
 
 /* ============================================================
-   SOURCE-SPECIFIC OVERRIDES
+   SOURCE-SPECIFIC OVERRIDES (Expanded for All)
    ============================================================ */
 
 type SourceOverride = {
@@ -67,6 +67,7 @@ type SourceOverride = {
   queryHint?: string;
 };
 
+// All sources have overrides now for better balance.
 const SOURCE_OVERRIDES: Record<string, SourceOverride> = {
   "wsj.com": {
     windowDays: 5,
@@ -83,15 +84,45 @@ const SOURCE_OVERRIDES: Record<string, SourceOverride> = {
     minEffective: 2,
     queryHint: "UK politics OR economy OR world",
   },
+  "reuters.com": {
+    windowDays: 3,
+    minEffective: 2,
+    queryHint: "world OR politics OR finance OR analysis",
+  },
+  "bloomberg.com": {
+    windowDays: 3,
+    minEffective: 2,
+    queryHint: "finance OR markets OR economy OR tech",
+  },
+  "apnews.com": {
+    windowDays: 3,
+    minEffective: 2,
+    queryHint: "breaking OR politics OR world OR US news",
+  },
   "msnbc.com": {
     windowDays: 3,
     minEffective: 2,
-    queryHint: "politics OR investigations",
+    queryHint: "politics OR investigations OR US news",
+  },
+  "cnn.com": {
+    windowDays: 3,
+    minEffective: 2,
+    queryHint: "US news OR world OR analysis",
+  },
+  "foxnews.com": {
+    windowDays: 3,
+    minEffective: 2,
+    queryHint: "US politics OR world OR investigations",
+  },
+  "bbc.com": {
+    windowDays: 3,
+    minEffective: 2,
+    queryHint: "UK news OR world OR analysis",
   },
   "newsmax.com": {
     windowDays: 3,
     minEffective: 1,
-    queryHint: "politics OR US news",
+    queryHint: "politics OR US news OR opinion",
   },
 };
 
@@ -120,6 +151,7 @@ export type DomainStats = {
    HELPERS
    ============================================================ */
 
+// Returns registered domain from a URL (without www, lowercase)
 function extractDomainFromUrl(url: string): string {
   try {
     const u = new URL(url);
@@ -127,6 +159,12 @@ function extractDomainFromUrl(url: string): string {
   } catch {
     return "unknown";
   }
+}
+
+// Return the root domain, e.g., edition.cnn.com -> cnn.com
+function rootDomain(hostname: string): string {
+  const parts = hostname.split(".");
+  return parts.slice(-2).join(".");
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -141,11 +179,9 @@ function shuffle<T>(arr: T[]): T[] {
 function perDomainLimit(domain: string): number {
   return DOMAIN_MAX_OVERRIDES[domain] ?? DEFAULT_PER_DOMAIN_MAX;
 }
-
 function sourceWindow(domain: string): number {
   return SOURCE_OVERRIDES[domain]?.windowDays ?? DEFAULT_NEWS_WINDOW_DAYS;
 }
-
 function sourceQuery(label: string, domain: string): string {
   const hint = SOURCE_OVERRIDES[domain]?.queryHint;
   return hint
@@ -186,7 +222,11 @@ export async function runNewsFetchRefresh(opts?: {
         max: perDomainLimit(domain) * 3,
         days: windowDays,
       });
-    } catch {
+      if (!Array.isArray(items) || items.length === 0) {
+        console.warn(`[news/fetcher] No items returned for domain ${domain} (${source.label})`);
+      }
+    } catch (e) {
+      console.warn(`[news/fetcher] webSearch error for domain ${domain}: ${e}`);
       continue;
     }
 
@@ -201,8 +241,17 @@ export async function runNewsFetchRefresh(opts?: {
       if (queuedRows.length >= storiesTarget) break;
       if (!item?.url) continue;
 
-      const itemDomain = extractDomainFromUrl(item.url);
-      if (!itemDomain.endsWith(domain)) continue;
+      // Accept subdomains, but only if rootDomain matches expected domain
+      const itemUrlDomain = extractDomainFromUrl(item.url);
+      const itemRoot = rootDomain(itemUrlDomain);
+
+      if (itemRoot !== domain) {
+        domainStats[domain].skipped++;
+        console.warn(
+          `[news/fetcher] Domain mismatch: got ${itemUrlDomain} (root ${itemRoot}), expected root ${domain}`
+        );
+        continue;
+      }
 
       domainStats[domain].attempted++;
 
@@ -223,6 +272,7 @@ export async function runNewsFetchRefresh(opts?: {
       });
 
       domainStats[domain].queued++;
+      if (domainStats[domain].queued >= perDomainLimit(domain)) break;
     }
   }
 
