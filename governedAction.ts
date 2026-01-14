@@ -13,6 +13,12 @@ export type GovernedActionInput<T> = {
   trace: DecisionTrace;
   authority: AuthorityInstance | null;
   effect: () => T;
+
+  // REQUIRED execution context for constraint compilation
+  context: {
+    hasHumanStop: boolean;
+    reversible: boolean;
+  };
 };
 
 export type GovernedActionResult<T> =
@@ -24,9 +30,13 @@ export type GovernedActionResult<T> =
 export function governedAction<T>(
   input: GovernedActionInput<T>
 ): GovernedActionResult<T> {
-  const { trace, authority, effect } = input;
+  const { trace, authority, effect, context } = input;
 
-  const compiled = compileConstraints(trace, authority);
+  const compiled = compileConstraints(
+    trace,
+    authority,
+    context
+  );
 
   return executeGoverned(
     trace,
