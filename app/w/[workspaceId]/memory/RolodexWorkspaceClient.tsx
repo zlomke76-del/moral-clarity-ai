@@ -11,7 +11,7 @@ type RolodexRecord = {
   relationship_type: string | null;
   primary_email: string | null;
   primary_phone: string | null;
-  birthday: string | null;
+  birthday: string | null; // YYYY-MM-DD
   notes: string | null;
   sensitivity_level: number | null;
   consent_level: number | null;
@@ -28,8 +28,21 @@ type Props = {
    Helpers
 ------------------------------------------------------------ */
 function normalize(value: unknown) {
-  if (value === "") return null;
+  if (value === "" || value === undefined) return null;
   return value;
+}
+
+function normalizeDate(value: unknown): string | null {
+  if (!value || typeof value !== "string") return null;
+
+  // Accept YYYY-MM-DD directly
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+  // Convert ISO → YYYY-MM-DD
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return null;
+
+  return d.toISOString().slice(0, 10);
 }
 
 /* ------------------------------------------------------------
@@ -45,7 +58,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   /* ------------------------------------------------------------
-     Load contacts (USER-SCOPED, NULL-AWARE)
+     Load contacts
   ------------------------------------------------------------ */
   async function load() {
     setLoading(true);
@@ -53,15 +66,18 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
 
     try {
       const res = await fetch(`/api/rolodex`, { cache: "no-store" });
-
-      if (!res.ok) {
-        setError("Failed to load contacts.");
-        setItems([]);
-        return;
-      }
+      if (!res.ok) throw new Error();
 
       const json = await res.json();
-      setItems(Array.isArray(json.items) ? json.items : []);
+      const rows = Array.isArray(json.items) ? json.items : [];
+
+      // Normalize birthday on ingest
+      setItems(
+        rows.map((r: RolodexRecord) => ({
+          ...r,
+          birthday: normalizeDate(r.birthday),
+        }))
+      );
     } catch {
       setError("Error loading contacts.");
       setItems([]);
@@ -88,27 +104,25 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
       notes: null,
       sensitivity_level: 2,
       consent_level: 1,
-      workspace_id: null, // IMPORTANT: do not force workspace
+      workspace_id: null,
     });
     setError(null);
   }
 
   function select(record: RolodexRecord) {
     setSelected(record);
-    setDraft({ ...record });
+    setDraft({
+      ...record,
+      birthday: normalizeDate(record.birthday),
+    });
     setError(null);
   }
 
   /* ------------------------------------------------------------
-     Save (POST or PATCH)
+     Save
   ------------------------------------------------------------ */
   async function save() {
-    if (!draft) {
-      setError("Nothing to save.");
-      return;
-    }
-
-    if (!draft.name?.trim()) {
+    if (!draft || !draft.name?.trim()) {
       setError("Name is required.");
       return;
     }
@@ -122,26 +136,25 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
         ? `/api/rolodex/${selected!.id}`
         : `/api/rolodex`;
 
-      const method = isUpdate ? "PATCH" : "POST";
-
       const payload = {
         ...draft,
         relationship_type: normalize(draft.relationship_type),
         primary_email: normalize(draft.primary_email),
         primary_phone: normalize(draft.primary_phone),
-        birthday: normalize(draft.birthday),
         notes: normalize(draft.notes),
         workspace_id: normalize(draft.workspace_id),
+        birthday: normalizeDate(draft.birthday),
       };
 
       const res = await fetch(url, {
-        method,
+        method: isUpdate ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
-        setError("Failed to save contact.");
+        const j = await res.json().catch(() => null);
+        setError(j?.message ?? "Failed to save contact.");
         return;
       }
 
@@ -188,16 +201,10 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
       <h2 className="text-xl font-semibold mb-4">Rolodex</h2>
 
       <div className="flex gap-2 mb-4">
-        <button
-          onClick={startNew}
-          className="px-3 py-2 rounded bg-neutral-800 text-sm"
-        >
+        <button onClick={startNew} className="px-3 py-2 rounded bg-neutral-800 text-sm">
           + New
         </button>
-        <button
-          onClick={load}
-          className="px-3 py-2 rounded bg-neutral-800 text-sm"
-        >
+        <button onClick={load} className="px-3 py-2 rounded bg-neutral-800 text-sm">
           Refresh
         </button>
       </div>
@@ -225,9 +232,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
             <div className="grid gap-3 bg-neutral-950 border border-neutral-800 rounded p-4">
               <input
                 value={draft.name ?? ""}
-                onChange={(e) =>
-                  setDraft({ ...draft, name: e.target.value })
-                }
+                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                 placeholder="Name"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
               />
@@ -235,22 +240,16 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
               <input
                 value={draft.relationship_type ?? ""}
                 onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    relationship_type: e.target.value,
-                  })
+                  setDraft({ ...draft, relationship_type: e.target.value })
                 }
-                placeholder="Relationship (e.g. Client, Partner)"
+                placeholder="Relationship"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
               />
 
               <input
                 value={draft.primary_email ?? ""}
                 onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    primary_email: e.target.value,
-                  })
+                  setDraft({ ...draft, primary_email: e.target.value })
                 }
                 placeholder="Email"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
@@ -259,10 +258,7 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
               <input
                 value={draft.primary_phone ?? ""}
                 onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    primary_phone: e.target.value,
-                  })
+                  setDraft({ ...draft, primary_phone: e.target.value })
                 }
                 placeholder="Phone"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
@@ -272,19 +268,14 @@ export default function RolodexWorkspaceClient({ workspaceId }: Props) {
                 type="date"
                 value={draft.birthday ?? ""}
                 onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    birthday: e.target.value || null,
-                  })
+                  setDraft({ ...draft, birthday: e.target.value || null })
                 }
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
               />
 
               <textarea
                 value={draft.notes ?? ""}
-                onChange={(e) =>
-                  setDraft({ ...draft, notes: e.target.value })
-                }
+                onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
                 placeholder="Notes"
                 className="bg-neutral-900 border border-neutral-800 rounded p-2 text-sm"
               />
