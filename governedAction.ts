@@ -1,24 +1,19 @@
 // governedAction.ts
 // ------------------------------------------------------------
 // Solace Governance Adapter
-// Single mandatory entry point for all consequence-bearing actions
+// Canonical adapter: packages inputs only
 // ------------------------------------------------------------
 
 import { executeGoverned } from "./executionGateIntegration";
-import { compileConstraints } from "./constraintCompiler";
+import { ConstraintPolicy } from "./constraintCompiler";
 import { DecisionTrace } from "./decisionTrace";
 import { AuthorityInstance } from "./authorityModel";
 
 export type GovernedActionInput<T> = {
   trace: DecisionTrace;
   authority: AuthorityInstance | null;
+  policy: ConstraintPolicy;
   effect: () => T;
-
-  // REQUIRED execution context for constraint compilation
-  context: {
-    hasHumanStop: boolean;
-    reversible: boolean;
-  };
 };
 
 export type GovernedActionResult<T> =
@@ -27,21 +22,27 @@ export type GovernedActionResult<T> =
   | { status: "BLOCK" }
   | { status: "ESCALATE" };
 
+// Adapter simply packages canonical inputs for the kernel
 export function governedAction<T>(
   input: GovernedActionInput<T>
 ): GovernedActionResult<T> {
-  const { trace, authority, effect, context } = input;
+  const { trace, authority, policy, effect } = input;
 
-  const compiled = compileConstraints(
+  const outcome = executeGoverned(
     trace,
+    policy,
     authority,
-    context
+    effect
   );
 
-  return executeGoverned(
-    trace,
-    compiled,
-    authority,
-    () => effect()
-  );
+  switch (outcome.enforcement) {
+    case "ALLOW":
+      return { status: "ALLOW", result: outcome.result as T };
+    case "DEGRADE":
+      return { status: "DEGRADE", result: outcome.result as T };
+    case "BLOCK":
+      return { status: "BLOCK" };
+    case "ESCALATE":
+      return { status: "ESCALATE" };
+  }
 }
