@@ -75,14 +75,14 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       ok: true,
-      data: [],
+      items: [],
       ...(DIAG && { diag: { count: 0 } }),
     });
   }
 
   return NextResponse.json({
     ok: true,
-    data: data ?? [],
+    items: data ?? [],
     ...(DIAG && { diag: { count: data?.length ?? 0 } }),
   });
 }
