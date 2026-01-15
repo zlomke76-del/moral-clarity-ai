@@ -11,15 +11,15 @@ export type InspectionFinding = {
   severity: InspectionSeverity;
   message: string;
   filePaths?: string[];
-  inspector?: string; // optional at interface boundary
+  inspector?: string;
 };
 
 export type InspectionReportFinding = {
   id: string;
   severity: InspectionSeverity;
   message: string;
-  inspector: string;        // REQUIRED in reports
-  filePaths?: string[];     // STILL OPTIONAL
+  inspector: string;
+  filePaths?: string[];
 };
 
 export type InspectionReport = {
@@ -35,12 +35,14 @@ export type InspectionReport = {
 };
 
 /* ------------------------------------------------------------
-   Inspector interface (PLUGIN CONTRACT)
+   Inspector interface (SYNC OR ASYNC)
 ------------------------------------------------------------ */
 
 export interface ShadowInspector {
   name: string;
-  inspect(diff: SnapshotDiff): InspectionFinding[];
+  inspect(
+    diff: SnapshotDiff
+  ): InspectionFinding[] | Promise<InspectionFinding[]>;
 }
 
 /* ------------------------------------------------------------
@@ -54,12 +56,12 @@ export default class ShadowInspectionService {
     this.inspectors.push(inspector);
   }
 
-  runInspection(diff: SnapshotDiff): InspectionReport {
+  async runInspection(diff: SnapshotDiff): Promise<InspectionReport> {
     const findings: InspectionReportFinding[] = [];
 
     for (const inspector of this.inspectors) {
       try {
-        const result = inspector.inspect(diff);
+        const result = await inspector.inspect(diff);
 
         for (const finding of result) {
           findings.push({
