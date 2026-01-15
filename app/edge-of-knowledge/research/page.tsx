@@ -187,6 +187,11 @@ export default function EdgeOfKnowledgeIndexPage() {
               Auditor–Management Responsibility Boundary: Known but Unreported Risk (AMURB-v1)
             </Link>
           </li>
+          <li>
+            <Link href="/edge-of-knowledge/simulated-consciousness-boundary">
+              Simulated Consciousness Boundary Test (SCBT-v1)
+            </Link>
+          </li>
         </ul>
 
         <hr />
