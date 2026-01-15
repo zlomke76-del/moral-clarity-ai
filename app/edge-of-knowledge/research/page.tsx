@@ -177,6 +177,11 @@ export default function EdgeOfKnowledgeIndexPage() {
               Government Data Access Responsibility Boundary (GDARB-v1)
             </Link>
           </li>
+          <li>
+            <Link href="/edge-of-knowledge/corporate-shareholder-environment-boundary">
+              Corporate–Shareholder–Environment Responsibility Boundary (CSEB-v1)
+            </Link>
+          </li>
         </ul>
 
         <hr />
