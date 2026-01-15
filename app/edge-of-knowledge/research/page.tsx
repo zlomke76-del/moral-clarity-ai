@@ -98,21 +98,16 @@ export default function EdgeOfKnowledgeIndexPage() {
           <li><Link href="/edge-of-knowledge/semi-ipn-polyolefin-tpe">Semi-Interpenetrating Network (Semi-IPN)</Link></li>
           <li><Link href="/edge-of-knowledge/mineral-filled-polyolefin-barrier-films">Mineral-Filled Polyolefin Barrier Films</Link></li>
           <li><Link href="/edge-of-knowledge/hdpe-non-commutative-morphology">Non-Commutative Morphology Encoding in Semicrystalline Polyolefins</Link></li>
-
-          {/* ADDITIVE ENTRY — NO DELETIONS */}
           <li>
             <Link href="/edge-of-knowledge/beip-v1">
               Boundary-Encoded Interfacial Persistence (BEIP v1) — Pre-Registered Protocol
             </Link>
           </li>
-
-          {/* ADDITIVE ENTRY — NO DELETIONS */}
           <li>
             <Link href="/edge-of-knowledge/human-ai-co-agency-boundary">
               Human–AI Co-Agency Boundary — Minimal Decisive Experiment (Protocol)
             </Link>
           </li>
-
           <li><Link href="/edge-of-knowledge/inflammation-suppressing-microenvironment-polymer">Inflammation-Suppressing Human Micro-Environment Polymer</Link></li>
           <li><Link href="/edge-of-knowledge/suppressing-transferable-inflammatory-signaling">Suppressing Transferable Inflammatory Signaling in Indoor Micro-Environments</Link></li>
           <li><Link href="/edge-of-knowledge/passive-infrastructure-organophosphate-interruption">Passive Infrastructure Polymers for Irreversible Interruption of Organophosphate Surface Transfer Pathways</Link></li>
@@ -152,6 +147,26 @@ export default function EdgeOfKnowledgeIndexPage() {
           <li>
             <Link href="/edge-of-knowledge/boundary-of-meaning-vs-authority">
               The Boundary of Meaning vs Authority
+            </Link>
+          </li>
+        </ul>
+
+        {/* XI */}
+        <h2>XI. Boundary Tests — Pre-Registered, Decisive Experiments</h2>
+        <ul>
+          <li>
+            <Link href="/edge-of-knowledge/beip-v1">
+              Boundary-Encoded Interfacial Persistence (BEIP v1)
+            </Link>
+          </li>
+          <li>
+            <Link href="/edge-of-knowledge/human-ai-co-agency-boundary">
+              Human–AI Co-Agency Boundary — Minimal Decisive Experiment
+            </Link>
+          </li>
+          <li>
+            <Link href="/edge-of-knowledge/remote-work-incident-responsibility-boundary">
+              Remote Work Incident Responsibility Boundary (RWIRB-v1)
             </Link>
           </li>
         </ul>
