@@ -172,6 +172,11 @@ export default function EdgeOfKnowledgeIndexPage() {
               Parent–State Emergency Intervention Boundary (PSEIB-v1)
             </Link>
           </li>
+          <li>
+            <Link href="/edge-of-knowledge/government-data-access-responsibility-boundary">
+              Government Data Access Responsibility Boundary (GDARB-v1)
+            </Link>
+          </li>
         </ul>
 
         <hr />
