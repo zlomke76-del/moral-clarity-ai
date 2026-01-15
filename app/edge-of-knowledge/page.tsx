@@ -187,6 +187,21 @@ export default function EdgeOfKnowledgePage() {
             </Link>
           </li>
           <li>
+            <Link href="/edge-of-knowledge/riemann-hypothesis-critical-line-structural-obstruction">
+              Riemann Hypothesis: Critical Line Structural Obstruction
+            </Link>
+          </li>
+          <li>
+            <Link href="/edge-of-knowledge/collatz-conjecture-universal-descent-obstruction">
+              Collatz Conjecture: Universal Descent Obstruction
+            </Link>
+          </li>
+          <li>
+            <Link href="/edge-of-knowledge/hodge-conjecture-algebraicity-obstruction">
+              Hodge Conjecture: Algebraicity Obstruction
+            </Link>
+          </li>
+          <li>
             <Link href="/edge-of-knowledge/action-threshold-collapse">
               Action Threshold Collapse
             </Link>
