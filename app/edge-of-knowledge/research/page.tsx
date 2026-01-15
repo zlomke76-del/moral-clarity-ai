@@ -121,31 +121,19 @@ export default function EdgeOfKnowledgeIndexPage() {
         {/* VIII */}
         <h2>VIII. Epistemic Instrumentation — Detection Before Damage</h2>
         <ul>
-          <li>
-            <Link href="/edge-of-knowledge/detection-before-damage">
-              Detection Before Damage: Formal Reduction
-            </Link>
-          </li>
+          <li><Link href="/edge-of-knowledge/detection-before-damage">Detection Before Damage: Formal Reduction</Link></li>
         </ul>
 
         {/* IX */}
         <h2>IX. Adversarial & Incentive-Corrupted Regimes</h2>
         <ul>
-          <li>
-            <Link href="/edge-of-knowledge/adversarial-incentive-corrupted-regimes">
-              Adversarial & Incentive-Corrupted Regimes
-            </Link>
-          </li>
+          <li><Link href="/edge-of-knowledge/adversarial-incentive-corrupted-regimes">Adversarial & Incentive-Corrupted Regimes</Link></li>
         </ul>
 
         {/* X */}
         <h2>X. Meta-Failure of Knowledge Systems</h2>
         <ul>
-          <li>
-            <Link href="/edge-of-knowledge/meta-failure-of-knowledge-systems">
-              Meta-Failure of Knowledge Systems
-            </Link>
-          </li>
+          <li><Link href="/edge-of-knowledge/meta-failure-of-knowledge-systems">Meta-Failure of Knowledge Systems</Link></li>
         </ul>
 
         <hr />
