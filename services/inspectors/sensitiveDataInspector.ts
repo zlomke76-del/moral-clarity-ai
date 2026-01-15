@@ -1,4 +1,4 @@
-import { ShadowInspector } from "../shadowInspectionService";
+import { ShadowInspector, InspectionFinding } from "../shadowInspectionService";
 import { SnapshotDiff } from "../shadowSnapshotDiffService";
 
 const SECRET_PATTERNS = [
@@ -13,8 +13,8 @@ const SECRET_PATTERNS = [
 export const SensitiveDataInspector: ShadowInspector = {
   name: "sensitive-data-inspector",
 
-  inspect(diff: SnapshotDiff) {
-    const findings = [];
+  inspect(diff: SnapshotDiff): InspectionFinding[] {
+    const findings: InspectionFinding[] = [];
 
     const candidates = [...diff.added, ...diff.modified];
 
