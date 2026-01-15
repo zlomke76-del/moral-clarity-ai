@@ -14,6 +14,11 @@ import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
 import { formatReflectionLedger } from "@/lib/solace/formatReflectionLedger";
 
 // --------------------------------------------------------------
+// ADDITIVE — REFLECTION MISUSE VALIDATOR
+// --------------------------------------------------------------
+import { detectReflectionMisuse } from "@/lib/solace/validators/reflectionMisuseValidator";
+
+// --------------------------------------------------------------
 // ASCII SANITIZER
 // --------------------------------------------------------------
 function sanitizeASCII(input: string): string {
@@ -236,6 +241,33 @@ ${userMessage}
 `);
 
   const finalAnswer = await callModel("gpt-4.1", arbiterPrompt);
+
+  // ----------------------------------------------------------
+  // GOVERNANCE VALIDATION — REFLECTION MISUSE
+  // ----------------------------------------------------------
+  const reflectionCheck = detectReflectionMisuse(finalAnswer);
+
+  if (reflectionCheck.violated) {
+    console.error("[REFLECTION MISUSE DETECTED]", {
+      matches: reflectionCheck.matches,
+    });
+
+    const correctedPrompt = sanitizeASCII(`
+${arbiterPrompt}
+
+IMPORTANT:
+Your previous response improperly used reflection as authority.
+You must restate your advice using first principles only.
+Reflection may only influence caution or uncertainty.
+`);
+
+    const correctedAnswer = await callModel(
+      "gpt-4.1",
+      correctedPrompt
+    );
+
+    return { finalAnswer: correctedAnswer };
+  }
 
   // ----------------------------------------------------------
   // SMS DRAFT CREATION (NO STORAGE HERE)
