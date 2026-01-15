@@ -1,6 +1,12 @@
 import * as fs from "fs";
 import * as path from "path";
 import ShadowSnapshotService from "./shadowSnapshotService";
+import ShadowSnapshotDiffService, {
+  SnapshotDiff,
+} from "./shadowSnapshotDiffService";
+import ShadowInspectionService, {
+  InspectionReport,
+} from "./shadowInspectionService";
 
 type ShadowRepoConfig = {
   mainRepoPath: string;
@@ -13,7 +19,10 @@ export default class ShadowRepoService {
   private shadowRepoPath: string;
   private auditLogFile: string;
   private ignored: Set<string>;
+
   private snapshotService: ShadowSnapshotService;
+  private diffService: ShadowSnapshotDiffService;
+  private inspectionService: ShadowInspectionService;
 
   constructor(config: ShadowRepoConfig) {
     if (!config.mainRepoPath || !config.shadowRepoPath) {
@@ -32,6 +41,7 @@ export default class ShadowRepoService {
         "build",
         ".next",
         ".snapshots",
+        ".reviews",
       ]
     );
 
@@ -39,6 +49,9 @@ export default class ShadowRepoService {
       this.shadowRepoPath,
       Array.from(this.ignored)
     );
+
+    this.diffService = new ShadowSnapshotDiffService(this.shadowRepoPath);
+    this.inspectionService = new ShadowInspectionService();
   }
 
   /* ------------------------------------------------------------
@@ -63,24 +76,35 @@ export default class ShadowRepoService {
     this.logAudit("Shadow repo initialized.");
   }
 
+  /**
+   * Optional external registration of inspectors
+   */
+  registerInspector(inspector: any): void {
+    this.inspectionService.registerInspector(inspector);
+  }
+
   async syncShadowRepo(): Promise<void> {
     if (!fs.existsSync(this.mainRepoPath)) {
       throw new Error("Main repo path does not exist");
     }
 
-    // 1. Mirror main → shadow
+    /* ------------------------------------------------------------
+       1. Mirror + prune
+    ------------------------------------------------------------ */
     this.mirrorDirectory(this.mainRepoPath, this.shadowRepoPath);
-
-    // 2. Prune deletions
     this.pruneDeleted(this.mainRepoPath, this.shadowRepoPath);
-
     this.logAudit("Shadow repo sync completed.");
 
-    // 3. Snapshot (evidence layer)
+    /* ------------------------------------------------------------
+       2. Snapshot
+    ------------------------------------------------------------ */
+    let snapshotId: string;
+
     try {
       const manifest = this.snapshotService.createSnapshot();
+      snapshotId = manifest.snapshotId;
       this.logAudit(
-        `Snapshot created: ${manifest.snapshotId} (${manifest.fileCount} files, ${manifest.totalBytes} bytes)`
+        `Snapshot created: ${snapshotId} (${manifest.fileCount} files)`
       );
     } catch (err) {
       this.logAudit(
@@ -88,13 +112,99 @@ export default class ShadowRepoService {
           err instanceof Error ? err.message : String(err)
         }`
       );
-      // Snapshot failure does NOT invalidate sync
+      return;
     }
+
+    /* ------------------------------------------------------------
+       3. Diff (if previous snapshot exists)
+    ------------------------------------------------------------ */
+    const snapshotRoot = path.join(this.shadowRepoPath, ".snapshots");
+    const snapshots = fs
+      .readdirSync(snapshotRoot)
+      .filter(f => fs.statSync(path.join(snapshotRoot, f)).isDirectory())
+      .sort();
+
+    if (snapshots.length < 2) {
+      this.logAudit("No previous snapshot available for diff.");
+      return;
+    }
+
+    const prevSnapshotId = snapshots[snapshots.length - 2];
+
+    let diff: SnapshotDiff;
+    try {
+      diff = this.diffService.diffSnapshots(
+        prevSnapshotId,
+        snapshotId
+      );
+      this.persistDiff(snapshotId, diff);
+      this.logAudit(
+        `Diff generated: ${prevSnapshotId} → ${snapshotId}`
+      );
+    } catch (err) {
+      this.logAudit(
+        `DIFF ERROR: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
+      return;
+    }
+
+    /* ------------------------------------------------------------
+       4. Inspection
+    ------------------------------------------------------------ */
+    try {
+      const report = this.inspectionService.runInspection(diff);
+      this.persistInspectionReport(snapshotId, report);
+      this.logAudit(
+        `Inspection completed: ${report.summary.critical} critical, ${report.summary.warn} warnings`
+      );
+    } catch (err) {
+      this.logAudit(
+        `INSPECTION ERROR: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
+    }
+  }
+
+  /* ------------------------------------------------------------
+     Persistence helpers
+  ------------------------------------------------------------ */
+
+  private persistDiff(snapshotId: string, diff: SnapshotDiff): void {
+    const diffPath = path.join(
+      this.shadowRepoPath,
+      ".snapshots",
+      snapshotId,
+      "diff.json"
+    );
+
+    fs.writeFileSync(diffPath, JSON.stringify(diff, null, 2), "utf8");
+  }
+
+  private persistInspectionReport(
+    snapshotId: string,
+    report: InspectionReport
+  ): void {
+    const reportPath = path.join(
+      this.shadowRepoPath,
+      ".snapshots",
+      snapshotId,
+      "inspection-report.json"
+    );
+
+    fs.writeFileSync(
+      reportPath,
+      JSON.stringify(report, null, 2),
+      "utf8"
+    );
   }
 
   /* ------------------------------------------------------------
      Internal: Mirror + Prune
   ------------------------------------------------------------ */
+
   private mirrorDirectory(src: string, dest: string): void {
     if (!fs.existsSync(dest)) {
       fs.mkdirSync(dest, { recursive: true });
