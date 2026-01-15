@@ -106,6 +106,13 @@ export default function EdgeOfKnowledgeIndexPage() {
             </Link>
           </li>
 
+          {/* ADDITIVE ENTRY — NO DELETIONS */}
+          <li>
+            <Link href="/edge-of-knowledge/human-ai-co-agency-boundary">
+              Human–AI Co-Agency Boundary — Minimal Decisive Experiment (Protocol)
+            </Link>
+          </li>
+
           <li><Link href="/edge-of-knowledge/inflammation-suppressing-microenvironment-polymer">Inflammation-Suppressing Human Micro-Environment Polymer</Link></li>
           <li><Link href="/edge-of-knowledge/suppressing-transferable-inflammatory-signaling">Suppressing Transferable Inflammatory Signaling in Indoor Micro-Environments</Link></li>
           <li><Link href="/edge-of-knowledge/passive-infrastructure-organophosphate-interruption">Passive Infrastructure Polymers for Irreversible Interruption of Organophosphate Surface Transfer Pathways</Link></li>
