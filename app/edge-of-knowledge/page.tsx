@@ -182,6 +182,11 @@ export default function EdgeOfKnowledgePage() {
         <h2>Included Edge of Knowledge Analyses</h2>
         <ul>
           <li>
+            <Link href="/edge-of-knowledge/birch-and-swinnerton-dyer-sha-obstruction">
+              Birch and Swinnerton-Dyer: The Shafarevich–Tate Obstruction
+            </Link>
+          </li>
+          <li>
             <Link href="/edge-of-knowledge/action-threshold-collapse">
               Action Threshold Collapse
             </Link>
