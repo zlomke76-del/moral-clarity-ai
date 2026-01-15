@@ -184,6 +184,10 @@ export async function assembleContext(
         sessionCompaction: null,
         sessionState: null,
       },
+
+      // SHAPE-STABLE: reflection always present
+      reflectionLedger: [],
+
       workingMemory: {
         active: Boolean(conversationId),
         items: demoWM,
@@ -210,6 +214,7 @@ export async function assembleContext(
         sessionCompaction: null,
         sessionState: null,
       },
+      reflectionLedger: [],
       workingMemory: { active: false, items: [] },
       researchContext: [],
       authorities: [],
@@ -238,12 +243,15 @@ export async function assembleContext(
   // ----------------------------------------------------------
   // ADDITIVE — REFLECTION LEDGER (READ-ONLY, GOVERNANCE)
   // ----------------------------------------------------------
+  // Reflection is NON-AUTHORITATIVE.
+  // It may influence caution and uncertainty only.
+  // It must never justify approval, rejection, or permission.
   const reflectionRes = await supabaseAdmin
     .schema("governance")
     .from("reflection_ledger")
-    .select("*")
+    .select("source, domain, summary, outcome, recorded_at")
     .eq("user_id", effectiveUserId)
-    .order("timestamp", { ascending: false })
+    .order("recorded_at", { ascending: false })
     .limit(5);
 
   const reflectionLedger: ReflectionLedgerEntry[] =
