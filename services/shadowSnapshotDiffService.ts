@@ -1,109 +1,142 @@
 import fs from "fs";
 import path from "path";
 
-type SnapshotManifest = {
-  snapshotId: string;
-  createdAt: string;
-  fileCount: number;
-  totalBytes: number;
-  files: Record<
-    string,
-    {
-      hash: string;
-      size: number;
-    }
-  >;
-};
+/* ------------------------------------------------------------
+   Types
+------------------------------------------------------------ */
 
 export type SnapshotDiff = {
   fromSnapshot: string;
   toSnapshot: string;
-  generatedAt: string;
-  summary: {
-    added: number;
-    removed: number;
-    modified: number;
-  };
   added: string[];
-  removed: string[];
   modified: string[];
+  removed: string[];
 };
+
+/* ------------------------------------------------------------
+   Diff service
+------------------------------------------------------------ */
 
 export default class ShadowSnapshotDiffService {
   private snapshotRoot: string;
 
-  constructor(shadowRepoPath: string) {
-    this.snapshotRoot = path.join(
-      path.resolve(shadowRepoPath),
-      ".snapshots"
-    );
+  constructor(snapshotRoot: string) {
+    this.snapshotRoot = path.resolve(snapshotRoot);
   }
 
   /* ------------------------------------------------------------
-     Public API
+     PUBLIC API (AUTHORITATIVE)
   ------------------------------------------------------------ */
 
-  diffSnapshots(
-    fromSnapshotId: string,
-    toSnapshotId: string
+  computeDiff(toSnapshot: string): SnapshotDiff {
+    const snapshots = this.listSnapshots();
+
+    const toIndex = snapshots.indexOf(toSnapshot);
+    const fromSnapshot =
+      toIndex > 0 ? snapshots[toIndex - 1] : null;
+
+    if (!fromSnapshot) {
+      return {
+        fromSnapshot: "NONE",
+        toSnapshot,
+        added: this.listAllFiles(toSnapshot),
+        modified: [],
+        removed: [],
+      };
+    }
+
+    return this.diffSnapshots(fromSnapshot, toSnapshot);
+  }
+
+  /* ------------------------------------------------------------
+     Internal helpers
+  ------------------------------------------------------------ */
+
+  private listSnapshots(): string[] {
+    if (!fs.existsSync(this.snapshotRoot)) return [];
+
+    return fs
+      .readdirSync(this.snapshotRoot)
+      .filter(s =>
+        fs.statSync(path.join(this.snapshotRoot, s)).isDirectory()
+      )
+      .sort();
+  }
+
+  private diffSnapshots(
+    fromSnapshot: string,
+    toSnapshot: string
   ): SnapshotDiff {
-    const fromManifest = this.loadManifest(fromSnapshotId);
-    const toManifest = this.loadManifest(toSnapshotId);
+    const fromFiles = this.fileMap(fromSnapshot);
+    const toFiles = this.fileMap(toSnapshot);
 
     const added: string[] = [];
-    const removed: string[] = [];
     const modified: string[] = [];
+    const removed: string[] = [];
 
-    const fromFiles = fromManifest.files;
-    const toFiles = toManifest.files;
-
-    // Removed or modified
-    for (const filePath of Object.keys(fromFiles)) {
-      if (!toFiles[filePath]) {
-        removed.push(filePath);
-      } else if (fromFiles[filePath].hash !== toFiles[filePath].hash) {
-        modified.push(filePath);
+    for (const file of Object.keys(toFiles)) {
+      if (!fromFiles[file]) {
+        added.push(file);
+      } else if (fromFiles[file] !== toFiles[file]) {
+        modified.push(file);
       }
     }
 
-    // Added
-    for (const filePath of Object.keys(toFiles)) {
-      if (!fromFiles[filePath]) {
-        added.push(filePath);
+    for (const file of Object.keys(fromFiles)) {
+      if (!toFiles[file]) {
+        removed.push(file);
       }
     }
 
     return {
-      fromSnapshot: fromSnapshotId,
-      toSnapshot: toSnapshotId,
-      generatedAt: new Date().toISOString(),
-      summary: {
-        added: added.length,
-        removed: removed.length,
-        modified: modified.length,
-      },
+      fromSnapshot,
+      toSnapshot,
       added,
-      removed,
       modified,
+      removed,
     };
   }
 
-  /* ------------------------------------------------------------
-     Internal
-  ------------------------------------------------------------ */
+  private fileMap(snapshotId: string): Record<string, string> {
+    const root = path.join(this.snapshotRoot, snapshotId);
+    const map: Record<string, string> = {};
 
-  private loadManifest(snapshotId: string): SnapshotManifest {
-    const manifestPath = path.join(
-      this.snapshotRoot,
-      snapshotId,
-      "manifest.json"
-    );
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        const rel = path.relative(root, full);
 
-    if (!fs.existsSync(manifestPath)) {
-      throw new Error(`Snapshot manifest not found: ${snapshotId}`);
-    }
+        if (entry.isDirectory()) {
+          walk(full);
+        } else if (entry.isFile()) {
+          const stat = fs.statSync(full);
+          map[rel] = `${stat.size}:${stat.mtimeMs}`;
+        }
+      }
+    };
 
-    const raw = fs.readFileSync(manifestPath, "utf8");
-    return JSON.parse(raw) as SnapshotManifest;
+    walk(root);
+    return map;
+  }
+
+  private listAllFiles(snapshotId: string): string[] {
+    const root = path.join(this.snapshotRoot, snapshotId);
+    const files: string[] = [];
+
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        const rel = path.relative(root, full);
+
+        if (entry.isDirectory()) {
+          walk(full);
+        } else if (entry.isFile()) {
+          files.push(rel);
+        }
+      }
+    };
+
+    walk(root);
+    return files;
   }
 }
