@@ -14,6 +14,11 @@ import {
 } from "./context.constants";
 
 // ------------------------------------------------------------
+// ADDITIVE — REFLECTION LEDGER TYPES
+// ------------------------------------------------------------
+import { ReflectionLedgerEntry } from "@/services/reflection/reflectionLedger.types";
+
+// ------------------------------------------------------------
 // TYPES
 // ------------------------------------------------------------
 export type WorkingMemoryItem = {
@@ -36,6 +41,11 @@ export type SolaceContextBundle = {
     sessionCompaction?: any | null;
     sessionState?: any | null;
   };
+
+  // ----------------------------------------------------------
+  // ADDITIVE — READ-ONLY REFLECTION LEDGER (GOVERNANCE OUTCOMES)
+  // ----------------------------------------------------------
+  reflectionLedger?: ReflectionLedgerEntry[];
 
   workingMemory: {
     active: boolean;
@@ -226,6 +236,22 @@ export async function assembleContext(
     : [];
 
   // ----------------------------------------------------------
+  // ADDITIVE — REFLECTION LEDGER (READ-ONLY, GOVERNANCE)
+  // ----------------------------------------------------------
+  const reflectionRes = await supabaseAdmin
+    .schema("governance")
+    .from("reflection_ledger")
+    .select("*")
+    .eq("user_id", effectiveUserId)
+    .order("timestamp", { ascending: false })
+    .limit(5);
+
+  const reflectionLedger: ReflectionLedgerEntry[] =
+    Array.isArray(reflectionRes.data)
+      ? reflectionRes.data
+      : [];
+
+  // ----------------------------------------------------------
   // RESEARCH CONTEXT
   // ----------------------------------------------------------
   const hubbleRes = await supabaseAdmin
@@ -294,6 +320,12 @@ export async function assembleContext(
       sessionCompaction: null,
       sessionState: null,
     },
+
+    // --------------------------------------------------------
+    // ADDITIVE — EXPERIENCE BRIDGE
+    // --------------------------------------------------------
+    reflectionLedger,
+
     workingMemory: {
       active: Boolean(conversationId),
       items: wmItems,
