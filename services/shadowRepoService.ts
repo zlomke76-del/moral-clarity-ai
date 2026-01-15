@@ -7,6 +7,12 @@ import ShadowInspectionService, {
   InspectionReport,
 } from "./shadowInspectionService";
 
+// ------------------------------------------------------------
+// ADDITIVE — GOVERNANCE LEDGER INSERT
+// ------------------------------------------------------------
+import { insertReflectionLedgerEntry } from "./governance/insertReflectionLedgerEntry";
+import { ReflectionLedgerEntry } from "./reflection/reflectionLedger.types";
+
 /* ------------------------------------------------------------
    Config
 ------------------------------------------------------------ */
@@ -79,6 +85,51 @@ export default class ShadowRepoService {
 
       this.persistInspectionReport(snapshotId, report);
 
+      // --------------------------------------------------------
+      // 🔒 GOVERNANCE BOUNDARY — REFLECTION LEDGER INSERT
+      // --------------------------------------------------------
+      const ledgerEntry: ReflectionLedgerEntry = {
+        id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        source: "governance-pipeline",
+        scope: "code-change",
+
+        snapshot: {
+          id: snapshotId,
+          from: diff.fromSnapshot,
+          to: diff.toSnapshot,
+        },
+
+        diffSummary: {
+          added: diff.added.length,
+          modified: diff.modified.length,
+          removed: diff.removed.length,
+        },
+
+        inspectionSummary: report.summary,
+        inspectionFindings: report.findings,
+
+        assistiveSignals: {
+          refactorSuggested: report.summary.info > 0,
+          suggestionCount: report.summary.info,
+        },
+
+        // No human decision at sync time
+        invariants: {
+          autoPromoted: false,
+          autonomyLevel: 0,
+        },
+      };
+
+      await insertReflectionLedgerEntry({
+        entry: ledgerEntry,
+        userId: "SYSTEM", // replace with real user when available
+        workspaceId: null,
+      });
+
+      // --------------------------------------------------------
+      // EXISTING AUDIT LOG
+      // --------------------------------------------------------
       this.logAudit(
         `Inspection completed: ${report.summary.critical} critical, ${report.summary.warn} warnings`
       );
