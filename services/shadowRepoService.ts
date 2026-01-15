@@ -1,63 +1,112 @@
 import * as fs from "fs";
 import * as path from "path";
 
-// *** CONFIG: Replace with your repo paths ***
-const MAIN_REPO_PATH = "/absolute/path/to/main/repo";
-const SHADOW_REPO_PATH = "/absolute/path/to/shadow/repo";
-const AUDIT_LOG_FILE = path.join(SHADOW_REPO_PATH, "shadow_audit.log");
-/**********************************************/
+type ShadowRepoConfig = {
+  mainRepoPath: string;
+  shadowRepoPath: string;
+  ignored?: string[];
+};
 
-function logAudit(msg: string): void {
-  const line = new Date().toISOString() + " | " + msg + "\n";
-  try {
-    fs.appendFileSync(AUDIT_LOG_FILE, line, "utf8");
-  } catch (_) {
-    // Silent fail: audit log is non-critical for repo sync.
-  }
-}
+export default class ShadowRepoService {
+  private mainRepoPath: string;
+  private shadowRepoPath: string;
+  private auditLogFile: string;
+  private ignored: Set<string>;
 
-// Utility: Recursively copy directory tree (dir -> dest)
-function copyDir(srcDir: string, destDir: string): void {
-  if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
-  const entries = fs.readdirSync(srcDir, { withFileTypes: true });
-  for (const entry of entries) {
-    const srcPath = path.join(srcDir, entry.name);
-    const destPath = path.join(destDir, entry.name);
-    if (entry.isDirectory()) {
-      copyDir(srcPath, destPath);
-    } else if (entry.isFile()) {
-      fs.copyFileSync(srcPath, destPath);
+  constructor(config: ShadowRepoConfig) {
+    if (!config.mainRepoPath || !config.shadowRepoPath) {
+      throw new Error("ShadowRepoService: repo paths must be provided");
     }
-    // Symlinks and special files ignored for safety
+
+    this.mainRepoPath = path.resolve(config.mainRepoPath);
+    this.shadowRepoPath = path.resolve(config.shadowRepoPath);
+    this.auditLogFile = path.join(this.shadowRepoPath, "shadow-audit.log");
+
+    this.ignored = new Set(
+      config.ignored ?? [
+        ".git",
+        "node_modules",
+        "dist",
+        "build",
+        ".next",
+      ]
+    );
   }
-}
 
-// Mirror: Copy main repo to shadow repo (overwrite)
-function mirrorToShadowRepo(): void {
-  if (!fs.existsSync(MAIN_REPO_PATH)) return;
-  if (!fs.existsSync(SHADOW_REPO_PATH)) fs.mkdirSync(SHADOW_REPO_PATH, { recursive: true });
-  copyDir(MAIN_REPO_PATH, SHADOW_REPO_PATH);
-  logAudit("Mirror: Repo sync completed.");
-}
-
-// File system watcher (main repo -> shadow on change)
-function watchMainRepo(): void {
-  if (!fs.existsSync(MAIN_REPO_PATH)) return;
-  fs.watch(MAIN_REPO_PATH, { recursive: true }, (event, filename) => {
-    logAudit("Detected change: " + filename + " (" + event + ")");
+  /* ------------------------------------------------------------
+     Audit
+  ------------------------------------------------------------ */
+  private logAudit(message: string): void {
+    const line = `[${new Date().toISOString()}] ${message}\n`;
     try {
-      mirrorToShadowRepo();
-      // Stub: add inspection here
-      logAudit("Inspection: Stub ");
+      fs.appendFileSync(this.auditLogFile, line, "utf8");
     } catch (err) {
-      logAudit("Error during mirror/inspection: " + (err instanceof Error ? err.message : String(err)));
+      console.error("AUDIT LOG FAILURE:", err);
     }
-  });
-}
+  }
 
-// Manual script entry-point: to be called by an explicit script or test
-export function startShadowRepoMonitor(): void {
-  logAudit("Manual startup requested.");
-  mirrorToShadowRepo();
-  watchMainRepo();
+  /* ------------------------------------------------------------
+     Public API
+  ------------------------------------------------------------ */
+  async initializeShadowRepo(): Promise<void> {
+    if (!fs.existsSync(this.shadowRepoPath)) {
+      fs.mkdirSync(this.shadowRepoPath, { recursive: true });
+    }
+    this.logAudit("Shadow repo initialized.");
+  }
+
+  async syncShadowRepo(): Promise<void> {
+    if (!fs.existsSync(this.mainRepoPath)) {
+      throw new Error("Main repo path does not exist");
+    }
+
+    this.mirrorDirectory(this.mainRepoPath, this.shadowRepoPath);
+    this.pruneDeleted(this.mainRepoPath, this.shadowRepoPath);
+
+    this.logAudit("Shadow repo sync complete.");
+  }
+
+  /* ------------------------------------------------------------
+     Internal: Mirror + Prune
+  ------------------------------------------------------------ */
+  private mirrorDirectory(src: string, dest: string): void {
+    if (!fs.existsSync(dest)) {
+      fs.mkdirSync(dest, { recursive: true });
+    }
+
+    const entries = fs.readdirSync(src, { withFileTypes: true });
+
+    for (const entry of entries) {
+      if (this.ignored.has(entry.name)) continue;
+
+      const srcPath = path.join(src, entry.name);
+      const destPath = path.join(dest, entry.name);
+
+      if (entry.isDirectory()) {
+        this.mirrorDirectory(srcPath, destPath);
+      } else if (entry.isFile()) {
+        fs.copyFileSync(srcPath, destPath);
+      }
+    }
+  }
+
+  private pruneDeleted(src: string, dest: string): void {
+    if (!fs.existsSync(dest)) return;
+
+    const entries = fs.readdirSync(dest, { withFileTypes: true });
+
+    for (const entry of entries) {
+      if (this.ignored.has(entry.name)) continue;
+
+      const destPath = path.join(dest, entry.name);
+      const srcPath = path.join(src, entry.name);
+
+      if (!fs.existsSync(srcPath)) {
+        fs.rmSync(destPath, { recursive: true, force: true });
+        this.logAudit(`Pruned deleted path: ${destPath}`);
+      } else if (entry.isDirectory()) {
+        this.pruneDeleted(srcPath, destPath);
+      }
+    }
+  }
 }
