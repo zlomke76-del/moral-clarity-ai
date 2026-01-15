@@ -6,6 +6,18 @@ import fs from "fs";
 import ShadowRepoService from "./shadowRepoService";
 
 /* ------------------------------------------------------------
+   Inspectors (RULE-BASED + AI TRIAD)
+------------------------------------------------------------ */
+
+import { SensitiveDataInspector } from "./inspectors/sensitiveDataInspector";
+import { HighRiskSurfaceInspector } from "./inspectors/highRiskSurfaceInspector";
+import { DestructiveChangeInspector } from "./inspectors/destructiveChangeInspector";
+
+import { OptimistInspector } from "./inspectors/optimistInspector";
+import { SkepticInspector } from "./inspectors/skepticInspector";
+import { ArbiterInspector } from "./inspectors/arbiterInspector";
+
+/* ------------------------------------------------------------
    Environment configuration (AUTHORITATIVE)
 ------------------------------------------------------------ */
 
@@ -30,6 +42,27 @@ const repoService = new ShadowRepoService({
 });
 
 /* ------------------------------------------------------------
+   Inspector registration (ONE-TIME, NON-AUTHORITATIVE)
+------------------------------------------------------------ */
+
+// Deterministic rule-based inspectors
+repoService.registerInspector(SensitiveDataInspector);
+repoService.registerInspector(HighRiskSurfaceInspector);
+repoService.registerInspector(DestructiveChangeInspector);
+
+// AI triad inspectors (parallel reasoning lenses)
+repoService.registerInspector(OptimistInspector);
+repoService.registerInspector(SkepticInspector);
+repoService.registerInspector(ArbiterInspector);
+
+/*
+  IMPORTANT:
+  - Registration order does NOT imply authority
+  - All inspectors run in parallel
+  - No inspector can approve, block, or suppress others
+*/
+
+/* ------------------------------------------------------------
    Audit logging
 ------------------------------------------------------------ */
 
@@ -40,7 +73,6 @@ function logAudit(message: string) {
   try {
     fs.appendFileSync(AUDIT_LOG, line, "utf8");
   } catch (err) {
-    // Audit failure must never be silent
     console.error("AUDIT LOG FAILURE:", err);
   }
 }
