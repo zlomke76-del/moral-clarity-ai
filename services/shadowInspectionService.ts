@@ -11,7 +11,7 @@ export type InspectionFinding = {
   severity: InspectionSeverity;
   message: string;
   filePaths?: string[];
-  inspector: string;
+  inspector?: string; // ← OPTIONAL AT INTERFACE BOUNDARY
 };
 
 export type InspectionReport = {
@@ -23,7 +23,7 @@ export type InspectionReport = {
     warn: number;
     critical: number;
   };
-  findings: InspectionFinding[];
+  findings: Required<InspectionFinding>[];
 };
 
 /* ------------------------------------------------------------
@@ -46,14 +46,13 @@ export default class ShadowInspectionService {
     this.inspectors.push(inspector);
   }
 
-  runInspection(
-    diff: SnapshotDiff
-  ): InspectionReport {
-    const findings: InspectionFinding[] = [];
+  runInspection(diff: SnapshotDiff): InspectionReport {
+    const findings: Required<InspectionFinding>[] = [];
 
     for (const inspector of this.inspectors) {
       try {
         const result = inspector.inspect(diff);
+
         for (const finding of result) {
           findings.push({
             ...finding,
