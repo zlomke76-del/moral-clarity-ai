@@ -134,6 +134,11 @@ export default function EdgeOfKnowledgeIndexPage() {
         <h2>X. Meta-Failure of Knowledge Systems</h2>
         <ul>
           <li><Link href="/edge-of-knowledge/meta-failure-of-knowledge-systems">Meta-Failure of Knowledge Systems</Link></li>
+          <li>
+            <Link href="/edge-of-knowledge/boundary-of-meaning-vs-authority">
+              The Boundary of Meaning vs Authority
+            </Link>
+          </li>
         </ul>
 
         <hr />
