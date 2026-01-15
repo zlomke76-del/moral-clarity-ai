@@ -9,7 +9,7 @@ export type ReflectionPattern = {
   scope: ReflectionLedgerEntry["scope"];
   source: string;
   count: number;
-  summaries: string[];
+  descriptors: string[];
 };
 
 export function aggregateReflectionPatterns(
@@ -25,12 +25,20 @@ export function aggregateReflectionPatterns(
         scope: entry.scope,
         source: entry.source,
         count: 0,
-        summaries: [],
+        descriptors: [],
       };
     }
 
     index[key].count += 1;
-    index[key].summaries.push(entry.summary);
+
+    // --------------------------------------------------------
+    // NON-NORMATIVE DESCRIPTOR
+    // Reflection entries are structural, not narrative.
+    // We derive a safe descriptor without assuming schema.
+    // --------------------------------------------------------
+    index[key].descriptors.push(
+      `snapshot=${entry.snapshot ?? "n/a"} @ ${entry.timestamp}`
+    );
   }
 
   return Object.values(index);
