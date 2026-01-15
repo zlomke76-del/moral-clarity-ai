@@ -98,6 +98,14 @@ export default function EdgeOfKnowledgeIndexPage() {
           <li><Link href="/edge-of-knowledge/semi-ipn-polyolefin-tpe">Semi-Interpenetrating Network (Semi-IPN)</Link></li>
           <li><Link href="/edge-of-knowledge/mineral-filled-polyolefin-barrier-films">Mineral-Filled Polyolefin Barrier Films</Link></li>
           <li><Link href="/edge-of-knowledge/hdpe-non-commutative-morphology">Non-Commutative Morphology Encoding in Semicrystalline Polyolefins</Link></li>
+
+          {/* ADDITIVE ENTRY — NO DELETIONS */}
+          <li>
+            <Link href="/edge-of-knowledge/beip-v1">
+              Boundary-Encoded Interfacial Persistence (BEIP v1) — Pre-Registered Protocol
+            </Link>
+          </li>
+
           <li><Link href="/edge-of-knowledge/inflammation-suppressing-microenvironment-polymer">Inflammation-Suppressing Human Micro-Environment Polymer</Link></li>
           <li><Link href="/edge-of-knowledge/suppressing-transferable-inflammatory-signaling">Suppressing Transferable Inflammatory Signaling in Indoor Micro-Environments</Link></li>
           <li><Link href="/edge-of-knowledge/passive-infrastructure-organophosphate-interruption">Passive Infrastructure Polymers for Irreversible Interruption of Organophosphate Surface Transfer Pathways</Link></li>
