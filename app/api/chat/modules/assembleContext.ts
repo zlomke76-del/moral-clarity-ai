@@ -14,9 +14,9 @@ import {
 } from "./context.constants";
 
 // ------------------------------------------------------------
-// ADDITIVE — REFLECTION LEDGER TYPES
+// ADDITIVE — REFLECTION LEDGER READ MODEL (NON-AUTHORITATIVE)
 // ------------------------------------------------------------
-import { ReflectionLedgerEntry } from "@/services/reflection/reflectionLedger.types";
+import { ReflectionLedgerRead } from "@/services/reflection/reflectionLedger.read";
 
 // ------------------------------------------------------------
 // TYPES
@@ -43,9 +43,9 @@ export type SolaceContextBundle = {
   };
 
   // ----------------------------------------------------------
-  // ADDITIVE — READ-ONLY REFLECTION LEDGER (GOVERNANCE OUTCOMES)
+  // ADDITIVE — READ-ONLY REFLECTION LEDGER (PROJECTION)
   // ----------------------------------------------------------
-  reflectionLedger?: ReflectionLedgerEntry[];
+  reflectionLedger?: ReflectionLedgerRead[];
 
   workingMemory: {
     active: boolean;
@@ -92,7 +92,7 @@ type ContextSessionEnvelope = {
 };
 
 // ------------------------------------------------------------
-// CONSTANTS (ADDITIVE)
+// CONSTANTS
 // ------------------------------------------------------------
 const DEMO_USER_ID = "demo-session";
 const DEMO_WM_LIMIT = 10;
@@ -108,13 +108,6 @@ export async function assembleContext(
 ): Promise<SolaceContextBundle> {
   const conversationId = session?.sessionId ?? null;
   const executionProfile = session?.executionProfile ?? "studio";
-
-  console.log("[DIAG-ASSEMBLE]", {
-    canonicalUserKey,
-    workspaceId,
-    conversationId,
-    executionProfile,
-  });
 
   const cookieStore = await cookies();
 
@@ -154,26 +147,9 @@ export async function assembleContext(
   const effectiveUserId = user?.id ?? (isDemo ? DEMO_USER_ID : null);
 
   // ----------------------------------------------------------
-  // DEMO MODE — NO USER, SESSION-ONLY CONTEXT
+  // DEMO MODE
   // ----------------------------------------------------------
   if (!user && isDemo) {
-    let demoWM: WorkingMemoryItem[] = [];
-
-    if (conversationId) {
-      const wmRes = await supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
-        .select("id, role, content, created_at")
-        .eq("conversation_id", conversationId)
-        .eq("user_id", DEMO_USER_ID)
-        .order("created_at", { ascending: false })
-        .limit(DEMO_WM_LIMIT);
-
-      demoWM = Array.isArray(wmRes.data)
-        ? wmRes.data.reverse()
-        : [];
-    }
-
     return {
       persona: "Solace",
       executionProfile,
@@ -184,14 +160,8 @@ export async function assembleContext(
         sessionCompaction: null,
         sessionState: null,
       },
-
-      // SHAPE-STABLE: reflection always present
       reflectionLedger: [],
-
-      workingMemory: {
-        active: Boolean(conversationId),
-        items: demoWM,
-      },
+      workingMemory: { active: false, items: [] },
       researchContext: [],
       authorities: [],
       newsDigest: [],
@@ -200,9 +170,6 @@ export async function assembleContext(
     };
   }
 
-  // ----------------------------------------------------------
-  // STUDIO MODE — AUTH REQUIRED
-  // ----------------------------------------------------------
   if (!effectiveUserId) {
     return {
       persona: "Solace",
@@ -230,22 +197,19 @@ export async function assembleContext(
   const factsRes = await supabaseAdmin
     .schema("memory")
     .from("memories")
-    .select("content, created_at")
+    .select("content")
     .eq("user_id", effectiveUserId)
     .eq("memory_type", "fact")
     .order("created_at", { ascending: false })
     .limit(FACTS_LIMIT);
 
   const factualMemories = Array.isArray(factsRes.data)
-    ? factsRes.data.map((m) => m.content)
+    ? factsRes.data.map(m => m.content)
     : [];
 
   // ----------------------------------------------------------
-  // ADDITIVE — REFLECTION LEDGER (READ-ONLY, GOVERNANCE)
+  // REFLECTION LEDGER (READ PROJECTION)
   // ----------------------------------------------------------
-  // Reflection is NON-AUTHORITATIVE.
-  // It may influence caution and uncertainty only.
-  // It must never justify approval, rejection, or permission.
   const reflectionRes = await supabaseAdmin
     .schema("governance")
     .from("reflection_ledger")
@@ -254,7 +218,7 @@ export async function assembleContext(
     .order("recorded_at", { ascending: false })
     .limit(5);
 
-  const reflectionLedger: ReflectionLedgerEntry[] =
+  const reflectionLedger: ReflectionLedgerRead[] =
     Array.isArray(reflectionRes.data)
       ? reflectionRes.data
       : [];
@@ -274,48 +238,6 @@ export async function assembleContext(
     : [];
 
   // ----------------------------------------------------------
-  // WORKING MEMORY
-  // ----------------------------------------------------------
-  let wmItems: WorkingMemoryItem[] = [];
-
-  if (conversationId) {
-    const wmRes = await supabaseAdmin
-      .schema("memory")
-      .from("working_memory")
-      .select("id, role, content, created_at")
-      .eq("conversation_id", conversationId)
-      .eq("user_id", effectiveUserId)
-      .order("created_at", { ascending: true });
-
-    wmItems = Array.isArray(wmRes.data) ? wmRes.data : [];
-  }
-
-  wmItems = wmItems.map((item) => {
-    if (
-      item.role === "assistant" &&
-      typeof item.content === "string" &&
-      isNonContextualArtifact(item.content)
-    ) {
-      return { ...item, content: "[Image generated]" };
-    }
-    return item;
-  });
-
-  // ----------------------------------------------------------
-  // ROLODEX
-  // ----------------------------------------------------------
-  const rolodexRes = await supabaseAdmin
-    .schema("memory")
-    .from("rolodex")
-    .select("*")
-    .eq("user_id", effectiveUserId)
-    .order("created_at", { ascending: false });
-
-  const rolodexItems = Array.isArray(rolodexRes.data)
-    ? rolodexRes.data
-    : [];
-
-  // ----------------------------------------------------------
   // RETURN CONTEXT
   // ----------------------------------------------------------
   return {
@@ -328,20 +250,12 @@ export async function assembleContext(
       sessionCompaction: null,
       sessionState: null,
     },
-
-    // --------------------------------------------------------
-    // ADDITIVE — EXPERIENCE BRIDGE
-    // --------------------------------------------------------
     reflectionLedger,
-
-    workingMemory: {
-      active: Boolean(conversationId),
-      items: wmItems,
-    },
+    workingMemory: { active: false, items: [] },
     researchContext: researchItems,
     authorities: [],
     newsDigest: [],
     didResearch: researchItems.length > 0,
-    rolodex: rolodexItems,
+    rolodex: [],
   };
 }
