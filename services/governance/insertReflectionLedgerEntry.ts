@@ -1,35 +1,29 @@
-// ------------------------------------------------------------
-// GOVERNANCE — INSERT REFLECTION LEDGER ENTRY (AUTHORITATIVE)
-// ------------------------------------------------------------
-
 import { createClient } from "@supabase/supabase-js";
 import { ReflectionLedgerEntry } from "@/services/reflection/reflectionLedger.types";
 
-// ------------------------------------------------------------
-// ADMIN CLIENT
-// ------------------------------------------------------------
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: { persistSession: false, autoRefreshToken: false },
-  }
-);
+type InsertReflectionArgs = {
+  entry: ReflectionLedgerEntry;
+  userId: string;
+  workspaceId: string | null;
+};
 
-// ------------------------------------------------------------
-// INSERT (IMMUTABLE WRITE)
-// ------------------------------------------------------------
 export async function insertReflectionLedgerEntry(
-  entry: ReflectionLedgerEntry
+  args: InsertReflectionArgs
 ): Promise<void> {
-  // ----------------------------------------------------------
-  // CANONICAL PAYLOAD
-  // ----------------------------------------------------------
-  const payload: ReflectionLedgerEntry = {
-    ...entry,
+  const { entry, userId, workspaceId } = args;
 
-    // AUTHORITATIVE TIMESTAMP
-    timestamp: entry.timestamp ?? new Date().toISOString(),
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+    }
+  );
+
+  const payload = {
+    ...entry,
+    user_id: userId,
+    workspace_id: workspaceId,
   };
 
   const { error } = await supabaseAdmin
@@ -38,8 +32,6 @@ export async function insertReflectionLedgerEntry(
     .insert(payload);
 
   if (error) {
-    throw new Error(
-      `Reflection ledger insert failed: ${error.message}`
-    );
+    throw new Error(`Reflection ledger insert failed: ${error.message}`);
   }
 }
