@@ -6,7 +6,7 @@ import fs from "fs";
 import ShadowRepoService from "./shadowRepoService";
 
 /* ------------------------------------------------------------
-   Inspectors (RULE-BASED + AI TRIAD)
+   Inspectors (RULE-BASED + AI TRIAD + ASSISTIVE)
 ------------------------------------------------------------ */
 
 import { SensitiveDataInspector } from "./inspectors/sensitiveDataInspector";
@@ -16,6 +16,8 @@ import { DestructiveChangeInspector } from "./inspectors/destructiveChangeInspec
 import { OptimistInspector } from "./inspectors/optimistInspector";
 import { SkepticInspector } from "./inspectors/skepticInspector";
 import { ArbiterInspector } from "./inspectors/arbiterInspector";
+
+import { RefactorSuggestionInspector } from "./inspectors/refactorSuggestionInspector";
 
 /* ------------------------------------------------------------
    Environment configuration (AUTHORITATIVE)
@@ -50,15 +52,18 @@ repoService.registerInspector(SensitiveDataInspector);
 repoService.registerInspector(HighRiskSurfaceInspector);
 repoService.registerInspector(DestructiveChangeInspector);
 
-// AI triad inspectors (parallel reasoning lenses)
+// AI reasoning triad (parallel lenses)
 repoService.registerInspector(OptimistInspector);
 repoService.registerInspector(SkepticInspector);
 repoService.registerInspector(ArbiterInspector);
 
+// Assistive AI (craft guidance only)
+repoService.registerInspector(RefactorSuggestionInspector);
+
 /*
   IMPORTANT:
   - Registration order does NOT imply authority
-  - All inspectors run in parallel
+  - All inspectors run independently
   - No inspector can approve, block, or suppress others
 */
 
