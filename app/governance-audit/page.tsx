@@ -48,6 +48,22 @@ export default function GovernanceAuditPage() {
           assurance, or operational guarantees.
         </p>
 
+        {/* PRIMARY CTA — TOP */}
+        <div className="my-8">
+          <a
+            href="https://calendly.com/zlomke76/governance-drift-audit-intake-call"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block rounded-md bg-black px-6 py-3 text-white font-medium hover:bg-neutral-800"
+          >
+            Book a Governance &amp; Drift Audit Intake Call
+          </a>
+          <p className="mt-2 text-sm text-neutral-500">
+            A $500 deposit is required to reserve an intake slot and is applied
+            to the final audit fee.
+          </p>
+        </div>
+
         {/* OVERVIEW */}
         <h2>What This Is</h2>
         <p>
@@ -150,6 +166,22 @@ export default function GovernanceAuditPage() {
           series, which examines failure, uncertainty, and responsible action
           where optimization breaks.
         </p>
+
+        {/* SECONDARY CTA — BOTTOM */}
+        <div className="my-10">
+          <a
+            href="https://calendly.com/zlomke76/governance-drift-audit-intake-call"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block rounded-md border border-neutral-300 px-6 py-3 font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800"
+          >
+            Reserve an Audit Intake Slot
+          </a>
+          <p className="mt-2 text-sm text-neutral-500">
+            Intake calls are limited and gated. This is a diagnostic, not a
+            sales conversation.
+          </p>
+        </div>
 
         <hr />
 
