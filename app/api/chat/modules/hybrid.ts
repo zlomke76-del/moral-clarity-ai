@@ -9,6 +9,11 @@ import { callModel } from "./model-router";
 import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
 
 // --------------------------------------------------------------
+// ADDITIVE — REFLECTION LEDGER FORMATTER
+// --------------------------------------------------------------
+import { formatReflectionLedger } from "@/lib/solace/formatReflectionLedger";
+
+// --------------------------------------------------------------
 // ASCII SANITIZER
 // --------------------------------------------------------------
 function sanitizeASCII(input: string): string {
@@ -161,6 +166,7 @@ export async function runHybridPipeline(args: {
     wm: context?.workingMemory?.items?.length ?? 0,
     rolodex: context?.rolodex?.length ?? 0,
     attachments: context?.attachments?.length ?? 0,
+    reflection: context?.reflectionLedger?.length ?? 0,
   });
 
   const optimist = await callModel(
@@ -173,6 +179,27 @@ export async function runHybridPipeline(args: {
     sanitizeASCII(`${SKEPTIC_SYSTEM}\nUser: ${userMessage}`)
   );
 
+  // ----------------------------------------------------------
+  // ADDITIVE — PROMPT-LEVEL REFLECTION INVARIANT
+  // ----------------------------------------------------------
+  const REFLECTION_INVARIANT = `
+REFLECTION INFLUENCE INVARIANT (AUTHORITATIVE):
+
+Reflection may inform caution, emphasis, pattern awareness,
+and uncertainty disclosure only.
+
+Reflection MUST NOT:
+- justify approval or rejection
+- claim precedent or permission
+- override inspections or first principles
+- introduce or remove constraints
+
+Reflection is READ-ONLY, NON-AUTHORITATIVE,
+and may only appear after current analysis.
+
+Violation requires immediate self-correction.
+`;
+
   const system = buildSolaceSystemPrompt(
     "core",
     `
@@ -184,6 +211,8 @@ ABSOLUTE RULES:
 - Single unified voice
 - No fabrication
 - No autonomous action
+
+${REFLECTION_INVARIANT}
 `
   );
 
@@ -192,6 +221,9 @@ ${system}
 
 ${formatAuthoritativeAttachments(context)}
 ${formatFactualMemory(context)}
+
+${formatReflectionLedger(context.reflectionLedger)}
+
 ${formatRolodex(context)}
 ${formatWorkingMemory(context)}
 
