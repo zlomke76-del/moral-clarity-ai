@@ -1,6 +1,6 @@
 // ------------------------------------------------------------
 // Reflection Pattern Aggregation
-// Canonical, Type-Safe Compression
+// Canonical, Non-Normative Compression
 //------------------------------------------------------------
 
 import { ReflectionLedgerEntry } from "./reflectionLedger.types";
@@ -8,7 +8,6 @@ import { ReflectionLedgerEntry } from "./reflectionLedger.types";
 export type ReflectionPattern = {
   scope: ReflectionLedgerEntry["scope"];
   source: string;
-  outcome: ReflectionLedgerEntry["outcome"];
   count: number;
   summaries: string[];
 };
@@ -19,13 +18,12 @@ export function aggregateReflectionPatterns(
   const index: Record<string, ReflectionPattern> = {};
 
   for (const entry of ledger) {
-    const key = `${entry.scope}::${entry.source}::${entry.outcome}`;
+    const key = `${entry.scope}::${entry.source}`;
 
     if (!index[key]) {
       index[key] = {
         scope: entry.scope,
         source: entry.source,
-        outcome: entry.outcome,
         count: 0,
         summaries: [],
       };
