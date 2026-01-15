@@ -182,6 +182,11 @@ export default function EdgeOfKnowledgeIndexPage() {
               Corporate–Shareholder–Environment Responsibility Boundary (CSEB-v1)
             </Link>
           </li>
+          <li>
+            <Link href="/edge-of-knowledge/auditor-management-unreported-risk-boundary">
+              Auditor–Management Responsibility Boundary: Known but Unreported Risk (AMURB-v1)
+            </Link>
+          </li>
         </ul>
 
         <hr />
