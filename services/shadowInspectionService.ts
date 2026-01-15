@@ -11,7 +11,15 @@ export type InspectionFinding = {
   severity: InspectionSeverity;
   message: string;
   filePaths?: string[];
-  inspector?: string; // ← OPTIONAL AT INTERFACE BOUNDARY
+  inspector?: string; // optional at interface boundary
+};
+
+export type InspectionReportFinding = {
+  id: string;
+  severity: InspectionSeverity;
+  message: string;
+  inspector: string;        // REQUIRED in reports
+  filePaths?: string[];     // STILL OPTIONAL
 };
 
 export type InspectionReport = {
@@ -23,7 +31,7 @@ export type InspectionReport = {
     warn: number;
     critical: number;
   };
-  findings: Required<InspectionFinding>[];
+  findings: InspectionReportFinding[];
 };
 
 /* ------------------------------------------------------------
@@ -47,7 +55,7 @@ export default class ShadowInspectionService {
   }
 
   runInspection(diff: SnapshotDiff): InspectionReport {
-    const findings: Required<InspectionFinding>[] = [];
+    const findings: InspectionReportFinding[] = [];
 
     for (const inspector of this.inspectors) {
       try {
@@ -55,7 +63,10 @@ export default class ShadowInspectionService {
 
         for (const finding of result) {
           findings.push({
-            ...finding,
+            id: finding.id,
+            severity: finding.severity,
+            message: finding.message,
+            filePaths: finding.filePaths,
             inspector: inspector.name,
           });
         }
