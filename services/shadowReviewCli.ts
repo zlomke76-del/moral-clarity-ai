@@ -3,7 +3,7 @@ import path from "path";
 import ShadowSnapshotDiffService from "./shadowSnapshotDiffService";
 
 /* ------------------------------------------------------------
-   Config
+   Config (AUTHORITATIVE)
 ------------------------------------------------------------ */
 
 const SHADOW_REPO_PATH = process.env.SHADOW_REPO_PATH;
@@ -11,6 +11,9 @@ const SHADOW_REPO_PATH = process.env.SHADOW_REPO_PATH;
 if (!SHADOW_REPO_PATH) {
   throw new Error("SHADOW_REPO_PATH must be defined");
 }
+
+// From this point forward, TS knows this is a string
+const SHADOW_REPO_ROOT: string = SHADOW_REPO_PATH;
 
 /* ------------------------------------------------------------
    CLI
@@ -22,7 +25,7 @@ export async function runShadowReviewCli(args: {
   const { snapshotId } = args;
 
   const snapshotRoot = path.join(
-    path.resolve(SHADOW_REPO_PATH),
+    path.resolve(SHADOW_REPO_ROOT),
     ".snapshots"
   );
 
