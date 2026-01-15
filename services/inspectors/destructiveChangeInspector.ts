@@ -1,11 +1,11 @@
-import { ShadowInspector } from "../shadowInspectionService";
+import { ShadowInspector, InspectionFinding } from "../shadowInspectionService";
 import { SnapshotDiff } from "../shadowSnapshotDiffService";
 
 export const DestructiveChangeInspector: ShadowInspector = {
   name: "destructive-change-inspector",
 
-  inspect(diff: SnapshotDiff) {
-    const findings = [];
+  inspect(diff: SnapshotDiff): InspectionFinding[] {
+    const findings: InspectionFinding[] = [];
 
     for (const file of diff.removed) {
       findings.push({
