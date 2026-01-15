@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import ShadowSnapshotService from "./shadowSnapshotService";
 
 type ShadowRepoConfig = {
   mainRepoPath: string;
@@ -12,6 +13,7 @@ export default class ShadowRepoService {
   private shadowRepoPath: string;
   private auditLogFile: string;
   private ignored: Set<string>;
+  private snapshotService: ShadowSnapshotService;
 
   constructor(config: ShadowRepoConfig) {
     if (!config.mainRepoPath || !config.shadowRepoPath) {
@@ -29,7 +31,13 @@ export default class ShadowRepoService {
         "dist",
         "build",
         ".next",
+        ".snapshots",
       ]
+    );
+
+    this.snapshotService = new ShadowSnapshotService(
+      this.shadowRepoPath,
+      Array.from(this.ignored)
     );
   }
 
@@ -60,10 +68,28 @@ export default class ShadowRepoService {
       throw new Error("Main repo path does not exist");
     }
 
+    // 1. Mirror main → shadow
     this.mirrorDirectory(this.mainRepoPath, this.shadowRepoPath);
+
+    // 2. Prune deletions
     this.pruneDeleted(this.mainRepoPath, this.shadowRepoPath);
 
-    this.logAudit("Shadow repo sync complete.");
+    this.logAudit("Shadow repo sync completed.");
+
+    // 3. Snapshot (evidence layer)
+    try {
+      const manifest = this.snapshotService.createSnapshot();
+      this.logAudit(
+        `Snapshot created: ${manifest.snapshotId} (${manifest.fileCount} files, ${manifest.totalBytes} bytes)`
+      );
+    } catch (err) {
+      this.logAudit(
+        `SNAPSHOT ERROR: ${
+          err instanceof Error ? err.message : String(err)
+        }`
+      );
+      // Snapshot failure does NOT invalidate sync
+    }
   }
 
   /* ------------------------------------------------------------
