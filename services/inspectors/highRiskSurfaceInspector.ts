@@ -1,4 +1,4 @@
-import { ShadowInspector } from "../shadowInspectionService";
+import { ShadowInspector, InspectionFinding } from "../shadowInspectionService";
 import { SnapshotDiff } from "../shadowSnapshotDiffService";
 
 const HIGH_RISK_PATHS = [
@@ -15,8 +15,8 @@ const HIGH_RISK_PATHS = [
 export const HighRiskSurfaceInspector: ShadowInspector = {
   name: "high-risk-surface-inspector",
 
-  inspect(diff: SnapshotDiff) {
-    const findings = [];
+  inspect(diff: SnapshotDiff): InspectionFinding[] {
+    const findings: InspectionFinding[] = [];
 
     const touched = [...diff.modified, ...diff.added];
 
