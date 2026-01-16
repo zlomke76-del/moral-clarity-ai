@@ -1,5 +1,11 @@
-import { createClient } from "@supabase/supabase-js";
+// ------------------------------------------------------------
+// Reflection — Delegated Ledger Insert (NON-AUTHORITATIVE)
+// This file MUST NOT write to Supabase directly.
+// All writes are delegated to governance authority.
+// ------------------------------------------------------------
+
 import { ReflectionLedgerEntry } from "@/services/reflection/reflectionLedger.types";
+import { insertReflectionLedgerEntry as insertGovernanceReflectionLedgerEntry } from "@/services/governance/insertReflectionLedgerEntry";
 
 type InsertReflectionArgs = {
   entry: ReflectionLedgerEntry;
@@ -7,31 +13,23 @@ type InsertReflectionArgs = {
   workspaceId: string | null;
 };
 
+/**
+ * Delegated insert.
+ *
+ * This function exists only to preserve call-site compatibility.
+ * It MUST NOT:
+ *  - create a Supabase client
+ *  - touch schemas directly
+ *  - bypass governance authority
+ */
 export async function insertReflectionLedgerEntry(
   args: InsertReflectionArgs
 ): Promise<void> {
   const { entry, userId, workspaceId } = args;
 
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: { persistSession: false, autoRefreshToken: false },
-    }
-  );
-
-  const payload = {
-    ...entry,
-    user_id: userId,
-    workspace_id: workspaceId,
-  };
-
-  const { error } = await supabaseAdmin
-    .schema("governance")
-    .from("reflection_ledger")
-    .insert(payload);
-
-  if (error) {
-    throw new Error(`Reflection ledger insert failed: ${error.message}`);
-  }
+  await insertGovernanceReflectionLedgerEntry({
+    entry,
+    userId,
+    workspaceId,
+  });
 }
