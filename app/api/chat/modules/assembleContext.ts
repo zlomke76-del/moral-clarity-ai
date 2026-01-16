@@ -31,7 +31,6 @@ export type WorkingMemoryItem = {
 export type SolaceContextBundle = {
   persona: string;
 
-  // ADDITIVE — execution authority signal
   executionProfile?: "studio" | "demo";
 
   memoryPack: {
@@ -42,9 +41,6 @@ export type SolaceContextBundle = {
     sessionState?: any | null;
   };
 
-  // ----------------------------------------------------------
-  // ADDITIVE — READ-ONLY REFLECTION LEDGER (PROJECTION)
-  // ----------------------------------------------------------
   reflectionLedger?: ReflectionLedgerRead[];
 
   workingMemory: {
@@ -57,9 +53,6 @@ export type SolaceContextBundle = {
   newsDigest: any[];
   didResearch: boolean;
 
-  // ----------------------------------------------------------
-  // ADDITIVE — WORKSPACE CONTEXT (REQUIRED FOR CHAT ROUTE)
-  // ----------------------------------------------------------
   workspace?: {
     id: string | null;
     mode?: string | null;
@@ -68,19 +61,6 @@ export type SolaceContextBundle = {
 
   rolodex?: any[];
 };
-
-// ------------------------------------------------------------
-// NON-CONTEXTUAL ARTIFACT DETECTION
-// ------------------------------------------------------------
-function isNonContextualArtifact(content: string): boolean {
-  if (!content) return false;
-  const c = content.trim();
-  return (
-    c.startsWith("data:image/") ||
-    c.startsWith("<img") ||
-    c.startsWith("![")
-  );
-}
 
 // ------------------------------------------------------------
 // SESSION ENVELOPE
@@ -147,7 +127,7 @@ export async function assembleContext(
   const effectiveUserId = user?.id ?? (isDemo ? DEMO_USER_ID : null);
 
   // ----------------------------------------------------------
-  // DEMO MODE
+  // DEMO MODE (NO WM)
   // ----------------------------------------------------------
   if (!user && isDemo) {
     return {
@@ -208,6 +188,26 @@ export async function assembleContext(
     : [];
 
   // ----------------------------------------------------------
+  // WORKING MEMORY (RESTORED)
+  // ----------------------------------------------------------
+  let workingMemoryItems: WorkingMemoryItem[] = [];
+
+  if (conversationId) {
+    const wmRes = await supabaseAdmin
+      .schema("memory")
+      .from("working_memory")
+      .select("id, role, content, created_at")
+      .eq("user_id", effectiveUserId)
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: true })
+      .limit(isDemo ? DEMO_WM_LIMIT : 50);
+
+    workingMemoryItems = Array.isArray(wmRes.data)
+      ? wmRes.data
+      : [];
+  }
+
+  // ----------------------------------------------------------
   // REFLECTION LEDGER (READ PROJECTION)
   // ----------------------------------------------------------
   const reflectionRes = await supabaseAdmin
@@ -251,7 +251,10 @@ export async function assembleContext(
       sessionState: null,
     },
     reflectionLedger,
-    workingMemory: { active: false, items: [] },
+    workingMemory: {
+      active: workingMemoryItems.length > 0,
+      items: workingMemoryItems,
+    },
     researchContext: researchItems,
     authorities: [],
     newsDigest: [],
