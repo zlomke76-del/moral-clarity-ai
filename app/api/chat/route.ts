@@ -390,7 +390,6 @@ const executionProfile =
 // OPTION B2 — DEMO SENTINEL + SESSION WM
 // --------------------------------------------------------
 const DEMO_USER_ID = "demo-session";
-const DEMO_CONVERSATION_ID = "demo-webflow-session";
 const allowSessionWM = executionProfile === "demo";
 
 // --------------------------------------------------------
@@ -417,7 +416,7 @@ const supabaseAdmin = createClient(
 let resolvedConversationId: string | null = null;
 
 if (executionProfile === "demo") {
-  resolvedConversationId = DEMO_CONVERSATION_ID;
+  resolvedConversationId = "demo-webflow-session";
 } else {
   resolvedConversationId = conversationId ?? null;
 
@@ -449,32 +448,7 @@ if (!finalUserKey || !resolvedConversationId) {
 }
 
 // --------------------------------------------------------
-// DEMO MODE — SESSION WM READ (10 TURN CAP)
-// --------------------------------------------------------
-let sessionWM: Array<{ role: "user" | "assistant"; content: string }> = [];
-
-if (executionProfile === "demo") {
-  const { data: wmRows } = await supabaseAdmin
-    .schema("memory")
-    .from("working_memory")
-    .select("role, content, created_at")
-    .eq("conversation_id", resolvedConversationId)
-    .eq("user_id", DEMO_USER_ID)
-    .order("created_at", { ascending: false })
-    .limit(10);
-
-  if (Array.isArray(wmRows) && wmRows.length > 0) {
-    sessionWM = wmRows
-      .reverse()
-      .map((r) => ({
-        role: r.role as "user" | "assistant",
-        content: r.content,
-      }));
-  }
-}
-
-// --------------------------------------------------------
-// SSR AUTH CONTEXT
+// SSR AUTH CONTEXT  (HOISTED — REQUIRED)
 // --------------------------------------------------------
 const cookieStore: ReadonlyRequestCookies = await cookies();
 
@@ -497,34 +471,59 @@ const {
 } = await supabaseSSR.auth.getUser();
 
 // --------------------------------------------------------
-// AUTHORITATIVE WM USER ID (FIXED)
+// AUTH USER RESOLUTION (HOISTED — FIXES BUILD)
 // --------------------------------------------------------
-const wmUserId =
+const authUserId =
   executionProfile === "demo"
     ? DEMO_USER_ID
     : user?.id ?? finalUserKey;
 
 // --------------------------------------------------------
+// DEMO MODE — SESSION WM READ (10 TURN CAP)
+// --------------------------------------------------------
+let sessionWM: Array<{ role: "user" | "assistant"; content: string }> = [];
+
+if (executionProfile === "demo" && resolvedConversationId) {
+  const { data: wmRows } = await supabaseAdmin
+    .schema("memory")
+    .from("working_memory")
+    .select("role, content, created_at")
+    .eq("conversation_id", resolvedConversationId)
+    .eq("user_id", DEMO_USER_ID)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  if (Array.isArray(wmRows) && wmRows.length > 0) {
+    sessionWM = wmRows
+      .reverse()
+      .map((r) => ({
+        role: r.role as "user" | "assistant",
+        content: r.content,
+      }));
+  }
+}
+
+// --------------------------------------------------------
 // Persist user message
 // --------------------------------------------------------
-if ((wmUserId || allowSessionWM) && message) {
+if ((authUserId || allowSessionWM) && message) {
   await supabaseAdmin
     .schema("memory")
     .from("working_memory")
     .insert({
       conversation_id: resolvedConversationId,
-      user_id: wmUserId,
+      user_id: authUserId,
       workspace_id: resolvedWorkspaceId,
       role: "user",
       content: message,
     });
 }
 
-if (wmUserId) {
+if (authUserId) {
   void maybeRunRollingCompaction({
     supabaseAdmin,
     conversationId: resolvedConversationId,
-    userId: wmUserId,
+    userId: authUserId,
   });
 }
 
