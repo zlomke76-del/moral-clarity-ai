@@ -409,42 +409,47 @@ export async function POST(req: Request) {
       { auth: { persistSession: false, autoRefreshToken: false } }
     );
 
-    // --------------------------------------------------------
-    // AUTHORITATIVE CONVERSATION RESOLUTION
-    // --------------------------------------------------------
-    let resolvedConversationId: string | null = conversationId ?? null;
+// --------------------------------------------------------
+// AUTHORITATIVE CONVERSATION RESOLUTION (FIXED)
+// Demo mode is SERVER-OWNED. Client input is ignored.
+// --------------------------------------------------------
 
-    if (executionProfile === "demo") {
-      resolvedConversationId =
-        resolvedConversationId ?? `demo-${finalUserKey}`;
+let resolvedConversationId: string | null = null;
+
+if (executionProfile === "demo") {
+  // HARD LOCK: demo sessions are single-authority
+  // Client-supplied conversationId is ignored by design
+  resolvedConversationId = "demo-webflow-session";
+} else {
+  // Studio mode: client conversationId allowed, otherwise bootstrap
+  resolvedConversationId = conversationId ?? null;
+
+  if (!resolvedConversationId && finalUserKey) {
+    const { data, error } = await supabaseAdmin
+      .schema("memory")
+      .from("conversations")
+      .insert({
+        user_id: finalUserKey,
+        workspace_id: resolvedWorkspaceId,
+        source: "chat_bootstrap",
+      })
+      .select("id")
+      .single();
+
+    if (error || !data?.id) {
+      throw new Error("Failed to bootstrap conversation");
     }
 
-    if (
-      executionProfile === "studio" &&
-      !resolvedConversationId &&
-      finalUserKey
-    ) {
-      const { data, error } = await supabaseAdmin
-        .schema("memory")
-        .from("conversations")
-        .insert({
-          user_id: finalUserKey,
-          workspace_id: resolvedWorkspaceId,
-          source: "chat_bootstrap",
-        })
-        .select("id")
-        .single();
+    resolvedConversationId = data.id;
+  }
+}
 
-      if (error || !data?.id) {
-        throw new Error("Failed to bootstrap conversation");
-      }
-
-      resolvedConversationId = data.id;
-    }
-
-    if (!finalUserKey || !resolvedConversationId) {
-      throw new Error("userKey and conversationId are required");
-    }
+// --------------------------------------------------------
+// INVARIANT CHECK (NON-NEGOTIABLE)
+// --------------------------------------------------------
+if (!finalUserKey || !resolvedConversationId) {
+  throw new Error("userKey and conversationId are required");
+}
 
     // --------------------------------------------------------
     // DEMO MODE — SESSION WM READ (10 TURN CAP)
