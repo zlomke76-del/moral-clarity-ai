@@ -381,15 +381,16 @@ export async function POST(req: Request) {
         : message;
 
 // --------------------------------------------------------
-// DEMO SAFE — EXECUTION PROFILE
+// DEMO SAFE — EXECUTION PROFILE (AUTHORITATIVE)
 // --------------------------------------------------------
 const executionProfile =
   finalUserKey === "webflow-guest" ? "demo" : "studio";
 
 // --------------------------------------------------------
-// OPTION B2 — DEMO SENTINEL + SESSION WM
+// DEMO SENTINEL (SINGLE AUTHORITY)
 // --------------------------------------------------------
 const DEMO_USER_ID = "demo-session";
+const DEMO_CONVERSATION_ID = "demo-webflow-session";
 const allowSessionWM = executionProfile === "demo";
 
 // --------------------------------------------------------
@@ -401,7 +402,7 @@ const resolvedWorkspaceId =
   "global_news";
 
 // --------------------------------------------------------
-// ADMIN CLIENT (SINGLE AUTHORITATIVE DECLARATION)
+// ADMIN CLIENT (AUTHORITATIVE)
 // --------------------------------------------------------
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -410,15 +411,15 @@ const supabaseAdmin = createClient(
 );
 
 // --------------------------------------------------------
-// AUTHORITATIVE CONVERSATION RESOLUTION (FIXED)
-// Demo mode is SERVER-OWNED. Client input is ignored.
+// AUTHORITATIVE CONVERSATION RESOLUTION
 // --------------------------------------------------------
-let resolvedConversationId: string | null = null;
+let resolvedConversationId: string;
 
 if (executionProfile === "demo") {
-  resolvedConversationId = "demo-webflow-session";
+  // HARD LOCK — demo is server-owned
+  resolvedConversationId = DEMO_CONVERSATION_ID;
 } else {
-  resolvedConversationId = conversationId ?? null;
+  resolvedConversationId = conversationId ?? "";
 
   if (!resolvedConversationId && finalUserKey) {
     const { data, error } = await supabaseAdmin
@@ -441,37 +442,14 @@ if (executionProfile === "demo") {
 }
 
 // --------------------------------------------------------
-// INVARIANT CHECK (NON-NEGOTIABLE)
+// INVARIANT CHECK (HARD FAIL)
 // --------------------------------------------------------
 if (!finalUserKey || !resolvedConversationId) {
-  throw new Error("userKey and conversationId are required");
+  throw new Error("Invariant violation: userKey or conversationId missing");
 }
 
 // --------------------------------------------------------
-// SSR AUTH CONTEXT  (HOISTED — REQUIRED)
-// --------------------------------------------------------
-const cookieStore: ReadonlyRequestCookies = await cookies();
-
-const supabaseSSR = createServerClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  {
-    cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value;
-      },
-      set() {},
-      remove() {},
-    },
-  }
-);
-
-const {
-  data: { user },
-} = await supabaseSSR.auth.getUser();
-
-// --------------------------------------------------------
-// AUTH USER RESOLUTION (HOISTED — FIXES BUILD)
+// AUTH USER RESOLUTION (AUTHORITATIVE)
 // --------------------------------------------------------
 const authUserId =
   executionProfile === "demo"
@@ -483,12 +461,12 @@ const authUserId =
 // --------------------------------------------------------
 let sessionWM: Array<{ role: "user" | "assistant"; content: string }> = [];
 
-if (executionProfile === "demo" && resolvedConversationId) {
+if (executionProfile === "demo") {
   const { data: wmRows } = await supabaseAdmin
     .schema("memory")
     .from("working_memory")
     .select("role, content, created_at")
-    .eq("conversation_id", resolvedConversationId)
+    .eq("conversation_id", DEMO_CONVERSATION_ID)
     .eq("user_id", DEMO_USER_ID)
     .order("created_at", { ascending: false })
     .limit(10);
@@ -504,9 +482,9 @@ if (executionProfile === "demo" && resolvedConversationId) {
 }
 
 // --------------------------------------------------------
-// Persist user message
+// PERSIST USER MESSAGE (SINGLE IDENTITY)
 // --------------------------------------------------------
-if ((authUserId || allowSessionWM) && message) {
+if (message) {
   await supabaseAdmin
     .schema("memory")
     .from("working_memory")
@@ -519,16 +497,17 @@ if ((authUserId || allowSessionWM) && message) {
     });
 }
 
-if (authUserId) {
-  void maybeRunRollingCompaction({
-    supabaseAdmin,
-    conversationId: resolvedConversationId,
-    userId: authUserId,
-  });
-}
+// --------------------------------------------------------
+// ROLLING COMPACTION (SAFE — SAME IDENTITY)
+// --------------------------------------------------------
+void maybeRunRollingCompaction({
+  supabaseAdmin,
+  conversationId: resolvedConversationId,
+  userId: authUserId,
+});
 
 // --------------------------------------------------------
-// CONTEXT ASSEMBLY
+// CONTEXT ASSEMBLY (IDENTITY-STABLE)
 // --------------------------------------------------------
 const context = await assembleContext(
   finalUserKey,
@@ -538,8 +517,10 @@ const context = await assembleContext(
     sessionId: resolvedConversationId,
     sessionStartedAt: new Date().toISOString(),
     executionProfile,
+    sessionWM, // <-- THIS is now real again
   }
 );
+
 
     // --------------------------------------------------------
 // ATTACHMENTS — AUTHORITATIVE CONTEXT INJECTION (FIXED)
