@@ -358,7 +358,7 @@ export async function POST(req: Request) {
         : message;
 
     // --------------------------------------------------------
-    // DEMO SAFE — EXECUTION PROFILE
+    // EXECUTION PROFILE
     // --------------------------------------------------------
     const executionProfile =
       finalUserKey === "webflow-guest" ? "demo" : "studio";
@@ -367,7 +367,7 @@ export async function POST(req: Request) {
     const allowSessionWM = executionProfile === "demo";
 
     // --------------------------------------------------------
-    // CANONICAL WORKSPACE
+    // WORKSPACE RESOLUTION
     // --------------------------------------------------------
     const resolvedWorkspaceId =
       workspaceId ??
@@ -413,12 +413,15 @@ export async function POST(req: Request) {
       }
     }
 
+    // --------------------------------------------------------
+    // INVARIANT CHECK
+    // --------------------------------------------------------
     if (!finalUserKey || !resolvedConversationId) {
       throw new Error("userKey and conversationId are required");
     }
 
     // --------------------------------------------------------
-    // AUTH CONTEXT
+    // AUTH CONTEXT (SSR SAFE)
     // --------------------------------------------------------
     const cookieStore: ReadonlyRequestCookies = await cookies();
 
@@ -446,7 +449,7 @@ export async function POST(req: Request) {
         : user?.id ?? finalUserKey;
 
     // --------------------------------------------------------
-    // SESSION WORKING MEMORY READ (DEMO ONLY)
+    // SESSION WORKING MEMORY (DEMO ONLY)
     // --------------------------------------------------------
     let sessionWM: Array<{ role: "user" | "assistant"; content: string }> = [];
 
@@ -487,7 +490,7 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
-    // CONTEXT ASSEMBLY (WM BRIDGED)
+    // CONTEXT ASSEMBLY (WM → CONTEXT BRIDGE)
     // --------------------------------------------------------
     const context = await assembleContext(
       finalUserKey,
@@ -500,6 +503,65 @@ export async function POST(req: Request) {
         sessionWM,
       }
     );
+
+    // --------------------------------------------------------
+    // MODEL EXECUTION
+    // --------------------------------------------------------
+    const result = await runHybridPipeline({
+      context,
+      message: normalizedMessage ?? "",
+      ministryMode,
+      founderMode,
+      modeHint,
+    });
+
+    // --------------------------------------------------------
+    // PERSIST ASSISTANT MESSAGE
+    // --------------------------------------------------------
+    if (result?.text) {
+      await supabaseAdmin
+        .schema("memory")
+        .from("working_memory")
+        .insert({
+          conversation_id: resolvedConversationId,
+          user_id: authUserId,
+          workspace_id: resolvedWorkspaceId,
+          role: "assistant",
+          content: result.text,
+        });
+    }
+
+    // --------------------------------------------------------
+    // NON-BLOCKING ROLLING COMPACTION
+    // --------------------------------------------------------
+    maybeRunRollingCompaction({
+      supabaseAdmin,
+      conversationId: resolvedConversationId,
+      userId: authUserId,
+    }).catch(() => {});
+
+    // --------------------------------------------------------
+    // FINAL RESPONSE
+    // --------------------------------------------------------
+    return NextResponse.json(
+      {
+        ok: true,
+        response: result?.text ?? "",
+      },
+      { status: 200 }
+    );
+  } catch (err: any) {
+    console.error("[CHAT POST] fatal", err?.message);
+
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Internal server error",
+      },
+      { status: 500 }
+    );
+  }
+}
 
     // --------------------------------------------------------
     // MODEL EXECUTION
