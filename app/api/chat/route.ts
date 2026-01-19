@@ -265,6 +265,26 @@ function assertNoPhantomLanguage(text: string): string {
   return text;
 }
 
+/*-----------------------------------------------------------------------
+   CONTEXT ASSEMBLY (ADD: executionProfile SAFE EXTENSION)
+   NOTE: Disabled at top-level to preserve AUTHORITATIVE file shape.
+------------------------------------------------------------------------ */
+/*
+const context = await assembleContext(
+  finalUserKey,
+  resolvedWorkspaceId,
+  message ?? "",
+  ({
+    sessionId: resolvedConversationId,
+    sessionStartedAt: new Date().toISOString(),
+    executionProfile,
+  } as {
+    sessionId: string;
+    sessionStartedAt: string;
+    executionProfile?: "demo" | "studio";
+  })
+);
+*/
 
 // ------------------------------------------------------------
 // ROLLING COMPACTION (NON-BLOCKING)
@@ -338,9 +358,12 @@ export async function POST(req: Request) {
       userKey,
       workspaceId,
       conversationId,
+      newsMode = false,
+      newsLanguage,
       ministryMode = false,
       founderMode = false,
       modeHint = "",
+      newsDigest,
     } = body ?? {};
 
     const finalUserKey = canonicalUserKey ?? userKey;
@@ -357,258 +380,159 @@ export async function POST(req: Request) {
         ? message.replace(/^\/eppe\s*/i, "").trim()
         : message;
 
-    // --------------------------------------------------------
-    // EXECUTION PROFILE
-    // --------------------------------------------------------
-    const executionProfile =
-      finalUserKey === "webflow-guest" ? "demo" : "studio";
+// --------------------------------------------------------
+// DEMO SAFE — EXECUTION PROFILE
+// --------------------------------------------------------
+const executionProfile =
+  finalUserKey === "webflow-guest" ? "demo" : "studio";
 
-    const DEMO_USER_ID = "demo-session";
-    const allowSessionWM = executionProfile === "demo";
+// --------------------------------------------------------
+// OPTION B2 — DEMO SENTINEL + SESSION WM
+// --------------------------------------------------------
+const DEMO_USER_ID = "demo-session";
+const allowSessionWM = executionProfile === "demo";
 
-    // --------------------------------------------------------
-    // WORKSPACE RESOLUTION
-    // --------------------------------------------------------
-    const resolvedWorkspaceId =
-      workspaceId ??
-      process.env.MCA_WORKSPACE_ID ??
-      "global_news";
+// --------------------------------------------------------
+// CANONICAL WORKSPACE RESOLUTION
+// --------------------------------------------------------
+const resolvedWorkspaceId =
+  workspaceId ??
+  process.env.MCA_WORKSPACE_ID ??
+  "global_news";
 
-    // --------------------------------------------------------
-    // ADMIN CLIENT
-    // --------------------------------------------------------
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { persistSession: false, autoRefreshToken: false } }
-    );
+// --------------------------------------------------------
+// ADMIN CLIENT (SINGLE AUTHORITATIVE DECLARATION)
+// --------------------------------------------------------
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { persistSession: false, autoRefreshToken: false } }
+);
 
-    // --------------------------------------------------------
-    // CONVERSATION RESOLUTION
-    // --------------------------------------------------------
-    let resolvedConversationId: string | null = null;
+// --------------------------------------------------------
+// AUTHORITATIVE CONVERSATION RESOLUTION (FIXED)
+// Demo mode is SERVER-OWNED. Client input is ignored.
+// --------------------------------------------------------
+let resolvedConversationId: string | null = null;
 
-    if (executionProfile === "demo") {
-      resolvedConversationId = conversationId ?? finalUserKey;
-    } else {
-      resolvedConversationId = conversationId ?? null;
+if (executionProfile === "demo") {
+  // HARD LOCK: demo sessions are single-authority
+  resolvedConversationId = "demo-webflow-session";
+} else {
+  resolvedConversationId = conversationId ?? null;
 
-      if (!resolvedConversationId && finalUserKey) {
-        const { data, error } = await supabaseAdmin
-          .schema("memory")
-          .from("conversations")
-          .insert({
-            user_id: finalUserKey,
-            workspace_id: resolvedWorkspaceId,
-            source: "chat_bootstrap",
-          })
-          .select("id")
-          .single();
+  if (!resolvedConversationId && finalUserKey) {
+    const { data, error } = await supabaseAdmin
+      .schema("memory")
+      .from("conversations")
+      .insert({
+        user_id: finalUserKey,
+        workspace_id: resolvedWorkspaceId,
+        source: "chat_bootstrap",
+      })
+      .select("id")
+      .single();
 
-        if (error || !data?.id) {
-          throw new Error("Failed to bootstrap conversation");
-        }
-
-        resolvedConversationId = data.id;
-      }
+    if (error || !data?.id) {
+      throw new Error("Failed to bootstrap conversation");
     }
 
-    // --------------------------------------------------------
-    // INVARIANT CHECK
-    // --------------------------------------------------------
-    if (!finalUserKey || !resolvedConversationId) {
-      throw new Error("userKey and conversationId are required");
-    }
-
-    // --------------------------------------------------------
-    // AUTH CONTEXT (SSR SAFE)
-    // --------------------------------------------------------
-    const cookieStore: ReadonlyRequestCookies = await cookies();
-
-    const supabaseSSR = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value;
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    );
-
-    const {
-      data: { user },
-    } = await supabaseSSR.auth.getUser();
-
-    const authUserId =
-      executionProfile === "demo"
-        ? DEMO_USER_ID
-        : user?.id ?? finalUserKey;
-
-    // --------------------------------------------------------
-    // SESSION WORKING MEMORY (DEMO ONLY)
-    // --------------------------------------------------------
-    let sessionWM: Array<{ role: "user" | "assistant"; content: string }> = [];
-
-    if (executionProfile === "demo") {
-      const { data: wmRows } = await supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
-        .select("role, content, created_at")
-        .eq("conversation_id", resolvedConversationId)
-        .eq("user_id", DEMO_USER_ID)
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      if (Array.isArray(wmRows)) {
-        sessionWM = wmRows
-          .reverse()
-          .map((r) => ({
-            role: r.role as "user" | "assistant",
-            content: r.content,
-          }));
-      }
-    }
-
-    // --------------------------------------------------------
-    // PERSIST USER MESSAGE
-    // --------------------------------------------------------
-    if ((authUserId || allowSessionWM) && message) {
-      await supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
-        .insert({
-          conversation_id: resolvedConversationId,
-          user_id: authUserId,
-          workspace_id: resolvedWorkspaceId,
-          role: "user",
-          content: message,
-        });
-    }
-
-    // --------------------------------------------------------
-    // CONTEXT ASSEMBLY (WM → CONTEXT BRIDGE)
-    // --------------------------------------------------------
-    const context = await assembleContext(
-      finalUserKey,
-      resolvedWorkspaceId,
-      normalizedMessage ?? "",
-      {
-        sessionId: resolvedConversationId,
-        sessionStartedAt: new Date().toISOString(),
-        executionProfile,
-        sessionWM,
-      }
-    );
-
-    // --------------------------------------------------------
-    // MODEL EXECUTION
-    // --------------------------------------------------------
-    const result = await runHybridPipeline({
-      context,
-      message: normalizedMessage ?? "",
-      ministryMode,
-      founderMode,
-      modeHint,
-    });
-
-    // --------------------------------------------------------
-    // PERSIST ASSISTANT MESSAGE
-    // --------------------------------------------------------
-    if (result?.text) {
-      await supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
-        .insert({
-          conversation_id: resolvedConversationId,
-          user_id: authUserId,
-          workspace_id: resolvedWorkspaceId,
-          role: "assistant",
-          content: result.text,
-        });
-    }
-
-    // --------------------------------------------------------
-    // NON-BLOCKING ROLLING COMPACTION
-    // --------------------------------------------------------
-    maybeRunRollingCompaction({
-      supabaseAdmin,
-      conversationId: resolvedConversationId,
-      userId: authUserId,
-    }).catch(() => {});
-
-    // --------------------------------------------------------
-    // FINAL RESPONSE
-    // --------------------------------------------------------
-    return NextResponse.json(
-      {
-        ok: true,
-        response: result?.text ?? "",
-      },
-      { status: 200 }
-    );
-  } catch (err: any) {
-    console.error("[CHAT POST] fatal", err?.message);
-
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "Internal server error",
-      },
-      { status: 500 }
-    );
+    resolvedConversationId = data.id;
   }
 }
 
-    // --------------------------------------------------------
-    // MODEL EXECUTION
-    // --------------------------------------------------------
-    const response = await runHybridPipeline({
-      context,
-      ministryMode,
-      founderMode,
-      modeHint,
-    });
+// --------------------------------------------------------
+// INVARIANT CHECK (NON-NEGOTIABLE)
+// --------------------------------------------------------
+if (!finalUserKey || !resolvedConversationId) {
+  throw new Error("userKey and conversationId are required");
+}
 
-    // --------------------------------------------------------
-    // PERSIST ASSISTANT RESPONSE
-    // --------------------------------------------------------
-    if (response?.text) {
-      await supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
-        .insert({
-          conversation_id: resolvedConversationId,
-          user_id: authUserId,
-          workspace_id: resolvedWorkspaceId,
-          role: "assistant",
-          content: response.text,
-        });
-    }
+// --------------------------------------------------------
+// SSR AUTH CONTEXT (MUST PRECEDE authUserId)
+// --------------------------------------------------------
+const cookieStore: ReadonlyRequestCookies = await cookies();
 
-    // --------------------------------------------------------
-    // NON-BLOCKING COMPACTION
-    // --------------------------------------------------------
-    if (executionProfile === "demo") {
-      maybeRunRollingCompaction({
-        supabaseAdmin,
-        conversationId: resolvedConversationId,
-        userId: authUserId,
-      });
-    }
+const supabaseSSR = createServerClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  {
+    cookies: {
+      get(name: string) {
+        return cookieStore.get(name)?.value;
+      },
+      set() {},
+      remove() {},
+    },
+  }
+);
 
-    return NextResponse.json({ ok: true, response: response.text });
-  } catch (err: any) {
-    console.error("[CHAT] fatal", err?.message);
-    return NextResponse.json(
-      { ok: false, error: "Internal error" },
-      { status: 500 }
-    );
+const {
+  data: { user },
+} = await supabaseSSR.auth.getUser();
+
+// --------------------------------------------------------
+// AUTH USER RESOLUTION (NOW SAFE)
+// --------------------------------------------------------
+const authUserId =
+  executionProfile === "demo"
+    ? DEMO_USER_ID
+    : user?.id ?? finalUserKey;
+
+// --------------------------------------------------------
+// DEMO MODE — SESSION WM READ (10 TURN CAP)
+// --------------------------------------------------------
+let sessionWM: Array<{ role: "user" | "assistant"; content: string }> = [];
+
+if (executionProfile === "demo" && resolvedConversationId) {
+  const { data: wmRows } = await supabaseAdmin
+    .schema("memory")
+    .from("working_memory")
+    .select("role, content, created_at")
+    .eq("conversation_id", resolvedConversationId)
+    .eq("user_id", DEMO_USER_ID)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  if (Array.isArray(wmRows) && wmRows.length > 0) {
+    sessionWM = wmRows
+      .reverse()
+      .map((r) => ({
+        role: r.role as "user" | "assistant",
+        content: r.content,
+      }));
   }
 }
+
+// --------------------------------------------------------
+// Persist user message
+// --------------------------------------------------------
+if ((authUserId || allowSessionWM) && message) {
+  await supabaseAdmin
+    .schema("memory")
+    .from("working_memory")
+    .insert({
+      conversation_id: resolvedConversationId,
+      user_id: authUserId,
+      workspace_id: resolvedWorkspaceId,
+      role: "user",
+      content: message,
+    });
+}
+
+// --------------------------------------------------------
+// CONTEXT ASSEMBLY
+// --------------------------------------------------------
+const context = await assembleContext(
+  finalUserKey,
+  resolvedWorkspaceId,
+  normalizedMessage ?? "",
+  {
+    sessionId: resolvedConversationId,
+    sessionStartedAt: new Date().toISOString(),
+    executionProfile,
+  }
+);
 
     // --------------------------------------------------------
 // ATTACHMENTS — AUTHORITATIVE CONTEXT INJECTION (FIXED)
