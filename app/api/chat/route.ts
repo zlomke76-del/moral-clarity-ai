@@ -265,26 +265,6 @@ function assertNoPhantomLanguage(text: string): string {
   return text;
 }
 
-/*-----------------------------------------------------------------------
-   CONTEXT ASSEMBLY (ADD: executionProfile SAFE EXTENSION)
-   NOTE: Disabled at top-level to preserve AUTHORITATIVE file shape.
------------------------------------------------------------------------- */
-/*
-const context = await assembleContext(
-  finalUserKey,
-  resolvedWorkspaceId,
-  message ?? "",
-  ({
-    sessionId: resolvedConversationId,
-    sessionStartedAt: new Date().toISOString(),
-    executionProfile,
-  } as {
-    sessionId: string;
-    sessionStartedAt: string;
-    executionProfile?: "demo" | "studio";
-  })
-);
-*/
 
 // ------------------------------------------------------------
 // ROLLING COMPACTION (NON-BLOCKING)
@@ -411,13 +391,13 @@ const supabaseAdmin = createClient(
 
 // --------------------------------------------------------
 // AUTHORITATIVE CONVERSATION RESOLUTION (FIXED)
-// Demo mode is SERVER-OWNED. Client input is ignored.
+// Demo mode is SESSION-SCOPED per user
 // --------------------------------------------------------
 let resolvedConversationId: string | null = null;
 
 if (executionProfile === "demo") {
-  // HARD LOCK: demo sessions are single-authority
-  resolvedConversationId = "demo-webflow-session";
+  // Session-scoped demo conversation (per user/session)
+  resolvedConversationId = conversationId ?? finalUserKey;
 } else {
   resolvedConversationId = conversationId ?? null;
 
@@ -505,18 +485,15 @@ if (executionProfile === "demo" && resolvedConversationId) {
 }
 
 // --------------------------------------------------------
-// PERSIST USER MESSAGE (DEMO-SAFE)
+// Persist user message
 // --------------------------------------------------------
-if (message) {
+if ((authUserId || allowSessionWM) && message) {
   await supabaseAdmin
     .schema("memory")
     .from("working_memory")
     .insert({
       conversation_id: resolvedConversationId,
-      user_id:
-        executionProfile === "demo"
-          ? DEMO_USER_ID
-          : authUserId,
+      user_id: authUserId,
       workspace_id: resolvedWorkspaceId,
       role: "user",
       content: message,
