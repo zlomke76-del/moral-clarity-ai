@@ -269,19 +269,14 @@ function assertNoPhantomLanguage(text: string): string {
 // CONTEXT ASSEMBLY (DEMO SESSION WM INJECTION)
 // --------------------------------------------------------
 const context = await assembleContext(
-  finalUserKey,
+  canonicalUserKey ?? userKey,
   resolvedWorkspaceId,
   normalizedMessage ?? "",
   {
     sessionId: resolvedConversationId,
     sessionStartedAt: new Date().toISOString(),
     executionProfile,
-    sessionWM, // <-- REQUIRED for demo working memory
-  } as {
-    sessionId: string;
-    sessionStartedAt: string;
-    executionProfile?: "demo" | "studio";
-    sessionWM?: Array<{ role: "user" | "assistant"; content: string }>;
+    sessionWM,
   }
 );
 
