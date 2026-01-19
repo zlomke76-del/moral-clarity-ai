@@ -505,15 +505,18 @@ if (executionProfile === "demo" && resolvedConversationId) {
 }
 
 // --------------------------------------------------------
-// Persist user message
+// PERSIST USER MESSAGE (DEMO-SAFE)
 // --------------------------------------------------------
-if ((authUserId || allowSessionWM) && message) {
+if (message) {
   await supabaseAdmin
     .schema("memory")
     .from("working_memory")
     .insert({
       conversation_id: resolvedConversationId,
-      user_id: authUserId,
+      user_id:
+        executionProfile === "demo"
+          ? DEMO_USER_ID
+          : authUserId,
       workspace_id: resolvedWorkspaceId,
       role: "user",
       content: message,
