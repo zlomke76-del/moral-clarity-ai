@@ -46,6 +46,7 @@ export type SolaceContextBundle = {
   workingMemory: {
     active: boolean;
     items: WorkingMemoryItem[];
+    disclaimer?: string;
   };
 
   researchContext: any[];
@@ -69,6 +70,7 @@ type ContextSessionEnvelope = {
   sessionId: string;
   sessionStartedAt: string;
   executionProfile?: "studio" | "demo";
+  sessionWM?: WorkingMemoryItem[]; // ← EXPLICIT BRIDGE
 };
 
 // ------------------------------------------------------------
@@ -126,40 +128,41 @@ export async function assembleContext(
   const isDemo = executionProfile === "demo";
   const effectiveUserId = user?.id ?? (isDemo ? DEMO_USER_ID : null);
 
-// ----------------------------------------------------------
-// DEMO MODE (SESSION-SCOPED WM — NO SUPABASE DEPENDENCY)
-// ----------------------------------------------------------
-if (!user && isDemo) {
-  const injectedSessionWM =
-    Array.isArray((session as any)?.sessionWM)
-      ? (session as any).sessionWM.slice(-DEMO_WM_LIMIT)
+  // ----------------------------------------------------------
+  // DEMO MODE — SESSION-INJECTED WM ONLY (NO DB READ)
+  // ----------------------------------------------------------
+  if (!user && isDemo) {
+    const injectedSessionWM = Array.isArray(session?.sessionWM)
+      ? session!.sessionWM.slice(-DEMO_WM_LIMIT)
       : [];
 
-  return {
-    persona: "Solace",
-    executionProfile,
-    memoryPack: {
-      facts: [],
-      episodic: [],
-      autobiography: [],
-      sessionCompaction: null,
-      sessionState: null,
-    },
-    reflectionLedger: [],
-    workingMemory: {
-      active: injectedSessionWM.length > 0,
-      items: injectedSessionWM,
-    },
-    researchContext: [],
-    authorities: [],
-    newsDigest: [],
-    didResearch: false,
-    rolodex: [],
-  };
-}
+    return {
+      persona: "Solace",
+      executionProfile,
+      memoryPack: {
+        facts: [],
+        episodic: [],
+        autobiography: [],
+        sessionCompaction: null,
+        sessionState: null,
+      },
+      reflectionLedger: [],
+      workingMemory: {
+        active: injectedSessionWM.length > 0,
+        items: injectedSessionWM,
+        disclaimer:
+          "Working memory is session-scoped, non-authoritative, and used only for conversational continuity.",
+      },
+      researchContext: [],
+      authorities: [],
+      newsDigest: [],
+      didResearch: false,
+      rolodex: [],
+    };
+  }
 
   // ----------------------------------------------------------
-  // FACTUAL MEMORY
+  // FACTUAL MEMORY (AUTHORITATIVE)
   // ----------------------------------------------------------
   const factsRes = await supabaseAdmin
     .schema("memory")
@@ -171,11 +174,11 @@ if (!user && isDemo) {
     .limit(FACTS_LIMIT);
 
   const factualMemories = Array.isArray(factsRes.data)
-    ? factsRes.data.map(m => m.content)
+    ? factsRes.data.map((m) => m.content)
     : [];
 
   // ----------------------------------------------------------
-  // WORKING MEMORY (RESTORED)
+  // WORKING MEMORY (READ-ONLY CONTINUITY CONTEXT)
   // ----------------------------------------------------------
   let workingMemoryItems: WorkingMemoryItem[] = [];
 
@@ -189,13 +192,11 @@ if (!user && isDemo) {
       .order("created_at", { ascending: true })
       .limit(isDemo ? DEMO_WM_LIMIT : 50);
 
-    workingMemoryItems = Array.isArray(wmRes.data)
-      ? wmRes.data
-      : [];
+    workingMemoryItems = Array.isArray(wmRes.data) ? wmRes.data : [];
   }
 
   // ----------------------------------------------------------
-  // REFLECTION LEDGER (READ PROJECTION)
+  // REFLECTION LEDGER (READ PROJECTION — NON-AUTHORITATIVE)
   // ----------------------------------------------------------
   const reflectionRes = await supabaseAdmin
     .schema("governance")
@@ -205,10 +206,11 @@ if (!user && isDemo) {
     .order("recorded_at", { ascending: false })
     .limit(5);
 
-  const reflectionLedger: ReflectionLedgerRead[] =
-    Array.isArray(reflectionRes.data)
-      ? reflectionRes.data
-      : [];
+  const reflectionLedger: ReflectionLedgerRead[] = Array.isArray(
+    reflectionRes.data
+  )
+    ? reflectionRes.data
+    : [];
 
   // ----------------------------------------------------------
   // RESEARCH CONTEXT
@@ -225,7 +227,7 @@ if (!user && isDemo) {
     : [];
 
   // ----------------------------------------------------------
-  // RETURN CONTEXT
+  // RETURN CONTEXT BUNDLE
   // ----------------------------------------------------------
   return {
     persona: "Solace",
@@ -241,6 +243,8 @@ if (!user && isDemo) {
     workingMemory: {
       active: workingMemoryItems.length > 0,
       items: workingMemoryItems,
+      disclaimer:
+        "Working memory is a read-only continuity aid. It does not override facts, rules, or governance constraints.",
     },
     researchContext: researchItems,
     authorities: [],
