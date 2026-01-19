@@ -265,25 +265,26 @@ function assertNoPhantomLanguage(text: string): string {
   return text;
 }
 
-/*-----------------------------------------------------------------------
-   CONTEXT ASSEMBLY (ADD: executionProfile SAFE EXTENSION)
-   NOTE: Disabled at top-level to preserve AUTHORITATIVE file shape.
------------------------------------------------------------------------- */
-/*
+// --------------------------------------------------------
+// CONTEXT ASSEMBLY (DEMO SESSION WM INJECTION)
+// --------------------------------------------------------
 const context = await assembleContext(
   finalUserKey,
   resolvedWorkspaceId,
-  message ?? "",
-  ({
+  normalizedMessage ?? "",
+  {
     sessionId: resolvedConversationId,
     sessionStartedAt: new Date().toISOString(),
     executionProfile,
+    sessionWM, // <-- REQUIRED for demo working memory
   } as {
     sessionId: string;
     sessionStartedAt: string;
     executionProfile?: "demo" | "studio";
-  })
+    sessionWM?: Array<{ role: "user" | "assistant"; content: string }>;
+  }
 );
+
 */
 
 // ------------------------------------------------------------
