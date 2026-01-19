@@ -126,50 +126,37 @@ export async function assembleContext(
   const isDemo = executionProfile === "demo";
   const effectiveUserId = user?.id ?? (isDemo ? DEMO_USER_ID : null);
 
-  // ----------------------------------------------------------
-  // DEMO MODE (NO WM)
-  // ----------------------------------------------------------
-  if (!user && isDemo) {
-    return {
-      persona: "Solace",
-      executionProfile,
-      memoryPack: {
-        facts: [],
-        episodic: [],
-        autobiography: [],
-        sessionCompaction: null,
-        sessionState: null,
-      },
-      reflectionLedger: [],
-      workingMemory: { active: false, items: [] },
-      researchContext: [],
-      authorities: [],
-      newsDigest: [],
-      didResearch: false,
-      rolodex: [],
-    };
-  }
+// ----------------------------------------------------------
+// DEMO MODE (SESSION-SCOPED WM — NO SUPABASE DEPENDENCY)
+// ----------------------------------------------------------
+if (!user && isDemo) {
+  const injectedSessionWM =
+    Array.isArray((session as any)?.sessionWM)
+      ? (session as any).sessionWM.slice(-DEMO_WM_LIMIT)
+      : [];
 
-  if (!effectiveUserId) {
-    return {
-      persona: "Solace",
-      executionProfile,
-      memoryPack: {
-        facts: [],
-        episodic: [],
-        autobiography: [],
-        sessionCompaction: null,
-        sessionState: null,
-      },
-      reflectionLedger: [],
-      workingMemory: { active: false, items: [] },
-      researchContext: [],
-      authorities: [],
-      newsDigest: [],
-      didResearch: false,
-      rolodex: [],
-    };
-  }
+  return {
+    persona: "Solace",
+    executionProfile,
+    memoryPack: {
+      facts: [],
+      episodic: [],
+      autobiography: [],
+      sessionCompaction: null,
+      sessionState: null,
+    },
+    reflectionLedger: [],
+    workingMemory: {
+      active: injectedSessionWM.length > 0,
+      items: injectedSessionWM,
+    },
+    researchContext: [],
+    authorities: [],
+    newsDigest: [],
+    didResearch: false,
+    rolodex: [],
+  };
+}
 
   // ----------------------------------------------------------
   // FACTUAL MEMORY
