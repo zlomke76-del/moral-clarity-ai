@@ -265,20 +265,6 @@ function assertNoPhantomLanguage(text: string): string {
   return text;
 }
 
-// --------------------------------------------------------
-// CONTEXT ASSEMBLY (DEMO SESSION WM INJECTION)
-// --------------------------------------------------------
-const context = await assembleContext(
-  canonicalUserKey ?? userKey,
-  resolvedWorkspaceId,
-  normalizedMessage ?? "",
-  {
-    sessionId: resolvedConversationId,
-    sessionStartedAt: new Date().toISOString(),
-    executionProfile,
-    sessionWM,
-  }
-);
 
 // ------------------------------------------------------------
 // ROLLING COMPACTION (NON-BLOCKING)
