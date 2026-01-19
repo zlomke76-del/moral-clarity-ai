@@ -411,13 +411,13 @@ const supabaseAdmin = createClient(
 
 // --------------------------------------------------------
 // AUTHORITATIVE CONVERSATION RESOLUTION (FIXED)
-// Demo mode is SERVER-OWNED. Client input is ignored.
+// Demo mode is SESSION-SCOPED per user
 // --------------------------------------------------------
 let resolvedConversationId: string | null = null;
 
 if (executionProfile === "demo") {
-  // HARD LOCK: demo sessions are single-authority
-  resolvedConversationId = "demo-webflow-session";
+  // Session-scoped demo conversation (per user/session)
+  resolvedConversationId = conversationId ?? finalUserKey;
 } else {
   resolvedConversationId = conversationId ?? null;
 
