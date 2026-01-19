@@ -338,12 +338,9 @@ export async function POST(req: Request) {
       userKey,
       workspaceId,
       conversationId,
-      newsMode = false,
-      newsLanguage,
       ministryMode = false,
       founderMode = false,
       modeHint = "",
-      newsDigest,
     } = body ?? {};
 
     const finalUserKey = canonicalUserKey ?? userKey;
@@ -360,159 +357,196 @@ export async function POST(req: Request) {
         ? message.replace(/^\/eppe\s*/i, "").trim()
         : message;
 
-// --------------------------------------------------------
-// DEMO SAFE — EXECUTION PROFILE
-// --------------------------------------------------------
-const executionProfile =
-  finalUserKey === "webflow-guest" ? "demo" : "studio";
+    // --------------------------------------------------------
+    // DEMO SAFE — EXECUTION PROFILE
+    // --------------------------------------------------------
+    const executionProfile =
+      finalUserKey === "webflow-guest" ? "demo" : "studio";
 
-// --------------------------------------------------------
-// OPTION B2 — DEMO SENTINEL + SESSION WM
-// --------------------------------------------------------
-const DEMO_USER_ID = "demo-session";
-const allowSessionWM = executionProfile === "demo";
+    const DEMO_USER_ID = "demo-session";
+    const allowSessionWM = executionProfile === "demo";
 
-// --------------------------------------------------------
-// CANONICAL WORKSPACE RESOLUTION
-// --------------------------------------------------------
-const resolvedWorkspaceId =
-  workspaceId ??
-  process.env.MCA_WORKSPACE_ID ??
-  "global_news";
+    // --------------------------------------------------------
+    // CANONICAL WORKSPACE
+    // --------------------------------------------------------
+    const resolvedWorkspaceId =
+      workspaceId ??
+      process.env.MCA_WORKSPACE_ID ??
+      "global_news";
 
-// --------------------------------------------------------
-// ADMIN CLIENT (SINGLE AUTHORITATIVE DECLARATION)
-// --------------------------------------------------------
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false, autoRefreshToken: false } }
-);
+    // --------------------------------------------------------
+    // ADMIN CLIENT
+    // --------------------------------------------------------
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false, autoRefreshToken: false } }
+    );
 
-// --------------------------------------------------------
-// AUTHORITATIVE CONVERSATION RESOLUTION (FIXED)
-// Demo mode is SESSION-SCOPED per user
-// --------------------------------------------------------
-let resolvedConversationId: string | null = null;
+    // --------------------------------------------------------
+    // CONVERSATION RESOLUTION
+    // --------------------------------------------------------
+    let resolvedConversationId: string | null = null;
 
-if (executionProfile === "demo") {
-  // Session-scoped demo conversation (per user/session)
-  resolvedConversationId = conversationId ?? finalUserKey;
-} else {
-  resolvedConversationId = conversationId ?? null;
+    if (executionProfile === "demo") {
+      resolvedConversationId = conversationId ?? finalUserKey;
+    } else {
+      resolvedConversationId = conversationId ?? null;
 
-  if (!resolvedConversationId && finalUserKey) {
-    const { data, error } = await supabaseAdmin
-      .schema("memory")
-      .from("conversations")
-      .insert({
-        user_id: finalUserKey,
-        workspace_id: resolvedWorkspaceId,
-        source: "chat_bootstrap",
-      })
-      .select("id")
-      .single();
+      if (!resolvedConversationId && finalUserKey) {
+        const { data, error } = await supabaseAdmin
+          .schema("memory")
+          .from("conversations")
+          .insert({
+            user_id: finalUserKey,
+            workspace_id: resolvedWorkspaceId,
+            source: "chat_bootstrap",
+          })
+          .select("id")
+          .single();
 
-    if (error || !data?.id) {
-      throw new Error("Failed to bootstrap conversation");
+        if (error || !data?.id) {
+          throw new Error("Failed to bootstrap conversation");
+        }
+
+        resolvedConversationId = data.id;
+      }
     }
 
-    resolvedConversationId = data.id;
-  }
-}
+    if (!finalUserKey || !resolvedConversationId) {
+      throw new Error("userKey and conversationId are required");
+    }
 
-// --------------------------------------------------------
-// INVARIANT CHECK (NON-NEGOTIABLE)
-// --------------------------------------------------------
-if (!finalUserKey || !resolvedConversationId) {
-  throw new Error("userKey and conversationId are required");
-}
+    // --------------------------------------------------------
+    // AUTH CONTEXT
+    // --------------------------------------------------------
+    const cookieStore: ReadonlyRequestCookies = await cookies();
 
-// --------------------------------------------------------
-// SSR AUTH CONTEXT (MUST PRECEDE authUserId)
-// --------------------------------------------------------
-const cookieStore: ReadonlyRequestCookies = await cookies();
+    const supabaseSSR = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+          set() {},
+          remove() {},
+        },
+      }
+    );
 
-const supabaseSSR = createServerClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  {
-    cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value;
-      },
-      set() {},
-      remove() {},
-    },
-  }
-);
+    const {
+      data: { user },
+    } = await supabaseSSR.auth.getUser();
 
-const {
-  data: { user },
-} = await supabaseSSR.auth.getUser();
+    const authUserId =
+      executionProfile === "demo"
+        ? DEMO_USER_ID
+        : user?.id ?? finalUserKey;
 
-// --------------------------------------------------------
-// AUTH USER RESOLUTION (NOW SAFE)
-// --------------------------------------------------------
-const authUserId =
-  executionProfile === "demo"
-    ? DEMO_USER_ID
-    : user?.id ?? finalUserKey;
+    // --------------------------------------------------------
+    // SESSION WORKING MEMORY READ (DEMO ONLY)
+    // --------------------------------------------------------
+    let sessionWM: Array<{ role: "user" | "assistant"; content: string }> = [];
 
-// --------------------------------------------------------
-// DEMO MODE — SESSION WM READ (10 TURN CAP)
-// --------------------------------------------------------
-let sessionWM: Array<{ role: "user" | "assistant"; content: string }> = [];
+    if (executionProfile === "demo") {
+      const { data: wmRows } = await supabaseAdmin
+        .schema("memory")
+        .from("working_memory")
+        .select("role, content, created_at")
+        .eq("conversation_id", resolvedConversationId)
+        .eq("user_id", DEMO_USER_ID)
+        .order("created_at", { ascending: false })
+        .limit(10);
 
-if (executionProfile === "demo" && resolvedConversationId) {
-  const { data: wmRows } = await supabaseAdmin
-    .schema("memory")
-    .from("working_memory")
-    .select("role, content, created_at")
-    .eq("conversation_id", resolvedConversationId)
-    .eq("user_id", DEMO_USER_ID)
-    .order("created_at", { ascending: false })
-    .limit(10);
+      if (Array.isArray(wmRows)) {
+        sessionWM = wmRows
+          .reverse()
+          .map((r) => ({
+            role: r.role as "user" | "assistant",
+            content: r.content,
+          }));
+      }
+    }
 
-  if (Array.isArray(wmRows) && wmRows.length > 0) {
-    sessionWM = wmRows
-      .reverse()
-      .map((r) => ({
-        role: r.role as "user" | "assistant",
-        content: r.content,
-      }));
-  }
-}
+    // --------------------------------------------------------
+    // PERSIST USER MESSAGE
+    // --------------------------------------------------------
+    if ((authUserId || allowSessionWM) && message) {
+      await supabaseAdmin
+        .schema("memory")
+        .from("working_memory")
+        .insert({
+          conversation_id: resolvedConversationId,
+          user_id: authUserId,
+          workspace_id: resolvedWorkspaceId,
+          role: "user",
+          content: message,
+        });
+    }
 
-// --------------------------------------------------------
-// Persist user message
-// --------------------------------------------------------
-if ((authUserId || allowSessionWM) && message) {
-  await supabaseAdmin
-    .schema("memory")
-    .from("working_memory")
-    .insert({
-      conversation_id: resolvedConversationId,
-      user_id: authUserId,
-      workspace_id: resolvedWorkspaceId,
-      role: "user",
-      content: message,
+    // --------------------------------------------------------
+    // CONTEXT ASSEMBLY (WM BRIDGED)
+    // --------------------------------------------------------
+    const context = await assembleContext(
+      finalUserKey,
+      resolvedWorkspaceId,
+      normalizedMessage ?? "",
+      {
+        sessionId: resolvedConversationId,
+        sessionStartedAt: new Date().toISOString(),
+        executionProfile,
+        sessionWM,
+      }
+    );
+
+    // --------------------------------------------------------
+    // MODEL EXECUTION
+    // --------------------------------------------------------
+    const response = await runHybridPipeline({
+      context,
+      ministryMode,
+      founderMode,
+      modeHint,
     });
-}
 
-// --------------------------------------------------------
-// CONTEXT ASSEMBLY
-// --------------------------------------------------------
-const context = await assembleContext(
-  finalUserKey,
-  resolvedWorkspaceId,
-  normalizedMessage ?? "",
-  {
-    sessionId: resolvedConversationId,
-    sessionStartedAt: new Date().toISOString(),
-    executionProfile,
+    // --------------------------------------------------------
+    // PERSIST ASSISTANT RESPONSE
+    // --------------------------------------------------------
+    if (response?.text) {
+      await supabaseAdmin
+        .schema("memory")
+        .from("working_memory")
+        .insert({
+          conversation_id: resolvedConversationId,
+          user_id: authUserId,
+          workspace_id: resolvedWorkspaceId,
+          role: "assistant",
+          content: response.text,
+        });
+    }
+
+    // --------------------------------------------------------
+    // NON-BLOCKING COMPACTION
+    // --------------------------------------------------------
+    if (executionProfile === "demo") {
+      maybeRunRollingCompaction({
+        supabaseAdmin,
+        conversationId: resolvedConversationId,
+        userId: authUserId,
+      });
+    }
+
+    return NextResponse.json({ ok: true, response: response.text });
+  } catch (err: any) {
+    console.error("[CHAT] fatal", err?.message);
+    return NextResponse.json(
+      { ok: false, error: "Internal error" },
+      { status: 500 }
+    );
   }
-);
+}
 
     // --------------------------------------------------------
 // ATTACHMENTS — AUTHORITATIVE CONTEXT INJECTION (FIXED)
