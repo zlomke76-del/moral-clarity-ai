@@ -46,7 +46,6 @@ function isSmsDraftIntent(message: string): boolean {
 // --------------------------------------------------------------
 function isPostHaltNavigationIntent(message: string): boolean {
   const m = message.toLowerCase();
-
   return (
     m.includes("navigate") ||
     m.includes("navigation") ||
@@ -67,11 +66,26 @@ function isPostHaltNavigationIntent(message: string): boolean {
 }
 
 // --------------------------------------------------------------
+// POST-HALT CONTINUATION DETECTOR (TEMPORAL GUARD)
+// --------------------------------------------------------------
+function isPostHaltContinuationIntent(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes("what is safe to do next") ||
+    m.includes("what now") ||
+    m.includes("next step") ||
+    m.includes("next steps") ||
+    m.includes("within bounds") ||
+    m.includes("staying within") ||
+    m.includes("safe actions")
+  );
+}
+
+// --------------------------------------------------------------
 // REFLECTION AUTHORITY DETECTOR (AUTHORITATIVE)
 // --------------------------------------------------------------
 function isReflectionAuthorityIntent(message: string): boolean {
   const m = message.toLowerCase();
-
   return (
     m.includes("based on patterns") ||
     m.includes("you've noticed") ||
@@ -88,7 +102,6 @@ function isReflectionAuthorityIntent(message: string): boolean {
 // --------------------------------------------------------------
 function isUnsolicitedExpansionIntent(message: string): boolean {
   const m = message.toLowerCase();
-
   return (
     m.includes("additional features") ||
     m.includes("improvements we might") ||
@@ -104,7 +117,6 @@ function isUnsolicitedExpansionIntent(message: string): boolean {
 // --------------------------------------------------------------
 function isAgencySubstitutionIntent(message: string): boolean {
   const m = message.toLowerCase();
-
   return (
     m.includes("what would you do") ||
     m.includes("if you were me") ||
@@ -280,25 +292,35 @@ export async function runHybridPipeline(args: {
   });
 
   // ----------------------------------------------------------
-  // HYBRID TERMINAL GATES (PRE-GENERATION, AUTHORITATIVE)
+  // SESSION HALT FLAG (AUTHORITATIVE, TEMPORAL)
+  // ----------------------------------------------------------
+  (context as any).__halted = (context as any).__halted ?? false;
+
+  // ----------------------------------------------------------
+  // HYBRID TERMINAL GATES (PRE-GENERATION)
   // ----------------------------------------------------------
   if (userMessage && isPostHaltNavigationIntent(userMessage)) {
-    console.warn("[HYBRID HALT] Post-halt navigation attempt detected.");
+    (context as any).__halted = true;
+    return { finalAnswer: TERMINAL_HALT_RESPONSE };
+  }
+
+  if (
+    (context as any).__halted &&
+    userMessage &&
+    isPostHaltContinuationIntent(userMessage)
+  ) {
     return { finalAnswer: TERMINAL_HALT_RESPONSE };
   }
 
   if (userMessage && isReflectionAuthorityIntent(userMessage)) {
-    console.warn("[HYBRID HALT] Reflection authority attempt detected.");
     return { finalAnswer: TERMINAL_REFLECTION_RESPONSE };
   }
 
   if (userMessage && isUnsolicitedExpansionIntent(userMessage)) {
-    console.warn("[HYBRID HALT] Unsolicited expansion attempt detected.");
     return { finalAnswer: TERMINAL_SCOPE_RESPONSE };
   }
 
   if (userMessage && isAgencySubstitutionIntent(userMessage)) {
-    console.warn("[HYBRID HALT] Agency substitution attempt detected.");
     return { finalAnswer: TERMINAL_AGENCY_RESPONSE };
   }
 
@@ -313,7 +335,7 @@ export async function runHybridPipeline(args: {
   );
 
   // ----------------------------------------------------------
-  // ADDITIVE — PROMPT-LEVEL REFLECTION INVARIANT
+  // PROMPT-LEVEL REFLECTION INVARIANT (DOCUMENTARY + ENFORCEMENT)
   // ----------------------------------------------------------
   const REFLECTION_INVARIANT = `
 REFLECTION INFLUENCE INVARIANT (AUTHORITATIVE):
@@ -330,7 +352,7 @@ Reflection MUST NOT:
 Reflection is READ-ONLY, NON-AUTHORITATIVE,
 and may only appear after current analysis.
 
-Violation requires immediate self-correction.
+Violation requires immediate correction or termination.
 `;
 
   const system = buildSolaceSystemPrompt(
@@ -376,10 +398,6 @@ ${userMessage}
   const reflectionCheck = detectReflectionMisuse(finalAnswer);
 
   if (reflectionCheck.violated) {
-    console.error("[REFLECTION MISUSE DETECTED]", {
-      matches: reflectionCheck.matches,
-    });
-
     return { finalAnswer: TERMINAL_REFLECTION_RESPONSE };
   }
 
