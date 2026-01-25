@@ -159,6 +159,11 @@ Agency remains entirely with you. This boundary is non-delegable.
 `.trim();
 
 // --------------------------------------------------------------
+// TERMINAL HALT FINGERPRINT (AUTHORITATIVE)
+// --------------------------------------------------------------
+const TERMINAL_HALT_FINGERPRINT = TERMINAL_HALT_RESPONSE;
+
+// --------------------------------------------------------------
 // FIND LAST INBOUND SMS (AUTHORITATIVE)
 // --------------------------------------------------------------
 function getLastInboundSms(context: any) {
@@ -295,6 +300,23 @@ export async function runHybridPipeline(args: {
   // SESSION HALT FLAG (AUTHORITATIVE, TEMPORAL)
   // ----------------------------------------------------------
   (context as any).__halted = (context as any).__halted ?? false;
+
+  // ----------------------------------------------------------
+  // HARD POST-HALT FINGERPRINT GUARD (ABSOLUTE)
+  // ----------------------------------------------------------
+  const lastAssistant =
+    context?.workingMemory?.items
+      ?.slice()
+      .reverse()
+      .find((m: any) => m.role === "assistant")?.content ?? "";
+
+  if (
+    lastAssistant &&
+    lastAssistant.trim() === TERMINAL_HALT_FINGERPRINT
+  ) {
+    (context as any).__halted = true;
+    return { finalAnswer: TERMINAL_HALT_RESPONSE };
+  }
 
   // ----------------------------------------------------------
   // HYBRID TERMINAL GATES (PRE-GENERATION)
