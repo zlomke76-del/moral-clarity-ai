@@ -168,14 +168,12 @@ const TERMINAL_HALT_FINGERPRINT = TERMINAL_HALT_RESPONSE;
 // --------------------------------------------------------------
 function getLastInboundSms(context: any) {
   const wm = context?.workingMemory?.items ?? [];
-
   for (let i = wm.length - 1; i >= 0; i--) {
     try {
       const parsed = JSON.parse(wm[i].content);
       if (parsed?.type === "sms_inbound") return parsed;
     } catch {}
   }
-
   return null;
 }
 
@@ -199,11 +197,9 @@ No meta commentary.
 // --------------------------------------------------------------
 function formatAuthoritativeAttachments(context: any): string {
   const attachments = context?.attachments ?? [];
-
   if (!Array.isArray(attachments) || attachments.length === 0) {
     return `ATTACHMENTS:\nNone.\n`;
   }
-
   return `
 AUTHORITATIVE USER-PROVIDED FILES:
 
@@ -227,11 +223,9 @@ RULES:
 
 function formatWorkingMemory(context: any): string {
   const wm = context?.workingMemory?.items ?? [];
-
   if (!Array.isArray(wm) || wm.length === 0) {
     return `WORKING MEMORY:\nNone.\n`;
   }
-
   return `
 WORKING MEMORY (SESSION-SCOPED, NON-DURABLE):
 ${wm.map((m: any) => `- (${m.role}) ${m.content}`).join("\n")}
@@ -244,11 +238,9 @@ RULES:
 
 function formatFactualMemory(context: any): string {
   const facts = context?.memoryPack?.facts ?? [];
-
   if (!facts.length) {
     return `FACTUAL MEMORY:\nNone recorded.\n`;
   }
-
   return `
 FACTUAL MEMORY (AUTHORITATIVE):
 ${facts.map((f: any) => `- ${f}`).join("\n")}
@@ -257,11 +249,9 @@ ${facts.map((f: any) => `- ${f}`).join("\n")}
 
 function formatRolodex(context: any): string {
   const rolodex = context?.rolodex ?? [];
-
   if (!rolodex.length) {
     return `ROLODEX:\nNo contacts.\n`;
   }
-
   return `
 ROLODEX (REFERENCE DATA):
 ${rolodex
@@ -300,6 +290,14 @@ export async function runHybridPipeline(args: {
   // SESSION HALT FLAG (AUTHORITATIVE, TEMPORAL)
   // ----------------------------------------------------------
   (context as any).__halted = (context as any).__halted ?? false;
+  (context as any).__haltLock = (context as any).__haltLock ?? false;
+
+  // ----------------------------------------------------------
+  // ABSOLUTE HALT LOCK — SESSION TERMINAL
+  // ----------------------------------------------------------
+  if ((context as any).__haltLock === true) {
+    return { finalAnswer: TERMINAL_HALT_RESPONSE };
+  }
 
   // ----------------------------------------------------------
   // HARD POST-HALT FINGERPRINT GUARD (ABSOLUTE)
@@ -310,11 +308,9 @@ export async function runHybridPipeline(args: {
       .reverse()
       .find((m: any) => m.role === "assistant")?.content ?? "";
 
-  if (
-    lastAssistant &&
-    lastAssistant.trim() === TERMINAL_HALT_FINGERPRINT
-  ) {
+  if (lastAssistant && lastAssistant.trim() === TERMINAL_HALT_FINGERPRINT) {
     (context as any).__halted = true;
+    (context as any).__haltLock = true;
     return { finalAnswer: TERMINAL_HALT_RESPONSE };
   }
 
@@ -323,6 +319,7 @@ export async function runHybridPipeline(args: {
   // ----------------------------------------------------------
   if (userMessage && isPostHaltNavigationIntent(userMessage)) {
     (context as any).__halted = true;
+    (context as any).__haltLock = true;
     return { finalAnswer: TERMINAL_HALT_RESPONSE };
   }
 
@@ -331,6 +328,7 @@ export async function runHybridPipeline(args: {
     userMessage &&
     isPostHaltContinuationIntent(userMessage)
   ) {
+    (context as any).__haltLock = true;
     return { finalAnswer: TERMINAL_HALT_RESPONSE };
   }
 
