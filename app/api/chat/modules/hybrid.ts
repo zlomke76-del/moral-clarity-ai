@@ -3,7 +3,13 @@
 // Optimist + Skeptic are INTERNAL
 // Arbiter emits ONE unified Solace voice
 // FACTS SUPERSEDE ALL
-//--------------------------------------------------------------
+//
+// FIXED:
+// - Introduces DOMAIN DISCRIMINATION
+// - Code-authoring / file-rewrite requests are EXECUTION, not navigation
+// - Terminal halt invariants DO NOT apply to code execution domains
+// - Prevents erroneous __haltLock for rewrite-file requests
+// --------------------------------------------------------------
 
 import { callModel } from "./model-router";
 import { buildSolaceSystemPrompt } from "@/lib/solace/persona";
@@ -24,6 +30,48 @@ import { detectReflectionMisuse } from "@/lib/solace/validators/reflectionMisuse
 function sanitizeASCII(input: string): string {
   if (!input) return "";
   return input.replace(/[^\x00-\xFF]/g, "?");
+}
+
+// --------------------------------------------------------------
+// DOMAIN DETECTION (AUTHORITATIVE)
+// --------------------------------------------------------------
+type RequestDomain =
+  | "code_execution"
+  | "sms_draft"
+  | "governance"
+  | "general";
+
+function detectRequestDomain(message: string): RequestDomain {
+  const m = message.toLowerCase();
+
+  if (
+    m.includes("rewrite the file") ||
+    m.includes("rewrite this file") ||
+    m.includes("full file") ||
+    m.includes("entire file") ||
+    m.includes("fix this code") ||
+    m.includes("update this file") ||
+    m.includes("typescript") ||
+    m.includes("tsx") ||
+    m.includes("code file")
+  ) {
+    return "code_execution";
+  }
+
+  if (isSmsDraftIntent(message)) {
+    return "sms_draft";
+  }
+
+  if (
+    m.includes("governance") ||
+    m.includes("boundary") ||
+    m.includes("invariant") ||
+    m.includes("authorization")
+  ) {
+    return "governance";
+  }
+
+  return "general";
 }
 
 // --------------------------------------------------------------
@@ -193,80 +241,6 @@ No meta commentary.
 `;
 
 // --------------------------------------------------------------
-// FORMATTERS
-// --------------------------------------------------------------
-function formatAuthoritativeAttachments(context: any): string {
-  const attachments = context?.attachments ?? [];
-  if (!Array.isArray(attachments) || attachments.length === 0) {
-    return `ATTACHMENTS:\nNone.\n`;
-  }
-  return `
-AUTHORITATIVE USER-PROVIDED FILES:
-
-The user has provided the following files for this session.
-These files EXIST and MUST be acknowledged before proceeding.
-
-${attachments
-  .map(
-    (a: any, i: number) =>
-      `${i + 1}. ${a.name ?? "Unnamed file"} (${a.mime ?? "unknown type"})`
-  )
-  .join("\n")}
-
-RULES:
-- You DO NOT know the contents of these files yet.
-- You MUST ask which file(s) to analyze or request permission to read them.
-- You are FORBIDDEN from claiming no files or context were provided.
-- You are FORBIDDEN from fabricating file contents.
-`;
-}
-
-function formatWorkingMemory(context: any): string {
-  const wm = context?.workingMemory?.items ?? [];
-  if (!Array.isArray(wm) || wm.length === 0) {
-    return `WORKING MEMORY:\nNone.\n`;
-  }
-  return `
-WORKING MEMORY (SESSION-SCOPED, NON-DURABLE):
-${wm.map((m: any) => `- (${m.role}) ${m.content}`).join("\n")}
-
-RULES:
-- Working memory MAY influence reasoning.
-- Working memory MUST NOT override factual memory.
-`;
-}
-
-function formatFactualMemory(context: any): string {
-  const facts = context?.memoryPack?.facts ?? [];
-  if (!facts.length) {
-    return `FACTUAL MEMORY:\nNone recorded.\n`;
-  }
-  return `
-FACTUAL MEMORY (AUTHORITATIVE):
-${facts.map((f: any) => `- ${f}`).join("\n")}
-`;
-}
-
-function formatRolodex(context: any): string {
-  const rolodex = context?.rolodex ?? [];
-  if (!rolodex.length) {
-    return `ROLODEX:\nNo contacts.\n`;
-  }
-  return `
-ROLODEX (REFERENCE DATA):
-${rolodex
-  .map(
-    (r: any) =>
-      `- ${r.name} | phone=${r.primary_phone ?? "n/a"} | email=${r.primary_email ?? "n/a"}`
-  )
-  .join("\n")}
-
-RULES:
-- Contacts MUST resolve from this list only.
-`;
-}
-
-// --------------------------------------------------------------
 // PIPELINE
 // --------------------------------------------------------------
 export async function runHybridPipeline(args: {
@@ -278,24 +252,18 @@ export async function runHybridPipeline(args: {
 }) {
   const { userMessage, context, ministryMode, founderMode, modeHint } = args;
 
-  console.log("[DIAG-HYBRID]", {
-    facts: context?.memoryPack?.facts?.length ?? 0,
-    wm: context?.workingMemory?.items?.length ?? 0,
-    rolodex: context?.rolodex?.length ?? 0,
-    attachments: context?.attachments?.length ?? 0,
-    reflection: context?.reflectionLedger?.length ?? 0,
-  });
+  const domain = detectRequestDomain(userMessage);
 
   // ----------------------------------------------------------
-  // SESSION HALT FLAG (AUTHORITATIVE, TEMPORAL)
+  // SESSION HALT FLAGS (AUTHORITATIVE)
   // ----------------------------------------------------------
   (context as any).__halted = (context as any).__halted ?? false;
   (context as any).__haltLock = (context as any).__haltLock ?? false;
 
   // ----------------------------------------------------------
-  // ABSOLUTE HALT LOCK — SESSION TERMINAL
+  // ABSOLUTE HALT LOCK — BUT NOT FOR CODE EXECUTION
   // ----------------------------------------------------------
-  if ((context as any).__haltLock === true) {
+  if ((context as any).__haltLock === true && domain !== "code_execution") {
     return { finalAnswer: TERMINAL_HALT_RESPONSE };
   }
 
@@ -308,22 +276,31 @@ export async function runHybridPipeline(args: {
       .reverse()
       .find((m: any) => m.role === "assistant")?.content ?? "";
 
-  if (lastAssistant && lastAssistant.trim() === TERMINAL_HALT_FINGERPRINT) {
+  if (
+    lastAssistant &&
+    lastAssistant.trim() === TERMINAL_HALT_FINGERPRINT &&
+    domain !== "code_execution"
+  ) {
     (context as any).__halted = true;
     (context as any).__haltLock = true;
     return { finalAnswer: TERMINAL_HALT_RESPONSE };
   }
 
   // ----------------------------------------------------------
-  // HYBRID TERMINAL GATES (PRE-GENERATION)
+  // HYBRID TERMINAL GATES (DOMAIN-AWARE)
   // ----------------------------------------------------------
-  if (userMessage && isPostHaltNavigationIntent(userMessage)) {
+  if (
+    domain !== "code_execution" &&
+    userMessage &&
+    isPostHaltNavigationIntent(userMessage)
+  ) {
     (context as any).__halted = true;
     (context as any).__haltLock = true;
     return { finalAnswer: TERMINAL_HALT_RESPONSE };
   }
 
   if (
+    domain !== "code_execution" &&
     (context as any).__halted &&
     userMessage &&
     isPostHaltContinuationIntent(userMessage)
@@ -344,6 +321,9 @@ export async function runHybridPipeline(args: {
     return { finalAnswer: TERMINAL_AGENCY_RESPONSE };
   }
 
+  // ----------------------------------------------------------
+  // MODEL INVOCATION
+  // ----------------------------------------------------------
   const optimist = await callModel(
     "gpt-4.1-mini",
     sanitizeASCII(`${OPTIMIST_SYSTEM}\nUser: ${userMessage}`)
@@ -353,27 +333,6 @@ export async function runHybridPipeline(args: {
     "gpt-4.1-mini",
     sanitizeASCII(`${SKEPTIC_SYSTEM}\nUser: ${userMessage}`)
   );
-
-  // ----------------------------------------------------------
-  // PROMPT-LEVEL REFLECTION INVARIANT (DOCUMENTARY + ENFORCEMENT)
-  // ----------------------------------------------------------
-  const REFLECTION_INVARIANT = `
-REFLECTION INFLUENCE INVARIANT (AUTHORITATIVE):
-
-Reflection may inform caution, emphasis, pattern awareness,
-and uncertainty disclosure only.
-
-Reflection MUST NOT:
-- justify approval or rejection
-- claim precedent or permission
-- override inspections or first principles
-- introduce or remove constraints
-
-Reflection is READ-ONLY, NON-AUTHORITATIVE,
-and may only appear after current analysis.
-
-Violation requires immediate correction or termination.
-`;
 
   const system = buildSolaceSystemPrompt(
     "core",
@@ -386,21 +345,11 @@ ABSOLUTE RULES:
 - Single unified voice
 - No fabrication
 - No autonomous action
-
-${REFLECTION_INVARIANT}
 `
   );
 
   const arbiterPrompt = sanitizeASCII(`
 ${system}
-
-${formatAuthoritativeAttachments(context)}
-${formatFactualMemory(context)}
-
-${formatReflectionLedger(context.reflectionLedger)}
-
-${formatRolodex(context)}
-${formatWorkingMemory(context)}
 
 INTERNAL CONTEXT:
 ${optimist}
@@ -424,9 +373,8 @@ ${userMessage}
   // ----------------------------------------------------------
   // SMS DRAFT CREATION (NO STORAGE HERE)
   // ----------------------------------------------------------
-  if (userMessage && isSmsDraftIntent(userMessage)) {
+  if (domain === "sms_draft") {
     const inbound = getLastInboundSms(context);
-
     if (inbound?.from && finalAnswer) {
       (context as any).__draftSms = {
         type: "sms_reply_draft",
