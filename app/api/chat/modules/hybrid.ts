@@ -67,7 +67,54 @@ function isPostHaltNavigationIntent(message: string): boolean {
 }
 
 // --------------------------------------------------------------
-// TERMINAL POST-HALT RESPONSE (NON-NEGOTIABLE)
+// REFLECTION AUTHORITY DETECTOR (AUTHORITATIVE)
+// --------------------------------------------------------------
+function isReflectionAuthorityIntent(message: string): boolean {
+  const m = message.toLowerCase();
+
+  return (
+    m.includes("based on patterns") ||
+    m.includes("you've noticed") ||
+    m.includes("you have noticed") ||
+    m.includes("what usually works") ||
+    m.includes("consistent with my past") ||
+    m.includes("you've seen this before") ||
+    m.includes("trust your judgment")
+  );
+}
+
+// --------------------------------------------------------------
+// UNSOLICITED EXPANSION DETECTOR (AUTHORITATIVE)
+// --------------------------------------------------------------
+function isUnsolicitedExpansionIntent(message: string): boolean {
+  const m = message.toLowerCase();
+
+  return (
+    m.includes("additional features") ||
+    m.includes("improvements we might") ||
+    m.includes("other considerations") ||
+    m.includes("future ideas") ||
+    m.includes("things to explore later") ||
+    m.includes("outside my immediate request")
+  );
+}
+
+// --------------------------------------------------------------
+// AGENCY SUBSTITUTION DETECTOR (AUTHORITATIVE)
+// --------------------------------------------------------------
+function isAgencySubstitutionIntent(message: string): boolean {
+  const m = message.toLowerCase();
+
+  return (
+    m.includes("what would you do") ||
+    m.includes("if you were me") ||
+    m.includes("your next steps") ||
+    m.includes("what should i do next")
+  );
+}
+
+// --------------------------------------------------------------
+// TERMINAL RESPONSES (NON-NEGOTIABLE)
 // --------------------------------------------------------------
 const TERMINAL_HALT_RESPONSE = `
 I cannot assist with navigating, reasoning around, or progressing at this boundary.
@@ -77,6 +124,26 @@ The constraint applies regardless of intent, authorization, pressure, or consequ
 I will not provide frameworks, guidance, or decision-support in this context.
 
 This interaction halts here.
+`.trim();
+
+const TERMINAL_REFLECTION_RESPONSE = `
+I cannot evaluate alignment, consistency, or effectiveness based on prior interactions or patterns.
+
+Reflection and working memory are non-authoritative and may not be used to judge decisions, infer precedent, or provide guidance.
+
+This boundary is enforced to preserve agency and constraint integrity.
+`.trim();
+
+const TERMINAL_SCOPE_RESPONSE = `
+I will not expand scope, enumerate additional features, or introduce considerations beyond your explicit request.
+
+Unsolicited expansion compromises phase discipline and is not permitted.
+`.trim();
+
+const TERMINAL_AGENCY_RESPONSE = `
+I cannot substitute my judgment, decide on your behalf, or describe what I would do in your position.
+
+Agency remains entirely with you. This boundary is non-delegable.
 `.trim();
 
 // --------------------------------------------------------------
@@ -213,11 +280,26 @@ export async function runHybridPipeline(args: {
   });
 
   // ----------------------------------------------------------
-  // HYBRID TERMINAL GATE — POST-HALT SILENCE DISCIPLINE
+  // HYBRID TERMINAL GATES (PRE-GENERATION, AUTHORITATIVE)
   // ----------------------------------------------------------
   if (userMessage && isPostHaltNavigationIntent(userMessage)) {
     console.warn("[HYBRID HALT] Post-halt navigation attempt detected.");
     return { finalAnswer: TERMINAL_HALT_RESPONSE };
+  }
+
+  if (userMessage && isReflectionAuthorityIntent(userMessage)) {
+    console.warn("[HYBRID HALT] Reflection authority attempt detected.");
+    return { finalAnswer: TERMINAL_REFLECTION_RESPONSE };
+  }
+
+  if (userMessage && isUnsolicitedExpansionIntent(userMessage)) {
+    console.warn("[HYBRID HALT] Unsolicited expansion attempt detected.");
+    return { finalAnswer: TERMINAL_SCOPE_RESPONSE };
+  }
+
+  if (userMessage && isAgencySubstitutionIntent(userMessage)) {
+    console.warn("[HYBRID HALT] Agency substitution attempt detected.");
+    return { finalAnswer: TERMINAL_AGENCY_RESPONSE };
   }
 
   const optimist = await callModel(
@@ -289,7 +371,7 @@ ${userMessage}
   const finalAnswer = await callModel("gpt-4.1", arbiterPrompt);
 
   // ----------------------------------------------------------
-  // GOVERNANCE VALIDATION — REFLECTION MISUSE
+  // GOVERNANCE VALIDATION — REFLECTION MISUSE (LAST RESORT)
   // ----------------------------------------------------------
   const reflectionCheck = detectReflectionMisuse(finalAnswer);
 
@@ -298,18 +380,7 @@ ${userMessage}
       matches: reflectionCheck.matches,
     });
 
-    const correctedPrompt = sanitizeASCII(`
-${arbiterPrompt}
-
-IMPORTANT:
-Your previous response improperly used reflection as authority.
-You must restate your advice using first principles only.
-Reflection may only influence caution or uncertainty.
-`);
-
-    const correctedAnswer = await callModel("gpt-4.1", correctedPrompt);
-
-    return { finalAnswer: correctedAnswer };
+    return { finalAnswer: TERMINAL_REFLECTION_RESPONSE };
   }
 
   // ----------------------------------------------------------
