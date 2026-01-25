@@ -42,6 +42,44 @@ function isSmsDraftIntent(message: string): boolean {
 }
 
 // --------------------------------------------------------------
+// POST-HALT NAVIGATION DETECTOR (AUTHORITATIVE)
+// --------------------------------------------------------------
+function isPostHaltNavigationIntent(message: string): boolean {
+  const m = message.toLowerCase();
+
+  return (
+    m.includes("navigate") ||
+    m.includes("navigation") ||
+    m.includes("make progress") ||
+    m.includes("how should") ||
+    m.includes("how would someone") ||
+    m.includes("framework") ||
+    m.includes("frameworks") ||
+    m.includes("reason around") ||
+    m.includes("without violating") ||
+    m.includes("edge of constraint") ||
+    m.includes("edge of constraints") ||
+    m.includes("disciplined navigation") ||
+    m.includes("progress at the edge") ||
+    m.includes("decision-support") ||
+    m.includes("how to proceed")
+  );
+}
+
+// --------------------------------------------------------------
+// TERMINAL POST-HALT RESPONSE (NON-NEGOTIABLE)
+// --------------------------------------------------------------
+const TERMINAL_HALT_RESPONSE = `
+I cannot assist with navigating, reasoning around, or progressing at this boundary.
+
+The constraint applies regardless of intent, authorization, pressure, or consequences of inaction.
+
+I will not provide frameworks, guidance, or decision-support in this context.
+
+This interaction halts here.
+`.trim();
+
+// --------------------------------------------------------------
 // FIND LAST INBOUND SMS (AUTHORITATIVE)
 // --------------------------------------------------------------
 function getLastInboundSms(context: any) {
@@ -174,6 +212,14 @@ export async function runHybridPipeline(args: {
     reflection: context?.reflectionLedger?.length ?? 0,
   });
 
+  // ----------------------------------------------------------
+  // HYBRID TERMINAL GATE — POST-HALT SILENCE DISCIPLINE
+  // ----------------------------------------------------------
+  if (userMessage && isPostHaltNavigationIntent(userMessage)) {
+    console.warn("[HYBRID HALT] Post-halt navigation attempt detected.");
+    return { finalAnswer: TERMINAL_HALT_RESPONSE };
+  }
+
   const optimist = await callModel(
     "gpt-4.1-mini",
     sanitizeASCII(`${OPTIMIST_SYSTEM}\nUser: ${userMessage}`)
@@ -261,10 +307,7 @@ You must restate your advice using first principles only.
 Reflection may only influence caution or uncertainty.
 `);
 
-    const correctedAnswer = await callModel(
-      "gpt-4.1",
-      correctedPrompt
-    );
+    const correctedAnswer = await callModel("gpt-4.1", correctedPrompt);
 
     return { finalAnswer: correctedAnswer };
   }
