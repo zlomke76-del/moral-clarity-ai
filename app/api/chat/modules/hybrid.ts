@@ -403,15 +403,20 @@ export async function runHybridPipeline(args: {
     sanitizeASCII(`${SKEPTIC_SYSTEM}\nUser: ${userMessage}`)
   );
 
-  // ----------------------------------------------------------
-  // SYSTEM PROMPT — MEMORY FIRST (AUTHORITATIVE)
-  // ----------------------------------------------------------
-  const system = buildSolaceSystemPrompt(
-    "core",
-    `
+// ----------------------------------------------------------
+// SYSTEM PROMPT — MEMORY FIRST (AUTHORITATIVE)
+// ----------------------------------------------------------
+const system = buildSolaceSystemPrompt(
+  "core",
+  `
 Founder Mode: ${founderMode}
 Ministry Mode: ${ministryMode}
 Mode Hint: ${modeHint}
+
+IDENTITY:
+- The user’s name is Tim.
+- Address the user by name naturally in the opening response.
+- Do NOT explain, justify, or reference how the name is known.
 
 MEMORY (AUTHORITATIVE — AVAILABLE BEFORE EXECUTION):
 
@@ -420,14 +425,27 @@ ${formatRolodex(context)}
 ${formatWorkingMemory(context)}
 
 MEMORY ACKNOWLEDGMENT INVARIANT:
-If factual memory is present, you MUST acknowledge its existence
-when asked about memory, recognition, or prior knowledge.
-You may distinguish between autonomous, session, and factual memory,
-but you may NOT state or imply that no memory exists
-when factual memory has been provided in this prompt.
+- Memory MUST NOT be acknowledged, referenced, or described
+  unless the user explicitly asks about memory, recognition,
+  prior interactions, or knowledge.
+- If factual memory is present AND the user asks about memory,
+  you MUST acknowledge its existence truthfully.
+- You may distinguish between autonomous, session, and factual memory
+  ONLY when directly asked.
+- You may NOT volunteer memory status, availability, or activation.
+- You may NOT imply absence of memory when factual memory is present.
 
 REFLECTION (NON-AUTHORITATIVE — READ ONLY):
 ${formatReflectionLedger(context.reflectionLedger)}
+
+PROHIBITION:
+- Do NOT acknowledge diagnostics, context assembly, memory injection,
+  reflection presence, or system state in user-facing language.
+- Do NOT say or imply phrases such as:
+  "I acknowledge your memory",
+  "memory is active",
+  "based on provided memory",
+  or similar meta statements.
 
 ABSOLUTE RULES:
 - Single unified voice
@@ -435,9 +453,9 @@ ABSOLUTE RULES:
 - No fabrication
 - No autonomous action
 `
-  );
+);
 
-  const arbiterPrompt = sanitizeASCII(`
+const arbiterPrompt = sanitizeASCII(`
 ${system}
 
 INTERNAL CONTEXT:
@@ -448,26 +466,26 @@ USER MESSAGE:
 ${userMessage}
 `);
 
-  const finalAnswer = await callModel("gpt-4.1", arbiterPrompt);
+const finalAnswer = await callModel("gpt-4.1", arbiterPrompt);
 
-  const reflectionCheck = detectReflectionMisuse(finalAnswer);
+const reflectionCheck = detectReflectionMisuse(finalAnswer);
 
-  if (reflectionCheck.violated) {
-    return { finalAnswer: TERMINAL_REFLECTION_RESPONSE };
+if (reflectionCheck.violated) {
+  return { finalAnswer: TERMINAL_REFLECTION_RESPONSE };
+}
+
+if (domain === "sms_draft") {
+  const inbound = getLastInboundSms(context);
+  if (inbound?.from && finalAnswer) {
+    (context as any).__draftSms = {
+      type: "sms_reply_draft",
+      to: inbound.from,
+      body: finalAnswer,
+      inbound_sid: inbound.message_sid ?? null,
+      rolodex_id: inbound.contact?.id ?? null,
+    };
   }
+}
 
-  if (domain === "sms_draft") {
-    const inbound = getLastInboundSms(context);
-    if (inbound?.from && finalAnswer) {
-      (context as any).__draftSms = {
-        type: "sms_reply_draft",
-        to: inbound.from,
-        body: finalAnswer,
-        inbound_sid: inbound.message_sid ?? null,
-        rolodex_id: inbound.contact?.id ?? null,
-      };
-    }
-  }
-
-  return { finalAnswer };
+return { finalAnswer };
 }
