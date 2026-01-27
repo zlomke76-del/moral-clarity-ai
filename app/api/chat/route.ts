@@ -472,13 +472,13 @@ const authUserId =
 // --------------------------------------------------------
 let sessionWM: Array<{ role: "user" | "assistant"; content: string }> = [];
 
-if (executionProfile === "demo" && resolvedConversationId) {
+if (executionProfile !== "demo" && resolvedConversationId) {
   const { data: wmRows } = await supabaseAdmin
     .schema("memory")
     .from("working_memory")
     .select("role, content, created_at")
     .eq("conversation_id", resolvedConversationId)
-    .eq("user_id", DEMO_USER_ID)
+    .eq("user_id", authUserId)
     .order("created_at", { ascending: false })
     .limit(10);
 
@@ -491,6 +491,9 @@ if (executionProfile === "demo" && resolvedConversationId) {
       }));
   }
 }
+
+// DEMO INVARIANT:
+// Demo mode NEVER hydrates persisted working memory
 
 // --------------------------------------------------------
 // Persist user message
