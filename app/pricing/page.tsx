@@ -4,71 +4,92 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: "Simple monthly plans. No ads. No tracking. Cancel anytime.",
+  description:
+    "Institutional pricing for governed AI use. Designed for accountability, not experimentation.",
 };
 
 type Plan = {
-  id: "standard" | "family" | "ministry";
+  id: "professional" | "team" | "institutional" | "enterprise";
   name: string;
   tagline: string;
-  price: number;
-  seats: number | string;
+  price: string;
+  seats: string;
   highlight?: boolean;
   badge?: string;
   features: string[];
   ctaLabel: string;
-  href: string; // absolute for staging checkout
+  href: string;
   fine: string;
 };
 
 const PLANS: Plan[] = [
   {
-    id: "standard",
-    name: "Standard",
-    tagline: "Personal clarity with full guidance and memory.",
-    price: 25,
-    seats: 1,
+    id: "professional",
+    name: "Professional",
+    tagline: "Individual use with full reasoning transparency.",
+    price: "$75",
+    seats: "1 user",
     features: [
-      "Neutral Core + Guidance Modes",
-      "Persistent Projects & Memory",
-      "All Moral & Ministry lenses",
+      "Advisory-only outputs (no autonomous execution)",
+      "Session-scoped reasoning & memory",
+      "Neutral + domain reasoning modes",
+      "Explicit refusal & boundary signaling",
     ],
-    ctaLabel: "Gain clarity",
-    href: "https://staging.moralclarity.ai/buy/standard",
-    fine: "Single user • Cancel anytime",
+    ctaLabel: "Start professional access",
+    href: "https://staging.moralclarity.ai/buy/professional",
+    fine: "For individual professionals • No institutional delegation",
   },
   {
-    id: "family",
-    name: "Family",
-    tagline: "Shared clarity for households and small teams.",
-    price: 50,
-    seats: 4,
+    id: "team",
+    name: "Team / Program",
+    tagline: "Shared clarity for teams operating under review.",
+    price: "$300",
+    seats: "Up to 5 users",
     highlight: true,
-    badge: "Most popular",
+    badge: "Most adopted",
     features: [
-      "Everything in Standard",
-      "Up to 4 seats",
-      "Shared Memory & Guidance History",
+      "Everything in Professional",
+      "Shared workspace & session logs",
+      "Human-in-the-loop review workflows",
+      "Named team owner & permission boundaries",
     ],
-    ctaLabel: "Bring your family aboard",
-    href: "https://staging.moralclarity.ai/buy/family",
-    fine: "Up to 4 users • Cancel anytime",
+    ctaLabel: "Enable team access",
+    href: "https://staging.moralclarity.ai/buy/team",
+    fine: "Internal use only • No external authority delegation",
   },
   {
-    id: "ministry",
-    name: "Ministry / Enterprise",
-    tagline: "Equip your team or congregation with clarity tools.",
-    price: 249,
-    seats: 10,
+    id: "institutional",
+    name: "Institutional",
+    tagline: "Governed deployment for regulated or public-facing work.",
+    price: "$1,500+",
+    seats: "Custom",
     features: [
-      "Everything in Family",
-      "Up to 10 seats",
-      "Custom Faith Lens creation",
-      "Dedicated support channel",
+      "Execution-boundary enforcement",
+      "Authority, refusal, and escalation modeling",
+      "Audit-ready reasoning & provenance",
+      "Deployment contract & governance review",
+      "Priority support & onboarding",
     ],
-    ctaLabel: "Equip your ministry",
-    href: "https://staging.moralclarity.ai/buy/ministry",
-    fine: "Scale seats as needed • Cancel anytime",
+    ctaLabel: "Request institutional access",
+    href: "/contact?type=institutional",
+    fine: "Requires review • No instant activation",
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise / Public Sector",
+    tagline: "Mission-critical deployment with contractual safeguards.",
+    price: "Contracted",
+    seats: "Organization-wide",
+    features: [
+      "Custom deployment contracts",
+      "Execution-time authority controls",
+      "Regulatory alignment (health, finance, government)",
+      "Dedicated environment & support channel",
+      "Joint governance & escalation design",
+    ],
+    ctaLabel: "Contact for enterprise deployment",
+    href: "/contact?type=enterprise",
+    fine: "Contract required • No self-serve access",
   },
 ];
 
@@ -76,47 +97,51 @@ export default function PricingPage() {
   return (
     <section className="pricing mx-auto max-w-6xl px-4 py-12">
       {/* Header */}
-      <div className="pricing-head mb-10">
+      <div className="pricing-head mb-12">
         <h1 className="text-3xl font-semibold tracking-tight text-white">
-          Choose your plan
+          Institutional pricing
         </h1>
-        <p className="mt-2 text-sm text-zinc-400">
-          Simple monthly subscriptions. No upsells. No confusion.
+        <p className="mt-3 max-w-2xl text-sm text-zinc-400">
+          Solace is priced according to responsibility, not usage.  
+          Higher tiers reflect governance, accountability, and operational risk —
+          not feature unlocks.
         </p>
       </div>
 
       {/* Grid */}
-      <div className="pricing-grid grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="pricing-grid grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {PLANS.map((plan) => (
           <article
             key={plan.id}
             className={[
-              "plan relative rounded-xl border border-zinc-800/80 bg-zinc-900/40 p-6 shadow-sm",
-              plan.highlight ? "ring-1 ring-blue-500/30" : "",
+              "relative rounded-xl border border-zinc-800/80 bg-zinc-900/40 p-6",
+              plan.highlight ? "ring-1 ring-blue-500/40" : "",
             ].join(" ")}
-            data-base={plan.price}
-            data-seats={plan.seats}
           >
             {plan.badge && (
-              <span className="badge absolute -top-3 left-4 rounded-full bg-blue-600 px-3 py-1 text-xs font-medium text-white shadow">
+              <span className="absolute -top-3 left-4 rounded-full bg-blue-600 px-3 py-1 text-xs font-medium text-white shadow">
                 {plan.badge}
               </span>
             )}
 
             <h2 className="text-xl font-semibold text-white">{plan.name}</h2>
-            <p className="tagline mt-1 text-sm text-zinc-400">{plan.tagline}</p>
+            <p className="mt-1 text-sm text-zinc-400">{plan.tagline}</p>
 
-            <div className="price mt-4 flex items-baseline gap-1">
-              <span className="amount text-3xl font-semibold text-white">
-                ${plan.price}
+            <div className="mt-4 flex items-baseline gap-1">
+              <span className="text-3xl font-semibold text-white">
+                {plan.price}
               </span>
-              <span className="per text-sm text-zinc-400">/month</span>
+              {plan.price !== "Contracted" && (
+                <span className="text-sm text-zinc-400">/month</span>
+              )}
             </div>
 
-            <ul className="features mt-4 space-y-2 text-sm text-zinc-300">
+            <p className="mt-1 text-xs text-zinc-500">{plan.seats}</p>
+
+            <ul className="mt-4 space-y-2 text-sm text-zinc-300">
               {plan.features.map((f) => (
                 <li key={f} className="flex items-start gap-2">
-                  <span className="mt-1 inline-block h-1.5 w-1.5 rounded-full bg-blue-500" />
+                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-blue-500" />
                   <span>{f}</span>
                 </li>
               ))}
@@ -124,32 +149,24 @@ export default function PricingPage() {
 
             <Link
               href={plan.href}
-              target="_blank"
-              rel="noopener noreferrer"
               className={[
-                "cta mt-6 inline-flex w-full items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition",
+                "mt-6 inline-flex w-full items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition",
                 plan.highlight
                   ? "bg-blue-600 text-white hover:bg-blue-500"
                   : "bg-zinc-800 text-white hover:bg-zinc-700",
               ].join(" ")}
-              id={
-                plan.id === "standard"
-                  ? "stdCta"
-                  : plan.id === "family"
-                  ? "famCta"
-                  : "minCta"
-              }
             >
               {plan.ctaLabel}
             </Link>
 
-            <p className="fine mt-2 text-xs text-zinc-500">{plan.fine}</p>
+            <p className="mt-2 text-xs text-zinc-500">{plan.fine}</p>
           </article>
         ))}
       </div>
 
-      <p className="assurance mt-10 text-center text-sm text-zinc-400">
-        No hidden fees. No ads. No tracking. Cancel anytime.
+      <p className="mt-12 text-center text-sm text-zinc-500">
+        Solace is not optimized for experimentation at scale.  
+        Institutional deployments require explicit governance and acceptance of responsibility.
       </p>
     </section>
   );
