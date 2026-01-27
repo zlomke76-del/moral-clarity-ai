@@ -7,12 +7,29 @@ import SolaceDockWrapper from "./SolaceDockWrapper";
 export default function SolaceGuard() {
   const pathname = usePathname();
 
-  const hide =
+  // --------------------------------------------------
+  // 🟢 Public routes — NEVER mount Solace here
+  // --------------------------------------------------
+  const isPublic =
+    pathname === "/pricing" ||
+    pathname?.startsWith("/pricing") ||
+    pathname === "/contact" ||
+    pathname?.startsWith("/contact");
+
+  if (isPublic) return null;
+
+  // --------------------------------------------------
+  // 🔓 Auth routes — no dock
+  // --------------------------------------------------
+  const isAuth =
     pathname?.startsWith("/auth") ||
     pathname?.startsWith("/login") ||
     pathname?.startsWith("/sign-in");
 
-  if (hide) return null;
+  if (isAuth) return null;
 
+  // --------------------------------------------------
+  // 🔒 App-only dock
+  // --------------------------------------------------
   return <SolaceDockWrapper />;
 }
