@@ -315,18 +315,6 @@ ${rolodex
 `;
 }
 
-// --------------------------------------------------------------
-// PIPELINE
-// --------------------------------------------------------------
-export async function runHybridPipeline(args: {
-  userMessage: string;
-  context: any;
-  ministryMode?: boolean;
-  founderMode?: boolean;
-  modeHint?: string;
-}) {
-  const { userMessage, context, ministryMode, founderMode, modeHint } = args;
-
 // ----------------------------------------------------------
 // PIPELINE
 // ----------------------------------------------------------
