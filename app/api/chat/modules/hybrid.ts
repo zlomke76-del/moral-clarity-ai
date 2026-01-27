@@ -241,7 +241,7 @@ No meta commentary.
 `;
 
 // --------------------------------------------------------------
-// FORMATTERS (RESTORED — AUTHORITATIVE)
+// FORMATTERS (AUTHORITATIVE — FIXED)
 // --------------------------------------------------------------
 function formatAuthoritativeAttachments(context: any): string {
   const attachments = context?.attachments ?? [];
@@ -269,7 +269,10 @@ function formatWorkingMemory(context: any): string {
   const wm = context?.workingMemory?.items ?? [];
 
   if (!Array.isArray(wm) || wm.length === 0) {
-    return `WORKING MEMORY:\nNone.\n`;
+    return `
+WORKING MEMORY (SESSION-SCOPED, NON-DURABLE):
+[AVAILABLE — NO ITEMS PRESENT IN THIS TURN]
+`;
   }
 
   return `
@@ -282,7 +285,10 @@ function formatFactualMemory(context: any): string {
   const facts = context?.memoryPack?.facts ?? [];
 
   if (!facts.length) {
-    return `FACTUAL MEMORY:\nNone recorded.\n`;
+    return `
+FACTUAL MEMORY (AUTHORITATIVE):
+[AVAILABLE — NO FACTS EMITTED IN PROMPT]
+`;
   }
 
   return `
