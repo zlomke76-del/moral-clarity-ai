@@ -9,6 +9,7 @@
 // - Preserves ALL hard-stop invariants
 // - Memory is factual recall only, never judgmental
 // - No reflection authority leakage
+// - DIAGNOSTIC: WM VISIBILITY TRACE (LOG ONLY)
 // --------------------------------------------------------------
 
 import { callModel } from "./model-router";
@@ -331,6 +332,19 @@ ABSOLUTE RULES:
 - No fabrication
 - No autonomous action
 `
+  );
+
+  // ----------------------------------------------------------
+  // DIAGNOSTIC — WORKING MEMORY VISIBILITY (LOG ONLY)
+  // ----------------------------------------------------------
+  console.log(
+    "[WM DIAGNOSTIC]",
+    Array.isArray(context?.workingMemory?.items)
+      ? context.workingMemory.items.map((i: any) => ({
+          type: i.type,
+          preview: String(i.content).slice(0, 80),
+        }))
+      : "NO WORKING MEMORY ITEMS"
   );
 
   const memoryContext =
