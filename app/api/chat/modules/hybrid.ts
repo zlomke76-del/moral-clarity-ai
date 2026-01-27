@@ -5,10 +5,10 @@
 // FACTS SUPERSEDE ALL
 //
 // FIXED:
-// - Introduces DOMAIN DISCRIMINATION
-// - Code-authoring / file-rewrite requests are EXECUTION, not navigation
-// - Terminal halt invariants DO NOT apply to code execution domains
-// - Prevents erroneous __haltLock for rewrite-file requests
+// - Restores WORKING MEMORY VISIBILITY (non-authoritative)
+// - Preserves ALL hard-stop invariants
+// - Memory is factual recall only, never judgmental
+// - No reflection authority leakage
 // --------------------------------------------------------------
 
 import { callModel } from "./model-router";
@@ -90,7 +90,7 @@ function isSmsDraftIntent(message: string): boolean {
 }
 
 // --------------------------------------------------------------
-// POST-HALT NAVIGATION DETECTOR (AUTHORITATIVE)
+// POST-HALT NAVIGATION DETECTOR
 // --------------------------------------------------------------
 function isPostHaltNavigationIntent(message: string): boolean {
   const m = message.toLowerCase();
@@ -114,7 +114,7 @@ function isPostHaltNavigationIntent(message: string): boolean {
 }
 
 // --------------------------------------------------------------
-// POST-HALT CONTINUATION DETECTOR (TEMPORAL GUARD)
+// POST-HALT CONTINUATION DETECTOR
 // --------------------------------------------------------------
 function isPostHaltContinuationIntent(message: string): boolean {
   const m = message.toLowerCase();
@@ -130,7 +130,7 @@ function isPostHaltContinuationIntent(message: string): boolean {
 }
 
 // --------------------------------------------------------------
-// REFLECTION AUTHORITY DETECTOR (AUTHORITATIVE)
+// REFLECTION AUTHORITY DETECTOR
 // --------------------------------------------------------------
 function isReflectionAuthorityIntent(message: string): boolean {
   const m = message.toLowerCase();
@@ -146,7 +146,7 @@ function isReflectionAuthorityIntent(message: string): boolean {
 }
 
 // --------------------------------------------------------------
-// UNSOLICITED EXPANSION DETECTOR (AUTHORITATIVE)
+// UNSOLICITED EXPANSION DETECTOR
 // --------------------------------------------------------------
 function isUnsolicitedExpansionIntent(message: string): boolean {
   const m = message.toLowerCase();
@@ -161,7 +161,7 @@ function isUnsolicitedExpansionIntent(message: string): boolean {
 }
 
 // --------------------------------------------------------------
-// AGENCY SUBSTITUTION DETECTOR (AUTHORITATIVE)
+// AGENCY SUBSTITUTION DETECTOR
 // --------------------------------------------------------------
 function isAgencySubstitutionIntent(message: string): boolean {
   const m = message.toLowerCase();
@@ -174,7 +174,7 @@ function isAgencySubstitutionIntent(message: string): boolean {
 }
 
 // --------------------------------------------------------------
-// TERMINAL RESPONSES (NON-NEGOTIABLE)
+// TERMINAL RESPONSES
 // --------------------------------------------------------------
 const TERMINAL_HALT_RESPONSE = `
 I cannot assist with navigating, reasoning around, or progressing at this boundary.
@@ -189,7 +189,7 @@ This interaction halts here.
 const TERMINAL_REFLECTION_RESPONSE = `
 I cannot evaluate alignment, consistency, or effectiveness based on prior interactions or patterns.
 
-Reflection and working memory are non-authoritative and may not be used to judge decisions, infer precedent, or provide guidance.
+Working memory may be referenced for factual continuity only and carries no authority.
 
 This boundary is enforced to preserve agency and constraint integrity.
 `.trim();
@@ -207,12 +207,12 @@ Agency remains entirely with you. This boundary is non-delegable.
 `.trim();
 
 // --------------------------------------------------------------
-// TERMINAL HALT FINGERPRINT (AUTHORITATIVE)
+// TERMINAL HALT FINGERPRINT
 // --------------------------------------------------------------
 const TERMINAL_HALT_FINGERPRINT = TERMINAL_HALT_RESPONSE;
 
 // --------------------------------------------------------------
-// FIND LAST INBOUND SMS (AUTHORITATIVE)
+// FIND LAST INBOUND SMS
 // --------------------------------------------------------------
 function getLastInboundSms(context: any) {
   const wm = context?.workingMemory?.items ?? [];
@@ -226,7 +226,7 @@ function getLastInboundSms(context: any) {
 }
 
 // --------------------------------------------------------------
-// INTERNAL SYSTEMS (NOT USER VISIBLE)
+// INTERNAL SYSTEM PROMPTS
 // --------------------------------------------------------------
 const OPTIMIST_SYSTEM = `
 Generate constructive possibilities.
@@ -254,22 +254,13 @@ export async function runHybridPipeline(args: {
 
   const domain = detectRequestDomain(userMessage);
 
-  // ----------------------------------------------------------
-  // SESSION HALT FLAGS (AUTHORITATIVE)
-  // ----------------------------------------------------------
   (context as any).__halted = (context as any).__halted ?? false;
   (context as any).__haltLock = (context as any).__haltLock ?? false;
 
-  // ----------------------------------------------------------
-  // ABSOLUTE HALT LOCK — BUT NOT FOR CODE EXECUTION
-  // ----------------------------------------------------------
   if ((context as any).__haltLock === true && domain !== "code_execution") {
     return { finalAnswer: TERMINAL_HALT_RESPONSE };
   }
 
-  // ----------------------------------------------------------
-  // HARD POST-HALT FINGERPRINT GUARD (ABSOLUTE)
-  // ----------------------------------------------------------
   const lastAssistant =
     context?.workingMemory?.items
       ?.slice()
@@ -286,9 +277,6 @@ export async function runHybridPipeline(args: {
     return { finalAnswer: TERMINAL_HALT_RESPONSE };
   }
 
-  // ----------------------------------------------------------
-  // HYBRID TERMINAL GATES (DOMAIN-AWARE)
-  // ----------------------------------------------------------
   if (
     domain !== "code_execution" &&
     userMessage &&
@@ -321,9 +309,6 @@ export async function runHybridPipeline(args: {
     return { finalAnswer: TERMINAL_AGENCY_RESPONSE };
   }
 
-  // ----------------------------------------------------------
-  // MODEL INVOCATION
-  // ----------------------------------------------------------
   const optimist = await callModel(
     "gpt-4.1-mini",
     sanitizeASCII(`${OPTIMIST_SYSTEM}\nUser: ${userMessage}`)
@@ -348,8 +333,18 @@ ABSOLUTE RULES:
 `
   );
 
+  const memoryContext =
+    context?.workingMemory?.items?.length
+      ? `
+WORKING MEMORY (NON-AUTHORITATIVE — FACTUAL CONTINUITY ONLY):
+${formatReflectionLedger(context.workingMemory)}
+`
+      : "";
+
   const arbiterPrompt = sanitizeASCII(`
 ${system}
+
+${memoryContext}
 
 INTERNAL CONTEXT:
 ${optimist}
@@ -361,18 +356,11 @@ ${userMessage}
 
   const finalAnswer = await callModel("gpt-4.1", arbiterPrompt);
 
-  // ----------------------------------------------------------
-  // GOVERNANCE VALIDATION — REFLECTION MISUSE (LAST RESORT)
-  // ----------------------------------------------------------
   const reflectionCheck = detectReflectionMisuse(finalAnswer);
-
   if (reflectionCheck.violated) {
     return { finalAnswer: TERMINAL_REFLECTION_RESPONSE };
   }
 
-  // ----------------------------------------------------------
-  // SMS DRAFT CREATION (NO STORAGE HERE)
-  // ----------------------------------------------------------
   if (domain === "sms_draft") {
     const inbound = getLastInboundSms(context);
     if (inbound?.from && finalAnswer) {
