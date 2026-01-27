@@ -4,31 +4,31 @@
  * Canonical internal billing slugs
  * These MUST align with Stripe price IDs and persisted billing data.
  */
-export type PlanSlug = "standard" | "family" | "ministry";
-
-/**
- * Public-facing plan aliases.
- * These are allowed in URLs and UI, but are normalized before billing.
- */
-export const PLAN_ALIASES: Record<string, PlanSlug> = {
-  professional: "standard",
-  pro: "standard",
-};
+export type PlanSlug =
+  | "standard"
+  | "professional"
+  | "family"
+  | "ministry";
 
 /**
  * Normalize any inbound plan identifier to a canonical PlanSlug.
  * Returns null if the plan is invalid.
+ *
+ * NOTE:
+ * - Professional is now a first-class plan.
+ * - No aliasing to Standard.
  */
 export function normalizePlanSlug(input?: string | null): PlanSlug | null {
   if (!input) return null;
 
   const key = input.toLowerCase();
 
-  if (key in PLAN_ALIASES) {
-    return PLAN_ALIASES[key];
-  }
-
-  if (key === "standard" || key === "family" || key === "ministry") {
+  if (
+    key === "standard" ||
+    key === "professional" ||
+    key === "family" ||
+    key === "ministry"
+  ) {
     return key;
   }
 
@@ -40,9 +40,10 @@ export function normalizePlanSlug(input?: string | null): PlanSlug | null {
  * Set these in Vercel → Project → Settings → Environment Variables.
  */
 export const PLAN_TO_PRICE: Record<PlanSlug, string> = {
-  standard: process.env.PRICE_STANDARD_ID!,  // $25
-  family:   process.env.PRICE_FAMILY_ID!,    // $50
-  ministry: process.env.PRICE_MINISTRY_ID!,  // $249
+  standard:     process.env.PRICE_STANDARD_ID!,      // $25 (legacy / intro)
+  professional: process.env.PRICE_PROFESSIONAL_ID!,  // $75
+  family:       process.env.PRICE_FAMILY_ID!,        // $50
+  ministry:     process.env.PRICE_MINISTRY_ID!,      // $249
 };
 
 /**
@@ -52,9 +53,10 @@ export const PLAN_META: Record<
   PlanSlug,
   { tier: string; seats: number; memoryGB?: number }
 > = {
-  standard: { tier: "plus",       seats: 1 },
-  family:   { tier: "pro_family", seats: 4 },
-  ministry: { tier: "ministry",   seats: 10 },
+  standard:     { tier: "plus",         seats: 1 },
+  professional: { tier: "professional", seats: 1 },
+  family:       { tier: "pro_family",   seats: 4 },
+  ministry:     { tier: "ministry",     seats: 10 },
 };
 
 /**
