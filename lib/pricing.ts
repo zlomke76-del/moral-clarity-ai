@@ -5,8 +5,9 @@
  * These MUST align with Stripe price IDs and persisted billing data.
  */
 export type PlanSlug =
-  | "standard"
-  | "professional"
+  | "standard"       // legacy / intro
+  | "professional"   // individual, accountable
+  | "team"           // team / program (self-serve)
   | "family"
   | "ministry";
 
@@ -15,8 +16,8 @@ export type PlanSlug =
  * Returns null if the plan is invalid.
  *
  * NOTE:
- * - Professional is now a first-class plan.
- * - No aliasing to Standard.
+ * - Professional and Team are now first-class plans.
+ * - No aliasing or silent remapping.
  */
 export function normalizePlanSlug(input?: string | null): PlanSlug | null {
   if (!input) return null;
@@ -26,6 +27,7 @@ export function normalizePlanSlug(input?: string | null): PlanSlug | null {
   if (
     key === "standard" ||
     key === "professional" ||
+    key === "team" ||
     key === "family" ||
     key === "ministry"
   ) {
@@ -42,6 +44,7 @@ export function normalizePlanSlug(input?: string | null): PlanSlug | null {
 export const PLAN_TO_PRICE: Record<PlanSlug, string> = {
   standard:     process.env.PRICE_STANDARD_ID!,      // $25 (legacy / intro)
   professional: process.env.PRICE_PROFESSIONAL_ID!,  // $75
+  team:         process.env.PRICE_TEAM_ID!,          // $300
   family:       process.env.PRICE_FAMILY_ID!,        // $50
   ministry:     process.env.PRICE_MINISTRY_ID!,      // $249
 };
@@ -55,6 +58,7 @@ export const PLAN_META: Record<
 > = {
   standard:     { tier: "plus",         seats: 1 },
   professional: { tier: "professional", seats: 1 },
+  team:         { tier: "team",         seats: 5 },
   family:       { tier: "pro_family",   seats: 4 },
   ministry:     { tier: "ministry",     seats: 10 },
 };
