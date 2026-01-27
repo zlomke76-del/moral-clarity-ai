@@ -390,14 +390,17 @@ const supabaseAdmin = createClient(
 );
 
 // --------------------------------------------------------
-// AUTHORITATIVE CONVERSATION RESOLUTION (FIXED)
-// Demo mode is SESSION-SCOPED per user
+// AUTHORITATIVE CONVERSATION RESOLUTION (FINAL)
+// Demo mode is STRICTLY SESSION-ISOLATED
 // --------------------------------------------------------
 let resolvedConversationId: string | null = null;
 
 if (executionProfile === "demo") {
-  // Session-scoped demo conversation (per user/session)
-  resolvedConversationId = conversationId ?? finalUserKey;
+  // HARD INVARIANT:
+  // Demo conversations MUST NEVER share conversation_id.
+  // Each demo request resolves to an isolated session.
+  resolvedConversationId =
+    conversationId ?? `demo-${crypto.randomUUID()}`;
 } else {
   resolvedConversationId = conversationId ?? null;
 
@@ -420,6 +423,11 @@ if (executionProfile === "demo") {
     resolvedConversationId = data.id;
   }
 }
+if (executionProfile === "demo") {
+  // Demo mode never reads persisted working memory
+  sessionWM = [];
+}
+
 
 // --------------------------------------------------------
 // INVARIANT CHECK (NON-NEGOTIABLE)
