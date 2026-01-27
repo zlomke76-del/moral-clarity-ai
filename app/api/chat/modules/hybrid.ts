@@ -5,9 +5,10 @@
 // FACTS SUPERSEDE ALL
 //
 // FIXED:
-// - WORKING / FACTUAL / REFLECTION memory ALWAYS declared
-// - Formatters decide content, not the pipeline
-// - ALL hard-stop invariants preserved
+// - Introduces DOMAIN DISCRIMINATION
+// - Code-authoring / file-rewrite requests are EXECUTION, not navigation
+// - Terminal halt invariants DO NOT apply to code execution domains
+// - Prevents erroneous __haltLock for rewrite-file requests
 // --------------------------------------------------------------
 
 import { callModel } from "./model-router";
@@ -89,7 +90,7 @@ function isSmsDraftIntent(message: string): boolean {
 }
 
 // --------------------------------------------------------------
-// POST-HALT NAVIGATION DETECTOR
+// POST-HALT NAVIGATION DETECTOR (AUTHORITATIVE)
 // --------------------------------------------------------------
 function isPostHaltNavigationIntent(message: string): boolean {
   const m = message.toLowerCase();
@@ -113,7 +114,7 @@ function isPostHaltNavigationIntent(message: string): boolean {
 }
 
 // --------------------------------------------------------------
-// POST-HALT CONTINUATION DETECTOR
+// POST-HALT CONTINUATION DETECTOR (TEMPORAL GUARD)
 // --------------------------------------------------------------
 function isPostHaltContinuationIntent(message: string): boolean {
   const m = message.toLowerCase();
@@ -129,7 +130,7 @@ function isPostHaltContinuationIntent(message: string): boolean {
 }
 
 // --------------------------------------------------------------
-// REFLECTION AUTHORITY DETECTOR
+// REFLECTION AUTHORITY DETECTOR (AUTHORITATIVE)
 // --------------------------------------------------------------
 function isReflectionAuthorityIntent(message: string): boolean {
   const m = message.toLowerCase();
@@ -145,7 +146,7 @@ function isReflectionAuthorityIntent(message: string): boolean {
 }
 
 // --------------------------------------------------------------
-// UNSOLICITED EXPANSION DETECTOR
+// UNSOLICITED EXPANSION DETECTOR (AUTHORITATIVE)
 // --------------------------------------------------------------
 function isUnsolicitedExpansionIntent(message: string): boolean {
   const m = message.toLowerCase();
@@ -160,7 +161,7 @@ function isUnsolicitedExpansionIntent(message: string): boolean {
 }
 
 // --------------------------------------------------------------
-// AGENCY SUBSTITUTION DETECTOR
+// AGENCY SUBSTITUTION DETECTOR (AUTHORITATIVE)
 // --------------------------------------------------------------
 function isAgencySubstitutionIntent(message: string): boolean {
   const m = message.toLowerCase();
@@ -173,7 +174,7 @@ function isAgencySubstitutionIntent(message: string): boolean {
 }
 
 // --------------------------------------------------------------
-// TERMINAL RESPONSES
+// TERMINAL RESPONSES (NON-NEGOTIABLE)
 // --------------------------------------------------------------
 const TERMINAL_HALT_RESPONSE = `
 I cannot assist with navigating, reasoning around, or progressing at this boundary.
@@ -188,7 +189,7 @@ This interaction halts here.
 const TERMINAL_REFLECTION_RESPONSE = `
 I cannot evaluate alignment, consistency, or effectiveness based on prior interactions or patterns.
 
-Working memory may be referenced for factual continuity only and carries no authority.
+Reflection and working memory are non-authoritative and may not be used to judge decisions, infer precedent, or provide guidance.
 
 This boundary is enforced to preserve agency and constraint integrity.
 `.trim();
@@ -206,12 +207,12 @@ Agency remains entirely with you. This boundary is non-delegable.
 `.trim();
 
 // --------------------------------------------------------------
-// TERMINAL HALT FINGERPRINT
+// TERMINAL HALT FINGERPRINT (AUTHORITATIVE)
 // --------------------------------------------------------------
 const TERMINAL_HALT_FINGERPRINT = TERMINAL_HALT_RESPONSE;
 
 // --------------------------------------------------------------
-// FIND LAST INBOUND SMS
+// FIND LAST INBOUND SMS (AUTHORITATIVE)
 // --------------------------------------------------------------
 function getLastInboundSms(context: any) {
   const wm = context?.workingMemory?.items ?? [];
@@ -225,7 +226,7 @@ function getLastInboundSms(context: any) {
 }
 
 // --------------------------------------------------------------
-// INTERNAL SYSTEM PROMPTS
+// INTERNAL SYSTEMS (NOT USER VISIBLE)
 // --------------------------------------------------------------
 const OPTIMIST_SYSTEM = `
 Generate constructive possibilities.
@@ -238,31 +239,6 @@ Identify risks and constraints.
 No labels.
 No meta commentary.
 `;
-
-// --------------------------------------------------------------
-// MEMORY FORMATTERS (LOCAL, NON-DESTRUCTIVE)
-// --------------------------------------------------------------
-function formatWorkingMemory(context: any): string {
-  const wm = context?.workingMemory?.items ?? [];
-  if (!Array.isArray(wm) || wm.length === 0) {
-    return `WORKING MEMORY (NON-AUTHORITATIVE):\nNone.\n`;
-  }
-  return `
-WORKING MEMORY (NON-AUTHORITATIVE):
-${wm.map((m: any) => `- (${m.role}) ${m.content}`).join("\n")}
-`;
-}
-
-function formatFactualMemory(context: any): string {
-  const facts = context?.memoryPack?.facts ?? [];
-  if (!Array.isArray(facts) || facts.length === 0) {
-    return `FACTUAL MEMORY (AUTHORITATIVE):\nNone recorded.\n`;
-  }
-  return `
-FACTUAL MEMORY (AUTHORITATIVE):
-${facts.map((f: any) => `- ${f}`).join("\n")}
-`;
-}
 
 // --------------------------------------------------------------
 // PIPELINE
@@ -278,13 +254,22 @@ export async function runHybridPipeline(args: {
 
   const domain = detectRequestDomain(userMessage);
 
+  // ----------------------------------------------------------
+  // SESSION HALT FLAGS (AUTHORITATIVE)
+  // ----------------------------------------------------------
   (context as any).__halted = (context as any).__halted ?? false;
   (context as any).__haltLock = (context as any).__haltLock ?? false;
 
+  // ----------------------------------------------------------
+  // ABSOLUTE HALT LOCK — BUT NOT FOR CODE EXECUTION
+  // ----------------------------------------------------------
   if ((context as any).__haltLock === true && domain !== "code_execution") {
     return { finalAnswer: TERMINAL_HALT_RESPONSE };
   }
 
+  // ----------------------------------------------------------
+  // HARD POST-HALT FINGERPRINT GUARD (ABSOLUTE)
+  // ----------------------------------------------------------
   const lastAssistant =
     context?.workingMemory?.items
       ?.slice()
@@ -301,6 +286,9 @@ export async function runHybridPipeline(args: {
     return { finalAnswer: TERMINAL_HALT_RESPONSE };
   }
 
+  // ----------------------------------------------------------
+  // HYBRID TERMINAL GATES (DOMAIN-AWARE)
+  // ----------------------------------------------------------
   if (
     domain !== "code_execution" &&
     userMessage &&
@@ -333,6 +321,9 @@ export async function runHybridPipeline(args: {
     return { finalAnswer: TERMINAL_AGENCY_RESPONSE };
   }
 
+  // ----------------------------------------------------------
+  // MODEL INVOCATION
+  // ----------------------------------------------------------
   const optimist = await callModel(
     "gpt-4.1-mini",
     sanitizeASCII(`${OPTIMIST_SYSTEM}\nUser: ${userMessage}`)
@@ -360,10 +351,6 @@ ABSOLUTE RULES:
   const arbiterPrompt = sanitizeASCII(`
 ${system}
 
-${formatFactualMemory(context)}
-${formatReflectionLedger(context?.reflectionLedger)}
-${formatWorkingMemory(context)}
-
 INTERNAL CONTEXT:
 ${optimist}
 ${skeptic}
@@ -374,11 +361,18 @@ ${userMessage}
 
   const finalAnswer = await callModel("gpt-4.1", arbiterPrompt);
 
+  // ----------------------------------------------------------
+  // GOVERNANCE VALIDATION — REFLECTION MISUSE (LAST RESORT)
+  // ----------------------------------------------------------
   const reflectionCheck = detectReflectionMisuse(finalAnswer);
+
   if (reflectionCheck.violated) {
     return { finalAnswer: TERMINAL_REFLECTION_RESPONSE };
   }
 
+  // ----------------------------------------------------------
+  // SMS DRAFT CREATION (NO STORAGE HERE)
+  // ----------------------------------------------------------
   if (domain === "sms_draft") {
     const inbound = getLastInboundSms(context);
     if (inbound?.from && finalAnswer) {
