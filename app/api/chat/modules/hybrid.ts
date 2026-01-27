@@ -327,6 +327,18 @@ export async function runHybridPipeline(args: {
 }) {
   const { userMessage, context, ministryMode, founderMode, modeHint } = args;
 
+// ----------------------------------------------------------
+// PIPELINE
+// ----------------------------------------------------------
+export async function runHybridPipeline(args: {
+  userMessage: string;
+  context: any;
+  ministryMode?: boolean;
+  founderMode?: boolean;
+  modeHint?: string;
+}) {
+  const { userMessage, context, ministryMode, founderMode, modeHint } = args;
+
   // ----------------------------------------------------------
   // DIAGNOSTIC — RESTORED (WM / FACTS / ROLODEX)
   // ----------------------------------------------------------
@@ -418,6 +430,13 @@ MEMORY (AUTHORITATIVE — AVAILABLE BEFORE EXECUTION):
 ${formatFactualMemory(context)}
 ${formatRolodex(context)}
 ${formatWorkingMemory(context)}
+
+MEMORY ACKNOWLEDGMENT INVARIANT:
+If factual memory is present, you MUST acknowledge its existence
+when asked about memory, recognition, or prior knowledge.
+You may distinguish between autonomous, session, and factual memory,
+but you may NOT state or imply that no memory exists
+when factual memory has been provided in this prompt.
 
 REFLECTION (NON-AUTHORITATIVE — READ ONLY):
 ${formatReflectionLedger(context.reflectionLedger)}
