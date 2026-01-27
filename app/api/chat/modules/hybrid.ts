@@ -327,6 +327,13 @@ export async function runHybridPipeline(args: {
 }) {
   const { userMessage, context, ministryMode, founderMode, modeHint } = args;
 
+  // ----------------------------------------------------------
+  // DIAGNOSTIC — RESTORED (WM)
+  // ----------------------------------------------------------
+  console.log("[DIAG-HYBRID]", {
+    WM: context?.workingMemory?.items?.length ?? 0,
+  });
+
   const domain = detectRequestDomain(userMessage);
 
   (context as any).__halted = (context as any).__halted ?? false;
@@ -401,6 +408,12 @@ Founder Mode: ${founderMode}
 Ministry Mode: ${ministryMode}
 Mode Hint: ${modeHint}
 
+MEMORY (AUTHORITATIVE — AVAILABLE BEFORE EXECUTION):
+
+${formatFactualMemory(context)}
+${formatReflectionLedger(context.reflectionLedger)}
+${formatWorkingMemory(context)}
+
 ABSOLUTE RULES:
 - Single unified voice
 - No fabrication
@@ -410,12 +423,6 @@ ABSOLUTE RULES:
 
   const arbiterPrompt = sanitizeASCII(`
 ${system}
-
-${formatAuthoritativeAttachments(context)}
-${formatFactualMemory(context)}
-${formatReflectionLedger(context.reflectionLedger)}
-${formatRolodex(context)}
-${formatWorkingMemory(context)}
 
 INTERNAL CONTEXT:
 ${optimist}
