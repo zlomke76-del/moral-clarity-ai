@@ -1,5 +1,39 @@
 // lib/pricing.ts
+
+/**
+ * Canonical internal billing slugs
+ * These MUST align with Stripe price IDs and persisted billing data.
+ */
 export type PlanSlug = "standard" | "family" | "ministry";
+
+/**
+ * Public-facing plan aliases.
+ * These are allowed in URLs and UI, but are normalized before billing.
+ */
+export const PLAN_ALIASES: Record<string, PlanSlug> = {
+  professional: "standard",
+  pro: "standard",
+};
+
+/**
+ * Normalize any inbound plan identifier to a canonical PlanSlug.
+ * Returns null if the plan is invalid.
+ */
+export function normalizePlanSlug(input?: string | null): PlanSlug | null {
+  if (!input) return null;
+
+  const key = input.toLowerCase();
+
+  if (key in PLAN_ALIASES) {
+    return PLAN_ALIASES[key];
+  }
+
+  if (key === "standard" || key === "family" || key === "ministry") {
+    return key;
+  }
+
+  return null;
+}
 
 /**
  * Stripe Price IDs come from env vars so we don't hardcode live IDs in git.
@@ -12,14 +46,20 @@ export const PLAN_TO_PRICE: Record<PlanSlug, string> = {
 };
 
 /**
- * Metadata you’re already using (tier, seats, memoryGB) to carry through Checkout.
+ * Metadata carried through Checkout for provisioning & governance.
  */
-export const PLAN_META: Record<PlanSlug, { tier: string; seats: number; memoryGB?: number }> = {
+export const PLAN_META: Record<
+  PlanSlug,
+  { tier: string; seats: number; memoryGB?: number }
+> = {
   standard: { tier: "plus",       seats: 1 },
   family:   { tier: "pro_family", seats: 4 },
   ministry: { tier: "ministry",   seats: 10 },
 };
 
+/**
+ * Reverse lookup used for webhooks and reconciliation.
+ */
 export function inferPlanFromPriceId(priceId: string): PlanSlug | null {
   const entries = Object.entries(PLAN_TO_PRICE) as [PlanSlug, string][];
   const found = entries.find(([, id]) => id === priceId);
