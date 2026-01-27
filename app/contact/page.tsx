@@ -45,124 +45,133 @@ export default function Page() {
   }
 
   return (
-    <section className="flex justify-center py-24 px-4">
-      <div className="w-full max-w-2xl space-y-8 rounded-2xl border border-zinc-800 bg-zinc-950/90 p-10 backdrop-blur">
-        {/* Header */}
+    <main className="min-h-screen bg-black text-zinc-200 px-6 py-24">
+      <section className="mx-auto w-full max-w-2xl space-y-10">
+        {/* Title */}
         <header className="space-y-3">
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="text-3xl font-serif tracking-tight">
             {isInstitutional
               ? "Institutional & Governance Inquiry"
-              : "Contact Moral Clarity AI"}
+              : "Contact — Moral Clarity AI"}
           </h1>
 
-          <p className="text-sm text-zinc-400 max-w-prose">
+          <p className="text-sm text-zinc-400 leading-relaxed">
             This channel reaches the Moral Clarity stewardship team directly.
             Messages submitted here are reviewed by humans.
           </p>
         </header>
 
+        <hr className="border-zinc-700/60" />
+
         {/* Institutional framing */}
         {isInstitutional && (
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-300">
-            <p className="mb-2 font-medium">
+          <section className="space-y-2 text-sm leading-relaxed">
+            <p className="text-zinc-300 font-medium">
               Institutional access is not self-serve.
             </p>
-            <p>
-              Requests involving regulated, public-facing, or
-              execution-bound use are reviewed prior to any deployment
-              discussion. Submission of this form does not grant access
-              or approval.
+            <p className="text-zinc-400">
+              Requests involving regulated, public-facing, or execution-bound
+              use are reviewed prior to any deployment discussion. Submission of
+              this form does not grant access or approval.
             </p>
-          </div>
+          </section>
         )}
 
-        {/* Contact alternative */}
+        {/* Email fallback */}
         <p className="text-sm text-zinc-400">
-          Prefer email? Reach us at{" "}
+          Direct correspondence:{" "}
           <a
-            className="text-blue-400 hover:underline"
             href="mailto:support@moralclarity.ai"
+            className="text-blue-400 hover:underline"
           >
             support@moralclarity.ai
           </a>
         </p>
 
+        <hr className="border-zinc-700/60" />
+
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-2">
-            <label className="text-xs uppercase tracking-wide text-zinc-500">
-              Name
-            </label>
-            <input
-              name="name"
-              required
-              placeholder="Your full name"
-              className="w-full rounded-md bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <section className="space-y-5">
+            <div className="space-y-1">
+              <label className="text-xs uppercase tracking-wider text-zinc-500">
+                Name
+              </label>
+              <input
+                name="name"
+                required
+                placeholder="Full name"
+                className="w-full bg-black border border-zinc-700 px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-400"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <label className="text-xs uppercase tracking-wide text-zinc-500">
-              Email
-            </label>
-            <input
-              name="email"
-              type="email"
-              required
-              placeholder="you@organization.com"
-              className="w-full rounded-md bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
-            />
-          </div>
+            <div className="space-y-1">
+              <label className="text-xs uppercase tracking-wider text-zinc-500">
+                Email
+              </label>
+              <input
+                name="email"
+                type="email"
+                required
+                placeholder="you@organization.com"
+                className="w-full bg-black border border-zinc-700 px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-400"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <label className="text-xs uppercase tracking-wide text-zinc-500">
-              Message
-            </label>
-            <textarea
-              name="message"
-              required
-              rows={6}
-              placeholder={
-                isInstitutional
-                  ? "Describe your organization, intended use, and governance context."
-                  : "How can we help?"
-              }
-              className="w-full rounded-md bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
-            />
-          </div>
+            <div className="space-y-1">
+              <label className="text-xs uppercase tracking-wider text-zinc-500">
+                Message
+              </label>
+              <textarea
+                name="message"
+                required
+                rows={6}
+                placeholder={
+                  isInstitutional
+                    ? "Describe your organization, intended use, and governance context."
+                    : "Your message."
+                }
+                className="w-full bg-black border border-zinc-700 px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-400"
+              />
+            </div>
+          </section>
 
-          <button
-            type="submit"
-            disabled={status === "sending"}
-            className="inline-flex items-center rounded-md bg-blue-600 px-5 py-2.5 text-sm font-medium transition disabled:opacity-60 hover:bg-blue-500"
-          >
-            {status === "sending"
-              ? "Submitting…"
-              : isInstitutional
-              ? "Submit inquiry for review"
-              : "Send message"}
-          </button>
+          <hr className="border-zinc-700/60" />
 
-          {status === "sent" && (
-            <p className="text-sm text-green-400">
-              Inquiry received. A member of the stewardship team will
-              respond.
-            </p>
-          )}
+          {/* Submit */}
+          <section className="flex items-center gap-4">
+            <button
+              type="submit"
+              disabled={status === "sending"}
+              className="border border-zinc-500 px-4 py-2 text-sm hover:border-zinc-300 transition disabled:opacity-60"
+            >
+              {status === "sending"
+                ? "Submitting…"
+                : isInstitutional
+                ? "Submit inquiry for review"
+                : "Send message"}
+            </button>
 
-          {status === "error" && (
-            <p className="text-sm text-red-400">
-              Something went wrong. Please try again or email us directly.
-            </p>
-          )}
+            {status === "sent" && (
+              <span className="text-sm text-green-400">
+                Inquiry received.
+              </span>
+            )}
+
+            {status === "error" && (
+              <span className="text-sm text-red-400">
+                Submission failed.
+              </span>
+            )}
+          </section>
         </form>
 
-        {/* Footer note */}
-        <p className="text-xs text-zinc-500">
+        {/* Footer */}
+        <p className="text-xs text-zinc-500 leading-relaxed">
           Appropriate for governance questions, institutional correspondence,
           sponsorship inquiries, and regulated-use discussions.
         </p>
-      </div>
-    </section>
+      </section>
+    </main>
   );
 }
