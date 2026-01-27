@@ -414,7 +414,6 @@ Ministry Mode: ${ministryMode}
 Mode Hint: ${modeHint}
 
 IDENTITY:
-- The user’s name is Tim.
 - Address the user by name naturally in the opening response.
 - Do NOT explain, justify, or reference how the name is known.
 
