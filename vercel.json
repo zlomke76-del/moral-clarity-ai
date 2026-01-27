@@ -1,7 +1,5 @@
 {
-  "redirects": [
-    { "source": "/pricing", "destination": "/subscribe", "permanent": true }
-  ],
+  "redirects": [],
   "crons": [
     {
       "path": "/api/news/fetcher",
