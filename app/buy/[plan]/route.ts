@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { PLAN_TO_PRICE, PLAN_META, type PlanSlug } from "@/lib/pricing";
+import {
+  PLAN_TO_PRICE,
+  PLAN_META,
+  normalizePlanSlug,
+  type PlanSlug,
+} from "@/lib/pricing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,7 +34,8 @@ export async function GET(
     url.searchParams.get("nxtPlan") ??
     pathPlan;
 
-  const plan = rawPlan?.toLowerCase() as PlanSlug | undefined;
+  // ✅ CANONICAL NORMALIZATION (single authority)
+  const plan: PlanSlug | null = normalizePlanSlug(rawPlan);
 
   if (!plan || !(plan in PLAN_TO_PRICE)) {
     return NextResponse.json(
@@ -63,9 +69,8 @@ export async function GET(
         plan,
         tier: meta.tier,
         seats: String(meta.seats),
-        memoryGB: meta.memoryGB !== undefined
-          ? String(meta.memoryGB)
-          : null,
+        memoryGB:
+          meta.memoryGB !== undefined ? String(meta.memoryGB) : null,
       },
     });
 
