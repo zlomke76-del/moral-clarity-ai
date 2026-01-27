@@ -514,6 +514,24 @@ const context = await assembleContext(
   }
 );
 
+// --------------------------------------------------------
+// CONTEXT INVARIANT OBSERVABILITY (AUTHORITATIVE)
+// --------------------------------------------------------
+console.log("[CTX SHAPE]", Object.keys(context ?? {}));
+
+if (
+  !context ||
+  !("workingMemory" in context) ||
+  !("memoryPack" in context) ||
+  !("reflectionLedger" in context)
+) {
+  console.error("[CTX INVARIANT VIOLATION] Memory structures not hydrated", {
+    hasWorkingMemory: Boolean((context as any)?.workingMemory),
+    hasMemoryPack: Boolean((context as any)?.memoryPack),
+    hasReflectionLedger: Boolean((context as any)?.reflectionLedger),
+  });
+}
+
     // --------------------------------------------------------
 // ATTACHMENTS — AUTHORITATIVE CONTEXT INJECTION (FIXED)
 // --------------------------------------------------------
