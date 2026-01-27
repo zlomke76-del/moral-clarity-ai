@@ -328,10 +328,12 @@ export async function runHybridPipeline(args: {
   const { userMessage, context, ministryMode, founderMode, modeHint } = args;
 
   // ----------------------------------------------------------
-  // DIAGNOSTIC — RESTORED (WM)
+  // DIAGNOSTIC — RESTORED (WM / FACTS / ROLODEX)
   // ----------------------------------------------------------
   console.log("[DIAG-HYBRID]", {
     WM: context?.workingMemory?.items?.length ?? 0,
+    FACTS: context?.memoryPack?.facts?.length ?? 0,
+    ROLODEX: context?.rolodex?.length ?? 0,
   });
 
   const domain = detectRequestDomain(userMessage);
@@ -401,6 +403,9 @@ export async function runHybridPipeline(args: {
     sanitizeASCII(`${SKEPTIC_SYSTEM}\nUser: ${userMessage}`)
   );
 
+  // ----------------------------------------------------------
+  // SYSTEM PROMPT — MEMORY FIRST (AUTHORITATIVE)
+  // ----------------------------------------------------------
   const system = buildSolaceSystemPrompt(
     "core",
     `
@@ -411,11 +416,15 @@ Mode Hint: ${modeHint}
 MEMORY (AUTHORITATIVE — AVAILABLE BEFORE EXECUTION):
 
 ${formatFactualMemory(context)}
-${formatReflectionLedger(context.reflectionLedger)}
+${formatRolodex(context)}
 ${formatWorkingMemory(context)}
+
+REFLECTION (NON-AUTHORITATIVE — READ ONLY):
+${formatReflectionLedger(context.reflectionLedger)}
 
 ABSOLUTE RULES:
 - Single unified voice
+- Facts supersede all
 - No fabrication
 - No autonomous action
 `
