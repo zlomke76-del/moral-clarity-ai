@@ -147,13 +147,17 @@ export default function PricingPage() {
               ))}
             </ul>
 
+            {/* CTA — now a true button-style control */}
             <Link
               href={plan.href}
+              aria-label={plan.ctaLabel}
               className={[
-                "mt-6 inline-flex w-full items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition",
+                "mt-6 inline-flex w-full items-center justify-center gap-2",
+                "rounded-lg px-4 py-2.5 text-sm font-semibold",
+                "transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-black",
                 plan.highlight
-                  ? "bg-blue-600 text-white hover:bg-blue-500"
-                  : "bg-zinc-800 text-white hover:bg-zinc-700",
+                  ? "bg-blue-600 text-white hover:bg-blue-500 active:bg-blue-700"
+                  : "bg-zinc-800 text-white hover:bg-zinc-700 active:bg-zinc-600",
               ].join(" ")}
             >
               {plan.ctaLabel}
