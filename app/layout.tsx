@@ -39,9 +39,21 @@ export default async function RootLayout({
     hdrs.get("referer") ||
     "";
 
-  const isApp =
-    pathname.startsWith("/app") ||
-    pathname.includes("/app/");
+  // --------------------------------------------------
+  // 🟢 Explicit public routes (no subscription guard)
+  // --------------------------------------------------
+  const isPublicRoute =
+    pathname === "/pricing" ||
+    pathname.startsWith("/pricing") ||
+    pathname === "/contact" ||
+    pathname.startsWith("/contact");
+
+  // --------------------------------------------------
+  // 🔒 App routes (guarded)
+  // --------------------------------------------------
+  const isAppRoute =
+    !isPublicRoute &&
+    (pathname.startsWith("/app") || pathname.includes("/app/"));
 
   return (
     <html lang="en" className="h-full dark">
@@ -51,8 +63,8 @@ export default async function RootLayout({
 
         <LayoutShell>{children}</LayoutShell>
 
-        {/* ✅ SINGLE Solace mount */}
-        {isApp && <SolaceGuard />}
+        {/* ✅ SINGLE Solace mount — NEVER on pricing */}
+        {isAppRoute && <SolaceGuard />}
 
         <Toaster />
       </body>
