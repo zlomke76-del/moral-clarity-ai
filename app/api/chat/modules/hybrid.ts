@@ -241,6 +241,75 @@ No meta commentary.
 `;
 
 // --------------------------------------------------------------
+// FORMATTERS (RESTORED — AUTHORITATIVE)
+// --------------------------------------------------------------
+function formatAuthoritativeAttachments(context: any): string {
+  const attachments = context?.attachments ?? [];
+
+  if (!Array.isArray(attachments) || attachments.length === 0) {
+    return `ATTACHMENTS:\nNone.\n`;
+  }
+
+  return `
+AUTHORITATIVE USER-PROVIDED FILES:
+
+The user has provided the following files for this session.
+These files EXIST and MUST be acknowledged before proceeding.
+
+${attachments
+  .map(
+    (a: any, i: number) =>
+      `${i + 1}. ${a.name ?? "Unnamed file"} (${a.mime ?? "unknown type"})`
+  )
+  .join("\n")}
+`;
+}
+
+function formatWorkingMemory(context: any): string {
+  const wm = context?.workingMemory?.items ?? [];
+
+  if (!Array.isArray(wm) || wm.length === 0) {
+    return `WORKING MEMORY:\nNone.\n`;
+  }
+
+  return `
+WORKING MEMORY (SESSION-SCOPED, NON-DURABLE):
+${wm.map((m: any) => `- (${m.role}) ${m.content}`).join("\n")}
+`;
+}
+
+function formatFactualMemory(context: any): string {
+  const facts = context?.memoryPack?.facts ?? [];
+
+  if (!facts.length) {
+    return `FACTUAL MEMORY:\nNone recorded.\n`;
+  }
+
+  return `
+FACTUAL MEMORY (AUTHORITATIVE):
+${facts.map((f: any) => `- ${f}`).join("\n")}
+`;
+}
+
+function formatRolodex(context: any): string {
+  const rolodex = context?.rolodex ?? [];
+
+  if (!rolodex.length) {
+    return `ROLODEX:\nNo contacts.\n`;
+  }
+
+  return `
+ROLODEX (REFERENCE DATA):
+${rolodex
+  .map(
+    (r: any) =>
+      `- ${r.name} | phone=${r.primary_phone ?? "n/a"} | email=${r.primary_email ?? "n/a"}`
+  )
+  .join("\n")}
+`;
+}
+
+// --------------------------------------------------------------
 // PIPELINE
 // --------------------------------------------------------------
 export async function runHybridPipeline(args: {
@@ -254,22 +323,13 @@ export async function runHybridPipeline(args: {
 
   const domain = detectRequestDomain(userMessage);
 
-  // ----------------------------------------------------------
-  // SESSION HALT FLAGS (AUTHORITATIVE)
-  // ----------------------------------------------------------
   (context as any).__halted = (context as any).__halted ?? false;
   (context as any).__haltLock = (context as any).__haltLock ?? false;
 
-  // ----------------------------------------------------------
-  // ABSOLUTE HALT LOCK — BUT NOT FOR CODE EXECUTION
-  // ----------------------------------------------------------
   if ((context as any).__haltLock === true && domain !== "code_execution") {
     return { finalAnswer: TERMINAL_HALT_RESPONSE };
   }
 
-  // ----------------------------------------------------------
-  // HARD POST-HALT FINGERPRINT GUARD (ABSOLUTE)
-  // ----------------------------------------------------------
   const lastAssistant =
     context?.workingMemory?.items
       ?.slice()
@@ -286,9 +346,6 @@ export async function runHybridPipeline(args: {
     return { finalAnswer: TERMINAL_HALT_RESPONSE };
   }
 
-  // ----------------------------------------------------------
-  // HYBRID TERMINAL GATES (DOMAIN-AWARE)
-  // ----------------------------------------------------------
   if (
     domain !== "code_execution" &&
     userMessage &&
@@ -321,9 +378,6 @@ export async function runHybridPipeline(args: {
     return { finalAnswer: TERMINAL_AGENCY_RESPONSE };
   }
 
-  // ----------------------------------------------------------
-  // MODEL INVOCATION
-  // ----------------------------------------------------------
   const optimist = await callModel(
     "gpt-4.1-mini",
     sanitizeASCII(`${OPTIMIST_SYSTEM}\nUser: ${userMessage}`)
@@ -351,6 +405,12 @@ ABSOLUTE RULES:
   const arbiterPrompt = sanitizeASCII(`
 ${system}
 
+${formatAuthoritativeAttachments(context)}
+${formatFactualMemory(context)}
+${formatReflectionLedger(context.reflectionLedger)}
+${formatRolodex(context)}
+${formatWorkingMemory(context)}
+
 INTERNAL CONTEXT:
 ${optimist}
 ${skeptic}
@@ -361,18 +421,12 @@ ${userMessage}
 
   const finalAnswer = await callModel("gpt-4.1", arbiterPrompt);
 
-  // ----------------------------------------------------------
-  // GOVERNANCE VALIDATION — REFLECTION MISUSE (LAST RESORT)
-  // ----------------------------------------------------------
   const reflectionCheck = detectReflectionMisuse(finalAnswer);
 
   if (reflectionCheck.violated) {
     return { finalAnswer: TERMINAL_REFLECTION_RESPONSE };
   }
 
-  // ----------------------------------------------------------
-  // SMS DRAFT CREATION (NO STORAGE HERE)
-  // ----------------------------------------------------------
   if (domain === "sms_draft") {
     const inbound = getLastInboundSms(context);
     if (inbound?.from && finalAnswer) {
