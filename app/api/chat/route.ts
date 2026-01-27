@@ -423,11 +423,6 @@ if (executionProfile === "demo") {
     resolvedConversationId = data.id;
   }
 }
-if (executionProfile === "demo") {
-  // Demo mode never reads persisted working memory
-  sessionWM = [];
-}
-
 
 // --------------------------------------------------------
 // INVARIANT CHECK (NON-NEGOTIABLE)
