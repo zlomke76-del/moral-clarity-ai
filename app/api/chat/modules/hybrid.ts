@@ -5,10 +5,9 @@
 // FACTS SUPERSEDE ALL
 //
 // FIXED:
-// - Restores WORKING MEMORY VISIBILITY (non-authoritative)
-// - Preserves ALL hard-stop invariants
-// - Memory is factual recall only, never judgmental
-// - No reflection authority leakage
+// - WORKING / FACTUAL / REFLECTION memory ALWAYS declared
+// - Formatters decide content, not the pipeline
+// - ALL hard-stop invariants preserved
 // --------------------------------------------------------------
 
 import { callModel } from "./model-router";
@@ -241,6 +240,31 @@ No meta commentary.
 `;
 
 // --------------------------------------------------------------
+// MEMORY FORMATTERS (LOCAL, NON-DESTRUCTIVE)
+// --------------------------------------------------------------
+function formatWorkingMemory(context: any): string {
+  const wm = context?.workingMemory?.items ?? [];
+  if (!Array.isArray(wm) || wm.length === 0) {
+    return `WORKING MEMORY (NON-AUTHORITATIVE):\nNone.\n`;
+  }
+  return `
+WORKING MEMORY (NON-AUTHORITATIVE):
+${wm.map((m: any) => `- (${m.role}) ${m.content}`).join("\n")}
+`;
+}
+
+function formatFactualMemory(context: any): string {
+  const facts = context?.memoryPack?.facts ?? [];
+  if (!Array.isArray(facts) || facts.length === 0) {
+    return `FACTUAL MEMORY (AUTHORITATIVE):\nNone recorded.\n`;
+  }
+  return `
+FACTUAL MEMORY (AUTHORITATIVE):
+${facts.map((f: any) => `- ${f}`).join("\n")}
+`;
+}
+
+// --------------------------------------------------------------
 // PIPELINE
 // --------------------------------------------------------------
 export async function runHybridPipeline(args: {
@@ -333,18 +357,12 @@ ABSOLUTE RULES:
 `
   );
 
-  const memoryContext =
-    context?.workingMemory?.items?.length
-      ? `
-WORKING MEMORY (NON-AUTHORITATIVE — FACTUAL CONTINUITY ONLY):
-${formatReflectionLedger(context.workingMemory.items)}
-`
-      : "";
-
   const arbiterPrompt = sanitizeASCII(`
 ${system}
 
-${memoryContext}
+${formatFactualMemory(context)}
+${formatReflectionLedger(context?.reflectionLedger)}
+${formatWorkingMemory(context)}
 
 INTERNAL CONTEXT:
 ${optimist}
