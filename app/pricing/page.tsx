@@ -95,21 +95,21 @@ const PLANS: Plan[] = [
 
 export default function PricingPage() {
   return (
-    <section className="pricing mx-auto max-w-6xl px-4 py-12">
+    <section className="mx-auto max-w-6xl px-4 py-12">
       {/* Header */}
-      <div className="pricing-head mb-12">
+      <div className="mb-12">
         <h1 className="text-3xl font-semibold tracking-tight text-white">
           Institutional pricing
         </h1>
         <p className="mt-3 max-w-2xl text-sm text-zinc-400">
-          Solace is priced according to responsibility, not usage.  
-          Higher tiers reflect governance, accountability, and operational risk —
-          not feature unlocks.
+          Solace is priced according to responsibility, not usage. Higher tiers
+          reflect governance, accountability, and operational risk — not feature
+          unlocks.
         </p>
       </div>
 
       {/* Grid */}
-      <div className="pricing-grid grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {PLANS.map((plan) => (
           <article
             key={plan.id}
@@ -165,8 +165,8 @@ export default function PricingPage() {
       </div>
 
       <p className="mt-12 text-center text-sm text-zinc-500">
-        Solace is not optimized for experimentation at scale.  
-        Institutional deployments require explicit governance and acceptance of responsibility.
+        Solace is not optimized for experimentation at scale. Institutional
+        deployments require explicit governance and acceptance of responsibility.
       </p>
     </section>
   );
