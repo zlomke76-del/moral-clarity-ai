@@ -6,6 +6,7 @@
 // This route:
 //  - authenticates refresh requests
 //  - performs a full outlet coverage audit (read-only)
+//  - enforces multi-path reachability (RSS → Tavily fallback)
 //  - invokes ingest-worker ONLY if coverage is complete
 //  - DOES NOT modify ingest-worker behavior or Supabase writes
 // ============================================================
@@ -17,6 +18,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { OUTLET_CONFIGS } from "@/lib/news/outlets";
 import { fetchRssItems, filterItemsByDays } from "@/lib/news/rss";
+import { webSearch } from "@/lib/search";
 
 /* ========= ENV ========= */
 
@@ -56,7 +58,7 @@ function pickOrigin(req: NextRequest): string | null {
   return null;
 }
 
-/* ========= COVERAGE AUDIT (READ-ONLY) ========= */
+/* ========= COVERAGE AUDIT (READ-ONLY, MULTI-PATH) ========= */
 
 type CoverageReport = {
   attempted: string[];
@@ -77,26 +79,59 @@ async function auditOutletCoverage(): Promise<CoverageReport> {
     const canonical = outlet.canonical;
     coverage.attempted.push(canonical);
 
-    if (!outlet.rss) {
-      // Missing RSS is a legitimate config choice
-      coverage.noContent.push(canonical);
-      continue;
+    let reachable = false;
+    let hadContent = false;
+
+    // ---- 1) RSS ATTEMPT (if configured) ----
+    if (outlet.rss) {
+      try {
+        const items = await fetchRssItems(outlet.rss);
+        const recent = filterItemsByDays(items, 2);
+
+        if (recent.length > 0) {
+          reachable = true;
+          hadContent = true;
+        }
+      } catch {
+        // swallow — fall through to Tavily
+      }
     }
 
-    try {
-      const items = await fetchRssItems(outlet.rss);
-      const recent = filterItemsByDays(items, 2);
+    // ---- 2) TAVILY FALLBACK (reachability probe) ----
+    if (!reachable) {
+      try {
+        const results = await webSearch(
+          outlet.tavilyQuery || `site:${canonical}`,
+          {
+            news: true,
+            max: 1,
+            days: 2,
+          }
+        );
 
-      if (!recent.length) {
-        coverage.noContent.push(canonical);
+        if (Array.isArray(results) && results.length > 0) {
+          reachable = true;
+          hadContent = true;
+        }
+      } catch (err: any) {
+        coverage.failed.push({
+          outlet: canonical,
+          reason: err?.message || "RSS + Tavily failed",
+        });
         continue;
       }
+    }
 
-      coverage.succeeded.push(canonical);
-    } catch (err: any) {
+    if (reachable) {
+      if (hadContent) {
+        coverage.succeeded.push(canonical);
+      } else {
+        coverage.noContent.push(canonical);
+      }
+    } else {
       coverage.failed.push({
         outlet: canonical,
-        reason: err?.message || String(err),
+        reason: "Unreachable via RSS and Tavily",
       });
     }
   }
