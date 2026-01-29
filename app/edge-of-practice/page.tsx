@@ -298,6 +298,36 @@ export default function EdgeOfPracticeIndexPage() {
 
         <hr />
 
+        {/* CANONICAL CONSTRAINTS */}
+        <h2>Canonical Constraints</h2>
+        <p className="text-sm text-neutral-500">
+          All Edge of Practice experiments operate under the following
+          non-negotiable canonical invariants:
+        </p>
+        <ul className="text-sm text-neutral-500 list-disc pl-6 mt-2">
+          <li>
+            <Link href="/canon/invariants/refusal-outside-optimization">
+              Refusal Must Remain Outside Optimization
+            </Link>
+          </li>
+          <li>
+            <Link href="/canon/invariants/post-refusal-non-instrumentality">
+              Post-Refusal Non-Instrumentality
+            </Link>
+          </li>
+          <li>
+            <Link href="/canon/invariants/authority-conservation-across-agents">
+              Authority Conservation Across Agents
+            </Link>
+          </li>
+        </ul>
+        <p className="text-sm text-neutral-500 mt-2 italic">
+          These constraints are referenced for admissibility only.
+          They are not restated, interpreted, or modified here.
+        </p>
+
+        <hr />
+
         <p className="text-sm text-muted-foreground">
           This page is the authoritative index of all short-cycle experiments.
           Experiments are fixed at publication and revised only by explicit
