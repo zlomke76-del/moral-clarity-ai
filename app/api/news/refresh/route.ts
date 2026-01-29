@@ -1,13 +1,13 @@
 // app/api/news/refresh/route.ts
 // ============================================================
-// NEWS REFRESH (INGEST GATE)
+// NEWS REFRESH (INGEST GATE — CAPABILITY BASED)
 // Canonical gatekeeper before ingest-worker execution
 // ============================================================
 // This route:
 //  - authenticates refresh requests
-//  - performs a full outlet coverage audit (read-only)
-//  - enforces multi-path reachability (RSS → Tavily → Browserless)
-//  - invokes ingest-worker ONLY if coverage is complete
+//  - validates outlet acquisition CAPABILITY (not yield)
+//  - blocks only on misconfiguration or missing paths
+//  - invokes ingest-worker ONLY if coverage is valid
 //  - DOES NOT modify ingest-worker behavior or Supabase writes
 // ============================================================
 
@@ -15,15 +15,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
-
 import { OUTLET_CONFIGS } from "@/lib/news/outlets";
-import { fetchRssItems, filterItemsByDays } from "@/lib/news/rss";
-import { webSearch } from "@/lib/search";
 
 /* ========= ENV ========= */
 
 const NEWS_REFRESH_SECRET = process.env.NEWS_REFRESH_SECRET || "";
-const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN || "";
 
 // 🔒 Canonical production ingest worker endpoint
 const INGEST_WORKER_URL =
@@ -59,58 +55,23 @@ function pickOrigin(req: NextRequest): string | null {
   return null;
 }
 
-/* ========= BROWSERLESS PROBE (READ-ONLY) ========= */
-
-async function probeWithBrowserless(url: string): Promise<boolean> {
-  if (!BROWSERLESS_TOKEN) return false;
-
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-
-    const resp = await fetch(
-      `https://chrome.browserless.io/content?token=${encodeURIComponent(
-        BROWSERLESS_TOKEN
-      )}`,
-      {
-        method: "POST",
-        signal: controller.signal,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url,
-          options: {
-            waitUntil: "domcontentloaded",
-            timeout: 7000,
-          },
-        }),
-      }
-    );
-
-    clearTimeout(timeout);
-
-    if (!resp.ok) return false;
-
-    const text = await resp.text();
-    return typeof text === "string" && text.length > 500;
-  } catch {
-    return false;
-  }
-}
-
-/* ========= COVERAGE AUDIT (READ-ONLY, MULTI-PATH) ========= */
+/* ========= COVERAGE AUDIT (CAPABILITY, NOT YIELD) ========= */
 
 type CoverageReport = {
   attempted: string[];
   succeeded: string[];
-  noContent: string[];
   failed: { outlet: string; reason: string }[];
 };
 
-async function auditOutletCoverage(): Promise<CoverageReport> {
+/**
+ * Coverage here means:
+ *  - Does this outlet have at least ONE sanctioned acquisition path?
+ *  - NOT whether content appeared in the last N hours
+ */
+function auditOutletCoverage(): CoverageReport {
   const coverage: CoverageReport = {
     attempted: [],
     succeeded: [],
-    noContent: [],
     failed: [],
   };
 
@@ -118,61 +79,19 @@ async function auditOutletCoverage(): Promise<CoverageReport> {
     const canonical = outlet.canonical;
     coverage.attempted.push(canonical);
 
-    let reachable = false;
-    let hadContent = false;
+    const hasRss = Boolean(outlet.rss);
+    const hasTavily = Boolean(outlet.tavilyQuery);
+    const hasAnyPath = hasRss || hasTavily;
 
-    // ---- 1) RSS ----
-    if (outlet.rss) {
-      try {
-        const items = await fetchRssItems(outlet.rss);
-        const recent = filterItemsByDays(items, 2);
-        if (recent.length > 0) {
-          reachable = true;
-          hadContent = true;
-        }
-      } catch {
-        // fall through
-      }
-    }
-
-    // ---- 2) TAVILY ----
-    if (!reachable) {
-      try {
-        const results = await webSearch(
-          outlet.tavilyQuery || `site:${canonical}`,
-          { news: true, max: 1, days: 2 }
-        );
-        if (Array.isArray(results) && results.length > 0) {
-          reachable = true;
-          hadContent = true;
-        }
-      } catch {
-        // fall through
-      }
-    }
-
-    // ---- 3) BROWSERLESS (REACHABILITY ONLY) ----
-    if (!reachable) {
-      const probeUrl = `https://${canonical}`;
-      const ok = await probeWithBrowserless(probeUrl);
-      if (ok) {
-        reachable = true;
-        hadContent = false; // reachable but quiet
-      }
-    }
-
-    if (reachable) {
-      if (hadContent) {
-        coverage.succeeded.push(canonical);
-      } else {
-        coverage.noContent.push(canonical);
-      }
-    } else {
+    if (!hasAnyPath) {
       coverage.failed.push({
         outlet: canonical,
-        reason: "Unreachable via RSS, Tavily, and Browserless",
+        reason: "No acquisition path configured (rss or tavilyQuery missing)",
       });
+      continue;
     }
+
+    coverage.succeeded.push(canonical);
   }
 
   return coverage;
@@ -197,24 +116,12 @@ async function handleRefresh(req: NextRequest) {
     }
   }
 
-  // --- Coverage Gate ---
-  let coverage: CoverageReport;
-  try {
-    coverage = await auditOutletCoverage();
-  } catch (err: any) {
-    console.error("[news/refresh] coverage audit failed", err);
-    return NextResponse.json(
-      {
-        ok: false,
-        status: "coverage_audit_failed",
-        message: err?.message || String(err),
-      },
-      { status: 500, headers: corsHeaders(origin) }
-    );
-  }
+  // --- Coverage Gate (CAPABILITY ONLY) ---
+  const coverage = auditOutletCoverage();
 
   if (coverage.failed.length > 0) {
-    console.error("[news/refresh] coverage incomplete", coverage);
+    console.error("[news/refresh] coverage misconfiguration", coverage);
+
     return NextResponse.json(
       {
         ok: false,
@@ -226,6 +133,8 @@ async function handleRefresh(req: NextRequest) {
   }
 
   // --- Ingest Worker Invocation (UNCHANGED) ---
+  let workerResult: any = null;
+
   try {
     const workerResponse = await fetch(INGEST_WORKER_URL, {
       method: "POST",
@@ -244,17 +153,7 @@ async function handleRefresh(req: NextRequest) {
       );
     }
 
-    const worker = await workerResponse.json();
-
-    return NextResponse.json(
-      {
-        ok: true,
-        status: "refresh_completed",
-        coverage,
-        worker,
-      },
-      { status: 200, headers: corsHeaders(origin) }
-    );
+    workerResult = await workerResponse.json();
   } catch (err: any) {
     console.error("[news/refresh] ingest-worker invocation failed", err);
     return NextResponse.json(
@@ -266,6 +165,16 @@ async function handleRefresh(req: NextRequest) {
       { status: 500, headers: corsHeaders(origin) }
     );
   }
+
+  return NextResponse.json(
+    {
+      ok: true,
+      status: "refresh_completed",
+      coverage,
+      worker: workerResult,
+    },
+    { status: 200, headers: corsHeaders(origin) }
+  );
 }
 
 export async function GET(req: NextRequest) {
