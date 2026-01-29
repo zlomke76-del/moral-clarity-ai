@@ -1,13 +1,32 @@
+// app/api/news/refresh/route.ts
+// ============================================================
+// NEWS REFRESH (INGEST GATE)
+// Canonical gatekeeper before ingest-worker execution
+// ============================================================
+// This route:
+//  - authenticates refresh requests
+//  - performs a full outlet coverage audit (read-only)
+//  - invokes ingest-worker ONLY if coverage is complete
+//  - DOES NOT modify ingest-worker behavior or Supabase writes
+// ============================================================
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
+
+import { OUTLET_CONFIGS } from "@/lib/news/outlets";
+import { fetchRssItems, filterItemsByDays } from "@/lib/news/rss";
+
+/* ========= ENV ========= */
 
 const NEWS_REFRESH_SECRET = process.env.NEWS_REFRESH_SECRET || "";
 
 // 🔒 Canonical production ingest worker endpoint
 const INGEST_WORKER_URL =
   "https://studio.moralclarity.ai/api/news/ingest-worker";
+
+/* ========= CORS ========= */
 
 function corsHeaders(origin: string | null): Headers {
   const h = new Headers();
@@ -37,9 +56,60 @@ function pickOrigin(req: NextRequest): string | null {
   return null;
 }
 
+/* ========= COVERAGE AUDIT (READ-ONLY) ========= */
+
+type CoverageReport = {
+  attempted: string[];
+  succeeded: string[];
+  noContent: string[];
+  failed: { outlet: string; reason: string }[];
+};
+
+async function auditOutletCoverage(): Promise<CoverageReport> {
+  const coverage: CoverageReport = {
+    attempted: [],
+    succeeded: [],
+    noContent: [],
+    failed: [],
+  };
+
+  for (const outlet of OUTLET_CONFIGS) {
+    const canonical = outlet.canonical;
+    coverage.attempted.push(canonical);
+
+    if (!outlet.rss) {
+      // Missing RSS is a legitimate config choice
+      coverage.noContent.push(canonical);
+      continue;
+    }
+
+    try {
+      const items = await fetchRssItems(outlet.rss);
+      const recent = filterItemsByDays(items, 2);
+
+      if (!recent.length) {
+        coverage.noContent.push(canonical);
+        continue;
+      }
+
+      coverage.succeeded.push(canonical);
+    } catch (err: any) {
+      coverage.failed.push({
+        outlet: canonical,
+        reason: err?.message || String(err),
+      });
+    }
+  }
+
+  return coverage;
+}
+
+/* ========= MAIN ========= */
+
 async function handleRefresh(req: NextRequest) {
   const origin = pickOrigin(req);
 
+  // --- Auth ---
   if (NEWS_REFRESH_SECRET) {
     const url = new URL(req.url);
     const token =
@@ -53,6 +123,36 @@ async function handleRefresh(req: NextRequest) {
     }
   }
 
+  // --- Coverage Gate ---
+  let coverage: CoverageReport;
+  try {
+    coverage = await auditOutletCoverage();
+  } catch (err: any) {
+    console.error("[news/refresh] coverage audit failed", err);
+    return NextResponse.json(
+      {
+        ok: false,
+        status: "coverage_audit_failed",
+        message: err?.message || String(err),
+      },
+      { status: 500, headers: corsHeaders(origin) }
+    );
+  }
+
+  if (coverage.failed.length > 0) {
+    console.error("[news/refresh] coverage incomplete", coverage);
+
+    return NextResponse.json(
+      {
+        ok: false,
+        status: "coverage_incomplete",
+        coverage,
+      },
+      { status: 503, headers: corsHeaders(origin) }
+    );
+  }
+
+  // --- Ingest Worker Invocation (UNCHANGED) ---
   let workerResult: any = null;
 
   try {
@@ -90,6 +190,7 @@ async function handleRefresh(req: NextRequest) {
     {
       ok: true,
       status: "refresh_completed",
+      coverage,
       worker: workerResult,
     },
     { status: 200, headers: corsHeaders(origin) }
