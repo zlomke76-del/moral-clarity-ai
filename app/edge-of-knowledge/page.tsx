@@ -170,6 +170,34 @@ export default function EdgeOfKnowledgePage() {
           <Link href="/edge-of-protection">Edge of Protection</Link> governs authority, refusal, and containment. This separation is absolute.
         </p>
 
+        {/* CANONICAL CONSTRAINTS */}
+        <h2>Canonical Constraints</h2>
+        <p className="text-sm text-neutral-500">
+          All Edge of Knowledge materials operate under the following
+          non-negotiable canonical invariants:
+        </p>
+        <ul className="text-sm text-neutral-500 list-disc pl-6 mt-2">
+          <li>
+            <Link href="/canon/invariants/refusal-outside-optimization">
+              Refusal Must Remain Outside Optimization
+            </Link>
+          </li>
+          <li>
+            <Link href="/canon/invariants/post-refusal-non-instrumentality">
+              Post-Refusal Non-Instrumentality
+            </Link>
+          </li>
+          <li>
+            <Link href="/canon/invariants/authority-conservation-across-agents">
+              Authority Conservation Across Agents
+            </Link>
+          </li>
+        </ul>
+        <p className="text-sm text-neutral-500 mt-2 italic">
+          These constraints are referenced for admissibility only.
+          They are not restated, interpreted, or modified here.
+        </p>
+
         {/* SEAL */}
         <h2>Canonical Seal</h2>
         <p>
