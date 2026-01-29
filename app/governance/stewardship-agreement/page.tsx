@@ -10,6 +10,14 @@ export const metadata: Metadata = {
   title: "Stewardship Agreement | Moral Clarity AI",
   description:
     "The canonical governance charter defining stewardship authority, ethical boundaries, compensation, and licensing for the Moral Clarity AI ecosystem.",
+  openGraph: {
+    title: "Stewardship Agreement",
+    description:
+      "Canonical governance charter defining custodial authority, non-ownership, ethical integrity, and licensing for Moral Clarity AI.",
+    url: "https://moralclarity.ai/governance/stewardship-agreement",
+    siteName: "Moral Clarity AI",
+    type: "article",
+  },
   robots: {
     index: true,
     follow: true,
@@ -26,7 +34,7 @@ export default function StewardshipAgreementPage() {
         {/* Header */}
         <h1>Stewardship Agreement</h1>
         <p className="text-sm text-neutral-400">
-          Canonical Draft v0.5 · Published · Authority: Steward
+          Canonical Draft v0.6 · Published · Authority: Steward
         </p>
 
         <hr />
@@ -75,7 +83,12 @@ export default function StewardshipAgreementPage() {
         <p>
           Supporters are individuals or institutions that provide funding,
           resources, or collaboration without acquiring ownership, control, or
-          governance authority. Support does not confer entitlement.
+          governance authority.
+        </p>
+        <p>
+          Support does not create stakeholder status, implied influence,
+          expectation of governance input, or entitlement regardless of
+          contribution size, duration, or dependency.
         </p>
 
         <h3>2.4 Licensing</h3>
@@ -90,7 +103,7 @@ export default function StewardshipAgreementPage() {
 
         <h3>3.1 Steward Authority</h3>
         <p>
-          The Steward retains sole and final decision-making authority over
+          The Steward retains primary and final decision-making authority over
           governance, licensing, ethical boundaries, system evolution, and the
           acceptance or refusal of partnerships.
         </p>
@@ -167,6 +180,19 @@ export default function StewardshipAgreementPage() {
           authority.
         </p>
 
+        <h3>7.3 Stewardship Economics</h3>
+        <p>
+          Stewardship compensation reflects asymmetric risk, custodial
+          liability, refusal authority, reputational exposure, and the
+          obligation to act against economic incentives when ethical integrity
+          requires it.
+        </p>
+        <p>
+          Compensation is not wage-based, time-based, or benchmarked against
+          conventional employment roles, and is not intended to cap
+          responsibility, authority, or risk borne by the Steward.
+        </p>
+
         {/* Licensing */}
         <h2>8. Licensing Rights</h2>
         <p>
@@ -182,12 +208,29 @@ export default function StewardshipAgreementPage() {
           non-ownership authority. No automatic succession exists.
         </p>
 
+        <h3>9.1 Dormant Authority</h3>
+        <p>
+          In the event of Steward incapacitation or prolonged unavailability,
+          the Artifact enters a dormant governance state. During dormancy:
+        </p>
+        <ul>
+          <li>No new licenses may be granted</li>
+          <li>Existing licenses may be paused</li>
+          <li>
+            System evolution is frozen except for safety-critical remediation
+          </li>
+        </ul>
+        <p>
+          Dormancy persists until the Steward resumes authority or formally
+          designates a successor.
+        </p>
+
         {/* Amendments */}
         <h2>10. Amendment</h2>
         <p>
           This Agreement may be amended only by the Steward, provided amendments
-          preserve non-ownership, non-extraction, centralized authority, ethical
-          integrity, and governance clarity.
+          preserve non-ownership, non-extraction, centralized authority,
+          ethical integrity, and governance clarity.
         </p>
 
         {/* Breach */}
@@ -210,7 +253,7 @@ export default function StewardshipAgreementPage() {
         <hr />
 
         <p className="text-xs text-neutral-500">
-          Version: Canonical v0.5 · Status: Published · Last updated: 2025-01-XX
+          Version: Canonical v0.6 · Status: Published · Last updated: 2025-01-XX
         </p>
 
       </article>
