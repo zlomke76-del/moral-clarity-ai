@@ -101,22 +101,16 @@ export default function EdgeOfPracticeIndexPage() {
               Polyphonic AI Under Bounded Authority
             </Link>
           </li>
-
-          {/* === ADDITIVE ENTRY — NO DELETIONS === */}
           <li>
             <Link href="/edge-of-practice/confidence-suppresses-safeguards">
               Confidence Suppression of Dissent, Verification, and Refusal
             </Link>
           </li>
-
-          {/* === ADDITIVE ENTRY — NO DELETIONS === */}
           <li>
             <Link href="/edge-of-practice/pre-commitment-dampening">
               Pre-Commitment Dampening
             </Link>
           </li>
-
-          {/* === ADDITIVE ENTRY — NO DELETIONS === */}
           <li>
             <Link href="/edge-of-practice/refusal-outside-optimization">
               Refusal Must Remain Outside Optimization
@@ -188,15 +182,11 @@ export default function EdgeOfPracticeIndexPage() {
               Architected Micro-Lattice EV Battery Enclosure
             </Link>
           </li>
-
-          {/* === ADDITIVE ENTRY — NO DELETIONS === */}
           <li>
             <Link href="/edge-of-practice/pom-path-memory-bimodal-basin">
               POM Path-Memory Bimodal Basin Test
             </Link>
           </li>
-
-          {/* === ADDITIVE ENTRY — NO DELETIONS === */}
           <li>
             <Link href="/edge-of-practice/tpu-segmental-network-decoupling">
               TPU Segmental Network Decoupling Test
@@ -236,11 +226,6 @@ export default function EdgeOfPracticeIndexPage() {
           <li>
             <Link href="/edge-of-practice/embedded-osmotic-power">
               Embedded Osmotic Power
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-practice/phase-locked-capillary-oscillation">
-              Phase-Locked Capillary Oscillation
             </Link>
           </li>
         </ul>
@@ -298,7 +283,7 @@ export default function EdgeOfPracticeIndexPage() {
 
         <hr />
 
-        {/* CANONICAL CONSTRAINTS */}
+        {/* ================= CANONICAL CONSTRAINTS ================= */}
         <h2>Canonical Constraints</h2>
         <p className="text-sm text-neutral-500">
           All Edge of Practice experiments operate under the following
@@ -322,8 +307,32 @@ export default function EdgeOfPracticeIndexPage() {
           </li>
         </ul>
         <p className="text-sm text-neutral-500 mt-2 italic">
-          These constraints are referenced for admissibility only.
-          They are not restated, interpreted, or modified here.
+          These constraints are referenced for admissibility only. They are not
+          restated, interpreted, or modified here.
+        </p>
+
+        <hr />
+
+        {/* ================= EVALUATION & DEPLOYMENT GATE ================= */}
+        <h2>Evaluation &amp; Deployment Gate</h2>
+        <p>
+          The experiments indexed above surface failure modes that frequently
+          emerge only at runtime, particularly under uncertainty, pressure, or
+          delegation.
+        </p>
+        <p>
+          For organizations evaluating whether AI systems are suitable to move
+          beyond experimentation into regulated or high-consequence environments,
+          see the{' '}
+          <Link href="/canon/checklists/runtime-authority-v1">
+            Runtime Authority Checklist (v1.0)
+          </Link>.
+        </p>
+        <p>
+          The checklist defines outcome-level requirements for enforceable scope
+          limits, refusal integrity, uncertainty handling, predictability under
+          stress, and post-incident reconstruction. It is provided as a neutral
+          evaluation aid and does not prescribe technical architecture.
         </p>
 
         <hr />
