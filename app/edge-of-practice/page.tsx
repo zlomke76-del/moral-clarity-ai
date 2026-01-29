@@ -101,6 +101,13 @@ export default function EdgeOfPracticeIndexPage() {
               Polyphonic AI Under Bounded Authority
             </Link>
           </li>
+
+          {/* === ADDITIVE ENTRY — NO DELETIONS === */}
+          <li>
+            <Link href="/edge-of-practice/confidence-suppresses-safeguards">
+              Confidence Suppression of Dissent, Verification, and Refusal
+            </Link>
+          </li>
         </ul>
 
         {/* ================= MATERIALS ================= */}
