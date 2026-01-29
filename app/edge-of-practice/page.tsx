@@ -108,6 +108,20 @@ export default function EdgeOfPracticeIndexPage() {
               Confidence Suppression of Dissent, Verification, and Refusal
             </Link>
           </li>
+
+          {/* === ADDITIVE ENTRY — NO DELETIONS === */}
+          <li>
+            <Link href="/edge-of-practice/pre-commitment-dampening">
+              Pre-Commitment Dampening
+            </Link>
+          </li>
+
+          {/* === ADDITIVE ENTRY — NO DELETIONS === */}
+          <li>
+            <Link href="/edge-of-practice/refusal-outside-optimization">
+              Refusal Must Remain Outside Optimization
+            </Link>
+          </li>
         </ul>
 
         {/* ================= MATERIALS ================= */}
