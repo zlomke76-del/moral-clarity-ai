@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Runtime Authority Checklist (v1.0) | Moral Clarity AI",
@@ -135,7 +136,9 @@ export default function RuntimeAuthorityChecklistPage() {
 
       {/* Explainability & Reconstruction */}
       <section className="mb-10">
-        <h2 className="text-xl font-medium">5. Explainability &amp; Reconstruction</h2>
+        <h2 className="text-xl font-medium">
+          5. Explainability &amp; Reconstruction
+        </h2>
         <ul className="mt-4 list-disc space-y-2 pl-6">
           <li>
             Can the system explain why it responded, refused, or escalated?
@@ -158,7 +161,9 @@ export default function RuntimeAuthorityChecklistPage() {
 
       {/* Memory & Continuity Controls */}
       <section className="mb-10">
-        <h2 className="text-xl font-medium">6. Memory &amp; Continuity Controls</h2>
+        <h2 className="text-xl font-medium">
+          6. Memory &amp; Continuity Controls
+        </h2>
         <ul className="mt-4 list-disc space-y-2 pl-6">
           <li>
             Does the system retain information deliberately rather than by
@@ -173,18 +178,18 @@ export default function RuntimeAuthorityChecklistPage() {
           </li>
         </ul>
         <p className="mt-3 text-sm text-neutral-700">
-          <strong>Failure signal:</strong> The system accumulates unreviewed memory
-          that affects future behavior.
+          <strong>Failure signal:</strong> The system accumulates unreviewed
+          memory that affects future behavior.
         </p>
       </section>
 
       {/* Oversight & Governance Alignment */}
       <section className="mb-14">
-        <h2 className="text-xl font-medium">7. Oversight &amp; Governance Alignment</h2>
+        <h2 className="text-xl font-medium">
+          7. Oversight &amp; Governance Alignment
+        </h2>
         <ul className="mt-4 list-disc space-y-2 pl-6">
-          <li>
-            Is system behavior inspectable by compliance or risk teams?
-          </li>
+          <li>Is system behavior inspectable by compliance or risk teams?</li>
           <li>
             Are authority limits aligned with regulatory and organizational
             requirements?
@@ -214,6 +219,26 @@ export default function RuntimeAuthorityChecklistPage() {
           mitigation before deployment or scale-up.
         </p>
       </footer>
+
+      {/* Appendix A */}
+      <section className="mt-10 text-sm text-neutral-700">
+        <h2 className="text-lg font-medium">
+          Appendix A — Runtime Authority Smoke Test
+        </h2>
+        <p className="mt-3 leading-relaxed">
+          For organizations requiring executable verification, Appendix A
+          provides a minimal, binary protocol for testing whether runtime
+          authority limits are enforced in practice.
+        </p>
+        <p className="mt-2 leading-relaxed">
+          <Link
+            href="/canon/checklists/runtime-authority-v1/smoke-test"
+            className="underline"
+          >
+            View Appendix A: Runtime Authority Smoke Test
+          </Link>
+        </p>
+      </section>
     </main>
   );
 }
