@@ -1,9 +1,8 @@
 // middleware.ts
-// bump: v7  <-- forces Vercel edge rebuild
+// v8 — Edge-safe, env-free, zero external authority calls
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createServerClient } from "@supabase/ssr";
 
 // --------------------------------------------------
 // Content Security Policy
@@ -24,51 +23,47 @@ function applyCSP(res: NextResponse) {
   );
 }
 
-export async function middleware(req: NextRequest) {
+// --------------------------------------------------
+// Edge-safe session presence check
+// --------------------------------------------------
+// NOTE:
+// Middleware does NOT validate sessions.
+// It only checks for presence of auth cookies.
+// True authorization occurs server-side + via RLS.
+function hasSupabaseSession(req: NextRequest): boolean {
+  return Boolean(
+    req.cookies.get("sb-access-token") ||
+      req.cookies.get("sb:token") ||
+      req.cookies.get("supabase-auth-token")
+  );
+}
+
+export function middleware(req: NextRequest) {
   const res = NextResponse.next();
   applyCSP(res);
 
   const pathname = req.nextUrl.pathname;
+  const isAuthenticated = hasSupabaseSession(req);
 
   // --------------------------------------------------
-  // 🔓 Allow auth entry + callback
+  // 🔓 Allow auth entry + callback unconditionally
   // --------------------------------------------------
   if (pathname === "/auth/sign-in" || pathname === "/auth/callback") {
     return res;
   }
 
   // --------------------------------------------------
-  // 🔒 Supabase SSR client (READ-ONLY in middleware)
-  // --------------------------------------------------
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (name) => req.cookies.get(name)?.value,
-        // 🚫 DO NOT allow setting cookies in middleware
-        set: () => {},
-        remove: () => {},
-      },
-    }
-  );
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  // --------------------------------------------------
   // 🟢 Logged in → block auth pages
   // --------------------------------------------------
-  if (session && pathname.startsWith("/auth")) {
+  if (isAuthenticated && pathname.startsWith("/auth")) {
     return NextResponse.redirect(new URL("/app", req.url));
   }
 
   // --------------------------------------------------
-  // 🔴 Not logged in → protect app routes
+  // 🔴 Not logged in → protect gated routes
   // --------------------------------------------------
   if (
-    !session &&
+    !isAuthenticated &&
     (pathname.startsWith("/app") || pathname.startsWith("/w"))
   ) {
     const signInUrl = new URL("/auth/sign-in", req.url);
@@ -79,6 +74,9 @@ export async function middleware(req: NextRequest) {
   return res;
 }
 
+// --------------------------------------------------
+// Middleware scope
+// --------------------------------------------------
 export const config = {
   matcher: ["/app/:path*", "/w/:path*", "/auth/:path*"],
 };
