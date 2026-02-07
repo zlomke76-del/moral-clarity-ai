@@ -210,6 +210,11 @@ export default function EdgeOfKnowledgePage() {
         <h2>Included Edge of Knowledge Analyses</h2>
         <ul>
           <li>
+            <Link href="/edge-of-knowledge/boundary-self-modification-prohibition-bsmp-v1">
+              Boundary Self-Modification Prohibition (BSMP-v1)
+            </Link>
+          </li>
+          <li>
             <Link href="/edge-of-knowledge/birch-and-swinnerton-dyer-sha-obstruction">
               Birch and Swinnerton-Dyer: The Shafarevich–Tate Obstruction
             </Link>
