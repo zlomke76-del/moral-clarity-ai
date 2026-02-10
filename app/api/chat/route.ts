@@ -29,6 +29,7 @@ import { writeMemory } from "./modules/memory-writer";
 import { generateImage } from "./modules/image-router";
 import { requiresEPPE01 } from "@/lib/solace/policies/materials";
 import { validateEPPE01 } from "@/lib/solace/validators/eppe";
+import { authorizeExecution } from "@/lib/solace/authorityClient";
 
 // ------------------------------------------------------------
 // Attachment ingestion (AUTHORITATIVE)
