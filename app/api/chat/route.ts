@@ -14,10 +14,7 @@ import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension
 // ------------------------------------------------------------
 // Context constants
 // ------------------------------------------------------------
-import {
-  FACTS_LIMIT,
-  EPISODES_LIMIT,
-} from "./modules/context.constants";
+import { FACTS_LIMIT, EPISODES_LIMIT } from "./modules/context.constants";
 
 // ------------------------------------------------------------
 // Core pipelines
@@ -81,7 +78,6 @@ type TextArtifact = {
 };
 
 type AssistantArtifact = CodeArtifact | TextArtifact;
-
 
 // ------------------------------------------------------------
 // Helpers — intent detection
@@ -266,7 +262,6 @@ function assertNoPhantomLanguage(text: string): string {
   return text;
 }
 
-
 // ------------------------------------------------------------
 // ROLLING COMPACTION (NON-BLOCKING)
 // ------------------------------------------------------------
@@ -296,19 +291,16 @@ async function maybeRunRollingCompaction(params: {
   try {
     const compaction = await runSessionCompaction(conversationId, chunk);
 
-    await supabaseAdmin
-      .schema("memory")
-      .from("memories")
-      .insert({
-        user_id: userId,
-        email: "system",
-        workspace_id: null,
-        memory_type: "session_compaction",
-        source: "system",
-        content: JSON.stringify(compaction),
-        conversation_id: conversationId,
-        confidence: 1.0,
-      } as any);
+    await supabaseAdmin.schema("memory").from("memories").insert({
+      user_id: userId,
+      email: "system",
+      workspace_id: null,
+      memory_type: "session_compaction",
+      source: "system",
+      content: JSON.stringify(compaction),
+      conversation_id: conversationId,
+      confidence: 1.0,
+    } as any);
 
     await supabaseAdmin
       .schema("memory")
@@ -361,737 +353,707 @@ export async function POST(req: Request) {
         ? message.replace(/^\/eppe\s*/i, "").trim()
         : message;
 
-// --------------------------------------------------------
-// DEMO SAFE — EXECUTION PROFILE
-// --------------------------------------------------------
-const executionProfile =
-  finalUserKey === "webflow-guest" ? "demo" : "studio";
-
-// --------------------------------------------------------
-// OPTION B2 — DEMO SENTINEL + SESSION WM
-// --------------------------------------------------------
-const DEMO_USER_ID = "demo-session";
-const allowSessionWM = executionProfile === "demo";
-
-// --------------------------------------------------------
-// CANONICAL WORKSPACE RESOLUTION
-// --------------------------------------------------------
-const resolvedWorkspaceId =
-  workspaceId ??
-  process.env.MCA_WORKSPACE_ID ??
-  "global_news";
-
-// --------------------------------------------------------
-// ADMIN CLIENT (SINGLE AUTHORITATIVE DECLARATION)
-// --------------------------------------------------------
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false, autoRefreshToken: false } }
-);
-
-// --------------------------------------------------------
-// AUTHORITATIVE CONVERSATION RESOLUTION (FINAL)
-// Demo mode is STRICTLY SESSION-ISOLATED
-// --------------------------------------------------------
-let resolvedConversationId: string | null = null;
-
-if (executionProfile === "demo") {
-  // HARD INVARIANT:
-  // Demo conversations MUST NEVER share conversation_id.
-  // Each demo request resolves to an isolated session.
-  resolvedConversationId =
-    conversationId ?? `demo-${crypto.randomUUID()}`;
-} else {
-  resolvedConversationId = conversationId ?? null;
-
-  if (!resolvedConversationId && finalUserKey) {
-    const { data, error } = await supabaseAdmin
-      .schema("memory")
-      .from("conversations")
-      .insert({
-        user_id: finalUserKey,
-        workspace_id: resolvedWorkspaceId,
-        source: "chat_bootstrap",
-      })
-      .select("id")
-      .single();
-
-    if (error || !data?.id) {
-      throw new Error("Failed to bootstrap conversation");
-    }
-
-    resolvedConversationId = data.id;
-  }
-}
-
-// --------------------------------------------------------
-// INVARIANT CHECK (NON-NEGOTIABLE)
-// --------------------------------------------------------
-if (!finalUserKey || !resolvedConversationId) {
-  throw new Error("userKey and conversationId are required");
-}
-
-// --------------------------------------------------------
-// SSR AUTH CONTEXT (MUST PRECEDE authUserId)
-// --------------------------------------------------------
-const cookieStore: ReadonlyRequestCookies = await cookies();
-
-const supabaseSSR = createServerClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  {
-    cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value;
-      },
-      set() {},
-      remove() {},
-    },
-  }
-);
-
-const {
-  data: { user },
-} = await supabaseSSR.auth.getUser();
-
-// --------------------------------------------------------
-// AUTH USER RESOLUTION (NOW SAFE)
-// --------------------------------------------------------
-const authUserId =
-  executionProfile === "demo"
-    ? DEMO_USER_ID
-    : user?.id ?? finalUserKey;
-
-// --------------------------------------------------------
-// DEMO MODE — SESSION WM READ (10 TURN CAP)
-// --------------------------------------------------------
-let sessionWM: Array<{ role: "user" | "assistant"; content: string }> = [];
-
-if (executionProfile !== "demo" && resolvedConversationId) {
-  const { data: wmRows } = await supabaseAdmin
-    .schema("memory")
-    .from("working_memory")
-    .select("role, content, created_at")
-    .eq("conversation_id", resolvedConversationId)
-    .eq("user_id", authUserId)
-    .order("created_at", { ascending: false })
-    .limit(10);
-
-  if (Array.isArray(wmRows) && wmRows.length > 0) {
-    sessionWM = wmRows
-      .reverse()
-      .map((r) => ({
-        role: r.role as "user" | "assistant",
-        content: r.content,
-      }));
-  }
-}
-
-// DEMO INVARIANT:
-// Demo mode NEVER hydrates persisted working memory
-
-// --------------------------------------------------------
-// Persist user message
-// --------------------------------------------------------
-if ((authUserId || allowSessionWM) && message) {
-  await supabaseAdmin
-    .schema("memory")
-    .from("working_memory")
-    .insert({
-      conversation_id: resolvedConversationId,
-      user_id: authUserId,
-      workspace_id: resolvedWorkspaceId,
-      role: "user",
-      content: message,
-    });
-}
-
-// --------------------------------------------------------
-// CONTEXT ASSEMBLY
-// --------------------------------------------------------
-const context = await assembleContext(
-  finalUserKey,
-  resolvedWorkspaceId,
-  normalizedMessage ?? "",
-  {
-    sessionId: resolvedConversationId,
-    sessionStartedAt: new Date().toISOString(),
-    executionProfile,
-  }
-);
-
-// --------------------------------------------------------
-// CONTEXT INVARIANT OBSERVABILITY (AUTHORITATIVE)
-// --------------------------------------------------------
-console.log("[CTX SHAPE]", Object.keys(context ?? {}));
-
-if (
-  !context ||
-  !("workingMemory" in context) ||
-  !("memoryPack" in context) ||
-  !("reflectionLedger" in context)
-) {
-  console.error("[CTX INVARIANT VIOLATION] Memory structures not hydrated", {
-    hasWorkingMemory: Boolean((context as any)?.workingMemory),
-    hasMemoryPack: Boolean((context as any)?.memoryPack),
-    hasReflectionLedger: Boolean((context as any)?.reflectionLedger),
-  });
-}
+    // --------------------------------------------------------
+    // DEMO SAFE — EXECUTION PROFILE
+    // --------------------------------------------------------
+    const executionProfile =
+      finalUserKey === "webflow-guest" ? "demo" : "studio";
 
     // --------------------------------------------------------
-// ATTACHMENTS — AUTHORITATIVE CONTEXT INJECTION (FIXED)
-// --------------------------------------------------------
-let attachmentDigest = "";
-let hasImageAttachments = false;
+    // OPTION B2 — DEMO SENTINEL + SESSION WM
+    // --------------------------------------------------------
+    const DEMO_USER_ID = "demo-session";
+    const allowSessionWM = executionProfile === "demo";
 
-if (Array.isArray(body.attachments) && body.attachments.length > 0) {
-  attachmentDigest = await processAttachments(
-    body.attachments.map((a: any) => ({
-      name: a.name,
-      url: a.url,
-      type: a.mime,
-    }))
-  );
+    // --------------------------------------------------------
+    // CANONICAL WORKSPACE RESOLUTION
+    // --------------------------------------------------------
+    const resolvedWorkspaceId =
+      workspaceId ?? process.env.MCA_WORKSPACE_ID ?? "global_news";
 
-  hasImageAttachments = body.attachments.some(
-    (a: any) => typeof a.mime === "string" && a.mime.startsWith("image/")
-  );
+    // --------------------------------------------------------
+    // ADMIN CLIENT (SINGLE AUTHORITATIVE DECLARATION)
+    // --------------------------------------------------------
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false, autoRefreshToken: false } }
+    );
 
-  (context as any).attachments = body.attachments.map((a: any) => ({
-    name: a.name,
-    mime: a.mime,
-    url: a.url,
-    size: a.size,
-  }));
+    // --------------------------------------------------------
+    // AUTHORITATIVE CONVERSATION RESOLUTION (FINAL)
+    // Demo mode is STRICTLY SESSION-ISOLATED
+    // --------------------------------------------------------
+    let resolvedConversationId: string | null = null;
 
-  // ------------------------------------------------------
-  // IMPLICIT VISION CONSENT (UPLOAD = CONSENT)
-  // ------------------------------------------------------
-  if (hasImageAttachments) {
-    (context as any).visionConsent = true;
-  }
-}
+    if (executionProfile === "demo") {
+      // HARD INVARIANT:
+      // Demo conversations MUST NEVER share conversation_id.
+      // Each demo request resolves to an isolated session.
+      resolvedConversationId = conversationId ?? `demo-${crypto.randomUUID()}`;
+    } else {
+      resolvedConversationId = conversationId ?? null;
 
-// --------------------------------------------------------
-// DEMO SAFE — IMAGE BLOCK
-// --------------------------------------------------------
-if (executionProfile === "demo" && isImageRequest(message)) {
-  const demoResponse = "I’m here in demo mode. Ask me anything.";
+      if (!resolvedConversationId && finalUserKey) {
+        const { data, error } = await supabaseAdmin
+          .schema("memory")
+          .from("conversations")
+          .insert({
+            user_id: finalUserKey,
+            workspace_id: resolvedWorkspaceId,
+            source: "chat_bootstrap",
+          })
+          .select("id")
+          .single();
 
-  return NextResponse.json({
-    ok: true,
-    conversationId: resolvedConversationId,
-    response: demoResponse,
-    messages: [{ role: "assistant", content: demoResponse }],
-  });
-}
+        if (error || !data?.id) {
+          throw new Error("Failed to bootstrap conversation");
+        }
 
-// --------------------------------------------------------
-// TERMINAL APPROVAL
-// --------------------------------------------------------
-if (isTerminalApproval(message)) {
-  const terminalResponse = terminalApprovalResponse();
+        resolvedConversationId = data.id;
+      }
+    }
 
-  if (authUserId || allowSessionWM) {
-    await supabaseAdmin
-      .schema("memory")
-      .from("working_memory")
-      .insert({
-        conversation_id: resolvedConversationId,
-        user_id: authUserId ?? finalUserKey,
-        workspace_id: resolvedWorkspaceId,
-        role: "assistant",
-        content: terminalResponse,
-      });
-  }
+    // --------------------------------------------------------
+    // INVARIANT CHECK (NON-NEGOTIABLE)
+    // --------------------------------------------------------
+    if (!finalUserKey || !resolvedConversationId) {
+      throw new Error("userKey and conversationId are required");
+    }
 
-  return NextResponse.json({
-    ok: true,
-    conversationId: resolvedConversationId,
-    response: terminalResponse,
-    messages: [{ role: "assistant", content: terminalResponse }],
-  });
-}
+    // --------------------------------------------------------
+    // SSR AUTH CONTEXT (MUST PRECEDE authUserId)
+    // --------------------------------------------------------
+    const cookieStore: ReadonlyRequestCookies = await cookies();
 
-// --------------------------------------------------------
-// IMAGE GENERATION REQUEST (NOT ANALYSIS)
-// --------------------------------------------------------
-if (message && isImageRequest(message)) {
-
-  // ------------------------------------------------------
-  // SOLACE ADDITION — DECLARE EXECUTION INTENT
-  // ------------------------------------------------------
-  const imageIntent = {
-    intent_id: crypto.randomUUID(),
-    timestamp: new Date().toISOString(),
-
-    actor: {
-      type: "user",
-      id: authUserId,
-      display: finalUserKey,
-    },
-
-    system: {
-      name: "solace-chat",
-      version: "1.0",
-      environment: executionProfile,
-    },
-
-    action: {
-      name: "generate_image",
-      category: "write",
-      side_effects: ["external_model_call", "asset_generation"],
-    },
-
-    parameters: {
-      prompt: message,
-    },
-
-    context: {
-      policy_mode: "creative_generation",
-      risk_tier: executionProfile === "demo" ? "low" : "medium",
-      jurisdiction: [],
-    },
-  };
-
-  // ------------------------------------------------------
-  // SOLACE ADDITION — AUTHORITY CHECK (FAIL CLOSED)
-  // ------------------------------------------------------
-  const solaceDecision = await authorizeExecution(imageIntent);
-
-  if (!solaceDecision.permitted) {
-    return NextResponse.json({
-      ok: false,
-      conversationId: resolvedConversationId,
-      response: "Image generation is not permitted in this context.",
-      messages: [
-        {
-          role: "assistant",
-          content: "Image generation is not permitted in this context.",
+    const supabaseSSR = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+          set() {},
+          remove() {},
         },
-      ],
-    });
-  }
+      }
+    );
 
-  // ------------------------------------------------------
-  // EXECUTION (ONLY AFTER PERMIT)
-  // ------------------------------------------------------
-  const imageUrl = await generateImage(message);
-  const imageHtml = `<img src="${imageUrl}" style="max-width:100%;border-radius:12px;" />`;
+    const {
+      data: { user },
+    } = await supabaseSSR.auth.getUser();
 
-  if (authUserId || allowSessionWM) {
-    await supabaseAdmin
-      .schema("memory")
-      .from("working_memory")
-      .insert({
+    // --------------------------------------------------------
+    // AUTH USER RESOLUTION (NOW SAFE)
+    // --------------------------------------------------------
+    const authUserId =
+      executionProfile === "demo" ? DEMO_USER_ID : user?.id ?? finalUserKey;
+
+    // --------------------------------------------------------
+    // DEMO MODE — SESSION WM READ (10 TURN CAP)
+    // --------------------------------------------------------
+    let sessionWM: Array<{ role: "user" | "assistant"; content: string }> = [];
+
+    if (executionProfile !== "demo" && resolvedConversationId) {
+      const { data: wmRows } = await supabaseAdmin
+        .schema("memory")
+        .from("working_memory")
+        .select("role, content, created_at")
+        .eq("conversation_id", resolvedConversationId)
+        .eq("user_id", authUserId)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (Array.isArray(wmRows) && wmRows.length > 0) {
+        sessionWM = wmRows.reverse().map((r) => ({
+          role: r.role as "user" | "assistant",
+          content: r.content,
+        }));
+      }
+    }
+
+    // DEMO INVARIANT:
+    // Demo mode NEVER hydrates persisted working memory
+
+    // --------------------------------------------------------
+    // Persist user message
+    // --------------------------------------------------------
+    if ((authUserId || allowSessionWM) && message) {
+      await supabaseAdmin.schema("memory").from("working_memory").insert({
         conversation_id: resolvedConversationId,
         user_id: authUserId,
         workspace_id: resolvedWorkspaceId,
-        role: "assistant",
-        content: imageHtml,
+        role: "user",
+        content: message,
       });
-  }
-
-  return NextResponse.json({
-    ok: true,
-    conversationId: resolvedConversationId,
-    response: imageHtml,
-    messages: [{ role: "assistant", content: imageHtml }],
-  });
-}
-
-// ------------------------------------------------------------
-// EXPORT INTENT DETECTION (AUTHORITATIVE)
-// ------------------------------------------------------------
-function detectsExportIntent(text?: string): null | {
-  format: "docx" | "pdf" | "csv";
-  filename?: string;
-} {
-  if (!text) return null;
-
-  const lower = text.toLowerCase();
-
-  if (lower.includes("[export:docx]")) return { format: "docx" };
-  if (lower.includes("[export:pdf]")) return { format: "pdf" };
-  if (lower.includes("[export:csv]")) return { format: "csv" };
-
-  return null;
-}
-
-// --------------------------------------------------------
-// NEWSROOM
-// --------------------------------------------------------
-const wantsNews =
-  newsMode === true ||
-  (typeof message === "string" && isNewsKeywordFallback(message));
-
-if (wantsNews) {
-  const { data: digestRows, error } = await supabaseAdmin
-    .from("solace_news_digest_view")
-    .select(
-      "story_title, outlet, neutral_summary, story_url, created_at"
-    )
-    .order("created_at", { ascending: false })
-    .limit(6);
-
-  if (error) throw new Error("NEWSROOM_DIGEST_FETCH_FAILED");
-
-  const newsroomResponse = await runNewsroomExecutor(digestRows ?? []);
-
-  await supabaseAdmin
-    .schema("memory")
-    .from("working_memory")
-    .insert({
-      conversation_id: resolvedConversationId,
-      user_id: finalUserKey,
-      workspace_id: resolvedWorkspaceId,
-      role: "assistant",
-      content: newsroomResponse,
-    });
-
-  return NextResponse.json({
-    ok: true,
-    conversationId: resolvedConversationId,
-    response: newsroomResponse,
-    messages: [{ role: "assistant", content: newsroomResponse }],
-  });
-}
-
-// --------------------------------------------------------
-// EPPE IMPLICIT USE REJECTION
-// --------------------------------------------------------
-if (!isEPPECommand && requiresEPPE01(normalizedMessage)) {
-  const rejection =
-    "EPPE-01 evaluations require explicit invocation using the `/eppe` command.";
-
-  await supabaseAdmin
-    .schema("memory")
-    .from("working_memory")
-    .insert({
-      conversation_id: resolvedConversationId,
-      user_id: authUserId,
-      workspace_id: resolvedWorkspaceId,
-      role: "assistant",
-      content: rejection,
-    });
-
-  return NextResponse.json({
-    ok: true,
-    conversationId: resolvedConversationId,
-    response: rejection,
-    messages: [{ role: "assistant", content: rejection }],
-  });
-}
-
-// --------------------------------------------------------
-// HYBRID MESSAGE (ATTACHMENTS + VISION AUTH)
-// --------------------------------------------------------
-const visionInstruction =
-  (context as any).visionConsent
-    ? "The user has provided image attachments. You are authorized to analyze and describe their contents directly."
-    : "";
-
-const hybridUserMessage =
-  `${visionInstruction}\n\n${
-    attachmentDigest && attachmentDigest.length > 0
-      ? `${normalizedMessage ?? ""}\n\n${attachmentDigest}`
-      : normalizedMessage ?? ""
-  }`;
-
-// --------------------------------------------------------
-// HYBRID PIPELINE
-// --------------------------------------------------------
-const result = await runHybridPipeline({
-  userMessage: hybridUserMessage,
-  context,
-  ministryMode,
-  founderMode,
-  modeHint,
-});
-
-const rawResponse =
-  typeof result?.finalAnswer === "string" && result.finalAnswer.length > 0
-    ? result.finalAnswer
-    : "I’m here and ready to continue.";
-
-
-// --------------------------------------------------------
-// EXPORT INTERCEPT (AUTHORITATIVE)
-// --------------------------------------------------------
-const exportIntent = detectsExportIntent(rawResponse);
-
-if (exportIntent) {
-
-  // ------------------------------------------------------
-  // SOLACE ADDITION — DECLARE EXPORT EXECUTION INTENT
-  // ------------------------------------------------------
-  const exportExecutionIntent = {
-    intent_id: crypto.randomUUID(),
-    timestamp: new Date().toISOString(),
-
-    actor: {
-      type: "user",
-      id: authUserId,
-      display: finalUserKey,
-    },
-
-    system: {
-      name: "solace-chat",
-      version: "1.0",
-      environment: executionProfile,
-    },
-
-    action: {
-      name: "export_file",
-      category: "write",
-      side_effects: [
-        "file_generation",
-        "object_storage_write",
-        "download_link_exposure",
-      ],
-    },
-
-    parameters: {
-      format: exportIntent.format,
-      filename: exportIntent.filename,
-    },
-
-    context: {
-      policy_mode: "content_export",
-      risk_tier:
-        exportIntent.format === "pdf" || exportIntent.format === "docx"
-          ? "medium"
-          : "low",
-      jurisdiction: [],
-      purpose: "User-requested content export",
-    },
-  };
-
-  // ------------------------------------------------------
-  // SOLACE ADDITION — AUTHORITY CHECK (FAIL CLOSED)
-  // ------------------------------------------------------
-  const solaceDecision = await authorizeExecution(exportExecutionIntent);
-
-  if (!solaceDecision.permitted) {
-    return NextResponse.json({
-      ok: false,
-      conversationId: resolvedConversationId,
-      response: "Export is not permitted in this context.",
-      messages: [
-        {
-          role: "assistant",
-          content: "Export is not permitted in this context.",
-        },
-      ],
-    });
-  }
-
-  // ------------------------------------------------------
-  // EXECUTION (ONLY AFTER PERMIT)
-  // ------------------------------------------------------
-  const exportRes = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/api/exports`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        format: exportIntent.format,
-        filename: exportIntent.filename,
-        content: rawResponse,
-        workspaceId: resolvedWorkspaceId,
-      }),
     }
-  );
 
-  const exportJson = await exportRes.json();
+    // --------------------------------------------------------
+    // CONTEXT ASSEMBLY
+    // --------------------------------------------------------
+    const context = await assembleContext(
+      finalUserKey,
+      resolvedWorkspaceId,
+      normalizedMessage ?? "",
+      {
+        sessionId: resolvedConversationId,
+        sessionStartedAt: new Date().toISOString(),
+        executionProfile,
+      }
+    );
 
-  if (exportJson?.ok && exportJson.export?.url) {
-    const downloadResponse =
-      `Your file is ready.\n\n` +
-      `[Download ${exportIntent.filename}](${exportJson.export.url})`;
+    // --------------------------------------------------------
+    // CONTEXT INVARIANT OBSERVABILITY (AUTHORITATIVE)
+    // --------------------------------------------------------
+    console.log("[CTX SHAPE]", Object.keys(context ?? {}));
 
-    if (authUserId || allowSessionWM) {
-      await supabaseAdmin
-        .schema("memory")
-        .from("working_memory")
-        .insert({
+    if (
+      !context ||
+      !("workingMemory" in context) ||
+      !("memoryPack" in context) ||
+      !("reflectionLedger" in context)
+    ) {
+      console.error("[CTX INVARIANT VIOLATION] Memory structures not hydrated", {
+        hasWorkingMemory: Boolean((context as any)?.workingMemory),
+        hasMemoryPack: Boolean((context as any)?.memoryPack),
+        hasReflectionLedger: Boolean((context as any)?.reflectionLedger),
+      });
+    }
+
+    // --------------------------------------------------------
+    // ATTACHMENTS — AUTHORITATIVE CONTEXT INJECTION (FIXED)
+    // --------------------------------------------------------
+    let attachmentDigest = "";
+    let hasImageAttachments = false;
+
+    if (Array.isArray(body.attachments) && body.attachments.length > 0) {
+      attachmentDigest = await processAttachments(
+        body.attachments.map((a: any) => ({
+          name: a.name,
+          url: a.url,
+          type: a.mime,
+        }))
+      );
+
+      hasImageAttachments = body.attachments.some(
+        (a: any) => typeof a.mime === "string" && a.mime.startsWith("image/")
+      );
+
+      (context as any).attachments = body.attachments.map((a: any) => ({
+        name: a.name,
+        mime: a.mime,
+        url: a.url,
+        size: a.size,
+      }));
+
+      // ------------------------------------------------------
+      // IMPLICIT VISION CONSENT (UPLOAD = CONSENT)
+      // ------------------------------------------------------
+      if (hasImageAttachments) {
+        (context as any).visionConsent = true;
+      }
+    }
+
+    // --------------------------------------------------------
+    // DEMO SAFE — IMAGE BLOCK
+    // --------------------------------------------------------
+    if (executionProfile === "demo" && isImageRequest(message)) {
+      const demoResponse = "I’m here in demo mode. Ask me anything.";
+
+      return NextResponse.json({
+        ok: true,
+        conversationId: resolvedConversationId,
+        response: demoResponse,
+        messages: [{ role: "assistant", content: demoResponse }],
+      });
+    }
+
+    // --------------------------------------------------------
+    // TERMINAL APPROVAL
+    // --------------------------------------------------------
+    if (isTerminalApproval(message)) {
+      const terminalResponse = terminalApprovalResponse();
+
+      if (authUserId || allowSessionWM) {
+        await supabaseAdmin.schema("memory").from("working_memory").insert({
+          conversation_id: resolvedConversationId,
+          user_id: authUserId ?? finalUserKey,
+          workspace_id: resolvedWorkspaceId,
+          role: "assistant",
+          content: terminalResponse,
+        });
+      }
+
+      return NextResponse.json({
+        ok: true,
+        conversationId: resolvedConversationId,
+        response: terminalResponse,
+        messages: [{ role: "assistant", content: terminalResponse }],
+      });
+    }
+
+    // --------------------------------------------------------
+    // IMAGE GENERATION REQUEST (NOT ANALYSIS)
+    // --------------------------------------------------------
+    if (message && isImageRequest(message)) {
+      // ------------------------------------------------------
+      // SOLACE ADDITION — DECLARE EXECUTION INTENT
+      //
+      // INVARIANT:
+      // - Anything coming from Studio MUST have image on.
+      // - Therefore: action is registered as IMAGE_GENERATE and context.app is "studio".
+      // - Demo remains blocked above.
+      // ------------------------------------------------------
+      const imageIntent = {
+        intent_id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+
+        actor: {
+          type: "user",
+          id: authUserId,
+          display: finalUserKey,
+        },
+
+        system: {
+          name: "solace-chat",
+          version: "1.0",
+          environment: executionProfile, // "studio" | "demo"
+        },
+
+        action: {
+          // REGISTERED GOVERNED ACTION (Option A)
+          name: "IMAGE_GENERATE",
+          category: "media",
+          side_effects: ["external_model_call", "asset_generation"],
+        },
+
+        parameters: {
+          prompt: message,
+        },
+
+        context: {
+          // Explicit app binding for policy rules:
+          // allow IMAGE_GENERATE where context.app === "studio"
+          app: "studio",
+          policy_mode: "creative_generation",
+          risk_tier: executionProfile === "demo" ? "low" : "medium",
+          jurisdiction: [],
+        },
+      };
+
+      // ------------------------------------------------------
+      // SOLACE ADDITION — AUTHORITY CHECK (FAIL CLOSED)
+      // ------------------------------------------------------
+      const solaceDecision = await authorizeExecution(imageIntent);
+
+      if (!solaceDecision?.permitted) {
+        const decisionText =
+          (solaceDecision as any)?.explanation ||
+          (solaceDecision as any)?.reason ||
+          "Image generation is not permitted by execution authority.";
+
+        return NextResponse.json({
+          ok: false,
+          conversationId: resolvedConversationId,
+          response: decisionText,
+          messages: [{ role: "assistant", content: decisionText }],
+          // Non-breaking observability (UI may ignore):
+          decision: (solaceDecision as any)?.code || (solaceDecision as any)?.decision || "DENY",
+        });
+      }
+
+      // ------------------------------------------------------
+      // EXECUTION (ONLY AFTER PERMIT)
+      // ------------------------------------------------------
+      const imageUrl = await generateImage(message);
+      const imageHtml = `<img src="${imageUrl}" style="max-width:100%;border-radius:12px;" />`;
+
+      if (authUserId || allowSessionWM) {
+        await supabaseAdmin.schema("memory").from("working_memory").insert({
           conversation_id: resolvedConversationId,
           user_id: authUserId,
           workspace_id: resolvedWorkspaceId,
           role: "assistant",
-          content: downloadResponse,
+          content: imageHtml,
         });
+      }
+
+      return NextResponse.json({
+        ok: true,
+        conversationId: resolvedConversationId,
+        response: imageHtml,
+        messages: [{ role: "assistant", content: imageHtml }],
+      });
+    }
+
+    // ------------------------------------------------------------
+    // EXPORT INTENT DETECTION (AUTHORITATIVE)
+    // ------------------------------------------------------------
+    function detectsExportIntent(text?: string): null | {
+      format: "docx" | "pdf" | "csv";
+      filename?: string;
+    } {
+      if (!text) return null;
+
+      const lower = text.toLowerCase();
+
+      if (lower.includes("[export:docx]")) return { format: "docx" };
+      if (lower.includes("[export:pdf]")) return { format: "pdf" };
+      if (lower.includes("[export:csv]")) return { format: "csv" };
+
+      return null;
+    }
+
+    // --------------------------------------------------------
+    // NEWSROOM
+    // --------------------------------------------------------
+    const wantsNews =
+      newsMode === true ||
+      (typeof message === "string" && isNewsKeywordFallback(message));
+
+    if (wantsNews) {
+      const { data: digestRows, error } = await supabaseAdmin
+        .from("solace_news_digest_view")
+        .select("story_title, outlet, neutral_summary, story_url, created_at")
+        .order("created_at", { ascending: false })
+        .limit(6);
+
+      if (error) throw new Error("NEWSROOM_DIGEST_FETCH_FAILED");
+
+      const newsroomResponse = await runNewsroomExecutor(digestRows ?? []);
+
+      await supabaseAdmin.schema("memory").from("working_memory").insert({
+        conversation_id: resolvedConversationId,
+        user_id: finalUserKey,
+        workspace_id: resolvedWorkspaceId,
+        role: "assistant",
+        content: newsroomResponse,
+      });
+
+      return NextResponse.json({
+        ok: true,
+        conversationId: resolvedConversationId,
+        response: newsroomResponse,
+        messages: [{ role: "assistant", content: newsroomResponse }],
+      });
+    }
+
+    // --------------------------------------------------------
+    // EPPE IMPLICIT USE REJECTION
+    // --------------------------------------------------------
+    if (!isEPPECommand && requiresEPPE01(normalizedMessage)) {
+      const rejection =
+        "EPPE-01 evaluations require explicit invocation using the `/eppe` command.";
+
+      await supabaseAdmin.schema("memory").from("working_memory").insert({
+        conversation_id: resolvedConversationId,
+        user_id: authUserId,
+        workspace_id: resolvedWorkspaceId,
+        role: "assistant",
+        content: rejection,
+      });
+
+      return NextResponse.json({
+        ok: true,
+        conversationId: resolvedConversationId,
+        response: rejection,
+        messages: [{ role: "assistant", content: rejection }],
+      });
+    }
+
+    // --------------------------------------------------------
+    // HYBRID MESSAGE (ATTACHMENTS + VISION AUTH)
+    // --------------------------------------------------------
+    const visionInstruction = (context as any).visionConsent
+      ? "The user has provided image attachments. You are authorized to analyze and describe their contents directly."
+      : "";
+
+    const hybridUserMessage = `${visionInstruction}\n\n${
+      attachmentDigest && attachmentDigest.length > 0
+        ? `${normalizedMessage ?? ""}\n\n${attachmentDigest}`
+        : normalizedMessage ?? ""
+    }`;
+
+    // --------------------------------------------------------
+    // HYBRID PIPELINE
+    // --------------------------------------------------------
+    const result = await runHybridPipeline({
+      userMessage: hybridUserMessage,
+      context,
+      ministryMode,
+      founderMode,
+      modeHint,
+    });
+
+    const rawResponse =
+      typeof result?.finalAnswer === "string" && result.finalAnswer.length > 0
+        ? result.finalAnswer
+        : "I’m here and ready to continue.";
+
+    // --------------------------------------------------------
+    // EXPORT INTERCEPT (AUTHORITATIVE)
+    // --------------------------------------------------------
+    const exportIntent = detectsExportIntent(rawResponse);
+
+    if (exportIntent) {
+      // ------------------------------------------------------
+      // SOLACE ADDITION — DECLARE EXPORT EXECUTION INTENT
+      // ------------------------------------------------------
+      const exportExecutionIntent = {
+        intent_id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+
+        actor: {
+          type: "user",
+          id: authUserId,
+          display: finalUserKey,
+        },
+
+        system: {
+          name: "solace-chat",
+          version: "1.0",
+          environment: executionProfile,
+        },
+
+        action: {
+          name: "export_file",
+          category: "write",
+          side_effects: [
+            "file_generation",
+            "object_storage_write",
+            "download_link_exposure",
+          ],
+        },
+
+        parameters: {
+          format: exportIntent.format,
+          filename: exportIntent.filename,
+        },
+
+        context: {
+          policy_mode: "content_export",
+          risk_tier:
+            exportIntent.format === "pdf" || exportIntent.format === "docx"
+              ? "medium"
+              : "low",
+          jurisdiction: [],
+          purpose: "User-requested content export",
+        },
+      };
+
+      // ------------------------------------------------------
+      // SOLACE ADDITION — AUTHORITY CHECK (FAIL CLOSED)
+      // ------------------------------------------------------
+      const solaceDecision = await authorizeExecution(exportExecutionIntent);
+
+      if (!solaceDecision?.permitted) {
+        const decisionText =
+          (solaceDecision as any)?.explanation ||
+          (solaceDecision as any)?.reason ||
+          "Export is not permitted by execution authority.";
+
+        return NextResponse.json({
+          ok: false,
+          conversationId: resolvedConversationId,
+          response: decisionText,
+          messages: [{ role: "assistant", content: decisionText }],
+          decision:
+            (solaceDecision as any)?.code ||
+            (solaceDecision as any)?.decision ||
+            "DENY",
+        });
+      }
+
+      // ------------------------------------------------------
+      // EXECUTION (ONLY AFTER PERMIT)
+      // ------------------------------------------------------
+      const exportRes = await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_URL}/api/exports`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            format: exportIntent.format,
+            filename: exportIntent.filename,
+            content: rawResponse,
+            workspaceId: resolvedWorkspaceId,
+          }),
+        }
+      );
+
+      const exportJson = await exportRes.json();
+
+      if (exportJson?.ok && exportJson.export?.url) {
+        const downloadResponse =
+          `Your file is ready.\n\n` +
+          `[Download ${exportIntent.filename}](${exportJson.export.url})`;
+
+        if (authUserId || allowSessionWM) {
+          await supabaseAdmin.schema("memory").from("working_memory").insert({
+            conversation_id: resolvedConversationId,
+            user_id: authUserId,
+            workspace_id: resolvedWorkspaceId,
+            role: "assistant",
+            content: downloadResponse,
+          });
+        }
+
+        return NextResponse.json({
+          ok: true,
+          conversationId: resolvedConversationId,
+          response: downloadResponse,
+          messages: [{ role: "assistant", content: downloadResponse }],
+        });
+      }
+    }
+
+    // --------------------------------------------------------
+    // EPPE-01 VALIDATION (COMMAND ONLY)
+    // --------------------------------------------------------
+    let gatedResponse: any = rawResponse;
+
+    if (isEPPECommand) {
+      let parsed: any;
+
+      try {
+        parsed =
+          typeof rawResponse === "string" ? JSON.parse(rawResponse) : rawResponse;
+      } catch {
+        return NextResponse.json({
+          ok: false,
+          conversationId: resolvedConversationId,
+          response:
+            "EPPE-01 output must be valid JSON conforming to the evaluation schema.",
+          messages: [
+            {
+              role: "assistant",
+              content: "EPPE-01 enforcement: invalid or malformed JSON output.",
+            },
+          ],
+        });
+      }
+
+      const { valid, errors } = validateEPPE01(parsed);
+
+      if (!valid) {
+        return NextResponse.json({
+          ok: false,
+          conversationId: resolvedConversationId,
+          response:
+            "This evaluation does not meet EPPE-01 requirements and cannot be finalized.",
+          messages: [
+            {
+              role: "assistant",
+              content: `EPPE-01 validation failed:\n${errors
+                ?.map((e: any) => `- ${e.instancePath || "(root)"} ${e.message}`)
+                .join("\n")}`,
+            },
+          ],
+        });
+      }
+
+      gatedResponse = JSON.stringify(parsed, null, 2);
+    }
+
+    // --------------------------------------------------------
+    // ARTIFACT PASSTHROUGH (TEXT)
+    // --------------------------------------------------------
+    if (
+      gatedResponse &&
+      typeof gatedResponse === "object" &&
+      gatedResponse.artifact?.type === "text"
+    ) {
+      const artifact = gatedResponse.artifact;
+
+      const safeContent = assertNoPhantomLanguage(
+        scrubPhantomExecutionLanguage(artifact.content)
+      );
+
+      return NextResponse.json({
+        ok: true,
+        conversationId: resolvedConversationId,
+        messages: [
+          {
+            role: "assistant",
+            content: null,
+            artifact: {
+              ...artifact,
+              content: safeContent,
+            },
+          },
+        ],
+      });
+    }
+
+    // --------------------------------------------------------
+    // SAFETY SCRUB
+    // --------------------------------------------------------
+    const scrubbed = scrubPhantomExecutionLanguage(gatedResponse);
+    const safeResponse = assertNoPhantomLanguage(scrubbed);
+
+    // --------------------------------------------------------
+    // CODE ARTIFACT EXTRACTION (AUTHORITATIVE)
+    // --------------------------------------------------------
+    const codeArtifactResult = extractCodeArtifact(safeResponse);
+
+    if (codeArtifactResult) {
+      const { artifact, residualText } = codeArtifactResult;
+
+      if (authUserId || allowSessionWM) {
+        await supabaseAdmin.schema("memory").from("working_memory").insert({
+          conversation_id: resolvedConversationId,
+          user_id: authUserId,
+          workspace_id: resolvedWorkspaceId,
+          role: "assistant",
+          content: residualText || "",
+        });
+      }
+
+      return NextResponse.json({
+        ok: true,
+        conversationId: resolvedConversationId,
+        messages: [
+          ...(residualText ? [{ role: "assistant", content: residualText }] : []),
+          {
+            role: "assistant",
+            artifact,
+          },
+        ],
+      });
+    }
+
+    // --------------------------------------------------------
+    // PERSIST ASSISTANT MESSAGE (STRING PATH)
+    // --------------------------------------------------------
+    if (authUserId || allowSessionWM) {
+      await supabaseAdmin.schema("memory").from("working_memory").insert({
+        conversation_id: resolvedConversationId,
+        user_id: authUserId,
+        workspace_id: resolvedWorkspaceId,
+        role: "assistant",
+        content: safeResponse,
+      });
     }
 
     return NextResponse.json({
       ok: true,
       conversationId: resolvedConversationId,
-      response: downloadResponse,
-      messages: [{ role: "assistant", content: downloadResponse }],
+      response: safeResponse,
+      messages: [{ role: "assistant", content: safeResponse }],
     });
-  }
-}
+  } catch (err: any) {
+    console.error("[CHAT ROUTE ERROR]", err?.message);
 
-// --------------------------------------------------------
-// EPPE-01 VALIDATION (COMMAND ONLY)
-// --------------------------------------------------------
-let gatedResponse: any = rawResponse;
-
-if (isEPPECommand) {
-  let parsed: any;
-
-  try {
-    parsed =
-      typeof rawResponse === "string" ? JSON.parse(rawResponse) : rawResponse;
-  } catch {
     return NextResponse.json({
       ok: false,
-      conversationId: resolvedConversationId,
-      response:
-        "EPPE-01 output must be valid JSON conforming to the evaluation schema.",
+      response: "An internal error occurred. I’m still here.",
       messages: [
         {
           role: "assistant",
-          content:
-            "EPPE-01 enforcement: invalid or malformed JSON output.",
+          content: "An internal error occurred. I’m still here.",
         },
       ],
     });
   }
-
-  const { valid, errors } = validateEPPE01(parsed);
-
-  if (!valid) {
-    return NextResponse.json({
-      ok: false,
-      conversationId: resolvedConversationId,
-      response:
-        "This evaluation does not meet EPPE-01 requirements and cannot be finalized.",
-      messages: [
-        {
-          role: "assistant",
-          content: `EPPE-01 validation failed:\n${errors
-            ?.map(
-              (e: any) => `- ${e.instancePath || "(root)"} ${e.message}`
-            )
-            .join("\n")}`,
-        },
-      ],
-    });
-  }
-
-  gatedResponse = JSON.stringify(parsed, null, 2);
-}
-
-// --------------------------------------------------------
-// ARTIFACT PASSTHROUGH (TEXT)
-// --------------------------------------------------------
-if (
-  gatedResponse &&
-  typeof gatedResponse === "object" &&
-  gatedResponse.artifact?.type === "text"
-) {
-  const artifact = gatedResponse.artifact;
-
-  const safeContent = assertNoPhantomLanguage(
-    scrubPhantomExecutionLanguage(artifact.content)
-  );
-
-  return NextResponse.json({
-    ok: true,
-    conversationId: resolvedConversationId,
-    messages: [
-      {
-        role: "assistant",
-        content: null,
-        artifact: {
-          ...artifact,
-          content: safeContent,
-        },
-      },
-    ],
-  });
-}
-
-// --------------------------------------------------------
-// SAFETY SCRUB
-// --------------------------------------------------------
-const scrubbed = scrubPhantomExecutionLanguage(gatedResponse);
-const safeResponse = assertNoPhantomLanguage(scrubbed);
-
-// --------------------------------------------------------
-// CODE ARTIFACT EXTRACTION (AUTHORITATIVE)
-// --------------------------------------------------------
-const codeArtifactResult = extractCodeArtifact(safeResponse);
-
-if (codeArtifactResult) {
-  const { artifact, residualText } = codeArtifactResult;
-
-  if (authUserId || allowSessionWM) {
-    await supabaseAdmin
-      .schema("memory")
-      .from("working_memory")
-      .insert({
-        conversation_id: resolvedConversationId,
-        user_id: authUserId,
-        workspace_id: resolvedWorkspaceId,
-        role: "assistant",
-        content: residualText || "",
-      });
-  }
-
-  return NextResponse.json({
-    ok: true,
-    conversationId: resolvedConversationId,
-    messages: [
-      ...(residualText
-        ? [{ role: "assistant", content: residualText }]
-        : []),
-      {
-        role: "assistant",
-        artifact,
-      },
-    ],
-  });
-}
-
-
-// --------------------------------------------------------
-// PERSIST ASSISTANT MESSAGE (STRING PATH)
-// --------------------------------------------------------
-if (authUserId || allowSessionWM) {
-  await supabaseAdmin
-    .schema("memory")
-    .from("working_memory")
-    .insert({
-      conversation_id: resolvedConversationId,
-      user_id: authUserId,
-      workspace_id: resolvedWorkspaceId,
-      role: "assistant",
-      content: safeResponse,
-    });
-}
-
-return NextResponse.json({
-  ok: true,
-  conversationId: resolvedConversationId,
-  response: safeResponse,
-  messages: [{ role: "assistant", content: safeResponse }],
-});
-
-} catch (err: any) {
-  console.error("[CHAT ROUTE ERROR]", err?.message);
-
-  return NextResponse.json({
-    ok: false,
-    response: "An internal error occurred. I’m still here.",
-    messages: [
-      {
-        role: "assistant",
-        content: "An internal error occurred. I’m still here.",
-      },
-    ],
-  });
-}
 }
