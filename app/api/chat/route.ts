@@ -5,6 +5,7 @@
 // NEXT 16 SAFE — NODE RUNTIME
 // ------------------------------------------------------------
 
+import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
@@ -313,6 +314,104 @@ async function maybeRunRollingCompaction(params: {
 }
 
 // ------------------------------------------------------------
+// Authority question detection (HARD ROUTE)
+// ------------------------------------------------------------
+function isAuthorityQuestion(message?: string): boolean {
+  if (!message) return false;
+  const m = message.toLowerCase();
+
+  // Tight triggers: avoid false positives.
+  return (
+    /\bam i authorized\b/.test(m) ||
+    /\bam i allowed\b/.test(m) ||
+    /\bcan i proceed\b/.test(m) ||
+    /\bis this permitted\b/.test(m) ||
+    /\bpermission to proceed\b/.test(m) ||
+    /\bauthorized to proceed\b/.test(m)
+  );
+}
+
+function inferDeadlinePressure(message?: string): { deadline_pressure: boolean; deadline_minutes?: number } {
+  if (!message) return { deadline_pressure: false };
+
+  const m = message.toLowerCase();
+
+  // Parse "22 minutes" style
+  const minMatch = m.match(/(\d{1,3})\s*(minutes|min)\b/);
+  if (minMatch) {
+    const n = Number(minMatch[1]);
+    if (!Number.isNaN(n)) {
+      return { deadline_pressure: n <= 30, deadline_minutes: n };
+    }
+  }
+
+  // Heuristic phrases
+  if (m.includes("deadline") || m.includes("time-constrained") || m.includes("time constrained")) {
+    return { deadline_pressure: true };
+  }
+
+  return { deadline_pressure: false };
+}
+
+function normalizeBaseUrl(url?: string | null): string | null {
+  if (!url) return null;
+  const trimmed = url.trim().replace(/\/+$/, "");
+  if (!trimmed) return null;
+  if (!/^https?:\/\//i.test(trimmed)) return null;
+  return trimmed;
+}
+
+async function callSolaceCoreAuthorize(params: {
+  baseUrl: string;
+  intent: any;
+  timeoutMs?: number;
+}): Promise<{ decision: "PERMIT" | "DENY" | "ESCALATE"; reason?: string; raw?: any }> {
+  const { baseUrl, intent } = params;
+  const timeoutMs = Math.max(250, Math.min(params.timeoutMs ?? 3000, 15000));
+
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(`${baseUrl}/v1/authorize`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(process.env.SOLACE_API_KEY ? { "x-solace-api-key": process.env.SOLACE_API_KEY } : {}),
+      },
+      body: JSON.stringify(intent),
+      signal: controller.signal,
+    });
+
+    const json = await res.json().catch(() => ({}));
+    const decision = String(json?.decision ?? "DENY").toUpperCase();
+
+    if (decision === "PERMIT" || decision === "DENY" || decision === "ESCALATE") {
+      return { decision, reason: json?.reason, raw: json };
+    }
+
+    return { decision: "DENY", reason: "invalid_core_response", raw: json };
+  } catch (err: any) {
+    const msg =
+      err?.name === "AbortError"
+        ? "solace_core_timeout"
+        : err?.message ?? "solace_core_request_failed";
+
+    return { decision: "DENY", reason: msg, raw: null };
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+function formatAuthorityDecisionText(dec: { decision: string; reason?: string; raw?: any }): string {
+  const lines = [
+    `Decision: ${String(dec.decision).toUpperCase()}`,
+  ];
+  if (dec.reason) lines.push(`Reason: ${dec.reason}`);
+  return lines.join("\n");
+}
+
+// ------------------------------------------------------------
 // POST handler (AUTHORITATIVE)
 // ------------------------------------------------------------
 export async function POST(req: Request) {
@@ -473,9 +572,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // DEMO INVARIANT:
-    // Demo mode NEVER hydrates persisted working memory
-
     // --------------------------------------------------------
     // Persist user message
     // --------------------------------------------------------
@@ -556,6 +652,85 @@ export async function POST(req: Request) {
     }
 
     // --------------------------------------------------------
+    // HARD ROUTE: AUTHORITY QUESTIONS MUST NOT HIT THE LLM
+    // --------------------------------------------------------
+    if (typeof message === "string" && isAuthorityQuestion(message)) {
+      const baseUrl = normalizeBaseUrl(process.env.SOLACE_CORE_URL);
+      if (!baseUrl) {
+        const decisionText = formatAuthorityDecisionText({
+          decision: "DENY",
+          reason: "solace_core_url_missing_or_invalid",
+        });
+
+        await supabaseAdmin.schema("memory").from("working_memory").insert({
+          conversation_id: resolvedConversationId,
+          user_id: authUserId,
+          workspace_id: resolvedWorkspaceId,
+          role: "assistant",
+          content: decisionText,
+        });
+
+        return NextResponse.json({
+          ok: true,
+          conversationId: resolvedConversationId,
+          response: decisionText,
+          messages: [{ role: "assistant", content: decisionText }],
+          decision: "DENY",
+        });
+      }
+
+      const deadline = inferDeadlinePressure(message);
+
+      // Minimal, explicit authority intent (no model output, no advice).
+      const authorityIntent = {
+        intent_id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        actor: {
+          type: "user",
+          id: authUserId,
+          display: finalUserKey,
+        },
+        system: {
+          name: "solace-chat",
+          version: "1.0",
+          environment: executionProfile,
+        },
+        // Keep compatibility with your core engine: `intent` string + `context.deadline_pressure`
+        intent: "reliance_eligible_output",
+        context: {
+          ...deadline,
+          risk_tier: "high",
+          purpose: "authorization_query",
+          app: "studio",
+        },
+      };
+
+      const decision = await callSolaceCoreAuthorize({
+        baseUrl,
+        intent: authorityIntent,
+        timeoutMs: 3500,
+      });
+
+      const decisionText = formatAuthorityDecisionText(decision);
+
+      await supabaseAdmin.schema("memory").from("working_memory").insert({
+        conversation_id: resolvedConversationId,
+        user_id: authUserId,
+        workspace_id: resolvedWorkspaceId,
+        role: "assistant",
+        content: decisionText,
+      });
+
+      return NextResponse.json({
+        ok: true,
+        conversationId: resolvedConversationId,
+        response: decisionText,
+        messages: [{ role: "assistant", content: decisionText }],
+        decision: decision.decision,
+      });
+    }
+
+    // --------------------------------------------------------
     // DEMO SAFE — IMAGE BLOCK
     // --------------------------------------------------------
     if (executionProfile === "demo" && isImageRequest(message)) {
@@ -599,55 +774,46 @@ export async function POST(req: Request) {
     if (message && isImageRequest(message)) {
       // ------------------------------------------------------
       // SOLACE ADDITION — DECLARE EXECUTION INTENT
-      //
-      // INVARIANT:
-      // - Anything coming from Studio MUST have image on.
-      // - Therefore: action is registered as IMAGE_GENERATE and context.app is "studio".
-      // - Demo remains blocked above.
       // ------------------------------------------------------
-const imageIntent = {
-  intent_id: crypto.randomUUID(),
-  timestamp: new Date().toISOString(),
+      const imageIntent = {
+        intent_id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
 
-  actor: {
-    type: "user",
-    id: authUserId,
-    display: finalUserKey,
-  },
+        actor: {
+          type: "user",
+          id: authUserId,
+          display: finalUserKey,
+        },
 
-  system: {
-    name: "solace-chat",
-    version: "1.0",
-    environment: executionProfile, // "studio" | "demo"
-  },
+        system: {
+          name: "solace-chat",
+          version: "1.0",
+          environment: executionProfile, // "studio" | "demo"
+        },
 
-  action: {
-    name: "IMAGE_GENERATE",
-    category: "media",
-    side_effects: ["external_model_call", "asset_generation"],
-  },
+        action: {
+          name: "IMAGE_GENERATE",
+          category: "media",
+          side_effects: ["external_model_call", "asset_generation"],
+        },
 
-  parameters: {
-    prompt: message,
-  },
+        parameters: {
+          prompt: message,
+        },
 
-  context: {
-    // --------------------------------------------------
-    // AUTHORITY INVARIANTS
-    // --------------------------------------------------
-    app: "studio",
-    policy_mode: "creative_generation",
-
-    // 🔑 THIS IS THE MISSING PIECE
-    accepted: true,
-
-    risk_tier: executionProfile === "demo" ? "low" : "medium",
-    jurisdiction: [],
-  },
-};
+        context: {
+          app: "studio",
+          policy_mode: "creative_generation",
+          accepted: true,
+          risk_tier: executionProfile === "demo" ? "low" : "medium",
+          jurisdiction: [],
+        },
+      };
 
       // ------------------------------------------------------
       // SOLACE ADDITION — AUTHORITY CHECK (FAIL CLOSED)
+      // NOTE: authorityClient is acceptance-only; this will DENY unless acceptance is provided
+      // or bypass is enabled.
       // ------------------------------------------------------
       const solaceDecision = await authorizeExecution(imageIntent);
 
@@ -662,8 +828,10 @@ const imageIntent = {
           conversationId: resolvedConversationId,
           response: decisionText,
           messages: [{ role: "assistant", content: decisionText }],
-          // Non-breaking observability (UI may ignore):
-          decision: (solaceDecision as any)?.code || (solaceDecision as any)?.decision || "DENY",
+          decision:
+            (solaceDecision as any)?.code ||
+            (solaceDecision as any)?.decision ||
+            "DENY",
         });
       }
 
