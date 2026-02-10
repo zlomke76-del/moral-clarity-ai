@@ -605,42 +605,46 @@ export async function POST(req: Request) {
       // - Therefore: action is registered as IMAGE_GENERATE and context.app is "studio".
       // - Demo remains blocked above.
       // ------------------------------------------------------
-      const imageIntent = {
-        intent_id: crypto.randomUUID(),
-        timestamp: new Date().toISOString(),
+const imageIntent = {
+  intent_id: crypto.randomUUID(),
+  timestamp: new Date().toISOString(),
 
-        actor: {
-          type: "user",
-          id: authUserId,
-          display: finalUserKey,
-        },
+  actor: {
+    type: "user",
+    id: authUserId,
+    display: finalUserKey,
+  },
 
-        system: {
-          name: "solace-chat",
-          version: "1.0",
-          environment: executionProfile, // "studio" | "demo"
-        },
+  system: {
+    name: "solace-chat",
+    version: "1.0",
+    environment: executionProfile, // "studio" | "demo"
+  },
 
-        action: {
-          // REGISTERED GOVERNED ACTION (Option A)
-          name: "IMAGE_GENERATE",
-          category: "media",
-          side_effects: ["external_model_call", "asset_generation"],
-        },
+  action: {
+    name: "IMAGE_GENERATE",
+    category: "media",
+    side_effects: ["external_model_call", "asset_generation"],
+  },
 
-        parameters: {
-          prompt: message,
-        },
+  parameters: {
+    prompt: message,
+  },
 
-        context: {
-          // Explicit app binding for policy rules:
-          // allow IMAGE_GENERATE where context.app === "studio"
-          app: "studio",
-          policy_mode: "creative_generation",
-          risk_tier: executionProfile === "demo" ? "low" : "medium",
-          jurisdiction: [],
-        },
-      };
+  context: {
+    // --------------------------------------------------
+    // AUTHORITY INVARIANTS
+    // --------------------------------------------------
+    app: "studio",
+    policy_mode: "creative_generation",
+
+    // 🔑 THIS IS THE MISSING PIECE
+    accepted: true,
+
+    risk_tier: executionProfile === "demo" ? "low" : "medium",
+    jurisdiction: [],
+  },
+};
 
       // ------------------------------------------------------
       // SOLACE ADDITION — AUTHORITY CHECK (FAIL CLOSED)
