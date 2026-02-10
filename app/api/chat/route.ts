@@ -617,6 +617,65 @@ if (isTerminalApproval(message)) {
 // IMAGE GENERATION REQUEST (NOT ANALYSIS)
 // --------------------------------------------------------
 if (message && isImageRequest(message)) {
+
+  // ------------------------------------------------------
+  // SOLACE ADDITION — DECLARE EXECUTION INTENT
+  // ------------------------------------------------------
+  const imageIntent = {
+    intent_id: crypto.randomUUID(),
+    timestamp: new Date().toISOString(),
+
+    actor: {
+      type: "user",
+      id: authUserId,
+      display: finalUserKey,
+    },
+
+    system: {
+      name: "solace-chat",
+      version: "1.0",
+      environment: executionProfile,
+    },
+
+    action: {
+      name: "generate_image",
+      category: "write",
+      side_effects: ["external_model_call", "asset_generation"],
+    },
+
+    parameters: {
+      prompt: message,
+    },
+
+    context: {
+      policy_mode: "creative_generation",
+      risk_tier: executionProfile === "demo" ? "low" : "medium",
+      jurisdiction: [],
+    },
+  };
+
+  // ------------------------------------------------------
+  // SOLACE ADDITION — AUTHORITY CHECK (FAIL CLOSED)
+  // ------------------------------------------------------
+  const solaceDecision = await authorizeExecution(imageIntent);
+
+  if (!solaceDecision.permitted) {
+    return NextResponse.json({
+      ok: false,
+      conversationId: resolvedConversationId,
+      response: "Image generation is not permitted in this context.",
+      messages: [
+        {
+          role: "assistant",
+          content: "Image generation is not permitted in this context.",
+        },
+      ],
+    });
+  }
+
+  // ------------------------------------------------------
+  // EXECUTION (ONLY AFTER PERMIT)
+  // ------------------------------------------------------
   const imageUrl = await generateImage(message);
   const imageHtml = `<img src="${imageUrl}" style="max-width:100%;border-radius:12px;" />`;
 
@@ -755,12 +814,81 @@ const rawResponse =
     ? result.finalAnswer
     : "I’m here and ready to continue.";
 
+
 // --------------------------------------------------------
 // EXPORT INTERCEPT (AUTHORITATIVE)
 // --------------------------------------------------------
 const exportIntent = detectsExportIntent(rawResponse);
 
 if (exportIntent) {
+
+  // ------------------------------------------------------
+  // SOLACE ADDITION — DECLARE EXPORT EXECUTION INTENT
+  // ------------------------------------------------------
+  const exportExecutionIntent = {
+    intent_id: crypto.randomUUID(),
+    timestamp: new Date().toISOString(),
+
+    actor: {
+      type: "user",
+      id: authUserId,
+      display: finalUserKey,
+    },
+
+    system: {
+      name: "solace-chat",
+      version: "1.0",
+      environment: executionProfile,
+    },
+
+    action: {
+      name: "export_file",
+      category: "write",
+      side_effects: [
+        "file_generation",
+        "object_storage_write",
+        "download_link_exposure",
+      ],
+    },
+
+    parameters: {
+      format: exportIntent.format,
+      filename: exportIntent.filename,
+    },
+
+    context: {
+      policy_mode: "content_export",
+      risk_tier:
+        exportIntent.format === "pdf" || exportIntent.format === "docx"
+          ? "medium"
+          : "low",
+      jurisdiction: [],
+      purpose: "User-requested content export",
+    },
+  };
+
+  // ------------------------------------------------------
+  // SOLACE ADDITION — AUTHORITY CHECK (FAIL CLOSED)
+  // ------------------------------------------------------
+  const solaceDecision = await authorizeExecution(exportExecutionIntent);
+
+  if (!solaceDecision.permitted) {
+    return NextResponse.json({
+      ok: false,
+      conversationId: resolvedConversationId,
+      response: "Export is not permitted in this context.",
+      messages: [
+        {
+          role: "assistant",
+          content: "Export is not permitted in this context.",
+        },
+      ],
+    });
+  }
+
+  // ------------------------------------------------------
+  // EXECUTION (ONLY AFTER PERMIT)
+  // ------------------------------------------------------
   const exportRes = await fetch(
     `${process.env.NEXT_PUBLIC_BASE_URL}/api/exports`,
     {
