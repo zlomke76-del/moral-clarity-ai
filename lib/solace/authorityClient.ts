@@ -1,7 +1,10 @@
 // lib/solace/authorityClient.ts
 // ------------------------------------------------------------
 // Solace Core Authority Client (AUTHORITATIVE)
-// - Calls Solace Core over the network (Vercel-safe)
+// - Server-only helper for Solace → Core calls
+// - Supports BOTH authority surfaces:
+//     1) /v1/authorize  (advisory, no acceptance)
+//     2) /v1/execute    (binding, acceptance-required)
 // - Fail-closed by default
 // - Optional explicit bypass for local/dev only (env-gated)
 // ------------------------------------------------------------
@@ -53,24 +56,118 @@ function safeJson(v: any): string {
   }
 }
 
+function failClosed(reason: string): SolaceDecision {
+  return {
+    permitted: false,
+    decision: "DENY",
+    reason,
+    issuer: null,
+    executeHash: null,
+    consumedAt: null,
+    raw: null,
+  };
+}
+
 /**
- * AUTHORITATIVE — authorizeExecution(intent)
+ * ------------------------------------------------------------
+ * AUTHORIZE-ONLY — authorizeIntent(intent)
  *
- * This client is designed to be called from server-only contexts (Next.js route handlers).
+ * Calls Solace Core /v1/authorize
+ * - Advisory surface
+ * - No acceptance required
+ * - Writes ledger evidence in Core
+ * - Used by Solace UI / browser-mediated flows
+ * ------------------------------------------------------------
+ */
+export async function authorizeIntent(
+  intent: any,
+  opts?: { timeoutMs?: number }
+): Promise<SolaceDecision> {
+  const baseUrl = normalizeBaseUrl(process.env.SOLACE_CORE_URL);
+  const bypass = isTruthyEnv(process.env.SOLACE_AUTH_BYPASS);
+  const timeoutMs = Math.max(250, Math.min(opts?.timeoutMs ?? 3000, 15000));
+
+  if (bypass) {
+    return {
+      permitted: true,
+      decision: "PERMIT",
+      reason: "solace_auth_bypass_enabled",
+      issuer: "bypass",
+      executeHash: null,
+      consumedAt: new Date().toISOString(),
+      raw: null,
+    };
+  }
+
+  if (!baseUrl) {
+    return failClosed("solace_core_url_missing_or_invalid");
+  }
+
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(`${baseUrl}/v1/authorize`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(process.env.SOLACE_API_KEY
+          ? { "x-solace-api-key": process.env.SOLACE_API_KEY }
+          : {}),
+      },
+      body: safeJson(intent),
+      signal: controller.signal,
+    });
+
+    const json = await res.json().catch(() => ({}));
+    const decision = String(json?.decision ?? "DENY").toUpperCase();
+
+    if (decision === "PERMIT") {
+      return {
+        permitted: true,
+        decision: "PERMIT",
+        reason: json?.reason,
+        raw: json,
+      };
+    }
+
+    if (decision === "ESCALATE") {
+      return {
+        permitted: false,
+        decision: "ESCALATE",
+        reason: json?.reason ?? "escalated",
+        raw: json,
+      };
+    }
+
+    return {
+      permitted: false,
+      decision: "DENY",
+      reason: json?.reason ?? "denied",
+      raw: json,
+    };
+  } catch (err: any) {
+    const msg =
+      err?.name === "AbortError"
+        ? "solace_core_timeout"
+        : err?.message ?? "solace_core_request_failed";
+
+    return failClosed(msg);
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/**
+ * ------------------------------------------------------------
+ * EXECUTION GATE — authorizeExecution(intent, acceptance)
  *
- * Contract:
- * - If SOLACE_CORE_URL is missing or invalid => FAIL CLOSED (DENY)
- * - If Solace Core request fails => FAIL CLOSED (DENY)
- * - If Solace Core returns PERMIT => permitted=true
- *
- * Acceptance-only Core:
- * - Your Solace Core (server.js) requires an `acceptance` object.
- * - Therefore, this function FAILS CLOSED unless one is provided OR
- *   an explicit dev bypass is enabled.
- *
- * Dev bypass (explicit):
- * - Set SOLACE_AUTH_BYPASS=true to return PERMIT without calling Core.
- * - DO NOT enable this in production.
+ * Calls Solace Core /v1/execute
+ * - Acceptance REQUIRED
+ * - Binding authority gate
+ * - FAIL CLOSED if anything is missing or invalid
+ * - Used ONLY for real execution paths
+ * ------------------------------------------------------------
  */
 export async function authorizeExecution(
   intent: any,
@@ -84,9 +181,6 @@ export async function authorizeExecution(
   const bypass = isTruthyEnv(process.env.SOLACE_AUTH_BYPASS);
   const timeoutMs = Math.max(250, Math.min(opts?.timeoutMs ?? 3000, 15000));
 
-  // ----------------------------------------------------------
-  // OPTIONAL DEV BYPASS (EXPLICIT, ENV-GATED)
-  // ----------------------------------------------------------
   if (bypass) {
     return {
       permitted: true,
@@ -99,48 +193,22 @@ export async function authorizeExecution(
     };
   }
 
-  // ----------------------------------------------------------
-  // FAIL CLOSED — NOT CONFIGURED
-  // ----------------------------------------------------------
   if (!baseUrl) {
-    return {
-      permitted: false,
-      decision: "DENY",
-      reason: "solace_core_url_missing_or_invalid",
-      issuer: null,
-      executeHash: null,
-      consumedAt: null,
-      raw: null,
-    };
+    return failClosed("solace_core_url_missing_or_invalid");
   }
 
-  // ----------------------------------------------------------
-  // ACCEPTANCE REQUIRED (your Core is acceptance-only)
-  // ----------------------------------------------------------
   const acceptance = opts?.acceptance;
   if (!acceptance) {
-    return {
-      permitted: false,
-      decision: "DENY",
-      reason: "acceptance_required_missing",
-      issuer: null,
-      executeHash: null,
-      consumedAt: null,
-      raw: null,
-    };
+    return failClosed("acceptance_required_missing");
   }
 
-  // ----------------------------------------------------------
-  // EXECUTE BINDING PAYLOAD
-  // NOTE: this is NOT “execution” — it’s the material being authorized.
-  // Keep it minimal + deterministic.
-  // ----------------------------------------------------------
-  const execute = opts?.execute ?? {
-    type: "authorize_only",
-    intent_id: intent?.intent_id ?? null,
-    action: intent?.action ?? null,
-    parameters: intent?.parameters ?? null,
-  };
+  const execute =
+    opts?.execute ?? {
+      type: "authorize_only",
+      intent_id: intent?.intent_id ?? null,
+      action: intent?.action ?? null,
+      parameters: intent?.parameters ?? null,
+    };
 
   const payload: SolaceExecuteRequest = {
     intent,
@@ -148,9 +216,6 @@ export async function authorizeExecution(
     acceptance,
   };
 
-  // ----------------------------------------------------------
-  // NETWORK CALL (FAIL CLOSED)
-  // ----------------------------------------------------------
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -159,7 +224,6 @@ export async function authorizeExecution(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // Reserved for future caller-auth if you add it at the Core.
         ...(process.env.SOLACE_API_KEY
           ? { "x-solace-api-key": process.env.SOLACE_API_KEY }
           : {}),
@@ -169,7 +233,6 @@ export async function authorizeExecution(
     });
 
     const json = await res.json().catch(() => ({}));
-
     const decision = String(json?.decision ?? "DENY").toUpperCase();
 
     if (decision === "PERMIT") {
@@ -190,8 +253,6 @@ export async function authorizeExecution(
         decision: "ESCALATE",
         reason: json?.reason ?? "escalated",
         issuer: json?.issuer ?? null,
-        executeHash: json?.executeHash ?? null,
-        consumedAt: json?.consumedAt ?? null,
         raw: json,
       };
     }
@@ -201,8 +262,6 @@ export async function authorizeExecution(
       decision: "DENY",
       reason: json?.reason ?? "denied",
       issuer: json?.issuer ?? null,
-      executeHash: json?.executeHash ?? null,
-      consumedAt: json?.consumedAt ?? null,
       raw: json,
     };
   } catch (err: any) {
@@ -211,15 +270,7 @@ export async function authorizeExecution(
         ? "solace_core_timeout"
         : err?.message ?? "solace_core_request_failed";
 
-    return {
-      permitted: false,
-      decision: "DENY",
-      reason: msg,
-      issuer: null,
-      executeHash: null,
-      consumedAt: null,
-      raw: null,
-    };
+    return failClosed(msg);
   } finally {
     clearTimeout(t);
   }
