@@ -815,7 +815,7 @@ export async function POST(req: Request) {
       // NOTE: authorityClient is acceptance-only; this will DENY unless acceptance is provided
       // or bypass is enabled.
       // ------------------------------------------------------
-      const solaceDecision = await authorizeExecution(imageIntent);
+      const solaceDecision = await authorizeIntent(imageIntent);
 
       if (!solaceDecision?.permitted) {
         const decisionText =
