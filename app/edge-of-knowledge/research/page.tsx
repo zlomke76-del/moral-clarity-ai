@@ -135,6 +135,11 @@ export default function EdgeOfKnowledgeIndexPage() {
         <h2>VIII. Epistemic Instrumentation — Detection Before Damage</h2>
         <ul>
           <li><Link href="/edge-of-knowledge/detection-before-damage">Detection Before Damage: Formal Reduction</Link></li>
+          <li>
+            <Link href="/edge-of-knowledge/dqf-v1-1">
+              Drift Quantification Framework v1.1 (Regime-Bounded Drift Instrumentation)
+            </Link>
+          </li>
         </ul>
 
         {/* IX */}
