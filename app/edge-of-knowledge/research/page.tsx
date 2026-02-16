@@ -48,6 +48,60 @@ export default function EdgeOfKnowledgeIndexPage() {
           govern action where traditional optimization no longer applies.
         </p>
 
+        {/* ===================================================== */}
+        {/* GOVERNING THESIS — EPISTEMIC DECOUPLING              */}
+        {/* ===================================================== */}
+
+        <div className="not-prose my-10 rounded-xl border border-neutral-200 bg-neutral-50 p-6 dark:border-neutral-800 dark:bg-neutral-900/40">
+          <h2 className="text-lg font-semibold tracking-tight">
+            The Governing Problem
+          </h2>
+
+          <p className="mt-4 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
+            Systems rarely collapse suddenly. They become{" "}
+            <strong>internally consistent and externally wrong</strong>.
+          </p>
+
+          <p className="mt-3 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
+            AI systems continue producing coherent outputs while drifting from
+            ground truth. Organizations accumulate governance artifacts while
+            behavior decouples from constraint. Materials pass validation while
+            degrading along untracked pathways.
+          </p>
+
+          <p className="mt-3 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
+            <strong>
+              Edge of Knowledge exists to detect epistemic decoupling before
+              consequence becomes irreversible.
+            </strong>
+          </p>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-3 text-sm">
+            <div>
+              <p className="font-semibold">Research</p>
+              <p className="text-neutral-600 dark:text-neutral-400">
+                Defines the boundary.
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold">Instrumentation</p>
+              <p className="text-neutral-600 dark:text-neutral-400">
+                Detects boundary violation.
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold">Constraint</p>
+              <p className="text-neutral-600 dark:text-neutral-400">
+                Intervenes before lock-in.
+              </p>
+            </div>
+          </div>
+
+          <p className="mt-6 text-xs text-neutral-500 dark:text-neutral-400">
+            Without that sequence, governance becomes documentation of failure.
+          </p>
+        </div>
+
         <hr />
 
         {/* I */}
@@ -98,19 +152,16 @@ export default function EdgeOfKnowledgeIndexPage() {
           <li><Link href="/edge-of-knowledge/semi-ipn-polyolefin-tpe">Semi-Interpenetrating Network (Semi-IPN)</Link></li>
           <li><Link href="/edge-of-knowledge/mineral-filled-polyolefin-barrier-films">Mineral-Filled Polyolefin Barrier Films</Link></li>
           <li><Link href="/edge-of-knowledge/hdpe-non-commutative-morphology">Non-Commutative Morphology Encoding in Semicrystalline Polyolefins</Link></li>
-
           <li>
             <Link href="/edge-of-knowledge/beip-v1">
               Boundary-Encoded Interfacial Persistence (BEIP v1) — Pre-Registered Protocol
             </Link>
           </li>
-
           <li>
             <Link href="/edge-of-knowledge/human-ai-co-agency-boundary">
               Human–AI Co-Agency Boundary — Minimal Decisive Experiment (Protocol)
             </Link>
           </li>
-
           <li><Link href="/edge-of-knowledge/inflammation-suppressing-microenvironment-polymer">Inflammation-Suppressing Human Micro-Environment Polymer</Link></li>
           <li><Link href="/edge-of-knowledge/suppressing-transferable-inflammatory-signaling">Suppressing Transferable Inflammatory Signaling in Indoor Micro-Environments</Link></li>
           <li><Link href="/edge-of-knowledge/passive-infrastructure-organophosphate-interruption">Passive Infrastructure Polymers for Irreversible Interruption of Organophosphate Surface Transfer Pathways</Link></li>
