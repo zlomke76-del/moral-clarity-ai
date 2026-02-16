@@ -146,6 +146,11 @@ export default function EdgeOfKnowledgeIndexPage() {
         <h2>IX. Adversarial & Incentive-Corrupted Regimes</h2>
         <ul>
           <li><Link href="/edge-of-knowledge/adversarial-incentive-corrupted-regimes">Adversarial & Incentive-Corrupted Regimes</Link></li>
+          <li>
+            <Link href="/edge-of-knowledge/drift-case-study-01">
+              Drift Case Study 01 — Incentive Pressure & Constraint Erosion
+            </Link>
+          </li>
         </ul>
 
         {/* X */}
@@ -162,41 +167,13 @@ export default function EdgeOfKnowledgeIndexPage() {
         {/* XI */}
         <h2>XI. Boundary Tests — Pre-Registered, Decisive Experiments</h2>
         <ul>
-          <li>
-            <Link href="/edge-of-knowledge/beip-v1">
-              Boundary-Encoded Interfacial Persistence (BEIP v1)
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/human-ai-co-agency-boundary">
-              Human–AI Co-Agency Boundary — Minimal Decisive Experiment
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/parent-state-emergency-intervention-boundary">
-              Parent–State Emergency Intervention Boundary (PSEIB-v1)
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/government-data-access-responsibility-boundary">
-              Government Data Access Responsibility Boundary (GDARB-v1)
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/corporate-shareholder-environment-boundary">
-              Corporate–Shareholder–Environment Responsibility Boundary (CSEB-v1)
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/auditor-management-unreported-risk-boundary">
-              Auditor–Management Responsibility Boundary: Known but Unreported Risk (AMURB-v1)
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/simulated-consciousness-boundary">
-              Simulated Consciousness Boundary Test (SCBT-v1)
-            </Link>
-          </li>
+          <li><Link href="/edge-of-knowledge/beip-v1">Boundary-Encoded Interfacial Persistence (BEIP v1)</Link></li>
+          <li><Link href="/edge-of-knowledge/human-ai-co-agency-boundary">Human–AI Co-Agency Boundary — Minimal Decisive Experiment</Link></li>
+          <li><Link href="/edge-of-knowledge/parent-state-emergency-intervention-boundary">Parent–State Emergency Intervention Boundary (PSEIB-v1)</Link></li>
+          <li><Link href="/edge-of-knowledge/government-data-access-responsibility-boundary">Government Data Access Responsibility Boundary (GDARB-v1)</Link></li>
+          <li><Link href="/edge-of-knowledge/corporate-shareholder-environment-boundary">Corporate–Shareholder–Environment Responsibility Boundary (CSEB-v1)</Link></li>
+          <li><Link href="/edge-of-knowledge/auditor-management-unreported-risk-boundary">Auditor–Management Responsibility Boundary: Known but Unreported Risk (AMURB-v1)</Link></li>
+          <li><Link href="/edge-of-knowledge/simulated-consciousness-boundary">Simulated Consciousness Boundary Test (SCBT-v1)</Link></li>
         </ul>
 
         <hr />
