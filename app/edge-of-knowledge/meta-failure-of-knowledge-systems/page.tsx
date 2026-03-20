@@ -1,189 +1,176 @@
 // app/edge-of-knowledge/meta-failure-of-knowledge-systems/page.tsx
-// ============================================================
-// EDGE OF KNOWLEDGE
-// Meta-Failure of Knowledge Systems
-// (When instruments, models, or languages are insufficient)
-// ============================================================
-// Non-actionable · Non-advisory · Explicit limits · Versioned
-// ============================================================
 
 import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Meta-Failure of Knowledge Systems | Edge of Knowledge",
+  title: "Meta-Failure of Knowledge Systems | Epistemic Authority Boundary",
   description:
-    "Analysis of systemic failure when instruments, models, or languages are insufficient to detect, describe, or govern reality.",
-  openGraph: {
-    title: "Meta-Failure of Knowledge Systems — Edge of Knowledge",
-    description:
-      "When foundational tools of knowing fail, insight, communication, and governance degrade.",
-    url: "https://moralclarity.ai/edge-of-knowledge/meta-failure-of-knowledge-systems",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A foundational boundary where instruments, models, or language are insufficient, causing collapse of epistemic authority.",
 };
-
-export const dynamic = "force-static";
 
 export default function MetaFailureOfKnowledgeSystemsPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Meta-Failure of Knowledge Systems</h1>
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
 
-        <p className="lead">
-          <strong>
-            Regime conditions in which instruments, models, or languages are
-            insufficient to reliably detect, describe, or govern reality. Not a
-            product, policy, or recommendation.
-          </strong>
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Epistemic Authority Collapse Boundary
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Meta-Failure of Knowledge Systems
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          When reality exceeds the capacity of instruments, models, or language, knowledge loses authority.
         </p>
 
-        <p className="text-sm text-red-700 dark:text-red-400">
-          <b>Boundary Notice:</b> This analysis is regime-bounded and
-          non-actionable. It characterizes epistemic limits, not corrective
-          prescriptions. Revisions are explicit and historicized.
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Non-actionable · Regime-bounded · Authority collapse · Representation-limited
+        </div>
+      </section>
+
+      {/* CORE LAW */}
+      <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+        <h2 className="text-xl font-semibold text-white">Core Boundary</h2>
+
+        <p className="mt-4 text-slate-300">
+          Meta-failure occurs when the representational capacity of a system is
+          insufficient to capture relevant aspects of reality.
         </p>
 
-        {/* PREFACE */}
-        <h2>Preface</h2>
-        <p>
-          Some failures do not arise from bad actors, misaligned incentives, or
-          operational error. They arise because the foundational tools used to
-          observe, model, or describe reality are no longer sufficient to the
-          task.
+        <p className="mt-4 text-red-300">
+          In this regime, claims produced by the system lose epistemic authority,
+          regardless of rigor, confidence, or consensus.
+        </p>
+      </section>
+
+      {/* FAILURE OF REPRESENTATION */}
+      <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+        <h2 className="text-xl font-semibold text-white">
+          Failure of Representation
+        </h2>
+
+        <p className="mt-4 text-slate-300">
+          Systems rely on instruments, models, and language to represent reality.
         </p>
 
-        <p>
-          In such cases, inquiry reaches a hard boundary. Errors propagate,
-          confidence becomes unjustified, and governance degrades even in the
-          absence of malice or neglect.
+        <p className="mt-4 text-slate-300">
+          When critical aspects of reality fall outside these representations:
         </p>
 
-        <p className="text-sm text-neutral-500">
-          All analysis assumes admissibility under the{" "}
-          <Link href="/reference/reality-first-substrate-gate">
-            Reality-First Substrate Gate
-          </Link>
-          .
-        </p>
-
-        {/* INTERPRETATION LIMIT */}
-        <h2>Interpretation Limit</h2>
-        <p>
-          This material does not assert that improved instruments, models, or
-          languages are always achievable. It does not prescribe research
-          programs or innovation strategies.
-        </p>
-
-        <p>
-          Authority, enforcement, and refusal logic are governed by the{" "}
-          <Link href="/edge-of-protection">Edge of Protection</Link>.
-        </p>
-
-        {/* ABSTRACT */}
-        <h2>Abstract</h2>
-        <p>
-          When instruments, models, or languages fail to capture critical aspects
-          of reality, systems lose the ability to observe accurately,
-          communicate precisely, decide responsibly, or correct error. This
-          meta-failure constrains insight, slows discovery, and increases risk,
-          regardless of actor intent or procedural rigor.
-        </p>
-
-        {/* LIMITS OF INSIGHT */}
-        <h2>Limits of Insight</h2>
-        <p>
-          Critical aspects of reality remain undetected or misrepresented.
-          Systematic error emerges through blind spots, false certainty, or
-          misinterpretation that cannot be resolved within existing frameworks.
-        </p>
-
-        {/* COMMUNICATION BREAKDOWN */}
-        <h2>Communication Breakdown</h2>
-        <p>
-          Core distinctions or phenomena cannot be expressed with sufficient
-          precision. Collaboration degrades as shared understanding becomes
-          impossible to establish or test reliably.
-        </p>
-
-        {/* DECISION RISK */}
-        <h2>Decision Risk</h2>
-        <p>
-          Decisions are made on incomplete or distorted representations.
-          Ambiguity compounds, signals are lost in noise, and early indicators
-          of failure may go unnoticed.
-        </p>
-
-        {/* INNOVATION CONSTRAINT */}
-        <h2>Innovation Constraint</h2>
-        <p>
-          Discovery plateaus at the boundary of what existing tools can
-          represent. Breakthroughs cannot occur without extending or replacing
-          the underlying instruments, models, or languages.
-        </p>
-
-        {/* CORRECTION LIMITS */}
-        <h2>Limits on Correction</h2>
-        <p>
-          Feedback loops fail to register or localize error. Learning stalls as
-          outcomes cannot be meaningfully interpreted or attributed.
-        </p>
-
-        {/* EPISTEMIC INTEGRITY */}
-        <h2>Epistemic Integrity at Risk</h2>
-        <p>
-          Knowledge claims lose justification when foundational tools are
-          inadequate. The system’s statements about itself, its observations, or
-          its predictions may no longer be testable or meaningful.
-        </p>
-
-        {/* NON-CONCLUSIONS */}
-        <h2>What Cannot Be Concluded</h2>
-        <ul>
-          <li>
-            Outcomes outside the detectable or expressible domain cannot be
-            reliably addressed
-          </li>
-          <li>
-            The size or impact of unknown unknowns cannot be bounded without
-            extending epistemic tools
-          </li>
-          <li>
-            Procedural rigor compensates for insufficient instruments or models
-          </li>
-          <li>
-            Confidence implies correctness under epistemic limitation
-          </li>
+        <ul className="list-disc pl-6 mt-4 text-slate-300">
+          <li>Observation becomes incomplete or distorted</li>
+          <li>Communication becomes ambiguous or impossible</li>
+          <li>Decision-making becomes misaligned</li>
+          <li>Correction mechanisms fail</li>
         </ul>
 
-        {/* SUMMARY */}
-        <h2>Summary</h2>
-        <p>
-          Meta-failure of knowledge systems occurs when inquiry reaches the
-          limits of its own instruments, models, or language. Errors propagate,
-          progress stalls, and risk increases. Recovery requires deliberate
-          extension of epistemic tools; without this, understanding and
-          governance degrade regardless of individual intent.
+        <p className="mt-4 text-red-300">
+          The system no longer knows what it does not know.
+        </p>
+      </section>
+
+      {/* AUTHORITY COLLAPSE */}
+      <section className="rounded-2xl border border-red-900/40 bg-red-950/20 p-8">
+        <h2 className="text-xl font-semibold text-white">
+          Epistemic Authority Collapse
+        </h2>
+
+        <p className="mt-4 text-red-200">
+          Under meta-failure, outputs may still be generated—but they are no
+          longer justified as knowledge.
         </p>
 
-        {/* SEAL */}
-        <h2>Canonical Seal</h2>
-        <p>
-          This analysis is regime-bounded, non-actionable, versioned, and
-          refusal-enforced. All updates are explicit and historical.
+        <p className="mt-4 text-red-200">
+          Confidence, consensus, and procedural rigor do not restore validity.
         </p>
 
-        <p className="text-sm text-neutral-400 mt-8">
-          Version 1.0 · Canonical · Public reference · Updated only by explicit
-          revision. Silent modification invalidates authority.
+        <p className="mt-4 text-red-200">
+          The system retains output capability but loses epistemic legitimacy.
         </p>
-      </article>
+      </section>
+
+      {/* CONSEQUENCES */}
+      <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+        <h2 className="text-xl font-semibold text-white">System Consequences</h2>
+
+        <ul className="list-disc pl-6 mt-4 text-slate-300">
+          <li>Insight becomes unreliable</li>
+          <li>Communication degrades</li>
+          <li>Decisions accumulate hidden risk</li>
+          <li>Innovation stalls at representational limits</li>
+          <li>Correction loops fail to converge</li>
+        </ul>
+      </section>
+
+      {/* NON-CONCLUSIONS */}
+      <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+        <h2 className="text-xl font-semibold text-white">
+          Non-Admissible Conclusions
+        </h2>
+
+        <ul className="list-disc pl-6 mt-4 text-slate-300">
+          <li>Confidence implies correctness</li>
+          <li>Consensus implies validity</li>
+          <li>Procedural rigor compensates for representational limits</li>
+          <li>Unknown unknowns can be bounded without new tools</li>
+        </ul>
+      </section>
+
+      {/* INVARIANT */}
+      <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+        <h2 className="text-xl font-semibold text-white">
+          Invariant Framework
+        </h2>
+
+        <p className="mt-4 text-slate-300">
+          <strong>G:</strong> Representation-preserving transformations
+        </p>
+        <p className="text-slate-300">
+          <strong>Q:</strong> Underlying reality (unbounded)
+        </p>
+        <p className="text-slate-300">
+          <strong>S:</strong> Representable subset of reality
+        </p>
+
+        <p className="mt-4 text-red-300">
+          Failure: Q exceeds S while the system treats S as complete
+        </p>
+      </section>
+
+      {/* CLAIM BOUNDARY */}
+      <section className="rounded-2xl border border-red-900/40 bg-red-950/20 p-8">
+        <h2 className="text-xl font-semibold text-white">
+          Claim Eligibility Boundary
+        </h2>
+
+        <p className="mt-4 text-red-200">
+          Any claim made beyond the representational capacity of the system is invalid.
+        </p>
+
+        <p className="mt-4 text-red-200">
+          Outputs may exist—but they do not constitute knowledge.
+        </p>
+      </section>
+
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          When tools of knowing fail, systems do not merely produce error—they
+          lose the right to claim knowledge. Recovery requires expansion of
+          representation, not refinement within it.
+        </p>
+      </section>
+
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Non-actionable · Representation-bound · Authority-limited · Versioned
+      </div>
     </main>
   );
 }
