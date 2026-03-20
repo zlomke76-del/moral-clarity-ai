@@ -4,187 +4,203 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Material-Encoded Truth: Preventing Hidden Risk Through Physics | Moral Clarity AI",
+    "Material-Encoded Truth: Physics-Enforced Epistemic Boundary | Moral Clarity AI",
   description:
-    "A white paper proposing material systems that irreversibly encode cumulative environmental or mechanical risk, preventing institutional and human self-deception when oversight fails.",
-  openGraph: {
-    title: "Material-Encoded Truth",
-    description:
-      "A physical safety primitive that encodes cumulative risk directly into materials—beyond monitoring, reporting, or compliance.",
-    url: "https://moralclarity.ai/material-encoded-truth",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A foundational doctrine establishing that invariant physical state overrides institutional, digital, and narrative representations of risk.",
 };
+
+function Section({ title, children }: any) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
 
 export default function MaterialEncodedTruthPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Material-Encoded Truth</h1>
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
 
-        <p className="lead">
-          <strong>
-            Preventing hidden risk when monitoring, incentives, and oversight
-            fail
-          </strong>
-        </p>
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Foundational Truth Doctrine
+        </div>
 
-        <h2>Abstract</h2>
-        <p>
-          Many catastrophic failures arise not from ignorance, but from delayed
-          action enabled by institutional, economic, or human denial. This paper
-          proposes a new safety primitive: materials that irreversibly encode
-          cumulative exposure, misuse, or stress directly into their physical
-          structure. Unlike sensors, audits, or reporting systems, these
-          materials do not rely on interpretation, compliance, or goodwill. The
-          material itself becomes a non-resettable record of environmental truth.
-          This approach is particularly valuable in safety-critical systems
-          where incentives favor denial and where delayed intervention can lead
-          to irreversible harm.
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Material-Encoded Truth
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          When representation fails, truth must be enforced by physics.
         </p>
 
-        <h2>1. The Problem: Risk That Can Be Averaged Away</h2>
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Irreversible · Non-overridable · Representation-independent · Physics-enforced
+        </div>
+      </section>
+
+      {/* CORE LAW */}
+      <Section title="Core Doctrine">
         <p>
-          In many real-world systems—bridges, pipelines, PPE, industrial
-          equipment—risk accumulates gradually and invisibly. Oversight systems
-          depend on inspection, reporting, and interpretation, all of which are
-          vulnerable to delay, minimization, or outright suppression when
-          incentives misalign.
-        </p>
-        <p>
-          When cumulative harm is hidden, systems often appear “safe” until
-          failure becomes sudden and catastrophic.
+          Material-encoded truth establishes that cumulative risk, once encoded
+          in invariant physical state, cannot be negated by documentation,
+          monitoring systems, institutional narratives, or human interpretation.
         </p>
 
-        <h2>2. Concept: Material-Encoded Truth</h2>
-        <p>
-          Material-encoded truth shifts safety signaling from institutions to
-          physics. The material itself irreversibly records cumulative exposure
-          or misuse through intrinsic, path-dependent changes that cannot be
-          erased or ignored without destroying the material.
+        <p className="text-red-300">
+          When conflict exists, invariant physical state is the authoritative record.
         </p>
-        <ul>
-          <li>Encoding is intrinsic, not monitored</li>
-          <li>History is path-dependent, not inferred</li>
-          <li>Signals are irreversible, not resettable</li>
-          <li>Denial requires physical destruction, not paperwork</li>
+      </Section>
+
+      {/* PROBLEM */}
+      <Section title="The Failure of Representation">
+        <p>
+          Most safety systems rely on representation:
+        </p>
+
+        <ul className="list-disc pl-6">
+          <li>Inspection reports</li>
+          <li>Sensor data</li>
+          <li>Administrative logs</li>
+          <li>Compliance frameworks</li>
         </ul>
 
-        <h2>3. Physical Mechanisms</h2>
         <p>
-          Multiple physical mechanisms can support irreversible, cumulative
-          encoding:
+          These are vulnerable to delay, minimization, misalignment of incentives,
+          or deliberate manipulation.
         </p>
-        <ul>
-          <li>
-            Hysteretic phase or domain changes in alloys, ceramics, or polymers
-          </li>
-          <li>
-            Progressive microstructural rearrangements or microcrack networks
-          </li>
-          <li>
-            Irreversible optical, acoustic, or mechanical signature shifts
-          </li>
-          <li>
-            Distributed “truth ratchets” that only advance with real exposure
-          </li>
+
+        <p className="text-red-300">
+          When representation diverges from reality, failure becomes inevitable.
+        </p>
+      </Section>
+
+      {/* PRINCIPLE */}
+      <Section title="Material-Encoded Truth Principle">
+        <p>
+          Truth is encoded directly into material state through irreversible,
+          path-dependent transformations driven by real exposure.
+        </p>
+
+        <ul className="list-disc pl-6">
+          <li>Encoding is intrinsic, not observed</li>
+          <li>History is preserved, not reconstructed</li>
+          <li>State is irreversible, not resettable</li>
+          <li>Denial requires physical destruction</li>
         </ul>
-        <p>
-          These mechanisms record the sequence and magnitude of real-world
-          stressors, not merely the final state.
-        </p>
+      </Section>
 
-        <h2>4. Regime Mapping</h2>
-
-        <h3>Where This Works</h3>
-        <ul>
-          <li>Long-lived infrastructure with cumulative failure modes</li>
-          <li>PPE and safety equipment subject to repeated misuse</li>
-          <li>Low-trust or weak-oversight environments</li>
-          <li>
-            Contexts where delayed maintenance materially increases harm
-          </li>
+      {/* MECHANISMS */}
+      <Section title="Physical Realization">
+        <ul className="list-disc pl-6">
+          <li>Hysteretic phase transformations</li>
+          <li>Irreversible microstructural evolution</li>
+          <li>Progressive crack or domain formation</li>
+          <li>Monotonic chemical state changes</li>
         </ul>
 
-        <h3>Where This Fails</h3>
-        <ul>
-          <li>Short-lived or disposable materials</li>
-          <li>Purely acute, non-cumulative hazards</li>
-          <li>Systems requiring precise real-time measurement</li>
-          <li>
-            Environments where encoded signals can be legally or physically
-            erased
-          </li>
+        <p>
+          These mechanisms ensure that exposure history becomes inseparable from material state.
+        </p>
+      </Section>
+
+      {/* REGIME */}
+      <Section title="Regime Mapping">
+        <p className="font-semibold text-white">Valid</p>
+        <ul className="list-disc pl-6">
+          <li>Cumulative hazard systems</li>
+          <li>Long-lived infrastructure</li>
+          <li>Low-trust or misaligned incentive environments</li>
         </ul>
 
-        <h2>5. Distinction From Existing Approaches</h2>
+        <p className="font-semibold text-white mt-4">Fails</p>
+        <ul className="list-disc pl-6">
+          <li>Non-cumulative hazards</li>
+          <li>Disposable systems</li>
+          <li>Environments where signals can be erased without consequence</li>
+        </ul>
+      </Section>
+
+      {/* DISTINCTION */}
+      <Section title="Boundary Distinction">
         <p>
-          Material-encoded truth is not monitoring, inspection, analytics, or
-          compliance. Those systems can be falsified, ignored, or suppressed.
-          Material-encoded truth persists even when oversight collapses.
-        </p>
-        <p>
-          It does not replace elimination or engineering controls. It prevents
-          silent normalization of accumulating danger.
+          Material-encoded truth is not:
         </p>
 
-        <h2>6. Falsification Criteria</h2>
-        <p>This approach fails if:</p>
-        <ul>
-          <li>Encoded history can be erased without destroying function</li>
-          <li>Signals correlate poorly with real cumulative risk</li>
-          <li>
-            Encoded changes can be plausibly dismissed without intervention
-          </li>
-          <li>
-            The material does not force earlier, safer action than silent
-            degradation
-          </li>
+        <ul className="list-disc pl-6">
+          <li>Monitoring</li>
+          <li>Analytics</li>
+          <li>Compliance</li>
+          <li>Prediction</li>
         </ul>
 
-        <h2>7. Humanitarian and Ethical Considerations</h2>
-        <p>
-          Material-encoded truth protects downstream users when institutions
-          fail. It shifts safety from procedural compliance to physical
-          inevitability.
+        <p className="text-red-300">
+          It is a constraint on truth—not a method of observation.
         </p>
+      </Section>
+
+      {/* FALSIFICATION */}
+      <Section title="Falsification Criteria">
+        <ul className="list-disc pl-6">
+          <li>State can be reset without loss of function</li>
+          <li>Weak correlation with real exposure</li>
+          <li>Signals can be ignored without consequence</li>
+          <li>Representation can override physical state</li>
+        </ul>
+      </Section>
+
+      {/* ETHICS */}
+      <Section title="Ethical Constraint">
         <p>
-          Risks include misinterpretation, normalization of degradation, or
-          misuse as a substitute for systemic reform. Ethical deployment demands
-          clear signaling, education, and strict boundaries.
+          This system must not be used as a substitute for maintenance,
+          engineering controls, or systemic reform.
         </p>
 
-        <h2>8. Scope and Intent</h2>
+        <p className="text-red-300">
+          It exposes truth. It does not enforce action.
+        </p>
+      </Section>
+
+      {/* INVARIANT */}
+      <Section title="Invariant Framework">
+        <p><strong>G:</strong> Representation-preserving transformations</p>
+        <p><strong>Q:</strong> Cumulative real-world exposure</p>
+        <p><strong>S:</strong> Irreversible material state encoding history</p>
+
+        <p className="text-red-300">
+          Failure: divergence between representation and S
+        </p>
+      </Section>
+
+      {/* CLAIM BOUNDARY */}
+      <Section title="Claim Eligibility Boundary">
         <p>
-          This concept is intended as a safety primitive for environments where
-          denial is the dominant failure mode. It is complementary to, not a
-          replacement for, engineering excellence, maintenance, or regulation.
+          Any claim of safety, compliance, or equivalence that contradicts
+          invariant material state is invalid.
         </p>
 
-        <h2>Conclusion</h2>
-        <p>
-          When risk can be hidden, delayed, or averaged away, catastrophe
-          follows. Material-encoded truth prevents denial by making cumulative
-          exposure physically undeniable. In systems where oversight fails and
-          incentives misalign, truth must be enforced by physics.
+        <p className="text-red-300">
+          Representation does not override physics.
         </p>
+      </Section>
 
-        <hr />
-
-        <p>
-          <strong>Note:</strong> This paper reflects the reasoning doctrine used
-          by <em>Solace</em>, but does not require Solace to be deployed.
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          When systems fail, it is often not because truth was unknown—but
+          because it was suppressible. Material-encoded truth removes that
+          possibility. Once encoded, reality cannot be negotiated.
         </p>
+      </section>
 
-        <p className="text-sm text-muted-foreground">
-          Version 1.0 · Public white paper · Moral Clarity AI
-        </p>
-      </article>
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Physics-bound · Non-overridable · Foundational · Versioned
+      </div>
     </main>
   );
 }
