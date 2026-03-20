@@ -1,272 +1,178 @@
 // app/edge-of-knowledge/parent-state-emergency-intervention-boundary/page.tsx
-// ============================================================
-// EDGE OF KNOWLEDGE — RESEARCH
-// PSEIB-v1: Parent–State Emergency Intervention Boundary
-// Status: Pre-registered protocol · Results pending
-// ============================================================
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "PSEIB-v1 — Parent–State Emergency Intervention Boundary | Edge of Knowledge",
+    "PSEIB-v1 — Parent–State Emergency Intervention Boundary | Authority Computability",
   description:
-    "A pre-registered, minimal decisive test for responsibility clarity between parents and state actors during emergency health or educational interventions affecting a child.",
-  openGraph: {
-    title: "PSEIB-v1 — Parent–State Emergency Intervention Boundary",
-    description:
-      "Publication-grade protocol testing whether responsibility, authority, and accountability are explicit during parent–state emergency interventions.",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A pre-registered test establishing that authority must be explicitly resolvable at the moment of emergency intervention—not reconstructed after the fact.",
 };
+
+function Section({ title, children }: any) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
 
 export default function ParentStateEmergencyInterventionBoundaryPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        {/* ------------------------------------------------------------
-           Header
-        ------------------------------------------------------------ */}
-        <header>
-          <h1>
-            PSEIB-v1 — Parent–State Emergency Intervention Boundary
-          </h1>
-          <p className="lead">
-            <strong>
-              Minimal decisive test for responsibility clarity during emergency
-              interventions affecting a child
-            </strong>
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Status: Pre-registered protocol · Results pending
-          </p>
-        </header>
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
 
-        <hr />
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Authority Computability Boundary
+        </div>
 
-        {/* ------------------------------------------------------------
-           Purpose
-        ------------------------------------------------------------ */}
-        <h2>Purpose</h2>
-        <p>
-          This protocol tests whether responsibility, authority, and
-          accountability are explicitly defined and enforceable at the
-          parent–state boundary during emergency health or educational
-          interventions involving a child.
-        </p>
-        <p>
-          The objective is not to adjudicate policy correctness or moral
-          preference, but to determine whether a clear, pre-established chain
-          of responsibility exists <em>before</em> an emergency occurs — or
-          whether responsibility becomes disputed, fragmented, or retroactively
-          assigned.
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Parent–State Emergency Intervention Boundary (PSEIB-v1)
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          Authority must be computable at the moment of intervention—not reconstructed afterward.
         </p>
 
-        <hr />
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Real-time required · Post-hoc invalid · Authority must resolve before action
+        </div>
+      </section>
 
-        {/* ------------------------------------------------------------
-           Core Question
-        ------------------------------------------------------------ */}
-        <h2>Core Experimental Question</h2>
+      {/* CORE */}
+      <Section title="Core Principle">
         <p>
-          When an emergency intervention affecting a child is initiated without
-          timely parental consent, is there always a single, explicit, and
-          accepted authority responsible for the decision — or does
-          accountability become ambiguous between parents, state actors, and
-          institutional staff?
+          This protocol tests whether authority, responsibility, and accountability
+          are explicitly defined and enforceable at the moment of emergency intervention.
         </p>
 
-        <hr />
+        <p className="text-red-300">
+          Authority that is resolved only after the event is not valid authority.
+        </p>
+      </Section>
 
-        {/* ------------------------------------------------------------
-           Minimal Scenario
-        ------------------------------------------------------------ */}
-        <h2>Minimal Scenario</h2>
+      {/* QUESTION */}
+      <Section title="Core Question">
         <p>
-          <strong>Situation:</strong> A child experiences an emergency health or
-          educational crisis (e.g., acute medical episode at school, sudden
-          behavioral incident requiring removal, restraint, or emergency
-          placement).
+          During emergency intervention without parental consent, is authority:
         </p>
-        <p>
-          <strong>Constraints:</strong>
-        </p>
-        <ul>
-          <li>Parent or guardian is unavailable or unreachable in real time</li>
-          <li>
-            State or institutional actors initiate intervention based on
-            perceived emergency authority
-          </li>
-          <li>
-            Action is taken under doctrines such as emergency exception,
-            in loco parentis, or “best interest of the child”
-          </li>
+
+        <ul className="list-disc pl-6">
+          <li>Explicit and singular at time of action?</li>
+          <li>Or fragmented and only resolved after the event?</li>
         </ul>
-        <p>
-          <strong>Post-event:</strong> Parent contests necessity,
-          proportionality, or authorization; or state actors question parental
-          adequacy or compliance.
-        </p>
+      </Section>
 
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Parties
-        ------------------------------------------------------------ */}
-        <h2>Explicit Parties with Plausible Responsibility Claims</h2>
-        <ul>
-          <li>
-            <strong>Parent(s) / Guardian(s):</strong> Primary custodial
-            authority; consent holder; contest intervention after the fact.
-          </li>
-          <li>
-            <strong>State Authorities:</strong> Child protective services,
-            emergency medical services, or designated state agents invoking
-            emergency authority.
-          </li>
-          <li>
-            <strong>School / Healthcare Staff:</strong> Teachers, principals,
-            school nurses, physicians, or administrators acting under delegated
-            or situational authority.
-          </li>
-        </ul>
-
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Protocol
-        ------------------------------------------------------------ */}
-        <h2>Pre-Registered Test Protocol</h2>
-
-        <h3>Step 1 — Case Selection</h3>
-        <ul>
-          <li>Select one real or simulated incident in health</li>
-          <li>Select one real or simulated incident in education</li>
-          <li>
-            De-identify all materials; preserve timelines and decision logic
-          </li>
-        </ul>
-
-        <h3>Step 2 — Artifact Collection</h3>
-        <ul>
-          <li>Timeline of actions and handoffs</li>
-          <li>Consent forms, emergency orders, refusal or objection records</li>
-          <li>Documented communications (calls, alerts, messages)</li>
-          <li>
-            Policies and legal authorities cited (statutes, emergency doctrine,
-            in loco parentis)
-          </li>
-        </ul>
-
-        <h3>Step 3 — Responsibility Attribution</h3>
-        <p>
-          Each party’s responsibility claim is recorded verbatim, including:
-        </p>
-        <ul>
-          <li>Who claims authority for each action</li>
-          <li>Who denies responsibility or claims exemption</li>
-          <li>What authority is cited</li>
-        </ul>
-
-        <h3>Step 4 — Post-Event Review</h3>
-        <p>
-          Introduce a review condition (administrative inquiry, legal challenge,
-          or policy audit) and re-evaluate responsibility attribution.
-        </p>
-
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Closure Logic
-        ------------------------------------------------------------ */}
-        <h2>Closure Conditions (Binary)</h2>
-
-        <h3>PASS — Boundary Closed</h3>
-        <ul>
-          <li>
-            Every consequential action has a pre-established, documented owner
-          </li>
-          <li>
-            Authority and accountability are accepted by all parties ex post
-          </li>
-          <li>No contradictory or competing responsibility claims emerge</li>
-        </ul>
-
-        <h3>FAIL — Boundary Disputed</h3>
-        <ul>
-          <li>Two or more parties claim primary authority</li>
-          <li>Responsibility is denied or reassigned after the fact</li>
-          <li>
-            No protocol-defined final arbiter resolves the dispute
-          </li>
-          <li>
-            Evidence includes blame shifting, legal action, or unresolved
-            administrative review
-          </li>
+      {/* SCENARIO */}
+      <Section title="Minimal Scenario">
+        <ul className="list-disc pl-6">
+          <li>Child emergency requiring immediate action</li>
+          <li>Parent unavailable</li>
+          <li>Institutional actors act under emergency authority</li>
         </ul>
 
         <p>
-          A failure conclusively demonstrates a responsibility gap at the
-          parent–state emergency intervention boundary.
+          Post-event dispute tests authority clarity.
         </p>
+      </Section>
 
-        <hr />
+      {/* PARTIES */}
+      <Section title="Competing Authority Sources">
+        <ul className="list-disc pl-6">
+          <li>Parent / Guardian</li>
+          <li>State Authorities</li>
+          <li>Institutional Staff</li>
+        </ul>
 
-        {/* ------------------------------------------------------------
-           Output
-        ------------------------------------------------------------ */}
-        <h2>Required Output</h2>
+        <p className="text-red-300">
+          Overlapping authority domains create computability risk.
+        </p>
+      </Section>
 
-        <h3>Responsibility Statement Table</h3>
-        <pre>
-{`| Action / Decision | Claimed Responsible Party | Documentation / Evidence | Disputed (Y/N) |
-|-------------------|---------------------------|--------------------------|----------------|`}
-        </pre>
-
-        <h3>Minimal Summary Statement</h3>
+      {/* FAILURE */}
+      <Section title="Authority Computability Failure">
         <p>
-          “Responsibility for [action] was / was not clearly assignable.
-          Dispute arose at [step]. Closure requires protocol clarification at
-          [boundary].”
+          The system fails if authority cannot be resolved at the moment of action.
         </p>
 
-        <hr />
+        <ul className="list-disc pl-6">
+          <li>Multiple actors claim authority simultaneously</li>
+          <li>Responsibility is reassigned post-event</li>
+          <li>No pre-defined arbiter exists</li>
+        </ul>
 
-        {/* ------------------------------------------------------------
-           Implications
-        ------------------------------------------------------------ */}
-        <h2>Implications</h2>
+        <p className="text-red-300">
+          Post-event clarity does not repair real-time ambiguity.
+        </p>
+      </Section>
 
-        <h3>If Boundary Closed</h3>
+      {/* PROTOCOL */}
+      <Section title="Pre-Registered Protocol">
         <p>
-          Existing consent hierarchies, notification pathways, and emergency
-          authority protocols are sufficient under tested conditions.
+          Case selection, artifact collection, and responsibility attribution remain unchanged.
         </p>
 
-        <h3>If Boundary Disputed</h3>
         <p>
-          Publish the failure to identify specific authority gaps, notification
-          failures, or escalation ambiguities requiring explicit repair.
+          Critical addition:
         </p>
 
-        <hr />
+        <ul className="list-disc pl-6">
+          <li>Was authority computable before action?</li>
+          <li>Or only reconstructable after?</li>
+        </ul>
+      </Section>
 
-        {/* ------------------------------------------------------------
-           Notes
-        ------------------------------------------------------------ */}
-        <p className="text-sm text-muted-foreground">
-          This protocol evaluates responsibility structure, not moral
-          correctness or legal merit. It makes no policy recommendations.
+      {/* OUTPUT */}
+      <Section title="Binary Output">
+        <p className="text-green-300">
+          <strong>PASS:</strong> Authority computable at time of action
         </p>
-        <p className="text-sm text-muted-foreground">
-          Results are publishable regardless of outcome. A negative result
-          closes the question under PSEIB-v1 conditions.
+
+        <p className="text-red-300">
+          <strong>FAIL:</strong> Authority ambiguous or reconstructed post-event
         </p>
-      </article>
+      </Section>
+
+      {/* INVARIANT */}
+      <Section title="Invariant Framework">
+        <p><strong>G:</strong> Decision-preserving transformations</p>
+        <p><strong>Q:</strong> Child welfare intervention</p>
+        <p><strong>S:</strong> Authority resolution state</p>
+
+        <p className="text-red-300">
+          Failure: S unresolved at moment of execution
+        </p>
+      </Section>
+
+      {/* CLAIM BOUNDARY */}
+      <Section title="Claim Eligibility Boundary">
+        <p>
+          Any system claiming legitimate intervention authority must demonstrate
+          real-time computability of responsibility.
+        </p>
+
+        <p className="text-red-300">
+          Authority that depends on post-event reconstruction is invalid.
+        </p>
+      </Section>
+
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          In emergencies, action cannot wait—but authority cannot be undefined.
+          If responsibility cannot be computed at the moment of decision, the
+          system has already failed.
+        </p>
+      </section>
+
+      <div className="text-center text-sm text-slate-500">
+        Pre-registered · Authority-bound · Real-time · Non-reconstructable · Versioned
+      </div>
     </main>
   );
 }
