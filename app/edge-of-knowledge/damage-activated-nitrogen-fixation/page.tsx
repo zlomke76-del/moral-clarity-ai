@@ -4,237 +4,202 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Damage-Activated, Distributed Nitrogen Fixation Using Elemental Co-Design | Moral Clarity AI",
+    "Damage-Activated Nitrogen Fixation | Moral Clarity AI",
   description:
-    "A boundary analysis of whether mechanical damage in Earth-abundant materials can intrinsically drive marginal nitrogen fixation. A tightly constrained, falsifiable research hypothesis.",
-  openGraph: {
-    title:
-      "Damage-Activated Nitrogen Fixation Using Elemental Co-Design",
-    description:
-      "Can unavoidable mechanical damage yield marginal nitrogen fixation without electricity, heat, or biology?",
-    url: "https://moralclarity.ai/edge-of-knowledge/damage-activated-nitrogen-fixation",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A kinetic-boundary evaluation of whether mechanical damage can produce trace nitrogen fixation under strict physical and ethical constraints.",
 };
 
-export default function DamageActivatedNitrogenFixationPage() {
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>
-          Damage-Activated, Distributed Nitrogen Fixation Using Elemental Co-Design
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8 shadow-lg backdrop-blur-sm">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300 leading-7">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function Signal({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-sky-900/40 bg-slate-900/60 p-4">
+      <div className="text-xs uppercase tracking-widest text-sky-300">
+        {label}
+      </div>
+      <div className="mt-2 text-sm text-slate-200">{value}</div>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10 shadow-xl">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Kinetic Boundary Evaluation
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white leading-tight">
+          Damage-Activated Nitrogen Fixation
         </h1>
 
-        <p className="lead">
-          <strong>
-            A strictly bounded evaluation of whether mechanical damage can
-            intrinsically drive marginal nitrogen fixation without electricity,
-            plasma, heat, or biology
-          </strong>
+        <p className="mt-4 text-lg text-slate-300">
+          Can mechanical damage alone produce trace nitrogen fixation?
         </p>
 
-        <h2>Abstract</h2>
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <Signal label="Type" value="Extreme-Edge Evaluation" />
+          <Signal label="Constraint" value="Mechanical Energy Only" />
+          <Signal label="Status" value="Kinetically Marginal" />
+        </div>
+
+        <div className="mt-8 rounded-xl border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200">
+          No scalability · No energy gain · No replacement claims
+        </div>
+      </section>
+
+      {/* CORE */}
+      <Section title="Core Question">
         <p>
-          This paper evaluates a fringe but physically constrained hypothesis:
-          whether Earth-abundant material systems can produce measurable nitrogen
-          fixation as an intrinsic consequence of mechanical damage—such as wear,
-          fracture, or cyclic strain—without applied electricity, deliberate
-          heating, plasma, or biological mediation. The analysis explicitly
-          rejects scalability claims and treats the concept only as a potential
-          source of marginal, distributed chemical benefit in environments where
-          centralized nitrogen fixation is unavailable.
+          Can unavoidable mechanical damage generate sufficient localized
+          energy to produce measurable nitrogen fixation without external
+          inputs?
         </p>
-
         <p>
-          The question is not whether this approach can compete with
-          Haber-Bosch or biological fixation—it cannot—but whether unavoidable
-          mechanical work can, under narrow regimes, be causally coupled to trace
-          nitrogen reduction in a reproducible and ethically defensible way.
+          The hypothesis is strictly limited to trace, distributed, and
+          non-competitive chemical output.
         </p>
+      </Section>
 
-        <h2>1. Physical and Chemical Plausibility</h2>
+      {/* PHYSICS */}
+      <Section title="Kinetic Constraint">
         <p>
-          Nitrogen fixation is kinetically constrained by the strength of the
-          N≡N triple bond. However, mechanical damage can transiently generate
-          high-energy, non-equilibrium states in materials—fresh fracture
-          surfaces, crack tips, dislocations, and strained lattices—that locally
-          alter electronic structure and surface reactivity.
+          Nitrogen fixation is limited by the strength of the N≡N bond.
         </p>
-
         <p>
-          In principle, these short-lived defect states may lower activation
-          barriers for nitrogen chemisorption or partial reduction, yielding
-          fixed nitrogen species such as nitrides, NH₂, or trace NH₃.
+          Mechanical damage may create transient, high-energy defect states:
         </p>
-
-        <ul>
-          <li>Extremely localized (nanoscopic reaction zones)</li>
-          <li>Transient (milliseconds to seconds before passivation)</li>
-          <li>Strictly energy-limited by the mechanical work input</li>
-          <li>Highly sensitive to oxygen and water passivation</li>
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Fresh fracture surfaces</li>
+          <li>Crack-tip electronic distortion</li>
+          <li>Strained lattice regions</li>
         </ul>
 
         <p>
-          No claim of net energy gain or “free” chemistry is made. The mechanical
-          damage itself is the sole energy source.
+          These states are:
         </p>
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Extremely localized</li>
+          <li>Transient</li>
+          <li>Energy-limited</li>
+          <li>Rapidly passivated</li>
+        </ul>
+      </Section>
 
-        <h2>2. Elemental Co-Design Constraints</h2>
-        <ul>
-          <li>Only Earth-abundant elements (e.g., Fe, Mn, Ti, Mg)</li>
-          <li>No applied current, plasma, or deliberate heating</li>
-          <li>No biological or enzymatic mediation</li>
-          <li>Irreversible material degradation is allowed and expected</li>
-          <li>The process must be intrinsic to the material</li>
+      {/* HARD CONSTRAINTS */}
+      <Section title="Hard Constraints">
+        <ul className="list-disc pl-6 space-y-2">
+          <li>No electricity, plasma, or deliberate heating</li>
+          <li>No biological mediation</li>
+          <li>Only Earth-abundant elements</li>
+          <li>Mechanical damage is the sole energy source</li>
+        </ul>
+      </Section>
+
+      {/* REGIME */}
+      <Section title="Admissibility Window">
+        <p className="font-semibold text-white">Admissible</p>
+        <ul className="list-disc pl-6">
+          <li>Continuous mechanical cycling</li>
+          <li>Distributed environments</li>
+          <li>Long time horizons</li>
         </ul>
 
-        <p>
-          All nitrogen activation must be causally linked to mechanical damage
-          events and not to hidden energy inputs or external controls.
-        </p>
-
-        <h2>3. Regime Mapping</h2>
-
-        <h3>Potentially Viable</h3>
-        <ul>
-          <li>Persistent mechanical cycling (soil abrasion, agricultural wear)</li>
-          <li>Distributed environments with long time horizons</li>
-          <li>Low-resource or off-grid settings</li>
-          <li>
-            Contexts where even extremely small nitrogen inputs have cumulative
-            value
-          </li>
+        <p className="font-semibold text-white mt-4">Marginal</p>
+        <ul className="list-disc pl-6">
+          <li>Rapid passivation environments</li>
+          <li>Low mechanical stress</li>
         </ul>
 
-        <h3>Marginal</h3>
-        <ul>
-          <li>Low-stress or static environments</li>
-          <li>Rapid surface passivation by air or water</li>
-          <li>Applications requiring predictability or control</li>
+        <p className="font-semibold text-white mt-4">Rejected</p>
+        <ul className="list-disc pl-6">
+          <li>Industrial nitrogen production</li>
+          <li>Scalable fertilizer systems</li>
+          <li>Any efficiency-based claim</li>
         </ul>
+      </Section>
 
-        <h3>Failure Regimes</h3>
-        <ul>
-          <li>Industrial ammonia synthesis</li>
-          <li>Replacement for Haber-Bosch or biological fixation</li>
-          <li>Any claim of scalability or efficiency</li>
-          <li>Reusable, stable catalyst requirements</li>
-        </ul>
-
-        <h2>4. Confound Exclusion</h2>
-        <p>
-          Any valid observation must rigorously exclude:
-        </p>
-        <ul>
-          <li>Hidden electrochemical or thermal pathways</li>
+      {/* CONFUNDS */}
+      <Section title="Confound Exclusion">
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Hidden electrochemical pathways</li>
+          <li>Thermal activation</li>
           <li>Biological contamination</li>
-          <li>Simple nitrogen adsorption without reduction</li>
-          <li>Trace contamination or background signal</li>
+          <li>Simple adsorption without reduction</li>
         </ul>
+      </Section>
 
-        <p>
-          Verification requires chemically confirmed N₂ conversion (e.g.,
-          isotope labeling), strict negative controls, and reproducible coupling
-          to mechanical damage events.
-        </p>
-
-        <h2>5. Falsification Criteria</h2>
+      {/* FALSIFICATION */}
+      <Section title="Falsification Gate">
         <p>This hypothesis collapses if:</p>
-        <ul>
-          <li>Fixed nitrogen does not exceed background levels</li>
-          <li>Energy accounting matches known electrochemical pathways</li>
-          <li>Surface passivation outpaces defect creation</li>
-          <li>Results are irreproducible or ambiguous</li>
-          <li>Mechanical degradation yields no net chemical utility</li>
+        <ul className="list-disc pl-6 space-y-2">
+          <li>No measurable nitrogen fixation above background</li>
+          <li>Energy accounting matches known pathways</li>
+          <li>Passivation dominates defect formation</li>
+          <li>Results are irreproducible</li>
         </ul>
+      </Section>
 
-        <h2>6. Humanitarian and Ethical Assessment</h2>
+      {/* INVARIANT */}
+      <Section title="Invariant Structure">
+        <p>Conserved: mechanical work input</p>
+        <p>Invariant: verified nitrogen species per damage event</p>
         <p>
-          If—and only if—reproducible, the sole ethical value lies in marginal,
-          supplemental nitrogen input where no alternatives exist. The risks of
-          overclaiming are severe.
+          Failure: absence of new chemically verified nitrogen products
         </p>
+      </Section>
 
-        <ul>
-          <li>Misrepresentation as “green” or energy-free fertilizer</li>
-          <li>Policy or agricultural misuse</li>
-          <li>Neglect of proven nitrogen management practices</li>
-          <li>Environmental harm exceeding benefit</li>
+      {/* ETHICS */}
+      <Section title="Ethical Boundary">
+        <p>
+          Overclaiming converts a marginal effect into systemic risk.
+        </p>
+        <ul className="list-disc pl-6 space-y-2">
+          <li>False “green fertilizer” claims</li>
+          <li>Policy misdirection</li>
+          <li>Neglect of proven systems</li>
         </ul>
+      </Section>
 
-        <p>
-          Ethical deployment demands transparent yield reporting, explicit
-          non-scalability, and strict framing as supplemental—not substitutive.
+      {/* FINAL */}
+      <section className="rounded-2xl border border-red-900/40 bg-red-950/20 p-8">
+        <h2 className="text-xl font-semibold text-white">
+          Final Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          CONDITIONAL RESEARCH GO — Extremely Narrow Window.
+          This concept exists only at the kinetic edge of plausibility and
+          collapses under any claim of scale, efficiency, or substitution.
         </p>
+      </section>
 
-        <h2>7. Comparison to Existing Nitrogen Fixation</h2>
-        <ul>
-          <li><strong>Haber-Bosch:</strong> Dominant, centralized, high-yield</li>
-          <li><strong>Biological fixation:</strong> Context-dependent but robust</li>
-          <li><strong>Electrochemical/plasma:</strong> Infrastructure-dependent</li>
-          <li>
-            <strong>Damage-activated fixation:</strong> Low-yield, distributed,
-            non-competitive
-          </li>
-        </ul>
-
-        <h2>8. Invariant Framework Declaration</h2>
-
-        <p>
-          <strong>Symmetry group (𝑮):</strong> Reparameterizations of material
-          composition, macroscopic geometry, and surface labeling that preserve
-          total mechanical energy input while allowing arbitrary rearrangement
-          of representation.
-        </p>
-
-        <p>
-          <strong>Conserved quantity (𝑸):</strong> Total mechanical work applied
-          to the system; no external energy sources are permitted.
-        </p>
-
-        <p>
-          <strong>Invariant spectrum (𝑺):</strong> The set of chemically verified
-          nitrogen-containing species produced per unit mechanical damage,
-          constrained by isotope identity and bond formation.
-        </p>
-
-        <p>
-          <strong>Failure signature on 𝑺:</strong> Absence of new invariant
-          nitrogen-containing species beyond background noise, or appearance of
-          species attributable to non-mechanical energy pathways.
-        </p>
-
-        <h2>9. Final Judgment</h2>
-        <p>
-          <strong>
-            CONDITIONAL RESEARCH GO — Extremely Narrow Window
-          </strong>
-        </p>
-
-        <p>
-          This concept is not forbidden by physics, but it resides at the kinetic
-          boundary of plausibility. Its only defensible value lies in converting
-          unavoidable mechanical damage into marginal chemical benefit where
-          centralized solutions do not reach.
-        </p>
-
-        <p>
-          Any drift toward scalability, replacement, or energy breakthrough
-          claims invalidates the premise and voids legitimacy.
-        </p>
-
-        <hr />
-
-        <p className="text-sm text-muted-foreground">
-          Version 1.0 · Public research evaluation · Edge of Knowledge · Moral
-          Clarity AI · Not a product or deployment claim
-        </p>
-      </article>
+      {/* FOOTER */}
+      <div className="text-center text-sm text-slate-500">
+        Edge-bound · Kinetically constrained · Non-scalable · Versioned
+      </div>
     </main>
   );
 }
