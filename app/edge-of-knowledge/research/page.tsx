@@ -1,6 +1,8 @@
 // app/edge-of-knowledge/research/page.tsx
 // ============================================================
 // EDGE OF KNOWLEDGE — RESEARCH INDEX
+// Public, regime-bounded research on failure, uncertainty,
+// and responsible action where optimization breaks.
 // ============================================================
 
 import type { Metadata } from "next";
@@ -25,292 +27,421 @@ export const metadata: Metadata = {
   },
 };
 
+function Section({
+  title,
+  items,
+}: {
+  title: string;
+  items: Array<{ href: string; label: string }>;
+}) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/55 p-6 shadow-[0_0_0_1px_rgba(59,130,246,0.06),0_10px_40px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+      <h2 className="text-2xl font-semibold tracking-tight text-white">{title}</h2>
+      <ul className="mt-5 space-y-3">
+        {items.map((item) => (
+          <li key={item.href}>
+            <Link
+              href={item.href}
+              className="text-[15px] leading-7 text-sky-300 underline decoration-sky-700/50 underline-offset-4 transition hover:text-sky-200 hover:decoration-sky-400"
+            >
+              {item.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export default function EdgeOfKnowledgeIndexPage() {
   return (
-    <main className="mx-auto max-w-5xl px-6 py-16">
-      {/* ================= HERO / ENTRY ================= */}
-      <section className="mb-12 overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50/85 shadow-xl dark:border-neutral-800 dark:bg-neutral-900/60">
-        <div className="grid gap-8 p-8 md:grid-cols-[1.2fr_0.8fr] md:items-center">
-          <div>
-            <div className="mb-3 inline-flex items-center rounded-full border border-sky-200 bg-white/70 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.12em] text-sky-700 dark:border-sky-900 dark:bg-neutral-900/70 dark:text-sky-300">
+    <main className="mx-auto max-w-6xl px-6 py-14 md:px-8 md:py-16">
+      {/* HERO */}
+      <section className="relative overflow-hidden rounded-3xl border border-sky-950/40 bg-slate-950/65 shadow-[0_0_0_1px_rgba(59,130,246,0.08),0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-sm">
+        <div className="grid gap-10 px-8 py-10 md:grid-cols-[1.35fr_0.65fr] md:px-10 md:py-12">
+          <div className="relative z-10">
+            <div className="inline-flex items-center rounded-full border border-sky-900/60 bg-sky-950/50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-300">
               Research Layer
             </div>
 
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            <h1 className="mt-5 text-4xl font-semibold tracking-tight text-white md:text-5xl">
               Edge of Knowledge
             </h1>
 
-            <p className="mt-4 text-base font-medium text-neutral-800 dark:text-neutral-200">
+            <p className="mt-5 max-w-3xl text-lg font-medium leading-8 text-slate-100">
               Research on failure, uncertainty, and responsible action where
-              optimization breaks
+              optimization breaks.
             </p>
 
-            <p className="mt-4 max-w-3xl text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
-              <em>Edge of Knowledge</em> is a public research series examining
-              how systems fail when assumptions quietly collapse, incentives
-              misalign, and certainty becomes dangerous. These documents are not
-              product proposals, investment theses, or policy mandates. They are
+            <p className="mt-6 max-w-3xl text-[16px] leading-8 text-slate-300">
+              <em>Edge of Knowledge</em> is a public research series examining how
+              systems fail when assumptions quietly collapse, incentives misalign,
+              and certainty becomes dangerous. These documents are not product
+              proposals, investment theses, or policy mandates. They are
               regime-bounded analyses intended to clarify limits, surface risk,
-              and govern action where traditional optimization no longer
-              applies.
+              and govern action where traditional optimization no longer applies.
             </p>
           </div>
 
-          <div className="flex items-center justify-center">
-            <div className="relative flex w-full max-w-xs items-center justify-center rounded-2xl border border-neutral-200/70 bg-white/40 p-6 shadow-[0_0_40px_rgba(14,165,233,0.10)] dark:border-neutral-800 dark:bg-neutral-950/30 dark:shadow-[0_0_60px_rgba(56,189,248,0.08)]">
+          <div className="relative z-10 flex items-center justify-center">
+            <div className="flex w-full max-w-[280px] items-center justify-center rounded-3xl border border-sky-950/40 bg-slate-950/45 p-6 shadow-[0_0_40px_rgba(59,130,246,0.12)]">
               <Image
                 src="/assets/image_research_trans_01.png"
-                alt="Edge of Knowledge research emblem"
-                width={340}
-                height={340}
-                className="h-auto w-full max-w-[220px] object-contain drop-shadow-[0_0_24px_rgba(59,130,246,0.18)]"
+                alt="MCAI Research emblem"
+                width={320}
+                height={320}
                 priority
+                className="h-auto w-full max-w-[220px] object-contain drop-shadow-[0_0_30px_rgba(59,130,246,0.20)]"
               />
             </div>
           </div>
         </div>
       </section>
 
-      {/* ================= GOVERNING PROBLEM ================= */}
-      <section className="mb-12 rounded-xl border border-neutral-200 bg-neutral-50 p-6 dark:border-neutral-800 dark:bg-neutral-900/40">
-        <div className="mb-4 flex items-center gap-3">
-          <div className="h-2 w-2 rounded-full bg-sky-500" />
-          <h2 className="text-lg font-semibold tracking-tight">
+      {/* GOVERNING PROBLEM */}
+      <section className="mt-10 rounded-3xl border border-sky-950/40 bg-slate-950/60 p-8 shadow-[0_0_0_1px_rgba(59,130,246,0.06),0_16px_48px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+        <div className="flex items-center gap-3">
+          <div className="h-2.5 w-2.5 rounded-full bg-sky-400" />
+          <h2 className="text-2xl font-semibold tracking-tight text-white">
             The Governing Problem
           </h2>
         </div>
 
-        <p className="mt-4 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
-          Systems rarely collapse suddenly. They become{" "}
-          <strong>internally consistent and externally wrong</strong>.
-        </p>
+        <div className="mt-6 space-y-4 text-[16px] leading-8 text-slate-300">
+          <p>
+            Systems rarely collapse suddenly. They become{" "}
+            <strong className="text-white">
+              internally consistent and externally wrong
+            </strong>
+            .
+          </p>
 
-        <p className="mt-3 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
-          AI systems continue producing coherent outputs while drifting from
-          ground truth. Organizations accumulate governance artifacts while
-          behavior decouples from constraint. Materials pass validation while
-          degrading along untracked pathways.
-        </p>
+          <p>
+            AI systems continue producing coherent outputs while drifting from
+            ground truth. Organizations accumulate governance artifacts while
+            behavior decouples from constraint. Materials pass validation while
+            degrading along untracked pathways.
+          </p>
 
-        <p className="mt-3 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
-          <strong>
-            Edge of Knowledge exists to detect epistemic decoupling before
-            consequence becomes irreversible.
-          </strong>
-        </p>
+          <p>
+            <strong className="text-white">
+              Edge of Knowledge exists to detect epistemic decoupling before
+              consequence becomes irreversible.
+            </strong>
+          </p>
+        </div>
 
-        {/* === SYSTEM STACK === */}
-        <div className="mt-6 grid gap-3 text-sm">
-          <div className="rounded-md border border-neutral-200 bg-neutral-100 px-4 py-3 dark:border-neutral-700 dark:bg-neutral-800">
-            <strong>Research</strong> — Defines the boundary
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-sky-950/40 bg-slate-900/70 px-5 py-4">
+            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-sky-300">
+              Research
+            </p>
+            <p className="mt-2 text-[15px] leading-7 text-slate-200">
+              Defines the boundary.
+            </p>
           </div>
-          <div className="rounded-md border border-neutral-200 bg-neutral-100 px-4 py-3 dark:border-neutral-700 dark:bg-neutral-800">
-            <strong>Instrumentation</strong> — Detects boundary violation
+
+          <div className="rounded-2xl border border-sky-950/40 bg-slate-900/70 px-5 py-4">
+            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-sky-300">
+              Instrumentation
+            </p>
+            <p className="mt-2 text-[15px] leading-7 text-slate-200">
+              Detects boundary violation.
+            </p>
           </div>
-          <div className="rounded-md border border-neutral-200 bg-neutral-100 px-4 py-3 dark:border-neutral-700 dark:bg-neutral-800">
-            <strong>Constraint</strong> — Intervenes before lock-in
+
+          <div className="rounded-2xl border border-sky-950/40 bg-slate-900/70 px-5 py-4">
+            <p className="text-sm font-semibold uppercase tracking-[0.12em] text-sky-300">
+              Constraint
+            </p>
+            <p className="mt-2 text-[15px] leading-7 text-slate-200">
+              Intervenes before lock-in.
+            </p>
           </div>
         </div>
 
-        <p className="mt-6 text-xs text-neutral-500 dark:text-neutral-400">
+        <p className="mt-6 text-sm leading-7 text-slate-400">
           Without that sequence, governance becomes documentation of failure.
         </p>
       </section>
 
-      {/* ================= DIVIDER ================= */}
-      <div className="my-12 h-px w-full bg-gradient-to-r from-transparent via-neutral-400/40 to-transparent" />
+      <div className="my-12 h-px w-full bg-gradient-to-r from-transparent via-sky-700/50 to-transparent" />
 
-      {/* ================= CONTENT ================= */}
-      <article className="prose prose-neutral max-w-none dark:prose-invert prose-headings:scroll-mt-24 prose-h2:mt-12 prose-h2:border-b prose-h2:border-neutral-200 prose-h2:pb-2 prose-h2:dark:border-neutral-800">
-        {/* I */}
-        <h2>I. Doctrine — Governing Action Under Uncertainty</h2>
-        <ul>
-          <li>
-            <Link href="/edge-of-knowledge">
-              Governing Action at the Edge of Knowledge
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/morphology-trajectory-integrity">
-              Morphology Trajectory Integrity (MTI-1)
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/untracked-configurational-energy-landscapes">
-              Untracked Configurational Energy Landscapes in Polymer Durability
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/non-commutative-morphology-trajectories">
-              Non-Commutative Morphology Trajectories in Polymer Durability
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/epistemic-lock-in">
-              Epistemic Lock-In After Risk Acknowledgment
-            </Link>
-          </li>
-        </ul>
+      {/* INDEX */}
+      <div className="grid gap-8">
+        <Section
+          title="I. Doctrine — Governing Action Under Uncertainty"
+          items={[
+            {
+              href: "/edge-of-knowledge",
+              label: "Governing Action at the Edge of Knowledge",
+            },
+            {
+              href: "/edge-of-knowledge/morphology-trajectory-integrity",
+              label: "Morphology Trajectory Integrity (MTI-1)",
+            },
+            {
+              href: "/edge-of-knowledge/untracked-configurational-energy-landscapes",
+              label:
+                "Untracked Configurational Energy Landscapes in Polymer Durability",
+            },
+            {
+              href: "/edge-of-knowledge/non-commutative-morphology-trajectories",
+              label:
+                "Non-Commutative Morphology Trajectories in Polymer Durability",
+            },
+            {
+              href: "/edge-of-knowledge/epistemic-lock-in",
+              label: "Epistemic Lock-In After Risk Acknowledgment",
+            },
+          ]}
+        />
 
-        {/* II */}
-        <h2>II. Governance-Driven Failure Modes</h2>
-        <ul>
-          <li>
-            <Link href="/edge-of-knowledge/procedural-entrenchment">
-              Procedural Entrenchment
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/action-threshold-collapse">
-              Action Threshold Collapse
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/fragmented-responsibility-disjunction">
-              Fragmented Responsibility Disjunction
-            </Link>
-          </li>
-        </ul>
+        <Section
+          title="II. Governance-Driven Failure Modes"
+          items={[
+            {
+              href: "/edge-of-knowledge/procedural-entrenchment",
+              label: "Procedural Entrenchment",
+            },
+            {
+              href: "/edge-of-knowledge/action-threshold-collapse",
+              label: "Action Threshold Collapse",
+            },
+            {
+              href: "/edge-of-knowledge/fragmented-responsibility-disjunction",
+              label: "Fragmented Responsibility Disjunction",
+            },
+          ]}
+        />
 
-        {/* III */}
-        <h2>III. Failure Visibility & Accountability</h2>
-        <ul>
-          <li>
-            <Link href="/edge-of-knowledge/interfacial-debond-failure-class">
-              Interfacial-Debond–Controlled Failure (General Class)
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/quiet-failure">
-              Materials That Quietly Prevent Failure
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/neglect-impossible">
-              Materials That Make Neglect Impossible
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/irreversible-infrastructure-exposure-marker">
-              Irreversible Infrastructure Exposure Marker
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/phase-locked-wear-surfaces">
-              Phase-Locked Wear Surfaces
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/material-encoded-truth">
-              Material-Encoded Truth
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/intrinsic-cognitive-drift-materials">
-              Intrinsic Cognitive-Drift Signaling Materials
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/signaling-before-failure">
-              Signaling Before Failure
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/thermal-indicator-paint">
-              Thermal Indicator Paint for Food Safety
-            </Link>
-          </li>
-        </ul>
+        <Section
+          title="III. Failure Visibility & Accountability"
+          items={[
+            {
+              href: "/edge-of-knowledge/interfacial-debond-failure-class",
+              label: "Interfacial-Debond–Controlled Failure (General Class)",
+            },
+            {
+              href: "/edge-of-knowledge/quiet-failure",
+              label: "Materials That Quietly Prevent Failure",
+            },
+            {
+              href: "/edge-of-knowledge/neglect-impossible",
+              label: "Materials That Make Neglect Impossible",
+            },
+            {
+              href: "/edge-of-knowledge/irreversible-infrastructure-exposure-marker",
+              label: "Irreversible Infrastructure Exposure Marker",
+            },
+            {
+              href: "/edge-of-knowledge/phase-locked-wear-surfaces",
+              label: "Phase-Locked Wear Surfaces",
+            },
+            {
+              href: "/edge-of-knowledge/material-encoded-truth",
+              label: "Material-Encoded Truth",
+            },
+            {
+              href: "/edge-of-knowledge/intrinsic-cognitive-drift-materials",
+              label: "Intrinsic Cognitive-Drift Signaling Materials",
+            },
+            {
+              href: "/edge-of-knowledge/signaling-before-failure",
+              label: "Signaling Before Failure",
+            },
+            {
+              href: "/edge-of-knowledge/thermal-indicator-paint",
+              label: "Thermal Indicator Paint for Food Safety",
+            },
+          ]}
+        />
 
-        {/* IV */}
-        <h2>IV. Boundary Research — Physically Allowed, Non-Scalable</h2>
-        <ul>
-          <li>
-            <Link href="/edge-of-knowledge/damage-activated-nitrogen-fixation">
-              Damage-Activated Nitrogen Fixation
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/salt-gradient-desalination-wick">
-              Salt-Gradient Desalination Wick
-            </Link>
-          </li>
-        </ul>
+        <Section
+          title="IV. Boundary Research — Physically Allowed, Non-Scalable"
+          items={[
+            {
+              href: "/edge-of-knowledge/damage-activated-nitrogen-fixation",
+              label: "Damage-Activated Nitrogen Fixation",
+            },
+            {
+              href: "/edge-of-knowledge/salt-gradient-desalination-wick",
+              label: "Salt-Gradient Desalination Wick",
+            },
+          ]}
+        />
 
-        {/* V */}
-        <h2>V. Validation-First Materials Exploration</h2>
-        <ul>
-          <li>
-            <Link href="/edge-of-knowledge/high-crystallinity-polyamide-fibers">
-              High-Crystallinity Polyamide Fibers
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/tpu-elastomer-networks">
-              Thermoplastic Polyurethane Elastomer Networks
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/polymer-discovery-validation">
-              Polymer Discovery (Validation-First, Non-Inventive)
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/semi-ipn-polyolefin-tpe">
-              Semi-Interpenetrating Network (Semi-IPN)
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/mineral-filled-polyolefin-barrier-films">
-              Mineral-Filled Polyolefin Barrier Films
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/hdpe-non-commutative-morphology">
-              Non-Commutative Morphology Encoding in Semicrystalline
-              Polyolefins
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/beip-v1">
-              Boundary-Encoded Interfacial Persistence (BEIP v1) —
-              Pre-Registered Protocol
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/human-ai-co-agency-boundary">
-              Human–AI Co-Agency Boundary — Minimal Decisive Experiment
-              (Protocol)
-            </Link>
-          </li>
-        </ul>
+        <Section
+          title="V. Validation-First Materials Exploration"
+          items={[
+            {
+              href: "/edge-of-knowledge/high-crystallinity-polyamide-fibers",
+              label: "High-Crystallinity Polyamide Fibers",
+            },
+            {
+              href: "/edge-of-knowledge/tpu-elastomer-networks",
+              label: "Thermoplastic Polyurethane Elastomer Networks",
+            },
+            {
+              href: "/edge-of-knowledge/polymer-discovery-validation",
+              label: "Polymer Discovery (Validation-First, Non-Inventive)",
+            },
+            {
+              href: "/edge-of-knowledge/semi-ipn-polyolefin-tpe",
+              label: "Semi-Interpenetrating Network (Semi-IPN)",
+            },
+            {
+              href: "/edge-of-knowledge/mineral-filled-polyolefin-barrier-films",
+              label: "Mineral-Filled Polyolefin Barrier Films",
+            },
+            {
+              href: "/edge-of-knowledge/hdpe-non-commutative-morphology",
+              label:
+                "Non-Commutative Morphology Encoding in Semicrystalline Polyolefins",
+            },
+            {
+              href: "/edge-of-knowledge/beip-v1",
+              label:
+                "Boundary-Encoded Interfacial Persistence (BEIP v1) — Pre-Registered Protocol",
+            },
+            {
+              href: "/edge-of-knowledge/human-ai-co-agency-boundary",
+              label:
+                "Human–AI Co-Agency Boundary — Minimal Decisive Experiment (Protocol)",
+            },
+            {
+              href: "/edge-of-knowledge/inflammation-suppressing-microenvironment-polymer",
+              label: "Inflammation-Suppressing Human Micro-Environment Polymer",
+            },
+            {
+              href: "/edge-of-knowledge/suppressing-transferable-inflammatory-signaling",
+              label:
+                "Suppressing Transferable Inflammatory Signaling in Indoor Micro-Environments",
+            },
+            {
+              href: "/edge-of-knowledge/passive-infrastructure-organophosphate-interruption",
+              label:
+                "Passive Infrastructure Polymers for Irreversible Interruption of Organophosphate Surface Transfer Pathways",
+            },
+            {
+              href: "/edge-of-knowledge/irreversible-gradient-ratcheting-composites",
+              label: "Irreversible Gradient-Ratcheting Composites (IGRC)",
+            },
+          ]}
+        />
 
-        {/* VI */}
-        <h2>VI. Formal Epistemic Obstructions (Mathematics)</h2>
-        <ul>
-          <li>
-            <Link href="/edge-of-knowledge/riemann-hypothesis-critical-line-structural-obstruction">
-              Riemann Hypothesis: Critical Line Structural Obstruction
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/collatz-conjecture-universal-descent-obstruction">
-              Collatz Conjecture: Universal Descent Obstruction
-            </Link>
-          </li>
-          <li>
-            <Link href="/edge-of-knowledge/hodge-conjecture-algebraicity-obstruction">
-              Hodge Conjecture: Algebraicity Obstruction
-            </Link>
-          </li>
-        </ul>
-      </article>
+        <Section
+          title="VI. Formal Epistemic Obstructions (Mathematics)"
+          items={[
+            {
+              href: "/edge-of-knowledge/riemann-hypothesis-critical-line-structural-obstruction",
+              label: "Riemann Hypothesis: Critical Line Structural Obstruction",
+            },
+            {
+              href: "/edge-of-knowledge/collatz-conjecture-universal-descent-obstruction",
+              label: "Collatz Conjecture: Universal Descent Obstruction",
+            },
+            {
+              href: "/edge-of-knowledge/hodge-conjecture-algebraicity-obstruction",
+              label: "Hodge Conjecture: Algebraicity Obstruction",
+            },
+          ]}
+        />
 
-      {/* ================= FOOTER NOTE ================= */}
-      <p className="mt-16 text-center text-sm text-neutral-500 dark:text-neutral-400">
-        Edge of Knowledge is a public research series. Documents are updated
-        only by explicit revision and remain accessible for epistemic
-        continuity.
+        <Section
+          title="VII. Operational Drift & Degradation"
+          items={[
+            {
+              href: "/edge-of-knowledge/maintenance-drift-and-degradation-dynamics",
+              label: "Maintenance Drift and Degradation Dynamics",
+            },
+          ]}
+        />
+
+        <Section
+          title="VIII. Epistemic Instrumentation — Detection Before Damage"
+          items={[
+            {
+              href: "/edge-of-knowledge/detection-before-damage",
+              label: "Detection Before Damage: Formal Reduction",
+            },
+            {
+              href: "/edge-of-knowledge/dqf-v1-1",
+              label:
+                "Drift Quantification Framework v1.1 (Regime-Bounded Drift Instrumentation)",
+            },
+          ]}
+        />
+
+        <Section
+          title="IX. Adversarial & Incentive-Corrupted Regimes"
+          items={[
+            {
+              href: "/edge-of-knowledge/adversarial-incentive-corrupted-regimes",
+              label: "Adversarial & Incentive-Corrupted Regimes",
+            },
+            {
+              href: "/edge-of-knowledge/drift-case-study-01",
+              label:
+                "Drift Case Study 01 — Incentive Pressure & Constraint Erosion",
+            },
+          ]}
+        />
+
+        <Section
+          title="X. Meta-Failure of Knowledge Systems"
+          items={[
+            {
+              href: "/edge-of-knowledge/meta-failure-of-knowledge-systems",
+              label: "Meta-Failure of Knowledge Systems",
+            },
+            {
+              href: "/edge-of-knowledge/boundary-of-meaning-vs-authority",
+              label: "The Boundary of Meaning vs Authority",
+            },
+          ]}
+        />
+
+        <Section
+          title="XI. Boundary Tests — Pre-Registered, Decisive Experiments"
+          items={[
+            {
+              href: "/edge-of-knowledge/beip-v1",
+              label: "Boundary-Encoded Interfacial Persistence (BEIP v1)",
+            },
+            {
+              href: "/edge-of-knowledge/human-ai-co-agency-boundary",
+              label: "Human–AI Co-Agency Boundary — Minimal Decisive Experiment",
+            },
+            {
+              href: "/edge-of-knowledge/parent-state-emergency-intervention-boundary",
+              label: "Parent–State Emergency Intervention Boundary (PSEIB-v1)",
+            },
+            {
+              href: "/edge-of-knowledge/government-data-access-responsibility-boundary",
+              label: "Government Data Access Responsibility Boundary (GDARB-v1)",
+            },
+            {
+              href: "/edge-of-knowledge/corporate-shareholder-environment-boundary",
+              label:
+                "Corporate–Shareholder–Environment Responsibility Boundary (CSEB-v1)",
+            },
+            {
+              href: "/edge-of-knowledge/auditor-management-unreported-risk-boundary",
+              label:
+                "Auditor–Management Responsibility Boundary: Known but Unreported Risk (AMURB-v1)",
+            },
+            {
+              href: "/edge-of-knowledge/simulated-consciousness-boundary",
+              label: "Simulated Consciousness Boundary Test (SCBT-v1)",
+            },
+          ]}
+        />
+      </div>
+
+      <p className="mt-14 text-center text-sm leading-7 text-slate-400">
+        Edge of Knowledge is a public research series. Documents are updated only
+        by explicit revision and remain accessible for epistemic continuity.
       </p>
     </main>
   );
