@@ -1,8 +1,6 @@
 // app/edge-of-knowledge/research/page.tsx
 // ============================================================
 // EDGE OF KNOWLEDGE — RESEARCH INDEX
-// Public, regime-bounded research on failure, uncertainty,
-// and responsible action where optimization breaks.
 // ============================================================
 
 import type { Metadata } from "next";
@@ -28,18 +26,20 @@ export const metadata: Metadata = {
 
 export default function EdgeOfKnowledgeIndexPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Edge of Knowledge</h1>
+    <main className="mx-auto max-w-4xl px-6 py-16">
 
-        <p className="lead">
-          <strong>
-            Research on failure, uncertainty, and responsible action where
-            optimization breaks
-          </strong>
+      {/* ================= HERO / ENTRY ================= */}
+      <section className="mb-12 rounded-2xl border border-neutral-200 bg-neutral-50/80 p-8 dark:border-neutral-800 dark:bg-neutral-900/60 shadow-xl">
+        <h1 className="text-3xl font-semibold tracking-tight">
+          Edge of Knowledge
+        </h1>
+
+        <p className="mt-4 text-base font-medium">
+          Research on failure, uncertainty, and responsible action where
+          optimization breaks
         </p>
 
-        <p>
+        <p className="mt-4 text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">
           <em>Edge of Knowledge</em> is a public research series examining how
           systems fail when assumptions quietly collapse, incentives misalign,
           and certainty becomes dangerous. These documents are not product
@@ -47,62 +47,56 @@ export default function EdgeOfKnowledgeIndexPage() {
           regime-bounded analyses intended to clarify limits, surface risk, and
           govern action where traditional optimization no longer applies.
         </p>
+      </section>
 
-        {/* ===================================================== */}
-        {/* GOVERNING THESIS — EPISTEMIC DECOUPLING              */}
-        {/* ===================================================== */}
+      {/* ================= GOVERNING PROBLEM ================= */}
+      <section className="mb-12 rounded-xl border border-neutral-200 bg-neutral-50 p-6 dark:border-neutral-800 dark:bg-neutral-900/40">
+        <h2 className="text-lg font-semibold tracking-tight">
+          The Governing Problem
+        </h2>
 
-        <div className="not-prose my-10 rounded-xl border border-neutral-200 bg-neutral-50 p-6 dark:border-neutral-800 dark:bg-neutral-900/40">
-          <h2 className="text-lg font-semibold tracking-tight">
-            The Governing Problem
-          </h2>
+        <p className="mt-4 text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">
+          Systems rarely collapse suddenly. They become{" "}
+          <strong>internally consistent and externally wrong</strong>.
+        </p>
 
-          <p className="mt-4 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
-            Systems rarely collapse suddenly. They become{" "}
-            <strong>internally consistent and externally wrong</strong>.
-          </p>
+        <p className="mt-3 text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">
+          AI systems continue producing coherent outputs while drifting from
+          ground truth. Organizations accumulate governance artifacts while
+          behavior decouples from constraint. Materials pass validation while
+          degrading along untracked pathways.
+        </p>
 
-          <p className="mt-3 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
-            AI systems continue producing coherent outputs while drifting from
-            ground truth. Organizations accumulate governance artifacts while
-            behavior decouples from constraint. Materials pass validation while
-            degrading along untracked pathways.
-          </p>
+        <p className="mt-3 text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">
+          <strong>
+            Edge of Knowledge exists to detect epistemic decoupling before
+            consequence becomes irreversible.
+          </strong>
+        </p>
 
-          <p className="mt-3 text-sm leading-relaxed text-neutral-700 dark:text-neutral-300">
-            <strong>
-              Edge of Knowledge exists to detect epistemic decoupling before
-              consequence becomes irreversible.
-            </strong>
-          </p>
-
-          <div className="mt-6 grid gap-4 sm:grid-cols-3 text-sm">
-            <div>
-              <p className="font-semibold">Research</p>
-              <p className="text-neutral-600 dark:text-neutral-400">
-                Defines the boundary.
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold">Instrumentation</p>
-              <p className="text-neutral-600 dark:text-neutral-400">
-                Detects boundary violation.
-              </p>
-            </div>
-            <div>
-              <p className="font-semibold">Constraint</p>
-              <p className="text-neutral-600 dark:text-neutral-400">
-                Intervenes before lock-in.
-              </p>
-            </div>
+        {/* === SYSTEM STACK (UPGRADED) === */}
+        <div className="mt-6 grid gap-3 text-sm">
+          <div className="rounded-md border border-neutral-200 bg-neutral-100 px-4 py-2 dark:border-neutral-700 dark:bg-neutral-800">
+            <strong>Research</strong> — Defines the boundary
           </div>
-
-          <p className="mt-6 text-xs text-neutral-500 dark:text-neutral-400">
-            Without that sequence, governance becomes documentation of failure.
-          </p>
+          <div className="rounded-md border border-neutral-200 bg-neutral-100 px-4 py-2 dark:border-neutral-700 dark:bg-neutral-800">
+            <strong>Instrumentation</strong> — Detects boundary violation
+          </div>
+          <div className="rounded-md border border-neutral-200 bg-neutral-100 px-4 py-2 dark:border-neutral-700 dark:bg-neutral-800">
+            <strong>Constraint</strong> — Intervenes before lock-in
+          </div>
         </div>
 
-        <hr />
+        <p className="mt-6 text-xs text-neutral-500 dark:text-neutral-400">
+          Without that sequence, governance becomes documentation of failure.
+        </p>
+      </section>
+
+      {/* ================= DIVIDER ================= */}
+      <div className="my-12 h-px w-full bg-gradient-to-r from-transparent via-neutral-400/40 to-transparent" />
+
+      {/* ================= CONTENT ================= */}
+      <article className="prose prose-neutral dark:prose-invert max-w-none">
 
         {/* I */}
         <h2>I. Doctrine — Governing Action Under Uncertainty</h2>
@@ -162,10 +156,6 @@ export default function EdgeOfKnowledgeIndexPage() {
               Human–AI Co-Agency Boundary — Minimal Decisive Experiment (Protocol)
             </Link>
           </li>
-          <li><Link href="/edge-of-knowledge/inflammation-suppressing-microenvironment-polymer">Inflammation-Suppressing Human Micro-Environment Polymer</Link></li>
-          <li><Link href="/edge-of-knowledge/suppressing-transferable-inflammatory-signaling">Suppressing Transferable Inflammatory Signaling in Indoor Micro-Environments</Link></li>
-          <li><Link href="/edge-of-knowledge/passive-infrastructure-organophosphate-interruption">Passive Infrastructure Polymers for Irreversible Interruption of Organophosphate Surface Transfer Pathways</Link></li>
-          <li><Link href="/edge-of-knowledge/irreversible-gradient-ratcheting-composites">Irreversible Gradient-Ratcheting Composites (IGRC)</Link></li>
         </ul>
 
         {/* VI */}
@@ -176,65 +166,13 @@ export default function EdgeOfKnowledgeIndexPage() {
           <li><Link href="/edge-of-knowledge/hodge-conjecture-algebraicity-obstruction">Hodge Conjecture: Algebraicity Obstruction</Link></li>
         </ul>
 
-        {/* VII */}
-        <h2>VII. Operational Drift & Degradation</h2>
-        <ul>
-          <li><Link href="/edge-of-knowledge/maintenance-drift-and-degradation-dynamics">Maintenance Drift and Degradation Dynamics</Link></li>
-        </ul>
-
-        {/* VIII */}
-        <h2>VIII. Epistemic Instrumentation — Detection Before Damage</h2>
-        <ul>
-          <li><Link href="/edge-of-knowledge/detection-before-damage">Detection Before Damage: Formal Reduction</Link></li>
-          <li>
-            <Link href="/edge-of-knowledge/dqf-v1-1">
-              Drift Quantification Framework v1.1 (Regime-Bounded Drift Instrumentation)
-            </Link>
-          </li>
-        </ul>
-
-        {/* IX */}
-        <h2>IX. Adversarial & Incentive-Corrupted Regimes</h2>
-        <ul>
-          <li><Link href="/edge-of-knowledge/adversarial-incentive-corrupted-regimes">Adversarial & Incentive-Corrupted Regimes</Link></li>
-          <li>
-            <Link href="/edge-of-knowledge/drift-case-study-01">
-              Drift Case Study 01 — Incentive Pressure & Constraint Erosion
-            </Link>
-          </li>
-        </ul>
-
-        {/* X */}
-        <h2>X. Meta-Failure of Knowledge Systems</h2>
-        <ul>
-          <li><Link href="/edge-of-knowledge/meta-failure-of-knowledge-systems">Meta-Failure of Knowledge Systems</Link></li>
-          <li>
-            <Link href="/edge-of-knowledge/boundary-of-meaning-vs-authority">
-              The Boundary of Meaning vs Authority
-            </Link>
-          </li>
-        </ul>
-
-        {/* XI */}
-        <h2>XI. Boundary Tests — Pre-Registered, Decisive Experiments</h2>
-        <ul>
-          <li><Link href="/edge-of-knowledge/beip-v1">Boundary-Encoded Interfacial Persistence (BEIP v1)</Link></li>
-          <li><Link href="/edge-of-knowledge/human-ai-co-agency-boundary">Human–AI Co-Agency Boundary — Minimal Decisive Experiment</Link></li>
-          <li><Link href="/edge-of-knowledge/parent-state-emergency-intervention-boundary">Parent–State Emergency Intervention Boundary (PSEIB-v1)</Link></li>
-          <li><Link href="/edge-of-knowledge/government-data-access-responsibility-boundary">Government Data Access Responsibility Boundary (GDARB-v1)</Link></li>
-          <li><Link href="/edge-of-knowledge/corporate-shareholder-environment-boundary">Corporate–Shareholder–Environment Responsibility Boundary (CSEB-v1)</Link></li>
-          <li><Link href="/edge-of-knowledge/auditor-management-unreported-risk-boundary">Auditor–Management Responsibility Boundary: Known but Unreported Risk (AMURB-v1)</Link></li>
-          <li><Link href="/edge-of-knowledge/simulated-consciousness-boundary">Simulated Consciousness Boundary Test (SCBT-v1)</Link></li>
-        </ul>
-
-        <hr />
-
-        <p className="text-sm text-muted-foreground">
-          Edge of Knowledge is a public research series. Documents are updated
-          only by explicit revision and remain accessible for epistemic
-          continuity.
-        </p>
       </article>
+
+      {/* ================= FOOTER NOTE ================= */}
+      <p className="mt-16 text-sm text-neutral-500 dark:text-neutral-400 text-center">
+        Edge of Knowledge is a public research series. Documents are updated only by explicit revision and remain accessible for epistemic continuity.
+      </p>
+
     </main>
   );
 }
