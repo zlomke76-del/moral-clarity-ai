@@ -6,186 +6,197 @@ export const metadata: Metadata = {
   title:
     "Irreversible Infrastructure Exposure Marker (IIEM) | Moral Clarity AI",
   description:
-    "A regime-bounded evaluation of passive, irreversible physical markers that encode cumulative infrastructure exposure where inspections, records, and electronic systems fail.",
-  openGraph: {
-    title: "Irreversible Infrastructure Exposure Marker (IIEM)",
-    description:
-      "A passive post-exposure audit artifact for infrastructure stewardship and accountability.",
-    url: "https://moralclarity.ai/edge-of-knowledge/irreversible-infrastructure-exposure-marker",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A physical truth-anchor system that irreversibly encodes cumulative exposure, overriding incomplete or corrupted records.",
 };
+
+function Section({ title, children }: any) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
 
 export default function IIEMPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Irreversible Infrastructure Exposure Marker (IIEM)</h1>
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
 
-        <p className="lead">
-          <strong>
-            A passive post-exposure audit artifact for infrastructure stewardship
-          </strong>
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Physical Truth Anchor
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Irreversible Infrastructure Exposure Marker (IIEM)
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          A co-located, irreversible record of exposure that cannot be rewritten,
+          erased, or administratively overridden.
         </p>
 
-        <p className="text-sm text-muted-foreground">
-          Edge of Knowledge · Materials & Governance Interface
-        </p>
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Irreversible · Non-digital · Non-overridable · Audit-only
+        </div>
+      </section>
 
-        <h2>1. Problem Framing</h2>
+      {/* CORE */}
+      <Section title="Core Definition">
         <p>
-          IIEM addresses a recurring governance and safety failure: cumulative,
-          hazard-driven exposure of infrastructure components is often not
-          reliably recorded, preserved, or made visible using existing regimes.
-          Inspection gaps, lost records, sensor failures, administrative neglect,
-          and data manipulation can allow critical exposure thresholds to be
-          crossed without durable acknowledgment.
+          IIEM encodes, through irreversible physical transformation, that a
+          defined cumulative exposure boundary has been crossed.
         </p>
+
+        <p className="text-red-300">
+          It records exposure directly in material state—not in systems,
+          logs, or institutional memory.
+        </p>
+      </Section>
+
+      {/* TRUTH ROLE */}
+      <Section title="Truth Anchor Function">
         <p>
-          IIEM encodes—by irreversible physical change—the fact that a defined
-          exposure boundary has been crossed. The record is co-located with the
-          asset, independent of electronics, institutional memory, or digital
-          systems.
+          IIEM operates as a physical invariant that binds exposure reality to
+          the asset itself.
         </p>
 
-        <h2>2. Physical and Material Plausibility</h2>
+        <p className="text-red-300">
+          When institutional records, inspections, or digital systems conflict
+          with the marker, the marker represents the authoritative record of exposure.
+        </p>
+      </Section>
+
+      {/* PROBLEM */}
+      <Section title="Problem Framing">
         <p>
-          Passive, irreversible exposure encoding is physically plausible using
-          known materials such as UV-dose films, stress-indicating lacquers,
-          corrosion-promoted patinas, or chemically gated color-change pastes.
-        </p>
-        <ul>
-          <li>Calibration to cumulative, not instantaneous, exposure</li>
-          <li>Irreversibility under operational conditions</li>
-          <li>Resistance to tampering, fading, or detachment</li>
-          <li>Visibility under realistic inspection environments</li>
-        </ul>
-        <p>
-          Failure modes include premature activation, missed threshold crossing,
-          cross-sensitivity, concealment, or physical loss of the marker.
+          Infrastructure exposure is frequently under-recorded due to:
         </p>
 
-        <h2>3. Regime Mapping</h2>
-
-        <h3>Viable</h3>
-        <ul>
-          <li>Assets exposed to dominant, predictable hazards</li>
-          <li>Contexts with inspection gaps or unreliable records</li>
-          <li>Situations where post-exposure accountability matters</li>
-        </ul>
-
-        <h3>Degrades</h3>
-        <ul>
-          <li>Routine repainting or surface replacement</li>
-          <li>Multiple confounding exposure mechanisms</li>
-          <li>Institutional cultures that ignore physical indicators</li>
+        <ul className="list-disc pl-6">
+          <li>Inspection gaps</li>
+          <li>Lost or incomplete records</li>
+          <li>Sensor failures</li>
+          <li>Administrative manipulation</li>
         </ul>
 
-        <h3>Fails</h3>
-        <ul>
-          <li>Inaccessible or concealed components</li>
-          <li>Highly variable or poorly characterizable exposure regimes</li>
-          <li>Use as a substitute for inspection or maintenance</li>
+        <p>
+          These failures allow critical thresholds to be crossed without
+          durable acknowledgment.
+        </p>
+      </Section>
+
+      {/* MECHANISM */}
+      <Section title="Physical Plausibility">
+        <ul className="list-disc pl-6">
+          <li>UV-dose films</li>
+          <li>Stress-indicating lacquers</li>
+          <li>Corrosion-driven patinas</li>
+          <li>Chemically gated color transitions</li>
         </ul>
 
-        <h2>4. Distinction From Confounds</h2>
+        <p className="text-red-300">
+          The transformation must be irreversible, threshold-calibrated, and
+          resistant to tampering or environmental reversal.
+        </p>
+      </Section>
+
+      {/* REGIME */}
+      <Section title="Regime Mapping">
+        <p className="font-semibold text-white">Viable</p>
+        <ul className="list-disc pl-6">
+          <li>Predictable hazard environments</li>
+          <li>Inspection-limited contexts</li>
+          <li>Post-exposure accountability critical</li>
+        </ul>
+
+        <p className="font-semibold text-white mt-4">Failure</p>
+        <ul className="list-disc pl-6">
+          <li>Marker removal or concealment</li>
+          <li>Uncharacterizable exposure regimes</li>
+          <li>Use as substitute for maintenance</li>
+        </ul>
+      </Section>
+
+      {/* DISTINCTION */}
+      <Section title="Boundary Distinction">
         <p>IIEM is not:</p>
-        <ul>
+
+        <ul className="list-disc pl-6">
           <li>A sensor or monitoring system</li>
-          <li>Predictive maintenance or failure forecasting</li>
-          <li>A warning or alert mechanism</li>
-          <li>A performance-enhancing material</li>
-          <li>A digital or administrative logging system</li>
-        </ul>
-        <p>
-          It records past exposure only. It does not predict failure or guarantee
-          safety.
-        </p>
-
-        <h2>5. Falsification Criteria</h2>
-        <ul>
-          <li>
-            No material reliably produces irreversible, interpretable change at
-            the intended exposure threshold
-          </li>
-          <li>False positives or negatives dominate real-world behavior</li>
-          <li>Markers are routinely lost, obscured, or altered</li>
-          <li>
-            Institutional regimes ignore or misuse the encoded information
-          </li>
+          <li>A predictive or diagnostic tool</li>
+          <li>An alert or warning system</li>
+          <li>A safety mechanism</li>
         </ul>
 
-        <h2>6. Ethical Risk of Misuse</h2>
-        <ul>
-          <li>
-            Responsibility shifting onto the marker instead of stewardship
-          </li>
-          <li>False inference of safety from lack of visible change</li>
-          <li>
-            Weaponization for blame, liability avoidance, or cost deferral
-          </li>
-          <li>Misrepresentation as a safety or early-warning system</li>
+        <p className="text-red-300">
+          It records past reality only. It does not interpret or predict.
+        </p>
+      </Section>
+
+      {/* FALSIFICATION */}
+      <Section title="Falsification Criteria">
+        <ul className="list-disc pl-6">
+          <li>No reliable irreversible transition at threshold</li>
+          <li>High false positive or negative rates</li>
+          <li>Routine loss, tampering, or degradation</li>
+          <li>Systematic institutional disregard</li>
+        </ul>
+      </Section>
+
+      {/* ETHICS */}
+      <Section title="Misuse Constraint">
+        <ul className="list-disc pl-6">
+          <li>Cannot replace inspection or maintenance</li>
+          <li>Cannot imply safety or compliance</li>
+          <li>Cannot shift responsibility onto the marker</li>
         </ul>
 
-        <h2>7. Final Judgment</h2>
+        <p className="text-red-300">
+          The marker reveals failure—it does not prevent it.
+        </p>
+      </Section>
+
+      {/* INVARIANT */}
+      <Section title="Invariant Framework">
+        <p><strong>G:</strong> Exposure-preserving transformations</p>
+        <p><strong>Q:</strong> Total cumulative exposure</p>
+        <p><strong>S:</strong> Irreversible marker state</p>
+
+        <p className="text-red-300">
+          Failure: mismatch between verified exposure and marker state
+        </p>
+      </Section>
+
+      {/* CLAIM BOUNDARY */}
+      <Section title="Claim Eligibility Boundary">
         <p>
-          <strong>CONDITIONAL GO</strong>
-        </p>
-        <p>
-          IIEM is physically plausible and occupies a unique role as a passive,
-          persistent exposure record. Its value lies in auditability and
-          accountability, not prediction or prevention. Deployment is justified
-          only in tightly governed trials with explicit guardrails preventing
-          misuse or substitution for inspection.
+          Any claim of compliance, safety, or stewardship that contradicts the
+          invariant marker state is invalid.
         </p>
 
-        <hr />
-
-        <h2>Invariant Closure (Canonical)</h2>
-
-        <p>
-          <strong>Symmetry group (𝑮):</strong> Exposure-preserving transformations
-          of the infrastructure environment (time, duty cycle, hazard intensity)
-          under which inspection records and administrative representations may
-          vary.
+        <p className="text-red-300">
+          Administrative, digital, or observational records do not override
+          physical invariants.
         </p>
+      </Section>
 
-        <p>
-          <strong>Conserved quantity (𝑸):</strong> Total cumulative exposure to
-          the targeted hazard class. Exposure may be distributed or unrecorded,
-          but it is not negated by documentation, repainting, or administrative
-          action.
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          IIEM establishes a physical truth anchor. It does not improve safety,
+          predict failure, or enforce behavior. It ensures that exposure,
+          once incurred, cannot be denied, erased, or reinterpreted.
         </p>
+      </section>
 
-        <p>
-          <strong>Invariant spectrum (𝑺):</strong> The irreversible physical state
-          of the marker encoding threshold-crossing exposure (e.g., color change,
-          phase transition, morphology shift).
-        </p>
-
-        <p>
-          <strong>Failure signature on 𝑺:</strong> Either (a) absence of
-          irreversible change after verified threshold exposure, or (b)
-          irreversible change occurring outside the defined exposure regime.
-        </p>
-
-        <p>
-          <strong>Legitimacy boundary:</strong> Any claim of compliance, safety,
-          or stewardship that contradicts the marker’s invariant state is not
-          legitimate by formal or ethical criteria and must be rejected.
-        </p>
-
-        <hr />
-
-        <p className="text-sm text-muted-foreground">
-          Version 1.0 · Public research note · Moral Clarity AI · Edge of Knowledge
-        </p>
-      </article>
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Truth-bound · Irreversible · Non-overridable · Versioned
+      </div>
     </main>
   );
 }
