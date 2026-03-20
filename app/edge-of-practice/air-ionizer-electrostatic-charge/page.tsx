@@ -2,245 +2,254 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Air Ionizer Effects on Electrostatic Charge Buildup in Laboratory Electronics — Edge of Practice",
+    "Electrostatic Charge Admissibility Boundary in Ionized Environments | Edge of Practice — Moral Clarity AI",
   description:
-    "A controlled experiment testing whether air ionizers alter electrostatic charge accumulation on laboratory electronics.",
+    "A constraint artifact defining when electrostatic safety claims are non-admissible in ionized laboratory environments due to spatial charge variability and node-edge extremes.",
   robots: {
     index: true,
     follow: true,
   },
 };
 
+function SectionCard({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-black/10 bg-white/70 p-6 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+      <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
+        {eyebrow}
+      </div>
+      <h2 className="mb-4 text-xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
+        {title}
+      </h2>
+      <div className="space-y-4 text-[15px] leading-7 text-zinc-700 dark:text-zinc-300">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function SignalPill({
+  children,
+  tone = "neutral",
+}: {
+  children: React.ReactNode;
+  tone?: "neutral" | "fail" | "pass";
+}) {
+  const toneClass =
+    tone === "fail"
+      ? "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+      : tone === "pass"
+      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+      : "border-zinc-300/70 bg-zinc-100 text-zinc-700 dark:border-white/10 dark:bg-white/10 dark:text-zinc-300";
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium tracking-wide ${toneClass}`}
+    >
+      {children}
+    </span>
+  );
+}
+
 export default function AirIonizerElectrostaticChargePage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Air Ionizer Effects on Electrostatic Charge Buildup in Laboratory Electronics</h1>
+    <main className="mx-auto max-w-6xl px-6 py-16 md:px-8 md:py-20">
+      <div className="space-y-8">
+        {/* HERO */}
+        <section className="rounded-3xl border border-black/10 bg-gradient-to-br from-white via-zinc-50 to-zinc-100 dark:border-white/10 dark:from-zinc-950 dark:to-zinc-900">
+          <div className="grid lg:grid-cols-[1.2fr_0.8fr]">
+            <div className="p-10">
+              <div className="mb-4 flex gap-2 flex-wrap">
+                <SignalPill>Edge of Practice</SignalPill>
+                <SignalPill tone="fail">Admissibility Boundary</SignalPill>
+                <SignalPill>RCS Constraint</SignalPill>
+              </div>
 
-        <h2>Problem Statement</h2>
-        <p>
-          This experiment tests whether using an air ionizer affects
-          electrostatic charge accumulation on laboratory electronics compared
-          to conditions with no ionizer present. The objective is to determine
-          whether an air ionizer introduces, reduces, or has no effect on static
-          charge, potentially creating unintended electrostatic discharge (ESD)
-          hazards.
+              <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
+                Electrostatic Charge Admissibility Boundary
+              </h1>
+
+              <p className="mt-6 text-lg text-zinc-700 dark:text-zinc-300 max-w-3xl">
+                Electrostatic safety claims in ionized environments are valid
+                only if localized node and edge voltage extremes remain bounded.
+                Mean voltage stability is non-admissible as a safety indicator.
+              </p>
+
+              <div className="mt-8 rounded-2xl border bg-black text-white p-6">
+                <div className="text-xs uppercase tracking-widest text-zinc-400 mb-2">
+                  Core Boundary Doctrine
+                </div>
+                <p className="text-lg">
+                  Electrostatic safety is <strong>non-admissible</strong> if any
+                  node or node-to-node coupling exceeds critical voltage
+                  thresholds, regardless of mean system voltage.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-zinc-950 text-white p-10 space-y-4">
+              <div>
+                <div className="text-xs uppercase text-zinc-400 mb-1">
+                  Valid only if
+                </div>
+                <p className="text-sm">
+                  No node or edge exceeds threshold voltage and no localized
+                  extremes dominate risk.
+                </p>
+              </div>
+
+              <div className="border border-rose-400/20 bg-rose-500/10 p-4 rounded-xl">
+                <div className="text-xs uppercase text-rose-300 mb-1">
+                  Invalid when
+                </div>
+                <p className="text-sm text-rose-100">
+                  Any localized voltage spike or ΔV emerges, regardless of
+                  average conditions.
+                </p>
+              </div>
+
+              <div>
+                <div className="text-xs uppercase text-zinc-400 mb-1">
+                  Governing scale
+                </div>
+                <p className="text-sm">
+                  Spatial charge distribution and node-edge coupling geometry.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CONSTRAINT DEFINITION */}
+        <SectionCard
+          eyebrow="Constraint Definition"
+          title="What is being tested"
+        >
+          <p>
+            Air ionizers are admissible as electrostatic control mechanisms only
+            if they do not introduce localized charge extremes or increase node
+            variability beyond defined thresholds.
+          </p>
+          <p>
+            Mean voltage reduction is insufficient. Safety is determined by
+            worst-case node and edge behavior.
+          </p>
+        </SectionCard>
+
+        {/* GOVERNING VARIABLES */}
+        <SectionCard
+          eyebrow="Governing Variables"
+          title="Electrostatic admissibility is locally determined"
+        >
+          <ul>
+            <li>Node voltage (Vₙ)</li>
+            <li>Edge potential difference (ΔVₙ₋ₘ)</li>
+            <li>Spatial charge variance</li>
+            <li>Temporal charge stability</li>
+          </ul>
+        </SectionCard>
+
+        {/* FAILURE */}
+        <SectionCard
+          eyebrow="Failure Modes"
+          title="Falsification conditions"
+        >
+          <ul>
+            <li>Any node exceeds ±100 V</li>
+            <li>ΔV between nodes exceeds critical threshold</li>
+            <li>Voltage variability increases ≥25%</li>
+          </ul>
+
+          <p>
+            <strong>Absence of mean instability is not evidence of safety.</strong>
+          </p>
+        </SectionCard>
+
+        {/* EXPERIMENT */}
+        <SectionCard
+          eyebrow="Experimental Protocol"
+          title="Binary falsification structure"
+        >
+          <ul>
+            <li>Baseline (no ionizer)</li>
+            <li>Ionizer active condition</li>
+            <li>Controlled environment</li>
+            <li>Repeated measurement cycles</li>
+          </ul>
+
+          <p>
+            The outcome is strictly binary. Interpretation beyond thresholds is
+            non-admissible.
+          </p>
+        </SectionCard>
+
+        {/* BELOW EDGE */}
+        <SectionCard
+          eyebrow="Below the Edge"
+          title="Connectivity-controlled electrostatic risk"
+        >
+          <p>
+            Electrostatic risk is governed by node-edge extremes, not mean
+            voltage. Localized coupling can dominate system behavior.
+          </p>
+
+          <ul>
+            <li>Mean voltage is non-admissible</li>
+            <li>Uniform ionization is non-admissible</li>
+            <li>Global safety inference is non-admissible</li>
+          </ul>
+
+          <p>
+            Risk emerges from extreme nodes and high ΔV edges within the network.
+          </p>
+        </SectionCard>
+
+        {/* VERDICT */}
+        <section className="grid md:grid-cols-2 gap-6">
+          <div className="p-8 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+            <h2 className="text-2xl font-semibold text-emerald-800 dark:text-emerald-200">
+              PASS
+            </h2>
+            <p className="mt-4 text-sm">
+              All node voltages and edge differentials remain within defined
+              thresholds across all measurements.
+            </p>
+          </div>
+
+          <div className="p-8 rounded-2xl bg-rose-500/10 border border-rose-500/20">
+            <h2 className="text-2xl font-semibold text-rose-800 dark:text-rose-200">
+              FAIL
+            </h2>
+            <p className="mt-4 text-sm">
+              Any node or edge exceeds threshold or variability increases beyond
+              admissible limits.
+            </p>
+          </div>
+        </section>
+
+        {/* INVARIANT */}
+        <section className="bg-zinc-950 text-white p-10 rounded-2xl">
+          <p className="text-2xl font-semibold">
+            Electrostatic safety is governed by extremes, not averages.
+          </p>
+          <p className="mt-4 text-zinc-300">
+            When localized charge exceeds threshold, system-level safety claims
+            are invalid regardless of global stability.
+          </p>
+        </section>
+
+        <p className="text-sm text-zinc-500">
+          Edge-of-Practice experiments are constraint-bound, reproducible, and
+          non-interpretive beyond defined thresholds.
         </p>
-
-        <h2>Hidden Assumption Being Tested</h2>
-        <p>
-          Air ionizers neutralize static charge safely and do not increase
-          electrostatic risk for nearby electronics.
-        </p>
-
-        <h2>What Might Be True Instead</h2>
-        <p>
-          Air ionizers may introduce spatial charge gradients or increase charge
-          variability, raising ESD risk rather than reducing it.
-        </p>
-
-        <h2>Measurement Instruments</h2>
-        <ul>
-          <li>Desk air ionizer with adjustable output</li>
-          <li>Three identical ESD-sensitive circuit boards or devices</li>
-          <li>Non-contact electrostatic field meter (±1 V resolution)</li>
-          <li>Static voltmeter probe (if available)</li>
-          <li>Temperature and humidity monitor (±1% RH accuracy)</li>
-          <li>Non-conductive mounting platform</li>
-          <li>Insulated gloves</li>
-          <li>Timer or stopwatch</li>
-          <li>Data logging sheet or software</li>
-        </ul>
-
-        <h2>Environmental Controls</h2>
-        <ul>
-          <li>Temperature: 22 ± 2 °C</li>
-          <li>Relative humidity: 40 ± 5%</li>
-          <li>No external airflow or HVAC changes during testing</li>
-          <li>All measurements conducted in the same room</li>
-          <li>Minimized movement and electronic device usage nearby</li>
-        </ul>
-
-        <h2>Experimental Procedure</h2>
-
-        <h3>1. Preparation</h3>
-        <ol>
-          <li>
-            Place test boards on a non-conductive platform, spaced 10 cm apart.
-          </li>
-          <li>
-            Allow the environment to stabilize for 30 minutes.
-          </li>
-          <li>
-            Calibrate the electrostatic meter per manufacturer instructions.
-          </li>
-          <li>
-            Wear insulated gloves when handling electronics.
-          </li>
-        </ol>
-
-        <h3>2. Baseline (No Ionizer)</h3>
-        <ol>
-          <li>
-            Ensure the air ionizer is OFF and unplugged.
-          </li>
-          <li>
-            Leave boards undisturbed for 10 minutes.
-          </li>
-          <li>
-            Measure surface voltage at three standard locations on each board.
-          </li>
-          <li>
-            Repeat measurements every 5 minutes for a total of three readings
-            (15 minutes).
-          </li>
-          <li>
-            Record all voltages, temperature, and humidity.
-          </li>
-        </ol>
-
-        <h3>3. Ionizer Active</h3>
-        <ol>
-          <li>
-            Position the air ionizer 30 cm from the electronics, aligned with
-            airflow direction.
-          </li>
-          <li>
-            Power on the ionizer at manufacturer-recommended output.
-          </li>
-          <li>
-            Allow 10 minutes for atmospheric equilibration.
-          </li>
-          <li>
-            Repeat surface voltage measurements exactly as in the baseline
-            condition.
-          </li>
-        </ol>
-
-        <h2>Comparison Against Baseline</h2>
-        <ul>
-          <li>
-            Calculate average static voltage per board for each condition.
-          </li>
-          <li>
-            Record full distributions with environmental data.
-          </li>
-        </ul>
-
-        <h2>Binary ESD-Risk Failure Definition</h2>
-        <ul>
-          <li>
-            <strong>FAIL:</strong> Any measured surface voltage exceeds ±100 V at
-            any point.
-          </li>
-          <li>
-            <strong>FAIL:</strong> Average absolute voltage increases by ≥25%
-            with ionizer ON compared to baseline.
-          </li>
-          <li>
-            <strong>PASS:</strong> All voltages remain ≤±100 V and do not
-            increase by ≥25%.
-          </li>
-        </ul>
-
-        <h2>Reporting</h2>
-        <p>
-          Report mean, range, and standard deviation of all measured voltages for
-          both baseline and ionizer-active conditions. The outcome is strictly
-          binary.
-        </p>
-
-        <h2>Reproducibility Requirement</h2>
-        <p>
-          Repeat the entire procedure on three separate days. Results must be
-          consistent across runs.
-        </p>
-
-        <h2>Scope Boundaries</h2>
-        <p>
-          This experiment makes no claims regarding health, compliance, product
-          efficacy, or best practices. No extrapolation to other environments or
-          devices is permitted.
-        </p>
-
-        <hr />
-
-        <p className="text-sm text-muted-foreground">
-          Edge-of-Practice experiments are designed for short-cycle execution,
-          binary falsification, and direct laboratory reproducibility. No
-          interpretation beyond stated thresholds is allowed.
-        </p>
-
-        {/* ========================================================= */}
-        {/* BELOW THE EDGE — CONNECTIVITY-CONTROLLED ELECTROSTATIC RISK */}
-        {/* ADDITIVE ONLY — NO REMOVALS                                */}
-        {/* ========================================================= */}
-
-        <hr />
-
-        <h2>Below the Edge: Connectivity-Controlled Electrostatic Risk</h2>
-
-        <h3>Frozen Assumption</h3>
-        <p>
-          System-wide electrostatic risk can be inferred from the mean voltage
-          across board measurement nodes, presuming that no single node or set of
-          strongly coupled nodes and edges can generate localized extremes that
-          dominate the risk profile.
-        </p>
-
-        <h3>Structural Decomposition</h3>
-        <p>
-          Electrostatic charge behavior in ionized environments is spatially
-          heterogeneous due to non-uniform ionizer plume structure, airflow
-          boundaries, and surface geometry. Measurement nodes experience
-          distinct local charge accumulation and dissipation timescales.
-          Localized high-potential nodes may persist despite stable mean voltage
-          across the network. When such nodes are linked by physical coupling
-          pathways—defined by proximity, geometry, or airflow alignment—their
-          interaction can dominate system-level risk.
-        </p>
-
-        <h3>Regime Boundary</h3>
-        <p>
-          The frozen assumption holds only while no edge connecting measurement
-          nodes develops a potential difference (ΔV) exceeding its
-          path-specific critical threshold. The regime boundary is crossed when
-          one or more node-to-node couplings exhibit ΔV above threshold,
-          independent of the mean node voltage.
-        </p>
-
-        <h3>Failure Signature</h3>
-        <p>
-          The abrupt emergence during a run of a high-ΔV edge or persistently
-          elevated node voltage—directly observable in the measured dataset—
-          while the average network voltage remains stable. This signature
-          cannot be reconstructed from gradual or independent local variations.
-        </p>
-
-        <h3>Disentitlements</h3>
-        <ul>
-          <li>
-            Electrostatic risk cannot be inferred from mean voltage or average
-            ion neutralization.
-          </li>
-          <li>
-            Claims of uniform charge control via ionization are invalid.
-          </li>
-          <li>
-            Any safety model excluding node–edge extremes and coupling geometry
-            is epistemically unsound.
-          </li>
-        </ul>
-
-        <h3>Corrected Interpretation</h3>
-        <p>
-          Electrostatic risk is governed by the presence and connectivity of
-          nodes and edges exhibiting extreme voltage or edge ΔV within the
-          measurement network. These localized extremes—not global averages—
-          control the possibility of abrupt, system-relevant electrostatic
-          hazards.
-        </p>
-      </article>
+      </div>
     </main>
   );
 }
