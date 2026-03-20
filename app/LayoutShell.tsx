@@ -1,3 +1,4 @@
+// app/LayoutShell.tsx
 "use client";
 
 import { usePathname } from "next/navigation";
@@ -15,7 +16,6 @@ export default function LayoutShell({
   // ─────────────────────────────────────────────
   // Route classification
   // ─────────────────────────────────────────────
-
   const isAppShell = pathname === "/app" || pathname.startsWith("/app/");
   const isWorkspace = pathname.startsWith("/w/");
 
@@ -27,9 +27,8 @@ export default function LayoutShell({
       <>
         <div
           data-app-shell
-          className="grid grid-cols-[minmax(280px,20vw)_1fr] h-screen min-h-0 relative z-10"
+          className="relative z-10 grid h-screen min-h-0 grid-cols-[minmax(280px,20vw)_1fr]"
         >
-          {/* SIDEBAR */}
           <aside
             data-neural-sidebar
             className="h-full overflow-y-auto border-r border-neutral-800 bg-neutral-950/60 backdrop-blur-xl"
@@ -37,14 +36,13 @@ export default function LayoutShell({
             <NeuralSidebar />
           </aside>
 
-          {/* MAIN */}
           <main
             data-app-main
-            className="h-full min-h-0 flex flex-col overflow-hidden"
+            className="flex h-full min-h-0 flex-col overflow-hidden"
           >
             <div
               data-app-content
-              className="w-full h-full min-h-0 flex flex-col overflow-hidden px-10 py-12"
+              className="flex h-full min-h-0 w-full flex-col overflow-hidden px-10 py-12"
             >
               {children}
             </div>
@@ -63,7 +61,7 @@ export default function LayoutShell({
   if (isWorkspace) {
     return (
       <>
-        <div data-workspace-canvas className="w-screen h-screen overflow-hidden">
+        <div data-workspace-canvas className="h-screen w-screen overflow-hidden">
           {children}
         </div>
 
@@ -75,11 +73,16 @@ export default function LayoutShell({
 
   // ─────────────────────────────────────────────
   // STANDALONE (marketing / auth / research)
+  // Neutral wrapper: page-level routes own their own max-width, spacing,
+  // cards, and composition. Avoid inherited shell/container styling here.
   // ─────────────────────────────────────────────
   return (
     <>
-      <main data-standalone className="mc-page-shell">
-        <div className="mc-container w-full">{children}</div>
+      <main
+        data-standalone
+        className="relative z-10 min-h-screen w-full overflow-x-hidden"
+      >
+        <div className="w-full">{children}</div>
       </main>
 
       <LayoutDebugOverlay />
