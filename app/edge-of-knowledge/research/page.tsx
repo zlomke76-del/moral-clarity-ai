@@ -27,14 +27,19 @@ export const metadata: Metadata = {
   },
 };
 
-type DomainCard = {
+type ResearchLink = {
+  href: string;
+  label: string;
+};
+
+type ResearchDomain = {
   numeral: string;
   title: string;
   description: string;
-  items: Array<{ href: string; label: string }>;
+  items: ResearchLink[];
 };
 
-const domains: DomainCard[] = [
+const domains: ResearchDomain[] = [
   {
     numeral: "I",
     title: "Doctrine — Governing Action Under Uncertainty",
@@ -327,23 +332,21 @@ const domains: DomainCard[] = [
   },
 ];
 
-function DomainIndexCard({
-  numeral,
-  title,
-  description,
-  items,
-}: DomainCard) {
+function DomainCard({ numeral, title, description, items }: ResearchDomain) {
   return (
-    <section className="group rounded-2xl border border-sky-950/45 bg-slate-950/60 p-6 shadow-[0_0_0_1px_rgba(59,130,246,0.05),0_16px_48px_rgba(0,0,0,0.34)] backdrop-blur-sm transition duration-200 hover:border-sky-800/60 hover:shadow-[0_0_0_1px_rgba(59,130,246,0.10),0_20px_60px_rgba(0,0,0,0.42)]">
+    <section className="group rounded-3xl border border-sky-950/45 bg-slate-950/72 p-6 shadow-[0_0_0_1px_rgba(59,130,246,0.05),0_18px_56px_rgba(0,0,0,0.38)] backdrop-blur-sm transition duration-200 hover:border-sky-800/60 hover:shadow-[0_0_0_1px_rgba(59,130,246,0.10),0_24px_72px_rgba(0,0,0,0.46)]">
       <div className="flex items-start gap-4">
-        <div className="mt-0.5 inline-flex min-w-[2.5rem] items-center justify-center rounded-full border border-sky-900/50 bg-sky-950/45 px-2.5 py-1 text-xs font-semibold tracking-[0.14em] text-sky-300">
+        <div className="mt-0.5 inline-flex min-w-[2.6rem] items-center justify-center rounded-full border border-sky-900/60 bg-sky-950/50 px-2.5 py-1 text-xs font-semibold tracking-[0.14em] text-sky-300">
           {numeral}
         </div>
+
         <div className="min-w-0">
-          <h2 className="text-xl font-semibold tracking-tight text-white">
+          <h2 className="text-xl font-semibold leading-tight tracking-tight text-white">
             {title}
           </h2>
-          <p className="mt-3 text-sm leading-7 text-slate-300">{description}</p>
+          <p className="mt-3 text-sm leading-7 text-slate-300">
+            {description}
+          </p>
         </div>
       </div>
 
@@ -367,10 +370,9 @@ function DomainIndexCard({
 
 export default function EdgeOfKnowledgeIndexPage() {
   return (
-    <main className="mx-auto max-w-7xl px-6 py-14 md:px-8 md:py-16">
-      {/* HERO */}
-      <section className="relative overflow-hidden rounded-3xl border border-sky-950/45 bg-slate-950/65 shadow-[0_0_0_1px_rgba(59,130,246,0.08),0_28px_90px_rgba(0,0,0,0.48)] backdrop-blur-sm">
-        <div className="grid gap-10 px-8 py-10 md:grid-cols-[1.35fr_0.65fr] md:px-10 md:py-12">
+    <main className="w-full max-w-[1360px]">
+      <section className="relative overflow-hidden rounded-[2rem] border border-sky-950/45 bg-slate-950/72 shadow-[0_0_0_1px_rgba(59,130,246,0.08),0_30px_100px_rgba(0,0,0,0.50)] backdrop-blur-sm">
+        <div className="grid gap-10 px-8 py-10 md:px-10 md:py-12 lg:grid-cols-[1.35fr_0.65fr]">
           <div className="relative z-10">
             <div className="inline-flex items-center rounded-full border border-sky-900/60 bg-sky-950/50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-300">
               Research Layer
@@ -397,22 +399,21 @@ export default function EdgeOfKnowledgeIndexPage() {
           </div>
 
           <div className="relative z-10 flex items-center justify-center">
-            <div className="flex w-full max-w-[280px] items-center justify-center rounded-3xl border border-sky-950/40 bg-slate-950/45 p-6 shadow-[0_0_40px_rgba(59,130,246,0.12)]">
+            <div className="flex w-full max-w-[300px] items-center justify-center rounded-[2rem] border border-sky-950/40 bg-slate-950/45 p-7 shadow-[0_0_48px_rgba(59,130,246,0.12)]">
               <Image
                 src="/assets/image_research_trans_01.png"
-                alt="MCAI Research emblem"
-                width={320}
-                height={320}
+                alt="Edge of Knowledge research emblem"
+                width={340}
+                height={340}
                 priority
-                className="h-auto w-full max-w-[220px] object-contain drop-shadow-[0_0_30px_rgba(59,130,246,0.20)]"
+                className="h-auto w-full max-w-[230px] object-contain drop-shadow-[0_0_34px_rgba(59,130,246,0.22)]"
               />
             </div>
           </div>
         </div>
       </section>
 
-      {/* GOVERNING PROBLEM */}
-      <section className="mt-10 rounded-3xl border border-sky-950/45 bg-slate-950/60 p-8 shadow-[0_0_0_1px_rgba(59,130,246,0.05),0_16px_48px_rgba(0,0,0,0.34)] backdrop-blur-sm">
+      <section className="mt-10 rounded-[2rem] border border-sky-950/45 bg-slate-950/70 p-8 shadow-[0_0_0_1px_rgba(59,130,246,0.05),0_18px_56px_rgba(0,0,0,0.38)] backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <div className="h-2.5 w-2.5 rounded-full bg-sky-400" />
           <h2 className="text-2xl font-semibold tracking-tight text-white">
@@ -420,7 +421,7 @@ export default function EdgeOfKnowledgeIndexPage() {
           </h2>
         </div>
 
-        <div className="mt-6 space-y-4 text-[16px] leading-8 text-slate-300">
+        <div className="mt-6 max-w-5xl space-y-4 text-[16px] leading-8 text-slate-300">
           <p>
             Systems rarely collapse suddenly. They become{" "}
             <strong className="text-white">
@@ -445,7 +446,7 @@ export default function EdgeOfKnowledgeIndexPage() {
         </div>
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-sky-950/40 bg-slate-900/70 px-5 py-4">
+          <div className="rounded-2xl border border-sky-950/40 bg-slate-900/72 px-5 py-4">
             <p className="text-sm font-semibold uppercase tracking-[0.12em] text-sky-300">
               Research
             </p>
@@ -454,7 +455,7 @@ export default function EdgeOfKnowledgeIndexPage() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-sky-950/40 bg-slate-900/70 px-5 py-4">
+          <div className="rounded-2xl border border-sky-950/40 bg-slate-900/72 px-5 py-4">
             <p className="text-sm font-semibold uppercase tracking-[0.12em] text-sky-300">
               Instrumentation
             </p>
@@ -463,7 +464,7 @@ export default function EdgeOfKnowledgeIndexPage() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-sky-950/40 bg-slate-900/70 px-5 py-4">
+          <div className="rounded-2xl border border-sky-950/40 bg-slate-900/72 px-5 py-4">
             <p className="text-sm font-semibold uppercase tracking-[0.12em] text-sky-300">
               Constraint
             </p>
@@ -480,7 +481,6 @@ export default function EdgeOfKnowledgeIndexPage() {
 
       <div className="my-12 h-px w-full bg-gradient-to-r from-transparent via-sky-700/50 to-transparent" />
 
-      {/* RESEARCH DOMAINS */}
       <section>
         <div className="mb-6 flex items-end justify-between gap-6">
           <div>
@@ -492,23 +492,24 @@ export default function EdgeOfKnowledgeIndexPage() {
             </h2>
           </div>
 
-          <p className="hidden max-w-xl text-sm leading-7 text-slate-400 lg:block">
+          <p className="hidden max-w-xl text-sm leading-7 text-slate-400 xl:block">
             Each domain below groups work by governing function so readers can
             move through doctrine, detection, failure, and validation without
             losing system context.
           </p>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-2">
+        <div className="grid gap-6 2xl:grid-cols-2">
           {domains.map((domain) => (
-            <DomainIndexCard key={domain.title} {...domain} />
+            <DomainCard key={domain.title} {...domain} />
           ))}
         </div>
       </section>
 
       <p className="mt-14 text-center text-sm leading-7 text-slate-400">
-        Edge of Knowledge is a public research series. Documents are updated only
-        by explicit revision and remain accessible for epistemic continuity.
+        Edge of Knowledge is a public research series. Documents are updated
+        only by explicit revision and remain accessible for epistemic
+        continuity.
       </p>
     </main>
   );
