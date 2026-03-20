@@ -1,192 +1,189 @@
 // app/edge-of-knowledge/riemann-hypothesis-critical-line-structural-obstruction/page.tsx
-// ============================================================
-// EDGE OF KNOWLEDGE
-// Riemann Hypothesis — Critical Line Structural Obstruction
-// Regime-bounded, non-actionable, non-advisory doctrine
-// ============================================================
-// This entry exposes an epistemic boundary.
-// It does not propose proof strategies, heuristics, or research directions.
-// ============================================================
+// Upgraded: Analytic Completeness Boundary
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Riemann Hypothesis: The Critical Line Structural Obstruction | Edge of Knowledge",
+    "Riemann Hypothesis: Analytic Completeness Boundary | Edge of Knowledge",
   description:
-    "A formal reduction identifying the shared hidden assumption underlying all major approaches to the Riemann Hypothesis and the resulting epistemic limitation.",
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A constraint identifying the assumption that analytic structure alone determines zero placement, and the resulting epistemic limitation.",
 };
 
 export const dynamic = "force-static";
 
+function Section({ title, children }: any) {
+  return (
+    <section className="mb-14">
+      <h2 className="text-2xl font-semibold text-white mb-4">{title}</h2>
+      <div className="space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
+
 export default function RiemannHypothesisStructuralObstructionPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>
+    <main className="mx-auto max-w-[1100px] px-6 py-16 text-slate-100 space-y-12">
+
+      {/* HERO */}
+      <section className="rounded-3xl border border-slate-800 bg-slate-950/80 p-10">
+        <p className="text-sm uppercase tracking-widest text-slate-400">
+          Edge of Knowledge — Analytic Completeness Boundary
+        </p>
+
+        <h1 className="mt-4 text-4xl font-semibold">
           The Riemann Hypothesis
           <br />
           and the Critical Line Structural Obstruction
         </h1>
 
-        <p className="lead">
-          <strong>
-            This entry isolates the decisive epistemic limitation common to all
-            major approaches to the Riemann Hypothesis. It does not attempt proof,
-            disproof, construction, or methodological guidance.
-          </strong>
+        <p className="mt-4 text-lg text-slate-300">
+          Analytic structure is not sufficient evidence of zero placement.
         </p>
 
-        <p className="text-sm text-red-700 dark:text-red-400">
-          <b>Boundary Notice:</b> This material is regime-bounded and
-          non-actionable. It is not advice, instruction, or a proposal for
-          mathematical research.
-        </p>
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Representation limited · Completeness unproven · Enforcement required
+        </div>
+      </section>
 
-        <h2>Precise Statement</h2>
+      {/* CORE */}
+      <Section title="Core Boundary">
         <p>
-          The Riemann Hypothesis asserts that all nontrivial zeros of the Riemann
-          zeta function <code>ζ(s)</code> have real part exactly{" "}
-          <code>Re(s) = 1/2</code>.
+          This entry defines a constraint: analytic continuation, functional
+          equation, and symmetry structure are not sufficient to determine
+          zero placement unless an independent enforcing mechanism exists.
         </p>
 
+        <p className="text-red-300">
+          Analytic structure alone is not admissible evidence of exact alignment.
+        </p>
+      </Section>
+
+      {/* STATEMENT */}
+      <Section title="Precise Statement">
         <p>
-          The zeta function is initially defined for{" "}
-          <code>Re(s) &gt; 1</code> and analytically continued to the complex
-          plane, excluding a simple pole at <code>s = 1</code>. Nontrivial zeros
-          lie within the critical strip{" "}
-          <code>0 &lt; Re(s) &lt; 1</code>, excluding the negative even integers.
+          The Riemann Hypothesis asserts that all nontrivial zeros of{" "}
+          <code>ζ(s)</code> satisfy <code>Re(s) = 1/2</code>.
         </p>
+      </Section>
 
-        <h2>Dominant Historical Strategy Classes</h2>
-        <ul>
-          <li>
-            <strong>Analytic Number Theory:</strong> explicit formulas, zero-free
-            regions, and complex-analytic bounds.
-          </li>
-          <li>
-            <strong>Spectral and Operator Theory:</strong> hypothesized
-            correspondences between zeros and spectra of self-adjoint operators
-            (Hilbert–Pólya).
-          </li>
-          <li>
-            <strong>Random Matrix Theory:</strong> statistical modeling of zero
-            distributions via matrix ensembles.
-          </li>
-          <li>
-            <strong>Algebraic and Arithmetic Approaches:</strong> analogies with
-            zeta and L-functions arising from algebraic geometry and automorphic
-            forms.
-          </li>
+      {/* STRATEGIES */}
+      <Section title="Dominant Strategy Classes">
+        <ul className="list-disc pl-6">
+          <li>Analytic number theory</li>
+          <li>Spectral / operator approaches</li>
+          <li>Random matrix theory</li>
+          <li>Algebraic / arithmetic analogies</li>
         </ul>
 
-        <h2>Core Hidden Assumption</h2>
+        <p className="text-red-300">
+          All operate within representations derived from ζ(s).
+        </p>
+      </Section>
+
+      {/* ASSUMPTION */}
+      <Section title="Shared Hidden Assumption">
         <p>
-          All known approaches implicitly assume that the analytic continuation,
-          functional equation, and symmetry structure of <code>ζ(s)</code> encode
-          all information necessary to determine the exact placement of its
-          nontrivial zeros.
+          All approaches assume that the analytic structure of ζ(s) encodes all
+          necessary information for zero placement.
         </p>
 
+        <p className="text-red-300">
+          The critical line is treated as intrinsic rather than enforced.
+        </p>
+      </Section>
+
+      {/* LIMIT */}
+      <Section title="Structural Limitation">
         <p>
-          In particular, the critical line <code>Re(s) = 1/2</code> is treated as
-          intrinsically privileged by symmetry, with no independent or external
-          structural mechanism required to enforce zero alignment.
+          This assumption introduces a completeness risk:
         </p>
 
-        <h2>Why This Assumption Limits Progress</h2>
-        <p>
-          Treating the critical line as naturally definitive risks circularity:
-          arguments often explain zero alignment by appealing to structures that
-          already presuppose that alignment.
-        </p>
-
-        <ul>
-          <li>
-            Analytic methods rely on the functional equation and cannot access
-            potential nonlocal or arithmetic structures not encoded in it.
-          </li>
-          <li>
-            Operator-theoretic approaches postulate self-adjoint operators
-            without explicit construction, yielding non-constructive reasoning.
-          </li>
-          <li>
-            Random matrix models explain statistical regularities but do not
-            determine exact zero locations.
-          </li>
-          <li>
-            Algebraic analogies illuminate structure in related contexts but do
-            not transfer a concrete enforcing mechanism to <code>ζ(s)</code>.
-          </li>
+        <ul className="list-disc pl-6">
+          <li>Arguments reflect symmetry rather than enforce it</li>
+          <li>Analytic methods remain internally closed</li>
+          <li>External enforcing mechanisms are absent</li>
         </ul>
 
+        <p className="text-red-300">
+          Reflection without enforcement is not explanation.
+        </p>
+      </Section>
+
+      {/* FAILURE */}
+      <Section title="Analytic Completeness Failure">
         <p>
-          As a result, all strategies may remain confined within analytic or
-          probabilistic frameworks that reflect, rather than explain, the
-          observed phenomenon.
+          The system fails when analytic representation is treated as complete
+          without independent verification.
         </p>
 
-        <h2>Falsifiable Constraint</h2>
-        <p>
-          Any genuine resolution of the Riemann Hypothesis must satisfy at least
-          one of the following:
+        <p className="text-red-300">
+          Completeness is assumed—but not demonstrated.
         </p>
+      </Section>
 
-        <ul>
-          <li>
-            Provide a constructive, verifiable mechanism enforcing{" "}
-            <code>Re(s) = 1/2</code> for all nontrivial zeros.
-          </li>
-          <li>
-            Exhibit a specific, reproducible zero off the critical line with
-            independently verifiable computation.
-          </li>
-          <li>
-            Identify an explicit symmetry, dynamical system, or operator whose
-            properties provably determine zero placement.
-          </li>
+      {/* FALSIFICATION */}
+      <Section title="Falsifiable Constraint">
+        <p>Resolution requires at least one:</p>
+
+        <ul className="list-disc pl-6">
+          <li>Constructive enforcement mechanism</li>
+          <li>Explicit counterexample off the critical line</li>
+          <li>Operator or symmetry with provable zero-determining power</li>
         </ul>
 
-        <p>
-          Statistical agreement, heuristic analogy, or indirect bounds are
-          insufficient.
+        <p className="text-red-300">
+          Statistical or heuristic agreement is not admissible.
         </p>
+      </Section>
 
-        <h2>Non-Conclusions</h2>
-        <ul>
-          <li>The Riemann Hypothesis is neither proved nor disproved.</li>
-          <li>
-            Computational verification of many zeros does not constitute proof.
-          </li>
-          <li>
-            Postulated operator correspondences without construction do not
-            resolve the hypothesis.
-          </li>
-          <li>
-            Symmetry alone does not explain enforcement.
-          </li>
+      {/* NON-CONCLUSIONS */}
+      <Section title="Non-Admissible Conclusions">
+        <ul className="list-disc pl-6">
+          <li>Symmetry implies enforcement</li>
+          <li>Computation implies proof</li>
+          <li>Heuristics imply determinism</li>
         </ul>
+      </Section>
 
-        <h2>Canonical Classification</h2>
+      {/* INVARIANT */}
+      <Section title="Invariant Framework">
+        <p><strong>G:</strong> Analytic transformations</p>
+        <p><strong>Q:</strong> True zero distribution</p>
+        <p><strong>S:</strong> Represented analytic structure</p>
+
+        <p className="text-red-300">
+          Failure: Q assumed fully contained within S without proof
+        </p>
+      </Section>
+
+      {/* CLAIM */}
+      <Section title="Claim Eligibility Boundary">
         <p>
-          This entry is an <strong>Edge of Knowledge</strong> artifact. It
-          delineates an epistemic boundary without advancing solution strategies,
-          prescriptions, or applications.
+          Any claim that zero placement is determined solely by analytic
+          structure is invalid without an independent enforcing mechanism.
         </p>
 
-        <hr />
-
-        <p className="text-sm text-neutral-400">
-          Canonical · Public · Regime-bounded · Version 1.0
-          <br />
-          Updates require explicit revision. Silent modification invalidates the
-          entry.
+        <p className="text-red-300">
+          Representation cannot substitute for enforcement.
         </p>
-      </article>
+      </Section>
+
+      {/* FINAL */}
+      <section className="rounded-2xl border border-red-900/40 bg-red-950/20 p-8">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          The critical line may be correct—but correctness is not explanation.
+          Until enforcement is demonstrated, analytic symmetry remains an
+          incomplete representation of reality.
+        </p>
+      </section>
+
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Non-actionable · Representation-bound · Completeness-limited · Versioned
+      </div>
     </main>
   );
 }
