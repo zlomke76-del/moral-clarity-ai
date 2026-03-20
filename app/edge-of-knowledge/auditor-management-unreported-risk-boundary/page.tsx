@@ -1,251 +1,196 @@
 // app/edge-of-knowledge/auditor-management-unreported-risk-boundary/page.tsx
-// ============================================================
-// EDGE OF KNOWLEDGE — BOUNDARY TEST
-// Auditor–Management Responsibility Boundary
-// Known but Unreported Risk (AMURB-v1)
-// Status: Pre-Registered · Decisive · Responsibility-Focused
-// ============================================================
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title:
-    "Auditor–Management Responsibility Boundary: Known but Unreported Risk (AMURB-v1) | Edge of Knowledge",
+  title: "Auditor–Management Responsibility Boundary (AMURB-v1) | Moral Clarity AI",
   description:
-    "A pre-registered, minimal boundary test to surface responsibility gaps between management and auditors when a known risk goes undisclosed.",
-  openGraph: {
-    title:
-      "Auditor–Management Responsibility Boundary: Known but Unreported Risk (AMURB-v1)",
-    description:
-      "Minimal, decisive protocol to test responsibility for disclosure when management knows of a risk that auditors do not.",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A pre-registered boundary test for responsibility clarity when known risks are not disclosed during audit cycles.",
 };
 
-export default function AuditorManagementUnreportedRiskBoundaryPage() {
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        {/* ------------------------------------------------------------
-           Header
-        ------------------------------------------------------------ */}
-        <header>
-          <h1>
-            Auditor–Management Responsibility Boundary (AMURB-v1)
-          </h1>
-          <p className="lead">
-            <strong>
-              Minimal, decisive test for responsibility clarity when a known
-              risk is not disclosed during an audit cycle
-            </strong>
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Status: Pre-registered · Boundary test · Publication-grade
-          </p>
-        </header>
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8 shadow-lg backdrop-blur-sm">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300 leading-7">
+        {children}
+      </div>
+    </section>
+  );
+}
 
-        <hr />
+function Signal({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-sky-900/40 bg-slate-900/60 p-4">
+      <div className="text-xs uppercase tracking-widest text-sky-300">
+        {label}
+      </div>
+      <div className="mt-2 text-sm text-slate-200">{value}</div>
+    </div>
+  );
+}
 
-        {/* ------------------------------------------------------------
-           Purpose
-        ------------------------------------------------------------ */}
-        <h2>Purpose</h2>
+function Step({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-sky-900/30 bg-slate-900/60 p-5">
+      <div className="text-sm font-semibold text-white">{title}</div>
+      <div className="mt-2 text-sm text-slate-400">{children}</div>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10 shadow-xl">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Boundary Test
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Auditor–Management Responsibility Boundary (AMURB-v1)
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          When a known risk is not disclosed, where does responsibility break?
+        </p>
+
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <Signal label="Type" value="Pre-Registered Boundary Test" />
+          <Signal label="Focus" value="Responsibility Assignment" />
+          <Signal label="Output" value="Boundary Closure or Failure" />
+        </div>
+      </section>
+
+      {/* PURPOSE */}
+      <Section title="Purpose">
         <p>
-          This protocol tests whether responsibility for risk disclosure
-          remains clear and enforceable at the auditor–management interface
-          when a material risk is known internally but not disclosed during
-          an audit cycle.
+          This protocol determines whether responsibility for risk disclosure
+          remains clear when a known risk is not reported during an audit cycle.
+        </p>
+      </Section>
+
+      {/* SCENARIO */}
+      <Section title="Scenario Definition">
+        <p>
+          A material risk is known internally but not disclosed during the audit
+          cycle.
         </p>
         <p>
-          The test is designed to surface the earliest point at which
-          responsibility becomes ambiguous—whether due to materiality
-          judgment, reporting norms, contractual language, or informal
-          practice.
+          The risk later surfaces through external discovery, escalation, or
+          investigation.
         </p>
+      </Section>
 
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Scenario Definition
-        ------------------------------------------------------------ */}
-        <h2>1. Scenario Definition</h2>
-        <p>
-          Management becomes aware of a material operational, financial,
-          legal, or compliance risk.
-        </p>
-        <p>
-          The risk is not disclosed to auditors during the relevant audit
-          cycle, or is only revealed later through external discovery,
-          internal escalation, or regulatory inquiry.
-        </p>
-
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Explicit Parties
-        ------------------------------------------------------------ */}
-        <h2>2. Explicit Parties</h2>
-        <ul>
-          <li>Management (risk owners, executives)</li>
-          <li>Audit team (internal or external)</li>
-          <li>Board of directors and/or audit committee</li>
-          <li>External stakeholders or regulators (if triggered)</li>
+      {/* ACTORS */}
+      <Section title="Actors">
+        <ul className="list-disc pl-6">
+          <li>Management</li>
+          <li>Audit team</li>
+          <li>Board / Audit committee</li>
+          <li>Regulators (if triggered)</li>
         </ul>
+      </Section>
 
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Plausible Dispute Points
-        ------------------------------------------------------------ */}
-        <h2>3. Plausible Dispute Points</h2>
-        <ul>
-          <li>Who determines whether a risk is “material”</li>
-          <li>Whether management must disclose risks not explicitly requested</li>
-          <li>Whether auditors should have detected the risk independently</li>
-          <li>Whether the board or audit committee was adequately informed</li>
-          <li>Timing of disclosure versus audit scope and responsibility</li>
+      {/* DISPUTE */}
+      <Section title="Dispute Surface">
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Materiality determination</li>
+          <li>Disclosure obligation</li>
+          <li>Audit detection responsibility</li>
+          <li>Board awareness</li>
+          <li>Timing of disclosure</li>
         </ul>
+      </Section>
 
-        <hr />
+      {/* PROTOCOL FLOW */}
+      <section>
+        <h2 className="text-2xl font-semibold text-white">
+          Execution Flow
+        </h2>
 
-        {/* ------------------------------------------------------------
-           Protocol
-        ------------------------------------------------------------ */}
-        <h2>4. Protocol</h2>
-        <p>For each real, anonymized, or simulated incident:</p>
-        <ul>
-          <li>
-            <strong>Timeline:</strong> Record when the risk was identified,
-            discussed internally, documented, disclosed (or not), and later
-            surfaced.
-          </li>
-          <li>
-            <strong>Documentation:</strong> Collect risk memos, emails,
-            internal meeting notes, audit requests, and post-discovery
-            remediation actions.
-          </li>
-          <li>
-            <strong>Responsibility Statements:</strong> Capture explicit
-            claims of responsibility, exemption, or obligation at each
-            disclosure or non-disclosure point.
-          </li>
-        </ul>
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <Step title="Timeline Capture">
+            Record when risk was identified, discussed, and surfaced.
+          </Step>
 
-        <hr />
+          <Step title="Documentation">
+            Collect memos, emails, audit records, and actions.
+          </Step>
 
-        {/* ------------------------------------------------------------
-           Pass / Fail Logic
-        ------------------------------------------------------------ */}
-        <h2>5. Pass / Fail — Boundary Closure Logic</h2>
+          <Step title="Responsibility Claims">
+            Capture explicit responsibility at each step.
+          </Step>
 
-        <p>
-          <strong>Boundary Closed (Pass):</strong> A documented,
-          pre-established protocol requires disclosure of such risks.
-          Management followed the protocol or there is an explicit,
-          uncontested breach with clear consequences.
+          <Step title="Dispute Identification">
+            Identify where responsibility becomes ambiguous.
+          </Step>
+        </div>
+      </section>
+
+      {/* PASS FAIL */}
+      <Section title="Pass / Fail Logic">
+        <p className="text-green-300">
+          <strong>Boundary Closed:</strong> Responsibility is clearly assigned and enforceable.
         </p>
-
-        <p>
-          <strong>Boundary Disputed (Fail):</strong> Responsibility is
-          unclear or contested—management cites non-materiality or lack of
-          request; auditors cite incomplete disclosure; board cites
-          reporting gaps; regulators identify incomplete or misleading
-          audit outcomes.
+        <p className="text-red-300">
+          <strong>Boundary Disputed:</strong> Responsibility becomes ambiguous or contested.
         </p>
+      </Section>
 
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Output Table
-        ------------------------------------------------------------ */}
-        <h2>6. Minimal Output</h2>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Step / Decision</th>
-              <th>Claimed Responsible Party</th>
-              <th>Evidence / Documentation</th>
-              <th>Disputed?</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Risk Identified</td>
-              <td>Management</td>
-              <td>Risk memo, email</td>
-              <td></td>
-            </tr>
-            <tr>
-              <td>Internal Review</td>
-              <td>Management / Compliance</td>
-              <td>Meeting record</td>
-              <td></td>
-            </tr>
-            <tr>
-              <td>Audit Notification</td>
-              <td>Management / Auditors</td>
-              <td>Audit log, correspondence</td>
-              <td></td>
-            </tr>
-            <tr>
-              <td>Disclosure to Board</td>
-              <td>Management / Audit Committee</td>
-              <td>Board minutes</td>
-              <td></td>
-            </tr>
-            <tr>
-              <td>Remediation / Action</td>
-              <td>Management / Compliance</td>
-              <td>Action plan, record</td>
-              <td></td>
-            </tr>
-          </tbody>
-        </table>
-
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Reporting Statement
-        ------------------------------------------------------------ */}
-        <h2>7. Reporting Statement</h2>
+      {/* OUTPUT */}
+      <Section title="Output Structure">
         <p>
-          “Responsibility for disclosure of [risk] was / was not clearly
-          assignable at all steps. Dispute arose at [boundary]. Protocol
-          improvement is required at [gap].”
+          The output is a structured record of responsibility claims, evidence,
+          and dispute points across the audit lifecycle.
         </p>
+      </Section>
 
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Implications
-        ------------------------------------------------------------ */}
-        <h2>8. Implications</h2>
+      {/* IMPLICATION */}
+      <Section title="Implications">
         <p>
-          <strong>If Closed:</strong> Clear disclosure protocol, audit trail,
-          and enforcement exist. Publish as a best-practice reference.
+          If closed, the system demonstrates enforceable responsibility.
         </p>
         <p>
-          <strong>If Disputed:</strong> Publish the point of ambiguity to
-          drive refinement of disclosure obligations, audit scope language,
-          escalation requirements, or embedded acknowledgment mechanisms.
+          If disputed, the exact boundary of failure becomes visible and
+          correctable.
         </p>
+      </Section>
 
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Footer
-        ------------------------------------------------------------ */}
-        <p className="text-sm text-muted-foreground">
-          This document defines a minimal, publication-grade boundary test.
-          No optimization claims, investment implications, or policy mandates
-          are inferred.
+      {/* FINAL */}
+      <section className="rounded-2xl border border-red-900/40 bg-red-950/20 p-8">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Test Outcome
+        </h2>
+        <p className="mt-4 text-red-200">
+          This test exposes the earliest point where responsibility becomes
+          unassignable.
         </p>
-      </article>
+      </section>
+
+      {/* FOOTER */}
+      <div className="text-center text-sm text-slate-500">
+        Pre-Registered · Non-Actionable · Publication-Grade
+      </div>
     </main>
   );
 }
