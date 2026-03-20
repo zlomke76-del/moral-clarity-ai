@@ -1,16 +1,14 @@
-// app/edge-of-knowledge/space-truth-encoding/page.tsx
-
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Passive Truth-Encoding Materials for Space Mission Integrity | Moral Clarity AI",
+    "Passive Truth-Encoding Materials for Space Mission Integrity | Truth Persistence Boundary",
   description:
-    "A white paper evaluating whether spacecraft materials can intrinsically encode cumulative radiation, thermal, and impact exposure to prevent silent degradation and institutional self-deception.",
+    "A constraint establishing that cumulative degradation must be irreversibly encoded in material state, or the system becomes epistemically unsafe.",
   openGraph: {
     title: "Passive Truth-Encoding Materials for Space Mission Integrity",
     description:
-      "A proposal for embedding irreversible exposure truth directly into spacecraft materials—without sensors, power, or telemetry.",
+      "Truth must persist physically when telemetry and institutions cannot be trusted.",
     url: "https://moralclarity.ai/space-truth-encoding",
     siteName: "Moral Clarity AI",
     type: "article",
@@ -21,184 +19,180 @@ export const metadata: Metadata = {
   },
 };
 
+function Section({ title, children }: any) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
+
 export default function SpaceTruthEncodingPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Passive Truth-Encoding Materials for Space Mission Integrity</h1>
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
 
-        <p className="lead">
-          <strong>
-            A white paper on embedding cumulative exposure truth directly into
-            spacecraft materials
-          </strong>
-        </p>
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Truth Persistence Boundary
+        </div>
 
-        <h2>Abstract</h2>
-        <p>
-          Long-duration space missions operate under extreme uncertainty,
-          limited telemetry, and strong incentives for optimistic modeling.
-          Catastrophic failures often arise not from lack of intelligence, but
-          from silent, cumulative material degradation that remains hidden until
-          it is too late to act. This paper evaluates whether spacecraft
-          materials can be engineered to intrinsically and irreversibly encode
-          cumulative exposure to space-specific hazards—such as ionizing
-          radiation, micrometeoroid impacts, vacuum-induced chemical changes,
-          and extreme thermal cycling—without sensors, power, or telemetry. Such
-          materials would function as a physical safety primitive, preventing
-          denial or averaging away of real exposure history when institutional
-          or technical oversight fails.
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Passive Truth-Encoding Materials for Space Mission Integrity
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          When telemetry fails, truth must persist in matter—not interpretation.
         </p>
 
-        <h2>1. The Problem: Invisible Accumulation in Space Systems</h2>
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Truth persistent · Irreversible · Non-erasable · Institution-independent
+        </div>
+      </section>
+
+      {/* CORE */}
+      <Section title="Core Boundary">
         <p>
-          Spacecraft materials experience cumulative insults that are difficult
-          to monitor continuously or interpret in real time. Radiation damage,
-          thermal fatigue, micro-impacts, and outgassing alter material
-          properties gradually, often without triggering immediate alarms.
-          Telemetry bandwidth is limited, sensors fail, and ground-based models
-          extrapolate beyond validated regimes.
-        </p>
-        <p>
-          When degradation is invisible, decision-makers may delay maintenance,
-          extend mission lifetimes beyond safe margins, or underestimate
-          compounding risk. Failure, when it occurs, is often sudden and
-          catastrophic.
+          This system defines a constraint: cumulative exposure must be
+          irreversibly encoded into material state in regimes where monitoring,
+          telemetry, or institutional interpretation are unreliable.
         </p>
 
-        <h2>2. Concept: Material-Encoded Exposure Truth</h2>
-        <p>
-          Passive truth-encoding materials embed cumulative exposure history
-          directly into their physical structure. Instead of measuring and
-          reporting conditions, the material itself irreversibly records what
-          space has done to it.
+        <p className="text-red-300">
+          If truth can be lost, averaged, or denied, the system is epistemically unsafe.
         </p>
-        <ul>
-          <li>Encoding is intrinsic to the bulk material</li>
-          <li>No sensors, electronics, power, or telemetry required</li>
-          <li>Changes are path-dependent and non-resettable</li>
+      </Section>
+
+      {/* PROBLEM */}
+      <Section title="Problem: Invisible Accumulation">
+        <p>
+          Space systems degrade cumulatively through radiation, thermal cycling,
+          micro-impacts, and vacuum exposure. These effects are often invisible
+          until catastrophic failure.
+        </p>
+
+        <p className="text-red-300">
+          When degradation is not physically recorded, decision-making becomes vulnerable to optimism, delay, and denial.
+        </p>
+      </Section>
+
+      {/* CONCEPT */}
+      <Section title="Truth Encoding Principle">
+        <p>
+          The material itself becomes the record of exposure.
+        </p>
+
+        <ul className="list-disc pl-6">
+          <li>Intrinsic encoding within the bulk material</li>
+          <li>No sensors, power, or telemetry required</li>
+          <li>Irreversible, path-dependent state changes</li>
           <li>Erasure requires material destruction</li>
         </ul>
 
-        <h2>3. Physical Plausibility</h2>
-        <p>
-          Several well-established physical mechanisms support irreversible,
-          cumulative encoding:
+        <p className="text-red-300">
+          Measurement can fail. Matter cannot forget.
         </p>
-        <ul>
-          <li>
-            <strong>Radiation-induced color centers:</strong> Optical materials
-            darken irreversibly with accumulated ionizing radiation.
-          </li>
-          <li>
-            <strong>Lattice damage and embrittlement:</strong> Metals and
-            polymers undergo permanent microstructural changes under radiation
-            and thermal cycling.
-          </li>
-          <li>
-            <strong>Microfracture accumulation:</strong> Composites and ceramics
-            record repeated impacts and cyclic stress through crack networks and
-            delamination.
-          </li>
-          <li>
-            <strong>Phase transformations:</strong> Certain alloys and polymers
-            undergo irreversible state changes after repeated thermal or vacuum
-            exposure.
-          </li>
-          <li>
-            <strong>Outgassing-driven chemical shifts:</strong> Vacuum exposure
-            permanently alters composition and surface chemistry.
-          </li>
+      </Section>
+
+      {/* MECHANISMS */}
+      <Section title="Physical Mechanisms">
+        <ul className="list-disc pl-6">
+          <li>Radiation-induced color centers</li>
+          <li>Lattice damage and embrittlement</li>
+          <li>Microfracture networks</li>
+          <li>Irreversible phase transitions</li>
+          <li>Vacuum-driven chemical shifts</li>
         </ul>
+
         <p>
-          These effects escalate monotonically with exposure and cannot be
-          reversed under normal operational conditions.
+          These mechanisms encode exposure cumulatively and non-resettably.
         </p>
+      </Section>
 
-        <h2>4. Regime Mapping</h2>
-
-        <h3>High-Value Regimes</h3>
-        <ul>
+      {/* REGIME */}
+      <Section title="Regime Mapping">
+        <p className="font-semibold text-white">Valid:</p>
+        <ul className="list-disc pl-6">
           <li>Long-duration, deep-space missions</li>
-          <li>Surface habitats and orbital infrastructure</li>
-          <li>Systems with sparse or unreliable active monitoring</li>
-          <li>
-            Contexts where organizational incentives favor optimism or delay
-          </li>
+          <li>Telemetry-limited or failure-prone systems</li>
+          <li>Environments with strong institutional bias or delay risk</li>
         </ul>
 
-        <h3>Low-Value or Failure Regimes</h3>
-        <ul>
+        <p className="font-semibold text-white mt-4">Fails:</p>
+        <ul className="list-disc pl-6">
           <li>Short-duration missions</li>
-          <li>Systems with dense, reliable sensor coverage</li>
-          <li>Post-mission analysis only</li>
-          <li>Applications requiring precise real-time quantification</li>
+          <li>High-fidelity, redundant monitoring systems</li>
+          <li>Contexts requiring precise real-time measurement</li>
+        </ul>
+      </Section>
+
+      {/* FAILURE */}
+      <Section title="Failure Modes">
+        <ul className="list-disc pl-6">
+          <li>Encoded signals do not correlate with degradation</li>
+          <li>Exposure history can be masked or erased</li>
+          <li>Signals are ambiguous or uninterpretable</li>
+          <li>Truth arrives too late to inform action</li>
         </ul>
 
-        <h2>5. Distinction From Existing Safety Approaches</h2>
-        <p>
-          Passive truth-encoding materials differ fundamentally from sensors,
-          inspections, redundancy, and safety margins. Those systems rely on
-          interpretation, reporting, and incentives. Material-encoded truth
-          persists even when oversight collapses.
+        <p className="text-red-300">
+          If truth cannot be trusted, encoding fails.
         </p>
-        <p>
-          This approach does not replace elimination, redundancy, or active
-          monitoring. It prevents silent normalization of cumulative risk.
-        </p>
+      </Section>
 
-        <h2>6. Falsification Criteria</h2>
-        <p>The concept is invalid if:</p>
-        <ul>
-          <li>
-            Encoded signals do not correlate with real degradation or failure
-            risk
-          </li>
-          <li>
-            Exposure records can be erased or masked without destroying the
-            material
-          </li>
-          <li>
-            Signals are ambiguous, non-interpretable, or too late to inform
-            action
-          </li>
-          <li>
-            Operational decisions are not improved relative to silent materials
-          </li>
+      {/* DISTINCTION */}
+      <Section title="Boundary Distinction">
+        <p>This system is not:</p>
+        <ul className="list-disc pl-6">
+          <li>A sensor</li>
+          <li>A monitoring system</li>
+          <li>A predictive model</li>
         </ul>
 
-        <h2>7. Humanitarian and Scientific Value</h2>
-        <p>
-          By embedding exposure truth directly into matter, this approach limits
-          the ability of institutions or individuals to deny or defer action in
-          the face of accumulating risk. It supports transparency, safety, and
-          accountability in environments where failure can cost lives.
+        <p className="text-red-300">
+          It enforces truth—not interpretation.
         </p>
+      </Section>
+
+      {/* INVARIANT */}
+      <Section title="Invariant Framework">
+        <p><strong>G:</strong> Exposure-preserving transformations</p>
+        <p><strong>Q:</strong> True cumulative degradation</p>
+        <p><strong>S:</strong> Material-encoded state</p>
+
+        <p className="text-red-300">
+          Failure: Q cannot be reconstructed from S
+        </p>
+      </Section>
+
+      {/* CLAIM */}
+      <Section title="Claim Eligibility Boundary">
         <p>
-          Ethical risks include misinterpretation, normalization of degradation,
-          or misuse as a substitute for proper engineering. Deployment requires
-          clear signaling standards, education, and governance.
+          Any system operating under cumulative risk must demonstrate that
+          degradation truth is physically preserved and non-erasable.
         </p>
 
-        <h2>Conclusion</h2>
-        <p>
-          Passive truth-encoding materials constitute a valid safety primitive
-          for long-duration, telemetry-limited space missions. When cumulative
-          degradation threatens mission integrity and oversight is imperfect,
-          truth must be enforced by physics, not paperwork.
+        <p className="text-red-300">
+          Systems that rely solely on telemetry or interpretation are not sufficient in these regimes.
         </p>
+      </Section>
 
-        <hr />
-
-        <p>
-          <strong>Note:</strong> This paper reflects the reasoning framework used
-          by <em>Solace</em>, but does not require Solace to be deployed.
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          In environments where failure is delayed and oversight is imperfect,
+          truth must be enforced by physics. Systems that allow degradation to
+          remain invisible are not merely incomplete—they are structurally unsafe.
         </p>
+      </section>
 
-        <p className="text-sm text-muted-foreground">
-          Version 1.0 · Public white paper · Moral Clarity AI
-        </p>
-      </article>
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Truth-bound · Irreversible · Non-erasable · Institution-independent · Versioned
+      </div>
     </main>
   );
 }
