@@ -4,223 +4,195 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Action Threshold Collapse: When Systems Cannot Act Without Making Things Worse | Moral Clarity AI",
+    "Action Threshold Collapse | Moral Clarity AI",
   description:
-    "A regime-bounded examination of governance paralysis under irreducible tradeoff, where every available intervention produces greater harm than inaction.",
-  openGraph: {
-    title: "Action Threshold Collapse",
-    description:
-      "When risk is known, capability exists, and action itself destabilizes the system.",
-    url: "https://moralclarity.ai/edge-of-knowledge/action-threshold-collapse",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A regime-bounded failure mode where every available action produces greater harm than inaction.",
 };
+
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8 shadow-lg backdrop-blur-sm">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300 leading-7">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function Signal({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-sky-900/40 bg-slate-900/60 p-4">
+      <div className="text-xs uppercase tracking-widest text-sky-300">
+        {label}
+      </div>
+      <div className="mt-2 text-sm text-slate-200">{value}</div>
+    </div>
+  );
+}
 
 export default function ActionThresholdCollapsePage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Action Threshold Collapse</h1>
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10 shadow-xl">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Failure Mode
+        </div>
 
-        <p className="lead">
-          <strong>
-            When systems cannot act without making things worse
-          </strong>
-        </p>
+        <h1 className="mt-4 text-4xl font-semibold text-white leading-tight">
+          Action Threshold Collapse
+        </h1>
 
-        <h2>Preface</h2>
-        <p>
-          Action Threshold Collapse is frequently misclassified as indecision,
-          weakness, or incompetence in governance. This misdiagnosis obscures the
-          true mechanism at work. In these cases, paralysis does not arise from
-          lack of will, insight, or authority, but from the structural reality
-          that every available intervention carries secondary effects perceived
-          as more damaging than the risk itself.
-        </p>
-        <p>
-          Treating such impasses as moral or managerial failure distorts
-          responsibility, undermines legitimate stewardship, and collapses
-          ethical evaluation into caricature.
+        <p className="mt-4 text-lg text-slate-300">
+          When systems cannot act without making things worse.
         </p>
 
-        <h2>Abstract</h2>
-        <p>
-          Action Threshold Collapse is a governance failure mode distinct from
-          procedural inertia, omission, or ignorance. It occurs when risk is
-          recognized, signaling is clear, and intervention capability exists,
-          yet effective action is foreclosed because all available options induce
-          unacceptable secondary harm, instability, or legitimacy loss. This
-          failure mode emerges in systems where structural tradeoffs render all
-          interventions net-negative, producing paralysis, oscillation, or
-          delayed escalation. The diagnosis applies only where information is
-          sufficient, authority exists, and inaction is compelled by the
-          destabilizing consequences of action itself.
-        </p>
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <Signal label="Type" value="Governance Failure Mode" />
+          <Signal label="Condition" value="Irreducible Tradeoff" />
+          <Signal label="Outcome" value="Forced Inaction / Oscillation" />
+        </div>
+      </section>
 
-        <h2>The Problem: When Every Action Increases Harm</h2>
+      {/* PREFACE */}
+      <Section title="Preface">
         <p>
-          In certain tightly coupled systems, intervention initiates adverse
-          cascades that amplify rather than reduce risk. Actions trigger feedback
-          loops, legitimacy erosion, or secondary failures that exceed the
-          original threat. In such regimes, inaction is not a default preference;
-          it is the consequence of all available actions being ethically or
-          operationally indefensible.
+          Action Threshold Collapse is frequently misclassified as indecision or
+          incompetence. This misdiagnosis obscures the structural reality that
+          every available intervention produces outcomes worse than the risk
+          itself.
         </p>
         <p>
-          The system is not ignorant, unprepared, or procedurally stalled. It is
-          constrained by the reality that intervention itself becomes the most
-          dangerous act.
+          In these conditions, paralysis is not failure of will. It is a
+          consequence of the system’s constraint space.
         </p>
+      </Section>
 
-        <h2>Failure Mode Definition</h2>
+      {/* ABSTRACT */}
+      <Section title="Abstract">
         <p>
-          Action Threshold Collapse applies only when all of the following
-          conditions are simultaneously satisfied:
+          This failure mode arises when risk is recognized, signaling is clear,
+          and intervention capability exists — yet action is foreclosed because
+          all available options produce greater harm, instability, or legitimacy
+          loss.
         </p>
-        <ul>
+      </Section>
+
+      {/* CORE PROBLEM */}
+      <Section title="The Problem">
+        <p>
+          In tightly coupled systems, intervention initiates cascades that
+          amplify rather than reduce risk.
+        </p>
+        <p>
+          The system is not ignorant. It is constrained by the fact that action
+          itself becomes the most dangerous move.
+        </p>
+      </Section>
+
+      {/* CONDITIONS */}
+      <Section title="Failure Conditions">
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Recognized risk</li>
+          <li>Clear signaling</li>
+          <li>Available capability</li>
+          <li>All actions produce greater harm than inaction</li>
+        </ul>
+      </Section>
+
+      {/* DISTINCTIONS */}
+      <Section title="Distinction From Adjacent Failures">
+        <ul className="space-y-3">
           <li>
-            <strong>Recognized risk:</strong> The threat is explicitly acknowledged
-            by decision-makers.
+            <strong>Procedural Entrenchment:</strong> rules block action
           </li>
           <li>
-            <strong>Clear signaling:</strong> Alerts and feedback mechanisms
-            accurately communicate risk magnitude and trajectory.
+            <strong>Neglect:</strong> risk is ignored
           </li>
           <li>
-            <strong>Available capability:</strong> Practical means of intervention
-            exist within scope of authority.
+            <strong>Silent Degradation:</strong> harm unseen
           </li>
           <li>
-            <strong>Action-induced destabilization:</strong> Every available
-            intervention produces secondary harm, legitimacy loss, or instability
-            outweighing its benefit.
+            <strong>Late Warning:</strong> information arrives too late
           </li>
         </ul>
-        <p>
-          Under these conditions, paralysis, oscillation, or delayed escalation
-          is not negligence—it is structurally compelled.
-        </p>
+      </Section>
 
-        <h2>Distinction From Adjacent Failure Modes</h2>
-        <ul>
-          <li>
-            <strong>Procedural Entrenchment:</strong> Action is blocked by rigid
-            adherence to rules. In Action Threshold Collapse, procedures may be
-            flexible, but outcomes remain unacceptable.
-          </li>
-          <li>
-            <strong>Neglect or Omission:</strong> Risk is ignored or unrecognized.
-            Here, risk and duty are explicitly acknowledged.
-          </li>
-          <li>
-            <strong>Silent Degradation:</strong> Harm accumulates without detection.
-            In this mode, signaling is sufficient and visible.
-          </li>
-          <li>
-            <strong>Late or Absent Warning:</strong> Information arrives too late.
-            In Action Threshold Collapse, information is timely and credible.
-          </li>
-        </ul>
-
-        <h2>Regime Mapping</h2>
-
-        <h3>Likely</h3>
-        <ul>
-          <li>Systemic financial crises</li>
+      {/* REGIME */}
+      <Section title="Regime Mapping">
+        <p className="font-semibold text-white">Likely</p>
+        <ul className="list-disc pl-6">
+          <li>Financial crises</li>
           <li>Geopolitical standoffs</li>
-          <li>Highly interconnected infrastructure under stress</li>
-          <li>Ecological or social systems with strong feedback coupling</li>
+          <li>Highly coupled infrastructure</li>
         </ul>
 
-        <h3>Marginal</h3>
-        <ul>
-          <li>Loosely coupled systems</li>
-          <li>Domains where intervention effects can be isolated or contained</li>
+        <p className="font-semibold text-white mt-4">Inapplicable</p>
+        <ul className="list-disc pl-6">
+          <li>Ignorance</li>
+          <li>Lack of authority</li>
+          <li>Procedural blockage</li>
         </ul>
+      </Section>
 
-        <h3>Inapplicable</h3>
-        <ul>
-          <li>Ignorance or missing information</li>
-          <li>Lack of authority or capability</li>
-          <li>Procedural blockage as primary cause</li>
-        </ul>
-
-        <h2>Why Signaling Alone Cannot Resolve It</h2>
+      {/* LIMIT */}
+      <Section title="Why More Information Fails">
         <p>
-          No increase in monitoring, data, or warning fidelity resolves Action
-          Threshold Collapse. The impasse is not epistemic; it is structural and
-          ethical. Additional information only sharpens awareness of the dilemma
-          without creating a viable path to safe action.
+          This is not an epistemic problem. Additional data increases awareness
+          but does not create a viable action path.
         </p>
+      </Section>
 
-        <h2>Falsification Criteria</h2>
-        <p>This framing fails if:</p>
-        <ul>
-          <li>
-            Comparable systems reliably intervene without producing greater harm
-          </li>
-          <li>
-            Paralysis is shown to result from missing knowledge or capacity
-          </li>
-          <li>
-            Incremental or adaptive actions consistently restore stability
-            without unacceptable side effects
-          </li>
+      {/* FALSIFICATION */}
+      <Section title="Falsification Criteria">
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Systems intervene without greater harm</li>
+          <li>Paralysis caused by missing knowledge</li>
+          <li>Incremental action restores stability</li>
         </ul>
+      </Section>
 
-        <h2>Ethical Risk of Misuse</h2>
+      {/* ETHICAL */}
+      <Section title="Ethical Risk">
         <p>
-          This concept can be abused to rationalize bad-faith inaction or shield
-          actors from accountability. Action Threshold Collapse must never be
-          invoked without transparent articulation of tradeoffs, projected
-          consequences, and why no available action meets ethical thresholds.
+          This concept can be abused to justify inaction. It must require explicit
+          articulation of tradeoffs and consequences.
         </p>
-        <p>
-          Without this transparency, the concept collapses into excuse-making.
+      </Section>
+
+      {/* INVARIANT */}
+      <Section title="Invariant Structure">
+        <p>Symmetry group: permissible interventions</p>
+        <p>Conserved quantity: legitimacy</p>
+        <p>Failure condition: all actions worse than inaction</p>
+      </Section>
+
+      {/* FINAL */}
+      <section className="rounded-2xl border border-red-900/40 bg-red-950/20 p-8">
+        <h2 className="text-xl font-semibold text-white">Final Judgment</h2>
+        <p className="mt-4 text-red-200 leading-7">
+          CONDITIONAL VALIDITY. This failure mode exists only where action is
+          structurally foreclosed by irreducible harm tradeoffs.
         </p>
+      </section>
 
-        <h2>Invariant Framework Declaration</h2>
-        <ul>
-          <li>
-            <strong>Symmetry group (𝑮):</strong> Permissible governance
-            interventions under existing authority, mandate, and legal bounds
-          </li>
-          <li>
-            <strong>Conserved quantity (𝑸):</strong> System legitimacy and
-            stability under intervention
-          </li>
-          <li>
-            <strong>Invariant spectrum (𝑺):</strong> Net harm induced by each
-            available action, measured across coupled domains (stability,
-            legitimacy, cascading risk)
-          </li>
-          <li>
-            <strong>Failure signature on 𝑺:</strong> All admissible actions
-            occupy a strictly worse harm region than inaction, producing a
-            categorical gap rather than a gradient tradeoff
-          </li>
-        </ul>
-
-        <h2>Final Judgment</h2>
-        <p>
-          <strong>CONDITIONAL VALIDITY.</strong> Action Threshold Collapse is a
-          distinct and structurally falsifiable governance failure mode arising
-          only when action is foreclosed by irreducible harm tradeoffs. It does
-          not absolve responsibility; it defines the boundary where legitimacy
-          cannot be claimed by action or inaction alone.
-        </p>
-
-        <hr />
-
-        <p className="text-sm text-muted-foreground">
-          Version 1.1 · Public doctrine · Edge of Knowledge · Moral Clarity AI
-        </p>
-      </article>
+      {/* FOOTER */}
+      <div className="text-center text-sm text-slate-500">
+        Version 1.1 · Edge of Knowledge · Moral Clarity AI
+      </div>
     </main>
   );
 }
