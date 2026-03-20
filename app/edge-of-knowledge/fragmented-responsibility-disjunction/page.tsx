@@ -1,174 +1,186 @@
 // app/edge-of-knowledge/fragmented-responsibility-disjunction/page.tsx
-// Moral Clarity AI — Edge of Knowledge
-// Title: Fragmented Responsibility Disjunction
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Fragmented Responsibility Disjunction | Moral Clarity AI",
   description:
-    "A governance failure mode where risk is recognized and signaled, yet action fails because authority is fragmented, overlapping, or non-executable.",
-  openGraph: {
-    title: "Fragmented Responsibility Disjunction",
-    description:
-      "When recognized risk fails to produce action due to fragmented or non-executable responsibility.",
-    url: "https://moralclarity.ai/edge-of-knowledge/fragmented-responsibility-disjunction",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A terminal execution failure state where risk is known and capability exists, but no legitimate authority path enables action.",
 };
+
+function Section({ title, children }: any) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
+
+function Signal({ label, value }: any) {
+  return (
+    <div className="rounded-xl border border-sky-900/40 bg-slate-900/60 p-4">
+      <div className="text-xs uppercase text-sky-300">{label}</div>
+      <div className="mt-2 text-sm text-slate-200">{value}</div>
+    </div>
+  );
+}
 
 export default function FragmentedResponsibilityDisjunctionPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Fragmented Responsibility Disjunction</h1>
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
 
-        <p className="lead">
-          <strong>
-            When recognized risk fails to produce action because no authority
-            can legitimately act
-          </strong>
-        </p>
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Execution Failure State
+        </div>
 
-        <p className="text-sm text-muted-foreground">
-          Edge of Knowledge · Governance-Driven Failure Modes
-        </p>
+        <h1 className="mt-4 text-4xl font-semibold text-white leading-tight">
+          Fragmented Responsibility Disjunction
+        </h1>
 
-        <h2>Preface</h2>
-        <p>
-          Governance failures are often attributed to ignorance, incompetence,
-          or unwillingness. Such explanations fail to account for a distinct
-          and recurrent failure mode: situations in which risk is explicitly
-          recognized and adequately signaled, yet no accountable intervention
-          occurs because responsibility itself is structurally fragmented.
-        </p>
-        <p>
-          In these regimes, failure does not arise from absence of awareness,
-          intent, or capability, but from the absence of executable authority.
+        <p className="mt-4 text-lg text-slate-300">
+          Recognized risk without executable authority.
         </p>
 
-        <h2>Abstract</h2>
-        <p>
-          Fragmented Responsibility Disjunction is a governance failure mode
-          that arises after risk acknowledgment and signaling sufficiency, when
-          authority for response is distributed across multiple actors with
-          overlapping, partial, or non-hierarchical mandates. No single entity
-          is empowered to act unilaterally, and no enforceable collective
-          mechanism exists to compel coordinated action.
-        </p>
-        <p>
-          The failure is structural, not epistemic or procedural: risk is known,
-          capability exists, but responsibility cannot be executed without
-          violating legitimacy constraints.
-        </p>
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <Signal label="Type" value="Execution-Impossibility State" />
+          <Signal label="Trigger" value="Fragmented Authority" />
+          <Signal label="Failure" value="No Executable Path" />
+        </div>
 
-        <h2>Failure Mode Definition</h2>
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Diagnostic only · Non-actionable · Authority-bound
+        </div>
+      </section>
+
+      {/* PREFACE */}
+      <Section title="Preface">
         <p>
-          Fragmented Responsibility Disjunction is present only when all of the
-          following conditions hold simultaneously:
+          Governance failures are often attributed to ignorance or unwillingness.
+          This fails to explain a distinct condition:
         </p>
-        <ul>
-          <li>Risk is formally recognized and acknowledged</li>
-          <li>Signaling is timely, credible, and sufficient</li>
-          <li>Capability to respond exists across the system</li>
-          <li>
-            Authority is divided among multiple entities with overlapping,
-            partial, or non-hierarchical mandates
-          </li>
-          <li>
-            No single actor is institutionally authorized to act unilaterally
-            without exceeding its legitimate scope
-          </li>
-          <li>
-            No binding mechanism exists to compel coordinated action
-          </li>
+        <p className="text-red-300">
+          Systems where risk is known, capability exists, and action is beneficial—
+          yet no action occurs because no legitimate authority can act.
+        </p>
+      </Section>
+
+      {/* CORE */}
+      <Section title="State Definition">
+        <p>
+          Fragmented Responsibility Disjunction is a terminal execution failure
+          state in which:
+        </p>
+        <ul className="list-disc pl-6">
+          <li>Risk is explicitly recognized</li>
+          <li>Capability to respond is present</li>
+          <li>Action is beneficial and feasible</li>
+          <li>No actor can act without violating legitimacy constraints</li>
         </ul>
 
-        <h2>Distinction From Adjacent Failure Modes</h2>
-        <ul>
-          <li>
-            <strong>Epistemic Lock-In:</strong> Interpretation fails to update;
-            here, interpretive consensus exists
-          </li>
-          <li>
-            <strong>Action Threshold Collapse:</strong> Action itself is
-            net-negative; here, action is beneficial but not executable
-          </li>
-          <li>
-            <strong>Procedural Entrenchment:</strong> Rules block action; here,
-            authority itself is misaligned
-          </li>
-          <li>
-            <strong>Neglect or Omission:</strong> Risk is unrecognized; here,
-            recognition is explicit
-          </li>
+        <p>
+          The system is fully aware and fully capable—but structurally unable to act.
+        </p>
+      </Section>
+
+      {/* ENTRY CONDITIONS */}
+      <Section title="Entry Conditions (All Required)">
+        <ul className="list-disc pl-6">
+          <li>Risk is formally acknowledged</li>
+          <li>Signaling is sufficient and credible</li>
+          <li>System capability is preserved</li>
+          <li>Authority is distributed across actors</li>
+          <li>No actor has unilateral legitimacy</li>
+          <li>No binding coordination mechanism exists</li>
+        </ul>
+      </Section>
+
+      {/* INVARIANT */}
+      <Section title="Invariant Framework Declaration">
+        <p><strong>G (Symmetry):</strong> Reassignments of authority across actors</p>
+        <p><strong>Q (Conserved):</strong> Total system capability</p>
+        <p><strong>S (State Space):</strong> Executable authority paths</p>
+
+        <p className="mt-4 text-red-300">
+          Failure signature: S = ∅ (no legitimate execution path exists)
+        </p>
+      </Section>
+
+      {/* MECHANISM */}
+      <Section title="Mechanism of Failure">
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Overlapping mandates prevent unilateral action</li>
+          <li>Non-hierarchical authority blocks escalation</li>
+          <li>Coordination requires consensus without enforcement</li>
+          <li>Actors remain within legitimacy bounds while inaction persists</li>
         </ul>
 
-        <h2>Invariant Framework Declaration</h2>
-
         <p>
-          <strong>Symmetry group (𝑮):</strong> Redistributions of authority,
-          mandate reassignments, and role re-labelings that preserve the total
-          set of actors while allowing responsibility to be reconfigured.
+          The system is not blocked by rules—it is blocked by the structure of authority itself.
         </p>
+      </Section>
 
+      {/* DATA LIMIT */}
+      <Section title="Why More Information Cannot Resolve It">
         <p>
-          <strong>Conserved quantity (𝑸):</strong> Aggregate system capability
-          to respond to the recognized risk.
-        </p>
-
-        <p>
-          <strong>Invariant spectrum (𝑺):</strong> The set of executable
-          authority paths—actors or coalitions that can legitimately initiate
-          and carry out a response without exceeding mandate or requiring
-          external permission.
-        </p>
-
-        <p>
-          <strong>Failure signature on 𝑺:</strong> The invariant spectrum is
-          empty. No legitimate authority path exists despite preserved system
-          capability and acknowledged risk.
-        </p>
-
-        <h2>Why More Data Cannot Resolve It</h2>
-        <p>
-          Additional information does not create executable authority. When the
-          invariant spectrum is empty, further signaling only reinforces
-          awareness without enabling action. The constraint is institutional,
-          not informational.
-        </p>
-
-        <h2>Ethical Risk of Misuse</h2>
-        <p>
-          This concept must not be used to diffuse responsibility or absolve
-          actors of bad faith. Diagnosing Fragmented Responsibility Disjunction
-          requires explicit demonstration that no legitimate authority path
-          exists—not merely that coordination is difficult.
-        </p>
-
-        <h2>Final Judgment</h2>
-        <p>
-          <strong>DOCTRINALLY VALID — REGIME-BOUNDED</strong>
+          Additional data does not create authority.
         </p>
         <p>
-          Fragmented Responsibility Disjunction identifies a structural failure
-          in governance legitimacy: capability exists, risk is known, but no
-          actor can act without overstepping authority. The diagnosis forbids
-          claims of control, safety, or stewardship until authority is
-          explicitly realigned.
+          When S = ∅, signaling increases awareness without enabling execution.
         </p>
-
-        <hr />
-
-        <p className="text-sm text-muted-foreground">
-          Version 1.1 · Public doctrine · Edge of Knowledge · Moral Clarity AI
+        <p className="text-red-300">
+          The constraint is structural, not informational.
         </p>
-      </article>
+      </Section>
+
+      {/* DISTINCTIONS */}
+      <Section title="Boundary Distinctions">
+        <ul className="list-disc pl-6">
+          <li>Not ignorance — risk is known</li>
+          <li>Not lock-in — interpretation is correct</li>
+          <li>Not inertia — actors could act individually</li>
+          <li>Not procedural failure — authority itself is misaligned</li>
+        </ul>
+      </Section>
+
+      {/* TERMINAL */}
+      <Section title="Terminal State Characteristics">
+        <ul className="list-disc pl-6">
+          <li>Awareness remains high</li>
+          <li>Capability remains intact</li>
+          <li>Inaction persists</li>
+          <li>Failure emerges externally</li>
+        </ul>
+      </Section>
+
+      {/* ETHICS */}
+      <Section title="Misuse Constraint">
+        <p>
+          This concept must not be used to diffuse responsibility or justify inaction.
+        </p>
+        <p>
+          Invocation requires proof that no legitimate authority path exists—
+          not merely that coordination is difficult.
+        </p>
+      </Section>
+
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          State Classification
+        </h2>
+        <p className="mt-4 text-red-200">
+          Fragmented Responsibility Disjunction is not a failure of knowledge or capability.
+          It is a failure of executable authority. When S = ∅, action is impossible
+          without violating legitimacy. The system cannot correct itself.
+        </p>
+      </section>
+
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Authority-bound · Terminal · Versioned
+      </div>
     </main>
   );
 }
