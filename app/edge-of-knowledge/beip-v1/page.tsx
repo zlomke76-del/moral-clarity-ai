@@ -1,253 +1,173 @@
 // app/edge-of-knowledge/beip-v1/page.tsx
-// ------------------------------------------------------------
-// Edge of Knowledge Entry
-// Boundary-Encoded Interfacial Persistence (BEIP v1)
-// Status: Pre-registered protocol · Results pending
-// ------------------------------------------------------------
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "BEIP v1 — Boundary-Encoded Interfacial Persistence",
   description:
-    "A minimal, falsifiable experiment testing whether polymer interfaces can encode persistent physical memory under near-melt thermal cycling.",
+    "A pre-registered, minimal falsification test for whether polymer interfaces encode persistent physical memory.",
 };
 
-export default function BEIPv1Page() {
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      {/* ------------------------------------------------------------
-         Header
-      ------------------------------------------------------------ */}
-      <header className="mb-12">
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Boundary-Encoded Interfacial Persistence (BEIP v1)
-        </h1>
-        <p className="mt-4 text-lg text-muted-foreground">
-          A minimal, falsifiable test for physical memory at polymer interfaces
-        </p>
-        <div className="mt-6 rounded-md border px-4 py-3 text-sm">
-          <strong>Status:</strong> Pre-registered protocol · Results pending
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8 shadow-lg backdrop-blur-sm">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300 leading-7">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function Signal({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-sky-900/40 bg-slate-900/60 p-4">
+      <div className="text-xs uppercase tracking-widest text-sky-300">
+        {label}
+      </div>
+      <div className="mt-2 text-sm text-slate-200">{value}</div>
+    </div>
+  );
+}
+
+function Step({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-sky-900/30 bg-slate-900/60 p-5">
+      <div className="text-sm font-semibold text-white">{title}</div>
+      <div className="mt-2 text-sm text-slate-400">{children}</div>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10 shadow-xl">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Boundary Experiment
         </div>
-      </header>
 
-      {/* ------------------------------------------------------------
-         Why This Exists
-      ------------------------------------------------------------ */}
-      <section className="mb-12">
-        <h2 className="text-xl font-semibold">Why This Exists</h2>
-        <p className="mt-4">
-          Semicrystalline polymers frequently exhibit anomalous behavior near
-          surfaces and interfaces. After repeated heating, cooling, or service,
-          boundary regions may age, soften, embrittle, or crystallize differently
-          than the bulk.
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          BEIP v1 — Boundary-Encoded Interfacial Persistence
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          Can a polymer interface remember?
         </p>
-        <p className="mt-4">
-          These effects are widely reported but rarely resolved. The unresolved
-          question is simple:
-        </p>
-        <blockquote className="mt-4 border-l-4 pl-4 italic">
-          Do polymer interfaces merely respond transiently to processing, or can
-          they encode persistent physical memory that survives ordinary thermal
-          cycling?
-        </blockquote>
-        <p className="mt-4">
-          BEIP v1 is a deliberately minimal, pre-registered experiment designed
-          to answer this question decisively.
-        </p>
+
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <Signal label="Type" value="Pre-Registered Kill Test" />
+          <Signal label="Domain" value="Polymer Interfaces" />
+          <Signal label="Outcome" value="Binary Survival / Closure" />
+        </div>
+
+        <div className="mt-8 rounded-xl border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200">
+          No mechanism claims · No application claims · Falsification-first
+        </div>
       </section>
 
-      {/* ------------------------------------------------------------
-         Claim Under Test
-      ------------------------------------------------------------ */}
-      <section className="mb-12">
-        <h2 className="text-xl font-semibold">The Claim Under Test</h2>
-        <p className="mt-4">
-          This experiment tests whether a common plastic— isotactic polypropylene
-          (iPP)— can retain a history-dependent physical state at its boundary
-          with a solid surface after repeated near-melt thermal cycling.
+      {/* QUESTION */}
+      <Section title="The Question">
+        <p>
+          Do polymer interfaces encode persistent physical memory, or are all
+          observed effects transient artifacts of processing history?
         </p>
-        <ul className="mt-4 list-disc pl-6">
-          <li>Localized to the interface rather than the bulk</li>
-          <li>Persistent under repeated near-melt cycling</li>
-          <li>Erased only by crossing a true full-melt reset</li>
+      </Section>
+
+      {/* CLAIM */}
+      <Section title="Claim Under Test">
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Interface-localized state</li>
+          <li>Persistent under near-melt cycling</li>
+          <li>Erased only by full melt reset</li>
         </ul>
-      </section>
+      </Section>
 
-      {/* ------------------------------------------------------------
-         What This Is Not
-      ------------------------------------------------------------ */}
-      <section className="mb-12">
-        <h2 className="text-xl font-semibold">What This Is Not</h2>
-        <ul className="mt-4 list-disc pl-6">
-          <li>Not a mechanism proposal</li>
-          <li>Not an application roadmap</li>
-          <li>Not a chemistry modification</li>
-          <li>Not a performance claim</li>
+      {/* WHAT THIS IS NOT */}
+      <Section title="What This Is Not">
+        <ul className="list-disc pl-6 space-y-2">
+          <li>No mechanism proposal</li>
+          <li>No chemistry modification</li>
+          <li>No application pathway</li>
+          <li>No performance claims</li>
         </ul>
-        <p className="mt-4">
-          This is a boundary test designed to either survive or fail without
-          interpretation.
-        </p>
-      </section>
+        <p>This test exists to survive or fail.</p>
+      </Section>
 
-      {/* ------------------------------------------------------------
-         Experimental Design
-      ------------------------------------------------------------ */}
-      <section className="mb-12">
-        <h2 className="text-xl font-semibold">
-          Experimental Design (Pre-Registered)
-        </h2>
-
-        <h3 className="mt-6 font-semibold">Materials</h3>
-        <ul className="mt-2 list-disc pl-6">
-          <li>Polymer: batch-matched isotactic polypropylene (iPP)</li>
-          <li>Film thickness: 50–200 nm (recorded per sample)</li>
-          <li>
-            Substrates:
-            <ul className="mt-2 list-disc pl-6">
-              <li>Silicon (native oxide)</li>
-              <li>Silanized silicon (hydrophobic)</li>
-            </ul>
-          </li>
-        </ul>
-
-        <h3 className="mt-6 font-semibold">Thermal Reference</h3>
-        <p className="mt-2">
-          Melting peak temperature (Tm,peak) is determined by DSC on first
-          heating at 10 °C/min under inert atmosphere. All protocol temperatures
-          are defined relative to the measured Tm,peak for the batch.
-        </p>
-      </section>
-
-      {/* ------------------------------------------------------------
-         Two-Arm Structure
-      ------------------------------------------------------------ */}
-      <section className="mb-12">
-        <h2 className="text-xl font-semibold">Two-Arm Test Structure</h2>
-
-        <h3 className="mt-6 font-semibold">
-          Arm A — Near-Melt Cycling (Test Condition)
-        </h3>
-        <ul className="mt-2 list-disc pl-6">
-          <li>Temperature: Tm,peak − 8 °C</li>
-          <li>
-            Adjustment rule: if adjusted, adjust only downward (to −10 °C);
-            never higher than −8 °C
-          </li>
-          <li>Hold: 2 minutes</li>
-          <li>Cycles: 8</li>
-          <li>Cool to room temperature after final cycle</li>
-        </ul>
-
-        <h3 className="mt-6 font-semibold">
-          Arm B — Full-Melt Reset (Erase Control)
-        </h3>
-        <ul className="mt-2 list-disc pl-6">
-          <li>Temperature: Tm,peak + 15 °C</li>
-          <li>Hold: 15 minutes</li>
-          <li>Cycles: 3</li>
-          <li>Cool to room temperature after final cycle</li>
-        </ul>
-      </section>
-
-      {/* ------------------------------------------------------------
-         Readouts
-      ------------------------------------------------------------ */}
-      <section className="mb-12">
-        <h2 className="text-xl font-semibold">
-          Readouts (Observation-Only)
-        </h2>
-
-        <h3 className="mt-6 font-semibold">
-          Atomic Force Microscopy (Primary)
-        </h3>
-        <ul className="mt-2 list-disc pl-6">
-          <li>Tapping mode</li>
-          <li>Height and phase contrast (modulus optional)</li>
-          <li>
-            Identical, registered coordinates for baseline, post-Arm A, and
-            post-Arm B
-          </li>
-        </ul>
-        <p className="mt-2 text-sm italic">
-          AFM data is inadmissible if coordinates cannot be reliably re-found.
+      {/* EXPERIMENT */}
+      <Section title="Experimental Structure">
+        <p>
+          Minimal two-arm design isolates persistence vs reset behavior.
         </p>
 
-        <h3 className="mt-6 font-semibold">
-          Differential Scanning Calorimetry (Secondary)
-        </h3>
-        <ul className="mt-2 list-disc pl-6">
-          <li>Cooling scans: Tc,peak and ΔHc</li>
-          <li>Optional reheating: ΔHm to confirm reset quality in Arm B</li>
-        </ul>
-      </section>
+        <div className="grid gap-4 md:grid-cols-2 mt-6">
+          <Step title="Arm A — Near-Melt Cycling">
+            Repeated sub-melt cycling to test persistence.
+          </Step>
 
-      {/* ------------------------------------------------------------
-         Fastest Kill
-      ------------------------------------------------------------ */}
-      <section className="mb-12">
-        <h2 className="text-xl font-semibold">
+          <Step title="Arm B — Full Melt Reset">
+            Full melt cycles to erase any encoded state.
+          </Step>
+        </div>
+      </Section>
+
+      {/* READOUT */}
+      <Section title="Readouts">
+        <p>
+          AFM (primary): spatially registered structural persistence.
+        </p>
+        <p>
+          DSC (secondary): thermal signature separation.
+        </p>
+      </Section>
+
+      {/* KILL */}
+      <section className="rounded-2xl border border-red-900/40 bg-red-950/20 p-8">
+        <h2 className="text-xl font-semibold text-white">
           Single Fastest-Kill Criterion
         </h2>
-        <p className="mt-4">
-          The hypothesis of boundary-encoded interfacial persistence is
-          conclusively falsified if:
+        <p className="mt-4 text-red-200 leading-7">
+          No reproducible interface-localized signature after cycling AND no
+          DSC separation → hypothesis fails.
         </p>
-        <ol className="mt-4 list-decimal pl-6">
-          <li>
-            AFM shows no reproducible, interface-localized,
-            history-dependent signature after Arm A relative to baseline and
-            Arm B across substrates and repeats, and
-          </li>
-          <li>
-            DSC shows no systematic separation between Arm A, Arm B, and baseline
-            in Tc,peak or ΔHc beyond normal instrument and run-to-run variation.
-          </li>
-        </ol>
-        <p className="mt-4 font-medium">
+        <p className="mt-4 font-medium text-red-300">
           If both conditions are met, the line closes.
         </p>
       </section>
 
-      {/* ------------------------------------------------------------
-         Impact
-      ------------------------------------------------------------ */}
-      <section className="mb-12">
-        <h2 className="text-xl font-semibold">What This Accomplishes</h2>
-
-        <h3 className="mt-6 font-semibold">If the Effect Survives</h3>
-        <ul className="mt-2 list-disc pl-6">
-          <li>Demonstrates persistent physical memory localized to interfaces</li>
-          <li>
-            Challenges the assumption that only chemistry or full melting matter
-          </li>
-          <li>Establishes boundaries as state-bearing regions</li>
-        </ul>
-
-        <h3 className="mt-6 font-semibold">If the Effect Fails</h3>
-        <ul className="mt-2 list-disc pl-6">
-          <li>Closes a long-standing ambiguity in polymer aging</li>
-          <li>
-            Confirms near-melt cycling does not preserve boundary memory in iPP
-          </li>
-          <li>Prevents continued drift into artifact-driven explanations</li>
-        </ul>
-      </section>
-
-      {/* ------------------------------------------------------------
-         Footer
-      ------------------------------------------------------------ */}
-      <footer className="border-t pt-8 text-sm text-muted-foreground">
+      {/* OUTCOME */}
+      <Section title="Outcome Space">
         <p>
-          No mechanism claims. No applications inferred. No chemistry changes
-          proposed.
+          If it survives → boundaries become state-bearing regions.
         </p>
-        <p className="mt-2">
-          This Edge of Knowledge entry exists to decide whether a boundary can
-          remember — or not.
+        <p>
+          If it fails → ambiguity in polymer boundary behavior closes.
         </p>
-      </footer>
+      </Section>
+
+      {/* FOOTER */}
+      <div className="text-center text-sm text-slate-500">
+        Pre-Registered · Minimal · Falsifiable · Non-Interpretive
+      </div>
     </main>
   );
 }
