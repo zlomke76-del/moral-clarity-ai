@@ -1,151 +1,193 @@
-// app/edge-of-knowledge/virtual-screening-standard/page.tsx
-// ============================================================
-// EDGE OF KNOWLEDGE
-// Reliability & Governance Standard
-// CLIP-Based Virtual Drug Screening
-// ============================================================
-
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Reliability & Governance Standard for CLIP-Based Virtual Drug Screening | Moral Clarity AI",
+    "Untracked Configurational Energy Landscapes in Polymer Durability | State Observability Boundary",
   description:
-    "Methods-level standards for calibration, reproducibility, interpretability, and auditability in CLIP-based virtual drug screening pipelines.",
-  robots: { index: true, follow: true },
+    "A constraint establishing that durability prediction is non-admissible when the governing internal configurational state trajectory is not observed or tracked.",
+  openGraph: {
+    title:
+      "Untracked Configurational Energy Landscapes in Polymer Durability",
+    description:
+      "Prediction fails when internal state evolution is not observable.",
+    url: "https://moralclarity.ai/edge-of-knowledge/untracked-configurational-energy-landscapes",
+    siteName: "Moral Clarity AI",
+    type: "article",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
-export const dynamic = "force-static";
-
-export default function VirtualScreeningStandardPage() {
+function Section({ title, children }: any) {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article
-        className="
-          prose prose-neutral dark:prose-invert max-w-none
-          prose-h1:tracking-tight
-          prose-h2:tracking-tight
-          prose-a:underline prose-a:font-medium
-          prose-a:text-blue-600 dark:prose-a:text-blue-400
-        "
-      >
-        <h1>
-          Reliability &amp; Governance Standard for CLIP-Based Virtual Drug
-          Screening
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
+
+export default function UntrackedConfigurationalEnergyLandscapesPage() {
+  return (
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — State Observability Boundary
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Untracked Configurational Energy Landscapes in Polymer Durability
         </h1>
 
-        <p className="text-sm text-neutral-500">
-          Edge of Knowledge · Methods &amp; Standards · Public Draft v1.0
+        <p className="mt-4 text-lg text-slate-300">
+          Prediction is invalid when the governing internal state is not observed.
         </p>
 
-        <h2>Purpose</h2>
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          State-unobserved · Trajectory-dependent · Endpoint-insufficient · Prediction-limited
+        </div>
+      </section>
+
+      {/* CORE */}
+      <Section title="Core Boundary">
         <p>
-          This document defines a set of non-expansive, implementation-agnostic
-          operational standards intended to improve the reliability,
-          reproducibility, interpretability, and auditability of CLIP-based
-          virtual drug screening pipelines. It addresses recurring failure modes
-          observed in large-scale computational screening without altering
-          underlying scientific claims or substituting for experimental
-          validation.
+          This system defines a constraint: durability prediction is valid only
+          if the evolving internal configurational energy field is observable,
+          tracked, or explicitly bounded.
         </p>
 
-        <h2>Scope</h2>
+        <p className="text-red-300">
+          If the governing internal state is unobserved, prediction is non-admissible.
+        </p>
+      </Section>
+
+      {/* DEFINITION */}
+      <Section title="Governing State Variable">
         <p>
-          These standards apply to virtual screening systems that employ joint
-          protein–ligand embedding or similarity-based retrieval architectures,
-          including CLIP-inspired models. The controls described herein operate
-          at the workflow and system-behavior level and are designed to coexist
-          with diverse model architectures, datasets, and institutional
-          environments.
+          The relevant quantity is the evolving, spatially heterogeneous
+          configurational free energy landscape, including:
         </p>
 
-        <h2>Enumerated Controls</h2>
-
-        <h3>1. Retrieval Calibration Layer</h3>
-        <p>
-          Post-retrieval similarity scores SHOULD be calibrated (e.g., via
-          isotonic or temperature scaling) prior to final candidate ranking.
-          Calibration mitigates overconfident embedding tails and stabilizes
-          ranking behavior across targets and repeated runs.
-        </p>
-
-        <h3>2. Negative Sampling Discipline</h3>
-        <p>
-          Training pipelines SHOULD incorporate disciplined hard-negative
-          sampling using structurally plausible non-binders. This control
-          improves discrimination beyond naive similarity and reduces
-          false-positive enrichment.
-        </p>
-
-        <h3>3. Pocket–Ligand Interaction Decomposition</h3>
-        <p>
-          Candidate scores SHOULD be decomposable into interpretable components,
-          such as pocket geometry alignment, chemical feature compatibility, and
-          learned interaction residuals. This enables expert review and
-          mechanism-based triage.
-        </p>
-
-        <h3>4. Failure-Mode Logging</h3>
-        <p>
-          Systems SHOULD log exclusion and rejection events with explicit
-          reasons, including confidence thresholds, uncertainty measures, and
-          score variance. Failure-mode logging supports iterative improvement
-          and transparent error analysis.
-        </p>
-
-        <h3>5. Determinism Envelope</h3>
-        <p>
-          A determinism mode SHOULD be available, enforcing fixed random seeds,
-          frozen model weights, and pinned dependencies. This enables exact
-          reproducibility for demonstrations, cross-institutional comparison,
-          and regulatory review.
-        </p>
-
-        <h3>6. Golden-Set Regression Tests</h3>
-        <p>
-          Screening pipelines SHOULD maintain non-negotiable regression tests
-          against benchmark protein–ligand pairs. Golden sets enforce
-          non-regression guarantees and defend against silent performance drift
-          during system evolution.
-        </p>
-
-        <h2>Explicit Boundaries</h2>
-        <ul>
-          <li>
-            These standards do not introduce autonomous decision-making or
-            validation.
-          </li>
-          <li>
-            Computational outputs are not treated as biological or clinical
-            conclusions.
-          </li>
-          <li>
-            Wet-lab validation and expert review remain mandatory downstream
-            steps.
-          </li>
-          <li>
-            No performance, speed, scale, or discovery claims are asserted.
-          </li>
+        <ul className="list-disc pl-6">
+          <li>Entanglement distributions</li>
+          <li>Free volume evolution</li>
+          <li>Residual stress fields</li>
+          <li>Defect populations and microstructural disorder</li>
         </ul>
 
-        <h2>Status &amp; Versioning</h2>
         <p>
-          This document is released as a public draft (v1.0). It is intended to
-          be versioned, auditable, and incrementally refined in response to
-          community, institutional, and regulatory needs while preserving its
-          non-expansive scope.
+          This state evolves irreversibly and path-dependently under real conditions.
+        </p>
+      </Section>
+
+      {/* CONSTRAINT */}
+      <Section title="Observability Constraint">
+        <p className="text-red-300">
+          Durability depends on trajectory—not initial state or endpoint measurement.
         </p>
 
-        <h2>Citation</h2>
         <p>
-          When referencing this standard, cite as:
-          <br />
-          <em>
-            “Reliability &amp; Governance Standard for CLIP-Based Virtual Drug
-            Screening, Edge of Knowledge, Moral Clarity AI, v1.0.”
-          </em>
+          Standard methods collapse this high-dimensional field into scalar descriptors,
+          eliminating the governing variable from analysis.
         </p>
-      </article>
+      </Section>
+
+      {/* FAILURE */}
+      <Section title="Prediction Failure Mode">
+        <ul className="list-disc pl-6">
+          <li>Endpoint testing replaces trajectory tracking</li>
+          <li>Spatial heterogeneity is averaged away</li>
+          <li>Non-equilibrium evolution is treated as equilibrium</li>
+        </ul>
+
+        <p className="text-red-300">
+          These reductions produce apparent certainty where none exists.
+        </p>
+      </Section>
+
+      {/* REGIME */}
+      <Section title="Regime Mapping">
+        <p className="font-semibold text-white">Applies:</p>
+        <ul className="list-disc pl-6">
+          <li>Time-dependent polymer systems</li>
+          <li>Fatigue, creep, and environmental degradation regimes</li>
+          <li>Distributed damage accumulation systems</li>
+        </ul>
+
+        <p className="font-semibold text-white mt-4">Does not apply:</p>
+        <ul className="list-disc pl-6">
+          <li>Fully reversible systems</li>
+          <li>Static or homogeneous microstructures</li>
+          <li>Purely externally dominated failure modes</li>
+        </ul>
+      </Section>
+
+      {/* CRITICAL TRUTH */}
+      <Section title="Critical Implication">
+        <p className="text-red-300">
+          Ignorance of the governing state variable is not uncertainty—it is invalidity.
+        </p>
+
+        <p>
+          Predictions derived without state observability cannot be considered reliable,
+          regardless of empirical agreement in limited tests.
+        </p>
+      </Section>
+
+      {/* CONSEQUENCE */}
+      <Section title="System Consequence">
+        <p>
+          Failure occurs when the internal energy distribution becomes incompatible
+          with future loading conditions—not when a scalar property is exceeded.
+        </p>
+
+        <p className="text-red-300">
+          By the time failure is visible, the governing state trajectory is already irreversible.
+        </p>
+      </Section>
+
+      {/* INVARIANT */}
+      <Section title="Invariant Framework">
+        <p><strong>G:</strong> State-preserving transformations</p>
+        <p><strong>Q:</strong> True internal energy distribution</p>
+        <p><strong>S:</strong> Observed or modeled state</p>
+
+        <p className="text-red-300">
+          Failure: Q not contained within S
+        </p>
+      </Section>
+
+      {/* CLAIM */}
+      <Section title="Claim Eligibility Boundary">
+        <p>
+          Any durability prediction must demonstrate that the governing internal
+          state trajectory is observable, bounded, or explicitly accounted for.
+        </p>
+
+        <p className="text-red-300">
+          Scalar, endpoint, or averaged models are not admissible evidence.
+        </p>
+      </Section>
+
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          Durability is not a property—it is a trajectory through an evolving
+          internal state space. Systems that ignore this trajectory do not make
+          uncertain predictions—they make invalid ones.
+        </p>
+      </section>
+
+      <div className="text-center text-sm text-slate-500">
+        Canonical · State-bound · Trajectory-dependent · Non-admissible prediction · Versioned
+      </div>
     </main>
   );
 }
