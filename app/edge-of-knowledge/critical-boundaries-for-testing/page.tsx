@@ -1,225 +1,220 @@
 // app/edge-of-knowledge/critical-boundaries-for-testing/page.tsx
-// ============================================================
-// EDGE OF KNOWLEDGE — RESEARCH
-// Critical Boundaries for Publication-Grade Testing
-// Status: Boundary framework · Test selection pending
-// ============================================================
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Critical Boundaries for Publication-Grade Testing | Edge of Knowledge",
+    "Critical Boundaries for Publication-Grade Testing | Moral Clarity AI",
   description:
-    "A minimal framework identifying critical system boundaries where falsifiable, publication-grade tests materially improve reliability, safety, governance, and accountability.",
-  openGraph: {
-    title: "Critical Boundaries for Publication-Grade Testing",
-    description:
-      "Research framework for identifying and testing high-risk system boundaries using minimal, falsifiable experiments.",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A selection framework identifying which system boundaries require minimal, falsifiable, publication-grade testing.",
 };
 
-export default function CriticalBoundariesForTestingPage() {
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        {/* ------------------------------------------------------------
-           Header
-        ------------------------------------------------------------ */}
-        <header>
-          <h1>Critical Boundaries for Publication-Grade Testing</h1>
-          <p className="lead">
-            <strong>
-              Minimal, falsifiable boundaries that determine reliability,
-              safety, governance, and operational clarity
-            </strong>
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Status: Boundary framework · Test selection pending
-          </p>
-        </header>
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8 shadow-lg backdrop-blur-sm">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300 leading-7">
+        {children}
+      </div>
+    </section>
+  );
+}
 
-        <hr />
+function Signal({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-sky-900/40 bg-slate-900/60 p-4">
+      <div className="text-xs uppercase tracking-widest text-sky-300">
+        {label}
+      </div>
+      <div className="mt-2 text-sm text-slate-200">{value}</div>
+    </div>
+  );
+}
 
-        {/* ------------------------------------------------------------
-           Overview
-        ------------------------------------------------------------ */}
-        <h2>Overview</h2>
-        <p>
-          This document identifies a minimal set of system boundaries that
-          consistently determine whether complex systems remain reliable,
-          safe, governable, and accountable as they scale.
-        </p>
-        <p>
-          Each boundary is framed not as a theoretical concern, but as a
-          <strong> publishable testing surface</strong>: a location where
-          ambiguity, if left untested, becomes a live risk vector.
-        </p>
-        <p>
-          The list is intentionally constrained. It is not exhaustive. It is
-          filtered for phase relevance and decision impact.
-        </p>
+function Boundary({
+  title,
+  test,
+  output,
+}: {
+  title: string;
+  test: string;
+  output: string;
+}) {
+  return (
+    <div className="rounded-xl border border-sky-900/30 bg-slate-900/60 p-5">
+      <div className="text-sm font-semibold text-white">{title}</div>
+      <p className="mt-2 text-sm text-slate-400">
+        <strong>Test:</strong> {test}
+      </p>
+      <p className="mt-2 text-sm text-slate-500">
+        <strong>Output:</strong> {output}
+      </p>
+    </div>
+  );
+}
 
-        <hr />
+export default function Page() {
+  return (
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10 shadow-xl">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Meta Framework
+        </div>
 
-        {/* ------------------------------------------------------------
-           Boundary List
-        ------------------------------------------------------------ */}
-        <h2>Critical Boundaries</h2>
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Critical Boundaries for Publication-Grade Testing
+        </h1>
 
-        <h3>1. Cross-Functional Collaboration Boundaries</h3>
-        <p>
-          <strong>Test:</strong> What coordination failures or handoff
-          ambiguities emerge between disciplines (e.g., engineering,
-          operations, compliance)?
-        </p>
-        <p>
-          <strong>Publishable test:</strong> A minimal scenario in which
-          ownership, authority, or responsibility is ambiguous at a
-          team–system interface.
-        </p>
-
-        <h3>2. Data Privacy and Security Boundaries</h3>
-        <p>
-          <strong>Test:</strong> Under what conditions does personal or
-          sensitive data cross established containment or access lines?
-        </p>
-        <p>
-          <strong>Publishable test:</strong> A clean protocol designed to
-          surface boundary leakage during system updates, integrations, or
-          user-driven export flows.
+        <p className="mt-4 text-lg text-slate-300">
+          Which system edges are worth testing—and why.
         </p>
 
-        <h3>3. User Authorization and Access Control Boundaries</h3>
-        <p>
-          <strong>Test:</strong> At which edges do privilege escalation or
-          unintended access surface?
-        </p>
-        <p>
-          <strong>Publishable test:</strong> Tabletop or live pairing using
-          minimal representative user roles and forced-edge scenarios
-          (e.g., role crossover, forgotten accounts, compound permission
-          events).
-        </p>
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <Signal label="Type" value="Selection Framework" />
+          <Signal label="Function" value="Test Prioritization" />
+          <Signal label="Output" value="Boundary → Test Mapping" />
+        </div>
 
-        <h3>4. Input Validation and Sanity Boundaries</h3>
-        <p>
-          <strong>Test:</strong> Which malformed, out-of-range, or adversarial
-          inputs cross validation guards?
-        </p>
-        <p>
-          <strong>Publishable test:</strong> A minimal canonical set of
-          out-of-bound inputs with pre-defined “must-reject” and
-          “must-handle” states.
-        </p>
+        <div className="mt-8 rounded-xl border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200">
+          Framework · Non-exhaustive · Test generation layer
+        </div>
+      </section>
 
-        <h3>5. Error Handling and Fault Containment Boundaries</h3>
+      {/* CORE */}
+      <Section title="Core Function">
         <p>
-          <strong>Test:</strong> Where do system or network faults propagate
-          across intended isolation boundaries?
+          This framework identifies system boundaries where ambiguity
+          translates directly into operational, safety, or governance risk.
         </p>
         <p>
-          <strong>Publishable test:</strong> Controlled injection of
-          representative faults with downstream consequence tracing.
+          Each boundary represents a location where a minimal, falsifiable test
+          can materially improve system clarity.
         </p>
+      </Section>
 
-        <h3>6. Inter-Module and API Integration Boundaries</h3>
-        <p>
-          <strong>Test:</strong> What mismatches in contract, data type, or
-          protocol allow silent error, partial data handling, or inconsistent
-          state?
-        </p>
-        <p>
-          <strong>Publishable test:</strong> Minimal cross-version or
-          cross-module execution where the published interface contract is
-          deliberately stressed.
-        </p>
-
-        <h3>7. Scaling and Resource Allocation Boundaries</h3>
-        <p>
-          <strong>Test:</strong> What is the first observable symptom of
-          resource exhaustion, contention, or performance cliff?
-        </p>
-        <p>
-          <strong>Publishable test:</strong> Load ramp until a resource
-          compartment boundary is breached, with a pre-defined metric for
-          “boundary exceeded” (e.g., latency, error rate, refused
-          connections).
-        </p>
-
-        <h3>8. Third-Party Service and External Dependency Boundaries</h3>
-        <p>
-          <strong>Test:</strong> What loss or abnormal behavior outside the
-          system propagates undesired risk inward?
-        </p>
-        <p>
-          <strong>Publishable test:</strong> Simulated loss or corruption of
-          third-party components to test isolation, fallback, and recovery
-          behavior.
-        </p>
-
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Why Publish
-        ------------------------------------------------------------ */}
-        <h2>Why Publish These Tests</h2>
-        <ul>
-          <li>
-            Each boundary represents a failure surface where ambiguity becomes
-            operational risk.
-          </li>
-          <li>
-            Publishing minimal tests creates reusable templates that raise
-            baseline standards across organizations.
-          </li>
-          <li>
-            Clear pass/fail closure strengthens operational trust,
-            regulatory posture, and institutional learning.
-          </li>
+      {/* SELECTION LOGIC */}
+      <Section title="Selection Criteria">
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Ambiguity blocks responsibility or accountability</li>
+          <li>Failure propagates across system boundaries</li>
+          <li>Human interpretation substitutes for clear assignment</li>
+          <li>System behavior cannot be validated through inspection alone</li>
         </ul>
+      </Section>
 
-        <hr />
+      {/* BOUNDARY SURFACES */}
+      <section>
+        <h2 className="text-2xl font-semibold text-white">
+          Critical Boundary Surfaces
+        </h2>
 
-        {/* ------------------------------------------------------------
-           Guidance
-        ------------------------------------------------------------ */}
-        <h2>Guidance for Test Selection</h2>
-        <ul>
-          <li>
-            Prioritize boundaries where ambiguity blocks accountability,
-            safety, or responsible scaling.
-          </li>
-          <li>
-            Apply minimal falsification logic: negative results close the
-            question; positive results define the next sharper edge.
-          </li>
-          <li>
-            Focus on boundaries nearest to the line of responsibility or the
-            point of system handoff.
-          </li>
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <Boundary
+            title="Cross-Functional Coordination"
+            test="Where does ownership break between teams?"
+            output="Responsibility ambiguity under handoff"
+          />
+
+          <Boundary
+            title="Data Privacy / Security"
+            test="Where does data cross containment boundaries?"
+            output="Leakage or unauthorized access"
+          />
+
+          <Boundary
+            title="Authorization / Access Control"
+            test="Where does privilege escalation occur?"
+            output="Unintended access states"
+          />
+
+          <Boundary
+            title="Input Validation"
+            test="Which invalid inputs pass system guards?"
+            output="Acceptance of out-of-bound states"
+          />
+
+          <Boundary
+            title="Fault Containment"
+            test="Where do failures propagate beyond isolation?"
+            output="Cross-boundary failure spread"
+          />
+
+          <Boundary
+            title="API / Module Integration"
+            test="Where do contract mismatches occur?"
+            output="Silent or partial system failure"
+          />
+
+          <Boundary
+            title="Scaling / Resource Limits"
+            test="Where does performance degrade into failure?"
+            output="First observable system collapse signal"
+          />
+
+          <Boundary
+            title="External Dependencies"
+            test="What external failures penetrate system boundaries?"
+            output="Dependency-induced instability"
+          />
+        </div>
+      </section>
+
+      {/* WHY THIS MATTERS */}
+      <Section title="Why These Boundaries Matter">
+        <p>
+          Each boundary represents a point where untested ambiguity becomes a
+          live risk vector.
+        </p>
+        <p>
+          Testing these surfaces produces reusable, publication-grade evidence
+          of system behavior under stress.
+        </p>
+      </Section>
+
+      {/* TEST GENERATION */}
+      <Section title="Test Generation Principle">
+        <p>
+          For each boundary, construct the minimal test that:
+        </p>
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Forces the boundary condition</li>
+          <li>Produces a binary outcome</li>
+          <li>Generates an evidentiary artifact</li>
         </ul>
-
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Footer
-        ------------------------------------------------------------ */}
-        <p className="text-sm text-muted-foreground">
-          This document defines a research framework, not an exhaustive list
-          or a mandate. Individual boundary tests are intended to be
-          pre-registered, executed, and published independently.
+        <p>
+          Negative results close ambiguity. Positive results define the next
+          sharper boundary.
         </p>
-        <p className="text-sm text-muted-foreground">
-          No optimization claims, product implications, or policy directives
-          are inferred.
+      </Section>
+
+      {/* FINAL */}
+      <section className="rounded-2xl border border-red-900/40 bg-red-950/20 p-8">
+        <h2 className="text-xl font-semibold text-white">
+          Framework Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          Systems fail at boundaries that are not tested. This framework
+          identifies which boundaries must be tested first.
         </p>
-      </article>
+      </section>
+
+      {/* FOOTER */}
+      <div className="text-center text-sm text-slate-500">
+        Meta-layer · Boundary selection · Non-actionable
+      </div>
     </main>
   );
 }
