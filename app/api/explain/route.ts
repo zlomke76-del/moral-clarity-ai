@@ -4,25 +4,43 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 export async function POST(req: Request) {
-  const { memory_id } = await req.json();
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!memory_id) {
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    return NextResponse.json(
+      { error: "Supabase environment variables are not configured." },
+      { status: 500 }
+    );
+  }
+
+  let body: { memory_id?: string };
+
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid JSON body." },
+      { status: 400 }
+    );
+  }
+
+  const memoryId = body.memory_id?.trim();
+
+  if (!memoryId) {
     return NextResponse.json(
       { error: "memory_id required" },
       { status: 400 }
     );
   }
 
+  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
   const { data, error } = await supabase
     .from("user_memories")
     .select("metadata->explanation")
-    .eq("id", memory_id)
+    .eq("id", memoryId)
     .single();
 
   if (error) {
