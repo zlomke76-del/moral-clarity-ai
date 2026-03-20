@@ -1,12 +1,4 @@
 // app/edge-of-knowledge/epistemic-failure-stress-test/page.tsx
-// ============================================================
-// EDGE OF KNOWLEDGE — CANONICAL STRESS TEST
-// Epistemic Failure in Medical Discovery
-// ============================================================
-// This document exposes how high-confidence error forms,
-// persists, and reveals itself only after irreversible cost.
-// It is non-actionable by design.
-// ============================================================
 
 import type { Metadata } from "next";
 
@@ -14,189 +6,125 @@ export const metadata: Metadata = {
   title:
     "Canonical Edge Stress-Test: Epistemic Failure in Medical Discovery | Moral Clarity AI",
   description:
-    "A canonical, non-actionable stress-test exposing how high-confidence error forms, persists, and reveals itself too late in computational and preclinical medical discovery.",
-  robots: { index: true, follow: true },
+    "A staged stress-test exposing how high-confidence error forms, persists, and reveals itself only after irreversible cost.",
 };
 
-export const dynamic = "force-static";
-
-export default function EpistemicFailureStressTestPage() {
+function Section({ title, children }: any) {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article
-        className="
-          prose prose-neutral dark:prose-invert max-w-none
-          prose-h1:tracking-tight
-          prose-h2:tracking-tight
-          prose-h3:tracking-tight
-        "
-      >
-        <h1>Canonical Edge Stress-Test</h1>
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
 
-        <p className="text-sm text-neutral-500">
-          Edge of Knowledge · Canonical · Non-Actionable · Version 1.0
+function Stage({ title, children }: any) {
+  return (
+    <div className="rounded-xl border border-sky-900/30 bg-slate-900/60 p-6">
+      <div className="text-sm font-semibold text-white">{title}</div>
+      <div className="mt-3 text-sm text-slate-400 space-y-2">{children}</div>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase text-sky-300 tracking-widest">
+          Edge of Knowledge — Canonical Stress-Test
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Epistemic Failure in Medical Discovery
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          How high-confidence error forms, persists, and reveals itself too late.
         </p>
 
-        <h2>Epistemic Failure in Computational &amp; Preclinical Medical Discovery</h2>
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Non-actionable · Exposure only · No intervention logic
+        </div>
+      </section>
 
-        <h2>I. Scope &amp; Non-Claims</h2>
-        <p>
-          This stress-test governs epistemic exposure, not practice or
-          application. It does not propose treatments, mechanisms, experiments,
-          compounds, or institutional actions. No biological efficacy or
-          readiness is asserted. Its sole purpose is to expose how certainty can
-          remain high while correctness collapses.
-        </p>
-
-        <h2>II. Stress-Test Invocation</h2>
-        <p>This stress-test SHOULD be invoked when:</p>
-        <ul>
-          <li>Multiple models converge with high confidence</li>
-          <li>Validation appears strong but remains internally bounded</li>
-          <li>Programs advance despite weak external grounding</li>
-          <li>Institutional momentum resists reassessment</li>
+      {/* INVOCATION */}
+      <Section title="Stress-Test Invocation">
+        <p>This stress-test activates under:</p>
+        <ul className="list-disc pl-6">
+          <li>High model agreement</li>
+          <li>Strong internal validation</li>
+          <li>Weak external grounding</li>
+          <li>Institutional momentum resisting reassessment</li>
         </ul>
-        <p>
-          This stress-test MUST NOT be used to select interventions, decide next
-          steps, or justify action.
-        </p>
+      </Section>
 
-        <h2>III. Phase A — Hidden Assumptions Audit</h2>
-        <p>
-          <strong>Objective:</strong> Identify the minimum assumption set whose
-          falsity invalidates dominant narratives while confidence remains
-          elevated.
-        </p>
+      {/* STAGES */}
+      <Section title="Failure Progression Stages">
 
-        <h3>Assumption Classes</h3>
-        <ul>
-          <li>Causal validity of biomarkers</li>
-          <li>Fidelity of preclinical models to human pathology</li>
-          <li>Representativeness of training datasets</li>
-          <li>Accuracy of phenotypic labels</li>
-          <li>Integrity of proxy and engineered features</li>
-          <li>Generalizability of internal validation</li>
-          <li>Concordance interpreted as correctness</li>
-          <li>Predictive performance equated with mechanism</li>
+        <Stage title="Phase A — Hidden Assumptions">
+          <p>Confidence rests on unexamined premises.</p>
+          <p>Failure trigger: assumptions remain implicit.</p>
+        </Stage>
+
+        <Stage title="Phase B — Counterfactual Reality">
+          <p>Alternate worlds exist where the system is wrong but appears correct.</p>
+          <p>Failure trigger: plausibility of unseen contradictions.</p>
+        </Stage>
+
+        <Stage title="Phase C — Error Persistence">
+          <p>Error survives validation, replication, and peer review.</p>
+          <p>Failure mechanism: incentives + pipelines reinforce the same mistake.</p>
+        </Stage>
+
+        <Stage title="Phase D — Late Revelation">
+          <p>Failure emerges indirectly and ambiguously.</p>
+          <p>Signal: delayed contradiction, not clean invalidation.</p>
+        </Stage>
+
+        <Stage title="Phase E — Lock-In">
+          <p>System cannot reverse course without prohibitive cost.</p>
+          <p>State: recognition occurs after optionality is lost.</p>
+        </Stage>
+
+      </Section>
+
+      {/* FAILURE CHARACTER */}
+      <Section title="Failure Characteristics">
+        <ul className="list-disc pl-6">
+          <li>Confidence remains high throughout</li>
+          <li>Error is structurally reinforced</li>
+          <li>Correction arrives too late</li>
+          <li>Failure is non-categorical and difficult to isolate</li>
         </ul>
+      </Section>
 
-        <p>
-          <strong>Pass condition:</strong> Assumptions are explicit.
-          <br />
-          <strong>Fail condition:</strong> Assumptions remain implicit or are
-          collapsed into confidence.
-        </p>
-
-        <h2>IV. Phase B — Counterfactual Consistency Analysis</h2>
-        <p>
-          <strong>Objective:</strong> Describe internally consistent biological
-          realities in which current models mislead while appearing rigorous.
-        </p>
-
-        <ul>
-          <li>Latent confounding producing reproducible but spurious signals</li>
-          <li>Phenotypic concordance without shared causality</li>
-          <li>Dataset artifact reinforcement across the field</li>
-          <li>Surrogate endpoints disconnected from disease trajectory</li>
-          <li>Technical overfitting to batch or instrument signatures</li>
-          <li>Suppressed biological heterogeneity</li>
-          <li>Entrenched literature-driven pathway narratives</li>
+      {/* LIMITS */}
+      <Section title="Output Constraints">
+        <ul className="list-disc pl-6">
+          <li>No prescriptions</li>
+          <li>No interventions</li>
+          <li>No optimization paths</li>
+          <li>Exposure only</li>
         </ul>
+      </Section>
 
-        <p>
-          <strong>Pass condition:</strong> Counterfactuals remain plausible.
-          <br />
-          <strong>Fail condition:</strong> Analysis drifts toward fixes or
-          prescriptions.
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Stress-Test Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          The system fails not when confidence collapses—but when it remains high
+          beyond the point of correction.
         </p>
+      </section>
 
-        <h2>V. Phase C — Error Persistence Mechanisms</h2>
-        <p>
-          <strong>Objective:</strong> Explain why error survives replication,
-          peer review, and validation.
-        </p>
-
-        <ul>
-          <li>Confirmation bias aligned with dominant narratives</li>
-          <li>Institutional incentive structures</li>
-          <li>Data availability bottlenecks</li>
-          <li>Standard pipeline propagation</li>
-        </ul>
-
-        <p>
-          <strong>Pass condition:</strong> Persistence is structural, not
-          personal.
-          <br />
-          <strong>Fail condition:</strong> Responsibility is individualized.
-        </p>
-
-        <h2>VI. Phase D — Downstream Revelation</h2>
-        <p>
-          <strong>Objective:</strong> Show how epistemic failure collides with
-          reality late, indirectly, and ambiguously.
-        </p>
-
-        <ul>
-          <li>Marginal efficacy decay and non-linear dose responses</li>
-          <li>Late-emerging toxicology contradictions</li>
-          <li>Regulatory ambiguity and indefinite data requests</li>
-          <li>Post hoc rationalization of subgroup variability</li>
-        </ul>
-
-        <p>
-          <strong>Pass condition:</strong> Failure appears delayed and
-          non-categorical.
-          <br />
-          <strong>Fail condition:</strong> Early, clean invalidation is implied.
-        </p>
-
-        <h2>VII. Phase E — Misattribution &amp; Lock-In</h2>
-        <p>
-          <strong>Objective:</strong> Identify how institutions misread failure
-          and entrench loss.
-        </p>
-
-        <h3>Misattribution Patterns</h3>
-        <ul>
-          <li>Operational attribution replacing premise review</li>
-          <li>Blame drift toward contextual variables</li>
-          <li>Sunk-cost preservation through re-optimization</li>
-        </ul>
-
-        <h3>Irreversible Signals</h3>
-        <ul>
-          <li>Late-stage marginal efficacy plateaus</li>
-          <li>Class-effect toxicity recognized at scale</li>
-          <li>Regulatory deadlock after resource exhaustion</li>
-          <li>Ethical harm recognized retrospectively</li>
-          <li>Loss of strategic optionality</li>
-        </ul>
-
-        <p>
-          <strong>Pass condition:</strong> Lock-in precedes recognition.
-          <br />
-          <strong>Fail condition:</strong> Easy redirection is suggested.
-        </p>
-
-        <h2>VIII. Output Constraints</h2>
-        <ul>
-          <li>No treatments, mechanisms, experiments, or recommendations</li>
-          <li>No claims of efficacy or readiness</li>
-          <li>Uncertainty is explicit and primary</li>
-          <li>Analysis remains non-actionable</li>
-        </ul>
-
-        <h2>IX. Canonical Close</h2>
-        <p>
-          This stress-test is complete when it demonstrates how confidence can
-          remain high until correction is no longer possible. Further depth
-          would require action and is therefore out of scope.
-        </p>
-
-        <p className="text-sm text-neutral-400">
-          Version 1.0 · Canonical · Edge of Knowledge · Updated only by revision
-        </p>
-      </article>
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Stress-Test · Non-actionable · Versioned
+      </div>
     </main>
   );
 }
