@@ -1,194 +1,180 @@
 // app/edge-of-knowledge/procedural-entrenchment/page.tsx
-// Moral Clarity AI — Edge of Knowledge White Paper
-// Title: Procedural Entrenchment — Governance Inertia After Risk Recognition
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Procedural Entrenchment: Governance Inertia After Risk Recognition | Moral Clarity AI",
+    "Procedural Entrenchment: Execution Admissibility Boundary | Moral Clarity AI",
   description:
-    "A white paper examining governance-driven failure modes in which recognized risks persist due to institutional inertia, procedural recursion, and compliance substitution rather than ignorance or omission.",
-  openGraph: {
-    title: "Procedural Entrenchment",
-    description:
-      "When risk is known, capacity exists, and signaling is sufficient—but governance remains stalled.",
-    url: "https://moralclarity.ai/edge-of-knowledge/procedural-entrenchment",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A governance constraint identifying failure when known risk cannot be converted into admissible action due to procedural inertia.",
 };
+
+function Section({ title, children }: any) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
 
 export default function ProceduralEntrenchmentPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Procedural Entrenchment</h1>
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
 
-        <p className="lead">
-          <strong>
-            Governance inertia after risk recognition
-          </strong>
-        </p>
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Execution Admissibility Boundary
+        </div>
 
-        <h2>Preface</h2>
-        <p>
-          This paper examines a governance-based failure mode that emerges after
-          risk has been clearly identified, acknowledged, and documented.
-          Unlike failures caused by ignorance, lack of capability, or missing
-          warning signals, procedural entrenchment occurs when institutions
-          remain unable to act because established processes, rules, or
-          decision pathways actively impede timely and proportional response.
-        </p>
-        <p>
-          The focus here is not on individual negligence or bad faith, but on
-          structural and epistemic dynamics that cause known hazards to persist
-          through procedural recursion, delay, or dilution.
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Procedural Entrenchment
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          When risk is known but action is not admissible, governance has failed its execution function.
         </p>
 
-        <h2>Abstract</h2>
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Risk known · Action blocked · Execution invalid · Post-recognition failure
+        </div>
+      </section>
+
+      {/* CORE */}
+      <Section title="Core Boundary">
         <p>
-          Procedural Entrenchment is a governance-driven failure mode in
-          high-stakes systems where risk is recognized and capacity to act
-          exists, yet effective intervention is stalled by institutional
-          inertia. Decision-makers remain locked into established procedures,
-          compliance pathways, or regulatory routines that substitute process
-          continuity for substantive risk reduction. Catastrophic outcomes
-          arise not from lack of information, but from delay, normalization of
-          known hazards, or recursive adherence to governance frameworks that
-          are no longer fit for the active risk regime. This paper defines the
-          boundaries of Procedural Entrenchment, distinguishes it from adjacent
-          failure modes, and clarifies its ethical risks to prevent misuse as a
-          blanket critique of governance or due process.
+          Procedural Entrenchment defines a failure state in which recognized
+          risk persists because governance structures prevent timely and
+          proportional action.
         </p>
 
-        <h2>1. Failure Mode Definition</h2>
-        <p>
-          Procedural Entrenchment describes the persistence of unacceptable risk
-          due to rigid adherence to established governance processes after the
-          risk is known. The failure occurs when institutional actors continue
-          to follow pre-existing rules, approval chains, or compliance
-          mechanisms even as those same structures demonstrably prevent
-          appropriate or timely response.
+        <p className="text-red-300">
+          Governance that cannot convert knowledge into action is not valid within that regime.
         </p>
+      </Section>
+
+      {/* FAILURE DEFINITION */}
+      <Section title="Failure Mode Definition">
         <p>
-          The system does not fail because it lacks awareness or tools. It fails
-          because deviation from established procedure carries greater
-          institutional cost than allowing the risk to persist.
+          The system fails when:
         </p>
 
-        <h2>2. Core Characteristics</h2>
-        <ul>
-          <li>Risk is explicitly recognized and documented</li>
-          <li>Warning signals and analyses are available and circulating</li>
-          <li>Technical or operational capacity to respond exists</li>
-          <li>Action is delayed, diluted, or deferred by procedural constraints</li>
-          <li>Compliance activity substitutes for outcome-oriented intervention</li>
+        <ul className="list-disc pl-6">
+          <li>Risk is explicitly recognized</li>
+          <li>Capacity to act exists</li>
+          <li>Action is procedurally constrained or delayed</li>
         </ul>
 
-        <h2>3. Mechanisms of Entrenchment</h2>
-        <ul>
-          <li>
-            <strong>Procedural recursion:</strong> risk repeatedly re-enters
-            review cycles without escalation authority
-          </li>
-          <li>
-            <strong>Liability deflection:</strong> incentives favor adherence to
-            process over deviation, even when ineffective
-          </li>
-          <li>
-            <strong>Fragmented authority:</strong> responsibility diffused
-            across committees, jurisdictions, or timelines
-          </li>
-          <li>
-            <strong>Normalization of known hazard:</strong> persistence of risk
-            becomes institutionally tolerated
-          </li>
+        <p className="text-red-300">
+          Awareness without admissible execution is a structural failure—not a delay.
+        </p>
+      </Section>
+
+      {/* MECHANISMS */}
+      <Section title="Mechanisms of Entrenchment">
+        <ul className="list-disc pl-6">
+          <li>Procedural recursion without escalation authority</li>
+          <li>Liability structures favoring inaction over deviation</li>
+          <li>Fragmented authority preventing decisive ownership</li>
+          <li>Normalization of persistent, known hazards</li>
+        </ul>
+      </Section>
+
+      {/* EXECUTION FAILURE */}
+      <Section title="Execution Admissibility Failure">
+        <p>
+          The critical failure is not informational—it is operational.
+        </p>
+
+        <p className="text-red-300">
+          If action is not admissible within governance, execution is structurally blocked.
+        </p>
+
+        <p>
+          Post-event accountability does not repair this failure.
+        </p>
+      </Section>
+
+      {/* REGIME */}
+      <Section title="Regime Mapping">
+        <p className="font-semibold text-white">Applies when:</p>
+        <ul className="list-disc pl-6">
+          <li>Risk is known and documented</li>
+          <li>Signals are sufficient</li>
+          <li>Capability exists</li>
+          <li>Governance blocks execution</li>
         </ul>
 
-        <h2>4. Regime Boundaries</h2>
+        <p className="font-semibold text-white mt-4">Does not apply when:</p>
+        <ul className="list-disc pl-6">
+          <li>Risk is unknown</li>
+          <li>Capability is absent</li>
+          <li>Signals are missing or suppressed</li>
+        </ul>
+      </Section>
 
-        <h3>Applies When</h3>
-        <ul>
-          <li>Risk is known and acknowledged</li>
-          <li>Signaling and documentation are sufficient</li>
-          <li>Capabilities exist but are procedurally constrained</li>
-          <li>Governance frameworks dominate response logic</li>
+      {/* DISTINCTION */}
+      <Section title="Boundary Distinction">
+        <p>This is not:</p>
+
+        <ul className="list-disc pl-6">
+          <li>Neglect (risk is known)</li>
+          <li>Signal failure (information exists)</li>
+          <li>Capability gap (tools are available)</li>
         </ul>
 
-        <h3>Does Not Apply When</h3>
-        <ul>
-          <li>Risk is genuinely unknown or poorly understood</li>
-          <li>Technical or material capability is absent</li>
-          <li>Failure results from omission or neglect</li>
-          <li>Signals are missing, suppressed, or ignored</li>
+        <p className="text-red-300">
+          The failure exists within governance logic itself.
+        </p>
+      </Section>
+
+      {/* FALSIFICATION */}
+      <Section title="Falsification Criteria">
+        <ul className="list-disc pl-6">
+          <li>Procedures adapt reliably to known risk</li>
+          <li>Governance enables timely action</li>
+          <li>Delays are caused by true uncertainty or incapacity</li>
         </ul>
+      </Section>
 
-        <h2>5. Distinction From Adjacent Failure Modes</h2>
-        <p>
-          Procedural Entrenchment is not neglect. The risk is recognized.
-          It is not quiet failure. The hazard is visible and discussed.
-          It is not a signaling problem. Information flows exist.
-        </p>
-        <p>
-          The resistance arises within governance logic itself. Additional
-          monitoring, alerts, or reporting does not resolve the failure because
-          the bottleneck is procedural authority, not awareness.
-        </p>
+      {/* INVARIANT */}
+      <Section title="Invariant Framework">
+        <p><strong>G:</strong> Procedure-preserving transformations</p>
+        <p><strong>Q:</strong> Recognized risk</p>
+        <p><strong>S:</strong> Execution admissibility state</p>
 
-        <h2>6. Falsification Criteria</h2>
-        <p>This framing collapses if:</p>
-        <ul>
-          <li>
-            Institutions reliably adapt procedures in response to known risk
-          </li>
-          <li>
-            Governance frameworks consistently enable timely, proportional action
-          </li>
-          <li>
-            Delays are better explained by technical incapacity or uncertainty
-          </li>
-        </ul>
+        <p className="text-red-300">
+          Failure: Q exists while S blocks action
+        </p>
+      </Section>
+
+      {/* CLAIM */}
+      <Section title="Claim Eligibility Boundary">
         <p>
-          If procedures do not impede action post-recognition, Procedural
-          Entrenchment does not apply.
+          Any governance system claiming effectiveness must demonstrate that
+          recognized risk can be converted into admissible action.
         </p>
 
-        <h2>7. Ethical Risks and Misuse</h2>
-        <p>
-          Misapplied, this concept could be used to delegitimize due process,
-          oversight, or necessary caution. It could also mask individual
-          abdication of responsibility by framing all inaction as inevitable
-          institutional failure.
+        <p className="text-red-300">
+          Process continuity cannot substitute for outcome execution.
         </p>
-        <p>
-          This paper does not argue against governance. It identifies a specific
-          failure state where governance mechanisms persist beyond their valid
-          risk regime.
-        </p>
+      </Section>
 
-        <h2>8. Final Judgment</h2>
-        <p>
-          <strong>VALID FAILURE MODE — GOVERNANCE-SPECIFIC</strong>
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          Governance exists to enable action under uncertainty. When it prevents
+          action after certainty is achieved, it has exceeded its valid regime.
         </p>
-        <p>
-          Procedural Entrenchment represents a critical vulnerability in complex
-          systems where recognized risk collides with rigid governance
-          structures. Addressing it requires explicit mechanisms for authority
-          escalation, procedural suspension, or outcome-prioritized override
-          under defined conditions—without abandoning legitimacy or oversight.
-        </p>
+      </section>
 
-        <hr />
-
-        <p className="text-sm text-muted-foreground">
-          Version 1.0 · Public white paper · Edge of Knowledge Series · Moral Clarity AI
-        </p>
-      </article>
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Execution-bound · Post-recognition · Non-admissible delay · Versioned
+      </div>
     </main>
   );
 }
