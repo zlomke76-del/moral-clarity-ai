@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Thermoplastic Polyurethane Elastomer Networks | Edge of Knowledge",
+    "Thermoplastic Polyurethane Elastomer Networks | Microphase Persistence Boundary",
   description:
-    "A validation-first analysis of thermoplastic polyurethane elastomer networks examining microphase morphology, elasticity, and operational boundaries.",
+    "A constraint establishing that TPU performance is valid only if microphase morphology remains stable under time and environmental exposure.",
   openGraph: {
     title:
-      "Thermoplastic Polyurethane Elastomer Networks: Microphase Morphology and Operational Boundaries",
+      "Thermoplastic Polyurethane Elastomer Networks: Microphase Stability Boundary",
     description:
-      "Regime-bounded analysis of TPU elastomer networks emphasizing microphase separation, environmental sensitivity, and degradation limits.",
+      "Elastic performance depends on persistence of microphase separation—not initial material state.",
     url: "https://moralclarity.ai/edge-of-knowledge/tpu-elastomer-networks",
     siteName: "Moral Clarity AI",
     type: "article",
@@ -20,203 +20,179 @@ export const metadata: Metadata = {
   },
 };
 
+function Section({ title, children }: any) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
+
 export default function TPUElastomerNetworksPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>
-          Thermoplastic Polyurethane Elastomer Networks: Microphase Morphology
-          and Operational Boundaries
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Microphase Persistence Boundary
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Thermoplastic Polyurethane Elastomer Networks
         </h1>
 
-        <p className="lead">
-          <strong>Regime-Bounded Validation Analysis</strong>
+        <p className="mt-4 text-lg text-slate-300">
+          Elastic performance is valid only if microphase morphology persists over time and environment.
         </p>
 
-        <hr />
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Morphology-bound · Time-dependent · Environment-sensitive · Drift-limited
+        </div>
+      </section>
 
-        <h2>1. Problem Framing</h2>
-
+      {/* CORE */}
+      <Section title="Core Boundary">
         <p>
-          Thermoplastic polyurethane (TPU) elastomer networks occupy a materials
-          niche requiring elasticity, abrasion resistance, and toughness—traits
-          often insufficiently delivered by commodity polyolefins or less
-          structured thermoplastic elastomers. Commodity alternatives frequently
-          exhibit permanent deformation, limited fatigue life, or poor abrasion
-          resistance under cyclic or abrasive loading.
+          This system defines a constraint: TPU performance depends on the persistence
+          of microphase-separated morphology under real environmental and temporal conditions.
         </p>
 
+        <p className="text-red-300">
+          If morphology drifts, the system is invalid regardless of initial properties.
+        </p>
+      </Section>
+
+      {/* PROBLEM */}
+      <Section title="Problem Framing">
         <p>
-          Thermoset rubbers provide toughness and elasticity but introduce curing
-          complexity, limited recyclability, and constrained processing
-          flexibility. TPU offers a melt-processable, recyclable elastomeric
-          system that delivers recoverable elasticity and moderate toughness
-          within a bounded, industrially relevant operating envelope.
+          Elastomeric systems must balance elasticity, toughness, and durability.
+          Many materials exhibit acceptable initial performance but degrade under
+          environmental exposure or sustained load.
         </p>
 
-        <h2>2. Candidate Polymer Regime (Class-Level Only)</h2>
+        <p className="text-red-300">
+          Initial elasticity does not constitute durable performance.
+        </p>
+      </Section>
 
-        <ul>
-          <li>
-            <strong>Polymer family:</strong> Commercial thermoplastic
-            polyurethanes
-          </li>
-          <li>
-            <strong>Architecture:</strong> Segmented block copolymers with
-            alternating soft and hard segments
-          </li>
-          <li>
-            <strong>Categories:</strong> Polyester-based and polyether-based TPU
-            families
-          </li>
-          <li>
-            <strong>Processing:</strong> Standard industrial methods including
-            extrusion, injection molding, and calendaring
-          </li>
+      {/* REGIME */}
+      <Section title="Candidate Polymer Regime">
+        <ul className="list-disc pl-6">
+          <li>Segmented TPU block copolymers</li>
+          <li>Microphase-separated hard and soft domains</li>
+          <li>Industrial melt-processable systems</li>
         </ul>
 
         <p>
-          All described behavior derives from established TPU morphologies and
-          industrial practice, not from novel chemistry or proprietary
-          formulations.
+          Behavior is governed by morphology—not composition alone.
         </p>
+      </Section>
 
-        <h2>3. Physical Plausibility Rationale</h2>
-
+      {/* MECHANISM */}
+      <Section title="Physical Mechanism">
         <p>
-          TPU performance is governed by microphase separation between hard,
-          urethane-rich domains and soft, flexible segments. Hard domains
-          aggregate into discrete physical crosslinks that restrict flow and
-          provide abrasion resistance, dimensional recovery, and moderate heat
-          tolerance.
+          Hard domains form physical crosslinks that anchor the network, while
+          soft segments provide extensibility and energy dissipation.
         </p>
 
         <p>
-          Soft segments form an extensible matrix that accommodates deformation
-          and dissipates energy. Under load, soft domains stretch while hard
-          domains anchor the network, allowing reversible elasticity without
-          chemical crosslinking. This morphology distinguishes TPU from
-          rubber–thermoplastic blends, which lack the same uniform,
-          thermally reversible network structure.
+          Elastic recovery depends on maintaining this phase-separated structure.
         </p>
 
-        <h2>4. Cost &amp; Scale Considerations</h2>
+        <p className="text-red-300">
+          Loss of phase structure eliminates elastomeric behavior.
+        </p>
+      </Section>
 
-        <ul>
-          <li>
-            TPU production is globally established and scalable
-          </li>
-          <li>
-            Raw materials are widely available and non-exotic
-          </li>
-          <li>
-            Costs exceed commodity polyolefins due to polymer complexity and
-            processing sensitivity
-          </li>
-          <li>
-            Costs degrade further when tight morphology control or purity is
-            required, increasing reject rates and rework
-          </li>
+      {/* CONSTRAINT */}
+      <Section title="Microphase Persistence Constraint">
+        <p>
+          The governing variable is the stability of phase morphology under:
+        </p>
+
+        <ul className="list-disc pl-6">
+          <li>Humidity and hydrolysis</li>
+          <li>UV and oxidative exposure</li>
+          <li>Thermal cycling</li>
+          <li>Sustained mechanical load</li>
         </ul>
 
-        <h2>5. Environmental Sensitivity &amp; Drift</h2>
+        <p className="text-red-300">
+          Environmental drift invalidates performance claims.
+        </p>
+      </Section>
 
-        <ul>
-          <li>
-            <strong>Hydrolysis &amp; Humidity:</strong> Polyester-based TPUs are
-            vulnerable to hydrolysis in warm, humid, or wet environments,
-            resulting in softening, discoloration, and loss of integrity.
-            Polyether-based TPUs reduce hydrolytic sensitivity but remain subject
-            to swelling and creep.
-          </li>
-          <li>
-            <strong>UV &amp; Oxidative Aging:</strong> Both TPU categories degrade
-            under UV and prolonged oxygen exposure, leading to embrittlement,
-            surface cracking, and discoloration.
-          </li>
-          <li>
-            <strong>Stress Cracking &amp; Creep:</strong> Sustained mechanical
-            loads or chemical exposure promote creep, stress cracking, and
-            gradual loss of elastic recovery.
-          </li>
-          <li>
-            <strong>Service Envelope:</strong> Performance is relatively stable
-            indoors; outdoor, wet, or chemically aggressive conditions accelerate
-            drift and early failure.
-          </li>
+      {/* FAILURE */}
+      <Section title="Failure Modes">
+        <ul className="list-disc pl-6">
+          <li>Hydrolytic degradation of soft segments</li>
+          <li>UV-induced embrittlement</li>
+          <li>Creep and stress relaxation under load</li>
+          <li>Loss of phase separation through aging</li>
         </ul>
 
-        <h2>6. Failure Modes &amp; No-Go Boundaries</h2>
+        <p className="text-red-300">
+          Any morphology drift reduces or eliminates elastic recovery.
+        </p>
+      </Section>
 
-        <ul>
-          <li>
-            Rapid degradation under continuous moisture and heat (polyester
-            TPUs)
-          </li>
-          <li>
-            Mechanical breakdown under UV exposure without stabilization
-          </li>
-          <li>
-            Unpredictable failure when used as load-bearing or safety-critical
-            components
-          </li>
-          <li>
-            Accelerated softening and creep under long-term cyclic loading at
-            elevated temperatures
-          </li>
-          <li>
-            Not appropriate for biomedical, implantable, military, or
-            fire-critical contexts without specialized validation
-          </li>
+      {/* REGIME MAP */}
+      <Section title="Regime Mapping">
+        <p className="font-semibold text-white">Valid:</p>
+        <ul className="list-disc pl-6">
+          <li>Indoor, controlled environments</li>
+          <li>Moderate mechanical loading</li>
         </ul>
 
-        <h2>7. Ethical / Misuse Considerations</h2>
-
-        <ul>
-          <li>
-            Overstating durability or toughness, particularly for outdoor or
-            chemical exposure
-          </li>
-          <li>
-            Misrepresenting indoor-suitable TPUs as long-life outdoor solutions
-          </li>
-          <li>
-            Confusing ease of processing with universal fitness-for-purpose
-          </li>
-          <li>
-            Failing to distinguish between polyester and polyether-based
-            vulnerabilities
-          </li>
+        <p className="font-semibold text-white mt-4">Fails:</p>
+        <ul className="list-disc pl-6">
+          <li>Outdoor UV exposure</li>
+          <li>Wet or humid environments (polyester TPU)</li>
+          <li>Long-term load-bearing applications</li>
         </ul>
+      </Section>
 
-        <h2>8. Summary Judgment</h2>
+      {/* INVARIANT */}
+      <Section title="Invariant Framework">
+        <p><strong>G:</strong> Morphology-preserving transformations</p>
+        <p><strong>Q:</strong> Elastic performance</p>
+        <p><strong>S:</strong> Microphase structure</p>
 
+        <p className="text-red-300">
+          Failure: Q degrades as S drifts
+        </p>
+      </Section>
+
+      {/* CLAIM */}
+      <Section title="Claim Eligibility Boundary">
         <p>
-          <strong>CONDITIONAL GO</strong>
+          Any claim of TPU durability must demonstrate stability of microphase
+          morphology over time and environmental exposure.
         </p>
 
-        <p>
-          Thermoplastic polyurethane elastomer networks provide validated,
-          processable elasticity and abrasion resistance within a clearly
-          bounded operational envelope. Their susceptibility to hydrolysis, UV
-          exposure, stress cracking, and long-term drift limits their robustness
-          relative to higher-ranked regimes.
+        <p className="text-red-300">
+          Initial performance data is not admissible evidence of long-term behavior.
         </p>
+      </Section>
 
-        <p>
-          Disciplined, context-aware use can deliver meaningful value, but only
-          where environmental and mechanical conditions are explicitly managed
-          and communicated. Under equal scrutiny, TPU merits inclusion but not
-          promotion within Section V.
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          TPU systems are valid only within controlled environments where
+          microphase structure remains stable. Elasticity is not an inherent
+          property—it is a maintained condition. When morphology drifts,
+          performance disappears.
         </p>
+      </section>
 
-        <hr />
-
-        <p className="text-sm text-muted-foreground">
-          Edge of Knowledge documents are regime-bounded analyses. They do not
-          prescribe implementation and are updated only by explicit revision.
-        </p>
-      </article>
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Morphology-bound · Time-dependent · Environment-limited · Versioned
+      </div>
     </main>
   );
 }
