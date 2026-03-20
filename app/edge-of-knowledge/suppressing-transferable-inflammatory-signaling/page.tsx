@@ -1,17 +1,15 @@
-// app/edge-of-knowledge/suppressing-transferable-inflammatory-signaling/page.tsx
-
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Suppressing Transferable Inflammatory Signaling in Indoor Micro-Environments | Edge of Knowledge",
+    "Suppressing Transferable Inflammatory Signaling | Biological Exposure Boundary",
   description:
-    "A regime-bounded polymer system for passively suppressing biologically active indoor inflammatory drivers via irreversible surface sequestration and redox buffering.",
+    "A constraint establishing that biologically active inflammatory signaling must be eliminated at the transfer layer, not inferred from air-quality metrics.",
   openGraph: {
     title:
       "Suppressing Transferable Inflammatory Signaling in Indoor Micro-Environments",
     description:
-      "Why endpoint air-quality metrics fail to capture biological inflammatory risk—and how passive polymer surfaces can permanently lower baseline immune activation.",
+      "Biological exposure—not air concentration—defines safety.",
     url: "https://moralclarity.ai/edge-of-knowledge/suppressing-transferable-inflammatory-signaling",
     siteName: "Moral Clarity AI",
     type: "article",
@@ -22,282 +20,194 @@ export const metadata: Metadata = {
   },
 };
 
+function Section({ title, children }: any) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
+
 export default function SuppressingTransferableInflammatorySignalingPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>
-          Suppressing Transferable Inflammatory Signaling in Indoor
-          Micro-Environments
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Biological Exposure Boundary
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Suppressing Transferable Inflammatory Signaling in Indoor Micro-Environments
         </h1>
 
-        <p className="lead">
-          <strong>
-            A passive polymer architecture that irreversibly suppresses
-            biologically active indoor inflammation drivers beyond the reach of
-            conventional air-quality control
-          </strong>
+        <p className="mt-4 text-lg text-slate-300">
+          Safety is defined by biological exposure—not measured air concentration.
         </p>
 
-        <hr />
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Transfer layer · Irreversible · Non-emissive · Metrics insufficient
+        </div>
+      </section>
 
-        <h2>I. Problem Statement</h2>
-
+      {/* CORE */}
+      <Section title="Core Boundary">
         <p>
-          Modern indoor environments satisfy regulatory air-quality thresholds
-          while continuing to produce chronic inflammatory burden across
-          populations. This failure persists because prevailing standards focus
-          on bulk pollutant concentration rather than the transferable,
-          biologically active fractions that directly trigger epithelial,
-          immune, and neural inflammatory pathways.
+          This system defines a constraint: biologically active inflammatory signaling
+          must be eliminated at the point of transfer, not inferred from bulk air metrics.
         </p>
 
+        <p className="text-red-300">
+          If signaling remains transferable, the system is invalid regardless of measured air quality.
+        </p>
+      </Section>
+
+      {/* PROBLEM */}
+      <Section title="Problem: Metric Illusion">
         <p>
-          The dominant drivers are not mass particulate load or acute toxic
-          exposure, but low-level, persistent signaling inputs: endotoxin and
-          allergen fragments associated with particulate matter, indoor
-          oxidants such as ozone, and reactive aldehydes released through
-          material off-gassing. These species remain biologically potent at
-          concentrations far below regulatory concern and act continuously
-          over years.
+          Regulatory air-quality metrics measure concentration, not biological effect.
+          Low-level, persistent inflammatory signals remain active far below thresholds.
         </p>
 
+        <p className="text-red-300">
+          Equal concentration does not imply equal biological impact.
+        </p>
+      </Section>
+
+      {/* PRINCIPLE */}
+      <Section title="Transferable Signal Principle">
         <p>
-          Existing mitigation strategies—ventilation, filtration, adsorption,
-          and episodic cleaning—operate episodically, require energy or
-          maintenance, and do not permanently alter baseline exposure.
-          Consequently, inflammatory signaling re-establishes immediately
-          between interventions.
+          The relevant variable is not presence in air, but transferability to biological interfaces.
         </p>
 
-        <hr />
+        <ul className="list-disc pl-6">
+          <li>Endotoxin and allergen fragments</li>
+          <li>Reactive oxidants</li>
+          <li>Volatile aldehydes</li>
+        </ul>
 
-        <h2>II. System Definition</h2>
+        <p className="text-red-300">
+          Biological activation occurs at the point of contact—not at the point of measurement.
+        </p>
+      </Section>
 
+      {/* SYSTEM */}
+      <Section title="System Definition">
         <p>
-          The proposed system is a microphase-separated, zwitterionic
-          block-copolymer textile or surface membrane embedding covalently
-          anchored redox-buffer motifs and nucleophilic binding sites within a
-          hydrated surface domain.
+          A microphase-separated polymer architecture passively suppresses
+          inflammatory signaling through:
         </p>
 
-        <p>
-          Its function is to passively and continuously suppress indoor
-          inflammatory signaling by:
-        </p>
-
-        <ul>
-          <li>
-            Irreversibly sequestering the transferable bioactive fraction of
-            PM-associated endotoxin and allergen fragments;
-          </li>
-          <li>
-            Consuming indoor oxidants through immobilized redox buffering;
-          </li>
-          <li>
-            Neutralizing reactive aldehydes via stable, non-volatile adduct
-            formation.
-          </li>
+        <ul className="list-disc pl-6">
+          <li>Irreversible sequestration of bioactive fragments</li>
+          <li>Redox buffering of oxidants</li>
+          <li>Covalent neutralization of reactive aldehydes</li>
         </ul>
 
         <p>
-          All mechanisms operate without leaching, regeneration, external
-          energy input, or user action. Bound species are immobilized within the
-          polymer matrix and are not re-emitted under humidity, mechanical, or
-          cleaning cycles.
+          All processes are non-emissive, non-regenerative, and intrinsic to the material.
         </p>
+      </Section>
 
-        <hr />
-
-        <h2>III. Why Endpoint Air Metrics Fail</h2>
-
-        <p>
-          Bulk PM concentration, VOC totals, or average ozone levels do not
-          correlate reliably with inflammatory response. What matters is the
-          fraction that remains transferable to epithelial surfaces and capable
-          of engaging innate immune signaling pathways.
+      {/* CORE CONSTRAINT */}
+      <Section title="Transfer Elimination Constraint">
+        <p className="text-red-300">
+          Reduction is insufficient. Transferability must be eliminated.
         </p>
 
         <p>
-          Two environments with identical measured air concentrations may
-          differ dramatically in biological impact depending on the availability
-          of transferable endotoxin fragments, oxidant persistence, and local
-          humidity-mediated uptake dynamics.
+          A system that lowers concentration but preserves biological transfer remains invalid.
         </p>
+      </Section>
 
+      {/* MTI */}
+      <Section title="Trajectory Constraint (MTI-1)">
         <p>
-          Endpoint air measurements therefore cannot validate biological safety.
-          Any credible intervention must operate at the level of signaling
-          suppression, not mass reduction alone.
+          System validity depends on trajectory—not endpoint.
         </p>
 
-        <hr />
-
-        <h2>IV. Polymer Architecture and Governing Mechanisms</h2>
-
-        <h3>Architecture</h3>
-
-        <ul>
-          <li>
-            Zwitterionic surface domains provide high hydration, suppress
-            nonspecific fouling, and stabilize humidity at the interface;
-          </li>
-          <li>
-            Nanostructured ionic and gel microcavities immobilize bioactive
-            endotoxin and allergen fragments through dual electrostatic and
-            physical trapping;
-          </li>
-          <li>
-            Covalently tethered redox-buffer motifs convert indoor oxidants to
-            stable, non-volatile oxidized states;
-          </li>
-          <li>
-            Immobilized nucleophilic sites form irreversible adducts with
-            reactive aldehydes.
-          </li>
+        <ul className="list-disc pl-6">
+          <li>Hydration state</li>
+          <li>Ionic conductivity</li>
+          <li>Redox capacity</li>
+          <li>Bound fragment load</li>
         </ul>
 
-        <p>
-          Functional layer thickness exceeds the maximum diffusion length of
-          target species during humidity cycling, preventing early breakthrough
-          or re-release.
+        <p className="text-red-300">
+          Endpoint equivalence does not imply biological equivalence.
         </p>
+      </Section>
 
-        <hr />
-
-        <h2>V. Internal State Vector and MTI-1 Compliance</h2>
-
-        <p>
-          System validity is governed by an explicit internal state trajectory,
-          not by endpoint performance claims. The minimal observable state
-          vector includes:
-        </p>
-
-        <ul>
-          <li>Surface hydration (contact angle or gravimetric uptake);</li>
-          <li>Surface ionic conductivity (impedance spectroscopy);</li>
-          <li>Redox capacity (catechol–quinone ratio or equivalent);</li>
-          <li>
-            Bound bioactive fragment load (extractable endotoxin/allergen
-            assay).
-          </li>
+      {/* FAILURE */}
+      <Section title="Failure Modes">
+        <ul className="list-disc pl-6">
+          <li>Re-release under humidity or cleaning</li>
+          <li>Incomplete binding allowing transfer</li>
+          <li>Byproduct formation with biological activity</li>
+          <li>Trajectory drift breaking suppression</li>
         </ul>
 
-        <p>
-          These variables evolve monotonically with exposure and cycling.
-          Sequence dependence is expected: oxidant exposure followed by
-          mechanical flex produces a different trajectory than flexing prior
-          to oxidant exposure. Endpoint equivalence does not imply trajectory
-          equivalence.
+        <p className="text-red-300">
+          Any transferable signaling invalidates the system.
         </p>
+      </Section>
 
-        <p>
-          Durability and efficacy claims are valid only within the bounded
-          regime defined by these trajectories, in accordance with Morphology
-          Trajectory Integrity (MTI-1).
-        </p>
-
-        <hr />
-
-        <h2>VI. Regime Boundaries</h2>
-
-        <h3>Applies to</h3>
-
-        <ul>
-          <li>
-            Interior occupied environments with relative humidity between
-            30–65%;
-          </li>
-          <li>
-            Formaldehyde and aldehyde concentrations in the 10–500 ppb range;
-          </li>
-          <li>
-            Continuous, low-level oxidant exposure typical of urban indoor
-            spaces;
-          </li>
-          <li>
-            Deployment on soft surfaces, textiles, wall panels, bedding, and
-            furnishings.
-          </li>
+      {/* REGIME */}
+      <Section title="Regime Mapping">
+        <p className="font-semibold text-white">Valid:</p>
+        <ul className="list-disc pl-6">
+          <li>Indoor environments with chronic low-level exposure</li>
+          <li>Human-occupied micro-environments</li>
         </ul>
 
-        <h3>Does not apply to</h3>
-
-        <ul>
-          <li>Outdoor or industrial atmospheres;</li>
-          <li>Environments with extreme humidity (&lt;20% or &gt;80% RH);</li>
-          <li>
-            Chemical regimes involving solvents, strong acids, or bases that
-            degrade the polymer;
-          </li>
-          <li>Claims of universal air purification.</li>
+        <p className="font-semibold text-white mt-4">Fails:</p>
+        <ul className="list-disc pl-6">
+          <li>Industrial or outdoor systems</li>
+          <li>Extreme humidity regimes</li>
+          <li>Claims of universal purification</li>
         </ul>
+      </Section>
 
-        <hr />
+      {/* INVARIANT */}
+      <Section title="Invariant Framework">
+        <p><strong>G:</strong> Transfer-preserving transformations</p>
+        <p><strong>Q:</strong> Biological activation potential</p>
+        <p><strong>S:</strong> Transferability state</p>
 
-        <h2>VII. Decisive Falsification Test</h2>
+        <p className="text-red-300">
+          Failure: Q remains active through S
+        </p>
+      </Section>
 
+      {/* CLAIM */}
+      <Section title="Claim Eligibility Boundary">
         <p>
-          The system is falsified if, under controlled indoor chamber exposure
-          to realistic PM-associated bioactive fragments, ozone, and reactive
-          aldehydes:
+          Any system claiming reduction of inflammatory burden must demonstrate
+          elimination of transferable signaling.
         </p>
 
-        <ul>
-          <li>
-            No persistent reduction in transferable endotoxin or allergen
-            fraction is observed;
-          </li>
-          <li>
-            Bound species are measurably re-released under humidity or cleaning
-            cycles;
-          </li>
-          <li>
-            Oxidant or aldehyde conversion produces volatile or hazardous
-            byproducts above ambient baseline;
-          </li>
-          <li>
-            Internal state vector trajectories do not correlate with exposure
-            history.
-          </li>
-        </ul>
-
-        <p>
-          Failure under any of these conditions irreversibly invalidates the
-          system’s claims within this regime.
+        <p className="text-red-300">
+          Air-quality metrics alone are not admissible evidence.
         </p>
+      </Section>
 
-        <hr />
-
-        <h2>VIII. Humanity-Scale Impact</h2>
-
-        <p>
-          This system does not rely on behavior, awareness, or episodic
-          intervention. It alters the environmental baseline itself.
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          Environments are not safe because they measure clean—they are safe
+          when biological signaling cannot occur. Systems that reduce numbers
+          but preserve activation are not protective—they are misleading.
         </p>
+      </section>
 
-        <p>
-          By converting ubiquitous indoor surfaces into continuous suppressors
-          of inflammatory signaling, it reduces chronic immune activation across
-          entire populations—especially children, the elderly, and the
-          chronically exposed.
-        </p>
-
-        <p>
-          The impact is cumulative, silent, and systemic: a background reduction
-          in inflammation that conventional filtration, ventilation, and policy
-          interventions cannot achieve.
-        </p>
-
-        <hr />
-
-        <p className="text-sm text-muted-foreground">
-          Edge of Knowledge papers define regime-bounded constraints and
-          falsifiable mechanisms. This document proposes a physically grounded
-          pathway to reducing chronic inflammatory burden by altering indoor
-          material ecology rather than episodic exposure control.
-        </p>
-      </article>
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Transfer-bound · Non-admissible metrics · Biological-first · Versioned
+      </div>
     </main>
   );
 }
