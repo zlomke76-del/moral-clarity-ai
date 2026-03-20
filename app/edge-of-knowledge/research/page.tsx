@@ -1,8 +1,6 @@
 // app/edge-of-knowledge/research/page.tsx
 // ============================================================
 // EDGE OF KNOWLEDGE — RESEARCH INDEX
-// Public, regime-bounded research on failure, uncertainty,
-// and responsible action where optimization breaks.
 // ============================================================
 
 import type { Metadata } from "next";
@@ -370,7 +368,7 @@ function DomainCard({ numeral, title, description, items }: ResearchDomain) {
 
 export default function EdgeOfKnowledgeIndexPage() {
   return (
-    <main className="w-full max-w-[1360px]">
+    <main className="w-full">
       <section className="relative overflow-hidden rounded-[2rem] border border-sky-950/45 bg-slate-950/72 shadow-[0_0_0_1px_rgba(59,130,246,0.08),0_30px_100px_rgba(0,0,0,0.50)] backdrop-blur-sm">
         <div className="grid gap-10 px-8 py-10 md:px-10 md:py-12 lg:grid-cols-[1.35fr_0.65fr]">
           <div className="relative z-10">
