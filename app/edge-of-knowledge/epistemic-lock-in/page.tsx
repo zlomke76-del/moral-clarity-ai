@@ -7,184 +7,177 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Epistemic Lock-In After Risk Acknowledgment | Moral Clarity AI",
   description:
-    "A governance failure mode in which recognized risk, sufficient data, and available capability fail to produce adaptation due to entrenched interpretive frameworks.",
-  openGraph: {
-    title: "Epistemic Lock-In After Risk Acknowledgment",
-    description:
-      "When recognized risk fails to reframe understanding despite sufficient evidence and capability.",
-    url: "https://moralclarity.ai/edge-of-knowledge/epistemic-lock-in",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A terminal epistemic failure state in which recognized risk fails to produce model revision despite sufficient evidence and capability.",
 };
 
 export default function EpistemicLockInPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Epistemic Lock-In After Risk Acknowledgment</h1>
+    <main className="mx-auto max-w-[900px] px-6 py-20 space-y-16">
+      <article className="space-y-10 text-slate-300 leading-7">
 
-        <p className="lead">
-          <strong>
-            When recognized risk fails to reframe understanding
-          </strong>
-        </p>
+        {/* HERO */}
+        <header className="space-y-4">
+          <p className="text-xs uppercase tracking-widest text-sky-300">
+            Edge of Knowledge — Terminal Epistemic State
+          </p>
 
-        <p className="text-sm text-muted-foreground">
-          Edge of Knowledge · Governance-Driven Failure Modes
-        </p>
+          <h1 className="text-4xl font-semibold text-white leading-tight">
+            Epistemic Lock-In After Risk Acknowledgment
+          </h1>
 
-        <h2>Preface</h2>
-        <p>
-          Persistent governance failures are frequently misdiagnosed as
-          incompetence, political stasis, or administrative delay. While such
-          explanations may be convenient, they often obscure a deeper and more
-          consequential failure mode: epistemic lock-in.
-        </p>
-        <p>
-          In these cases, risk is acknowledged, data is sufficient, and
-          intervention capacity exists—yet understanding does not change.
-          Misclassifying this condition as procedural or political failure
-          collapses diagnosis and misassigns responsibility.
-        </p>
+          <p className="text-lg text-slate-300">
+            Recognized risk without interpretive change.
+          </p>
 
-        <h2>Abstract</h2>
-        <p>
-          Epistemic Lock-In After Risk Acknowledgment is a governance failure mode
-          in which decision-makers explicitly recognize material risk, possess
-          credible and sufficient information, and retain feasible capacity to
-          respond—where action itself is not net-negative—yet remain unable to
-          revise or abandon dominant interpretive frameworks.
-        </p>
-        <p>
-          The failure is not epistemic ignorance, procedural inertia, omission,
-          or action paralysis. It is an inability to update the governing model
-          of reality itself despite disconfirming evidence.
-        </p>
+          <div className="mt-6 rounded-xl border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200">
+            Diagnostic only · Non-actionable · No intervention layer
+          </div>
+        </header>
 
-        <h2>Failure Mode Definition</h2>
-        <p>
-          Epistemic Lock-In After Risk Acknowledgment occurs only when all of the
-          following conditions are simultaneously satisfied:
-        </p>
-        <ul>
-          <li>Material risk is explicitly acknowledged by decision-makers</li>
-          <li>Signaling is timely, credible, and sufficient</li>
-          <li>Practical capability to act exists within authority</li>
-          <li>Available actions are not inherently net-negative</li>
-          <li>
-            Interpretive frameworks remain unchanged despite evidence requiring
-            reframing
-          </li>
-        </ul>
+        {/* ENTRY CONDITIONS */}
+        <section>
+          <h2 className="text-xl font-semibold text-white">
+            Entry Conditions (All Required)
+          </h2>
+          <ul className="mt-4 list-disc pl-6 space-y-2">
+            <li>Material risk is explicitly acknowledged</li>
+            <li>Evidence is sufficient, credible, and timely</li>
+            <li>Capability to act exists within authority</li>
+            <li>Available actions are not inherently net-negative</li>
+            <li>
+              Interpretive frameworks remain unchanged despite disconfirming evidence
+            </li>
+          </ul>
 
-        <h2>The Mechanism of Lock-In</h2>
-        <p>
-          Once established, epistemic lock-in is reinforced through structural
-          mechanisms rather than individual error:
-        </p>
-        <ul>
-          <li>
-            <strong>Model Sanctification:</strong> Dominant frameworks become
-            non-falsifiable by institutional convention
-          </li>
-          <li>
-            <strong>Consensus Gravity:</strong> Shared interpretation stabilizes
-            belief independent of evidence
-          </li>
-          <li>
-            <strong>Reputational Coupling:</strong> Authority becomes tied to
-            maintaining existing models
-          </li>
-          <li>
-            <strong>Parameter Absorption:</strong> New data is treated as noise
-            or adjustment rather than paradigm violation
-          </li>
-        </ul>
+          <p className="mt-4">
+            Lock-in exists only when all conditions are simultaneously satisfied.
+          </p>
+        </section>
 
-        <h2>Distinction From Adjacent Failure Modes</h2>
-        <ul>
-          <li>
-            <strong>Action Threshold Collapse:</strong> Action is foreclosed by
-            unavoidable harm; here, action is feasible but understanding does
-            not update
-          </li>
-          <li>
-            <strong>Procedural Entrenchment:</strong> Rules block action; here,
-            interpretation blocks meaning
-          </li>
-          <li>
-            <strong>Neglect or Omission:</strong> Risk is unrecognized; here, it
-            is acknowledged
-          </li>
-          <li>
-            <strong>Silent Degradation:</strong> Harm is invisible; here, harm
-            is seen but cognitively contained
-          </li>
-        </ul>
+        {/* STATE DEFINITION */}
+        <section>
+          <h2 className="text-xl font-semibold text-white">
+            State Definition
+          </h2>
+          <p className="mt-4">
+            Epistemic Lock-In is the collapse of interpretive flexibility under
+            acknowledged contradiction.
+          </p>
+          <p>
+            The system continues to process information—but cannot generate
+            new models of reality.
+          </p>
+        </section>
 
-        <h2>Invariant Framework Declaration</h2>
+        {/* MECHANISM */}
+        <section>
+          <h2 className="text-xl font-semibold text-white">
+            Stabilization Mechanisms
+          </h2>
+          <ul className="mt-4 list-disc pl-6 space-y-2">
+            <li><strong>Model Sanctification:</strong> Framework becomes non-falsifiable</li>
+            <li><strong>Consensus Gravity:</strong> Agreement stabilizes belief</li>
+            <li><strong>Reputational Coupling:</strong> Identity binds to model</li>
+            <li><strong>Parameter Absorption:</strong> Data is normalized instead of disruptive</li>
+          </ul>
+        </section>
 
-        <p>
-          <strong>Symmetry group (𝑮):</strong> Reparameterizations of models,
-          narratives, metrics, and institutional language that preserve the
-          declared risk acknowledgment while allowing arbitrary reframing of
-          explanation.
-        </p>
+        {/* INVARIANT */}
+        <section>
+          <h2 className="text-xl font-semibold text-white">
+            Invariant Framework Declaration
+          </h2>
 
-        <p>
-          <strong>Conserved quantity (𝑸):</strong> Formal acknowledgment of
-          material risk (risk is neither denied nor retracted).
-        </p>
+          <p className="mt-4">
+            <strong>G (Symmetry group):</strong> Reparameterizations preserving risk acknowledgment
+          </p>
 
-        <p>
-          <strong>Invariant spectrum (𝑺):</strong> The set of permissible model
-          states capable of producing materially different policy or action
-          decisions under the acknowledged risk.
-        </p>
+          <p>
+            <strong>Q (Conserved quantity):</strong> Risk remains formally recognized
+          </p>
 
-        <p>
-          <strong>Failure signature on 𝑺:</strong> Collapse of the spectrum to a
-          single or degenerate model class—no new interpretive states appear
-          despite accumulating disconfirming evidence.
-        </p>
+          <p>
+            <strong>S (Invariant spectrum):</strong> Set of viable interpretive models
+          </p>
 
-        <h2>Why More Data Does Not Resolve It</h2>
-        <p>
-          Once the invariant spectrum collapses, additional data does not
-          generate new models. Information is absorbed, normalized, or deflected
-          to preserve interpretive continuity. The constraint is structural, not
-          informational.
-        </p>
+          <p className="mt-4 text-red-300">
+            Failure signature: Collapse of S to a single model class.
+          </p>
+        </section>
 
-        <h2>Ethical Risk of Misuse</h2>
-        <p>
-          This concept must not be used to excuse inaction, shield authority, or
-          portray epistemic rigidity as inevitable. Invocation requires explicit
-          demonstration that alternative interpretive states were available but
-          institutionally suppressed.
-        </p>
+        {/* DATA LIMIT */}
+        <section>
+          <h2 className="text-xl font-semibold text-white">
+            Why More Data Does Not Resolve It
+          </h2>
+          <p className="mt-4">
+            Once the invariant spectrum collapses, additional data does not
+            generate new models.
+          </p>
+          <p>
+            Information is absorbed, normalized, or deflected to preserve
+            interpretive continuity.
+          </p>
+          <p>
+            The constraint is structural—not informational.
+          </p>
+        </section>
 
-        <h2>Final Judgment</h2>
-        <p>
-          <strong>DOCTRINALLY VALID — REGIME-BOUNDED</strong>
-        </p>
-        <p>
-          Epistemic Lock-In After Risk Acknowledgment identifies a failure of
-          understanding—not knowledge, will, or capacity. Its function is
-          diagnostic: to prevent moral and operational misclassification of
-          epistemic failure as negligence or paralysis.
-        </p>
+        {/* DISTINCTIONS */}
+        <section>
+          <h2 className="text-xl font-semibold text-white">
+            Boundary Distinctions
+          </h2>
+          <ul className="mt-4 list-disc pl-6 space-y-2">
+            <li>Not ignorance — risk is known</li>
+            <li>Not inertia — action is possible</li>
+            <li>Not procedural failure — interpretation is constrained</li>
+            <li>Not silent degradation — contradiction is visible</li>
+          </ul>
+        </section>
 
-        <hr />
+        {/* TERMINAL STATE */}
+        <section>
+          <h2 className="text-xl font-semibold text-white">
+            Terminal State Characteristics
+          </h2>
+          <ul className="mt-4 list-disc pl-6 space-y-2">
+            <li>High confidence persists</li>
+            <li>Evidence accumulates without impact</li>
+            <li>No new models emerge</li>
+            <li>Correction becomes externally forced or impossible</li>
+          </ul>
+        </section>
 
-        <p className="text-sm text-muted-foreground">
-          Version 1.1 · Public doctrine · Edge of Knowledge · Moral Clarity AI
-        </p>
+        {/* ETHICS */}
+        <section>
+          <h2 className="text-xl font-semibold text-white">
+            Ethical Constraint
+          </h2>
+          <p className="mt-4">
+            This concept must not be used to excuse inaction or shield authority.
+          </p>
+          <p>
+            Invocation requires explicit demonstration that alternative models
+            were available but institutionally suppressed.
+          </p>
+        </section>
+
+        {/* FINAL */}
+        <section className="rounded-xl border border-red-900/40 bg-red-950/20 p-6">
+          <h2 className="text-xl font-semibold text-white">
+            State Classification
+          </h2>
+          <p className="mt-4 text-red-200">
+            Epistemic Lock-In is not a failure to act—it is a failure to
+            understand. Once established, internal correction is no longer
+            possible.
+          </p>
+        </section>
+
+        <footer className="text-sm text-slate-500 text-center pt-6">
+          Canonical · Terminal · Non-actionable · Versioned
+        </footer>
       </article>
     </main>
   );
