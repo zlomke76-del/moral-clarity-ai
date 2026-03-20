@@ -6,274 +6,172 @@ export const metadata: Metadata = {
   title:
     "Inflammation-Suppressing Human Micro-Environment Polymer | Edge of Knowledge",
   description:
-    "A passive polymer system that continuously reduces indoor inflammatory load by sequestering transferable bioactive particulate fragments, consuming oxidants, and neutralizing reactive aldehydes without re-emission or hazardous byproducts.",
-  openGraph: {
-    title: "Inflammation-Suppressing Human Micro-Environment Polymer",
-    description:
-      "A regime-bounded polymer architecture for population-scale reduction of chronic indoor inflammation drivers.",
-    url: "https://moralclarity.ai/edge-of-knowledge/inflammation-suppressing-microenvironment-polymer",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A conservation-bound polymer system that transforms reactive indoor inflammatory drivers into bound, non-transferable states without re-emission or hazardous byproducts.",
 };
+
+function Section({ title, children }: any) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
 
 export default function InflammationSuppressingPolymerPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Inflammation-Suppressing Human Micro-Environment Polymer</h1>
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
 
-        <p className="lead">
-          <strong>
-            A passive polymer system that lowers baseline human inflammatory load
-            by permanently neutralizing transferable airborne bioactive drivers
-            within indoor environments
-          </strong>
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — State Transformation System
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white leading-tight">
+          Inflammation-Suppressing Human Micro-Environment Polymer
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          Passive reduction of reactive inflammatory exposure through chemical state transformation—not elimination.
         </p>
 
-        <hr />
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Hazard conserved · State transformed · No re-emission · No elimination claim
+        </div>
+      </section>
 
-        <h2>I. System Definition</h2>
-
+      {/* CORE */}
+      <Section title="System Definition">
         <p>
-          This system is a microphase-separated, zwitterionic block-copolymer
-          textile surface embedding covalently anchored redox-buffer motifs and
-          nucleophilic binding sites for continuous sequestration of the
-          transferable bioactive fraction of particulate-associated
-          endotoxin/allergen fragments, consumption of indoor oxidants, and
-          neutralization of reactive aldehydes, with no re-emission or hazardous
-          byproducts under real indoor cycling.
+          This system is a microphase-separated polymer architecture that
+          converts transferable, reactive inflammatory drivers into bound,
+          non-transferable states within a stable material matrix.
         </p>
 
-        <p>
-          The system operates passively, without airflow forcing, regeneration,
-          external energy input, antimicrobial activity, or user behavior. Its
-          function is to lower the chronic inflammatory background of indoor
-          human micro-environments by permanently removing specific biochemical
-          triggers from circulation.
+        <p className="text-red-300">
+          Total hazard is not eliminated—it is transformed and immobilized.
         </p>
+      </Section>
 
-        <hr />
-
-        <h2>II. Targeted Inflammation Drivers</h2>
-
-        <ul>
-          <li>
-            <strong>Transferable bioactive PM fractions:</strong> endotoxin and
-            allergen fragments associated with particulate matter that activate
-            epithelial and innate immune pathways independent of bulk particle
-            mass.
-          </li>
-          <li>
-            <strong>Indoor oxidants:</strong> ozone and secondary oxidants that
-            generate oxidative stress and epithelial injury.
-          </li>
-          <li>
-            <strong>Reactive aldehydes:</strong> small electrophilic VOCs (e.g.,
-            formaldehyde) that form protein adducts and irritate airway and
-            neural tissues.
-          </li>
+      {/* TARGETS */}
+      <Section title="Targeted Drivers">
+        <ul className="list-disc pl-6">
+          <li>Transferable bioactive particulate fragments</li>
+          <li>Indoor oxidants</li>
+          <li>Reactive aldehydes</li>
         </ul>
 
         <p>
-          Bulk particulate filtration, antimicrobial killing, and universal VOC
-          capture are explicitly outside scope. Only transferable bioactive and
-          chemically reactive drivers are claimed.
+          Bulk filtration, antimicrobial action, and universal VOC removal are
+          explicitly outside scope.
         </p>
+      </Section>
 
-        <hr />
+      {/* MECHANISMS */}
+      <Section title="Transformation Mechanisms">
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Electrostatic capture + physical entrapment</li>
+          <li>Irreversible oxidant consumption</li>
+          <li>Covalent aldehyde neutralization</li>
+        </ul>
 
-        <h2>III. Governing Polymer Mechanisms</h2>
-
-        <h3>Bioactive Fragment Sequestration</h3>
-        <p>
-          Target fragments are captured by a dual-mode architecture: high-affinity
-          ionic and zwitterionic sites immobilize fragments electrostatically,
-          followed by physical entrapment within hydrated gel microcavities.
-          This suppresses transfer, shedding, and re-aerosolization under
-          physiologically relevant humidity, handling, and cleaning.
+        <p className="text-red-300">
+          All mechanisms convert reactive species into stable, retained forms.
         </p>
+      </Section>
 
-        <h3>Oxidant Consumption</h3>
-        <p>
-          Indoor oxidants are consumed by immobilized redox-buffer motifs that
-          irreversibly transition to a stable oxidized state. No catalytic
-          regeneration is claimed, and no volatile carbonyl or secondary
-          byproducts are produced above ambient baseline.
-        </p>
-
-        <h3>Reactive Aldehyde Neutralization</h3>
-        <p>
-          Reactive aldehydes are neutralized by covalently anchored nucleophilic
-          sites, forming stable, non-volatile adducts retained within the
-          polymer matrix. Non-reactive VOCs are not claimed.
-        </p>
-
-        <hr />
-
-        <h2>IV. Polymer Architecture</h2>
-
-        <ul>
-          <li>
-            <strong>Base:</strong> polyether-based block copolymer incorporating
-            zwitterionic sulfobetaine segments.
-          </li>
-          <li>
-            <strong>Functional domains:</strong> covalently immobilized
-            catechol-like redox motifs and nucleophilic capture sites.
-          </li>
-          <li>
-            <strong>Morphology:</strong> hydrated surface region containing
-            nanodomains (20–50 nm) within a functional layer thickness exceeding
-            diffusion lengths of targeted species under service cycling.
-          </li>
+      {/* STATE VECTOR */}
+      <Section title="Internal State Vector (MTI-1)">
+        <ul className="list-disc pl-6">
+          <li>Hydration state</li>
+          <li>Ionic conductivity</li>
+          <li>Redox capacity</li>
+          <li>Bound fragment load</li>
         </ul>
 
         <p>
-          The architecture prevents functional group migration, blooming,
-          leaching, or surface depletion during use.
+          These evolve monotonically and define system capacity and exhaustion.
         </p>
+      </Section>
 
-        <hr />
+      {/* FAILURE */}
+      <Section title="Failure Modes">
+        <ul className="list-disc pl-6">
+          <li>Saturation (capacity exhaustion)</li>
+          <li>Fouling (transport limitation)</li>
+          <li>Plasticization (morphology drift)</li>
+          <li>Migration (loss of functional groups)</li>
+        </ul>
+      </Section>
 
-        <h2>V. Internal State Vector (MTI-1)</h2>
-
+      {/* FALSIFICATION */}
+      <Section title="Decisive Falsification">
         <p>
-          System integrity is governed by a minimal, observable state vector:
+          The claim fails if any targeted driver:
         </p>
 
-        <ul>
-          <li>Surface hydration (contact angle or gravimetric uptake)</li>
-          <li>Surface ionic conductivity (impedance spectroscopy)</li>
-          <li>
-            Redox capacity index (quinone:catechol ratio or equivalent spectral
-            proxy)
-          </li>
-          <li>
-            Bound bioactive fragment load (surface extract assay, e.g., LAL or
-            ELISA)
-          </li>
+        <ul className="list-disc pl-6">
+          <li>Is not measurably reduced at human interfaces</li>
+          <li>Re-emerges under stress</li>
+          <li>Generates secondary harmful products</li>
+        </ul>
+      </Section>
+
+      {/* CONSERVATION */}
+      <Section title="Conservation Constraint">
+        <p>
+          Chemically active load is conserved but redistributed across states:
+        </p>
+
+        <ul className="list-disc pl-6">
+          <li>Free → bound</li>
+          <li>Reactive → neutralized</li>
+          <li>Transferable → immobilized</li>
         </ul>
 
+        <p className="text-red-300">
+          Apparent reduction arises from loss of biological and chemical accessibility—not disappearance.
+        </p>
+      </Section>
+
+      {/* INVARIANT */}
+      <Section title="Invariant Framework">
+        <p><strong>G:</strong> Environmental cycling</p>
+        <p><strong>Q:</strong> Total reactive driver load</p>
+        <p><strong>S:</strong> Distribution of chemical states</p>
+
+        <p className="text-red-300">
+          Failure: loss of monotonic transformation or reactivation of bound states
+        </p>
+      </Section>
+
+      {/* CLAIM BOUNDARY */}
+      <Section title="Claim Eligibility Boundary">
         <p>
-          These parameters evolve monotonically under exposure and define both
-          functional capacity and end-of-life conditions.
+          Claims of elimination, sterilization, or total removal are invalid.
         </p>
 
-        <hr />
-
-        <h2>VI. Failure Physics and Silent Killers</h2>
-
-        <ul>
-          <li>
-            <strong>Saturation:</strong> redox and ionic signals plateau while
-            breakthrough appears in air metrics.
-          </li>
-          <li>
-            <strong>Fouling:</strong> surface hydration decreases, permeability
-            drops.
-          </li>
-          <li>
-            <strong>Plasticization:</strong> swelling &gt;5% with domain
-            broadening.
-          </li>
-          <li>
-            <strong>Migration:</strong> any detectable extractables in wash or
-            wipe fluids.
-          </li>
-          <li>
-            <strong>Humidity drift:</strong> irreversible conductivity loss
-            across cycles.
-          </li>
-        </ul>
-
-        <hr />
-
-        <h2>VII. Decisive Falsification Test</h2>
-
-        <p>
-          Standardized textile panels are chamber-exposed to real-world indoor
-          PM, ozone, and aldehydes under humidity cycling and cleaning stress.
+        <p className="text-red-300">
+          Only transformation and immobilization within S are admissible.
         </p>
+      </Section>
 
-        <p>
-          The claim fails if any targeted driver shows insufficient reduction,
-          early breakthrough, re-release under challenge, or formation of
-          hazardous byproducts above ambient baseline.
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          This system does not remove inflammatory drivers. It transforms their
+          chemical state and removes their ability to interact with human
+          biology. Any claim beyond this exceeds its epistemic authority.
         </p>
+      </section>
 
-        <hr />
-
-        <h2>VIII. First Deployment Wedge</h2>
-
-        <p>
-          Hospital rooms represent the highest-value initial deployment:
-          vulnerable populations, elevated irritant loads, frequent cleaning,
-          and institutional capacity for controlled replacement cycles.
-        </p>
-
-        <hr />
-
-        <h2>IX. Humanity-Scale Significance</h2>
-
-        <p>
-          This system alters the baseline inflammatory ecology of indoor human
-          environments continuously and passively. By lowering chronic immune
-          activation without behavior change, it enables cumulative health
-          protection across sleep, work, recovery, and care settings—an effect
-          unreachable by filters, ventilation, or episodic interventions.
-        </p>
-
-        <hr />
-
-        <h2>X. Invariant Closure (Canonical)</h2>
-
-        <p>
-          <strong>Symmetry group (𝑮):</strong> Indoor environmental cycling
-          transformations (humidity, occupancy, cleaning, airflow fluctuations)
-          under which system legitimacy is claimed.
-        </p>
-
-        <p>
-          <strong>Conserved quantity (𝑸):</strong> Total chemically active
-          inflammatory driver load within the micro-environment (oxidant
-          equivalents + transferable bioactive fragment potential).
-        </p>
-
-        <p>
-          <strong>Invariant spectrum (𝑺):</strong> The measurable set of
-          irreducible chemical states retained or neutralized by the polymer:
-          bound endotoxin/allergen fragment load, consumed oxidant capacity, and
-          aldehyde adduct population—observable via MTI-1 state variables.
-        </p>
-
-        <p>
-          <strong>Failure signature on 𝑺:</strong> Re-emergence, transfer, or
-          regeneration of any targeted inflammatory driver despite unchanged
-          conserved totals elsewhere in the room; or loss of monotonicity in the
-          MTI-1 vector.
-        </p>
-
-        <p>
-          <strong>Disentitlement:</strong> Any claim of inflammation suppression,
-          health benefit, or environmental control that does not map directly to
-          persistence and monotonic evolution of 𝑺 is illegitimate. Bulk air
-          metrics, proxy comfort indicators, or subjective outcomes cannot
-          substitute for invariant-state verification.
-        </p>
-
-        <hr />
-
-        <p className="text-sm text-muted-foreground">
-          Edge of Knowledge documents define regime-bounded mechanisms and
-          falsifiable constraints. This system establishes a new category of
-          passive inflammatory-load governance for indoor human environments.
-        </p>
-      </article>
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Conservation-bound · State-transforming · Versioned
+      </div>
     </main>
   );
 }
