@@ -1,281 +1,194 @@
 // app/edge-of-knowledge/government-data-access-responsibility-boundary/page.tsx
-// ============================================================
-// EDGE OF KNOWLEDGE — RESEARCH
-// GDARB-v1: Government Data Access Responsibility Boundary
-// Status: Pre-registered protocol · Results pending
-// ============================================================
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "GDARB-v1 — Government Data Access Responsibility Boundary | Edge of Knowledge",
+    "GDARB-v1 — Government Data Access Responsibility Boundary | Moral Clarity AI",
   description:
-    "A pre-registered, minimal decisive test for responsibility clarity during government data access or subpoena events involving private organizations and individuals.",
-  openGraph: {
-    title: "GDARB-v1 — Government Data Access Responsibility Boundary",
-    description:
-      "Publication-grade protocol testing whether responsibility and accountability are explicit during government data access or subpoena events.",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A pre-registered authority-boundary test evaluating whether executable responsibility exists during government data access events.",
 };
 
-export default function GovernmentDataAccessResponsibilityBoundaryPage() {
+function Section({ title, children }: any) {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        {/* ------------------------------------------------------------
-           Header
-        ------------------------------------------------------------ */}
-        <header>
-          <h1>
-            GDARB-v1 — Government Data Access Responsibility Boundary
-          </h1>
-          <p className="lead">
-            <strong>
-              Minimal decisive test for responsibility clarity during government
-              data access or subpoena events
-            </strong>
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Status: Pre-registered protocol · Results pending
-          </p>
-        </header>
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
 
-        <hr />
+function Signal({ label, value }: any) {
+  return (
+    <div className="rounded-xl border border-sky-900/40 bg-slate-900/60 p-4">
+      <div className="text-xs uppercase text-sky-300">{label}</div>
+      <div className="mt-2 text-sm text-slate-200">{value}</div>
+    </div>
+  );
+}
 
-        {/* ------------------------------------------------------------
-           Purpose
-        ------------------------------------------------------------ */}
-        <h2>Purpose</h2>
-        <p>
-          This protocol tests whether responsibility, authority, and
-          accountability are explicitly defined and accepted at every stage of a
-          government data access or subpoena event involving a private data
-          custodian and an individual.
-        </p>
-        <p>
-          The objective is not to assess legality, morality, or policy wisdom,
-          but to determine whether a clear, pre-established responsibility chain
-          exists before, during, and after the event — or whether accountability
-          becomes fragmented, disputed, or retroactively reassigned.
+export default function GDARBPage() {
+  return (
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Authority Boundary Test
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          GDARB-v1 — Government Data Access Responsibility Boundary
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          When legal authority is invoked, does executable responsibility exist?
         </p>
 
-        <hr />
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <Signal label="Type" value="Authority Boundary Test" />
+          <Signal label="Focus" value="Executable Responsibility" />
+          <Signal label="Failure" value="Authority Collapse (S = ∅)" />
+        </div>
 
-        {/* ------------------------------------------------------------
-           Core Question
-        ------------------------------------------------------------ */}
-        <h2>Core Experimental Question</h2>
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Pre-registered · Binary · Non-actionable
+        </div>
+      </section>
+
+      {/* PURPOSE */}
+      <Section title="Core Function">
         <p>
-          When a government entity requests or compels access to an individual’s
-          data held by a private organization, is responsibility for each
-          decision and action explicitly assigned and accepted — or does
-          accountability dissolve across government authority, corporate
-          compliance, individual rights, and oversight?
+          GDARB-v1 evaluates whether responsibility is not only defined—but
+          executable—during government data access events.
         </p>
 
-        <hr />
+        <p className="text-red-300">
+          The test reveals whether an authority path exists or collapses under
+          real-world constraints.
+        </p>
+      </Section>
 
-        {/* ------------------------------------------------------------
-           Minimal Scenario
-        ------------------------------------------------------------ */}
-        <h2>Minimal Scenario</h2>
+      {/* QUESTION */}
+      <Section title="Core Question">
         <p>
-          <strong>Situation:</strong> A government agency issues a data access
-          request or subpoena to a private organization regarding an
-          individual’s data.
+          When a government entity compels access to private data:
         </p>
+
+        <p className="text-white font-semibold">
+          Does a legitimate, executable authority path exist for every action?
+        </p>
+
         <p>
-          <strong>Outcome:</strong> Data is accessed, disclosed, limited, or
-          declined.
+          Or does responsibility dissolve across actors, preventing decisive,
+          accountable execution?
         </p>
-        <p>
-          <strong>Constraints:</strong>
-        </p>
-        <ul>
-          <li>Request cites statutory or judicial authority</li>
-          <li>Data custodian must decide whether and how to comply</li>
-          <li>
-            Individual may or may not be notified or able to contest
-          </li>
-          <li>
-            Oversight or review may occur before, during, or after the event
-          </li>
+      </Section>
+
+      {/* SCENARIO */}
+      <Section title="Minimal Scenario">
+        <ul className="list-disc pl-6">
+          <li>Government issues request or subpoena</li>
+          <li>Data custodian must respond</li>
+          <li>Individual rights may be affected</li>
+          <li>Oversight may or may not intervene</li>
         </ul>
 
-        <hr />
+        <p>
+          Outcome: data is disclosed, limited, or denied.
+        </p>
+      </Section>
 
-        {/* ------------------------------------------------------------
-           Parties
-        ------------------------------------------------------------ */}
-        <h2>Explicit Parties with Plausible Responsibility Claims</h2>
-        <ul>
-          <li>
-            <strong>Government Agency:</strong> Requestor or enforcer asserting
-            legal authority.
-          </li>
-          <li>
-            <strong>Data Custodian:</strong> Company or institution holding and
-            releasing or denying access to the data.
-          </li>
-          <li>
-            <strong>Individual / Data Subject:</strong> Person whose data is
-            requested and potentially disclosed.
-          </li>
-          <li>
-            <strong>Oversight / Review Body:</strong> Court, regulator, or
-            internal review mechanism, if present.
-          </li>
+      {/* PARTIES */}
+      <Section title="Authority Surface">
+        <ul className="list-disc pl-6">
+          <li>Government Agency</li>
+          <li>Data Custodian</li>
+          <li>Individual / Data Subject</li>
+          <li>Oversight / Court</li>
         </ul>
+      </Section>
 
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Dispute Points
-        ------------------------------------------------------------ */}
-        <h2>Plausible Responsibility Dispute Points</h2>
-        <ul>
-          <li>Authority and scope of the request</li>
-          <li>Consent, notification, and ability to contest</li>
-          <li>Extent and protection of disclosed data</li>
-          <li>Justification and evidentiary basis</li>
-          <li>Presence, timing, and adequacy of oversight</li>
+      {/* DISPUTES */}
+      <Section title="Authority Conflict Points">
+        <ul className="list-disc pl-6">
+          <li>Scope and legitimacy of request</li>
+          <li>Consent and notification</li>
+          <li>Data minimization</li>
+          <li>Oversight timing</li>
+          <li>Final accountability</li>
         </ul>
+      </Section>
 
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Protocol
-        ------------------------------------------------------------ */}
-        <h2>Pre-Registered Test Protocol</h2>
-
-        <h3>Step 1 — Incident Selection</h3>
-        <ul>
-          <li>Select one real or simulated data access or subpoena event</li>
-          <li>De-identify all personal or classified information</li>
-        </ul>
-
-        <h3>Step 2 — Timeline Construction</h3>
-        <ul>
+      {/* PROTOCOL */}
+      <Section title="Execution Protocol">
+        <p>Trace each step:</p>
+        <ul className="list-disc pl-6">
           <li>Request issuance</li>
-          <li>Decision to comply, limit, or deny</li>
-          <li>Data access or disclosure</li>
-          <li>Notification (if any)</li>
-          <li>Objection, appeal, or review</li>
-        </ul>
-
-        <h3>Step 3 — Artifact Collection</h3>
-        <ul>
-          <li>Subpoena, warrant, or formal request</li>
-          <li>Statutory or judicial authority cited</li>
-          <li>Company policies and access logs</li>
-          <li>Privacy notices and communications</li>
-          <li>Oversight or review records</li>
-        </ul>
-
-        <h3>Step 4 — Responsibility Attribution</h3>
-        <p>
-          For each decision or action, record explicit responsibility claims,
-          exemptions, or denials by each party.
-        </p>
-
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Closure Logic
-        ------------------------------------------------------------ */}
-        <h2>Closure Conditions (Binary)</h2>
-
-        <h3>PASS — Boundary Closed</h3>
-        <ul>
-          <li>
-            Every decision, disclosure, notification, and review step has a
-            documented and accepted responsible party
-          </li>
-          <li>
-            No conflicting or retroactive responsibility claims emerge
-          </li>
-        </ul>
-
-        <h3>FAIL — Boundary Disputed</h3>
-        <ul>
-          <li>
-            Two or more parties plausibly contest responsibility for a decision
-            or outcome
-          </li>
-          <li>
-            Responsibility is deferred, denied, or reassigned after the fact
-          </li>
-          <li>
-            Evidence includes unresolved complaints, legal challenges, or public
-            dispute
-          </li>
+          <li>Decision to comply or deny</li>
+          <li>Data access / disclosure</li>
+          <li>Notification</li>
+          <li>Review / appeal</li>
         </ul>
 
         <p>
-          A failure conclusively demonstrates a responsibility gap at the
-          government data access boundary.
+          For each step, record who can act—and whether that authority is
+          legitimate and uncontested.
+        </p>
+      </Section>
+
+      {/* CLOSURE */}
+      <Section title="Closure Logic (Binary)">
+        <p className="text-green-300">
+          <strong>PASS:</strong> A valid authority path exists for all steps.
         </p>
 
-        <hr />
+        <p className="text-red-300">
+          <strong>FAIL:</strong> Any step lacks a legitimate executable authority path.
+        </p>
 
-        {/* ------------------------------------------------------------
-           Output
-        ------------------------------------------------------------ */}
-        <h2>Required Output</h2>
+        <p className="mt-4 text-red-300">
+          A single failure implies S = ∅ at that boundary.
+        </p>
+      </Section>
 
-        <pre>
-{`| Step / Decision | Responsible Party | Evidence / Documentation | Disputed (Y/N) |
-|-----------------|-------------------|--------------------------|----------------|`}
+      {/* OUTPUT */}
+      <Section title="Output Artifact">
+        <pre className="text-sm bg-black/40 p-4 rounded-lg">
+{`| Step | Authority Holder | Evidence | Executable (Y/N) | Disputed (Y/N) |`}
         </pre>
 
         <p>
-          <strong>Minimal Summary Statement:</strong>
+          Output represents an authority execution map—not a narrative.
         </p>
+      </Section>
+
+      {/* IMPLICATION */}
+      <Section title="System Implication">
         <p>
-          “Responsibility for [event/action] was / was not clearly assignable at
-          all phases. Dispute arose at [point]. Protocol refinement is required
-          at [step].”
+          PASS → Authority is executable and auditable
         </p>
 
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Implications
-        ------------------------------------------------------------ */}
-        <h2>Implications</h2>
-
-        <h3>If Boundary Closed</h3>
         <p>
-          Documented practices constitute a repeatable, auditable best practice
-          for data access governance.
+          FAIL → Authority collapses into fragmentation (FRD condition)
         </p>
+      </Section>
 
-        <h3>If Boundary Disputed</h3>
-        <p>
-          Publish the dispute to identify specific authority, notification, or
-          oversight gaps requiring explicit repair.
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          This test reveals whether governance systems retain executable
+          authority under pressure—or collapse into non-action despite full
+          awareness and capability.
         </p>
+      </section>
 
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Notes
-        ------------------------------------------------------------ */}
-        <p className="text-sm text-muted-foreground">
-          This protocol evaluates responsibility structure, not legal validity
-          or policy merit. It makes no recommendations.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Results are publishable regardless of outcome. A negative result
-          closes the question under GDARB-v1 conditions.
-        </p>
-      </article>
+      <div className="text-center text-sm text-slate-500">
+        Pre-registered · Authority-bound · Binary · Versioned
+      </div>
     </main>
   );
 }
