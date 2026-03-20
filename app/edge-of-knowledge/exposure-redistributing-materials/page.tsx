@@ -6,11 +6,11 @@ export const metadata: Metadata = {
   title:
     "Exposure-Redistributing Materials as Harm Reduction | Moral Clarity AI",
   description:
-    "A regime-bounded evaluation of materials that reduce harm by redistributing exposure rather than eliminating hazards. Physics-valid, ethically constrained, and explicitly limited.",
+    "A conservation-bound evaluation of materials that redistribute exposure rather than eliminate hazard. Physics-valid, ethically constrained, and explicitly limited.",
   openGraph: {
     title: "Exposure-Redistributing Materials as Harm Reduction",
     description:
-      "When reducing harm means changing who is exposed, not claiming elimination.",
+      "When reducing harm means redistributing exposure under conservation constraints—not claiming elimination.",
     url: "https://moralclarity.ai/exposure-redistributing-materials",
     siteName: "Moral Clarity AI",
     type: "article",
@@ -21,73 +21,146 @@ export const metadata: Metadata = {
   },
 };
 
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8 shadow-lg backdrop-blur-sm">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300 leading-7">{children}</div>
+    </section>
+  );
+}
+
+function Signal({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-sky-900/40 bg-slate-900/60 p-4">
+      <div className="text-xs uppercase tracking-widest text-sky-300">
+        {label}
+      </div>
+      <div className="mt-2 text-sm text-slate-200">{value}</div>
+    </div>
+  );
+}
+
+function Mechanism({
+  title,
+  desc,
+}: {
+  title: string;
+  desc: string;
+}) {
+  return (
+    <div className="rounded-xl border border-sky-900/30 bg-slate-900/60 p-5">
+      <div className="text-sm font-semibold text-white">{title}</div>
+      <p className="mt-2 text-sm text-slate-400">{desc}</p>
+    </div>
+  );
+}
+
 export default function ExposureRedistributingMaterialsPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Exposure-Redistributing Materials as Harm Reduction</h1>
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10 shadow-xl">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Conservation-Bound Evaluation
+        </div>
 
-        <p className="lead">
-          <strong>
-            A physics- and ethics-grounded evaluation of materials that reduce
-            harm without claiming elimination
-          </strong>
+        <h1 className="mt-4 text-4xl font-semibold text-white leading-tight">
+          Exposure-Redistributing Materials as Harm Reduction
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          Harm reduction through redistribution—not elimination.
         </p>
 
-        <h2>Abstract</h2>
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <Signal label="Type" value="Conservation-Bound Evaluation" />
+          <Signal label="Constraint" value="Hazard Not Reduced" />
+          <Signal label="Effect" value="Exposure Redistribution" />
+        </div>
+
+        <div className="mt-8 rounded-xl border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200">
+          Hazard conserved · Redistribution only · No elimination claims
+        </div>
+      </section>
+
+      <Section title="Abstract">
         <p>
           Not all safety interventions eliminate hazards. Some instead reduce
           harm by redistributing exposure—changing where, when, or to whom a
-          hazard is most likely to interface with the human body. This paper
-          evaluates whether materials can passively and reliably achieve such
-          redistribution using intrinsic physical properties alone. We assess
-          physical plausibility, regime limits, confounds, falsification
-          criteria, and ethical risks. While exposure redistribution can provide
-          meaningful harm reduction in narrow, well-defined contexts, it is
-          fragile under real-world variability and must never be presented as
-          hazard elimination. Ethical deployment depends on strict validation
-          and transparent communication.
+          hazard is most likely to interface with the human body. This evaluation
+          asks whether materials can passively and reliably achieve such
+          redistribution using intrinsic physical properties alone.
         </p>
-
-        <h2>1. Physical Plausibility</h2>
         <p>
-          Redistribution of hazard exposure by material properties is physically
-          plausible. Relevant mechanisms include:
+          Exposure redistribution can provide meaningful harm reduction in
+          narrow, well-defined contexts, but it is fragile under real-world
+          variability and must never be presented as hazard elimination. Ethical
+          deployment depends on strict validation and transparent communication.
         </p>
-        <ul>
-          <li>
-            <strong>Directional transport bias:</strong> Structured or patterned
-            surfaces guiding particles, droplets, or contaminants away from
-            critical human interfaces.
-          </li>
-          <li>
-            <strong>Selective adhesion or affinity gradients:</strong> Layered
-            materials that anchor hazards in sacrificial or non-critical zones.
-          </li>
-          <li>
-            <strong>Interface impedance mismatch:</strong> Altered surface
-            energy or texture that reduces transfer probability at protected
-            interfaces.
-          </li>
-          <li>
-            <strong>Spatial localization:</strong> Designs that accumulate
-            hazards in removable, cleanable, or isolated regions.
-          </li>
-          <li>
-            <strong>Temporal delay:</strong> Slowing transfer or exposure to
-            reduce peak dose without altering total hazard load.
-          </li>
-        </ul>
+      </Section>
 
+      <Section title="Conservation Constraint">
         <p>
-          All mechanisms considered here strictly redistribute exposure rather
-          than remove, neutralize, or filter the hazard.
+          These systems do not reduce total hazard. They redistribute exposure
+          across space, time, or interface.
         </p>
+        <p>
+          Any observed harm reduction arises only if the redistribution lowers
+          effective risk at critical human interfaces.
+        </p>
+        <p className="text-red-300">Total hazard remains conserved.</p>
+      </Section>
 
-        <h2>2. Regime and Scale Analysis</h2>
+      <section>
+        <h2 className="text-2xl font-semibold text-white">
+          Mechanism Classes
+        </h2>
 
-        <h3>Viable regimes</h3>
-        <ul>
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <Mechanism
+            title="Directional Transport Bias"
+            desc="Structured or patterned surfaces guide particles, droplets, or contaminants away from critical human interfaces."
+          />
+          <Mechanism
+            title="Selective Adhesion or Affinity Gradients"
+            desc="Layered materials anchor hazards in sacrificial or non-critical zones."
+          />
+          <Mechanism
+            title="Interface Impedance Mismatch"
+            desc="Altered surface energy or texture reduces transfer probability at protected interfaces."
+          />
+          <Mechanism
+            title="Spatial Localization"
+            desc="Designs accumulate hazards in removable, cleanable, or isolated regions."
+          />
+          <Mechanism
+            title="Temporal Delay"
+            desc="Slowing transfer or exposure reduces peak dose without altering total hazard load."
+          />
+        </div>
+
+        <p className="mt-6 text-sm text-slate-400">
+          All mechanisms considered here conserve total hazard while
+          redistributing exposure. No removal, neutralization, or filtration is
+          assumed.
+        </p>
+      </section>
+
+      <Section title="Regime and Scale Analysis">
+        <p className="font-semibold text-white">Viable regimes</p>
+        <ul className="list-disc pl-6">
           <li>Close-contact environments with defined interfaces</li>
           <li>Layered fabrics, PPE adjuncts, or surface coverings</li>
           <li>
@@ -95,15 +168,15 @@ export default function ExposureRedistributingMaterialsPage() {
           </li>
         </ul>
 
-        <h3>Marginal regimes</h3>
-        <ul>
+        <p className="mt-4 font-semibold text-white">Marginal regimes</p>
+        <ul className="list-disc pl-6">
           <li>Variable airflow or posture</li>
           <li>Mixed contaminants</li>
           <li>Partial, intermittent, or inconsistent use</li>
         </ul>
 
-        <h3>Expected failures</h3>
-        <ul>
+        <p className="mt-4 font-semibold text-white">Expected failures</p>
+        <ul className="list-disc pl-6">
           <li>Far-field aerosol transmission</li>
           <li>High turbulence or rapidly changing environments</li>
           <li>Situations requiring absolute hazard elimination</li>
@@ -117,27 +190,25 @@ export default function ExposureRedistributingMaterialsPage() {
           Effectiveness declines rapidly with environmental variability and user
           non-compliance.
         </p>
+      </Section>
 
-        <h2>3. Distinguishing Real Effects from Confounds</h2>
+      <Section title="Distinguishing Real Effects from Confounds">
         <p>
           Exposure redistribution must arise from intrinsic material behavior,
           not from:
         </p>
-        <ul>
+        <ul className="list-disc pl-6">
           <li>Implicit filtration or airflow restriction</li>
           <li>Added thickness or simple coverage</li>
           <li>User behavioral changes</li>
           <li>Laboratory artifacts that fail under wear or fouling</li>
-          <li>
-            Net risk relocation to other critical body areas or people
-          </li>
+          <li>Net risk relocation to other critical body areas or people</li>
         </ul>
+      </Section>
 
-        <h2>4. Falsification Criteria</h2>
-        <p>
-          Redistribution as harm reduction is falsified if:
-        </p>
-        <ul>
+      <Section title="Falsification Criteria">
+        <p>Redistribution as harm reduction is falsified if:</p>
+        <ul className="list-disc pl-6">
           <li>
             Exposure at key human interfaces is not measurably reduced in
             controlled comparisons
@@ -153,60 +224,68 @@ export default function ExposureRedistributingMaterialsPage() {
           <li>
             Users cannot reliably perceive or benefit from the redistribution
           </li>
+          <li>
+            Total system exposure remains constant while local exposure appears
+            reduced only by mismeasurement rather than verified redistribution
+          </li>
         </ul>
+      </Section>
 
-        <h2>5. Humanitarian and Ethical Assessment</h2>
+      <Section title="Humanitarian and Ethical Assessment">
         <p>
           Partial exposure reduction can reduce harm when peak or localized dose
           drives risk. Such systems may be appropriate in low-resource settings
-          if robust, passive, and easily interpretable. Ethical risks include
-          false confidence, substitution for primary protections, and unequal
-          redistribution of risk. Ethical deployment requires explicit
-          communication that exposure still exists and elimination is not
-          claimed.
+          if robust, passive, and easily interpretable.
         </p>
+        <p>
+          Ethical risks include false confidence, substitution for primary
+          protections, and unequal redistribution of risk. Ethical deployment
+          requires explicit communication that exposure still exists and
+          elimination is not claimed.
+        </p>
+      </Section>
 
-        <h2>6. Comparison to Existing Mitigations</h2>
-        <ul>
+      <Section title="Comparison to Existing Mitigations">
+        <ul className="list-disc pl-6">
           <li>
-            <strong>Filtration or elimination:</strong> Reduce total hazard load;
-            redistribution does not.
+            <strong>Filtration or elimination:</strong> reduce total hazard
+            load; redistribution does not
           </li>
           <li>
-            <strong>Ventilation and purification:</strong> Actively remove
-            hazards; redistribution is complementary only.
+            <strong>Ventilation and purification:</strong> actively remove
+            hazards; redistribution is complementary only
           </li>
           <li>
-            <strong>Chemical interventions:</strong> Neutralize hazards but may
-            introduce toxicity.
+            <strong>Chemical interventions:</strong> neutralize hazards but may
+            introduce toxicity
           </li>
           <li>
-            <strong>Behavioral controls:</strong> Often outperform passive
-            redistribution when compliance is high.
+            <strong>Behavioral controls:</strong> often outperform passive
+            redistribution when compliance is high
           </li>
         </ul>
 
         <p>
           Redistribution must never undermine stronger, proven interventions.
         </p>
+      </Section>
 
-        <h2>7. Final Judgment</h2>
-        <p>
+      <section className="rounded-2xl border border-red-900/40 bg-red-950/20 p-8">
+        <h2 className="text-xl font-semibold text-white">Final Judgment</h2>
+        <p className="mt-4 text-red-200 leading-7">
           <strong>CONDITIONAL GO.</strong> Exposure-redistributing materials are
-          physically plausible and can reduce harm in narrow, predictable
-          scenarios. Effects are fragile, context-dependent, and ethically
-          deployable only with rigorous validation and transparent communication.
-          These systems should function solely as complementary measures, never
-          as replacements for elimination-based protections.
+          physically valid under conservation of hazard. They can reduce risk at
+          specific interfaces but do not reduce total hazard. Effects are
+          fragile, context-dependent, and ethically deployable only with
+          rigorous validation and transparent communication. These systems must
+          remain strictly complementary and must never be presented as
+          elimination.
         </p>
+      </section>
 
-        <hr />
-
-        <p className="text-sm text-muted-foreground">
-          Part of the <strong>Edge of Knowledge</strong> series · Version 1.0 ·
-          Moral Clarity AI
-        </p>
-      </article>
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Conservation-bound · Non-eliminative · Versioned
+      </div>
     </main>
   );
 }
