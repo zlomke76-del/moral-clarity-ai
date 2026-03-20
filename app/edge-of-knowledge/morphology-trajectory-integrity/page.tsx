@@ -4,205 +4,175 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Morphology Trajectory Integrity — Edge of Knowledge | Moral Clarity AI",
+    "Morphology Trajectory Integrity | Trajectory Admissibility Boundary",
   description:
-    "A governing doctrine establishing morphology trajectory integrity as a required condition for durability claims in trajectory-sensitive polymer regimes.",
-  openGraph: {
-    title: "Morphology Trajectory Integrity",
-    description:
-      "Why endpoint-only durability claims fail in trajectory-sensitive polymer systems, and what integrity requires instead.",
-    url: "https://moralclarity.ai/edge-of-knowledge/morphology-trajectory-integrity",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A governing constraint establishing continuous, observable morphology trajectory as a required condition for valid durability claims.",
 };
+
+function Section({ title, children }: any) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
 
 export default function MorphologyTrajectoryIntegrityPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Morphology Trajectory Integrity</h1>
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
 
-        <p className="lead">
-          <strong>
-            A governing constraint on durability claims in polymer systems where
-            internal morphology evolves on service-relevant time scales
-          </strong>
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Trajectory Integrity Boundary
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Morphology Trajectory Integrity
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          Durability claims are valid only if morphology trajectory is continuous, observable, and bounded.
         </p>
 
-        <hr />
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Continuity required · Interpolation invalid · Missing trajectory breaks claims
+        </div>
+      </section>
 
-        <h2>I. Doctrine Statement</h2>
-
+      {/* CORE */}
+      <Section title="Doctrine Statement">
         <p>
-          Durability claims in polymer systems whose internal morphology evolves
-          under mechanical or environmental exposure are valid only if the
-          trajectory of that morphology is explicitly accounted for, bounded, or
-          shown to be order-invariant. Endpoint-only characterization is
-          insufficient in trajectory-sensitive regimes.
+          In trajectory-sensitive polymer systems, durability claims are valid
+          only if the morphology trajectory is explicitly accounted for,
+          continuous, and bounded within validated limits.
         </p>
 
+        <p className="text-red-300">
+          Endpoint-only or discontinuous representations are non-admissible.
+        </p>
+      </Section>
+
+      {/* INTEGRITY */}
+      <Section title="Trajectory Integrity Requirement">
         <p>
-          This doctrine establishes <em>Morphology Trajectory Integrity</em> as a
-          prerequisite for credible durability, lifetime, and aging assertions.
-          Where morphology evolves irreversibly or hysteretically during
-          service, durability is conditional on the internal state trajectory,
-          not solely on initial properties or terminal measurements.
+          A valid trajectory must satisfy three conditions:
         </p>
 
-        <hr />
-
-        <h2>II. The Missing Quantity</h2>
-
-        <p>
-          The systematically untracked quantity governing long-term polymer
-          performance is the evolving, spatially heterogeneous distribution of
-          internal configurational free energy states within the material. This
-          includes the local arrangement and evolution of entanglements, free
-          volume, residual stress, interfacial cohesion, defect populations, and
-          phase or domain structure.
-        </p>
-
-        <p>
-          Conventional frameworks implicitly treat this internal energetic field
-          as static, equilibrated, or reducible to scalar properties measured at
-          endpoints. In reality, durability depends on how this field is
-          redistributed, depleted, or concentrated under coupled load and
-          environmental histories.
-        </p>
-
-        <p>
-          Because this internal state trajectory is neither tracked nor bounded
-          in standard qualification practice, durability claims are structurally
-          conditional—even when they appear experimentally supported.
-        </p>
-
-        <hr />
-
-        <h2>III. Applicability and Regime Boundaries</h2>
-
-        <h3>Applies to</h3>
-        <ul>
-          <li>Glassy amorphous polymers (e.g., polycarbonate-class behavior)</li>
-          <li>Semi-crystalline thermoplastics with evolving morphology</li>
-          <li>
-            Physically crosslinked elastomers (TPUs, ionomers, supramolecular
-            systems)
-          </li>
-          <li>
-            Multiphase polymers where interfaces or domains govern failure
-          </li>
+        <ul className="list-disc pl-6">
+          <li>Continuity across the full exposure history</li>
+          <li>Direct observability of morphology parameters</li>
+          <li>Bounded evolution within validated state space</li>
         </ul>
 
-        <h3>Does not apply to</h3>
-        <ul>
-          <li>
-            Systems with stationary, order-invariant morphology on service time
-            scales
-          </li>
-          <li>
-            Failures dominated exclusively by chemistry-limited degradation
-          </li>
-          <li>
-            Fully crystalline or inert systems lacking functional morphology
-            evolution
-          </li>
+        <p className="text-red-300">
+          Violation of any condition invalidates the claim.
+        </p>
+      </Section>
+
+      {/* MISSING QUANTITY */}
+      <Section title="The Missing Quantity">
+        <p>
+          The governing variable is the evolving distribution of internal
+          configurational free energy states.
+        </p>
+
+        <p>
+          This includes:
+        </p>
+
+        <ul className="list-disc pl-6">
+          <li>Free volume distribution</li>
+          <li>Entanglement stress fields</li>
+          <li>Interfacial cohesion</li>
+          <li>Defect populations</li>
         </ul>
 
+        <p className="text-red-300">
+          This distribution cannot be reduced to scalar endpoint properties.
+        </p>
+      </Section>
+
+      {/* CONTINUITY FAILURE */}
+      <Section title="Continuity Failure">
         <p>
-          The doctrine activates only when morphology evolution is physically
-          plausible, load-bearing, and coupled to service exposure. It does not
-          universalize path dependence where none exists.
+          Trajectory integrity is broken when:
         </p>
 
-        <hr />
-
-        <h2>IV. Non-Commutativity as the Integrity Test</h2>
-
-        <p>
-          In trajectory-sensitive regimes, the order of environmental and
-          mechanical exposure is non-commutative. Applying environmental cycling
-          before mechanical loading is not equivalent to applying the same
-          exposures in reverse order, even when total dose and duration match.
-        </p>
-
-        <p>
-          A minimal integrity test therefore requires demonstrating either:
-        </p>
-
-        <ul>
-          <li>
-            Order-invariant outcomes under matched exposure sequences, or
-          </li>
-          <li>
-            Explicit bounding of durability claims to conditions where order
-            effects are negligible
-          </li>
+        <ul className="list-disc pl-6">
+          <li>Measurement gaps exist in the trajectory</li>
+          <li>Intermediate states are inferred rather than observed</li>
+          <li>Exposure sequences are partially or ambiguously defined</li>
         </ul>
 
+        <p className="text-red-300">
+          Interpolated or assumed trajectories are not admissible representations.
+        </p>
+      </Section>
+
+      {/* NON-COMMUTATIVE */}
+      <Section title="Non-Commutativity as Integrity Test">
         <p>
-          Absent such demonstration, durability claims implicitly assume a
-          commutativity that polymer physics does not generally support.
+          Load order must be explicitly tested or bounded.
         </p>
 
-        <hr />
-
-        <h2>V. What This Doctrine Does Not Claim</h2>
-
-        <p>
-          Morphology Trajectory Integrity is not a constitutive model, a lifetime
-          prediction algorithm, or a universal failure theory. It does not
-          replace viscoelasticity, fracture mechanics, physical aging theory, or
-          diffusion-based models.
+        <p className="text-red-300">
+          Failure to address order effects constitutes trajectory ambiguity and invalidates claims.
         </p>
+      </Section>
 
-        <p>
-          Instead, it imposes an epistemic constraint: claims must not outrun the
-          physics they depend upon. Where trajectory matters, it must be
-          acknowledged, bounded, or measured.
-        </p>
-
-        <hr />
-
-        <h2>VI. Implications for Practice</h2>
-
-        <p>
-          This doctrine reframes durability evaluation from a property-checking
-          exercise to a trajectory-accounting discipline. It enables:
-        </p>
-
-        <ul>
-          <li>Clear separation between order-sensitive and order-invariant regimes</li>
-          <li>Falsifiable durability claims with explicit kill conditions</li>
-          <li>
-            Honest comparison across materials using shared mechanistic
-            constraints
-          </li>
-          <li>
-            Automated enforcement of integrity rules in review, qualification,
-            and publication contexts
-          </li>
+      {/* IRREVERSIBLE LOSS */}
+      <Section title="Irreversible Loss of Integrity">
+        <ul className="list-disc pl-6">
+          <li>Crossing non-recoverable morphology thresholds</li>
+          <li>Path-dependent drift without reset pathway</li>
+          <li>Loss of mapping between morphology and performance</li>
         </ul>
 
+        <p className="text-red-300">
+          Once integrity is lost, prior claims cannot be extended or reused.
+        </p>
+      </Section>
+
+      {/* INVARIANT */}
+      <Section title="Invariant Framework">
+        <p><strong>G:</strong> Morphology-preserving transformations</p>
+        <p><strong>Q:</strong> Material identity</p>
+        <p><strong>S:</strong> Continuous morphology trajectory</p>
+
+        <p className="text-red-300">
+          Failure: discontinuity, interpolation, or collapse of trajectory into endpoints
+        </p>
+      </Section>
+
+      {/* CLAIM BOUNDARY */}
+      <Section title="Claim Eligibility Boundary">
         <p>
-          By elevating trajectory from an implicit assumption to an explicit
-          requirement, Morphology Trajectory Integrity closes a structural gap
-          that has long separated laboratory qualification from field reality.
+          Any durability claim that relies on incomplete, interpolated, or
+          discontinuous trajectories is invalid.
         </p>
 
-        <hr />
-
-        <p className="text-sm text-muted-foreground">
-          Edge of Knowledge doctrines establish governing constraints, not design
-          prescriptions. This document defines a boundary condition for credible
-          durability claims in polymer systems where morphology evolves over
-          time.
+        <p className="text-red-300">
+          Observability and continuity are required—not optional.
         </p>
-      </article>
+      </Section>
+
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          A trajectory that is not fully observed is not a trajectory—it is an
+          assumption. Durability claims built on assumed trajectories exceed
+          their epistemic authority.
+        </p>
+      </section>
+
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Integrity-bound · Continuity-required · Non-admissible interpolation · Versioned
+      </div>
     </main>
   );
 }
