@@ -1,20 +1,12 @@
 // app/edge-of-knowledge/hodge-conjecture-algebraicity-obstruction/page.tsx
-// ============================================================
-// EDGE OF KNOWLEDGE
-// Hodge Conjecture — Algebraicity Obstruction
-// Regime-bounded, non-actionable, non-advisory doctrine
-// ============================================================
-// This entry exposes an epistemic boundary.
-// It does not propose constructions, proof strategies, or applications.
-// ============================================================
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "The Hodge Conjecture: The Algebraicity Obstruction | Edge of Knowledge",
+    "The Hodge Conjecture: Algebraicity as a Completeness Boundary | Edge of Knowledge",
   description:
-    "A formal reduction identifying the shared hidden assumption underlying all major approaches to the Hodge Conjecture and the resulting epistemic limitation.",
+    "A formal epistemic boundary showing that current approaches assume algebraic completeness without proof, limiting claim authority.",
   robots: {
     index: true,
     follow: true,
@@ -23,161 +15,162 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-static";
 
+function Section({ title, children }: any) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
+
+function Signal({ label, value }: any) {
+  return (
+    <div className="rounded-xl border border-sky-900/40 bg-slate-900/60 p-4">
+      <div className="text-xs uppercase text-sky-300">{label}</div>
+      <div className="mt-2 text-sm text-slate-200">{value}</div>
+    </div>
+  );
+}
+
 export default function HodgeConjectureAlgebraicityObstructionPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Completeness Boundary
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white">
           The Hodge Conjecture
-          <br />
-          and the Algebraicity Obstruction
         </h1>
 
-        <p className="lead">
-          <strong>
-            This entry isolates the decisive epistemic limitation common to all
-            known approaches to the Hodge Conjecture. It does not attempt proof,
-            disproof, construction, or methodological guidance.
-          </strong>
+        <p className="mt-4 text-lg text-slate-300">
+          Algebraicity is assumed complete. This assumption is unproven.
         </p>
 
-        <p className="text-sm text-red-700 dark:text-red-400">
-          <b>Boundary Notice:</b> This material is regime-bounded and
-          non-actionable. It is not advice, instruction, or a proposal for
-          mathematical research.
-        </p>
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <Signal label="Type" value="Completeness Boundary" />
+          <Signal label="Assumption" value="Algebraic Exhaustiveness" />
+          <Signal label="Failure" value="Unproven Closure" />
+        </div>
 
-        <h2>Precise Statement</h2>
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Non-actionable · Boundary only · No construction allowed
+        </div>
+      </section>
+
+      {/* STATEMENT */}
+      <Section title="Formal Statement">
         <p>
-          Let <code>X</code> be a smooth, projective, complex algebraic variety of
-          dimension <code>n</code>. The Hodge Conjecture asserts that every
-          rational cohomology class of type <code>(p,p)</code> in{" "}
-          <code>
-            H
-            <sup>2p</sup>(X, ℚ) ∩ H
-            <sup>p,p</sup>(X, ℂ)
-          </code>{" "}
-          is a rational linear combination of cohomology classes of algebraic
-          cycles of codimension <code>p</code> on <code>X</code>.
+          Let X be a smooth projective complex variety. The Hodge Conjecture
+          asserts that every rational (p,p)-class is algebraic.
         </p>
+      </Section>
 
-        <p>Equivalently, every rational Hodge class is algebraic.</p>
-
-        <h2>Scope</h2>
+      {/* CORE */}
+      <Section title="Core Boundary">
         <p>
-          The conjecture applies to all smooth, projective varieties over ℂ and
-          concerns the relationship between Hodge-theoretic (analytic) and
-          algebraic (cycle-theoretic) origins of cohomology classes.
+          All known approaches assume that algebraic cycles generate the full
+          space of rational Hodge classes.
         </p>
 
-        <h2>Dominant Historical Strategy Classes</h2>
-        <ul>
-          <li>
-            <strong>Construction via Known Algebraic Cycles:</strong> explicit
-            construction of cycles representing Hodge classes in special cases.
-          </li>
-          <li>
-            <strong>Topological and Analytic Methods:</strong> mixed Hodge
-            structures, variation of Hodge structure, and Lefschetz-type
-            theorems.
-          </li>
-          <li>
-            <strong>Reduction to Known Cases:</strong> extension from divisors
-            (Lefschetz (1,1) theorem) and other proven regimes.
-          </li>
-          <li>
-            <strong>Intermediate Jacobian and Normal Function Techniques:</strong>
-            detection of obstructions via normal functions and regulator maps.
-          </li>
+        <p className="text-red-300">
+          This is a completeness claim—not a proven property.
+        </p>
+      </Section>
+
+      {/* STRATEGY LIMIT */}
+      <Section title="Strategy Limitation">
+        <ul className="list-disc pl-6">
+          <li>Cycle constructions are partial generators</li>
+          <li>Analytic methods preserve type but not origin</li>
+          <li>Reduction arguments depend on known cases</li>
+          <li>Obstruction methods are incomplete</li>
         </ul>
 
-        <h2>Core Hidden Assumption</h2>
+        <p className="text-red-300">
+          No approach spans the full space of possible Hodge classes.
+        </p>
+      </Section>
+
+      {/* COMPLETENESS FAILURE */}
+      <Section title="Completeness Failure Condition">
         <p>
-          All major approaches implicitly assume that the space of rational Hodge{" "}
-          <code>(p,p)</code>-classes is exhaustively generated by algebraic
-          cycles.
+          Let S = space of all rational (p,p)-classes.
         </p>
 
         <p>
-          In particular, it is assumed that there exist no “exotic” Hodge classes
-          whose origin is analytic but not representable, even rationally, by
-          algebraic cycles.
+          Let A = subspace generated by algebraic cycles.
         </p>
 
-        <h2>Why This Assumption Limits Progress</h2>
+        <p className="text-red-300">
+          The conjecture assumes: S = A
+        </p>
+
         <p>
-          Known constructions of algebraic cycles do not scale uniformly across
-          all varieties or all codimensions. No general obstruction theory
-          excludes the existence of non-algebraic Hodge classes in higher
-          codimension.
+          This equality is not established.
+        </p>
+      </Section>
+
+      {/* EXOTIC POSSIBILITY */}
+      <Section title="Unresolved Possibility">
+        <p>
+          There may exist classes in S \ A:
         </p>
 
-        <ul>
-          <li>
-            Deformation and variation techniques may preserve Hodge type while
-            obscuring algebraic realizability.
-          </li>
-          <li>Reduction arguments risk circularity outside the proven range.</li>
-          <li>
-            Normal function and regulator methods detect some obstructions but do
-            not characterize all possibilities.
-          </li>
-          <li>
-            There is no universal construction guaranteeing algebraicity for all
-            Hodge classes.
-          </li>
+        <ul className="list-disc pl-6">
+          <li>Analytic in origin</li>
+          <li>Indistinguishable by current invariants</li>
+          <li>Not representable by algebraic cycles</li>
+        </ul>
+
+        <p className="text-red-300">
+          Their existence cannot be excluded.
+        </p>
+      </Section>
+
+      {/* FALSIFICATION */}
+      <Section title="Falsifiable Resolution Requirement">
+        <ul className="list-disc pl-6">
+          <li>Universal proof of S = A</li>
+          <li>Explicit example where S ≠ A</li>
         </ul>
 
         <p>
-          As a result, the conjecture may be true while remaining inaccessible to
-          proof under current paradigms—or false in regimes not yet detectable.
+          Any valid resolution must address completeness directly.
         </p>
+      </Section>
 
-        <h2>Falsifiable Constraint</h2>
+      {/* CLAIM BOUNDARY */}
+      <Section title="Claim Eligibility Boundary">
         <p>
-          Any genuine resolution of the Hodge Conjecture must satisfy one of the
-          following:
+          Any framework assuming algebraic exhaustiveness without proof exceeds
+          its epistemic authority.
         </p>
 
-        <ul>
-          <li>
-            <strong>Proof:</strong> provide a universal mechanism ensuring that
-            every rational <code>(p,p)</code>-class arises from algebraic cycles
-            for all smooth projective varieties.
-          </li>
-          <li>
-            <strong>Counterexample:</strong> exhibit a specific variety and
-            rational <code>(p,p)</code>-class that provably cannot be expressed
-            as a rational combination of algebraic cycle classes.
-          </li>
-        </ul>
-
-        <h2>Non-Conclusions</h2>
-        <ul>
-          <li>The conjecture is neither proved nor disproved.</li>
-          <li>Results for divisors and special varieties do not generalize.</li>
-          <li>
-            Absence of known counterexamples does not imply universality.
-          </li>
-          <li>Analytic correspondence alone does not enforce algebraicity.</li>
-        </ul>
-
-        <h2>Canonical Classification</h2>
-        <p>
-          This entry is an <strong>Edge of Knowledge</strong> artifact. It
-          delineates an epistemic boundary without proposing constructions,
-          strategies, or applications.
+        <p className="text-red-300">
+          Partial generation does not imply completeness.
         </p>
+      </Section>
 
-        <hr />
-
-        <p className="text-sm text-neutral-400">
-          Canonical · Public · Regime-bounded · Version 1.0
-          <br />
-          Updates require explicit revision. Silent modification invalidates the
-          entry.
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          The Hodge Conjecture is not blocked by lack of construction—it is
+          blocked by an unproven completeness assumption. Any approach that does
+          not resolve this boundary cannot claim full coverage.
         </p>
-      </article>
+      </section>
+
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Completeness-bound · Non-constructive · Versioned
+      </div>
     </main>
   );
 }
