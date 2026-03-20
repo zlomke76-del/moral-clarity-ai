@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Untracked Configurational Energy Landscapes in Polymer Durability | Edge of Knowledge",
+    "Thermoplastic Polyurethane Elastomer Networks | Microphase Persistence Boundary",
   description:
-    "A doctrine-level analysis of why polymer durability prediction is structurally conditional due to untracked, path-dependent internal configurational energy fields.",
+    "A constraint establishing that TPU performance is valid only if microphase morphology remains stable under time and environmental exposure.",
   openGraph: {
     title:
-      "Untracked Configurational Energy Landscapes in Polymer Durability",
+      "Thermoplastic Polyurethane Elastomer Networks: Microphase Stability Boundary",
     description:
-      "Why durability prediction systematically fails when evolving internal energy distributions are collapsed into scalar properties.",
-    url: "https://moralclarity.ai/edge-of-knowledge/untracked-configurational-energy-landscapes",
+      "Elastic performance depends on persistence of microphase separation—not initial material state.",
+    url: "https://moralclarity.ai/edge-of-knowledge/tpu-elastomer-networks",
     siteName: "Moral Clarity AI",
     type: "article",
   },
@@ -20,160 +20,179 @@ export const metadata: Metadata = {
   },
 };
 
-export default function UntrackedConfigurationalEnergyLandscapesPage() {
+function Section({ title, children }: any) {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Untracked Configurational Energy Landscapes in Polymer Durability</h1>
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
 
-        <p className="lead">
-          <strong>
-            Why durability prediction remains structurally conditional—even when
-            chemistry, morphology, and loading are well characterized
-          </strong>
+export default function TPUElastomerNetworksPage() {
+  return (
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Microphase Persistence Boundary
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Thermoplastic Polyurethane Elastomer Networks
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          Elastic performance is valid only if microphase morphology persists over time and environment.
         </p>
 
-        <hr />
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Morphology-bound · Time-dependent · Environment-sensitive · Drift-limited
+        </div>
+      </section>
 
-        <h2>I. Core Constraint</h2>
-
+      {/* CORE */}
+      <Section title="Core Boundary">
         <p>
-          The physical quantity systematically untracked in polymer durability
-          analysis is the evolving, spatially heterogeneous distribution of
-          internal configurational free energy states within the material. This
-          includes the microstructural landscape of entanglements, free volume,
-          residual stresses, local disorder, and defect populations—and, most
-          critically, the irreversible, path-dependent redistribution and
-          depletion of these states under coupled mechanical and environmental
-          loading.
+          This system defines a constraint: TPU performance depends on the persistence
+          of microphase-separated morphology under real environmental and temporal conditions.
         </p>
 
+        <p className="text-red-300">
+          If morphology drifts, the system is invalid regardless of initial properties.
+        </p>
+      </Section>
+
+      {/* PROBLEM */}
+      <Section title="Problem Framing">
         <p>
-          Existing frameworks implicitly treat this internal energy landscape as
-          static, equilibrated, or reducible to averaged scalar descriptors
-          measured at endpoints. In practice, durability, creep, fatigue, and
-          failure depend not only on applied histories or initial morphology,
-          but on how this internal energetic field evolves over time and space.
-          Because standard characterization and qualification methods do not
-          track, parameterize, or update this evolving field, they systematically
-          overestimate long-term resistance and toughness.
+          Elastomeric systems must balance elasticity, toughness, and durability.
+          Many materials exhibit acceptable initial performance but degrade under
+          environmental exposure or sustained load.
         </p>
 
-        <p>
-          Durability is therefore always conditional on an internal state
-          trajectory that is neither measured nor reported.
+        <p className="text-red-300">
+          Initial elasticity does not constitute durable performance.
         </p>
+      </Section>
 
-        <h2>II. What This Is—and Is Not</h2>
-
-        <p>
-          This is not a new failure mechanism, material class, or constitutive
-          model. It does not propose a replacement for viscoelasticity, fracture
-          mechanics, physical aging, or environmental stress cracking theory.
-          Instead, it identifies a governing constraint common to all such
-          descriptions: the omission of the evolving internal configurational
-          energy field as a first-class variable.
-        </p>
-
-        <p>
-          The claim does not assert that this field can be fully measured,
-          controlled, or predicted. It asserts only that its evolution governs
-          outcome wherever irreversible microstructural change occurs on service-
-          relevant time and length scales—and that ignoring it renders prediction
-          structurally incomplete.
-        </p>
-
-        <h2>III. Regime of Applicability</h2>
-
-        <p>This constraint governs systems where:</p>
-
-        <ul>
-          <li>
-            Internal morphology evolves irreversibly under load, environment, or
-            time
-          </li>
-          <li>
-            Localized rearrangements alter crack initiation, propagation, or
-            stress redistribution
-          </li>
-          <li>
-            Damage accumulates through distributed, subcritical processes rather
-            than single catastrophic events
-          </li>
+      {/* REGIME */}
+      <Section title="Candidate Polymer Regime">
+        <ul className="list-disc pl-6">
+          <li>Segmented TPU block copolymers</li>
+          <li>Microphase-separated hard and soft domains</li>
+          <li>Industrial melt-processable systems</li>
         </ul>
 
-        <p>It does not apply where:</p>
+        <p>
+          Behavior is governed by morphology—not composition alone.
+        </p>
+      </Section>
 
-        <ul>
-          <li>
-            Internal microstructure remains stationary, homogeneous, or fully
-            reversible
-          </li>
-          <li>
-            Failure is dominated entirely by external flaws or chemistry-limited
-            kinetics
-          </li>
-          <li>
-            Inorganic, glassy, or rigidly crystalline systems lack meaningful
-            internal configurational evolution
-          </li>
+      {/* MECHANISM */}
+      <Section title="Physical Mechanism">
+        <p>
+          Hard domains form physical crosslinks that anchor the network, while
+          soft segments provide extensibility and energy dissipation.
+        </p>
+
+        <p>
+          Elastic recovery depends on maintaining this phase-separated structure.
+        </p>
+
+        <p className="text-red-300">
+          Loss of phase structure eliminates elastomeric behavior.
+        </p>
+      </Section>
+
+      {/* CONSTRAINT */}
+      <Section title="Microphase Persistence Constraint">
+        <p>
+          The governing variable is the stability of phase morphology under:
+        </p>
+
+        <ul className="list-disc pl-6">
+          <li>Humidity and hydrolysis</li>
+          <li>UV and oxidative exposure</li>
+          <li>Thermal cycling</li>
+          <li>Sustained mechanical load</li>
         </ul>
 
-        <h2>IV. Why Standard Evaluation Fails</h2>
+        <p className="text-red-300">
+          Environmental drift invalidates performance claims.
+        </p>
+      </Section>
 
+      {/* FAILURE */}
+      <Section title="Failure Modes">
+        <ul className="list-disc pl-6">
+          <li>Hydrolytic degradation of soft segments</li>
+          <li>UV-induced embrittlement</li>
+          <li>Creep and stress relaxation under load</li>
+          <li>Loss of phase separation through aging</li>
+        </ul>
+
+        <p className="text-red-300">
+          Any morphology drift reduces or eliminates elastic recovery.
+        </p>
+      </Section>
+
+      {/* REGIME MAP */}
+      <Section title="Regime Mapping">
+        <p className="font-semibold text-white">Valid:</p>
+        <ul className="list-disc pl-6">
+          <li>Indoor, controlled environments</li>
+          <li>Moderate mechanical loading</li>
+        </ul>
+
+        <p className="font-semibold text-white mt-4">Fails:</p>
+        <ul className="list-disc pl-6">
+          <li>Outdoor UV exposure</li>
+          <li>Wet or humid environments (polyester TPU)</li>
+          <li>Long-term load-bearing applications</li>
+        </ul>
+      </Section>
+
+      {/* INVARIANT */}
+      <Section title="Invariant Framework">
+        <p><strong>G:</strong> Morphology-preserving transformations</p>
+        <p><strong>Q:</strong> Elastic performance</p>
+        <p><strong>S:</strong> Microphase structure</p>
+
+        <p className="text-red-300">
+          Failure: Q degrades as S drifts
+        </p>
+      </Section>
+
+      {/* CLAIM */}
+      <Section title="Claim Eligibility Boundary">
         <p>
-          Datasheets, short-duration tests, and monotonic loading protocols
-          collapse a high-dimensional, evolving internal energy field into static
-          averages. They do not interrogate how energy is stored, redistributed,
-          localized, or irreversibly dissipated across space and time under
-          cycling.
+          Any claim of TPU durability must demonstrate stability of microphase
+          morphology over time and environmental exposure.
         </p>
 
-        <p>
-          As a result, these methods systematically misclassify conditional
-          durability as intrinsic robustness. They detect only endpoints, not
-          trajectories; averages, not gradients; equilibrium assumptions, not
-          non-equilibrium evolution.
+        <p className="text-red-300">
+          Initial performance data is not admissible evidence of long-term behavior.
         </p>
+      </Section>
 
-        <h2>V. Consequence</h2>
-
-        <p>
-          Failure occurs not when a material is weak, but when its internal
-          configurational energy distribution becomes incompatible with the
-          future loads and environments it is asked to bear.
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          TPU systems are valid only within controlled environments where
+          microphase structure remains stable. Elasticity is not an inherent
+          property—it is a maintained condition. When morphology drifts,
+          performance disappears.
         </p>
+      </section>
 
-        <p>
-          This incompatibility is rarely sudden. It emerges through silent,
-          distributed evolution—long before macroscopic indicators signal risk.
-          By the time failure is visible, the governing energetic mismatch has
-          already been irreversibly encoded.
-        </p>
-
-        <h2>VI. Edge of Knowledge Judgment</h2>
-
-        <p>
-          <strong>CONDITIONAL GO.</strong>
-        </p>
-
-        <p>
-          This analysis defines a universal boundary condition for honest
-          durability assessment across polymer systems. It does not offer a
-          predictive solution, nor does it claim universal applicability. It
-          establishes the minimum epistemic discipline required to avoid
-          structural overconfidence in durability claims where internal
-          configurational energy evolution is load-bearing.
-        </p>
-
-        <hr />
-
-        <p className="text-sm text-muted-foreground">
-          Edge of Knowledge documents define limits, not prescriptions. This page
-          articulates a governing constraint that must be acknowledged before
-          optimization, prediction, or extrapolation can be considered valid.
-        </p>
-      </article>
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Morphology-bound · Time-dependent · Environment-limited · Versioned
+      </div>
     </main>
   );
 }
