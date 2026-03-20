@@ -6,181 +6,185 @@ export const metadata: Metadata = {
   title:
     "Interfacial-Debond–Controlled Failure as a General Class | Edge of Knowledge",
   description:
-    "A mechanism-level framework defining interfacial-debond–controlled failure as a general polymer physics regime, not a material-specific effect.",
-  openGraph: {
-    title:
-      "Interfacial-Debond–Controlled Failure as a General Class",
-    description:
-      "Why reversible interfaces produce a universal failure regime across polymers under environmental cycling.",
-    url: "https://moralclarity.ai/edge-of-knowledge/interfacial-debond-failure-class",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A durability claim boundary showing that reversible interfaces create a regime where bulk properties lose authority and interfacial spectra govern failure.",
 };
+
+function Section({ title, children }: any) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
 
 export default function InterfacialDebondFailureClassPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>
-          Why This Is a General Failure Class, Not a Material-Specific Effect
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Durability Claim Boundary
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white leading-tight">
+          Interfacial-Debond–Controlled Failure
         </h1>
 
-        <p className="lead">
-          <strong>
-            Interfacial-debond–controlled failure is an emergent regime of
-            polymer behavior, grounded in universal physics rather than any
-            particular chemistry, formulation, or processing choice.
-          </strong>
+        <p className="mt-4 text-lg text-slate-300">
+          Reversible interfaces create a regime where durability is governed by interfacial spectra—not bulk properties.
+        </p>
+
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Bulk metrics insufficient · Interface-dominated · Claim authority constrained
+        </div>
+      </section>
+
+      {/* CORE */}
+      <Section title="Core Statement">
+        <p>
+          Interfacial-debond–controlled failure is a general regime arising in
+          polymers with reversible associative domains, where fracture proceeds
+          through sequential or collective interface decohesion rather than bulk
+          yielding or covalent scission.
+        </p>
+
+        <p className="text-red-300">
+          In this regime, durability is not a bulk property—it is governed by the
+          distribution and evolution of interfacial states.
+        </p>
+      </Section>
+
+      {/* MECHANISM */}
+      <Section title="Governing Mechanism">
+        <p>
+          Load transfer occurs through reversible interfaces stabilized by ionic,
+          hydrogen-bonding, or supramolecular interactions.
         </p>
 
         <p>
-          The interfacial-debond-controlled mechanism elucidated here is best
-          understood as an emergent failure class grounded in universal polymer
-          physics, not as an artifact confined to a specific material, ion, or
-          formulation. This regime is characterized by distributed sacrificial
-          interfaces—regions within the polymer where load is transferred and
-          dissipated via reversible, non-covalent crosslinks. The structural and
-          mechanical behavior of such systems reflects a dynamic morphology
-          inherently coupled to environmental variables and cycling, resulting
-          in a time-dependent, non-static evolution of interfacial fracture
-          energy.
+          Failure emerges when:
+        </p>
+
+        <ul className="list-disc pl-6">
+          <li>Interfacial length scale approaches process-zone size</li>
+          <li>Association kinetics lag environmental cycling</li>
+          <li>Interfaces lose independence and fail collectively</li>
+        </ul>
+
+        <p className="text-red-300">
+          This produces a morphology-driven fracture pathway independent of bulk integrity.
+        </p>
+      </Section>
+
+      {/* KINETICS */}
+      <Section title="Kinetic Condition">
+        <p>
+          The critical condition is:
+        </p>
+
+        <p className="text-red-300">
+          Environmental cycling rate &gt; morphological relaxation time
         </p>
 
         <p>
-          At the core of this failure class are interfaces stabilized by
-          reversible associations—ionic, hydrogen-bonding, supramolecular, or
-          otherwise—that are neither permanent nor inert. The load-bearing
-          capacity of these interfaces and the capacity for energy dissipation
-          derive from transient bond formation and rupture events, whose
-          kinetics and equilibrium are directly modulated by external stimuli
-          such as humidity, temperature, and chemical exposure. Crucially, the
-          stability and efficacy of these interfaces are governed by the
-          relative magnitude of their spatial extent and the process-zone size
-          operative at advancing crack tips. When the interfacial length scale
-          approaches or overlaps with the process-zone size, the local
-          dissipative and toughening processes fail to remain independent,
-          inducing a collective, morphology-driven pathway to fracture.
+          Under this condition, interfaces cannot re-equilibrate, producing
+          cumulative, irreversible morphology drift.
+        </p>
+      </Section>
+
+      {/* GENERALITY */}
+      <Section title="Generality of the Regime">
+        <p>
+          This regime applies across polymer families with reversible interfaces:
+        </p>
+
+        <ul className="list-disc pl-6">
+          <li>Ionomers</li>
+          <li>Supramolecular polymers</li>
+          <li>Hydrogen-bonded systems</li>
+          <li>Reversible crosslink elastomers</li>
+        </ul>
+
+        <p>
+          It is not chemistry-specific—it is physics-governed.
+        </p>
+      </Section>
+
+      {/* TEST FAILURE */}
+      <Section title="Failure of Conventional Evaluation">
+        <p>
+          Standard testing fails because it:
+        </p>
+
+        <ul className="list-disc pl-6">
+          <li>Measures bulk properties instead of interfacial distributions</li>
+          <li>Uses monotonic loading instead of cyclic conditions</li>
+          <li>Ignores morphology drift and hysteresis</li>
+        </ul>
+
+        <p className="text-red-300">
+          These methods cannot resolve the governing state variables.
+        </p>
+      </Section>
+
+      {/* INVARIANT */}
+      <Section title="Invariant Framework">
+        <p><strong>G:</strong> Environmental and loading cycles</p>
+        <p><strong>Q:</strong> Mass and covalent backbone integrity</p>
+        <p><strong>S:</strong> Interfacial association lifetimes, length scales, and fracture contributions</p>
+
+        <p className="text-red-300">
+          Failure: collapse of a connected subset of S into a system-spanning debond pathway
+        </p>
+      </Section>
+
+      {/* CLAIM BOUNDARY */}
+      <Section title="Claim Eligibility Boundary">
+        <p>
+          Any durability, toughness, or lifetime claim that does not resolve the
+          invariant spectrum S is invalid in this regime.
+        </p>
+
+        <p className="text-red-300">
+          Bulk properties, average fracture energy, and short-duration tests do
+          not span the governing state space.
         </p>
 
         <p>
-          This failure behavior is general and applies across polymer families
-          united by the presence of reversible associative domains and
-          environmental sensitivity—ionomers, supramolecular polymers,
-          hydrogen-bonded matrices, and reversible crosslink elastomers—
-          regardless of detailed chemistry or processing. The critical
-          condition for its emergence is kinetic: environmental cycling that
-          alters association energies at rates exceeding the structural
-          relaxation time of the morphology. Under such conditions, the
-          microstructure cannot re-equilibrate before the next perturbation,
-          resulting in cumulative, hysteretic morphology drift and progressive
-          loss of interfacial integrity.
+          Conservation of material or chemistry does not imply persistence of
+          interfacial integrity.
+        </p>
+      </Section>
+
+      {/* UNCERTAINTY */}
+      <Section title="Uncertainty and Limits">
+        <p>
+          Quantitative prediction remains system-dependent and unresolved.
         </p>
 
         <p>
-          Mechanically, this produces an environment in which cracks propagate
-          not through bulk yielding or covalent bond scission, but by
-          sequential or collective decohesion of these sacrificial interfaces
-          in response to dynamic, environment-modulated toughening.
+          This framework does not provide design solutions—it defines evaluation
+          constraints.
         </p>
+      </Section>
 
-        <p>
-          The systematic under-recognition of this class in industrial practice
-          is rooted in fundamental mismatches between conventional evaluation
-          methods and the physics that govern real-world failure. Datasheets,
-          short-duration tests, and monotonic loading protocols are
-          structurally incapable of interrogating the dimensionless ratios—
-          such as the interfacial length to process-zone size and association
-          lifetime to relaxation time—that control the onset and evolution of
-          this mechanism. These protocols further neglect irreversible
-          morphology drift under cyclic environmental conditions and fail to
-          quantify hysteresis in mechanical response across cycles of
-          association and dissociation.
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          Durability is not a bulk material property in this regime. It is a
+          function of interfacial state evolution. Any claim that does not resolve
+          this spectrum exceeds its epistemic authority.
         </p>
+      </section>
 
-        <p>
-          Recognition of interfacial-debond–controlled failure as a general
-          class enables several advances: it compels the formulation of
-          falsifiable, morphology-grounded hypotheses for lifetime and
-          durability; it allows disciplined comparison across materials using
-          shared mechanistic descriptors; and it enables rigorous exclusion of
-          systems whose performance cannot withstand environmental and temporal
-          scrutiny. This framework raises the epistemic standard for evaluating
-          polymer durability wherever reversible interfaces and environmental
-          coupling dominate behavior.
-        </p>
-
-        <p>
-          Substantial uncertainties remain. Quantitative mapping between
-          externally driven association energy fluctuations, morphological
-          evolution kinetics, and time-dependent fracture energy is complex and
-          system-dependent. The precise boundaries where interfacial length
-          scales or kinetics dominate failure remain conditional on polymer
-          architecture and environmental protocol. No claim of predictive
-          generality or controllability is made—only the necessity of this
-          framework for honest evaluation.
-        </p>
-
-        <p>
-          In defining this as a failure regime rather than a material
-          phenomenon, this work establishes a universal boundary condition for
-          credible durability claims. It is not a prescriptive design guide nor
-          an advocacy for specific material solutions, but a disciplined
-          elevation of the analytical standards required to understand failure
-          at the edge of knowledge.
-        </p>
-
-        <hr />
-
-        <h2>Invariant Closure (Canonical)</h2>
-
-        <p>
-          <strong>Symmetry group (𝑮):</strong> Environmental cycling and loading
-          transformations (humidity, temperature, chemical exposure, mechanical
-          cycling) under which durability or lifetime claims are asserted.
-        </p>
-
-        <p>
-          <strong>Conserved quantity (𝑸):</strong> Total polymer mass and
-          covalent backbone integrity (no bulk material loss or chain scission
-          required for failure).
-        </p>
-
-        <p>
-          <strong>Invariant spectrum (𝑺):</strong> The distribution of
-          interfacial association lifetimes, interfacial length scales, and
-          effective fracture-energy contributions arising from reversible
-          interfaces across the morphology.
-        </p>
-
-        <p>
-          <strong>Failure signature on 𝑺:</strong> Emergence of a connected
-          population of interfaces whose association lifetime or effective
-          fracture contribution collapses under cycling, producing a
-          system-spanning debond pathway without bulk yielding or scission.
-        </p>
-
-        <p>
-          <strong>Disentitlement:</strong> Any durability, toughness, or lifetime
-          claim that relies on bulk properties, average fracture energy, or
-          short-duration testing without resolving the invariant spectrum 𝑺 is
-          not legitimate within this regime. Conservation of mass or chemistry
-          does not imply persistence of interfacial integrity.
-        </p>
-
-        <hr />
-
-        <p className="text-sm text-muted-foreground">
-          Edge of Knowledge documents define regime-bounded governing constraints,
-          not prescriptions or guarantees. This page establishes the invariant
-          structure required for legitimate durability claims in systems governed
-          by reversible interfacial physics.
-        </p>
-      </article>
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Interface-bound · Spectrum-dependent · Versioned
+      </div>
     </main>
   );
 }
