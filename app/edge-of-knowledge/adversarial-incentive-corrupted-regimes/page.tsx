@@ -1,218 +1,213 @@
 // app/edge-of-knowledge/adversarial-incentive-corrupted-regimes/page.tsx
-// ============================================================
-// EDGE OF KNOWLEDGE
-// Adversarial & Incentive-Corrupted Regimes
-// (Regime condition where truth-aligned behavior is penalized or denied)
-// ============================================================
-// Non-actionable · Non-advisory · Explicit limits · Versioned
-// ============================================================
 
 import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Adversarial & Incentive-Corrupted Regimes | Edge of Knowledge",
+  title: "Adversarial & Incentive-Corrupted Regimes | Moral Clarity AI",
   description:
-    "Analysis of environments where misalignment, denial, or manipulation are rewarded, causing trust, accountability, and cooperation to fail.",
-  openGraph: {
-    title: "Adversarial & Incentive-Corrupted Regimes — Edge of Knowledge",
-    description:
-      "When incentives reward denial or manipulation, core system functions collapse.",
-    url: "https://moralclarity.ai/edge-of-knowledge/adversarial-incentive-corrupted-regimes",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "Regimes where truth-aligned behavior is penalized, causing systemic breakdown across trust, coordination, and accountability.",
 };
 
-export const dynamic = "force-static";
-
-export default function AdversarialIncentiveCorruptedRegimesPage() {
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Adversarial & Incentive-Corrupted Regimes</h1>
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8 shadow-lg backdrop-blur-sm">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300 leading-7">
+        {children}
+      </div>
+    </section>
+  );
+}
 
-        <p className="lead">
-          <strong>
-            Regime conditions in which misalignment, denial, or manipulation are
-            rewarded, rendering truth-aligned behavior structurally unsafe. Not
-            a product, policy, or recommendation.
-          </strong>
+function Signal({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-sky-900/40 bg-slate-900/60 p-4">
+      <div className="text-xs uppercase tracking-widest text-sky-300">
+        {label}
+      </div>
+      <div className="mt-2 text-sm text-slate-200">{value}</div>
+    </div>
+  );
+}
+
+function FailureBlock({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-sky-900/30 bg-slate-900/60 p-5">
+      <div className="text-sm font-semibold text-white">{title}</div>
+      <p className="mt-2 text-sm text-slate-400 leading-6">{children}</p>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10 shadow-xl">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Regime Condition
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white leading-tight">
+          Adversarial & Incentive-Corrupted Regimes
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          When truth-aligned behavior becomes structurally unsafe.
         </p>
 
-        <p className="text-sm text-red-700 dark:text-red-400">
-          <b>Boundary Notice:</b> This analysis is regime-bounded and
-          non-actionable. It describes structural breakdown, not corrective
-          prescriptions. Revisions are explicit and historicized.
-        </p>
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <Signal label="Condition" value="Incentive Misalignment" />
+          <Signal label="Failure Type" value="Systemic Breakdown" />
+          <Signal label="Result" value="Truth Penalty Regime" />
+        </div>
 
-        {/* PREFACE */}
-        <h2>Preface</h2>
+        <div className="mt-8 rounded-xl border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200">
+          Boundary: Non-actionable · Descriptive only · No prescriptions
+        </div>
+      </section>
+
+      {/* PREFACE */}
+      <Section title="Preface">
         <p>
-          Some systems do not fail due to accident, ignorance, or lack of
-          technical capacity. They fail because the environment itself becomes
-          adversarial to truth. In such regimes, honesty, cooperation, and
-          accountability are no longer load-bearing assumptions.
+          Some systems fail not due to lack of capability, but because the
+          environment itself becomes adversarial to truth.
         </p>
-
         <p>
-          This document characterizes the structural breakdown that occurs when
-          incentives reward denial, distortion, or misalignment, and when
-          truth-aligned behavior carries disproportionate cost.
+          In these regimes, honesty, cooperation, and accountability are no
+          longer viable strategies.
         </p>
-
-        <p className="text-sm text-neutral-500">
-          All analysis assumes admissibility under the{" "}
-          <Link href="/reference/reality-first-substrate-gate">
+        <p className="text-sm text-slate-400">
+          Assumes admissibility under{" "}
+          <Link href="/reference/reality-first-substrate-gate" className="text-sky-300 underline">
             Reality-First Substrate Gate
+          </Link>
+        </p>
+      </Section>
+
+      {/* INTERPRETATION */}
+      <Section title="Interpretation Limit">
+        <p>
+          This analysis does not assign intent or prescribe remediation.
+        </p>
+        <p>
+          Authority and enforcement remain governed by{" "}
+          <Link href="/edge-of-protection" className="text-sky-300 underline">
+            Edge of Protection
           </Link>
           .
         </p>
+      </Section>
 
-        {/* INTERPRETATION LIMIT */}
-        <h2>Interpretation Limit</h2>
+      {/* ABSTRACT */}
+      <Section title="Abstract">
         <p>
-          This material does not diagnose individual intent or assign moral
-          blame. It describes systemic conditions and their effects on collective
-          function.
+          When incentives reward denial or manipulation, core system functions
+          fail together.
         </p>
-
         <p>
-          It does not prescribe remediation or enforcement strategies. Authority
-          and refusal logic are governed by the{" "}
-          <Link href="/edge-of-protection">Edge of Protection</Link>.
+          Trust, communication, and coordination collapse simultaneously,
+          producing instability and escalating damage.
         </p>
+      </Section>
 
-        {/* ABSTRACT */}
-        <h2>Abstract</h2>
-        <p>
-          When incentives reward denial, manipulation, or misalignment, core
-          system functions degrade simultaneously. Trust erodes, communication
-          collapses, accountability weakens, and coordinated action becomes
-          unstable or impossible. The resulting environment is adversarial,
-          unpredictable, and prone to escalating damage.
-        </p>
+      {/* FAILURE SYSTEM */}
+      <section className="space-y-6">
+        <h2 className="text-2xl font-semibold text-white">
+          System-Wide Failure Pattern
+        </h2>
 
-        {/* CORE BREAKDOWNS */}
-        <h2>System Functions That Fail Under Adversarial Incentives</h2>
+        <div className="grid gap-4 md:grid-cols-2">
+          <FailureBlock title="Trust">
+            Cooperative behavior becomes risky and is abandoned.
+          </FailureBlock>
 
-        <h3>Trust</h3>
-        <p>
-          Mutual confidence and assumed goodwill fail. Cooperative behavior
-          becomes risky, and actors default to defensive or self-protective
-          strategies.
-        </p>
+          <FailureBlock title="Communication">
+            Information is distorted, suppressed, or weaponized.
+          </FailureBlock>
 
-        <h3>Communication</h3>
-        <p>
-          Information channels degrade or close. Reporting becomes selective,
-          distorted, or suppressed as truthful disclosure incurs penalty.
-        </p>
+          <FailureBlock title="Accountability">
+            Enforcement becomes selective or performative.
+          </FailureBlock>
 
-        <h3>Accountability</h3>
-        <p>
-          Responsibility mechanisms lose traction or are weaponized. Enforcement
-          becomes inconsistent, performative, or selectively applied.
-        </p>
+          <FailureBlock title="Cooperation">
+            Coordination collapses under rising cost and risk.
+          </FailureBlock>
 
-        <h3>Cooperation</h3>
-        <p>
-          Shared purpose erodes. Coordination costs rise sharply, and joint
-          action becomes inefficient or infeasible.
-        </p>
+          <FailureBlock title="Goal Alignment">
+            Individual incentives diverge from system outcomes.
+          </FailureBlock>
 
-        <h3>Goal Alignment</h3>
-        <p>
-          Collective objectives cannot be maintained. Individual incentives
-          diverge from system-level outcomes.
-        </p>
+          <FailureBlock title="Transparency">
+            Honest reporting is penalized or suppressed.
+          </FailureBlock>
 
-        <h3>Transparency</h3>
-        <p>
-          Honest reporting is obstructed or replaced by manipulation, omission,
-          or strategic ambiguity.
-        </p>
+          <FailureBlock title="Decision-Making">
+            Outcomes detach from evidence and stability.
+          </FailureBlock>
 
-        <h3>Incentives</h3>
-        <p>
-          Reward structures favor short-term advantage, denial, or harm over
-          accuracy, repair, or long-term stability.
-        </p>
+          <FailureBlock title="Resilience">
+            System cannot absorb shocks or recover.
+          </FailureBlock>
+        </div>
+      </section>
 
-        <h3>Decision-Making</h3>
-        <p>
-          Deliberation degrades. Outcomes become erratic, unjust, or detached
-          from evidence.
-        </p>
-
-        <h3>Rules and Enforcement</h3>
-        <p>
-          Agreements and protocols lose legitimacy. Compliance becomes optional
-          or selectively ignored.
-        </p>
-
-        <h3>Resilience</h3>
-        <p>
-          Social and organizational cohesion weakens. The system cannot absorb
-          shocks or recover from setbacks.
-        </p>
-
-        <h3>Progress</h3>
-        <p>
-          Denial blocks recognition of problems. Correction stalls, and the
-          system stagnates or regresses.
-        </p>
-
-        <h3>Ethical Standards</h3>
-        <p>
-          Moral clarity decays. Exploitation, harm, or abuse increase as norms
-          lose enforcement power.
-        </p>
-
-        {/* HARD CONSTRAINTS */}
-        <h2>Hard Constraints</h2>
-        <ul>
-          <li>Truth-aligned behavior carries disproportionate cost</li>
-          <li>Detection signals are ignored or punished</li>
-          <li>Correction mechanisms lack authority</li>
-          <li>Recovery requires incentive realignment, not optimization</li>
+      {/* HARD CONSTRAINTS */}
+      <Section title="Hard Constraints">
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Truth carries disproportionate cost</li>
+          <li>Detection signals are punished</li>
+          <li>Correction lacks authority</li>
+          <li>Recovery requires incentive realignment</li>
         </ul>
+      </Section>
 
-        {/* NON-CONCLUSIONS */}
-        <h2>What Cannot Be Concluded</h2>
-        <ul>
-          <li>That good design alone prevents adversarial regimes</li>
-          <li>That transparency guarantees correction</li>
-          <li>That consensus reflects truth under misaligned incentives</li>
-          <li>That recovery is possible without structural realignment</li>
+      {/* NON-CONCLUSIONS */}
+      <Section title="Invalid Assumptions">
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Good design prevents adversarial regimes</li>
+          <li>Transparency ensures correction</li>
+          <li>Consensus reflects truth</li>
+          <li>Recovery occurs without structural change</li>
         </ul>
+      </Section>
 
-        {/* SUMMARY */}
-        <h2>Summary</h2>
+      {/* SUMMARY */}
+      <Section title="Summary">
         <p>
-          Adversarial and incentive-corrupted regimes represent a systemic
-          condition in which alignment, honesty, and cooperation cease to be
-          viable defaults. Core functions fail together, damage escalates, and
-          recovery becomes difficult without restoring incentive compatibility
-          with truth and accountability.
+          Adversarial regimes represent a structural condition where truth,
+          alignment, and cooperation cease to function as defaults.
         </p>
-
-        {/* SEAL */}
-        <h2>Canonical Seal</h2>
         <p>
-          This analysis is regime-bounded, non-actionable, versioned, and
-          refusal-enforced. All updates are explicit and historical.
+          Recovery requires restoring incentive compatibility with truth.
         </p>
+      </Section>
 
-        <p className="text-sm text-neutral-400 mt-8">
-          Version 1.0 · Canonical · Public reference · Updated only by explicit
-          revision. Silent modification invalidates authority.
+      {/* SEAL */}
+      <section className="rounded-2xl border border-sky-900/40 bg-slate-950/60 p-6 text-center">
+        <p className="text-sm text-slate-400">
+          Canonical · Non-actionable · Versioned · Refusal-enforced
         </p>
-      </article>
+      </section>
     </main>
   );
 }
