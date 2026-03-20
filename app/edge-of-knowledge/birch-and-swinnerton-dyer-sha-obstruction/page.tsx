@@ -1,184 +1,161 @@
 // app/edge-of-knowledge/birch-and-swinnerton-dyer-sha-obstruction/page.tsx
-// ============================================================
-// EDGE OF KNOWLEDGE
-// Birch and Swinnerton-Dyer Conjecture — Sha Obstruction
-// Regime-bounded, non-actionable, non-advisory doctrine
-// ============================================================
-// This entry exposes a structural epistemic boundary.
-// It does not propose methods, strategies, or solutions.
-// ============================================================
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Birch and Swinnerton-Dyer: The Shafarevich–Tate Obstruction | Edge of Knowledge",
+    "Birch and Swinnerton-Dyer — The Sha Obstruction | Moral Clarity AI",
   description:
-    "A formal reduction showing why the Birch and Swinnerton-Dyer conjecture is structurally blocked without control of the Shafarevich–Tate group.",
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A structural reduction identifying the Shafarevich–Tate group as the decisive epistemic barrier in the full BSD conjecture.",
 };
 
-export const dynamic = "force-static";
-
-export default function BSDShaObstructionPage() {
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>
-          Birch and Swinnerton-Dyer Conjecture:
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8 shadow-lg backdrop-blur-sm">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300 leading-7">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function Signal({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-sky-900/40 bg-slate-900/60 p-4">
+      <div className="text-xs uppercase tracking-widest text-sky-300">
+        {label}
+      </div>
+      <div className="mt-2 text-sm text-slate-200">{value}</div>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10 shadow-xl">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Structural Obstruction
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white leading-tight">
+          Birch and Swinnerton-Dyer:
           <br />
           The Shafarevich–Tate Obstruction
         </h1>
 
-        <p className="lead">
-          <strong>
-            This entry identifies the decisive epistemic barrier in the full
-            Birch and Swinnerton-Dyer conjecture. It does not attempt resolution,
-            construction, or recommendation.
-          </strong>
+        <p className="mt-4 text-lg text-slate-300">
+          The conjecture does not close without control of Sha(E).
         </p>
 
-        <p className="text-sm text-red-700 dark:text-red-400">
-          <b>Boundary Notice:</b> This material is regime-bounded and
-          non-actionable. It is not advice, instruction, or a proposal for
-          mathematical research direction.
-        </p>
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <Signal label="Type" value="Epistemic Barrier" />
+          <Signal label="Dependency" value="Sha(E)" />
+          <Signal label="Status" value="Unresolved / Blocking" />
+        </div>
 
-        <h2>Statement of the Problem</h2>
+        <div className="mt-8 rounded-xl border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200">
+          Regime-bounded · Non-actionable · No constructive claims
+        </div>
+      </section>
+
+      {/* CORE STATEMENT */}
+      <Section title="Core Statement">
         <p>
-          The Birch and Swinnerton-Dyer conjecture asserts a precise identity
-          relating the leading Taylor coefficient of the L-function of an
-          elliptic curve over ℚ at <code>s = 1</code> to arithmetic invariants of
-          the curve.
+          The full Birch and Swinnerton-Dyer conjecture reduces to a dependency
+          on the Shafarevich–Tate group.
         </p>
-
         <p>
-          In its full form, the conjecture is not merely an equality between
-          algebraic rank and analytic order of vanishing, but an explicit
-          arithmetic formula whose validity depends on the behavior of multiple
-          invariants.
+          Without establishing finiteness and arithmetic control of Sha(E),
+          the leading-term identity cannot be completed.
         </p>
+      </Section>
 
-        <h2>The Full Leading-Term Formula</h2>
-        <p>
-          For an elliptic curve <code>E/ℚ</code> of rank <code>r</code>, the
-          conjecture asserts:
-        </p>
-
-        <pre>
+      {/* FORMULA */}
+      <Section title="Leading-Term Identity">
+        <pre className="text-sm text-slate-200 bg-black/40 p-4 rounded-lg overflow-x-auto">
 {`lim_{s→1} L(E,s)/(s−1)^r
 = ( |Sha(E)| · Ω_E · Reg_E · ∏ c_p ) / |E(ℚ)_tors|²`}
         </pre>
-
         <p>
-          Among these terms, the Shafarevich–Tate group <code>Sha(E)</code> plays
-          a structurally unique role.
+          Sha(E) is not auxiliary. It is structurally embedded in the identity.
         </p>
+      </Section>
 
-        <h2>Core Hidden Assumption</h2>
-        <p>
-          All known approaches to the conjecture—analytic, arithmetic, or
-          Iwasawa-theoretic—depend essentially on the unproven assumption that:
-        </p>
-
-        <ul>
-          <li>
-            The Shafarevich–Tate group <code>Sha(E)</code> is finite, and
-          </li>
-          <li>
-            Its arithmetic structure does not introduce independent complexity
-            that obstructs effective comparison between analytic and algebraic
-            invariants.
-          </li>
+      {/* HIDDEN ASSUMPTION */}
+      <Section title="Hidden Dependency">
+        <p>All known approaches assume:</p>
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Finiteness of Sha(E)</li>
+          <li>Non-obstructive arithmetic structure</li>
         </ul>
+        <p>This assumption is unproven and non-removable.</p>
+      </Section>
 
+      {/* OBSTRUCTION */}
+      <Section title="Obstruction Mechanism">
         <p>
-          This assumption is not auxiliary. The order of{" "}
-          <code>Sha(E)</code> appears explicitly in the conjectured identity.
+          Outside controlled regimes, there is no framework to:
         </p>
-
-        <h2>Why This Is a Structural Obstruction</h2>
-        <p>
-          Where <code>Sha(E)</code> is controlled—such as certain rank 0 or rank 1
-          cases via Euler systems—the conjecture becomes accessible.
-        </p>
-
-        <p>
-          Outside these regimes, no unconditional framework exists to:
-        </p>
-
-        <ul>
-          <li>Compute or bound <code>|Sha(E)|</code> in general,</li>
-          <li>
-            Determine whether its arithmetic structure is benign or obstructive,
-          </li>
-          <li>
-            Or complete the leading-term identity even when analytic rank is
-            known.
-          </li>
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Compute |Sha(E)|</li>
+          <li>Bound its behavior</li>
+          <li>Guarantee non-obstructive structure</li>
         </ul>
-
         <p>
-          As a result, the conjecture may be true while remaining epistemically
-          inaccessible under current methods.
+          Therefore, the conjecture may be true but remains structurally
+          inaccessible.
         </p>
+      </Section>
 
-        <h2>Falsifiable Constraint</h2>
-        <p>
-          Any claimed proof or counterexample to the full
-          Birch and Swinnerton-Dyer conjecture must explicitly address the
-          behavior of <code>Sha(E)</code>.
-        </p>
-
-        <p>Specifically, it must:</p>
-
-        <ul>
-          <li>
-            Establish finiteness and arithmetic control of{" "}
-            <code>Sha(E)</code>, or
-          </li>
-          <li>
-            Demonstrate how unresolved behavior of{" "}
-            <code>Sha(E)</code> is rendered immaterial, or
-          </li>
-          <li>
-            Exhibit explicit obstructive behavior that disrupts the identity.
-          </li>
+      {/* FALSIFIABLE */}
+      <Section title="Falsifiable Constraint">
+        <p>Any valid resolution must address Sha(E) explicitly:</p>
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Prove finiteness and control</li>
+          <li>Neutralize its effect</li>
+          <li>Or exhibit obstruction</li>
         </ul>
+      </Section>
 
-        <h2>Non-Conclusions</h2>
-        <ul>
-          <li>
-            No general proof or disproof of the full conjecture is known.
-          </li>
-          <li>
-            Equality of rank and order of vanishing alone does not resolve BSD.
-          </li>
-          <li>
-            Computational evidence in restricted cases does not address the
-            general obstruction.
-          </li>
+      {/* NON CONCLUSIONS */}
+      <Section title="Invalid Conclusions">
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Rank equality does not resolve BSD</li>
+          <li>Partial results do not generalize</li>
+          <li>Computation does not remove obstruction</li>
         </ul>
+      </Section>
 
-        <h2>Canonical Classification</h2>
-        <p>
-          This entry is classified as an <strong>Edge of Knowledge</strong>{" "}
-          artifact. It exposes an epistemic boundary without proposing action,
-          optimization, or application.
+      {/* FINAL */}
+      <section className="rounded-2xl border border-red-900/40 bg-red-950/20 p-8">
+        <h2 className="text-xl font-semibold text-white">
+          Structural Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          BSD is blocked at Sha(E). Without resolving this dependency,
+          the conjecture cannot close.
         </p>
+      </section>
 
-        <hr />
-
-        <p className="text-sm text-neutral-400">
-          Canonical · Public · Regime-bounded · Version 1.0  
-          <br />
-          Updates require explicit revision. Silent modification invalidates the
-          entry.
-        </p>
-      </article>
+      {/* FOOTER */}
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Regime-bounded · Versioned · Non-actionable
+      </div>
     </main>
   );
 }
