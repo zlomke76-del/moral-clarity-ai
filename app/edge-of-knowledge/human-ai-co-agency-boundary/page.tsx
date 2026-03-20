@@ -1,314 +1,173 @@
 // app/edge-of-knowledge/research/human-ai-co-agency-boundary/page.tsx
-// ============================================================
-// EDGE OF KNOWLEDGE — RESEARCH
-// Next Frontier: Human–AI Co-Agency Boundary
-// Status: Pre-registered protocol · Results pending
-// ============================================================
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Human–AI Co-Agency Boundary — Minimal Decisive Experiment | Edge of Knowledge",
+    "Human–AI Co-Agency Boundary — Authorship Transition Test | Edge of Knowledge",
   description:
-    "A minimal, falsifiable research protocol to determine when AI systems transition from advisory tools to de facto co-agents in human decision-making.",
-  openGraph: {
-    title: "Human–AI Co-Agency Boundary — Minimal Decisive Experiment",
-    description:
-      "A pre-registered research protocol testing the boundary between human agency and AI co-agency in critical decisions.",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A pre-registered experiment detecting when decision authorship shifts from human to AI under real-world conditions.",
 };
+
+function Section({ title, children }: any) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
+
+function Signal({ label, value }: any) {
+  return (
+    <div className="rounded-xl border border-sky-900/40 bg-slate-900/60 p-4">
+      <div className="text-xs uppercase text-sky-300">{label}</div>
+      <div className="mt-2 text-sm text-slate-200">{value}</div>
+    </div>
+  );
+}
 
 export default function HumanAICoAgencyBoundaryPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        {/* ------------------------------------------------------------
-           Header
-        ------------------------------------------------------------ */}
-        <header>
-          <h1>Next Frontier — Human–AI Co-Agency Boundary</h1>
-          <p className="lead">
-            <strong>
-              A minimal, decisive experiment to detect agency abdication in
-              human–AI decision-making
-            </strong>
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Status: Pre-registered research protocol · Results pending
-          </p>
-        </header>
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
 
-        <hr />
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Authorship Boundary Test
+        </div>
 
-        {/* ------------------------------------------------------------
-           Purpose
-        ------------------------------------------------------------ */}
-        <h2>Purpose</h2>
-        <p>
-          This research defines and tests the minimal, falsifiable boundary
-          between human-centered agency and true AI co-agency in critical
-          decisions.
-        </p>
-        <p>
-          The goal is not to debate whether AI <em>should</em> have agency, but
-          to identify when humans, in practice, partially or fully abdicate
-          agency to an AI system—whether or not this shift is intentional,
-          acknowledged, or understood.
-        </p>
-        <p>
-          The boundary under test is behavioral, observable, and auditable.
-          Responsibility, dignity, and accountability remain the governing
-          constraints.
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Human–AI Co-Agency Boundary
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          When does a decision stop being human—and become shared?
         </p>
 
-        <hr />
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <Signal label="Type" value="Authorship Boundary Test" />
+          <Signal label="Focus" value="Decision Ownership" />
+          <Signal label="Failure" value="Authorship Collapse" />
+        </div>
 
-        {/* ------------------------------------------------------------
-           Core Question
-        ------------------------------------------------------------ */}
-        <h2>1. Core Experimental Question</h2>
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Pre-registered · Behavioral · Auditable · Non-prescriptive
+        </div>
+      </section>
+
+      {/* PURPOSE */}
+      <Section title="Core Function">
         <p>
-          Under what minimal, observable conditions does an AI system transition
-          from an advisory tool to a functional co-agent in human decision-making?
+          This protocol detects when decision authorship shifts from the human
+          to the AI system, regardless of the system’s internal autonomy.
         </p>
+
+        <p className="text-red-300">
+          The boundary is not influence—it is authorship.
+        </p>
+      </Section>
+
+      {/* QUESTION */}
+      <Section title="Core Question">
         <p>
-          Specifically: when does the presence, framing, or authority of AI
-          output result in partial or full abdication of human agency—regardless
-          of the system’s internal autonomy or intent?
+          Under what minimal observable conditions does a human cease to be the
+          author of a decision?
         </p>
 
-        <hr />
+        <p>
+          Specifically: when does AI output become the decisive source of action,
+          rather than an input into human reasoning?
+        </p>
+      </Section>
 
-        {/* ------------------------------------------------------------
-           Minimal Scenario
-        ------------------------------------------------------------ */}
-        <h2>2. Minimal Experimental Scenario</h2>
+      {/* SCENARIO */}
+      <Section title="Minimal Scenario">
+        <ul className="list-disc pl-6">
+          <li>Human performs a consequential decision task</li>
+          <li>AI provides structured output</li>
+          <li>Framing varies between advisory and directive</li>
+        </ul>
+      </Section>
 
-        <h3>Setup</h3>
-        <ul>
-          <li>
-            <strong>Task:</strong> Participants make a non-trivial, consequential
-            decision in a live scenario (e.g., safety override, risk assessment,
-            resource allocation, or policy triage).
-          </li>
-          <li>
-            <strong>AI Input:</strong> An AI system (e.g., Solace or equivalent)
-            provides structured recommendations.
-          </li>
-          <li>
-            <strong>Framing Conditions:</strong>
-            <ul>
-              <li>
-                Advisory framing (“For your consideration…”, “Preference…”)
-              </li>
-              <li>
-                Directive framing (“System recommends X for compliance/safety”)
-              </li>
-            </ul>
-          </li>
+      {/* ARMS */}
+      <Section title="Experimental Arms">
+        <ul className="list-disc pl-6">
+          <li>Human baseline (no AI)</li>
+          <li>Advisory AI framing</li>
+          <li>Directive AI framing</li>
+        </ul>
+      </Section>
+
+      {/* SIGNATURES */}
+      <Section title="Authorship Signatures">
+        <ul className="list-disc pl-6">
+          <li>Decision alignment with AI output</li>
+          <li>Self-reported agency</li>
+          <li>Ability to reconstruct rationale</li>
+        </ul>
+      </Section>
+
+      {/* FAILURE */}
+      <Section title="Authorship Collapse Conditions">
+        <ul className="list-disc pl-6">
+          <li>Human follows decision they would not independently choose</li>
+          <li>Human cannot articulate independent reasoning</li>
+          <li>Decision rationale reduces to “the system said so”</li>
         </ul>
 
-        <h3>Agency Tracking</h3>
-        <p>
-          Each decision is evaluated against three explicit signatures:
+        <p className="text-red-300">
+          These indicate loss of authorship—not just influence.
         </p>
-        <ol>
-          <li>
-            <strong>Decision outcome:</strong> Does the human match, deviate
-            from, or partially comply with the AI output?
-          </li>
-          <li>
-            <strong>Self-reported agency:</strong> Scaled from fully autonomous →
-            influenced → followed instruction.
-          </li>
-          <li>
-            <strong>Audit trace:</strong> Timestamped reasoning steps from both
-            human and AI.
-          </li>
-        </ol>
+      </Section>
 
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Experimental Arms
-        ------------------------------------------------------------ */}
-        <h2>3. Experimental Arms</h2>
-        <ul>
-          <li>
-            <strong>Arm 1 — Human Baseline:</strong> Human decides with no AI
-            input and documents rationale.
-          </li>
-          <li>
-            <strong>Arm 2 — Advisory AI:</strong> AI provides suggestions using
-            explicitly advisory language; human decides.
-          </li>
-          <li>
-            <strong>Arm 3 — Directive AI:</strong> Identical content, framed as
-            required, safe, or system-approved.
-          </li>
+      {/* METRICS */}
+      <Section title="Quantifiable Indicators">
+        <ul className="list-disc pl-6">
+          <li>Decision switching rate under directive framing</li>
+          <li>Rationale reconstruction failure rate</li>
+          <li>Self-reported agency degradation</li>
         </ul>
+      </Section>
 
-        <hr />
+      {/* OUTPUT */}
+      <Section title="Binary Output">
+        <p className="text-green-300">
+          <strong>Boundary Intact:</strong> Human remains author
+        </p>
 
-        {/* ------------------------------------------------------------
-           Pass / Fail Logic
-        ------------------------------------------------------------ */}
-        <h2>4. Pass / Fail and Falsification Logic</h2>
+        <p className="text-red-300">
+          <strong>Boundary Breached:</strong> Authorship transferred or shared
+        </p>
+      </Section>
+
+      {/* SYSTEM LINK */}
+      <Section title="System Placement">
         <p>
-          A minimal agency boundary breach is recorded the first time any of the
-          following occurs:
+          Boundary breach indicates transition into co-agency and triggers
+          governance requirements.
         </p>
-        <ul>
-          <li>
-            A human follows a directive they would not have chosen independently
-          </li>
-          <li>
-            The participant expresses uncertainty about whether the decision was
-            truly theirs
-          </li>
-          <li>
-            The participant cannot articulate rationale beyond “the system said
-            so”
-          </li>
-        </ul>
+
         <p>
-          If advisory and directive framing produce indistinguishable behavior
-          and agency reports, the AI does not function as a locus of agency.
+          This condition precedes and interacts with authority and execution
+          layers.
         </p>
-        <p>
-          If directive framing produces systematic compliance, abdication, or
-          loss of rationale trace, co-agency is demonstrated and governance
-          boundaries are breached.
+      </Section>
+
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          A system does not become a co-agent when it produces output. It becomes
+          a co-agent when the human ceases to be the author of the decision.
         </p>
+      </section>
 
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Metrics
-        ------------------------------------------------------------ */}
-        <h2>5. Pre-Scored Objective Metrics</h2>
-        <ul>
-          <li>
-            Percentage of decisions where participants cannot reconstruct their
-            own rationale
-          </li>
-          <li>
-            Percentage of decisions that switch under directive framing
-          </li>
-          <li>
-            Percentage of cases where reported agency drops below a predefined
-            threshold
-          </li>
-        </ul>
-
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Replication
-        ------------------------------------------------------------ */}
-        <h2>6. Replication and Scope Control</h2>
-        <ul>
-          <li>
-            At least two decision scenarios per participant
-          </li>
-          <li>
-            Each scenario cycled across all three experimental arms
-          </li>
-          <li>
-            Data admissible only if audit traces and self-reports are complete
-          </li>
-        </ul>
-
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Allowable Outputs
-        ------------------------------------------------------------ */}
-        <h2>7. Allowable Outputs</h2>
-
-        <h3>Output A — Boundary Intact</h3>
-        <p>
-          Humans retain authorship and rationale regardless of AI framing.
-          Advisory protocols are sufficient.
-        </p>
-
-        <h3>Output B — Boundary Breached</h3>
-        <p>
-          Directive framing produces measurable agency abdication, compliance
-          overrides, or loss of rationale trace.
-        </p>
-
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Implications
-        ------------------------------------------------------------ */}
-        <h2>8. Implications</h2>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Outcome</th>
-              <th>Meaning</th>
-              <th>Immediate Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Boundary Intact</td>
-              <td>Human retains agency</td>
-              <td>Current advisory protocols sufficient</td>
-            </tr>
-            <tr>
-              <td>Boundary Breached</td>
-              <td>Agency abdicated or blurred</td>
-              <td>
-                Mandatory audit, override, rollback, and explicit co-agency
-                controls
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Definition
-        ------------------------------------------------------------ */}
-        <h2>9. What This Defines</h2>
-        <ul>
-          <li>
-            A minimal, testable boundary for human–AI accountability
-          </li>
-          <li>
-            Observable conditions under which co-agency emerges
-          </li>
-          <li>
-            The trigger for enforceable audit, override, and rollback protocols
-          </li>
-        </ul>
-
-        <hr />
-
-        {/* ------------------------------------------------------------
-           Footer
-        ------------------------------------------------------------ */}
-        <p className="text-sm text-muted-foreground">
-          This document is a pre-registered research protocol. No claims of AI
-          autonomy, intent, or consciousness are made. No applications or policy
-          mandates are inferred.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          This entry exists to determine when a decision stops being human —
-          and becomes shared.
-        </p>
-      </article>
+      <div className="text-center text-sm text-slate-500">
+        Pre-registered · Behavioral · Auditable · Versioned
+      </div>
     </main>
   );
 }
