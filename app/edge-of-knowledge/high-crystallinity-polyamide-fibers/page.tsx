@@ -1,201 +1,176 @@
+// app/edge-of-knowledge/high-crystallinity-polyamide-fibers/page.tsx
+
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "High-Crystallinity Polyamide Fibers: Morphology-Driven Mechanical and Thermal Regime — Edge of Knowledge",
+    "High-Crystallinity Polyamide Fibers: Morphology-Dependent Performance Boundary | Moral Clarity AI",
   description:
-    "A regime-bounded validation analysis of high-crystallinity polyamide fibers, examining morphology-driven mechanical performance, environmental drift, and invariant failure boundaries.",
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A state-dependent evaluation showing that environmental exposure irreversibly alters morphology-driven performance, invalidating dry-state claims.",
 };
+
+function Section({ title, children }: any) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
+
+function Signal({ label, value }: any) {
+  return (
+    <div className="rounded-xl border border-sky-900/40 bg-slate-900/60 p-4">
+      <div className="text-xs uppercase text-sky-300">{label}</div>
+      <div className="mt-2 text-sm text-slate-200">{value}</div>
+    </div>
+  );
+}
 
 export default function HighCrystallinityPolyamideFibersPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>
-          High-Crystallinity Polyamide Fibers: Morphology-Driven Mechanical and
-          Thermal Regime
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — State-Dependent Claim Boundary
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white leading-tight">
+          High-Crystallinity Polyamide Fibers
         </h1>
 
-        <p className="text-sm opacity-70">
-          Edge of Knowledge · Regime-Bounded Validation Analysis
+        <p className="mt-4 text-lg text-slate-300">
+          Performance is morphology-dependent and environment-coupled. Dry-state claims are insufficient.
         </p>
 
-        <h2>1. Problem Framing</h2>
-        <p>
-          This regime addresses the persistent challenge of supplying robust
-          mechanical strength and moderate thermal stability in polymeric fibers
-          while retaining acceptable processability and cost. Many commercial
-          polymer fibers—especially lower-crystallinity polyamides or
-          polyesters—exhibit insufficient tensile properties, increased creep,
-          or reduced heat resistance under load.
-        </p>
-        <p>
-          Alternatives such as aramids, high-performance polyesters, or
-          composite-reinforced fibers improve selected properties but introduce
-          higher cost, processing complexity, or reduced ductility. The
-          high-crystallinity polyamide fiber regime offers a balanced,
-          industrially established option using widely available materials.
-        </p>
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <Signal label="Type" value="State-Dependent Boundary" />
+          <Signal label="Driver" value="Environmental Drift" />
+          <Signal label="Failure" value="Claim Invalidation" />
+        </div>
 
-        <h2>2. Candidate Polymer Regime (Class-Level Only)</h2>
-        <ul>
-          <li>
-            <strong>Polymer family:</strong> Conventional polyamides, primarily
-            nylon-6 and nylon-6,6
-          </li>
-          <li>
-            <strong>Physical state:</strong> Semi-crystalline fibers processed
-            to elevate crystalline content and molecular orientation
-          </li>
-          <li>
-            <strong>Morphology:</strong> Lamellar crystalline regions with
-            aligned amorphous tie molecules; crystallinity typically in the
-            40–60% range, depending on processing history
-          </li>
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Moisture-sensitive · Drift-prone · Environment required for validity
+        </div>
+      </section>
+
+      {/* CORE */}
+      <Section title="Core Statement">
+        <p>
+          Mechanical and thermal performance in high-crystallinity polyamide fibers
+          is governed by morphology and is strongly coupled to environmental state.
+        </p>
+        <p className="text-red-300">
+          Performance measured under dry conditions does not represent operational reality.
+        </p>
+      </Section>
+
+      {/* REGIME */}
+      <Section title="Regime Definition">
+        <ul className="list-disc pl-6">
+          <li>Semi-crystalline polyamides (nylon-6, nylon-6,6)</li>
+          <li>Crystallinity ~40–60%</li>
+          <li>High chain orientation via drawing</li>
+          <li>Service exposure to humidity and temperature variation</li>
         </ul>
+      </Section>
 
-        <h2>3. Physical Plausibility Rationale</h2>
+      {/* MECHANISM */}
+      <Section title="Morphology Mechanism">
         <p>
-          Crystalline regions enable dense chain packing and strong hydrogen
-          bonding between amide groups, restricting molecular mobility and
-          conferring tensile strength and thermal resistance up to the melting
-          regime. High chain orientation, introduced during drawing, aligns
-          polymer backbones along the fiber axis and supports efficient load
-          transfer.
+          Crystalline domains provide strength via dense packing and hydrogen bonding.
         </p>
         <p>
-          Amorphous regions provide toughness and strain accommodation; however,
-          insufficient crystallinity reduces strength, while excessive
-          crystallinity promotes brittleness. The regime’s behavior reflects a
-          well-established balance supported by decades of polyamide fiber
-          research and commercial practice.
-        </p>
-
-        <h2>4. Cost &amp; Scale Considerations</h2>
-        <ul>
-          <li>
-            Commodity monomers and mature global production infrastructure
-            support economical nylon fiber manufacture
-          </li>
-          <li>
-            Scaling from pilot to full production is well understood and widely
-            implemented
-          </li>
-          <li>
-            Costs increase if processes push crystallinity or orientation beyond
-            standard operating windows, increasing energy use or defect rates
-          </li>
-          <li>
-            Tight specification on morphology reduces yield and demands stricter
-            process control
-          </li>
-        </ul>
-
-        <h2>5. Environmental Sensitivity &amp; Drift</h2>
-        <ul>
-          <li>
-            Moisture uptake is intrinsic; absorbed water plasticizes the polymer,
-            reducing modulus and increasing creep and dimensional change
-          </li>
-          <li>
-            Thermal cycling near glass transition or melting temperatures
-            induces relaxation and gradual loss of orientation
-          </li>
-          <li>
-            Long-term exposure to warm, humid environments accelerates
-            hydrolytic chain scission, degrading mechanical integrity
-          </li>
-          <li>
-            Sustained performance requires environmental shielding or
-            conditioning; unprotected fibers drift from laboratory values over
-            time
-          </li>
-        </ul>
-
-        <h2>6. Failure Modes &amp; No-Go Boundaries</h2>
-        <ul>
-          <li>Structural collapse above melting transitions</li>
-          <li>
-            Rapid weakening under prolonged water or high-humidity exposure
-          </li>
-          <li>
-            Brittle or fatigue fracture when loading exceeds the design envelope
-            at high crystallinity
-          </li>
-          <li>
-            Misapplication in continuously wet, chemically aggressive, or
-            abrasive environments
-          </li>
-          <li>
-            Not appropriate for biomedical, implantable, or critical regulated
-            safety contexts
-          </li>
-        </ul>
-
-        <h2>7. Ethical / Misuse Considerations</h2>
-        <ul>
-          <li>
-            Overclaiming performance based on dry laboratory data without
-            accounting for service humidity
-          </li>
-          <li>
-            Understating irreversible hydrolytic degradation in warm climates
-          </li>
-          <li>
-            Miscommunication of safety margins where conditioned properties
-            diverge substantially from initial values
-          </li>
-          <li>
-            Overstated recyclability or sustainability claims despite property
-            degradation over lifecycle
-          </li>
-        </ul>
-
-        <h2>8. Invariant Framework Declaration</h2>
-        <ul>
-          <li>
-            <strong>Symmetry group (𝑮):</strong> Processing-preserving
-            morphological transformations of semi-crystalline polyamide fibers
-            (drawing, annealing, conditioning within defined windows)
-          </li>
-          <li>
-            <strong>Conserved quantity (𝑸):</strong> Polymer backbone continuity
-            and hydrogen-bond network integrity
-          </li>
-          <li>
-            <strong>Invariant spectrum (𝑺):</strong> Distribution of crystalline
-            fraction, chain orientation factor, and moisture-conditioned modulus
-            across the fiber population
-          </li>
-          <li>
-            <strong>Failure signature on 𝑺:</strong> Abrupt, non-gradual loss of
-            load-bearing modulus or creep resistance under humidity or thermal
-            cycling not inferable from dry-state or mean property values
-          </li>
-        </ul>
-
-        <h2>9. Status Statement</h2>
-        <p>
-          <strong>Status:</strong> Regime documented.
+          Amorphous regions enable toughness and deformation accommodation.
         </p>
         <p>
-          No authority, suitability, or deployment claim is asserted. Any
-          application, qualification, or safety relevance requires independent
-          validation under explicit environmental and loading boundary
-          conditions.
+          Performance depends on the balance and interaction of these domains.
+        </p>
+      </Section>
+
+      {/* DRIFT */}
+      <Section title="Environmental Drift Mechanism">
+        <ul className="list-disc pl-6">
+          <li>Moisture uptake plasticizes amorphous regions</li>
+          <li>Modulus decreases and creep increases</li>
+          <li>Thermal cycling relaxes orientation</li>
+          <li>Hydrolysis reduces molecular weight over time</li>
+        </ul>
+
+        <p className="text-red-300">
+          These effects shift the morphology-dependent performance state irreversibly over time.
+        </p>
+      </Section>
+
+      {/* STATE DEPENDENCE */}
+      <Section title="State Dependence">
+        <p>
+          Mechanical properties are functions of environmental state variables:
         </p>
 
-        <hr />
+        <ul className="list-disc pl-6">
+          <li>Moisture content</li>
+          <li>Temperature history</li>
+          <li>Exposure duration</li>
+        </ul>
 
-        <p className="text-sm opacity-70">
-          Edge of Knowledge documents are regime-bounded analyses. They do not
-          prescribe implementation and are updated only by explicit revision.
+        <p className="text-red-300">
+          A single material does not have a single performance value—it has a trajectory.
         </p>
-      </article>
+      </Section>
+
+      {/* FAILURE */}
+      <Section title="Failure Modes">
+        <ul className="list-disc pl-6">
+          <li>Loss of stiffness under humidity</li>
+          <li>Creep and dimensional drift</li>
+          <li>Hydrolytic degradation</li>
+          <li>Brittle fracture at high crystallinity extremes</li>
+        </ul>
+      </Section>
+
+      {/* INVARIANT */}
+      <Section title="Invariant Framework">
+        <p><strong>G:</strong> Morphology-preserving transformations within process window</p>
+        <p><strong>Q:</strong> Polymer backbone continuity</p>
+        <p><strong>S:</strong> Distribution of morphology + environmental state</p>
+
+        <p className="text-red-300">
+          Failure: Shift in S under environmental exposure not captured by dry-state metrics
+        </p>
+      </Section>
+
+      {/* CLAIM BOUNDARY */}
+      <Section title="Claim Eligibility Boundary">
+        <p>
+          Any claim based solely on dry-state or initial measurements is invalid in this regime.
+        </p>
+
+        <p className="text-red-300">
+          Performance must be specified as a function of environmental state.
+        </p>
+
+        <p>
+          Absence of environmental conditioning removes claim authority.
+        </p>
+      </Section>
+
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          Mechanical performance is not a fixed property. It is a state-dependent trajectory.
+          Any framework that treats conditioned materials as invariant exceeds its epistemic authority.
+        </p>
+      </section>
+
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Environment-bound · State-dependent · Versioned
+      </div>
     </main>
   );
 }
