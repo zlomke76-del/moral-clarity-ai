@@ -1,201 +1,278 @@
-// app/edge-of-practice/architected-micro-lattice-ev-battery-enclosure/page.tsx
-// ============================================================================
-// EDGE OF PRACTICE
-// Replacing laminate composites with failure-governed lattice structures
-// ============================================================================
-
 import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
   title:
-    "Replacing Laminate Composites with Failure-Governed Lattice Structures | Edge of Practice",
+    "Structural Failure Admissibility Boundary in EV Battery Enclosures | Edge of Practice — Moral Clarity AI",
   description:
-    "A falsifiable structural alternative to laminate composites for EV battery enclosures, based on architected micro-lattice sandwich panels with governed failure behavior.",
+    "A constraint artifact defining when structural systems are non-admissible due to hidden or non-governed failure modes, introducing failure-governed lattice architectures as a falsifiable alternative.",
   robots: {
     index: true,
     follow: true,
   },
 };
 
-export const dynamic = "force-static";
+function SectionCard({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-black/10 bg-white/70 p-6 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+      <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
+        {eyebrow}
+      </div>
+      <h2 className="mb-4 text-xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
+        {title}
+      </h2>
+      <div className="space-y-4 text-[15px] leading-7 text-zinc-700 dark:text-zinc-300">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function SignalPill({
+  children,
+  tone = "neutral",
+}: {
+  children: React.ReactNode;
+  tone?: "neutral" | "fail" | "pass";
+}) {
+  const toneClass =
+    tone === "fail"
+      ? "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+      : tone === "pass"
+      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+      : "border-zinc-300/70 bg-zinc-100 text-zinc-700 dark:border-white/10 dark:bg-white/10 dark:text-zinc-300";
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium tracking-wide ${toneClass}`}
+    >
+      {children}
+    </span>
+  );
+}
 
 export default function EdgeOfPractice_AMSS_EV_Battery_Enclosure() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>
-          Replacing Laminate Composites with Failure-Governed Lattice Structures
-        </h1>
+    <main className="mx-auto max-w-6xl px-6 py-16 md:px-8 md:py-20">
+      <div className="space-y-8">
+        {/* HERO */}
+        <section className="rounded-3xl border border-black/10 bg-gradient-to-br from-white via-zinc-50 to-zinc-100 dark:border-white/10 dark:from-zinc-950 dark:to-zinc-900">
+          <div className="grid lg:grid-cols-[1.2fr_0.8fr]">
+            <div className="p-10">
+              <div className="mb-4 flex gap-2 flex-wrap">
+                <SignalPill>Edge of Practice</SignalPill>
+                <SignalPill tone="fail">Structural Boundary</SignalPill>
+                <SignalPill>RCS Constraint</SignalPill>
+              </div>
 
-        <p className="text-lg text-neutral-500">
-          Edge of Practice · Architected Micro-Lattice Structural Systems (AMSS)
+              <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
+                Structural Failure Admissibility Boundary
+              </h1>
+
+              <p className="mt-6 text-lg text-zinc-700 dark:text-zinc-300 max-w-3xl">
+                Structural systems are valid only if failure is governed,
+                localized, and externally observable. Hidden or non-legible
+                failure modes render safety claims non-admissible.
+              </p>
+
+              <div className="mt-8 rounded-2xl border bg-black text-white p-6">
+                <div className="text-xs uppercase tracking-widest text-zinc-400 mb-2">
+                  Core Boundary Doctrine
+                </div>
+                <p className="text-lg">
+                  Structural safety is <strong>non-admissible</strong> if damage
+                  can exist without detection, propagate without localization, or
+                  require inference rather than direct observation.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-zinc-950 text-white p-10 space-y-4">
+              <div>
+                <div className="text-xs uppercase text-zinc-400 mb-1">
+                  Valid only if
+                </div>
+                <p className="text-sm">
+                  Failure is progressive, bounded, and directly observable
+                  through geometry or deformation.
+                </p>
+              </div>
+
+              <div className="border border-rose-400/20 bg-rose-500/10 p-4 rounded-xl">
+                <div className="text-xs uppercase text-rose-300 mb-1">
+                  Invalid when
+                </div>
+                <p className="text-sm text-rose-100">
+                  Damage is subsurface, delaminated, or requires indirect
+                  inspection to detect.
+                </p>
+              </div>
+
+              <div>
+                <div className="text-xs uppercase text-zinc-400 mb-1">
+                  Governing scale
+                </div>
+                <p className="text-sm">
+                  Failure topology and structural legibility, not peak strength.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CONSTRAINT */}
+        <SectionCard
+          eyebrow="Constraint Definition"
+          title="What the boundary enforces"
+        >
+          <p>
+            Structural systems are admissible only if their failure behavior is
+            governed, inspectable, and does not rely on hidden internal damage
+            states.
+          </p>
+
+          <p>
+            Inspection cannot be procedural compensation for structural opacity.
+          </p>
+        </SectionCard>
+
+        {/* PRACTICE FAILURE */}
+        <SectionCard
+          eyebrow="Failure of Current Practice"
+          title="Why laminate composites break the boundary"
+        >
+          <ul>
+            <li>Brittle failure without progressive signaling</li>
+            <li>Subsurface delamination undetectable by inspection</li>
+            <li>Damage propagation without geometric visibility</li>
+            <li>Repair dependent on uncertain internal state</li>
+          </ul>
+
+          <p>
+            These systems require inference to determine integrity. Therefore,
+            safety claims are non-admissible.
+          </p>
+        </SectionCard>
+
+        {/* ALTERNATIVE */}
+        <SectionCard
+          eyebrow="Structural Alternative"
+          title="Failure-governed lattice systems"
+        >
+          <p>
+            Architected Micro-Lattice Structural Systems (AMSS) enforce
+            admissibility by encoding failure behavior directly into structural
+            geometry.
+          </p>
+
+          <ul>
+            <li>Controlled lattice crushing absorbs energy</li>
+            <li>Failure localizes into bounded regions</li>
+            <li>Deformation is visible and measurable</li>
+            <li>No reliance on hidden adhesive integrity</li>
+          </ul>
+        </SectionCard>
+
+        {/* GOVERNING VARIABLES */}
+        <SectionCard
+          eyebrow="Governing Variables"
+          title="Failure must remain observable"
+        >
+          <ul>
+            <li>Failure localization radius</li>
+            <li>Energy absorption pathway</li>
+            <li>Visibility of deformation</li>
+            <li>Persistence of structural connectivity post-impact</li>
+          </ul>
+        </SectionCard>
+
+        {/* FAILURE */}
+        <SectionCard
+          eyebrow="Failure Modes"
+          title="Falsification conditions"
+        >
+          <ul>
+            <li>Damage propagates beyond defined bounds</li>
+            <li>Failure occurs without visible deformation</li>
+            <li>Structural integrity cannot be assessed directly</li>
+          </ul>
+
+          <p>
+            <strong>
+              Any hidden failure state renders the system non-admissible.
+            </strong>
+          </p>
+        </SectionCard>
+
+        {/* BELOW EDGE */}
+        <SectionCard
+          eyebrow="Below the Edge"
+          title="Hidden failure as a disqualifying condition"
+        >
+          <p>
+            Structural safety is governed by whether failure is legible, not by
+            whether failure occurs.
+          </p>
+
+          <ul>
+            <li>Inspection-based safety is non-admissible</li>
+            <li>Inference-based integrity is non-admissible</li>
+            <li>Subsurface damage tolerance is non-admissible</li>
+          </ul>
+
+          <p>
+            If a structure can fail without communicating its state, it cannot be
+            considered safe.
+          </p>
+        </SectionCard>
+
+        {/* VERDICT */}
+        <section className="grid md:grid-cols-2 gap-6">
+          <div className="p-8 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+            <h2 className="text-2xl font-semibold text-emerald-800 dark:text-emerald-200">
+              PASS
+            </h2>
+            <p className="mt-4 text-sm">
+              Failure is localized, progressive, and directly observable through
+              geometry and deformation.
+            </p>
+          </div>
+
+          <div className="p-8 rounded-2xl bg-rose-500/10 border border-rose-500/20">
+            <h2 className="text-2xl font-semibold text-rose-800 dark:text-rose-200">
+              FAIL
+            </h2>
+            <p className="mt-4 text-sm">
+              Failure is hidden, propagates silently, or requires indirect
+              inspection to assess integrity.
+            </p>
+          </div>
+        </section>
+
+        {/* INVARIANT */}
+        <section className="bg-zinc-950 text-white p-10 rounded-2xl">
+          <p className="text-2xl font-semibold">
+            A structure that cannot reveal its failure cannot be trusted.
+          </p>
+          <p className="mt-4 text-zinc-300">
+            Safety requires that damage is observable, bounded, and
+            interpretable. Hidden failure invalidates structural integrity
+            claims.
+          </p>
+        </section>
+
+        <p className="text-sm text-zinc-500">
+          ← <Link href="/edge-of-practice">Back to Edge of Practice</Link>
         </p>
-
-        <hr />
-
-        {/* PURPOSE */}
-        <h2>Purpose</h2>
-        <p>
-          This entry challenges the prevailing assumption that lightweight,
-          high-performance structural panels must rely on laminate composite
-          architectures with hidden internal failure modes. It proposes a
-          falsifiable alternative: architected micro-lattice sandwich panels
-          whose failure behavior is explicitly governed, progressive, and
-          inspectable.
-        </p>
-
-        {/* PRACTICE GAP */}
-        <h2>Practice Gap</h2>
-        <p>
-          Carbon fiber and other laminate composites excel at peak
-          stiffness-to-weight performance but suffer from intrinsic limitations:
-          brittle failure, subsurface delamination, complex inspection, and poor
-          repairability. In safety-critical applications such as EV battery
-          enclosures, these hidden failure modes create lifecycle risk that is
-          managed procedurally rather than structurally.
-        </p>
-
-        <p>
-          Current practice treats damage detection as an inspection problem. This
-          proposal treats it as a design problem.
-        </p>
-
-        {/* PROPOSED ALTERNATIVE */}
-        <h2>Proposed Structural Alternative</h2>
-        <p>
-          The proposed platform replaces laminate composites with{" "}
-          <strong>Architected Micro-Lattice Structural Systems (AMSS)</strong> —
-          sandwich panels in which load-bearing performance, energy absorption,
-          and failure behavior are determined by a manufacturable micro-scale
-          lattice core mechanically interlocked to thin metallic skins.
-        </p>
-
-        {/* FIRST PRODUCT */}
-        <h2>First Product Scope</h2>
-        <p>
-          <strong>Structural Product:</strong> EV battery enclosure panel
-        </p>
-        <p>
-          This application was selected due to high production volume, strict
-          impact and intrusion requirements, intolerance for hidden damage, and
-          strong economic pressure against carbon fiber.
-        </p>
-
-        {/* ARCHITECTURE */}
-        <h2>Structural Architecture</h2>
-
-        <h3>Core</h3>
-        <ul>
-          <li>Expanded or roll-formed aluminum micro-lattice</li>
-          <li>Feature scale: ~200–1000 μm</li>
-          <li>
-            Stretch-biased topology with intentionally designed crush initiators
-          </li>
-          <li>Manufactured using continuous, automotive-rate processes</li>
-        </ul>
-
-        <h3>Skins</h3>
-        <ul>
-          <li>Stamped aluminum alloy (AA5xxx / AA6xxx)</li>
-          <li>Thickness: 0.8–1.5 mm depending on intrusion requirements</li>
-          <li>
-            Primary functions: bending stiffness, environmental sealing, impact
-            load spreading
-          </li>
-        </ul>
-
-        <h3>Joining Strategy</h3>
-        <ul>
-          <li>
-            Mechanical interlocks formed between lattice nodes and skin
-            embossments
-          </li>
-          <li>
-            Structural adhesive film as a secondary, fatigue-friendly load path
-          </li>
-          <li>
-            No welds through bondlines; no reliance on hidden adhesive integrity
-          </li>
-        </ul>
-
-        {/* FAILURE GOVERNANCE */}
-        <h2>Failure Governance Model</h2>
-        <p>
-          Unlike laminate composites, failure in AMSS is designed to be{" "}
-          <strong>progressive, localized, and legible</strong>.
-        </p>
-
-        <ul>
-          <li>Impact energy is absorbed via controlled lattice crushing</li>
-          <li>Failure localizes into bounded zones rather than propagating</li>
-          <li>Skins plastically deform but remain mechanically attached</li>
-          <li>
-            Post-impact damage is visible and geometrically measurable without
-            advanced inspection equipment
-          </li>
-        </ul>
-
-        <p>
-          The structure does not fail silently. It communicates its state through
-          topology.
-        </p>
-
-        {/* INSPECTION & REPAIR */}
-        <h2>Inspection and Repair</h2>
-        <p>
-          AMSS panels are designed for inspection using visual geometry checks
-          and simple depth or deformation gauges. Repair is modular: damaged
-          panels are removed and replaced without curing ovens, composite scrap
-          handling, or subsurface damage uncertainty.
-        </p>
-
-        {/* THERMAL & FIRE */}
-        <h2>Thermal and Fire Considerations</h2>
-        <p>
-          The lattice architecture enables intentional thermal breaks and
-          integration of ceramic or intumescent barrier layers at the battery
-          interface. Structural integrity is not dependent on adhesive
-          performance during or after thermal runaway events.
-        </p>
-
-        {/* MANUFACTURING */}
-        <h2>Manufacturing Constraints</h2>
-        <ul>
-          <li>Target cycle time: ≤ 90 seconds per finished panel</li>
-          <li>
-            Continuous lattice feed, automated skin stamping, press lamination,
-            and mechanical locking
-          </li>
-          <li>
-            No sacrificial templates, nanoscale printing, or slow chemical
-            processing steps
-          </li>
-        </ul>
-
-        {/* WHY EDGE */}
-        <h2>Why This Is Edge of Practice</h2>
-        <p>
-          This proposal does not claim universal superiority. It explicitly
-          trades peak material stiffness for inspectability, repairability, and
-          governed failure. It is falsifiable through standardized impact,
-          intrusion, corrosion, and durability testing.
-        </p>
-
-        <p>
-          If the lattice fails to control damage localization, survive corrosion,
-          or meet automotive throughput targets, the approach should be rejected.
-        </p>
-
-        {/* NAVIGATION */}
-        <hr />
-        <p className="text-sm text-neutral-500">
-          ←{" "}
-          <Link href="/edge-of-practice">
-            Back to Edge of Practice Index
-          </Link>
-        </p>
-      </article>
+      </div>
     </main>
   );
 }
