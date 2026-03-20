@@ -43,6 +43,7 @@
     "react-dom": "18.3.1"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.2",
     "@types/chokidar": "^1.7.5",
     "@types/express": "^5.0.3",
     "@types/node": "^20.12.12",
