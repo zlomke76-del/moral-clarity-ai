@@ -1,248 +1,185 @@
+// app/edge-of-knowledge/phase-locked-wear-surfaces/page.tsx
+
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Phase-Locked Wear Surfaces | Edge of Knowledge",
+  title:
+    "Phase-Locked Wear Surfaces | Sequence Integrity Boundary",
   description:
-    "A regime-bounded evaluation of Phase-Locked Wear Surfaces: physically encoded, irreversible maintenance records that expose neglect without sensors or logs.",
-  openGraph: {
-    title: "Phase-Locked Wear Surfaces",
-    description:
-      "Physically encoded, irreversible maintenance records embedded directly into material wear.",
-    url: "https://moralclarity.ai/edge-of-knowledge/phase-locked-wear-surfaces",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A regime-bounded system where maintenance sequence is irreversibly encoded in material wear, making neglect and deviation physically reconstructable.",
 };
+
+function Section({ title, children }: any) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
 
 export default function PhaseLockedWearSurfacesPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Phase-Locked Wear Surfaces</h1>
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
 
-        <p className="lead">
-          <strong>Regime-Bounded Evaluation</strong>
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Sequence Integrity Boundary
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Phase-Locked Wear Surfaces
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          Maintenance history must be physically reconstructable—not inferred from records.
         </p>
 
-        <hr />
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Sequence encoded · Irreversible · Non-deniable · Reconstruction required
+        </div>
+      </section>
 
-        <h2>1. Problem Framing</h2>
-
+      {/* CORE */}
+      <Section title="Core Boundary">
         <p>
-          This concept addresses failures of accountability and recordkeeping in
-          maintenance regimes. It targets environments where inspection reports,
-          sensing systems, and digital logs can be forged, lost, deferred, or
-          ignored—allowing improper or skipped maintenance to persist without
-          detection.
+          Phase-Locked Wear Surfaces define a constraint where maintenance
+          sequence and adherence are irreversibly encoded into material state.
         </p>
 
+        <p className="text-red-300">
+          If sequence cannot be reconstructed from the surface, the system fails.
+        </p>
+      </Section>
+
+      {/* PROBLEM */}
+      <Section title="Problem Framing">
         <p>
-          Phase-Locked Wear Surfaces propose a non-reversible, physically encoded
-          trace of maintenance sequence and adherence. Stewardship
-          responsibility is embedded directly into the object itself, rather
-          than into documentation, administrative processes, or monitoring
-          infrastructure.
+          Conventional systems rely on external records, which can be forged,
+          lost, deferred, or ignored.
         </p>
 
-        <h2>2. Physical and Material Plausibility</h2>
+        <p className="text-red-300">
+          This creates a gap between actual maintenance history and represented history.
+        </p>
+      </Section>
 
+      {/* MECHANISM */}
+      <Section title="Physical Mechanism">
         <p>
-          It is physically plausible to engineer contact surfaces whose wear
-          characteristics reveal servicing history, provided materials and
-          geometries are selected to produce controlled, non-reversible wear.
-          Correct maintenance yields regular, predictable, phase-aligned wear.
-          Deviations—neglect, improper sequencing, or skipped actions—manifest
-          as anomalous, asymmetric, or accelerated wear patterns.
+          Controlled, non-reversible wear encodes sequence fidelity:
         </p>
 
-        <p>
-          These patterns function as tamper-evident physical records. Once
-          divergence occurs, the wear state cannot be reset or reconciled
-          without component replacement.
-        </p>
-
-        <ul>
-          <li>
-            <strong>Material selection:</strong> Surfaces must resist catastrophic
-            failure while reliably evolving under both correct and incorrect
-            servicing.
-          </li>
-          <li>
-            <strong>Calibration:</strong> Acceptable maintenance sequences must
-            be explicitly defined prior to deployment; post-hoc interpretation
-            undermines validity.
-          </li>
-          <li>
-            <strong>Durability:</strong> Wear signatures must remain legible
-            across the component’s useful service life.
-          </li>
-          <li>
-            <strong>Permanence:</strong> Wear is irreversible; records cannot be
-            erased, replayed, or repaired once divergence occurs.
-          </li>
+        <ul className="list-disc pl-6">
+          <li>Correct maintenance → phase-aligned, predictable wear</li>
+          <li>Deviation or omission → asymmetric or accelerated divergence</li>
         </ul>
 
+        <p className="text-red-300">
+          Wear becomes a physical record of sequence—not just usage.
+        </p>
+      </Section>
+
+      {/* SEQUENCE */}
+      <Section title="Sequence Integrity Requirement">
         <p>
-          Failure modes include environmental confounds (contamination,
-          corrosion), unintended wear, premature component retirement, or
-          misinterpretation of patterns.
+          Valid systems must satisfy:
         </p>
 
-        <h2>3. Regime Mapping</h2>
-
-        <h3>Viable</h3>
-        <ul>
-          <li>
-            Safety-critical components where maintenance discipline is paramount
-            and external recordkeeping is unreliable.
-          </li>
-          <li>
-            Systems with direct physical access for inspection.
-          </li>
-          <li>
-            Applications where asymmetric or excessive wear appropriately
-            triggers replacement or review.
-          </li>
+        <ul className="list-disc pl-6">
+          <li>Irreversible encoding of maintenance steps</li>
+          <li>Distinct differentiation between correct and incorrect sequences</li>
+          <li>Legibility across the full service life</li>
         </ul>
 
-        <h3>Degrades</h3>
-        <ul>
-          <li>
-            Environments with heavy contamination, corrosion, or uncontrolled
-            mechanical variables that obscure wear patterns.
-          </li>
-          <li>
-            Contexts lacking standardized interpretation or trained inspectors.
-          </li>
+        <p className="text-red-300">
+          Ambiguous or non-reconstructable sequences invalidate the system.
+        </p>
+      </Section>
+
+      {/* FAILURE */}
+      <Section title="Structural Failure Modes">
+        <ul className="list-disc pl-6">
+          <li>Environmental confounds obscure patterns</li>
+          <li>Wear signatures degrade before end-of-life</li>
+          <li>Patterns can be repaired, reset, or spoofed</li>
+          <li>Independent observers cannot reliably classify states</li>
         </ul>
 
-        <h3>Fails Outright</h3>
-        <ul>
-          <li>Disposable, low-value, or inaccessible components.</li>
-          <li>
-            Systems with highly variable or unpredictable wear regimes.
-          </li>
-          <li>
-            Maintenance tasks that do not manifest as physical surface
-            interaction.
-          </li>
+        <p className="text-red-300">
+          If sequence cannot be trusted, accountability collapses.
+        </p>
+      </Section>
+
+      {/* DISTINCTION */}
+      <Section title="Boundary Distinction">
+        <p>This system is not:</p>
+
+        <ul className="list-disc pl-6">
+          <li>Sensing or monitoring infrastructure</li>
+          <li>Predictive maintenance</li>
+          <li>Performance enhancement</li>
+          <li>Safety assurance</li>
         </ul>
 
-        <h2>4. Distinction From Confounds</h2>
+        <p className="text-red-300">
+          It encodes history—it does not interpret or act on it.
+        </p>
+      </Section>
 
-        <p>Phase-Locked Wear Surfaces are not:</p>
-
-        <ul>
-          <li>Sensors or sensing systems</li>
-          <li>Monitoring or logging infrastructure</li>
-          <li>Predictive diagnostics or forecasting tools</li>
-          <li>Lifetime or age indicators</li>
-          <li>Performance or safety enhancements</li>
+      {/* FALSIFICATION */}
+      <Section title="Falsification Criteria">
+        <ul className="list-disc pl-6">
+          <li>Wear patterns ambiguous between correct and incorrect maintenance</li>
+          <li>Sequence cannot be reconstructed from surface state</li>
+          <li>Patterns reproducible without correct maintenance</li>
+          <li>Evidence can be erased or manipulated</li>
         </ul>
 
+        <p className="text-red-300">
+          Non-unique or reversible encoding invalidates the system.
+        </p>
+      </Section>
+
+      {/* INVARIANT */}
+      <Section title="Invariant Framework">
+        <p><strong>G:</strong> Sequence-preserving transformations</p>
+        <p><strong>Q:</strong> Maintenance actions</p>
+        <p><strong>S:</strong> Wear state encoding sequence history</p>
+
+        <p className="text-red-300">
+          Failure: inability to reconstruct Q from S
+        </p>
+      </Section>
+
+      {/* CLAIM */}
+      <Section title="Claim Eligibility Boundary">
         <p>
-          Evidence is strictly retrospective. The system does not warn, predict,
-          or intervene. Misconception risk is significant if interpreted as a
-          failure-prevention or compliance system.
+          Any system claiming maintenance accountability must demonstrate that
+          sequence is physically encoded and reconstructable.
         </p>
 
-        <h2>5. Falsification Criteria</h2>
-
-        <p>The concept is invalidated if:</p>
-
-        <ul>
-          <li>
-            Wear patterns are ambiguous between correct and incorrect
-            maintenance.
-          </li>
-          <li>
-            Environmental or operational confounds produce indistinguishable
-            signatures.
-          </li>
-          <li>
-            Pattern legibility is lost prior to component end-of-life.
-          </li>
-          <li>
-            Engineered wear causes unpredictable or catastrophic failure.
-          </li>
-          <li>
-            Surfaces can be altered, repaired, or spoofed to erase evidence.
-          </li>
-          <li>
-            Independent observers cannot reliably classify wear states above
-            chance without privileged context.
-          </li>
-        </ul>
-
-        <h2>6. Ethical Risk of Misuse</h2>
-
-        <ul>
-          <li>
-            <strong>Responsibility shifting:</strong> Operators may attribute
-            failures to “normal wear,” obscuring neglect.
-          </li>
-          <li>
-            <strong>Overconfidence:</strong> Visible wear may be misread as proof
-            of diligence or safety.
-          </li>
-          <li>
-            <strong>Weaponization:</strong> Patterns could be used in punitive or
-            legal actions without adequate contextual safeguards.
-          </li>
-          <li>
-            <strong>Misrepresentation:</strong> Marketing as a compliance,
-            monitoring, or warning system undermines clarity and ethics.
-          </li>
-        </ul>
-
-        <h2>7. Final Judgment</h2>
-
-        <p>
-          <strong>CONDITIONAL GO</strong>
+        <p className="text-red-300">
+          External records cannot substitute for encoded history.
         </p>
+      </Section>
 
-        <p>
-          Phase-Locked Wear Surfaces are physically and materially plausible and
-          credibly distinct from data-based accountability mechanisms. Their
-          value is strictly regime-dependent.
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          Maintenance is not what was recorded—it is what was done. If sequence
+          cannot be recovered from material state, accountability remains
+          representational and therefore unreliable.
         </p>
+      </section>
 
-        <ul>
-          <li>
-            Viable only where irreversibility is acceptable and inspection is
-            routine.
-          </li>
-          <li>
-            Unsuitable for uncontrolled environments or low-value components.
-          </li>
-          <li>
-            Interpretation risks require standardized analysis and training.
-          </li>
-          <li>
-            Misuse may introduce liability, false confidence, or governance
-            failure if treated as predictive or fail-safe.
-          </li>
-        </ul>
-
-        <p>
-          This method functions as a physical deterrent to maintenance neglect
-          and record falsification in high-accountability regimes. It must not be
-          mistaken for monitoring, safety assurance, or predictive maintenance.
-          Deployment demands rigorous engineering discipline, institutional
-          transparency, and explicit boundary-setting.
-        </p>
-
-        <hr />
-
-        <p className="text-sm text-muted-foreground">
-          Edge of Knowledge documents are regime-bounded analyses. They do not
-          prescribe implementation and are updated only by explicit revision.
-        </p>
-      </article>
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Sequence-bound · Irreversible · Reconstruction-required · Versioned
+      </div>
     </main>
   );
 }
