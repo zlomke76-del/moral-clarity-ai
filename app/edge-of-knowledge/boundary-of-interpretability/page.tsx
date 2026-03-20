@@ -1,172 +1,203 @@
 // app/edge-of-knowledge/boundary-of-interpretability/page.tsx
-// ============================================================
-// EDGE OF KNOWLEDGE
-// The Boundary of Interpretability
-// Regime-bounded epistemic doctrine
-// ============================================================
-// Non-actionable · Non-advisory · Canonical
-// ============================================================
 
 import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "The Boundary of Interpretability | Edge of Knowledge",
+  title:
+    "Boundary of Interpretability | Moral Clarity AI",
   description:
-    "A formal doctrine defining where interpretability ends and how governance must shift when human understanding fails.",
-  openGraph: {
-    title: "The Boundary of Interpretability",
-    description:
-      "Where explanation fails, responsibility does not. A regime-bounded doctrine on interpretability limits.",
-    url: "https://moralclarity.ai/edge-of-knowledge/boundary-of-interpretability",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A structural epistemic boundary where explanation fails and governance must transition to outcome-based control.",
 };
 
-export const dynamic = "force-static";
-
-export default function BoundaryOfInterpretabilityPage() {
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>The Boundary of Interpretability</h1>
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8 shadow-lg backdrop-blur-sm">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300 leading-7">
+        {children}
+      </div>
+    </section>
+  );
+}
 
-        <p className="lead">
-          <strong>
-            A formal epistemic boundary defining where human understanding ends
-            and governance obligations must change form.
-          </strong>
+function Signal({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-sky-900/40 bg-slate-900/60 p-4">
+      <div className="text-xs uppercase tracking-widest text-sky-300">
+        {label}
+      </div>
+      <div className="mt-2 text-sm text-slate-200">{value}</div>
+    </div>
+  );
+}
+
+function FailureBlock({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-sky-900/30 bg-slate-900/60 p-5">
+      <div className="text-sm font-semibold text-white">{title}</div>
+      <p className="mt-2 text-sm text-slate-400 leading-6">{children}</p>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10 shadow-xl">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Epistemic Boundary
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white leading-tight">
+          Boundary of Interpretability
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          When explanation fails, control must change form.
         </p>
 
-        <p className="text-sm text-red-700 dark:text-red-400">
-          <b>Boundary Notice:</b> This document is regime-bounded and
-          non-actionable. It defines limits and obligations; it does not provide
-          implementation guidance or policy prescriptions.
-        </p>
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <Signal label="Type" value="Epistemic Cutoff" />
+          <Signal label="Trigger" value="Loss of Explainability" />
+          <Signal label="Outcome" value="Governance Transition" />
+        </div>
 
-        <h2>Definition</h2>
+        <div className="mt-8 rounded-xl border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200">
+          Regime-bounded · Non-actionable · No implementation guidance
+        </div>
+      </section>
+
+      {/* DEFINITION */}
+      <Section title="Definition">
         <p>
-          Interpretability ends at the point where the functioning, decision
-          rationale, or internal logic of a system can no longer be reliably
-          understood, reconstructed, or explained by human analysis. This limit
-          may arise due to inherent complexity, scale, emergent behavior,
-          insufficient tooling, or proprietary or black-box constraints.
+          The boundary of interpretability is reached when system behavior can no
+          longer be reliably explained, reconstructed, or validated through
+          human-understandable reasoning.
         </p>
-
         <p>
-          Beyond this boundary, explanation is no longer a reliable governance
-          mechanism. Claims of understanding cannot be justified, verified, or
-          operationally enforced.
+          Beyond this point, explanation ceases to function as a control
+          mechanism.
         </p>
+      </Section>
 
-        <h2>Governance Beyond Interpretability</h2>
+      {/* FAILURE */}
+      <section>
+        <h2 className="text-2xl font-semibold text-white">
+          What Breaks at the Boundary
+        </h2>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <FailureBlock title="Explanation">
+            Internal reasoning cannot be reliably reconstructed.
+          </FailureBlock>
+
+          <FailureBlock title="Verification">
+            Claims of understanding cannot be independently confirmed.
+          </FailureBlock>
+
+          <FailureBlock title="Control">
+            Governance based on reasoning inspection fails.
+          </FailureBlock>
+
+          <FailureBlock title="Trust">
+            Confidence based on explanation becomes invalid.
+          </FailureBlock>
+        </div>
+      </section>
+
+      {/* GOVERNANCE SHIFT */}
+      <Section title="Governance Transition">
         <p>
-          When interpretability fails, governance must not fail with it.
-          Responsibility persists even when explanation does not.
+          When interpretability fails, governance must shift from explanation to
+          externally verifiable control.
         </p>
 
-        <ul>
-          <li>
-            <strong>Outcome Accountability:</strong> Responsibility for system
-            effects must be externally assigned and enforced, independent of
-            internal explainability.
-          </li>
-          <li>
-            <strong>Independent Validation and Audit:</strong> System behavior
-            must be evaluated empirically through testing, monitoring, and
-            external review rather than internal reasoning access.
-          </li>
-          <li>
-            <strong>Procedural Transparency:</strong> What is explainable, what
-            is not, and where discretion enters must be explicitly documented.
-          </li>
-          <li>
-            <strong>Risk Mitigation Safeguards:</strong> Override capability,
-            human review, rollback, and recourse mechanisms must exist regardless
-            of model opacity.
-          </li>
-          <li>
-            <strong>Ethical Oversight:</strong> Standards for harm prevention,
-            fairness, and due process remain mandatory even when system logic
-            cannot be fully inspected.
-          </li>
-          <li>
-            <strong>Adaptive Governance:</strong> Oversight mechanisms must
-            evolve as new risks or incomprehensible behaviors emerge.
-          </li>
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Outcome accountability replaces reasoning-based justification</li>
+          <li>Empirical validation replaces internal inspection</li>
+          <li>Procedural transparency replaces interpretive claims</li>
+          <li>Safeguards replace assumed understanding</li>
         </ul>
 
-        <p>
-          <em>
-            Opacity does not reduce responsibility; it only shifts the locus of
-            governance.
-          </em>
+        <p className="italic text-slate-400">
+          Opacity does not reduce responsibility—it increases the need for
+          enforcement.
         </p>
+      </Section>
 
-        <h2>Constraints and Limits</h2>
-        <ul>
-          <li>
-            Full transparency may be technically, legally, or economically
-            impossible.
-          </li>
-          <li>
-            Interpretability tools are incomplete and may mask deeper opacity if
-            over-trusted.
-          </li>
-          <li>
-            Human understanding cannot scale indefinitely with system
-            complexity.
-          </li>
+      {/* LIMITS */}
+      <Section title="Non-Negotiable Limits">
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Perfect interpretability is unattainable at scale</li>
+          <li>Tools may create false confidence in understanding</li>
+          <li>Human cognition cannot match system complexity indefinitely</li>
         </ul>
+      </Section>
 
-        <h2>What Cannot Be Achieved</h2>
-        <ul>
-          <li>
-            Perfect or universal interpretability for all complex systems.
-          </li>
-          <li>
-            Legitimate reliance on opaque outputs without independent safeguards.
-          </li>
-          <li>
-            Governance based solely on claimed internal understanding.
-          </li>
+      {/* INVALID */}
+      <Section title="Invalid Assumptions">
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Explanation guarantees safety</li>
+          <li>Transparency guarantees control</li>
+          <li>Understanding can scale with system complexity</li>
         </ul>
+      </Section>
 
-        <h2>Summary</h2>
+      {/* RELATION */}
+      <Section title="Canonical Placement">
         <p>
-          Interpretability ends where reliable human explanation ends. Governance
-          must then shift from interpretive control to outcome accountability,
-          external validation, procedural transparency, and robust risk
-          mitigation. Ethical responsibility does not diminish with opacity; it
-          becomes more critical.
+          This entry belongs to the{" "}
+          <Link href="/edge-of-knowledge" className="text-sky-300 underline">
+            Edge of Knowledge
+          </Link>{" "}
+          series.
         </p>
-
         <p>
-          This boundary defines a hard epistemic limit. Crossing it without
-          adapting governance guarantees drift, harm, and institutional failure.
+          Enforcement, refusal, and containment beyond this boundary are defined
+          in{" "}
+          <Link href="/edge-of-protection" className="text-sky-300 underline">
+            Edge of Protection
+          </Link>
+          .
         </p>
+      </Section>
 
-        <h2>Canonical Placement</h2>
-        <p className="text-sm text-neutral-500">
-          This document is part of the{" "}
-          <Link href="/edge-of-knowledge">Edge of Knowledge</Link> series and is
-          governed by the refusal and containment principles defined in{" "}
-          <Link href="/edge-of-protection">Edge of Protection</Link>.
+      {/* FINAL */}
+      <section className="rounded-2xl border border-red-900/40 bg-red-950/20 p-8">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          Interpretability is not a permanent property. Once lost, explanation
+          cannot be relied on. Governance must shift or failure becomes
+          inevitable.
         </p>
+      </section>
 
-        <hr />
-
-        <p className="text-sm text-neutral-400 mt-8">
-          Canonical · Regime-bounded · Non-actionable · Updated only by explicit
-          revision. Interpretive drift or silent modification invalidates this
-          document.
-        </p>
-      </article>
+      {/* FOOTER */}
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Regime-bounded · Versioned · Non-actionable
+      </div>
     </main>
   );
 }
