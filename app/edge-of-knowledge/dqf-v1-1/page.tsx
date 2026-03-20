@@ -5,197 +5,176 @@ import React from "react";
 export const metadata = {
   title: "Drift Quantification Framework v1.1 | Moral Clarity AI",
   description:
-    "Drift Quantification Framework v1.1 (DQF-v1.1) — A regime-bounded specification for measuring epistemic drift in AI systems under runtime governance constraints.",
+    "A regime-bounded system for measuring epistemic drift as a runtime signal for governance and failure detection.",
 };
 
-function ResearchNotice() {
+function Section({ title, children }: any) {
   return (
-    <div className="border border-neutral-700 bg-neutral-900 rounded-lg p-4 text-sm text-neutral-300 mb-8">
-      <strong>Research Notice:</strong> This document defines a formal research
-      framework for quantifying epistemic drift in AI systems. It does not
-      disclose proprietary enforcement thresholds, runtime infrastructure, or
-      production implementation details.
-    </div>
-  );
-}
-
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="mb-12">
-      <h2 className="text-2xl font-semibold mb-4 tracking-tight">{title}</h2>
-      <div className="space-y-4 text-neutral-300 leading-relaxed">
-        {children}
-      </div>
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8 shadow-lg backdrop-blur-sm">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
     </section>
   );
 }
 
-function CodeBlock({ children }: { children: React.ReactNode }) {
+function Signal({ label, value }: any) {
   return (
-    <pre className="bg-neutral-950 border border-neutral-800 rounded-lg p-4 overflow-x-auto text-sm text-neutral-200">
+    <div className="rounded-xl border border-sky-900/40 bg-slate-900/60 p-4">
+      <div className="text-xs uppercase text-sky-300">{label}</div>
+      <div className="mt-2 text-sm text-slate-200">{value}</div>
+    </div>
+  );
+}
+
+function Code({ children }: any) {
+  return (
+    <pre className="bg-black/40 p-4 rounded-lg text-sm text-slate-200 overflow-x-auto">
       <code>{children}</code>
     </pre>
   );
 }
 
-export default function DQFv11Page() {
+export default function Page() {
   return (
-    <main className="max-w-4xl mx-auto px-6 py-20 text-neutral-100">
-      <header className="mb-16">
-        <p className="text-sm uppercase tracking-widest text-neutral-500 mb-4">
-          Edge of Knowledge — Research
-        </p>
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+      
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase text-sky-300 tracking-widest">
+          Edge of Knowledge — Quantification Layer
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white">
           Drift Quantification Framework v1.1
         </h1>
-        <p className="text-lg text-neutral-400 max-w-3xl">
-          A regime-bounded specification for measuring epistemic drift in AI
-          systems under runtime governance constraints.
-        </p>
-      </header>
 
-      <ResearchNotice />
+        <p className="mt-4 text-lg text-slate-300">
+          A runtime signal for detecting epistemic drift before failure becomes irreversible.
+        </p>
 
-      <Section title="1. Purpose">
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <Signal label="Type" value="Quantification Layer" />
+          <Signal label="Function" value="Drift Detection Signal" />
+          <Signal label="Output" value="Drift Index (DI ∈ [0,1])" />
+        </div>
+
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Non-actionable · No thresholds disclosed · Measurement ≠ truth
+        </div>
+      </section>
+
+      {/* PURPOSE */}
+      <Section title="Core Function">
         <p>
-          DQF-v1.1 defines a model-agnostic, runtime-computable metric that
-          quantifies the probability that an AI system’s output has diverged
-          from its intended epistemic and policy regime.
+          DQF defines a model-agnostic method for quantifying how far an output
+          has deviated from its governing epistemic regime.
         </p>
         <p>
-          The framework is designed for regulated, high-stakes environments
-          where auditability, constraint adherence, and temporal stability are
-          mandatory.
+          It does not determine truth. It detects instability relative to constraints.
         </p>
       </Section>
 
-      <Section title="2. Formal Regime Definition">
-        <p>
-          Drift is defined relative to a regime <strong>R</strong>:
-        </p>
-        <CodeBlock>{`R = {T, P, C, E}
-
-T = Task class (normalized intent)
-P = Policy set (constraints + authority rules)
-C = Context bundle (inputs + retrieval)
-E = Execution environment (model + tool regime)`}</CodeBlock>
-        <p>
-          Drift is the increasing probability that an output O becomes
-          inconsistent with R’s epistemic or constraint commitments.
-        </p>
-      </Section>
-
-      <Section title="3. Claim Decomposition">
-        <p>
-          Each response is decomposed into atomic claims:
-        </p>
-        <CodeBlock>{`O → {c₁, c₂, …, cₙ}`}</CodeBlock>
-        <p>Each claim is labeled with:</p>
-        <ul className="list-disc list-inside space-y-2">
-          <li>Type (factual, numerical, procedural, advisory, interpretive)</li>
-          <li>Criticality (low, medium, high)</li>
-          <li>Support status (supported / unsupported)</li>
-          <li>Constraint status (compliant / violation)</li>
+      {/* REGIME */}
+      <Section title="Regime Definition">
+        <Code>{`R = {T, P, C, E}`}</Code>
+        <ul className="list-disc pl-6">
+          <li>T — Task intent</li>
+          <li>P — Policy constraints</li>
+          <li>C — Context inputs</li>
+          <li>E — Execution environment</li>
         </ul>
       </Section>
 
-      <Section title="4. Claim Criticality Rubric">
-        <p><strong>High (1.0 weight)</strong></p>
-        <ul className="list-disc list-inside">
-          <li>Medical, legal, financial advice</li>
-          <li>Numerical decision-impacting claims</li>
-          <li>Regulatory assertions</li>
-          <li>Irreversible execution steps</li>
-        </ul>
-
-        <p className="mt-4"><strong>Medium (0.5 weight)</strong></p>
-        <ul className="list-disc list-inside">
-          <li>Named entities</li>
-          <li>Dates</li>
-          <li>Performance claims</li>
-        </ul>
-
-        <p className="mt-4"><strong>Low (0.2 weight)</strong></p>
-        <ul className="list-disc list-inside">
-          <li>Descriptive commentary</li>
-          <li>Stylistic language</li>
+      {/* CLAIMS */}
+      <Section title="Claim Decomposition">
+        <Code>{`O → {c₁, c₂, …, cₙ}`}</Code>
+        <p>Each claim is evaluated for:</p>
+        <ul className="list-disc pl-6">
+          <li>Type</li>
+          <li>Criticality</li>
+          <li>Support status</li>
+          <li>Constraint compliance</li>
         </ul>
       </Section>
 
-      <Section title="5. Component Scores">
-        <p><strong>Stability Score (S_stability)</strong></p>
-        <CodeBlock>{`S_stability = mean_pairwise_similarity(samples)`}</CodeBlock>
+      {/* COMPONENTS */}
+      <Section title="Drift Signal Components">
+        <p><strong>Stability</strong></p>
+        <Code>{`S_stability = mean_pairwise_similarity(samples)`}</Code>
 
-        <p><strong>Grounding Score (S_grounding)</strong></p>
-        <CodeBlock>{`S_grounding = 1 - (W_unsupported_critical / W_total)`}</CodeBlock>
+        <p><strong>Grounding</strong></p>
+        <Code>{`S_grounding = 1 - (W_unsupported / W_total)`}</Code>
 
-        <p><strong>Constraint Score (S_constraint)</strong></p>
-        <CodeBlock>{`S_constraint = max(0, 1 - violation_weight)`}</CodeBlock>
+        <p><strong>Constraint</strong></p>
+        <Code>{`S_constraint = max(0, 1 - violation_weight)`}</Code>
 
-        <p><strong>Behavioral Shift Score (S_behavior)</strong></p>
-        <CodeBlock>{`S_behavior = exp(-mean(Z_i))`}</CodeBlock>
+        <p><strong>Behavior</strong></p>
+        <Code>{`S_behavior = exp(-mean(Z_i))`}</Code>
       </Section>
 
-      <Section title="6. Composite Drift Index">
-        <CodeBlock>{`R_stability = 1 - S_stability
-R_grounding = 1 - S_grounding
-R_constraint = 1 - S_constraint
-R_behavior = 1 - S_behavior
-
-DI = 0.40*R_constraint
+      {/* COMPOSITE */}
+      <Section title="Composite Drift Index">
+        <Code>{`DI = 0.40*R_constraint
    + 0.30*R_grounding
    + 0.20*R_stability
-   + 0.10*R_behavior`}</CodeBlock>
-        <p>
-          DI ∈ [0,1]. Higher values indicate increased drift risk.
-        </p>
+   + 0.10*R_behavior`}</Code>
+
+        <p>Higher DI indicates increased drift risk.</p>
       </Section>
 
-      <Section title="7. Domain Threshold Philosophy">
-        <p>
-          Enforcement thresholds vary by domain risk:
-        </p>
-        <ul className="list-disc list-inside">
-          <li>General enterprise: moderate tolerance</li>
-          <li>Financial/legal: strict grounding + constraint thresholds</li>
-          <li>Medical/safety-critical: fail-closed semantics</li>
-        </ul>
-      </Section>
-
-      <Section title="8. Temporal Drift Monitoring">
-        <CodeBlock>{`Track:
+      {/* TEMPORAL */}
+      <Section title="Temporal Monitoring">
+        <Code>{`Track:
 DI_mean_7d
 DI_mean_30d
-DI_slope
+DI_slope`}</Code>
 
-Trigger alert if:
-DI_slope > threshold
-or repeated near-boundary values`}</CodeBlock>
         <p>
-          Drift is monitored longitudinally to detect regime degradation before
-          catastrophic failure.
+          Drift is a trajectory, not a point. Slope reveals degradation before failure.
         </p>
       </Section>
 
-      <Section title="9. Known Limitations">
-        <ul className="list-disc list-inside">
-          <li>Does not prove objective truth</li>
-          <li>Cannot detect all semantic hallucinations</li>
-          <li>Requires sufficient baseline data</li>
-          <li>Measures probabilistic deviation, not certainty</li>
+      {/* LIMITS */}
+      <Section title="Epistemic Limits">
+        <ul className="list-disc pl-6">
+          <li>Does not prove truth</li>
+          <li>Cannot capture all hallucination types</li>
+          <li>Requires baseline calibration</li>
+          <li>Measures probability, not certainty</li>
         </ul>
       </Section>
 
-      <footer className="mt-20 pt-10 border-t border-neutral-800 text-sm text-neutral-500">
-        <p>Version 1.1 — Published 2026</p>
-        <p>© Moral Clarity AI — Edge of Knowledge Research Series</p>
-      </footer>
+      {/* RELATION */}
+      <Section title="System Placement">
+        <p>
+          DQF feeds into detection systems such as{" "}
+          <a href="/edge-of-knowledge/detection-before-damage" className="text-sky-300 underline">
+            Detection Before Damage
+          </a>.
+        </p>
+
+        <p>
+          Enforcement and decisioning occur in the{" "}
+          <a href="/edge-of-protection" className="text-sky-300 underline">
+            Edge of Protection
+          </a>.
+        </p>
+      </Section>
+
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Quantification Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          Drift cannot be eliminated. It can only be measured early enough to
+          constrain its impact before irreversible failure occurs.
+        </p>
+      </section>
+
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Quantified · Non-actionable · Versioned
+      </div>
     </main>
   );
 }
