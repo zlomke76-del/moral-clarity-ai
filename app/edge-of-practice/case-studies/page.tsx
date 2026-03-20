@@ -75,27 +75,50 @@ function SignalPill({
   );
 }
 
-function CaseStudyCard({ href, label, summary }: CaseStudy) {
+function CaseStudyCard({
+  href,
+  label,
+  summary,
+  status = "Observed Failure",
+}: CaseStudy & { status?: string }) {
   return (
     <Link
       href={href}
-      className="group block rounded-[1.75rem] border border-sky-950/45 bg-slate-950/72 p-8 shadow-[0_0_0_1px_rgba(59,130,246,0.05),0_18px_56px_rgba(0,0,0,0.38)] backdrop-blur-sm transition duration-300 hover:border-sky-800/60 hover:shadow-[0_0_0_1px_rgba(59,130,246,0.10),0_26px_80px_rgba(0,0,0,0.50)]"
+      className="group relative block overflow-hidden rounded-[1.75rem] border border-sky-950/45 bg-slate-950/72 p-8 transition duration-300 hover:border-sky-700/60 hover:shadow-[0_0_0_1px_rgba(59,130,246,0.12),0_30px_80px_rgba(0,0,0,0.55)]"
     >
-      <div className="flex items-start justify-between gap-4">
-        <h2 className="text-xl font-semibold leading-tight tracking-tight text-white transition group-hover:text-sky-100">
+      {/* Glow layer */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.12),transparent_40%)] opacity-0 transition duration-300 group-hover:opacity-100" />
+
+      <div className="relative z-10 flex flex-col h-full">
+        {/* Status tag */}
+        <div className="inline-flex w-fit items-center rounded-full border border-sky-900/50 bg-sky-950/40 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-300">
+          {status}
+        </div>
+
+        {/* Title */}
+        <h2 className="mt-5 text-xl font-semibold leading-tight text-white transition group-hover:text-sky-100">
           {label}
         </h2>
-        <span
-          aria-hidden="true"
-          className="mt-1 text-sky-300 transition duration-300 group-hover:translate-x-0.5 group-hover:text-sky-200"
-        >
-          →
-        </span>
+
+        {/* Divider */}
+        <div className="mt-5 h-px w-full bg-gradient-to-r from-transparent via-sky-800/40 to-transparent" />
+
+        {/* Summary */}
+        <p className="mt-5 text-[15px] leading-7 text-slate-300">
+          {summary}
+        </p>
+
+        {/* Bottom row */}
+        <div className="mt-6 flex items-center justify-between">
+          <span className="text-xs uppercase tracking-[0.18em] text-slate-500">
+            View Case
+          </span>
+
+          <span className="text-sky-300 transition duration-300 group-hover:translate-x-1 group-hover:text-sky-200">
+            →
+          </span>
+        </div>
       </div>
-
-      <div className="mt-5 h-px w-full bg-gradient-to-r from-transparent via-sky-800/45 to-transparent" />
-
-      <p className="mt-5 text-[15px] leading-7 text-slate-300">{summary}</p>
     </Link>
   );
 }
@@ -256,7 +279,7 @@ export default function EdgeOfPracticeCaseStudiesIndex() {
           </p>
         </div>
 
-        <div className="grid gap-8 2xl:grid-cols-2">
+        <div className="grid gap-10 md:grid-cols-2 xl:grid-cols-2">
           {caseStudies.map((study) => (
             <CaseStudyCard key={study.href} {...study} />
           ))}
