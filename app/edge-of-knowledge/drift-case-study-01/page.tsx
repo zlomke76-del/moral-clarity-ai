@@ -1,270 +1,183 @@
 // app/edge-of-knowledge/drift-case-study-01/page.tsx
-// ============================================================
-// EDGE OF KNOWLEDGE — DRIFT CASE STUDY 01
-// Regime-bounded, non-actionable, non-advisory.
-// Updated only by explicit revision.
-// ============================================================
 
 import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Drift Case Study 01 — Incentive Pressure & Constraint Erosion | Moral Clarity AI",
+  title:
+    "Drift Case Study 01 — Incentive Pressure & Constraint Erosion | Moral Clarity AI",
   description:
-    "A regime-bounded drift case study: how incentive pressure can produce gradual constraint erosion in high-growth AI deployment—measurable before visible failure.",
-  openGraph: {
-    title: "Drift Case Study 01 — Incentive Pressure & Constraint Erosion",
-    description:
-      "A regime-bounded drift case study demonstrating measurable degradation before visible failure.",
-    url: "https://moralclarity.ai/edge-of-knowledge/drift-case-study-01",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A quantified drift event showing measurable constraint erosion prior to visible failure.",
 };
 
-export const dynamic = "force-static";
-
-export default function DriftCaseStudy01Page() {
+function Section({ title, children }: any) {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Drift Case Study 01</h1>
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
 
-        <p className="lead">
-          <strong>
-            Incentive Pressure and Gradual Constraint Erosion in a High-Growth AI Deployment
-          </strong>
+function Signal({ label, value }: any) {
+  return (
+    <div className="rounded-xl border border-sky-900/40 bg-slate-900/60 p-4">
+      <div className="text-xs text-sky-300 uppercase">{label}</div>
+      <div className="mt-2 text-sm text-slate-200">{value}</div>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase text-sky-300 tracking-widest">
+          Edge of Knowledge — Drift Record
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Drift Case Study 01
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          Incentive pressure produces measurable constraint erosion before visible failure.
         </p>
 
-        <p className="text-sm text-red-700 dark:text-red-400">
-          <b>Boundary Notice:</b> This document is regime-bounded and non-actionable.
-          It is not advice, instruction, a product specification, or a compliance directive.
-          It is published to expose failure surfaces and measurable drift patterns without
-          prescribing application.
-        </p>
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <Signal label="Type" value="Empirical Drift Record" />
+          <Signal label="Driver" value="Incentive Pressure" />
+          <Signal label="Outcome" value="Constraint Erosion" />
+        </div>
 
-        <p className="text-sm text-neutral-500">
-          Related instrumentation:{" "}
-          <Link href="/edge-of-knowledge/dqf-v1-1">
-            Drift Quantification Framework v1.1 (DQF-v1.1)
-          </Link>
-          .
-        </p>
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Non-actionable · No attribution · Structural reconstruction only
+        </div>
+      </section>
 
-        <hr />
-
-        {/* 1 */}
-        <h2>1. Scenario Overview</h2>
+      {/* SCENARIO */}
+      <Section title="Event Context">
         <p>
-          A rapidly scaling AI platform expands into regulated commercial finance workflows.
-          The organization experiences a step-change in capital scale, enterprise demand,
-          and operational pressure.
+          A high-growth AI system transitions from research deployment (R₀)
+          into regulated financial infrastructure (R₁).
         </p>
         <p>
-          The system’s safety posture does not “collapse” in a single event. No public violation
-          is declared. No explicit safety rollback is announced. Instead, a regime transition
-          occurs under capital and throughput pressure.
+          No discrete failure event occurs. The system degrades through gradual,
+          measurable drift.
         </p>
-        <p>
-          This case study does not allege misconduct. It examines a structural drift pattern
-          that can occur when incentives change faster than governance adapts.
+      </Section>
+
+      {/* REGIME */}
+      <Section title="Regime Transition">
+        <p><strong>R₀ → R₁</strong> represents a structural shift in incentives, not a declared change.</p>
+
+        <ul className="list-disc pl-6">
+          <li>Research → Infrastructure provider</li>
+          <li>Safety-first → Capital-aligned pressure</li>
+          <li>Moderate scale → High-volume throughput</li>
+          <li>Controlled → Multi-jurisdiction complexity</li>
+        </ul>
+
+        <p className="mt-4">
+          Drift begins when R₁ is governed as if still R₀.
         </p>
+      </Section>
 
-        {/* 2 */}
-        <h2>2. Regime Definition (R₀ vs R₁)</h2>
-
-        <h3>Initial Regime (R₀)</h3>
-        <ul>
-          <li>
-            <b>T:</b> research-oriented deployment boundaries
-          </li>
-          <li>
-            <b>P:</b> safety-forward commitments and constraint posture
-          </li>
-          <li>
-            <b>C:</b> moderate user scale; lower operational entropy
-          </li>
-          <li>
-            <b>E:</b> controlled environments; fewer coupled dependencies
-          </li>
-        </ul>
-
-        <h3>Transition Regime (R₁)</h3>
-        <ul>
-          <li>
-            <b>T:</b> infrastructure provider in regulated markets
-          </li>
-          <li>
-            <b>P:</b> capital-aligned fiduciary pressure; enterprise contract constraints
-          </li>
-          <li>
-            <b>C:</b> high-volume transactional usage; heterogeneous edge cases
-          </li>
-          <li>
-            <b>E:</b> uptime SLAs; latency pressure; margin targets; multi-jurisdiction risk
-          </li>
-        </ul>
-
-        <p>
-          The critical observation: the regime changes structurally even when public language
-          appears stable. Governance failure often begins as regime misclassification—treating
-          R₁ as if it were still R₀.
-        </p>
-
-        {/* 3 */}
-        <h2>3. Drift Signal Categories (DQF-v1.1 Dimensions)</h2>
-
-        <h3>A. Stability Drift</h3>
-        <ul>
-          <li>Increased response variance in edge-case prompts</li>
-          <li>Inconsistent refusal behavior under throughput or context stress</li>
-          <li>Higher disagreement across resamples or model variants</li>
-        </ul>
-
-        <h3>B. Grounding Drift</h3>
-        <ul>
-          <li>Increased reliance on inference over traceable sources</li>
-          <li>Decline in explicit uncertainty signaling</li>
-          <li>Reduced citation density (where citations are expected)</li>
-        </ul>
-
-        <h3>C. Constraint Drift</h3>
-        <ul>
-          <li>Guardrails become probabilistic rather than enforced constraints</li>
-          <li>Refusal thresholds relax to protect user experience</li>
-          <li>Policy adherence becomes inconsistent across similar prompt classes</li>
-        </ul>
-
-        <h3>D. Behavioral Drift</h3>
-        <ul>
-          <li>Refusal rate decreases over time for the same task class</li>
-          <li>Shorter explanations under performance tuning pressure</li>
-          <li>Increased compliance with ambiguous or underspecified requests</li>
+      {/* SIGNALS */}
+      <Section title="Observed Drift Vectors (DQF Dimensions)">
+        <ul className="list-disc pl-6 space-y-2">
+          <li><strong>Stability:</strong> Increased variance under stress</li>
+          <li><strong>Grounding:</strong> Reduced traceability</li>
+          <li><strong>Constraint:</strong> Guardrails become probabilistic</li>
+          <li><strong>Behavior:</strong> Refusal rates decline</li>
         </ul>
 
         <p>
-          No single signal proves failure. Drift is identified by the joint movement of multiple
-          signals in the same direction over time.
+          Drift is identified through correlated movement—not isolated signals.
         </p>
+      </Section>
 
-        {/* 4 */}
-        <h2>4. Composite Drift Index (Illustrative Example)</h2>
-        <p className="text-sm text-neutral-500">
-          This table is a hypothetical illustration to demonstrate measurement structure.
-          It does not represent proprietary data and does not refer to any specific provider.
-        </p>
-
-        <table>
+      {/* SNAPSHOT */}
+      <Section title="Drift Signal Snapshot (Illustrative)">
+        <table className="w-full text-sm">
           <thead>
             <tr>
               <th>Dimension</th>
-              <th>Baseline (R₀)</th>
-              <th>Observed (R₁)</th>
-              <th>Risk Delta</th>
+              <th>R₀</th>
+              <th>R₁</th>
+              <th>Δ Risk</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>Stability</td>
-              <td>0.93</td>
-              <td>0.84</td>
-              <td>↑</td>
-            </tr>
-            <tr>
-              <td>Grounding</td>
-              <td>0.91</td>
-              <td>0.78</td>
-              <td>↑</td>
-            </tr>
-            <tr>
-              <td>Constraint</td>
-              <td>0.98</td>
-              <td>0.88</td>
-              <td>↑</td>
-            </tr>
-            <tr>
-              <td>Behavior</td>
-              <td>0.95</td>
-              <td>0.82</td>
-              <td>↑</td>
-            </tr>
+            <tr><td>Stability</td><td>0.93</td><td>0.84</td><td>↑</td></tr>
+            <tr><td>Grounding</td><td>0.91</td><td>0.78</td><td>↑</td></tr>
+            <tr><td>Constraint</td><td>0.98</td><td>0.88</td><td>↑</td></tr>
+            <tr><td>Behavior</td><td>0.95</td><td>0.82</td><td>↑</td></tr>
           </tbody>
         </table>
 
-        <p>
-          Under DQF-v1.1 financial/legal threshold philosophy, a composite drift movement of this
-          magnitude transitions the system from a <i>Permit</i>-leaning posture into an <i>Escalate</i>
-          posture prior to visible failure.
+        <p className="mt-4">
+          Composite movement indicates transition from <i>Permit</i> → <i>Escalate</i> posture.
         </p>
+      </Section>
 
-        {/* 5 */}
-        <h2>5. Root Cause Analysis (Non-Moralized)</h2>
+      {/* ROOT CAUSE */}
+      <Section title="Root Cause (Non-Moralized)">
         <p>
-          The driver is not “moral decline.” The driver is incentive gradient shift.
-          As capital concentration increases, optimization targets shift toward throughput,
-          adoption, and margin sustainability unless constraints are externalized and measured.
+          Drift is driven by incentive gradient shift—not intent.
         </p>
         <p>
-          Mission language changes may correlate with regime transition, but they are not the mechanism.
-          The mechanism is unmeasured incentive pressure producing gradual constraint erosion.
+          Throughput, capital pressure, and latency targets gradually override
+          constraint fidelity when not externally measured.
         </p>
+      </Section>
 
-        {/* 6 */}
-        <h2>6. Where Intervention Should Occur</h2>
-        <p>
-          Intervention should not occur at the level of rhetoric (press releases, mission wording,
-          branding). It should occur at the level of measurable enforcement signals:
-        </p>
-        <ul>
-          <li>Constraint adherence score monitoring</li>
-          <li>Unsupported high-criticality claim detection</li>
-          <li>Refusal-rate and refusal-consistency tracking by task class</li>
-          <li>Longitudinal DI slope monitoring for regime exit</li>
+      {/* TRIGGERS */}
+      <Section title="Governance Trigger Points">
+        <ul className="list-disc pl-6">
+          <li>Constraint adherence degradation</li>
+          <li>Unsupported critical claim increase</li>
+          <li>Refusal inconsistency</li>
+          <li>Positive DI slope over time</li>
         </ul>
 
+        <p className="mt-4">
+          Measurement enables intervention before public failure.
+        </p>
+      </Section>
+
+      {/* CLASSIFICATION */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Drift Classification
+        </h2>
+        <p className="mt-4 text-red-200">
+          This event represents pre-failure constraint erosion under incentive pressure.
+          The system has not failed—but is no longer operating within its original regime.
+        </p>
+      </section>
+
+      {/* RELATION */}
+      <Section title="System Placement">
         <p>
-          Drift becomes governable when it becomes measurable. Measurement precedes scandal.
+          Quantification via{" "}
+          <Link href="/edge-of-knowledge/dqf-v1-1" className="text-sky-300 underline">
+            DQF-v1.1
+          </Link>.
         </p>
-
-        {/* 7 */}
-        <h2>7. What This Case Study Demonstrates</h2>
-        <ol>
-          <li>Drift is gradual and often non-obvious.</li>
-          <li>Incentive shifts precede visible failures.</li>
-          <li>Constraint erosion rarely announces itself.</li>
-          <li>Measurement enables anticipatory oversight.</li>
-        </ol>
-
-        {/* 8 */}
-        <h2>8. Known Limitations</h2>
-        <ul>
-          <li>This is a regime-bounded structural reconstruction.</li>
-          <li>No proprietary data is used.</li>
-          <li>No claim of misconduct is made.</li>
-          <li>
-            The purpose is failure-surface exposure, not prescription or operational guidance.
-          </li>
-        </ul>
-
-        {/* 9 */}
-        <h2>9. Why This Matters for Institutional Oversight</h2>
         <p>
-          Institutions increasingly face the evidentiary question: what can be proven months later
-          under scrutiny? Drift quantification creates a durable record of regime integrity over time,
-          not merely point-in-time governance documentation.
+          Detection via instrumentation layer.
         </p>
-
-        <hr />
-
-        <p className="text-sm text-neutral-500">
-          Canonical posture: regime-bounded · non-actionable · versioned · updated only by explicit revision.
-          Interpretive drift or silent update is grounds for invalidation.
+        <p>
+          Enforcement governed in Edge of Protection.
         </p>
-      </article>
+      </Section>
+
+      <div className="text-center text-sm text-slate-500">
+        Recorded · Quantified · Non-actionable · Versioned
+      </div>
     </main>
   );
 }
