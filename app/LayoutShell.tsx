@@ -82,7 +82,9 @@ export default function LayoutShell({
         data-standalone
         className="relative z-10 min-h-screen w-full overflow-x-hidden"
       >
-        <div className="w-full">{children}</div>
+        <div className="w-full flex justify-center">
+  <div className="w-full">{children}</div>
+</div>
       </main>
 
       <LayoutDebugOverlay />
