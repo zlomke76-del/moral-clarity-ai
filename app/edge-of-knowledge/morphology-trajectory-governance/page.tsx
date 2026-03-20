@@ -4,251 +4,163 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Morphology Trajectory Governance — Edge of Knowledge | Moral Clarity AI",
+    "Morphology Trajectory Governance | Trajectory Sovereignty Doctrine",
   description:
-    "A doctrine establishing morphology trajectory as a governing constraint on polymer durability, invalidating endpoint-only claims in trajectory-sensitive regimes.",
-  openGraph: {
-    title: "Morphology Trajectory Governance",
-    description:
-      "A formal doctrine defining epistemic validity through observable morphology trajectories in polymer durability.",
-    url: "https://moralclarity.ai/edge-of-knowledge/morphology-trajectory-governance",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A foundational doctrine establishing morphology trajectory as the only admissible representation of durability in trajectory-sensitive regimes.",
 };
+
+function Section({ title, children }: any) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
 
 export default function MorphologyTrajectoryGovernancePage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Morphology Trajectory Governance</h1>
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
 
-        <p className="lead">
-          <strong>
-            A doctrine establishing morphology trajectory as a governing
-            constraint on durability, invalidating endpoint-only claims in
-            trajectory-sensitive polymer regimes.
-          </strong>
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Trajectory Sovereignty Doctrine
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Morphology Trajectory Governance
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          Durability is not a property. It is a trajectory through morphology state space.
         </p>
 
-        <hr />
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Trajectory required · Endpoint invalid · Properties non-admissible
+        </div>
+      </section>
 
-        <h2>Thesis</h2>
-
+      {/* CORE LAW */}
+      <Section title="Core Doctrine">
         <p>
-          Polymer durability under cyclic mechanical and environmental loading
-          is governed not by static material properties or endpoint test
-          outcomes, but by the explicit path taken through an observable,
-          evolving morphology state space. In regimes where internal morphology
-          evolves on service-relevant time and length scales, durability claims
-          are structurally invalid unless the morphology trajectory itself is
-          explicitly tracked, bounded, and shown to remain within validated
-          limits.
+          In trajectory-sensitive polymer regimes, durability is governed by the
+          explicit path taken through morphology state space.
         </p>
 
+        <p className="text-red-300">
+          Static properties, endpoint measurements, and averaged metrics are not admissible representations.
+        </p>
+      </Section>
+
+      {/* SOVEREIGNTY */}
+      <Section title="Trajectory Sovereignty">
         <p>
-          This doctrine formalizes morphology trajectory as a first-class
-          epistemic variable. It does not propose a new material, chemistry, or
-          optimization pathway. It establishes a governance constraint that
-          reality already enforces but qualification systems routinely ignore.
+          Morphology trajectory is the only representation that preserves causal
+          linkage between structure and outcome.
         </p>
 
-        <hr />
+        <p className="text-red-300">
+          Any framework that substitutes endpoints, averages, or inferred states
+          for trajectory loses epistemic authority.
+        </p>
+      </Section>
 
-        <h2>Scope and Applicability</h2>
+      {/* MOMT */}
+      <Section title="Minimal Observable Morphology Trajectory (MOMT)">
+        <p>
+          All claims must define and track a continuous trajectory consisting of
+          at least three orthogonal morphology observables.
+        </p>
 
-        <h3>Applies To</h3>
-        <ul>
-          <li>Glassy amorphous polymers (e.g., polycarbonate, polystyrene)</li>
-          <li>
-            Semicrystalline thermoplastics (e.g., polyethylene, polypropylene,
-            nylon)
-          </li>
-          <li>
-            Supramolecular, multiphase, or physically crosslinked systems
-            (ionomers, block copolymers, filled elastomers)
-          </li>
+        <p className="text-red-300">
+          Missing trajectory segments invalidate the claim.
+        </p>
+      </Section>
+
+      {/* CONTINUITY */}
+      <Section title="Continuity Requirement">
+        <p>
+          Durability claims must reference a continuous trajectory through S.
+        </p>
+
+        <p className="text-red-300">
+          Endpoint-only or interpolated representations constitute structural breaks.
+        </p>
+      </Section>
+
+      {/* NON-COMMUTATIVITY */}
+      <Section title="Non-Commutativity Constraint">
+        <p>
+          Order of applied loads must be explicitly tested or declared invariant.
+        </p>
+
+        <p className="text-red-300">
+          Silence on load sequence invalidates the claim.
+        </p>
+      </Section>
+
+      {/* IRREVERSIBILITY */}
+      <Section title="Irreversible Loss of Eligibility">
+        <ul className="list-disc pl-6">
+          <li>Crossing non-recoverable morphology thresholds</li>
+          <li>Path-dependent drift without reset pathway</li>
+          <li>Loss of mapping between morphology and performance</li>
         </ul>
 
-        <h3>Does Not Apply To</h3>
-        <ul>
-          <li>Inorganics or metallic glasses without functional morphology</li>
-          <li>
-            Fully crystalline polymers with no service-scale morphology
-            evolution
-          </li>
-          <li>
-            Chemistry-dominated degradation regimes where morphology is
-            irrelevant (e.g., radiation-driven scission)
-          </li>
-          <li>
-            Single-use, monotonic-load systems explicitly bounded as
-            order-invariant
-          </li>
-        </ul>
+        <p className="text-red-300">
+          Once violated, all prior certifications are void.
+        </p>
+      </Section>
 
+      {/* FALSIFICATION */}
+      <Section title="Falsifiability Requirement">
         <p>
-          Outside these regimes, morphology trajectory governance is not
-          triggered. Inside them, compliance is mandatory.
+          Each claim must define a morphology-based kill condition.
         </p>
 
-        <hr />
+        <p className="text-red-300">
+          Claims without falsifiability are invalid.
+        </p>
+      </Section>
 
-        <h2>Minimal Observable Morphology Trajectory (MOMT)</h2>
+      {/* INVARIANT */}
+      <Section title="Invariant Framework">
+        <p><strong>G:</strong> Morphology-preserving transformations</p>
+        <p><strong>Q:</strong> Material identity</p>
+        <p><strong>S:</strong> Morphology trajectory through state space</p>
 
+        <p className="text-red-300">
+          Failure: collapse of trajectory into endpoints or averages
+        </p>
+      </Section>
+
+      {/* CLAIM BOUNDARY */}
+      <Section title="Claim Eligibility Boundary">
         <p>
-          Any durability, lifetime, fatigue, creep, or environmental resistance
-          claim in a trajectory-sensitive regime must define and track a
-          <strong> Minimal Observable Morphology Trajectory</strong>. This
-          trajectory consists of at least three orthogonal, directly observable
-          morphology parameters appropriate to the polymer family.
+          Any durability claim not expressed as a function of trajectory over S is invalid.
         </p>
 
-        <h3>1. Glassy Amorphous Polymers</h3>
-        <p>Acceptable observables (any three minimum):</p>
-        <ul>
-          <li>Free volume proxy (density, PALS, equivalent)</li>
-          <li>Nanocraze or nanodefect density</li>
-          <li>Residual stress field</li>
-          <li>Physical aging index (enthalpy relaxation via DSC)</li>
-        </ul>
-
-        <p>
-          Acceptable trajectories are continuous and monotonic within
-          characterized reversible ranges. Untracked relaxation or aging
-          invalidates claims.
+        <p className="text-red-300">
+          Properties do not exist independently of trajectory in this regime.
         </p>
+      </Section>
 
-        <h3>2. Semicrystalline Polymers</h3>
-        <p>Acceptable observables (any three minimum):</p>
-        <ul>
-          <li>Degree of crystallinity</li>
-          <li>Crystal domain size or distribution</li>
-          <li>Amorphous phase fraction</li>
-          <li>Tie-molecule density proxy</li>
-        </ul>
-
-        <p>
-          Morphology evolution must remain confined to predefined reversible
-          annealing or aging pathways. Gradient collapse or uncharacterized
-          recrystallization invalidates claims.
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          Durability cannot be claimed from where a system is—it can only be
+          claimed from how it arrived there. Any framework that ignores
+          trajectory exceeds its epistemic authority.
         </p>
+      </section>
 
-        <h3>3. Supramolecular and Multiphase Systems</h3>
-        <p>Acceptable observables (any three minimum):</p>
-        <ul>
-          <li>Domain size distribution</li>
-          <li>Phase connectivity or percolation state</li>
-          <li>Interfacial curvature or tension proxy</li>
-          <li>Interfacial cohesion proxy</li>
-        </ul>
-
-        <p>
-          Domain evolution must be reversible under prescribed cycling.
-          Unidirectional coarsening, percolation archiving, or interface
-          degradation constitutes irreversible trajectory failure.
-        </p>
-
-        <hr />
-
-        <h2>Trajectory Continuity Requirement</h2>
-
-        <p>
-          Durability claims must reference a continuous morphology trajectory,
-          not merely initial and final states. Missing intervals, interpolated
-          assumptions, or endpoint-only snapshots constitute a structural
-          trajectory break and invalidate the claim.
-        </p>
-
-        <hr />
-
-        <h2>Non-Commutativity Declaration</h2>
-
-        <p>
-          When both mechanical and environmental loads apply, claims must either
-          demonstrate order invariance or explicitly test non-commutative load
-          sequences (e.g., environment-then-mechanics versus
-          mechanics-then-environment). Silence on order effects is treated as
-          non-compliance.
-        </p>
-
-        <hr />
-
-        <h2>Irreversible Loss of Claim Eligibility</h2>
-
-        <p>
-          A system irreversibly loses claim eligibility if any monitored
-          morphology parameter:
-        </p>
-
-        <ul>
-          <li>Crosses a characterized non-recoverable threshold</li>
-          <li>
-            Exhibits path-dependent drift that cannot be reset by permitted
-            processes
-          </li>
-          <li>
-            No longer maps to any validated morphology state correlated with
-            performance
-          </li>
-        </ul>
-
-        <p>
-          Once violated, prior certifications are void. Reuse, equivalence, or
-          extension claims are forbidden without full requalification.
-        </p>
-
-        <hr />
-
-        <h2>Falsifiability Requirement</h2>
-
-        <p>
-          Every claim must include at least one explicit kill condition—an
-          observable morphology threshold beyond which the claim fails. Claims
-          without falsifiability conditions are non-scientific and invalid under
-          this doctrine.
-        </p>
-
-        <hr />
-
-        <h2>Why This Doctrine Exists</h2>
-
-        <p>
-          The physical quantity systematically excluded from polymer durability
-          qualification is the evolving, spatially heterogeneous distribution
-          of internal configurational energy states—free volume, entanglement
-          stress, interfacial cohesion, and defect populations—and its
-          irreversible redistribution under coupled load and environment.
-        </p>
-
-        <p>
-          Endpoint tests collapse this field into scalar averages, masking the
-          trajectory that actually governs failure. This doctrine does not add a
-          new variable; it forces explicit accounting for a quantity that has
-          always controlled outcome but has never been governed.
-        </p>
-
-        <hr />
-
-        <h2>Edge of Knowledge Judgment</h2>
-
-        <p>
-          <strong>GO.</strong> This doctrine is structurally complete,
-          falsifiable, and regime-bounded. It does not claim predictive
-          universality, nor does it prescribe material solutions. It elevates
-          the epistemic standard required to honestly assert durability in
-          systems where morphology evolves.
-        </p>
-
-        <p className="text-sm text-muted-foreground">
-          Edge of Knowledge documents are updated only by explicit revision and
-          remain accessible for epistemic continuity.
-        </p>
-      </article>
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Trajectory-sovereign · Non-admissible endpoints · Versioned
+      </div>
     </main>
   );
 }
