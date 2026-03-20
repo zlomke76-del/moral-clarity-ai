@@ -4,190 +4,175 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Non-Commutative Morphology Trajectories in Polymer Durability | Edge of Knowledge",
+    "Non-Commutative Morphology Trajectories | Order-Dependence Boundary",
   description:
-    "A doctrine-level analysis establishing path-dependent morphology evolution as a governing mechanism for polymer durability and failure under cyclic mechanical and environmental loading.",
-  openGraph: {
-    title: "Non-Commutative Morphology Trajectories in Polymer Durability",
-    description:
-      "Polymer durability governed by explicit, path-dependent morphology trajectories rather than static material states.",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A constraint establishing that load sequence governs morphology evolution, invalidating durability claims that omit trajectory order.",
 };
+
+function Section({ title, children }: any) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
 
 export default function NonCommutativeMorphologyTrajectoriesPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Non-Commutative Morphology Trajectories in Polymer Durability</h1>
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
 
-        <p className="lead">
-          <strong>
-            Polymer durability under cyclic mechanical and environmental loading
-            is governed not by static material state, but by the explicit path
-            taken through a minimal, observable morphology state vector.
-          </strong>
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Order-Dependence Boundary
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Non-Commutative Morphology Trajectories
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          Durability is governed by load sequence—not total exposure.
         </p>
 
-        <hr />
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Order matters · Sequence required · Commutativity invalid
+        </div>
+      </section>
 
-        <h2>1. Problem Statement</h2>
+      {/* CORE */}
+      <Section title="Core Statement">
+        <p>
+          Polymer durability under cyclic mechanical and environmental loading
+          is governed by the explicit trajectory through morphology state space,
+          not by total exposure alone.
+        </p>
+
+        <p className="text-red-300">
+          Load order is a governing variable—not an implementation detail.
+        </p>
+      </Section>
+
+      {/* PROBLEM */}
+      <Section title="Failure of Commutativity Assumption">
+        <p>
+          Conventional models assume that mechanical and environmental loading
+          commute, implying:
+        </p>
+
+        <p className="text-center text-white font-mono">
+          E → M = M → E
+        </p>
 
         <p>
-          Conventional polymer durability models implicitly assume that
-          mechanical and environmental loading effects commute: that total
-          exposure governs outcome regardless of order. In real systems,
-          polymers routinely violate this assumption. Identical materials,
-          exposed to the same total stress and environment but in different
-          sequences, exhibit divergent durability, failure modes, and service
-          lifetimes.
+          In trajectory-sensitive systems, this assumption fails:
+        </p>
+
+        <p className="text-center text-red-300 font-mono">
+          E → M ≠ M → E
         </p>
 
         <p>
-          This work formalizes that divergence as a non-commutative trajectory
-          through morphology space. The order of loading matters because polymer
-          morphology evolves on service-relevant time scales, and that evolution
-          feeds back into subsequent mechanical and environmental response.
+          Identical exposure totals produce divergent outcomes due to
+          intermediate morphology evolution.
         </p>
+      </Section>
 
-        <h2>2. Scope and Regime Boundaries</h2>
+      {/* STATE VECTOR */}
+      <Section title="Minimal Morphology State Vector">
+        <p className="font-mono text-white">M = (φ, d_cl, ρ_d, σ_int)</p>
 
-        <h3>Applies to</h3>
-        <ul>
-          <li>Glassy amorphous polymers (e.g., polycarbonate, polystyrene)</li>
-          <li>Semi-crystalline thermoplastics (e.g., PE, PP)</li>
-          <li>Physically crosslinked elastomers (TPU, ionomers)</li>
-          <li>Supramolecular and hydrogen-bonded polymer networks</li>
+        <ul className="list-disc pl-6">
+          <li><strong>φ</strong>: ordered phase fraction</li>
+          <li><strong>d_cl</strong>: domain size</li>
+          <li><strong>ρ_d</strong>: defect density</li>
+          <li><strong>σ_int</strong>: interfacial cohesion</li>
         </ul>
 
-        <h3>Does Not Apply to</h3>
-        <ul>
-          <li>Inorganics and metallic glasses</li>
-          <li>Fully crystalline polymers without dynamic morphology</li>
-          <li>Systems dominated by rapid chemical degradation</li>
+        <p className="text-red-300">
+          These variables evolve sequentially and encode system history.
+        </p>
+      </Section>
+
+      {/* MECHANISM */}
+      <Section title="Mechanism of Non-Commutativity">
+        <p>
+          Morphology evolves on service-relevant timescales and feeds back into
+          subsequent response.
+        </p>
+
+        <p>
+          Each step in the trajectory modifies:
+        </p>
+
+        <ul className="list-disc pl-6">
+          <li>Stress distribution</li>
+          <li>Energy dissipation pathways</li>
+          <li>Defect nucleation probability</li>
         </ul>
 
-        <h3>Degrades or Becomes Conditional</h3>
-        <ul>
-          <li>Filler-dominated fracture regimes</li>
-          <li>Ultra-high strain-rate deformation</li>
-          <li>Monotonic loading in inert environments</li>
-        </ul>
-
-        <h2>3. Minimal Morphology State Vector</h2>
-
-        <p>
-          Polymer morphology is represented as a minimal, observable state
-          vector:
+        <p className="text-red-300">
+          Subsequent loading acts on a different system—not the original.
         </p>
+      </Section>
 
-        <pre>
-M = (φ, d_cl, ρ_d, σ_int)
-        </pre>
-
-        <ul>
-          <li>
-            <strong>φ</strong>: ordered or crystalline phase fraction
-          </li>
-          <li>
-            <strong>d_cl</strong>: characteristic domain or cluster size
-          </li>
-          <li>
-            <strong>ρ_d</strong>: accumulated defect or microvoid density
-          </li>
-          <li>
-            <strong>σ_int</strong>: effective interfacial cohesion
-          </li>
-        </ul>
-
-        <p>
-          These variables evolve under load and environment and are jointly
-          responsible for stress transfer, energy dissipation, and crack
-          initiation or arrest.
-        </p>
-
-        <h2>4. Non-Commutativity Claim</h2>
-
-        <p>
-          In trajectory-sensitive polymer systems, environmental cycling (E)
-          and mechanical cycling (M) do not commute:
-        </p>
-
-        <pre>E → M ≠ M → E</pre>
-
-        <p>
-          Even when total cycle counts and exposure magnitudes are equal, the
-          resulting morphology states and durability outcomes differ because
-          intermediate morphology evolution alters subsequent response.
-        </p>
-
-        <h2>5. Decisive Experimental Test</h2>
-
-        <p>
-          Prepare identical specimens from a trajectory-sensitive polymer
-          system.
-        </p>
-
-        <ul>
-          <li>
-            <strong>Group A:</strong> Environmental cycling followed by
-            mechanical fatigue
-          </li>
-          <li>
-            <strong>Group B:</strong> Mechanical fatigue followed by
-            environmental cycling
-          </li>
+      {/* TEST */}
+      <Section title="Decisive Experimental Test">
+        <ul className="list-disc pl-6">
+          <li>Group A: Environmental → Mechanical</li>
+          <li>Group B: Mechanical → Environmental</li>
         </ul>
 
         <p>
-          Measure final morphology state vector components and durability
-          metrics. Divergent outcomes under matched total exposure falsify
-          commutative assumptions and validate trajectory governance.
+          Divergence in morphology or durability under matched exposure falsifies commutativity.
         </p>
+      </Section>
 
-        <h2>6. Falsification Conditions</h2>
-
-        <ol>
-          <li>
-            If durability and morphology are invariant to load order across
-            multiple polymer classes, the framework fails.
-          </li>
-          <li>
-            If irreversible damage accumulates independently of trajectory,
-            morphology path is not governing.
-          </li>
-        </ol>
-
-        <h2>7. What This Framework Does Not Claim</h2>
-
+      {/* CLAIM BOUNDARY */}
+      <Section title="Claim Eligibility Boundary">
         <p>
-          This framework does not provide universal lifetime prediction, nor
-          does it replace chemistry-limited degradation models. It applies only
-          where morphology evolution competes with service timescales.
+          Any durability claim that does not explicitly specify load sequence is invalid.
         </p>
 
-        <h2>8. Edge of Knowledge Judgment</h2>
-
-        <p>
-          <strong>CONDITIONAL GO.</strong>  
-          The framework introduces explicit falsifiability, a minimal state
-          vector, and a decisive experimental test. It elevates morphology
-          trajectory from implicit background assumption to load-bearing
-          explanatory variable while remaining bounded and non-universal.
+        <p className="text-red-300">
+          Total exposure metrics cannot substitute for trajectory order.
         </p>
+      </Section>
 
-        <hr />
+      {/* FALSIFICATION */}
+      <Section title="Falsification Conditions">
+        <ul className="list-disc pl-6">
+          <li>Durability invariant to load order</li>
+          <li>Damage independent of trajectory</li>
+        </ul>
+      </Section>
 
-        <p className="text-sm text-muted-foreground">
-          This document is part of the Edge of Knowledge research series.
-          Revisions occur only through explicit versioning to preserve epistemic
-          continuity.
+      {/* INVARIANT */}
+      <Section title="Invariant Framework">
+        <p><strong>G:</strong> Order-preserving transformations</p>
+        <p><strong>Q:</strong> Total exposure</p>
+        <p><strong>S:</strong> Morphology trajectory (sequence-dependent)</p>
+
+        <p className="text-red-300">
+          Failure: collapse of sequence into total exposure representation
         </p>
-      </article>
+      </Section>
+
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          Two systems with identical exposure are not equivalent if their histories differ.
+          Any framework that ignores sequence exceeds its epistemic authority.
+        </p>
+      </section>
+
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Order-bound · Non-commutative · Sequence-required · Versioned
+      </div>
     </main>
   );
 }
