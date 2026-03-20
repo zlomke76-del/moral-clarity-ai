@@ -1,240 +1,208 @@
+// app/edge-of-knowledge/polymer-discovery-validation/page.tsx
+
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Polymer Discovery — Validation-First Mapping | Edge of Knowledge",
+  title:
+    "Polymer Discovery — Validation-First Mapping | Discovery Boundary",
   description:
-    "A regime-bounded mapping of physically plausible, cost-accessible polymer architectures using commodity materials, focused on validation rather than invention.",
-  openGraph: {
-    title: "Polymer Discovery — Validation-First Mapping",
-    description:
-      "Physically plausible, economically accessible polymer regimes explored through validation-first analysis.",
-    url: "https://moralclarity.ai/edge-of-knowledge/polymer-discovery-validation",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A constraint-driven framework establishing that valid polymer discovery must emerge from physically grounded, validation-first regimes—not speculative invention.",
 };
+
+function Section({ title, children }: any) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
 
 export default function PolymerDiscoveryValidationPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Polymer Discovery (Validation-First, Non-Inventive)</h1>
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
 
-        <p className="lead">
-          <strong>Regime-Bounded Candidate Mapping</strong>
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Validation-First Discovery Boundary
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Polymer Discovery (Validation-First, Non-Inventive)
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          Discovery is valid only when grounded in existing physical regimes—not speculative invention.
         </p>
 
-        <hr />
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Validation required · Speculation invalid · Non-inventive · Regime-bound
+        </div>
+      </section>
 
-        <h2>Problem Framing</h2>
+      {/* CORE */}
+      <Section title="Core Boundary">
+        <p>
+          This framework defines a constraint: polymer discovery must emerge from
+          physically plausible, already-supported regimes.
+        </p>
+
+        <p className="text-red-300">
+          Novelty without validation is non-admissible.
+        </p>
+      </Section>
+
+      {/* PROBLEM */}
+      <Section title="Problem Framing">
+        <p>
+          Many applications require combinations of properties that existing
+          single-material systems cannot provide without trade-offs.
+        </p>
 
         <p>
-          Many products across infrastructure, packaging, and consumer sectors
-          require polymer materials that combine disparate functional
-          properties—such as mechanical toughness with chemical resistance,
-          flexible fatigue durability with dimensional stability, or selective
-          permeability with environmental durability.
+          Conventional approaches often introduce:
         </p>
 
-        <p>
-          Existing single-polymer systems often impose trade-offs or require
-          specialty polymers to achieve these combinations, driving cost,
-          complexity, or supply-chain fragility. There remains unmet demand for
-          cost-effective, scalable polymer architectures that bridge intermediate
-          performance gaps using commodity inputs.
-        </p>
-
-        <p>
-          The objective is not extreme performance, but reliable combinations of
-          properties that reduce system-level cost, complexity, or dependency on
-          exotic materials.
-        </p>
-
-        <h2>Candidate Polymer Regime (Class-Level Only)</h2>
-
-        <p>
-          Multilayer or blend architectures composed of:
-        </p>
-
-        <ul>
-          <li>
-            A semicrystalline polyolefin matrix (e.g., polyethylene or
-            polypropylene)
-          </li>
-          <li>
-            A dispersed or layered commodity elastomeric phase (e.g., SEBS, SBS,
-            EPDM)
-          </li>
-          <li>
-            Optional fiber reinforcement (glass or cellulose) or ionomeric
-            surface/interface modification
-          </li>
+        <ul className="list-disc pl-6">
+          <li>Exotic chemistries</li>
+          <li>Complex synthesis pathways</li>
+          <li>Fragile supply chains</li>
         </ul>
 
+        <p className="text-red-300">
+          These increase cost, risk, and epistemic uncertainty.
+        </p>
+      </Section>
+
+      {/* DISCOVERY RULE */}
+      <Section title="Validation-First Discovery Principle">
         <p>
-          This regime is described at the architectural level only. No specific
-          formulations, ratios, chemistries, or fabrication instructions are
-          implied.
+          Discovery is performed through mapping—not invention.
         </p>
 
-        <h2>Physical and Material Plausibility</h2>
-
-        <p>
-          Semicrystalline polyolefins provide baseline chemical resistance,
-          stiffness, durability, and well-understood processability. Elastomeric
-          phases—whether dispersed, co-continuous, or layered—introduce energy
-          dissipation, impact resistance, and fatigue tolerance by distributing
-          strain and mitigating crack initiation.
-        </p>
-
-        <p>
-          Layered and blended morphologies can be tuned using established
-          processing methods such as co-extrusion or melt blending, enabling
-          property combinations not achievable in neat polymers. Optional
-          ionomeric phases at interfaces may improve adhesion or modulate
-          permeability through ionic clustering mechanisms.
-        </p>
-
-        <p>
-          Fiber reinforcement (glass or bio-based) can further stabilize
-          mechanical performance and dimensional integrity through known load
-          transfer and reinforcement physics.
-        </p>
-
-        <p>
-          All mechanisms described are supported by existing polymer physics and
-          processing literature, without invoking untested synergies or
-          proprietary chemistry.
-        </p>
-
-        <h2>Cost &amp; Scale Considerations</h2>
-
-        <ul>
-          <li>
-            All matrix and modifier polymers are commodity or near-commodity
-            materials produced at industrial scale.
-          </li>
-          <li>
-            Processing methods are compatible with continuous manufacturing
-            (extrusion, calendaring, injection molding).
-          </li>
-          <li>
-            Fiber reinforcements may be low-cost glass or abundant cellulose.
-          </li>
-          <li>
-            No custom monomer synthesis, exotic catalysts, or laboratory-only
-            techniques are required.
-          </li>
+        <ul className="list-disc pl-6">
+          <li>Identify physically supported material regimes</li>
+          <li>Explore architecture-level combinations</li>
+          <li>Validate behavior through known mechanisms</li>
         </ul>
 
+        <p className="text-red-300">
+          Claims must be reducible to established physics—not hypothetical synergy.
+        </p>
+      </Section>
+
+      {/* REGIME */}
+      <Section title="Candidate Polymer Regime">
         <p>
-          Economic viability degrades if performance gains require excessive
-          compatibilizers, multi-stage processing, or tight morphological
-          control beyond standard industrial tolerances.
+          Multiphase architectures combining:
         </p>
 
-        <h2>Potential Application Domains (Non-Exhaustive)</h2>
-
-        <ul>
-          <li>
-            Barrier films and sheets for packaging, export goods, or containment
-            liners
-          </li>
-          <li>
-            Fatigue-resistant components in automotive interiors or electrical
-            insulation
-          </li>
-          <li>
-            Infrastructure overlays and coatings for abrasion or moisture
-            control
-          </li>
-          <li>
-            Environmental membranes or curtains for remediation, agriculture,
-            or water management
-          </li>
-          <li>
-            Consumer goods requiring tactile flexibility with dimensional
-            retention (grips, handles, seals)
-          </li>
+        <ul className="list-disc pl-6">
+          <li>Semicrystalline polyolefin matrices</li>
+          <li>Commodity elastomeric phases</li>
+          <li>Optional fiber reinforcement or ionomeric interfaces</li>
         </ul>
 
-        <h2>Failure Modes &amp; No-Go Boundaries</h2>
+        <p className="text-red-300">
+          Defined at the architectural level only—no formulation claims.
+        </p>
+      </Section>
 
-        <ul>
-          <li>
-            Severe phase incompatibility leading to delamination, embrittlement,
-            or unstable morphology
-          </li>
-          <li>
-            Performance loss outside the thermal, chemical, or UV envelope of
-            base polymers
-          </li>
-          <li>
-            Morphological drift under cyclic load or thermal cycling
-          </li>
-          <li>
-            Fiber-matrix interfacial decay or water ingress degrading properties
-          </li>
-          <li>
-            Economic invalidation when processing complexity outweighs
-            functional gains
-          </li>
+      {/* MECHANISM */}
+      <Section title="Physical Plausibility Constraint">
+        <p>
+          All observed behavior must derive from:
+        </p>
+
+        <ul className="list-disc pl-6">
+          <li>Established polymer physics</li>
+          <li>Known processing pathways</li>
+          <li>Documented interfacial and morphological mechanisms</li>
         </ul>
 
-        <h2>Ethical / Misuse Considerations</h2>
+        <p className="text-red-300">
+          Unsupported or emergent mechanisms invalidate the claim.
+        </p>
+      </Section>
 
-        <ul>
-          <li>
-            Overclaiming multifunctionality without sufficient characterization
-            may lead to premature failures or liability.
-          </li>
-          <li>
-            Multilayer or reinforced architectures may complicate recycling and
-            end-of-life handling.
-          </li>
-          <li>
-            Use in regulated contexts (food, potable water, air) without
-            validation poses safety risks.
-          </li>
-          <li>
-            Marketing-driven substitution for better-understood materials may
-            reduce system reliability if misapplied.
-          </li>
+      {/* COST */}
+      <Section title="Economic Boundary">
+        <p>
+          Valid systems must remain compatible with:
+        </p>
+
+        <ul className="list-disc pl-6">
+          <li>Commodity-scale production</li>
+          <li>Standard processing infrastructure</li>
+          <li>Reasonable morphological tolerances</li>
         </ul>
 
-        <h2>Summary</h2>
+        <p className="text-red-300">
+          Excessive complexity invalidates practical discovery.
+        </p>
+      </Section>
 
+      {/* FAILURE */}
+      <Section title="Failure Modes">
+        <ul className="list-disc pl-6">
+          <li>Phase incompatibility or delamination</li>
+          <li>Unstable morphology under load</li>
+          <li>Environmental degradation outside base polymer limits</li>
+          <li>Economic infeasibility due to process complexity</li>
+        </ul>
+      </Section>
+
+      {/* ETHICS */}
+      <Section title="Misuse Constraint">
+        <ul className="list-disc pl-6">
+          <li>Overclaiming multifunctionality</li>
+          <li>Using unvalidated systems in regulated contexts</li>
+          <li>Substituting proven materials without justification</li>
+        </ul>
+
+        <p className="text-red-300">
+          Validation cannot be replaced by narrative.
+        </p>
+      </Section>
+
+      {/* INVARIANT */}
+      <Section title="Invariant Framework">
+        <p><strong>G:</strong> Physics-preserving transformations</p>
+        <p><strong>Q:</strong> Material system constraints</p>
+        <p><strong>S:</strong> Validated architecture space</p>
+
+        <p className="text-red-300">
+          Failure: claims extend beyond validated S
+        </p>
+      </Section>
+
+      {/* CLAIM */}
+      <Section title="Claim Eligibility Boundary">
         <p>
-          Semicrystalline polyolefin–elastomer architectures, optionally combined
-          with fiber reinforcement or ionomeric interfacial control, represent a
-          physically plausible and economically accessible candidate space for
-          validation-focused polymer research.
+          Any discovery claim must be grounded in physically validated regimes.
         </p>
 
-        <p>
-          These regimes offer differentiated property combinations using known
-          materials and manufacturing infrastructure. Their viability is
-          application-specific and bounded by compatibility, durability,
-          recyclability, and cost discipline.
+        <p className="text-red-300">
+          Speculative invention without validation is not admissible.
         </p>
+      </Section>
 
-        <p>
-          No novel chemistry, proprietary formulation, or performance claim is
-          implied. This mapping serves as a falsifiable, skepticism-supported
-          point of departure for further validation.
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          Discovery is not the creation of the unknown—it is the disciplined
+          mapping of what already exists within physical law. Any framework that
+          prioritizes novelty over validation exceeds its epistemic authority.
         </p>
+      </section>
 
-        <hr />
-
-        <p className="text-sm text-muted-foreground">
-          Edge of Knowledge documents are regime-bounded analyses. They do not
-          prescribe implementation and are updated only by explicit revision.
-        </p>
-      </article>
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Validation-first · Non-inventive · Regime-bound · Versioned
+      </div>
     </main>
   );
 }
