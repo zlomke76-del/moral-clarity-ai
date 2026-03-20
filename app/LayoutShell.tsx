@@ -16,11 +16,8 @@ export default function LayoutShell({
   // Route classification
   // ─────────────────────────────────────────────
 
-  const isAppShell =
-    pathname === "/app" || pathname.startsWith("/app/");
-
-  const isWorkspace =
-    pathname.startsWith("/w/");
+  const isAppShell = pathname === "/app" || pathname.startsWith("/app/");
+  const isWorkspace = pathname.startsWith("/w/");
 
   // ─────────────────────────────────────────────
   // APP SHELL (with sidebar)
@@ -30,15 +27,12 @@ export default function LayoutShell({
       <>
         <div
           data-app-shell
-          className="grid grid-cols-[minmax(280px,20vw)_1fr]
-                     h-screen min-h-0 relative z-10"
+          className="grid grid-cols-[minmax(280px,20vw)_1fr] h-screen min-h-0 relative z-10"
         >
           {/* SIDEBAR */}
           <aside
             data-neural-sidebar
-            className="h-full overflow-y-auto
-                       border-r border-neutral-800
-                       bg-neutral-950/60 backdrop-blur-xl"
+            className="h-full overflow-y-auto border-r border-neutral-800 bg-neutral-950/60 backdrop-blur-xl"
           >
             <NeuralSidebar />
           </aside>
@@ -46,15 +40,11 @@ export default function LayoutShell({
           {/* MAIN */}
           <main
             data-app-main
-            className="h-full min-h-0
-                       flex flex-col
-                       overflow-hidden"
+            className="h-full min-h-0 flex flex-col overflow-hidden"
           >
             <div
               data-app-content
-              className="w-full h-full min-h-0
-                         flex flex-col overflow-hidden
-                         px-10 py-12"
+              className="w-full h-full min-h-0 flex flex-col overflow-hidden px-10 py-12"
             >
               {children}
             </div>
@@ -67,38 +57,29 @@ export default function LayoutShell({
     );
   }
 
-  // LayoutShell.tsx — WORKSPACE BRANCH ONLY
+  // ─────────────────────────────────────────────
+  // WORKSPACE
+  // ─────────────────────────────────────────────
+  if (isWorkspace) {
+    return (
+      <>
+        <div data-workspace-canvas className="w-screen h-screen overflow-hidden">
+          {children}
+        </div>
 
-if (isWorkspace) {
-  return (
-    <>
-      <div
-        data-workspace-canvas
-        className="w-screen h-screen overflow-hidden"
-      >
-        {children}
-      </div>
-
-      <LayoutDebugOverlay />
-      <SpeedInsights />
-    </>
-  );
-}
-
+        <LayoutDebugOverlay />
+        <SpeedInsights />
+      </>
+    );
+  }
 
   // ─────────────────────────────────────────────
-  // STANDALONE (marketing / auth)
+  // STANDALONE (marketing / auth / research)
   // ─────────────────────────────────────────────
   return (
     <>
-      <main
-        data-standalone
-        className="min-h-screen w-full
-                   flex flex-col
-                   items-center justify-start
-                   px-6 py-16"
-      >
-        {children}
+      <main data-standalone className="mc-page-shell">
+        <div className="mc-container w-full">{children}</div>
       </main>
 
       <LayoutDebugOverlay />
