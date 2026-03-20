@@ -1,183 +1,200 @@
 // app/edge-of-knowledge/boundary-of-coordination-under-uncertainty/page.tsx
-// ============================================================
-// EDGE OF KNOWLEDGE
-// The Boundary of Coordination Under Uncertainty
-// Regime-bounded epistemic doctrine
-// ============================================================
-// Non-actionable · Non-advisory · Canonical
-// ============================================================
 
 import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "The Boundary of Coordination Under Uncertainty | Edge of Knowledge",
+  title:
+    "Boundary of Coordination Under Uncertainty | Moral Clarity AI",
   description:
-    "A formal doctrine defining where coordination collapses under uncertainty and what failures emerge when alignment, trust, and shared meaning break.",
-  openGraph: {
-    title: "The Boundary of Coordination Under Uncertainty",
-    description:
-      "Where uncertainty overwhelms alignment, coordination fails. A regime-bounded analysis of systemic breakdown.",
-    url: "https://moralclarity.ai/edge-of-knowledge/boundary-of-coordination-under-uncertainty",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A structural regime boundary where coordination fails as uncertainty overwhelms trust, alignment, and shared meaning.",
 };
 
-export const dynamic = "force-static";
-
-export default function BoundaryOfCoordinationUnderUncertaintyPage() {
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>The Boundary of Coordination Under Uncertainty</h1>
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8 shadow-lg backdrop-blur-sm">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300 leading-7">
+        {children}
+      </div>
+    </section>
+  );
+}
 
-        <p className="lead">
-          <strong>
-            A formal boundary describing when coordination, cooperation, and
-            collective action become unreliable or impossible under uncertainty.
-          </strong>
+function Signal({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-sky-900/40 bg-slate-900/60 p-4">
+      <div className="text-xs uppercase tracking-widest text-sky-300">
+        {label}
+      </div>
+      <div className="mt-2 text-sm text-slate-200">{value}</div>
+    </div>
+  );
+}
+
+function FailureBlock({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-sky-900/30 bg-slate-900/60 p-5">
+      <div className="text-sm font-semibold text-white">{title}</div>
+      <p className="mt-2 text-sm text-slate-400 leading-6">{children}</p>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10 shadow-xl">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Regime Boundary
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white leading-tight">
+          Boundary of Coordination Under Uncertainty
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          When coordination becomes structurally impossible.
         </p>
 
-        <p className="text-sm text-red-700 dark:text-red-400">
-          <b>Boundary Notice:</b> This document is regime-bounded and
-          non-actionable. It defines systemic limits and failure modes without
-          offering prescriptions or operational guidance.
-        </p>
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <Signal label="Type" value="Regime Boundary" />
+          <Signal label="Driver" value="Uncertainty Overload" />
+          <Signal label="Outcome" value="Coordination Collapse" />
+        </div>
 
-        <h2>Definition</h2>
+        <div className="mt-8 rounded-xl border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200">
+          Regime-bounded · Non-actionable · No prescriptive guidance
+        </div>
+      </section>
+
+      {/* DEFINITION */}
+      <Section title="Definition">
         <p>
-          The boundary of coordination under uncertainty is reached when shared
-          understanding, trust, incentives, or accountability degrade to the
-          point that collective action can no longer be reliably organized or
-          sustained.
+          The boundary is reached when trust, shared meaning, incentives, and
+          accountability degrade to the point that coordination cannot be
+          reliably formed or sustained.
         </p>
-
         <p>
-          Beyond this boundary, coordination fails not because of individual
-          incompetence, but because the informational, incentive, and trust
-          structures required for alignment no longer hold.
+          Failure arises not from individual incompetence, but from structural
+          breakdown of alignment conditions.
         </p>
+      </Section>
 
-        <h2>Conditions That Drive Coordination Failure</h2>
-        <p>
-          When uncertainty intensifies and actors are misaligned, malicious, or
-          rewarded for denial, the following core system functions degrade or
-          collapse:
-        </p>
+      {/* FAILURE SYSTEM */}
+      <section>
+        <h2 className="text-2xl font-semibold text-white">
+          System Degradation Pattern
+        </h2>
 
-        <ul>
-          <li>
-            <strong>Trust:</strong> Assumptions of goodwill and reliability fail,
-            making cooperation fragile or unsafe.
-          </li>
-          <li>
-            <strong>Communication:</strong> Information channels distort,
-            fragment, or close; signals are withheld or manipulated.
-          </li>
-          <li>
-            <strong>Accountability:</strong> Responsibility mechanisms lose
-            legitimacy or are weaponized.
-          </li>
-          <li>
-            <strong>Cooperation:</strong> Shared work becomes inefficient,
-            adversarial, or impossible.
-          </li>
-          <li>
-            <strong>Goal Alignment:</strong> Collective objectives cannot be
-            formed, maintained, or trusted.
-          </li>
-          <li>
-            <strong>Transparency:</strong> Honest reporting is replaced by
-            denial, obfuscation, or narrative control.
-          </li>
-          <li>
-            <strong>Incentives:</strong> Reward structures favor harmful,
-            extractive, or self-defeating behavior.
-          </li>
-          <li>
-            <strong>Decision-Making:</strong> Deliberation breaks down; outcomes
-            become erratic, coercive, or unjust.
-          </li>
-          <li>
-            <strong>Rules and Enforcement:</strong> Agreements become
-            unenforceable or selectively ignored.
-          </li>
-          <li>
-            <strong>Resilience:</strong> Systems lose the ability to recover from
-            shocks or correct course.
-          </li>
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <FailureBlock title="Trust">
+            Cooperation becomes unsafe or irrational.
+          </FailureBlock>
+
+          <FailureBlock title="Communication">
+            Signals fragment, distort, or disappear.
+          </FailureBlock>
+
+          <FailureBlock title="Accountability">
+            Responsibility becomes unenforceable or weaponized.
+          </FailureBlock>
+
+          <FailureBlock title="Alignment">
+            Shared goals cannot be formed or maintained.
+          </FailureBlock>
+
+          <FailureBlock title="Incentives">
+            Harmful or extractive behavior is rewarded.
+          </FailureBlock>
+
+          <FailureBlock title="Decision-Making">
+            Outcomes detach from evidence and coherence.
+          </FailureBlock>
+
+          <FailureBlock title="Rules">
+            Agreements lose force or become selectively applied.
+          </FailureBlock>
+
+          <FailureBlock title="Resilience">
+            System cannot recover or correct trajectory.
+          </FailureBlock>
+        </div>
+      </section>
+
+      {/* CONSEQUENCE */}
+      <Section title="System Consequences">
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Progress stalls or reverses</li>
+          <li>Escalation replaces problem-solving</li>
+          <li>Ethical degradation accelerates</li>
+          <li>Recovery requires structural realignment</li>
         </ul>
+      </Section>
 
-        <h2>Systemic Consequences</h2>
-        <p>
-          Once coordination crosses this boundary, damage compounds rapidly.
-          Even technically sound actions may fail due to hostile, incoherent, or
-          adversarial environments.
-        </p>
-
-        <ul>
-          <li>
-            Progress stalls or reverses as denial blocks recognition of failure.
-          </li>
-          <li>
-            Ethical standards decay, increasing exploitation and harm.
-          </li>
-          <li>
-            Escalation replaces problem-solving.
-          </li>
-          <li>
-            Recovery becomes increasingly difficult without structural
-            realignment.
-          </li>
+      {/* LIMITS */}
+      <Section title="Non-Negotiable Limits">
+        <ul className="list-disc pl-6 space-y-2">
+          <li>Coordination cannot be guaranteed under high uncertainty</li>
+          <li>Procedure cannot substitute for trust</li>
+          <li>Formal agreement does not imply alignment</li>
         </ul>
+      </Section>
 
-        <h2>Limits and Non-Conclusions</h2>
-        <ul>
-          <li>
-            Coordination cannot be guaranteed under high uncertainty, even with
-            capable or well-intentioned actors.
-          </li>
-          <li>
-            Procedural fixes cannot substitute for broken trust or perverse
-            incentives.
-          </li>
-          <li>
-            Alignment cannot be inferred from formal agreement alone.
-          </li>
-        </ul>
-
-        <h2>Summary</h2>
+      {/* RELATION */}
+      <Section title="Canonical Placement">
         <p>
-          Coordination fails when uncertainty overwhelms trust, alignment,
-          incentives, and accountability. Beyond this boundary, collective
-          action becomes unreliable and often destructive. Restoration requires
-          realignment of incentives, reestablishment of accountability, and
-          re-grounding in shared truth—conditions that cannot be assumed and
-          cannot be forced through optimization alone.
+          This entry is part of the{" "}
+          <Link href="/edge-of-knowledge" className="text-sky-300 underline">
+            Edge of Knowledge
+          </Link>{" "}
+          series.
         </p>
-
-        <h2>Canonical Placement</h2>
-        <p className="text-sm text-neutral-500">
-          This document is part of the{" "}
-          <Link href="/edge-of-knowledge">Edge of Knowledge</Link> series. Authority,
-          enforcement, and refusal mechanisms governing response beyond this
-          boundary are defined in{" "}
-          <Link href="/edge-of-protection">Edge of Protection</Link>.
+        <p>
+          Authority, refusal, and enforcement beyond this boundary are governed
+          by{" "}
+          <Link href="/edge-of-protection" className="text-sky-300 underline">
+            Edge of Protection
+          </Link>
+          .
         </p>
+      </Section>
 
-        <hr />
-
-        <p className="text-sm text-neutral-400 mt-8">
-          Canonical · Regime-bounded · Non-actionable · Updated only by explicit
-          revision. Silent modification or interpretive drift invalidates this
-          document.
+      {/* FINAL */}
+      <section className="rounded-2xl border border-red-900/40 bg-red-950/20 p-8">
+        <h2 className="text-xl font-semibold text-white">
+          Regime Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          Beyond this boundary, coordination fails structurally. Recovery is not
+          procedural—it requires restoration of trust, alignment, and shared
+          truth.
         </p>
-      </article>
+      </section>
+
+      {/* FOOTER */}
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Regime-bounded · Versioned · Non-actionable
+      </div>
     </main>
   );
 }
