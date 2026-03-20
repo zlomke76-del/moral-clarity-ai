@@ -4,233 +4,177 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Maintenance Drift & Degradation Dynamics | Edge of Knowledge",
+    "Maintenance Drift & Degradation Dynamics | Moral Clarity AI",
   description:
-    "A regime-bounded analysis of slow, cumulative degradation in operational systems arising from maintenance drift, material fatigue, and epistemic erosion.",
-  openGraph: {
-    title:
-      "Maintenance Drift & Degradation Dynamics in Operational Systems",
-    description:
-      "Examining how gradual, often undetected drift degrades systems between validation and overt failure.",
-    url: "https://moralclarity.ai/edge-of-knowledge/maintenance-drift-and-degradation-dynamics",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A validation-decay boundary showing how cumulative operational drift erodes the legitimacy of initial system validation over time.",
 };
 
-export default function MaintenanceDriftAndDegradationDynamicsPage() {
+function Section({ title, children }: any) {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>
-          Maintenance Drift and Degradation Dynamics in Operational Systems
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
+
+export default function MaintenanceDriftPage() {
+  return (
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
+
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Validation Decay Boundary
+        </div>
+
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Maintenance Drift & Degradation Dynamics
         </h1>
 
-        <p className="lead">
-          <strong>Regime-Bounded Analysis</strong>
+        <p className="mt-4 text-lg text-slate-300">
+          Systems do not remain valid after validation. They drift.
         </p>
 
-        <hr />
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Validation expires · Drift accumulates · Legitimacy degrades over time
+        </div>
+      </section>
 
-        <h2>1. Gap Identification</h2>
-
+      {/* CORE */}
+      <Section title="Core Definition">
         <p>
-          The existing Edge of Knowledge series does not explicitly address the
-          cumulative, slow, and often undetected decline in system performance
-          and reliability arising from ongoing use or institutional evolution.
-          Maintenance drift, material fatigue, procedural erosion, and epistemic
-          decay are common precursors to failure, yet they rarely register as
-          discrete events or governance breakdowns.
+          Maintenance drift and degradation dynamics describe the cumulative,
+          time-dependent divergence of a system from its validated state due to
+          operation, wear, procedural erosion, and epistemic decay.
         </p>
 
+        <p className="text-red-300">
+          Validation is not preserved under operation. It decays as internal state evolves.
+        </p>
+      </Section>
+
+      {/* GAP */}
+      <Section title="Gap Identification">
         <p>
-          This omission is significant because many real-world failures under
-          uncertainty emerge not from singular shocks or explicit negligence,
-          but from the aggregated effect of deferred maintenance, unmodeled
-          wear, and gradual divergence from validated assumptions.
+          Most systems assume equivalence between validated and operational states.
         </p>
 
-        <h2>2. Concept Definition (High-Level)</h2>
-
-        <p>
-          Maintenance Drift and Degradation Dynamics examines the gradual,
-          regime-bounded processes through which systems—physical,
-          institutional, or epistemic—depart from their validated or intended
-          states over time.
-        </p>
-
-        <p>
-          These processes include accumulated maintenance gaps, incremental
-          material fatigue, procedural shortcutting, and knowledge decay. The
-          focus is on regimes where drift is detectable and temporally
-          traceable, yet precedes formal failure mechanisms, accountability
-          triggers, or boundary violations.
-        </p>
-
-        <h2>3. Why This Comes Next</h2>
-
-        <p>
-          This entry logically follows validation-first materials exploration by
-          addressing what occurs after initial validation, during sustained
-          operation and maintenance. It also builds on governance-driven failure
-          modes and failure visibility mechanisms by focusing on long-term,
-          low-salience drivers of unreliability that are neither immediately
-          visible nor governed by acute accountability structures.
+        <p className="text-red-300">
+          This assumption fails because cumulative exposure alters the invariant spectrum S.
         </p>
 
         <p>
-          It closes a critical process gap: the extended operational phase where
-          slow erosion, not sudden shock, dominates risk accumulation.
+          Failures often emerge not from discrete events, but from the untracked
+          accumulation of drift.
         </p>
+      </Section>
 
-        <h2>4. Regime Mapping</h2>
-
-        <h3>Valid</h3>
-        <ul>
-          <li>
-            Systems where ongoing operation produces time-dependent drift or
-            decay, including infrastructure, institutions, processes, and
-            material systems.
-          </li>
-          <li>
-            Contexts where maintenance, inspection, or correction is possible
-            but imperfect, deferred, or inconsistently applied.
-          </li>
+      {/* MECHANISM */}
+      <Section title="Drift Mechanisms">
+        <ul className="list-disc pl-6">
+          <li>Material fatigue and wear</li>
+          <li>Deferred or inconsistent maintenance</li>
+          <li>Procedural shortcutting</li>
+          <li>Knowledge loss and epistemic erosion</li>
         </ul>
 
-        <h3>Degrades</h3>
-        <ul>
-          <li>
-            Systems where degradation accelerates rapidly due to unmodeled
-            complexity or environmental instability.
-          </li>
-          <li>
-            Regimes with highly nonlinear feedback between system state and
-            governance response.
-          </li>
+        <p className="text-red-300">
+          These processes are cumulative, low-salience, and often invisible to governance systems.
+        </p>
+      </Section>
+
+      {/* REGIME */}
+      <Section title="Regime Mapping">
+        <p className="font-semibold text-white">Valid</p>
+        <ul className="list-disc pl-6">
+          <li>Long-duration operational systems</li>
+          <li>Maintenance-dependent infrastructure</li>
+          <li>Institutions with evolving personnel and procedures</li>
         </ul>
 
-        <h3>Fails Outright</h3>
-        <ul>
-          <li>
-            Environments dominated by singular, catastrophic events with no
-            observable precursors.
-          </li>
-          <li>
-            Systems that are statically validated and never operated,
-            maintained, or modified.
-          </li>
+        <p className="font-semibold text-white mt-4">Fails</p>
+        <ul className="list-disc pl-6">
+          <li>Purely static systems</li>
+          <li>Singular catastrophic regimes with no precursor drift</li>
+        </ul>
+      </Section>
+
+      {/* DISTINCTION */}
+      <Section title="Boundary Distinction">
+        <ul className="list-disc pl-6">
+          <li>Not failure detection — drift precedes detection</li>
+          <li>Not accountability — drift occurs without assignment</li>
+          <li>Not boundary violation — occurs within validated regimes</li>
         </ul>
 
-        <h2>5. Distinction From Existing Entries</h2>
+        <p className="text-red-300">
+          This is the erosion of validity—not the moment of failure.
+        </p>
+      </Section>
 
-        <ul>
-          <li>
-            <strong>Not failure visibility:</strong> Focuses on pre-failure
-            drift, not mechanisms for detecting failure events.
-          </li>
-          <li>
-            <strong>Not accountability signaling:</strong> Addresses gradual,
-            unassigned change rather than explicit responsibility or feedback.
-          </li>
-          <li>
-            <strong>Not boundary research:</strong> Concerns what happens inside
-            validated boundaries over time.
-          </li>
-          <li>
-            <strong>Not materials validation:</strong> Extends beyond initial
-            performance validation into post-deployment evolution.
-          </li>
-          <li>
-            <strong>Not governance inertia:</strong> Includes physical and
-            epistemic drift, not only decision stasis.
-          </li>
+      {/* VALIDATION DECAY */}
+      <Section title="Validation Decay">
+        <p>
+          Validation applies only to the initial state S₀.
+        </p>
+
+        <p>
+          As cumulative exposure alters S → S(t), equivalence to S₀ is lost.
+        </p>
+
+        <p className="text-red-300">
+          Validation authority decays as S diverges from its validated configuration.
+        </p>
+      </Section>
+
+      {/* FALSIFICATION */}
+      <Section title="Falsification Criteria">
+        <ul className="list-disc pl-6">
+          <li>No measurable drift between validation and operation</li>
+          <li>No degradation prior to failure</li>
+          <li>Existing systems fully capture drift effects</li>
         </ul>
+      </Section>
 
-        <h2>6. Falsification Criteria</h2>
+      {/* INVARIANT */}
+      <Section title="Invariant Framework">
+        <p><strong>G:</strong> Time and representation-preserving transformations</p>
+        <p><strong>Q:</strong> Cumulative operational exposure</p>
+        <p><strong>S:</strong> Degradation and drift spectrum</p>
 
+        <p className="text-red-300">
+          Failure: S diverges while validation remains treated as constant
+        </p>
+      </Section>
+
+      {/* CLAIM BOUNDARY */}
+      <Section title="Claim Eligibility Boundary">
         <p>
-          This concept would be unnecessary or redundant if:
+          Any claim of safety, reliability, or equivalence that does not account
+          for drift in S is invalid.
         </p>
 
-        <ul>
-          <li>
-            Failures caused by slow drift are already fully captured by existing
-            failure visibility or accountability mechanisms.
-          </li>
-          <li>
-            Empirical evidence shows no consequential change between validation
-            and failure in operational regimes.
-          </li>
-          <li>
-            No realistic scenario exists where gradual degradation impairs
-            system integrity prior to overt failure or governance breakdown.
-          </li>
-        </ul>
-
-        <h2>7. Summary Judgment</h2>
-
-        <p>
-          <strong>GO — fills a critical gap</strong>
+        <p className="text-red-300">
+          Validation without re-binding to current state does not confer legitimacy.
         </p>
+      </Section>
 
-        <p>
-          Explicit modeling of maintenance drift and degradation dynamics is
-          necessary for structural completeness of the Edge of Knowledge
-          framework. Its absence would under-represent the primary pathway by
-          which systems and institutions degrade under uncertainty.
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          Systems do not fail at the moment of breakdown—they fail long before,
+          as validation decays unnoticed. Any framework that treats validated
+          systems as static exceeds its epistemic authority.
         </p>
+      </section>
 
-        <hr />
-
-        <h2>Invariant Closure (Canonical)</h2>
-
-        <p>
-          <strong>Symmetry group (𝑮):</strong> Time-translation and
-          representation-preserving transformations under which systems are
-          assumed to remain equivalent between validation and operation
-          (e.g., documentation updates, personnel changes, procedural revisions
-          that claim continuity).
-        </p>
-
-        <p>
-          <strong>Conserved quantity (𝑸):</strong> Cumulative operational
-          exposure and wear (mechanical, procedural, epistemic) that accrues
-          irreversibly with use, regardless of recordkeeping or institutional
-          narrative.
-        </p>
-
-        <p>
-          <strong>Invariant spectrum (𝑺):</strong> The distribution of internal
-          degradation states (fatigue, tolerance drift, procedural entropy,
-          knowledge loss) that cannot be transformed away by administrative,
-          symbolic, or representational updates.
-        </p>
-
-        <p>
-          <strong>Failure signature on 𝑺:</strong> A knee or step change where
-          latent degradation modes become system-dominant despite stable
-          external validation metrics.
-        </p>
-
-        <p>
-          <strong>Legitimacy boundary:</strong> Any claim of continued safety,
-          reliability, or equivalence to the validated state that does not
-          explicitly account for accumulated drift in the invariant spectrum
-          is not legitimate by formal or ethical criteria.
-        </p>
-
-        <hr />
-
-        <p className="text-sm text-muted-foreground">
-          Edge of Knowledge documents are regime-bounded analyses. They do not
-          prescribe implementation and are updated only by explicit revision.
-        </p>
-      </article>
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Time-bound · Drift-driven · Validation-decaying · Versioned
+      </div>
     </main>
   );
 }
