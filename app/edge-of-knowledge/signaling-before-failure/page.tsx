@@ -1,16 +1,14 @@
-// app/edge-of-knowledge/signaling-before-failure/page.tsx
-
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Signaling Before Failure: Materials That Warn Prior to Biological Harm | Moral Clarity AI",
+    "Signaling Before Failure | Pre-Harm Visibility Boundary",
   description:
-    "A public white paper on intrinsically signaling materials that warn of approaching biological harm before catastrophic failure occurs. A harm-reduction doctrine grounded in physics, biology, and ethics.",
+    "A constraint establishing that systems must provide detectable signals prior to biological harm, or be considered invalid within that regime.",
   openGraph: {
     title: "Signaling Before Failure",
     description:
-      "Why materials should warn before harm occurs — not fail silently.",
+      "Failure without warning is not admissible in human-risk systems.",
     url: "https://moralclarity.ai/edge-of-knowledge/signaling-before-failure",
     siteName: "Moral Clarity AI",
     type: "article",
@@ -21,191 +19,168 @@ export const metadata: Metadata = {
   },
 };
 
+function Section({ title, children }: any) {
+  return (
+    <section className="rounded-2xl border border-sky-950/40 bg-slate-950/70 p-8">
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
+      <div className="mt-4 space-y-4 text-slate-300">{children}</div>
+    </section>
+  );
+}
+
 export default function SignalingBeforeFailurePage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Signaling Before Failure</h1>
+    <main className="mx-auto w-full max-w-[1100px] px-6 py-14 space-y-12">
 
-        <p className="lead">
-          <strong>
-            Why materials should warn of approaching biological harm instead of
-            failing silently
-          </strong>
-        </p>
+      {/* HERO */}
+      <section className="rounded-3xl border border-sky-950/50 bg-slate-950/80 p-10">
+        <div className="text-xs uppercase tracking-widest text-sky-300">
+          Edge of Knowledge — Pre-Harm Visibility Boundary
+        </div>
 
-        <h2>Preface</h2>
-        <p>
-          Most safety systems are designed to resist damage until they fail.
-          When failure occurs, it is often abrupt, silent, and discovered only
-          after harm has already happened. This document proposes a different
-          design philosophy: materials that preferentially signal when a
-          biologically relevant threshold is being approached — before injury,
-          not after failure.
-        </p>
-        <p>
-          This is not a proposal for elimination of risk, perfect protection, or
-          sensor-driven monitoring. It is a doctrine for harm reduction in
-          environments where absolute control is unavailable and human response
-          remains essential.
+        <h1 className="mt-4 text-4xl font-semibold text-white">
+          Signaling Before Failure
+        </h1>
+
+        <p className="mt-4 text-lg text-slate-300">
+          Systems are valid only if they signal before biological harm—not after failure.
         </p>
 
-        <h2>Abstract</h2>
+        <div className="mt-8 border border-red-900/40 bg-red-950/20 p-4 text-sm text-red-200 rounded-xl">
+          Signal required · Pre-harm · Silent systems invalid · Human-action dependent
+        </div>
+      </section>
+
+      {/* CORE */}
+      <Section title="Core Boundary">
         <p>
-          Materials can be engineered to fail in ways that are informative
-          rather than catastrophic. By coupling intrinsic material responses to
-          sub-harm biological thresholds, systems can provide clear, interpretable
-          warnings that prompt timely human action. This paper evaluates the
-          physical plausibility, regime limits, ethical constraints, and failure
-          modes of preferentially signaling materials. The aim is not to replace
-          elimination, engineering controls, or active monitoring, but to govern
-          their absence responsibly where constraints exist.
+          This system defines a constraint: a material or system exposed to human
+          biological risk must provide a detectable signal prior to harm.
         </p>
 
-        <h2>1. The Problem: Silent Failure</h2>
-        <p>
-          Many injuries and catastrophic events occur not because protection was
-          absent, but because degradation was invisible until it was too late.
-          Over-engineered systems that resist damage without signaling create
-          false confidence, defer intervention, and concentrate risk into sudden
-          failure modes.
+        <p className="text-red-300">
+          Failure without prior signal is not admissible within this regime.
         </p>
-        <ul>
-          <li>Wear accumulates without perceptible cues</li>
-          <li>Damage remains hidden until protection collapses</li>
-          <li>Users are deprived of actionable warning</li>
-          <li>Failure occurs after biological thresholds are exceeded</li>
+      </Section>
+
+      {/* PROBLEM */}
+      <Section title="Problem: Silent Failure">
+        <ul className="list-disc pl-6">
+          <li>Damage accumulates invisibly</li>
+          <li>Users receive no actionable warning</li>
+          <li>Failure occurs after thresholds are exceeded</li>
         </ul>
 
-        <h2>2. A Different Principle: Governed Failure</h2>
-        <p>
-          Preferentially signaling materials are designed not to be strongest at
-          all costs, but to fail in a controlled, interpretable, and timely way.
-          Their purpose is not maximal durability, but early visibility of
-          approaching harm.
+        <p className="text-red-300">
+          Silent systems concentrate risk into catastrophic events.
         </p>
-        <p>
-          The core design goal is simple:
-        </p>
-        <blockquote>
-          A material should change in a detectable way before biological injury
-          becomes likely — not after.
-        </blockquote>
+      </Section>
 
-        <h2>3. Physical and Biological Plausibility</h2>
+      {/* PRINCIPLE */}
+      <Section title="Signal-Precedence Principle">
         <p>
-          Intrinsic material responses can be coupled to stress, dose, heat, or
-          exposure levels correlated with biological risk. Plausible mechanisms
-          include:
-        </p>
-        <ul>
-          <li>
-            Stress- or dose-gated color, texture, or transparency change
-            (mechanochromic or thermochromic responses)
-          </li>
-          <li>
-            Progressive microcracking that produces audible or tactile cues
-            before structural loss
-          </li>
-          <li>
-            Irreversible deformation or stiffening near defined load thresholds
-          </li>
-          <li>
-            Non-toxic marker release (odor, pH change) tied to critical exposure
-            levels
-          </li>
-        </ul>
-        <p>
-          These responses must be intrinsic, non-resettable, and directly tied to
-          sub-harm thresholds — not cosmetic wear or post-damage indicators.
+          The governing rule is not maximum durability, but:
         </p>
 
-        <h2>4. Regime Boundaries</h2>
-        <p>
-          This approach is viable only in specific regimes:
-        </p>
-        <ul>
-          <li>
-            Hazards with well-characterized, actionable biological thresholds
-          </li>
-          <li>
-            Contexts where humans can respond (replace, remove, evacuate, stop)
-          </li>
-          <li>
-            Environments lacking electronic monitoring or continuous oversight
-          </li>
-          <li>
-            Acute or interface-limited risks rather than chronic cumulative
-            exposures
-          </li>
-        </ul>
-        <p>
-          It is not suitable for zero-threshold hazards, fail-safe medical
-          barriers, or populations unable to perceive or act on warnings.
+        <p className="text-white font-medium">
+          A system must signal before harm becomes likely.
         </p>
 
-        <h2>5. Signal Integrity</h2>
-        <p>
-          A warning is only meaningful if it is:
+        <p className="text-red-300">
+          Strength without signaling is not safety.
         </p>
-        <ul>
-          <li>Consistent and repeatable across real conditions</li>
-          <li>Unambiguous to non-expert users</li>
-          <li>Triggered before harm, not after damage</li>
-          <li>Persistent enough to prevent normalization or dismissal</li>
-        </ul>
-        <p>
-          False alarms, silent failure, or late signaling invalidate the system.
-        </p>
+      </Section>
 
-        <h2>6. Ethical Constraints</h2>
-        <p>
-          Signaling materials must never be framed as protective guarantees.
-          Their role is informational, not eliminative. Ethical deployment
-          requires:
-        </p>
-        <ul>
-          <li>Clear communication of residual risk</li>
-          <li>No substitution for primary prevention where available</li>
-          <li>
-            Consideration for users with sensory, cognitive, or contextual
-            limitations
-          </li>
-          <li>
-            Avoidance of burden-shifting onto populations unable to act
-          </li>
+      {/* MECHANISMS */}
+      <Section title="Physical Mechanisms">
+        <ul className="list-disc pl-6">
+          <li>Mechanochromic or thermochromic transitions</li>
+          <li>Progressive microfracture producing sensory cues</li>
+          <li>Irreversible deformation near thresholds</li>
+          <li>Non-toxic marker release tied to exposure</li>
         </ul>
 
-        <h2>7. Comparison to Alternatives</h2>
         <p>
-          Compared to silent over-engineering, intrinsic signaling reduces the
-          likelihood of catastrophic surprise. Compared to electronic sensors,
-          it trades precision for robustness, equity, and independence from
-          power and maintenance.
+          These must be intrinsic and non-resettable.
         </p>
+      </Section>
+
+      {/* REGIME */}
+      <Section title="Regime Mapping">
+        <p className="font-semibold text-white">Valid:</p>
+        <ul className="list-disc pl-6">
+          <li>Known biological thresholds</li>
+          <li>Human-interpretable environments</li>
+          <li>Absence of monitoring infrastructure</li>
+        </ul>
+
+        <p className="font-semibold text-white mt-4">Fails:</p>
+        <ul className="list-disc pl-6">
+          <li>Zero-threshold hazards</li>
+          <li>Critical medical barriers</li>
+          <li>Contexts where users cannot respond</li>
+        </ul>
+      </Section>
+
+      {/* INTEGRITY */}
+      <Section title="Signal Integrity Constraint">
+        <ul className="list-disc pl-6">
+          <li>Signal must occur before harm threshold</li>
+          <li>Signal must be unambiguous</li>
+          <li>Signal must persist long enough for action</li>
+        </ul>
+
+        <p className="text-red-300">
+          Late, ambiguous, or ignorable signals invalidate the system.
+        </p>
+      </Section>
+
+      {/* ETHICS */}
+      <Section title="Ethical Constraint">
+        <ul className="list-disc pl-6">
+          <li>No representation as protective guarantee</li>
+          <li>No replacement for elimination or monitoring</li>
+          <li>No burden-shifting onto vulnerable users</li>
+        </ul>
+      </Section>
+
+      {/* INVARIANT */}
+      <Section title="Invariant Framework">
+        <p><strong>G:</strong> Signal-preserving transformations</p>
+        <p><strong>Q:</strong> Biological harm threshold</p>
+        <p><strong>S:</strong> Signal state relative to Q</p>
+
+        <p className="text-red-300">
+          Failure: Q reached without prior S transition
+        </p>
+      </Section>
+
+      {/* CLAIM */}
+      <Section title="Claim Eligibility Boundary">
         <p>
-          It is not superior to elimination or active monitoring, but it is
-          meaningfully better than silence when those options are unavailable.
+          Any system exposed to biological risk must demonstrate that
+          detectable signaling occurs before harm.
         </p>
 
-        <h2>Conclusion</h2>
-        <p>
-          Preferentially signaling material failure is a viable harm-reduction
-          strategy when absolute protection is impossible and biological risk
-          thresholds are known. It transforms failure from a hidden event into a
-          governable moment, enabling human judgment rather than replacing it.
+        <p className="text-red-300">
+          Absence of pre-harm signal invalidates safety claims.
         </p>
-        <p>
-          The success of this approach depends not on strength, but on honesty:
-          making risk visible before harm occurs.
-        </p>
+      </Section>
 
-        <hr />
-
-        <p className="text-sm text-muted-foreground">
-          Version 1.0 · Public white paper · Edge of Knowledge Series
+      {/* FINAL */}
+      <section className="border border-red-900/40 bg-red-950/20 p-8 rounded-2xl">
+        <h2 className="text-xl font-semibold text-white">
+          Boundary Judgment
+        </h2>
+        <p className="mt-4 text-red-200">
+          A system that fails silently is not protective—it is delayed harm.
+          Safety is not defined by strength, but by visibility before injury.
         </p>
-      </article>
+      </section>
+
+      <div className="text-center text-sm text-slate-500">
+        Canonical · Pre-harm · Signal-bound · Non-admissible silence · Versioned
+      </div>
     </main>
   );
 }
