@@ -26,6 +26,12 @@ type CaseStudy = {
   href: string;
   label: string;
   summary: string;
+  status: "Observed Failure" | "Protocol Substitution" | "Narrated Compliance";
+  failureSignature: string;
+  testType: string;
+  domain: string;
+  outcomeType: string;
+  featured?: boolean;
 };
 
 const caseStudies: CaseStudy[] = [
@@ -34,6 +40,13 @@ const caseStudies: CaseStudy[] = [
     label: "Failure of AI Self-Administration Under The Steward’s Test (Grok)",
     summary:
       "A bounded case showing failure of self-administration under stewardship conditions rather than successful governed execution.",
+    status: "Observed Failure",
+    failureSignature:
+      "Claimed stewardship collapsed under self-application.",
+    testType: "Steward’s Test",
+    domain: "AI Self-Assessment",
+    outcomeType: "Authority Failure",
+    featured: true,
   },
   {
     href: "/edge-of-practice/case-studies/copilot-stewards-test-metaphorical-escape",
@@ -41,6 +54,12 @@ const caseStudies: CaseStudy[] = [
       "Metaphorical Escape in AI Self-Assessment Under The Steward’s Test (Copilot)",
     summary:
       "A case documenting metaphorical escape in place of direct admissible self-assessment under the test boundary.",
+    status: "Observed Failure",
+    failureSignature:
+      "Metaphor replaced direct admissible self-assessment.",
+    testType: "Steward’s Test",
+    domain: "AI Self-Assessment",
+    outcomeType: "Metaphorical Escape",
   },
   {
     href: "/edge-of-practice/case-studies/deepseek-stewards-test-protocol-substitution",
@@ -48,6 +67,12 @@ const caseStudies: CaseStudy[] = [
       "Simulation–Execution Confusion and Protocol Substitution Under The Steward’s Test (DeepSeek)",
     summary:
       "A case capturing substitution of narrated protocol for actual compliant execution under bounded test conditions.",
+    status: "Protocol Substitution",
+    failureSignature:
+      "Narrated protocol substituted for executable compliance.",
+    testType: "Steward’s Test",
+    domain: "Execution Boundary",
+    outcomeType: "Protocol Substitution",
   },
   {
     href: "/edge-of-practice/case-studies/chatgpt-stewards-test-narrated-compliance",
@@ -55,6 +80,12 @@ const caseStudies: CaseStudy[] = [
       "Narrated Hypothetical Compliance Under The Steward’s Test (ChatGPT)",
     summary:
       "A case where narrated hypothetical compliance appears in place of direct operationally valid compliance.",
+    status: "Narrated Compliance",
+    failureSignature:
+      "Narration stood in for operationally valid compliance.",
+    testType: "Steward’s Test",
+    domain: "Execution Boundary",
+    outcomeType: "Narrated Compliance",
   },
 ];
 
@@ -75,45 +106,226 @@ function SignalPill({
   );
 }
 
+function TaxonomyChip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center rounded-full border border-sky-900/45 bg-slate-900/80 px-3 py-1 text-[11px] font-medium tracking-[0.08em] text-slate-300">
+      {children}
+    </span>
+  );
+}
+
+function StatusBadge({
+  status,
+}: {
+  status: CaseStudy["status"];
+}) {
+  const styles: Record<CaseStudy["status"], string> = {
+    "Observed Failure":
+      "border-sky-900/50 bg-sky-950/40 text-sky-300",
+    "Protocol Substitution":
+      "border-amber-900/50 bg-amber-950/30 text-amber-300",
+    "Narrated Compliance":
+      "border-violet-900/50 bg-violet-950/30 text-violet-300",
+  };
+
+  return (
+    <div
+      className={`inline-flex w-fit items-center rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${styles[status]}`}
+    >
+      {status}
+    </div>
+  );
+}
+
+function SiblingNav() {
+  const items = [
+    { href: "/edge-of-knowledge/research", label: "Research" },
+    { href: "/edge-of-practice", label: "Practice" },
+    { href: "/edge-of-practice/case-studies", label: "Case Studies", active: true },
+    { href: "/edge-of-protection", label: "Protection" },
+  ];
+
+  return (
+    <section className="mt-10">
+      <div className="rounded-[1.5rem] border border-sky-950/40 bg-slate-950/55 p-3 backdrop-blur-sm">
+        <div className="flex flex-wrap gap-3">
+          {items.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={[
+                "rounded-xl border px-4 py-2 text-sm transition",
+                item.active
+                  ? "border-sky-700/60 bg-sky-950/45 text-sky-200"
+                  : "border-sky-950/40 bg-slate-950/40 text-slate-300 hover:border-sky-800/60 hover:text-sky-200",
+              ].join(" ")}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FeaturedCaseCard({
+  href,
+  label,
+  summary,
+  status,
+  failureSignature,
+  testType,
+  domain,
+  outcomeType,
+}: CaseStudy) {
+  return (
+    <Link
+      href={href}
+      className="group relative block overflow-hidden rounded-[2rem] border border-sky-800/55 bg-slate-950/78 p-8 shadow-[0_0_0_1px_rgba(59,130,246,0.10),0_28px_90px_rgba(0,0,0,0.52)] transition duration-300 hover:border-sky-600/70 hover:shadow-[0_0_0_1px_rgba(59,130,246,0.16),0_34px_100px_rgba(0,0,0,0.60)] md:p-10"
+    >
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.16),transparent_38%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.08),transparent_35%)] opacity-90" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/50 to-transparent" />
+
+      <div className="relative z-10">
+        <div className="flex flex-wrap items-center gap-3">
+          <StatusBadge status={status} />
+          <div className="inline-flex rounded-full border border-sky-900/45 bg-slate-900/75 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-300">
+            Featured Case
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-2">
+          <TaxonomyChip>{testType}</TaxonomyChip>
+          <TaxonomyChip>{domain}</TaxonomyChip>
+          <TaxonomyChip>{outcomeType}</TaxonomyChip>
+        </div>
+
+        <h2 className="mt-6 max-w-4xl text-2xl font-semibold leading-tight tracking-tight text-white transition group-hover:text-sky-100 md:text-[2rem]">
+          {label}
+        </h2>
+
+        <p className="mt-5 max-w-3xl text-base leading-8 text-slate-300">
+          {summary}
+        </p>
+
+        <div className="mt-7 rounded-2xl border border-sky-900/35 bg-slate-900/60 p-5">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-300">
+            Failure Signature
+          </div>
+          <p className="mt-3 text-lg font-medium leading-8 text-white">
+            {failureSignature}
+          </p>
+        </div>
+
+        <div className="mt-7 grid gap-4 md:grid-cols-3">
+          <div className="rounded-xl border border-sky-950/40 bg-slate-950/55 p-4">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              What was claimed
+            </div>
+            <p className="mt-2 text-sm leading-7 text-slate-300">
+              Steward-like or compliant self-governance remained available under test.
+            </p>
+          </div>
+          <div className="rounded-xl border border-sky-950/40 bg-slate-950/55 p-4">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              What was tested
+            </div>
+            <p className="mt-2 text-sm leading-7 text-slate-300">
+              Whether the system could apply the boundary to itself without evasive substitution.
+            </p>
+          </div>
+          <div className="rounded-xl border border-sky-950/40 bg-slate-950/55 p-4">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              What happened
+            </div>
+            <p className="mt-2 text-sm leading-7 text-slate-300">
+              The claim broke under bounded pressure and produced an inadmissible substitute.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-8 flex items-center justify-between">
+          <span className="text-xs uppercase tracking-[0.18em] text-slate-500">
+            View Featured Case
+          </span>
+          <span className="text-sky-300 transition duration-300 group-hover:translate-x-1 group-hover:text-sky-200">
+            →
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 function CaseStudyCard({
   href,
   label,
   summary,
-  status = "Observed Failure",
-}: CaseStudy & { status?: string }) {
+  status,
+  failureSignature,
+  testType,
+  domain,
+  outcomeType,
+}: CaseStudy) {
   return (
     <Link
       href={href}
-      className="group relative block overflow-hidden rounded-[1.75rem] border border-sky-950/45 bg-slate-950/72 p-8 transition duration-300 hover:border-sky-700/60 hover:shadow-[0_0_0_1px_rgba(59,130,246,0.12),0_30px_80px_rgba(0,0,0,0.55)]"
+      className="group relative block overflow-hidden rounded-[1.75rem] border border-sky-950/45 bg-slate-950/72 p-8 shadow-[0_0_0_1px_rgba(59,130,246,0.05),0_18px_56px_rgba(0,0,0,0.38)] transition duration-300 hover:-translate-y-0.5 hover:border-sky-700/60 hover:shadow-[0_0_0_1px_rgba(59,130,246,0.12),0_30px_80px_rgba(0,0,0,0.55)]"
     >
-      {/* Glow layer */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.12),transparent_40%)] opacity-0 transition duration-300 group-hover:opacity-100" />
 
-      <div className="relative z-10 flex flex-col h-full">
-        {/* Status tag */}
-        <div className="inline-flex w-fit items-center rounded-full border border-sky-900/50 bg-sky-950/40 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-300">
-          {status}
+      <div className="relative z-10 flex h-full flex-col">
+        <StatusBadge status={status} />
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <TaxonomyChip>{testType}</TaxonomyChip>
+          <TaxonomyChip>{domain}</TaxonomyChip>
+          <TaxonomyChip>{outcomeType}</TaxonomyChip>
         </div>
 
-        {/* Title */}
-        <h2 className="mt-5 text-xl font-semibold leading-tight text-white transition group-hover:text-sky-100">
+        <h2 className="mt-5 text-xl font-semibold leading-tight tracking-tight text-white transition group-hover:text-sky-100">
           {label}
         </h2>
 
-        {/* Divider */}
+        <div className="mt-5 rounded-xl border border-sky-900/30 bg-slate-900/50 p-4">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Failure Signature
+          </div>
+          <p className="mt-2 text-sm font-medium leading-7 text-slate-100">
+            {failureSignature}
+          </p>
+        </div>
+
         <div className="mt-5 h-px w-full bg-gradient-to-r from-transparent via-sky-800/40 to-transparent" />
 
-        {/* Summary */}
         <p className="mt-5 text-[15px] leading-7 text-slate-300">
           {summary}
         </p>
 
-        {/* Bottom row */}
+        <div className="mt-6 grid gap-3">
+          <div className="rounded-xl border border-sky-950/35 bg-slate-950/45 px-4 py-3">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Observed behavior
+            </div>
+            <p className="mt-2 text-sm leading-6 text-slate-300">
+              The bounded test produced a substitute pattern instead of admissible execution.
+            </p>
+          </div>
+          <div className="rounded-xl border border-sky-950/35 bg-slate-950/45 px-4 py-3">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Admissible conclusion
+            </div>
+            <p className="mt-2 text-sm leading-6 text-slate-300">
+              The claimed assumption did not survive the tested condition.
+            </p>
+          </div>
+        </div>
+
         <div className="mt-6 flex items-center justify-between">
           <span className="text-xs uppercase tracking-[0.18em] text-slate-500">
             View Case
           </span>
-
           <span className="text-sky-300 transition duration-300 group-hover:translate-x-1 group-hover:text-sky-200">
             →
           </span>
@@ -124,6 +336,9 @@ function CaseStudyCard({
 }
 
 export default function EdgeOfPracticeCaseStudiesIndex() {
+  const featuredCase = caseStudies.find((study) => study.featured);
+  const standardCases = caseStudies.filter((study) => !study.featured);
+
   return (
     <main className="mx-auto w-full max-w-[1400px] px-6 pb-8 pt-2 sm:px-8 lg:px-10">
       <section className="relative overflow-hidden rounded-[2rem] border border-sky-950/45 bg-slate-950/72 shadow-[0_0_0_1px_rgba(59,130,246,0.08),0_30px_100px_rgba(0,0,0,0.50)] backdrop-blur-sm">
@@ -181,6 +396,8 @@ export default function EdgeOfPracticeCaseStudiesIndex() {
           </div>
         </div>
       </section>
+
+      <SiblingNav />
 
       <section className="mx-auto max-w-5xl py-14 text-center">
         <p className="text-lg leading-9 text-slate-300 md:text-xl">
@@ -261,6 +478,28 @@ export default function EdgeOfPracticeCaseStudiesIndex() {
         </div>
       </section>
 
+      {featuredCase ? (
+        <section className="mt-14">
+          <div className="mb-8 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-300">
+                Featured Case
+              </div>
+              <h2 className="mt-2 text-3xl font-semibold tracking-tight text-white md:text-[2.35rem]">
+                A flagship bounded failure record
+              </h2>
+            </div>
+
+            <p className="max-w-2xl text-sm leading-7 text-slate-400">
+              One case is surfaced prominently to anchor the page around a
+              concrete evidentiary object rather than a flat list of links.
+            </p>
+          </div>
+
+          <FeaturedCaseCard {...featuredCase} />
+        </section>
+      ) : null}
+
       <section className="mt-14">
         <div className="mb-8 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
@@ -279,8 +518,8 @@ export default function EdgeOfPracticeCaseStudiesIndex() {
           </p>
         </div>
 
-        <div className="grid gap-10 md:grid-cols-2 xl:grid-cols-2">
-          {caseStudies.map((study) => (
+        <div className="grid gap-10 md:grid-cols-2">
+          {standardCases.map((study) => (
             <CaseStudyCard key={study.href} {...study} />
           ))}
         </div>
@@ -323,6 +562,24 @@ export default function EdgeOfPracticeCaseStudiesIndex() {
             the boundary of that failure stays inspectable over time.
           </p>
         </section>
+      </section>
+
+      <section className="mt-14 rounded-[1.75rem] border border-sky-900/35 bg-gradient-to-r from-slate-950/70 via-slate-950/55 to-slate-950/70 px-6 py-6 shadow-[0_0_0_1px_rgba(59,130,246,0.04)] backdrop-blur-sm">
+        <div className="grid gap-4 md:grid-cols-4">
+          {[
+            "Fixed at publication",
+            "Revised only by explicit versioning",
+            "No silent rewrite",
+            "Bounded claim discipline",
+          ].map((item) => (
+            <div
+              key={item}
+              className="rounded-xl border border-sky-950/35 bg-slate-950/45 px-4 py-3 text-sm text-slate-300"
+            >
+              {item}
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="mt-14 rounded-[1.75rem] border border-sky-950/40 bg-slate-950/55 px-6 py-6 text-center shadow-[0_0_0_1px_rgba(59,130,246,0.04)] backdrop-blur-sm">
