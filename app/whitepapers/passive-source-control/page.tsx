@@ -39,7 +39,7 @@ export default function PassiveSourceControlWhitepaper() {
           <p className="max-w-3xl text-lg leading-8 text-white/75">
             Evaluation of whether passive materials or geometry can bias droplet
             formation or trajectories prior to aerosolization without airflow,
-            filtration, or active mechanisms. :contentReference[oaicite:0]{index=0}
+            filtration, or active mechanisms.
           </p>
         </div>
       </section>
@@ -175,7 +175,8 @@ export default function PassiveSourceControlWhitepaper() {
       {/* INVARIANT */}
       <section className="rounded-2xl border border-white/10 bg-black p-10">
         <p className="text-2xl text-white leading-9">
-          If control depends on conditions that cannot be enforced, it is not control.
+          If control depends on conditions that cannot be enforced, it is not
+          control.
         </p>
         <p className="mt-4 text-white/60 leading-7">
           Effects that vanish in reality cannot be claimed at scale.
