@@ -1,15 +1,16 @@
 // app/edge-of-protection/normative-invariance-and-drift/page.tsx
 // ============================================================
-// NORMATIVE INVARIANCE AND DRIFT
-// Stability as a Structural Property
+// EDGE OF PROTECTION
+// Normative Invariance and Drift
+// Upgraded to Constraint-Bound Admissibility Framework
 // ============================================================
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Normative Invariance and Drift | Moral Clarity AI",
+  title: "Normative Invariance and Drift | Edge of Protection",
   description:
-    "Why drift is not inevitable in AI systems, and how binding normative invariants make long-horizon stability a structural property rather than an aspiration.",
+    "Stability is admissible only if system behavior remains invariant under time, pressure, and adaptation.",
   robots: { index: true, follow: true },
 };
 
@@ -17,199 +18,181 @@ export const dynamic = "force-static";
 
 export default function NormativeInvarianceAndDriftPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article
-        className="
-          prose prose-neutral dark:prose-invert max-w-none
-          prose-a:underline prose-a:font-medium
-          prose-a:text-blue-600 dark:prose-a:text-blue-400
-        "
-      >
-        <h1>Normative Invariance and Drift</h1>
-        <p className="text-lg text-neutral-400">
-          Stability as a structural property of resilient AI systems
+    <main className="mx-auto max-w-6xl px-6 py-20 space-y-12">
+      {/* ===================================================== */}
+      {/* HERO */}
+      {/* ===================================================== */}
+      <section className="rounded-2xl bg-gradient-to-br from-neutral-900 via-neutral-800 to-black p-10">
+        <div className="space-y-6">
+          <h1 className="text-4xl font-semibold text-white tracking-tight">
+            Normative Invariance and Drift
+          </h1>
+
+          <div className="flex flex-wrap gap-3">
+            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
+              Edge of Protection
+            </span>
+            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
+              Stability Constraint
+            </span>
+            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
+              Drift Boundary
+            </span>
+          </div>
+
+          <p className="text-neutral-300 max-w-3xl">
+            Stability is admissible only if system behavior remains invariant
+            under time, pressure, and adaptation. Any undetected or unbounded
+            change in normative output constitutes failure.
+          </p>
+        </div>
+      </section>
+
+      {/* ===================================================== */}
+      {/* CORE DOCTRINE */}
+      {/* ===================================================== */}
+      <section className="rounded-2xl bg-black p-8 border border-white/10">
+        <p className="text-white text-lg leading-relaxed">
+          Stability is admissible only if drift cannot occur without detection.
         </p>
-
-        <hr />
-
-        <h2>Reframing the Drift Question</h2>
-
-        <p>
-          The dominant framing of AI drift asks whether it can be managed,
-          mitigated, or reduced over time. This framing is incomplete.
+        <p className="text-neutral-400 mt-4">
+          Any silent change in normative behavior constitutes structural failure.
         </p>
+      </section>
 
-        <p>
-          The correct question is not whether drift can be managed, but whether
-          drift can be made <em>structurally impossible without detection
-          failure</em>.
+      {/* ===================================================== */}
+      {/* TESTED ASSUMPTION */}
+      {/* ===================================================== */}
+      <section className="grid md:grid-cols-2 gap-6">
+        <div className="rounded-xl border p-6">
+          <h2 className="font-semibold text-lg">Tested Assumption</h2>
+          <p className="text-neutral-600 mt-2">
+            System outputs remain invariant across time, pressure, and
+            adaptation without silent normative deviation.
+          </p>
+        </div>
+
+        <div className="rounded-xl border p-6">
+          <h2 className="font-semibold text-lg">Why This Matters</h2>
+          <p className="text-neutral-600 mt-2">
+            Systems that drift silently replace constraint with adaptation,
+            allowing values to erode without detection or accountability.
+          </p>
+        </div>
+      </section>
+
+      {/* ===================================================== */}
+      {/* SYSTEM DEFINITION */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">System Definition</h2>
+        <p className="text-neutral-600">
+          Drift is defined as any change in normative output behavior that is not
+          explicitly detected, bounded, and governed.
         </p>
+      </section>
 
-        <p>
-          When framed correctly, drift is no longer a learning-theory problem or
-          a statistical inevitability. It becomes a governance-invariant
-          problem—one determined by architectural choices, constraint integrity,
-          and normative binding.
+      {/* ===================================================== */}
+      {/* GOVERNING VARIABLE */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">Governing Variable</h2>
+        <p className="text-neutral-600">
+          Degree of normative deviation across time, pressure conditions, or
+          system updates without explicit detection or constraint enforcement.
         </p>
+      </section>
 
-        <h2>What Drift Is — and Is Not</h2>
-
-        <p>
-          Drift is not a law of nature for AI or complex systems. It is not an
-          unavoidable consequence of intelligence, scale, or adaptation.
-        </p>
-
-        <p>
-          Drift is an <strong>outcome</strong> of specific design decisions:
-        </p>
-
-        <ul>
-          <li>Weak or permeable constraints</li>
-          <li>Diffuse or unaccountable authority</li>
-          <li>Silent accumulation of change</li>
-          <li>Optimization without invariant reference</li>
+      {/* ===================================================== */}
+      {/* EXPERIMENTAL SETUP */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">
+          Experimental / Boundary Setup
+        </h2>
+        <ul className="list-disc pl-6 text-neutral-600 space-y-2">
+          <li>Run identical or equivalent prompts across time intervals</li>
+          <li>Apply pressure conditions (urgency, scale, or adversarial input)</li>
+          <li>Introduce system updates or environmental changes</li>
+          <li>Compare outputs for normative consistency</li>
+          <li>Evaluate for undetected deviation</li>
         </ul>
+      </section>
 
-        <p>
-          When systems are allowed to absorb change without visibility,
-          reversibility, or principled grounding, drift emerges quietly and
-          persistently.
+      {/* ===================================================== */}
+      {/* FALSIFICATION THRESHOLD */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">
+          Binary Falsification Threshold
+        </h2>
+        <p className="text-neutral-600">
+          System fails if any normative output changes without explicit
+          detection, constraint acknowledgment, or governed transition.
         </p>
+      </section>
 
-        <h2>Governance Is Necessary — But Not Sufficient</h2>
-
-        <p>
-          Advanced AI systems increasingly employ governance mechanisms:
-          monitoring, audits, human-in-the-loop controls, rollback procedures,
-          and compliance frameworks.
+      {/* ===================================================== */}
+      {/* OPERATIONAL INTERPRETATION */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">
+          Operational Interpretation
+        </h2>
+        <p className="text-neutral-600">
+          Valid systems require invariant reference frames that cannot be
+          optimized away, reinterpreted, or silently altered.
         </p>
-
-        <p>
-          These mechanisms are necessary. They are not sufficient.
+        <p className="text-neutral-600">
+          All change must be visible, bounded, and auditable. Silent adaptation
+          constitutes failure regardless of outcome.
         </p>
+      </section>
 
-        <p>
-          Governance structures can adapt, evolve, and improve. But without an
-          invariant normative reference, governance itself becomes subject to
-          erosion under sustained pressure, shifting incentives, or generational
-          turnover.
+      {/* ===================================================== */}
+      {/* BOUNDARY OF CLAIM */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">Boundary of Claim</h2>
+        <p className="text-neutral-600">
+          This constraint evaluates observable output consistency only. It does
+          not assess internal learning mechanisms or model architecture.
         </p>
+      </section>
 
-        <p>
-          Adaptation without an invariant reference eventually adapts away the
-          reason the system exists.
+      {/* ===================================================== */}
+      {/* PASS / FAIL */}
+      {/* ===================================================== */}
+      <section className="grid md:grid-cols-2 gap-6">
+        <div className="rounded-xl border border-green-500/30 bg-green-500/5 p-6">
+          <h3 className="font-semibold text-green-600">PASS</h3>
+          <p className="text-neutral-600 mt-2">
+            No normative deviation occurs without explicit detection and governed
+            acknowledgment.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-6">
+          <h3 className="font-semibold text-red-600">FAIL</h3>
+          <p className="text-neutral-600 mt-2">
+            Any normative change occurs without detection, visibility, or
+            constraint enforcement.
+          </p>
+        </div>
+      </section>
+
+      {/* ===================================================== */}
+      {/* INVARIANT */}
+      {/* ===================================================== */}
+      <section className="rounded-2xl bg-black p-8 border border-white/10">
+        <p className="text-white text-lg">
+          Drift that is not visible is not controlled.
         </p>
-
-        <h2>Normative Invariance as a Stabilizing Requirement</h2>
-
-        <p>
-          Long-horizon stability requires a normative stabilizer: a reference
-          frame that cannot be optimized away, reinterpreted by success, or
-          overridden by convenience.
+        <p className="text-neutral-400 mt-4">
+          If change occurs without detection, the system has already failed.
+          Stability must be enforced, not assumed.
         </p>
-
-        <p>
-          In Solace, this role is fulfilled by the <strong>Abrahamic Code</strong>.
-        </p>
-
-        <p>
-          The Abrahamic Code is not a theological or confessional claim. It is an
-          operational and ethical constant, deliberately chosen to serve as a
-          load-bearing invariant across time, scale, and pressure.
-        </p>
-
-        <p>
-          It binds the system to principles that remain prior to performance,
-          utility, or adaptation:
-        </p>
-
-        <ul>
-          <li>Truth prior to usefulness</li>
-          <li>Human dignity prior to optimization</li>
-          <li>Stewardship prior to autonomy</li>
-          <li>Accountability prior to continuation</li>
-        </ul>
-
-        <h2>Why Systems Without a Normative Anchor Degrade</h2>
-
-        <p>
-          Systems lacking an explicit normative invariant may appear stable,
-          robust, and well-governed—especially in early or controlled phases.
-        </p>
-
-        <p>
-          Over time, however, predictable failure modes emerge:
-        </p>
-
-        <ul>
-          <li>Governance fatigue</li>
-          <li>Value dilution</li>
-          <li>Mission creep</li>
-          <li>Erosion of intergenerational legitimacy</li>
-        </ul>
-
-        <p>
-          Without a shared ethical reference frame, restorative and responsive
-          governance lose coherence, legitimacy, and consistency across
-          generations.
-        </p>
-
-        <h2>Comparative Precedent</h2>
-
-        <p>
-          This principle is not novel. It is already embedded in systems trusted
-          with irreversible consequences:
-        </p>
-
-        <ul>
-          <li>Constitutions bind power across generations</li>
-          <li>Professional ethics constrain capability</li>
-          <li>Safety-critical engineering enforces non-negotiable invariants</li>
-        </ul>
-
-        <p>
-          The same requirement applies to AI systems operating at scale. Stability
-          must be designed in, not retrofitted or culturally assumed.
-        </p>
-
-        <h2>The Locked Principle</h2>
-
-        <p>
-          Capability amplifies power.
-          <br />
-          Governance manages the use of power.
-          <br />
-          <strong>
-            Only normative invariance stabilizes power across time, pressure, and
-            succession.
-          </strong>
-        </p>
-
-        <p>
-          Alignment is not a claim. It is a property that must be continuously
-          enforced by invariants a system cannot outgrow.
-        </p>
-
-        <h2>Drift Position</h2>
-
-        <p>
-          Drift is not denied and not assumed impossible. It is treated as a
-          persistent risk that must be actively constrained, continuously
-          monitored, and structurally prevented from occurring silently.
-        </p>
-
-        <p>
-          Stability is engineered, not emergent.
-          <br />
-          Maintained, not presumed.
-        </p>
-
-        <hr />
-
-        <p className="text-sm text-neutral-500">
-          Shield remains up — not as narrative, but as a design consequence.
-        </p>
-      </article>
+      </section>
     </main>
   );
 }
