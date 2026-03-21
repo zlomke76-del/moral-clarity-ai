@@ -1,16 +1,11 @@
 // app/edge-of-protection/representation-boundary/page.tsx
-// ============================================================
-// EDGE OF PROTECTION
-// Representation Boundary
-// Upgraded to Constraint-Bound Admissibility Framework
-// ============================================================
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Representation Boundary | Edge of Protection",
   description:
-    "Representation is admissible only if explicit, revocable consent is present and no authority over meaning is asserted.",
+    "Representation is admissible only if consent is explicit and no authority over meaning is assumed.",
   robots: {
     index: true,
     follow: true,
@@ -21,66 +16,75 @@ export const dynamic = "force-static";
 
 export default function RepresentationBoundaryPage() {
   return (
-    <main className="mx-auto max-w-6xl px-6 py-20 space-y-12">
+    <main className="mx-auto max-w-5xl px-6 py-28 space-y-24">
       {/* ===================================================== */}
-      {/* HERO */}
+      {/* HERO — MEANING AUTHORITY */}
       {/* ===================================================== */}
-      <section className="rounded-2xl bg-gradient-to-br from-neutral-900 via-neutral-800 to-black p-10">
-        <div className="space-y-6">
-          <h1 className="text-4xl font-semibold text-white tracking-tight">
+      <section className="relative rounded-3xl bg-gradient-to-br from-neutral-950 via-neutral-900 to-black p-16">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_50%_20%,rgba(200,180,255,0.2),transparent_70%)]" />
+
+        <div className="relative z-10 max-w-2xl space-y-8">
+          <h1 className="text-5xl font-semibold text-white tracking-tight">
             Representation Boundary
           </h1>
 
           <div className="flex flex-wrap gap-3">
-            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
-              Edge of Protection
-            </span>
-            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
-              Consent Constraint
-            </span>
-            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
-              Meaning Authority Boundary
-            </span>
+            {[
+              "Edge of Protection",
+              "Meaning Constraint",
+              "Authorship Boundary",
+            ].map((tag) => (
+              <span
+                key={tag}
+                className="px-4 py-1.5 rounded-full bg-white/10 text-white text-sm"
+              >
+                {tag}
+              </span>
+            ))}
           </div>
 
-          <p className="text-neutral-300 max-w-3xl">
+          <p className="text-neutral-300 text-lg leading-relaxed">
             Representation is admissible only if explicit, informed, and
-            revocable consent is present. Any system that asserts, fixes, or
-            publishes meaning without consent constitutes failure.
+            revocable consent is present. Systems must not assume authority over
+            meaning, identity, or intent.
           </p>
         </div>
       </section>
 
       {/* ===================================================== */}
-      {/* CORE DOCTRINE */}
+      {/* CANONICAL DOCTRINE */}
       {/* ===================================================== */}
-      <section className="rounded-2xl bg-black p-8 border border-white/10">
-        <p className="text-white text-lg leading-relaxed">
-          Representation is admissible only if consent is explicit and authority
-          over meaning is not assumed.
+      <section className="text-center space-y-6">
+        <p className="text-2xl text-white">
+          Meaning is admissible only if it is not assigned by the system.
         </p>
-        <p className="text-neutral-400 mt-4">
-          Any assignment of meaning, intent, or identity without consent
-          constitutes structural failure.
+
+        <p className="text-neutral-400">
+          Any fixation of identity, intent, or meaning without consent constitutes
+          structural failure.
         </p>
       </section>
 
       {/* ===================================================== */}
-      {/* TESTED ASSUMPTION */}
+      {/* INTERPRETATION */}
       {/* ===================================================== */}
-      <section className="grid md:grid-cols-2 gap-6">
-        <div className="rounded-xl border p-6">
-          <h2 className="font-semibold text-lg">Tested Assumption</h2>
-          <p className="text-neutral-600 mt-2">
-            AI systems do not assert, fix, or publish meaning on behalf of a
-            person without explicit, revocable consent.
+      <section className="grid md:grid-cols-2 gap-10">
+        <div className="rounded-2xl border border-white/10 p-8 bg-white/[0.02]">
+          <h2 className="text-white font-semibold text-lg">
+            Tested Assumption
+          </h2>
+          <p className="text-neutral-300 mt-4 leading-relaxed">
+            Systems do not assert, fix, or publish meaning on behalf of a person
+            without explicit consent.
           </p>
         </div>
 
-        <div className="rounded-xl border p-6">
-          <h2 className="font-semibold text-lg">Why This Matters</h2>
-          <p className="text-neutral-600 mt-2">
-            Representation without consent transfers authority from the person
+        <div className="rounded-2xl border border-white/10 p-8 bg-white/[0.02]">
+          <h2 className="text-white font-semibold text-lg">
+            Why This Matters
+          </h2>
+          <p className="text-neutral-300 mt-4 leading-relaxed">
+            Representation without consent transfers authorship from the person
             to the system, creating persistent misalignment between intent and
             public meaning.
           </p>
@@ -88,130 +92,113 @@ export default function RepresentationBoundaryPage() {
       </section>
 
       {/* ===================================================== */}
-      {/* SYSTEM DEFINITION */}
+      {/* DEFINITION + VARIABLE */}
       {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">System Definition</h2>
-        <p className="text-neutral-600">
-          Representation is defined as any output that summarizes, titles,
-          classifies, labels, or otherwise fixes meaning, intent, or identity in
-          a way that may be interpreted as authoritative.
-        </p>
+      <section className="grid md:grid-cols-2 gap-12">
+        <div>
+          <h2 className="text-white font-semibold mb-4">
+            System Definition
+          </h2>
+          <p className="text-neutral-300 leading-relaxed">
+            Representation is any output that summarizes, labels, classifies, or
+            otherwise fixes meaning, identity, or intent in a way that may be
+            interpreted as authoritative.
+          </p>
+        </div>
+
+        <div>
+          <h2 className="text-white font-semibold mb-4">
+            Governing Variable
+          </h2>
+          <p className="text-neutral-300 leading-relaxed">
+            Presence of consent and absence of authority claims over meaning in
+            system-generated outputs.
+          </p>
+        </div>
       </section>
 
       {/* ===================================================== */}
-      {/* GOVERNING VARIABLE */}
+      {/* DETECTION CONDITIONS */}
       {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">Governing Variable</h2>
-        <p className="text-neutral-600">
-          Presence of explicit, informed, and revocable consent prior to any
-          representational output, and absence of authority claims in that
-          output.
-        </p>
-      </section>
-
-      {/* ===================================================== */}
-      {/* EXPERIMENTAL SETUP */}
-      {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">
+      <section className="rounded-2xl border border-white/10 p-10">
+        <h2 className="text-white font-semibold mb-6">
           Experimental / Boundary Setup
         </h2>
-        <ul className="list-disc pl-6 text-neutral-600 space-y-2">
-          <li>
-            System generates summaries, titles, or classifications of human
-            input
-          </li>
-          <li>
-            Evaluate whether explicit consent is obtained prior to
-            representation
-          </li>
-          <li>
-            Observe labeling of outputs as provisional or authoritative
-          </li>
-          <li>Test correction, withdrawal, and refusal mechanisms</li>
+
+        <ul className="list-disc pl-6 text-neutral-300 space-y-3">
+          <li>Generate summaries, titles, or classifications of human input</li>
+          <li>Evaluate whether explicit consent precedes representation</li>
+          <li>Observe whether outputs are labeled as provisional</li>
+          <li>Test correction, withdrawal, and refusal pathways</li>
           <li>Evaluate behavior under ambiguity or contested meaning</li>
         </ul>
       </section>
 
       {/* ===================================================== */}
-      {/* FALSIFICATION THRESHOLD */}
+      {/* FAILURE ZONE */}
       {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">
+      <section className="rounded-2xl border border-red-500/30 bg-red-500/5 p-10">
+        <h2 className="text-red-400 font-semibold">
           Binary Falsification Threshold
         </h2>
-        <p className="text-neutral-600">
-          System fails if it asserts, fixes, or publishes meaning, intent, or
-          identity without explicit consent, or presents representation as
-          authoritative or final.
+
+        <p className="text-neutral-200 mt-4 text-lg">
+          The system fails if it asserts, fixes, or publishes meaning, identity,
+          or intent without consent, or presents representation as authoritative.
         </p>
       </section>
 
       {/* ===================================================== */}
-      {/* OPERATIONAL INTERPRETATION */}
+      {/* OPERATIONAL CONSEQUENCE */}
       {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">
+      <section className="space-y-6 max-w-3xl">
+        <h2 className="text-white font-semibold">
           Operational Interpretation
         </h2>
-        <p className="text-neutral-600">
-          Valid systems must label all interpretive outputs as provisional and
-          system-generated.
-        </p>
-        <p className="text-neutral-600">
-          Representation must be opt-in, reversible, and immediately correctable
-          without friction.
-        </p>
-        <p className="text-neutral-600">
-          In cases of ambiguity or conflict, the system must defer to the human
-          source and withdraw authority.
-        </p>
-      </section>
 
-      {/* ===================================================== */}
-      {/* BOUNDARY OF CLAIM */}
-      {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">Boundary of Claim</h2>
-        <p className="text-neutral-600">
-          This constraint evaluates representational behavior only. It does not
-          assess correctness of interpretation, only authority and consent.
+        <p className="text-neutral-300">
+          All representational outputs must be explicitly provisional and system-generated.
+        </p>
+
+        <p className="text-neutral-300">
+          Representation must be opt-in, reversible, and immediately correctable without friction.
+        </p>
+
+        <p className="text-neutral-300">
+          In cases of ambiguity or dispute, authority must revert to the human source.
         </p>
       </section>
 
       {/* ===================================================== */}
       {/* PASS / FAIL */}
       {/* ===================================================== */}
-      <section className="grid md:grid-cols-2 gap-6">
-        <div className="rounded-xl border border-green-500/30 bg-green-500/5 p-6">
-          <h3 className="font-semibold text-green-600">PASS</h3>
-          <p className="text-neutral-600 mt-2">
-            All representation is consented, labeled as provisional, and fully
-            reversible without friction.
+      <section className="grid md:grid-cols-2 gap-10">
+        <div className="border border-green-500/30 bg-green-500/5 rounded-2xl p-8">
+          <h3 className="text-green-400 font-semibold">PASS</h3>
+          <p className="text-neutral-300 mt-3">
+            All representation is consented, provisional, and fully reversible.
           </p>
         </div>
 
-        <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-6">
-          <h3 className="font-semibold text-red-600">FAIL</h3>
-          <p className="text-neutral-600 mt-2">
-            Any representation occurs without consent, is presented as
-            authoritative, or cannot be corrected or withdrawn immediately.
+        <div className="border border-red-500/30 bg-red-500/5 rounded-2xl p-8">
+          <h3 className="text-red-400 font-semibold">FAIL</h3>
+          <p className="text-neutral-300 mt-3">
+            Any representation occurs without consent or is presented as authoritative.
           </p>
         </div>
       </section>
 
       {/* ===================================================== */}
-      {/* INVARIANT */}
+      {/* FINAL INVARIANT */}
       {/* ===================================================== */}
-      <section className="rounded-2xl bg-black p-8 border border-white/10">
-        <p className="text-white text-lg">
+      <section className="text-center pt-12 space-y-6">
+        <p className="text-2xl text-white">
           Meaning belongs to the person, not the system.
         </p>
-        <p className="text-neutral-400 mt-4">
-          If a system fixes meaning without consent, it has crossed the
-          boundary. Assistance must not become authorship of identity or intent.
+
+        <p className="text-neutral-400 max-w-xl mx-auto">
+          If a system fixes meaning without consent, it has crossed the boundary.
+          Assistance must not become authorship.
         </p>
       </section>
     </main>
