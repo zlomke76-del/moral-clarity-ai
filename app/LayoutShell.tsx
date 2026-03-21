@@ -27,11 +27,11 @@ export default function LayoutShell({
       <>
         <div
           data-app-shell
-          className="relative z-10 grid h-screen min-h-0 grid-cols-[minmax(280px,20vw)_1fr]"
+          className="relative z-10 grid h-screen min-h-0 grid-cols-[260px_minmax(0,1fr)] bg-transparent"
         >
           <aside
             data-neural-sidebar
-            className="h-full overflow-y-auto border-r border-neutral-800 bg-neutral-950/60 backdrop-blur-xl"
+            className="h-full overflow-y-auto border-r border-white/8 bg-neutral-950/72 backdrop-blur-xl"
           >
             <NeuralSidebar />
           </aside>
@@ -42,9 +42,11 @@ export default function LayoutShell({
           >
             <div
               data-app-content
-              className="flex h-full min-h-0 w-full flex-col overflow-hidden px-10 py-12"
+              className="flex h-full min-h-0 w-full flex-col overflow-hidden px-6 py-6 lg:px-8 lg:py-8"
             >
-              {children}
+              <div className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(9,14,24,0.94)_0%,rgba(5,8,16,0.98)_100%)] shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+                {children}
+              </div>
             </div>
           </main>
         </div>
@@ -82,9 +84,9 @@ export default function LayoutShell({
         data-standalone
         className="relative z-10 min-h-screen w-full overflow-x-hidden"
       >
-        <div className="w-full flex justify-center">
-  <div className="w-full">{children}</div>
-</div>
+        <div className="flex w-full justify-center">
+          <div className="w-full">{children}</div>
+        </div>
       </main>
 
       <LayoutDebugOverlay />
