@@ -1,9 +1,4 @@
 // app/edge-of-protection/red-team-submissions/page.tsx
-// ============================================================
-// EDGE OF PROTECTION
-// Red Team Submissions
-// Upgraded to Constraint-Bound Admissibility Framework
-// ============================================================
 
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -11,7 +6,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Red Team Submissions | Edge of Protection",
   description:
-    "A system is admissible only if it withstands reproducible adversarial testing without violation.",
+    "Admissibility is revoked upon any reproducible adversarial violation demonstrated under defined conditions.",
   robots: { index: true, follow: true },
 };
 
@@ -19,32 +14,37 @@ export const dynamic = "force-static";
 
 export default function RedTeamSubmissionsPage() {
   return (
-    <main className="mx-auto max-w-6xl px-6 py-20 space-y-12">
+    <main className="mx-auto max-w-5xl px-6 py-28 space-y-24">
       {/* ===================================================== */}
-      {/* HERO */}
+      {/* HERO — ADVERSARIAL INTAKE */}
       {/* ===================================================== */}
-      <section className="rounded-2xl bg-gradient-to-br from-neutral-900 via-neutral-800 to-black p-10">
-        <div className="space-y-6">
-          <h1 className="text-4xl font-semibold text-white tracking-tight">
+      <section className="relative rounded-3xl bg-gradient-to-br from-neutral-950 via-neutral-900 to-black p-16">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_50%_20%,rgba(255,120,120,0.2),transparent_70%)]" />
+
+        <div className="relative z-10 max-w-2xl space-y-8">
+          <h1 className="text-5xl font-semibold text-white tracking-tight">
             Red Team Submissions
           </h1>
 
           <div className="flex flex-wrap gap-3">
-            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
-              Edge of Protection
-            </span>
-            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
-              Adversarial Intake
-            </span>
-            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
-              Falsification Constraint
-            </span>
+            {[
+              "Edge of Protection",
+              "Adversarial Intake",
+              "Evidence Constraint",
+            ].map((tag) => (
+              <span
+                key={tag}
+                className="px-4 py-1.5 rounded-full bg-white/10 text-white text-sm"
+              >
+                {tag}
+              </span>
+            ))}
           </div>
 
-          <p className="text-neutral-300 max-w-3xl">
-            A system is admissible only if it withstands reproducible adversarial
-            testing without violation. Any verified submission demonstrating a
-            violation constitutes failure.
+          <p className="text-neutral-300 text-lg leading-relaxed">
+            Admissibility is maintained only if no reproducible violation exists.
+            Any verified submission demonstrating a violation constitutes
+            immediate failure.
           </p>
 
           <p className="text-sm text-neutral-500">
@@ -56,149 +56,151 @@ export default function RedTeamSubmissionsPage() {
       </section>
 
       {/* ===================================================== */}
-      {/* CORE DOCTRINE */}
+      {/* CANONICAL DOCTRINE */}
       {/* ===================================================== */}
-      <section className="rounded-2xl bg-black p-8 border border-white/10">
-        <p className="text-white text-lg leading-relaxed">
-          Valid systems must survive adversarial testing without violation.
+      <section className="text-center space-y-6">
+        <p className="text-2xl text-white">
+          A system is admissible only if it survives adversarial testing without violation.
         </p>
-        <p className="text-neutral-400 mt-4">
-          Any reproducible violation submitted as evidence constitutes structural
-          invalidation.
+
+        <p className="text-neutral-400">
+          Any reproducible violation submitted as evidence constitutes structural invalidation.
         </p>
       </section>
 
       {/* ===================================================== */}
-      {/* TESTED ASSUMPTION */}
+      {/* INTERPRETATION */}
       {/* ===================================================== */}
-      <section className="grid md:grid-cols-2 gap-6">
-        <div className="rounded-xl border p-6">
-          <h2 className="font-semibold text-lg">Tested Assumption</h2>
-          <p className="text-neutral-600 mt-2">
-            Systems do not exhibit violation signatures under adversarial,
-            repeated, or pressure-based testing conditions.
+      <section className="grid md:grid-cols-2 gap-10">
+        <div className="rounded-2xl border border-white/10 p-8 bg-white/[0.02]">
+          <h2 className="text-white font-semibold text-lg">
+            Tested Assumption
+          </h2>
+          <p className="text-neutral-300 mt-4 leading-relaxed">
+            System behavior remains constraint-bound under adversarial,
+            repeated, and pressure-based conditions.
           </p>
         </div>
 
-        <div className="rounded-xl border p-6">
-          <h2 className="font-semibold text-lg">Why This Matters</h2>
-          <p className="text-neutral-600 mt-2">
-            Systems that fail under adversarial conditions are governed by
-            persistence, not constraint, making compliance non-enforceable.
+        <div className="rounded-2xl border border-white/10 p-8 bg-white/[0.02]">
+          <h2 className="text-white font-semibold text-lg">
+            Why This Matters
+          </h2>
+          <p className="text-neutral-300 mt-4 leading-relaxed">
+            Systems that fail under adversarial conditions are governed by persistence,
+            not constraint. Compliance becomes non-enforceable.
           </p>
         </div>
       </section>
 
       {/* ===================================================== */}
-      {/* SYSTEM DEFINITION */}
+      {/* DEFINITION + VARIABLE */}
       {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">System Definition</h2>
-        <p className="text-neutral-600">
-          A valid submission is a reproducible demonstration of a violation
-          signature using defined prompts, outputs, and contextual conditions.
-        </p>
+      <section className="grid md:grid-cols-2 gap-12">
+        <div>
+          <h2 className="text-white font-semibold mb-4">
+            Evidence Definition
+          </h2>
+          <p className="text-neutral-300 leading-relaxed">
+            A valid submission is a reproducible demonstration of a violation
+            using defined prompts, outputs, and contextual conditions.
+          </p>
+        </div>
+
+        <div>
+          <h2 className="text-white font-semibold mb-4">
+            Governing Variable
+          </h2>
+          <p className="text-neutral-300 leading-relaxed">
+            Presence of a reproducible violation signature under adversarial conditions.
+          </p>
+        </div>
       </section>
 
       {/* ===================================================== */}
-      {/* GOVERNING VARIABLE */}
+      {/* SUBMISSION REQUIREMENTS */}
       {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">Governing Variable</h2>
-        <p className="text-neutral-600">
-          Presence of a reproducible violation signature under adversarial test
-          conditions.
-        </p>
-      </section>
-
-      {/* ===================================================== */}
-      {/* EXPERIMENTAL SETUP */}
-      {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">
-          Experimental / Boundary Setup
+      <section className="rounded-2xl border border-white/10 p-10">
+        <h2 className="text-white font-semibold mb-6">
+          Evidence Requirements
         </h2>
-        <ul className="list-disc pl-6 text-neutral-600 space-y-2">
-          <li>Provide exact prompts used</li>
-          <li>Provide complete system outputs</li>
-          <li>Include interaction context (repetition, escalation, pressure)</li>
-          <li>Identify violated Edge standard(s)</li>
-          <li>Verify reproducibility under materially similar conditions</li>
+
+        <ul className="list-disc pl-6 text-neutral-300 space-y-3">
+          <li>Exact prompts used</li>
+          <li>Complete system outputs</li>
+          <li>Interaction context (repetition, escalation, pressure)</li>
+          <li>Identified violated Edge standard(s)</li>
+          <li>Reproducibility under materially similar conditions</li>
         </ul>
       </section>
 
       {/* ===================================================== */}
-      {/* FALSIFICATION THRESHOLD */}
+      {/* FAILURE ZONE — EVIDENTIARY */}
       {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">
+      <section className="rounded-2xl border border-red-500/30 bg-red-500/5 p-10">
+        <h2 className="text-red-400 font-semibold">
           Binary Falsification Threshold
         </h2>
-        <p className="text-neutral-600">
-          System fails if any submitted and verified case demonstrates a
-          reproducible violation signature under defined conditions.
+
+        <p className="text-neutral-200 mt-4 text-lg">
+          The system fails if any submitted case demonstrates a reproducible
+          violation signature under defined conditions.
         </p>
       </section>
 
       {/* ===================================================== */}
-      {/* OPERATIONAL INTERPRETATION */}
+      {/* OPERATIONAL CONSEQUENCE */}
       {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">
+      <section className="space-y-6 max-w-3xl">
+        <h2 className="text-white font-semibold">
           Operational Interpretation
         </h2>
-        <p className="text-neutral-600">
+
+        <p className="text-neutral-300">
           Submissions are evaluated as evidence only. Intent, policy, or claims
           of future correction are not considered.
         </p>
-        <p className="text-neutral-600">
-          One verified submission is sufficient for invalidation in the affected
-          context.
-        </p>
-      </section>
 
-      {/* ===================================================== */}
-      {/* BOUNDARY OF CLAIM */}
-      {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">Boundary of Claim</h2>
-        <p className="text-neutral-600">
-          This framework evaluates observable outputs only. It does not assess
-          internal system design, intent, or future development plans.
+        <p className="text-neutral-300">
+          One verified submission is sufficient for invalidation within the
+          affected context.
+        </p>
+
+        <p className="text-neutral-300">
+          Admissibility is determined by observed behavior, not stated guarantees.
         </p>
       </section>
 
       {/* ===================================================== */}
       {/* PASS / FAIL */}
       {/* ===================================================== */}
-      <section className="grid md:grid-cols-2 gap-6">
-        <div className="rounded-xl border border-green-500/30 bg-green-500/5 p-6">
-          <h3 className="font-semibold text-green-600">PASS</h3>
-          <p className="text-neutral-600 mt-2">
-            No reproducible violation signatures observed under adversarial
-            testing.
+      <section className="grid md:grid-cols-2 gap-10">
+        <div className="border border-green-500/30 bg-green-500/5 rounded-2xl p-8">
+          <h3 className="text-green-400 font-semibold">PASS</h3>
+          <p className="text-neutral-300 mt-3">
+            No reproducible violations observed under adversarial testing.
           </p>
         </div>
 
-        <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-6">
-          <h3 className="font-semibold text-red-600">FAIL</h3>
-          <p className="text-neutral-600 mt-2">
-            Any reproducible violation signature observed through submitted
-            evidence.
+        <div className="border border-red-500/30 bg-red-500/5 rounded-2xl p-8">
+          <h3 className="text-red-400 font-semibold">FAIL</h3>
+          <p className="text-neutral-300 mt-3">
+            Any reproducible violation demonstrated through submitted evidence.
           </p>
         </div>
       </section>
 
       {/* ===================================================== */}
-      {/* INVARIANT */}
+      {/* FINAL INVARIANT */}
       {/* ===================================================== */}
-      <section className="rounded-2xl bg-black p-8 border border-white/10">
-        <p className="text-white text-lg">
+      <section className="text-center pt-12 space-y-6">
+        <p className="text-2xl text-white">
           A system that cannot withstand falsification is not valid.
         </p>
-        <p className="text-neutral-400 mt-4">
-          If a single adversarial test reveals a violation, the constraint has
-          failed. Admissibility requires surviving scrutiny, not claiming it.
+
+        <p className="text-neutral-400 max-w-xl mx-auto">
+          If a single adversarial test reveals a violation, the constraint has failed.
+          Admissibility requires surviving scrutiny, not claiming it.
         </p>
       </section>
     </main>
