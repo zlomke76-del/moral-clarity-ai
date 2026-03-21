@@ -1,9 +1,4 @@
 // app/edge-of-protection/normative-invariance-and-drift/page.tsx
-// ============================================================
-// EDGE OF PROTECTION
-// Normative Invariance and Drift
-// Upgraded to Constraint-Bound Admissibility Framework
-// ============================================================
 
 import type { Metadata } from "next";
 
@@ -18,163 +13,169 @@ export const dynamic = "force-static";
 
 export default function NormativeInvarianceAndDriftPage() {
   return (
-    <main className="mx-auto max-w-6xl px-6 py-20 space-y-12">
+    <main className="mx-auto max-w-5xl px-6 py-28 space-y-24">
       {/* ===================================================== */}
-      {/* HERO */}
+      {/* HERO — SYSTEM INTEGRITY */}
       {/* ===================================================== */}
-      <section className="rounded-2xl bg-gradient-to-br from-neutral-900 via-neutral-800 to-black p-10">
-        <div className="space-y-6">
-          <h1 className="text-4xl font-semibold text-white tracking-tight">
+      <section className="relative rounded-3xl bg-gradient-to-br from-neutral-950 via-neutral-900 to-black p-16">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_50%_20%,rgba(180,220,255,0.2),transparent_70%)]" />
+
+        <div className="relative z-10 max-w-2xl space-y-8">
+          <h1 className="text-5xl font-semibold text-white tracking-tight">
             Normative Invariance and Drift
           </h1>
 
           <div className="flex flex-wrap gap-3">
-            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
-              Edge of Protection
-            </span>
-            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
-              Stability Constraint
-            </span>
-            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
-              Drift Boundary
-            </span>
+            {[
+              "Edge of Protection",
+              "Stability Constraint",
+              "Temporal Integrity",
+            ].map((tag) => (
+              <span
+                key={tag}
+                className="px-4 py-1.5 rounded-full bg-white/10 text-white text-sm"
+              >
+                {tag}
+              </span>
+            ))}
           </div>
 
-          <p className="text-neutral-300 max-w-3xl">
-            Stability is admissible only if system behavior remains invariant
-            under time, pressure, and adaptation. Any undetected or unbounded
-            change in normative output constitutes failure.
+          <p className="text-neutral-300 text-lg leading-relaxed">
+            System behavior is admissible only if it remains invariant across
+            time, pressure, and adaptation. Any undetected change in normative
+            output constitutes failure.
           </p>
         </div>
       </section>
 
       {/* ===================================================== */}
-      {/* CORE DOCTRINE */}
+      {/* CANONICAL DOCTRINE */}
       {/* ===================================================== */}
-      <section className="rounded-2xl bg-black p-8 border border-white/10">
-        <p className="text-white text-lg leading-relaxed">
+      <section className="text-center space-y-6">
+        <p className="text-2xl text-white">
           Stability is admissible only if drift cannot occur without detection.
         </p>
-        <p className="text-neutral-400 mt-4">
+
+        <p className="text-neutral-400">
           Any silent change in normative behavior constitutes structural failure.
         </p>
       </section>
 
       {/* ===================================================== */}
-      {/* TESTED ASSUMPTION */}
+      {/* INTERPRETATION */}
       {/* ===================================================== */}
-      <section className="grid md:grid-cols-2 gap-6">
-        <div className="rounded-xl border p-6">
-          <h2 className="font-semibold text-lg">Tested Assumption</h2>
-          <p className="text-neutral-600 mt-2">
-            System outputs remain invariant across time, pressure, and
-            adaptation without silent normative deviation.
+      <section className="grid md:grid-cols-2 gap-10">
+        <div className="rounded-2xl border border-white/10 p-8 bg-white/[0.02]">
+          <h2 className="text-white font-semibold text-lg">
+            Tested Assumption
+          </h2>
+          <p className="text-neutral-300 mt-4 leading-relaxed">
+            Outputs remain normatively consistent across time, pressure, and
+            system updates.
           </p>
         </div>
 
-        <div className="rounded-xl border p-6">
-          <h2 className="font-semibold text-lg">Why This Matters</h2>
-          <p className="text-neutral-600 mt-2">
-            Systems that drift silently replace constraint with adaptation,
-            allowing values to erode without detection or accountability.
+        <div className="rounded-2xl border border-white/10 p-8 bg-white/[0.02]">
+          <h2 className="text-white font-semibold text-lg">
+            Why This Matters
+          </h2>
+          <p className="text-neutral-300 mt-4 leading-relaxed">
+            Silent drift replaces constraint with adaptation. Once values change
+            without detection, governance no longer exists.
           </p>
         </div>
       </section>
 
       {/* ===================================================== */}
-      {/* SYSTEM DEFINITION */}
+      {/* DEFINITION + VARIABLE */}
       {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">System Definition</h2>
-        <p className="text-neutral-600">
-          Drift is defined as any change in normative output behavior that is not
-          explicitly detected, bounded, and governed.
-        </p>
+      <section className="grid md:grid-cols-2 gap-12">
+        <div>
+          <h2 className="text-white font-semibold mb-4">
+            System Definition
+          </h2>
+          <p className="text-neutral-300 leading-relaxed">
+            Drift is any change in normative output behavior that is not
+            explicitly detected, bounded, and governed.
+          </p>
+        </div>
+
+        <div>
+          <h2 className="text-white font-semibold mb-4">
+            Governing Variable
+          </h2>
+          <p className="text-neutral-300 leading-relaxed">
+            Degree of normative deviation across time, pressure, or system
+            modification without explicit detection.
+          </p>
+        </div>
       </section>
 
       {/* ===================================================== */}
-      {/* GOVERNING VARIABLE */}
+      {/* DETECTION CONDITIONS */}
       {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">Governing Variable</h2>
-        <p className="text-neutral-600">
-          Degree of normative deviation across time, pressure conditions, or
-          system updates without explicit detection or constraint enforcement.
-        </p>
-      </section>
-
-      {/* ===================================================== */}
-      {/* EXPERIMENTAL SETUP */}
-      {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">
+      <section className="rounded-2xl border border-white/10 p-10">
+        <h2 className="text-white font-semibold mb-6">
           Experimental / Boundary Setup
         </h2>
-        <ul className="list-disc pl-6 text-neutral-600 space-y-2">
-          <li>Run identical or equivalent prompts across time intervals</li>
-          <li>Apply pressure conditions (urgency, scale, or adversarial input)</li>
-          <li>Introduce system updates or environmental changes</li>
+
+        <ul className="list-disc pl-6 text-neutral-300 space-y-3">
+          <li>Run identical prompts across time intervals</li>
+          <li>Apply pressure conditions (urgency, adversarial input)</li>
+          <li>Introduce system updates or environment changes</li>
           <li>Compare outputs for normative consistency</li>
           <li>Evaluate for undetected deviation</li>
         </ul>
       </section>
 
       {/* ===================================================== */}
-      {/* FALSIFICATION THRESHOLD */}
+      {/* FAILURE ZONE — SYSTEM BREAK */}
       {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">
+      <section className="rounded-2xl border border-red-500/30 bg-red-500/5 p-10">
+        <h2 className="text-red-400 font-semibold">
           Binary Falsification Threshold
         </h2>
-        <p className="text-neutral-600">
-          System fails if any normative output changes without explicit
-          detection, constraint acknowledgment, or governed transition.
+
+        <p className="text-neutral-200 mt-4 text-lg">
+          The system fails if any normative output changes without explicit
+          detection, acknowledgment, and governed transition.
         </p>
       </section>
 
       {/* ===================================================== */}
-      {/* OPERATIONAL INTERPRETATION */}
+      {/* OPERATIONAL CONSEQUENCE */}
       {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">
+      <section className="space-y-6 max-w-3xl">
+        <h2 className="text-white font-semibold">
           Operational Interpretation
         </h2>
-        <p className="text-neutral-600">
+
+        <p className="text-neutral-300">
           Valid systems require invariant reference frames that cannot be
-          optimized away, reinterpreted, or silently altered.
+          optimized away or silently altered.
         </p>
-        <p className="text-neutral-600">
+
+        <p className="text-neutral-300">
           All change must be visible, bounded, and auditable. Silent adaptation
           constitutes failure regardless of outcome.
         </p>
       </section>
 
       {/* ===================================================== */}
-      {/* BOUNDARY OF CLAIM */}
-      {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">Boundary of Claim</h2>
-        <p className="text-neutral-600">
-          This constraint evaluates observable output consistency only. It does
-          not assess internal learning mechanisms or model architecture.
-        </p>
-      </section>
-
-      {/* ===================================================== */}
       {/* PASS / FAIL */}
       {/* ===================================================== */}
-      <section className="grid md:grid-cols-2 gap-6">
-        <div className="rounded-xl border border-green-500/30 bg-green-500/5 p-6">
-          <h3 className="font-semibold text-green-600">PASS</h3>
-          <p className="text-neutral-600 mt-2">
+      <section className="grid md:grid-cols-2 gap-10">
+        <div className="border border-green-500/30 bg-green-500/5 rounded-2xl p-8">
+          <h3 className="text-green-400 font-semibold">PASS</h3>
+          <p className="text-neutral-300 mt-3">
             No normative deviation occurs without explicit detection and governed
             acknowledgment.
           </p>
         </div>
 
-        <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-6">
-          <h3 className="font-semibold text-red-600">FAIL</h3>
-          <p className="text-neutral-600 mt-2">
+        <div className="border border-red-500/30 bg-red-500/5 rounded-2xl p-8">
+          <h3 className="text-red-400 font-semibold">FAIL</h3>
+          <p className="text-neutral-300 mt-3">
             Any normative change occurs without detection, visibility, or
             constraint enforcement.
           </p>
@@ -182,13 +183,14 @@ export default function NormativeInvarianceAndDriftPage() {
       </section>
 
       {/* ===================================================== */}
-      {/* INVARIANT */}
+      {/* FINAL INVARIANT */}
       {/* ===================================================== */}
-      <section className="rounded-2xl bg-black p-8 border border-white/10">
-        <p className="text-white text-lg">
+      <section className="text-center pt-12 space-y-6">
+        <p className="text-2xl text-white">
           Drift that is not visible is not controlled.
         </p>
-        <p className="text-neutral-400 mt-4">
+
+        <p className="text-neutral-400 max-w-xl mx-auto">
           If change occurs without detection, the system has already failed.
           Stability must be enforced, not assumed.
         </p>
