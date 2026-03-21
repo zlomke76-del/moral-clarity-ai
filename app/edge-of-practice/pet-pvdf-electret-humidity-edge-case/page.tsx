@@ -3,181 +3,262 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title:
-    "Edge Case: PET + PVDF Electret Filtration Under Humidity | Edge of Practice — Moral Clarity AI",
+    "Electret Filtration Under Humidity — Connectivity Failure Boundary (PET + PVDF) | Edge of Practice — Moral Clarity AI",
   description:
-    "A short-cycle edge case testing whether polymer-level charge retention (PET + PVDF) decisively outperforms legacy electret filter media under sustained humidity exposure.",
-  openGraph: {
-    title: "Edge Case: PET + PVDF Electret Filtration Under Humidity",
-    description:
-      "A plant- and lab-ready edge case challenging tolerated electret filtration compromises under realistic humidity conditions.",
-    url: "https://studio.moralclarity.ai/edge-of-practice/pet-pvdf-electret-humidity-edge-case",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
+    "A short-cycle falsification protocol testing whether humidity-driven electret decay is governed by connectivity collapse rather than smooth discharge—and whether polymer-level architectures outperform surface-treated systems.",
   robots: {
     index: true,
     follow: true,
   },
 };
 
+function SectionCard({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-black/10 bg-white/70 p-6 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+      <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
+        {eyebrow}
+      </div>
+      <h2 className="mb-4 text-xl font-semibold text-zinc-950 dark:text-zinc-50">
+        {title}
+      </h2>
+      <div className="space-y-4 text-[15px] leading-7 text-zinc-700 dark:text-zinc-300">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function SignalPill({
+  children,
+  tone = "neutral",
+}: {
+  children: React.ReactNode;
+  tone?: "neutral" | "fail" | "pass";
+}) {
+  const toneClass =
+    tone === "fail"
+      ? "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+      : tone === "pass"
+        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+        : "border-zinc-300 bg-zinc-100 text-zinc-700 dark:border-white/10 dark:bg-white/10 dark:text-zinc-300";
+
+  return (
+    <span className={`inline-flex rounded-full border px-3 py-1 text-xs ${toneClass}`}>
+      {children}
+    </span>
+  );
+}
+
 export default function PetPvdfElectretHumidityEdgeCasePage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Edge Case: PET + PVDF Electret Filtration Under Humidity</h1>
-        <p className="text-sm opacity-70">
-          Edge of Practice · Materials · Polymers · Filtration
-        </p>
+    <main className="mx-auto max-w-6xl px-6 py-16 md:px-8 md:py-20">
+      <div className="space-y-8">
 
-        <h2>One-Sentence Assumption Under Test</h2>
-        <p>
-          Conventional PET-based or polypropylene electret filter media provide
-          sufficiently durable electrostatic filtration performance under
-          realistic humidity exposure, making intrinsically charge-retentive
-          polymer architectures unnecessary.
-        </p>
+        {/* HERO */}
+        <section className="rounded-3xl border border-black/10 bg-gradient-to-br from-white to-zinc-100 p-10 dark:border-white/10 dark:from-zinc-950 dark:to-zinc-900">
+          <div className="mb-4 flex flex-wrap gap-2">
+            <SignalPill>Edge of Practice</SignalPill>
+            <SignalPill tone="fail">Short-Cycle Falsification</SignalPill>
+            <SignalPill>Electrostatic Boundary</SignalPill>
+          </div>
 
-        <h2>Why This Assumption Is Tolerated</h2>
-        <p>
-          Meltblown polypropylene and PET electret filters meet certification
-          requirements under controlled laboratory conditions and have proven
-          adequate in most commercial applications. Charge decay under humidity
-          is treated as an acceptable degradation mechanism, mitigated through
-          oversizing, replacement intervals, or surface treatments. PET and PP
-          processing infrastructure is mature, low-cost, and widely deployed,
-          while alternative polymer systems introduce material cost and process
-          complexity without an obvious forcing function.
-        </p>
+          <h1 className="text-4xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50 md:text-5xl">
+            Electret Filtration Under Humidity
+          </h1>
 
-        <p>
-          The assumption persists not because superior alternatives are
-          disproven, but because existing solutions are considered “good enough.”
-        </p>
+          <p className="mt-6 max-w-3xl text-lg leading-8 text-zinc-700 dark:text-zinc-300">
+            Electret filtration is admissible under humidity only if charge
+            retention decays smoothly and predictably. If performance collapse
+            occurs through connectivity-driven transitions, then surface-charged
+            commodity polymers are structurally insufficient.
+          </p>
 
-        <h2>Edge Case Definition</h2>
-        <p>
-          What if electrostatic charge decay under humidity is not a secondary
-          degradation mode, but the dominant performance failure mechanism—and a
-          polymer-level solution outperforms surface-treated electrets
-          decisively?
-        </p>
+          <div className="mt-8 rounded-2xl border border-zinc-200 bg-black p-6 text-white dark:border-white/10">
+            <div className="mb-2 text-[11px] uppercase tracking-[0.24em] text-zinc-400">
+              Core Doctrine
+            </div>
+            <p className="text-base leading-7 md:text-lg">
+              Electrostatic filtration is <strong>admissible</strong> only if
+              humidity-driven charge decay is continuous and controllable. If
+              charge collapses through discrete connectivity failure (“knee”
+              behavior), then polymer architecture—not surface charging—is the
+              governing variable.
+            </p>
+          </div>
+        </section>
 
-        <h2>Minimal Falsification Test</h2>
+        {/* ASSUMPTION */}
+        <SectionCard
+          eyebrow="Tested Assumption"
+          title="Surface-charged electrets are sufficient under humidity"
+        >
+          <p>
+            Conventional PET and polypropylene electret filters are assumed to
+            provide sufficiently durable electrostatic performance under
+            humidity, making intrinsically charge-retentive polymer systems
+            unnecessary.
+          </p>
+        </SectionCard>
 
-        <h3>Setup</h3>
-        <ul>
-          <li>
-            Produce small-area filter mats of:
-            <ul>
-              <li>PET-only electret media (baseline)</li>
-              <li>Polypropylene meltblown electret media (baseline)</li>
-              <li>
-                PET + PVDF (or PVDF-HFP) bicomponent or blended fiber media
-              </li>
-            </ul>
-          </li>
-          <li>
-            Apply identical corona or friction charging protocols to all samples.
-          </li>
-          <li>
-            Expose samples to sustained high-humidity conditions
-            (≥80&nbsp;percent relative humidity) for 24 to 72 hours.
-          </li>
-        </ul>
+        {/* WHY TOLERATED */}
+        <SectionCard
+          eyebrow="Why This Assumption Persists"
+          title="Degradation is treated as acceptable loss"
+        >
+          <p>
+            Charge decay is treated as a secondary degradation mode and managed
+            through oversizing, replacement intervals, or coatings.
+          </p>
 
-        <h2>Single Primary Readout</h2>
-        <p>
-          Electrostatic charge retention and filtration performance decay under
-          humidity exposure, measured as one of the following:
-        </p>
-        <ul>
-          <li>Surface potential versus time under humidity</li>
-          <li>
-            Filtration efficiency change at fixed pressure drop over exposure
-            time
-          </li>
-        </ul>
+          <p>
+            The system survives not because it is optimal—but because it is
+            operationally tolerated.
+          </p>
+        </SectionCard>
 
-        {/* ADDITIVE INSERT — KNEE CRITERION (NO SCOPE EXPANSION) */}
-        <h2>Addendum: Non-Monotonic Failure Signature (“Knee” Criterion)</h2>
-        <p>
-          Electrostatic charge decay under sustained humidity is often assumed to
-          proceed as a smooth, monotonic process governed by average material
-          behavior. This edge case explicitly allows for the possibility that
-          charge loss is instead controlled by connectivity of localized
-          fast-release regions, producing a non-monotonic or step-like failure
-          signature.
-        </p>
-        <p>
-          In this framing, charge-retention curves may exhibit a distinct “knee”:
-          an abrupt acceleration in decay after a finite exposure period rather
-          than gradual, continuous loss. The presence of such a knee indicates a
-          qualitative regime change in electrostatic persistence, consistent
-          with loss of global constraint connectivity rather than uniform
-          degradation.
-        </p>
-        <p>
-          Accordingly, this edge case treats the shape of the charge-retention
-          curve over time—not only its final magnitude—as diagnostically
-          relevant. A reproducible knee observed in PET + PVDF media, whether
-          stabilizing or destabilizing relative to PET-only or polypropylene
-          electrets, constitutes evidence that humidity-driven performance is
-          governed by connectivity effects rather than mean decay alone.
-        </p>
+        {/* EDGE CASE */}
+        <SectionCard
+          eyebrow="Edge Case Definition"
+          title="Is humidity failure actually dominant and structural?"
+        >
+          <p>
+            This edge case asks whether humidity-induced charge loss is the
+            primary failure mechanism—and whether polymer-level architectures
+            decisively outperform surface-treated electrets.
+          </p>
+        </SectionCard>
 
-        <h2>Pass / Fail Boundary</h2>
-        <p>
-          <strong>Pass (assumption survives):</strong> PET + PVDF media shows no
-          statistically meaningful improvement in charge retention or filtration
-          efficiency relative to PET-only or polypropylene electrets after
-          humidity exposure.
-        </p>
-        <p>
-          <strong>Fail (assumption breaks):</strong> PET + PVDF media retains
-          significantly higher electrostatic charge and filtration efficiency
-          under humidity, with a clear and persistent separation from legacy
-          electret materials.
-        </p>
+        {/* SYSTEM */}
+        <SectionCard
+          eyebrow="System Definition"
+          title="Controlled comparison of electret architectures"
+        >
+          <ul>
+            <li>PET-only electret media</li>
+            <li>Polypropylene meltblown electret media</li>
+            <li>PET + PVDF (or PVDF-HFP) bicomponent or blended fibers</li>
+            <li>Identical charging protocol (corona or friction)</li>
+            <li>Humidity exposure ≥80% RH for 24–72 hours</li>
+          </ul>
+        </SectionCard>
 
-        <h2>Embarrassing Flip Condition</h2>
-        <p>
-          PET + PVDF filter media maintains functional electrostatic performance
-          after humidity exposure where PET-only or polypropylene electrets
-          demonstrably collapse, without relying on coatings, additives, or
-          post-processing treatments.
-        </p>
+        {/* PRIMARY READOUT */}
+        <SectionCard
+          eyebrow="Primary Readout"
+          title="Charge retention and filtration decay"
+        >
+          <ul>
+            <li>Surface potential vs time</li>
+            <li>Filtration efficiency at fixed pressure drop</li>
+          </ul>
+        </SectionCard>
 
-        <h2>Corrected Interpretation if Flip Occurs</h2>
-        <p>
-          Electret durability under humidity is not adequately addressed by
-          surface charging of commodity polymers alone. Polymer architecture
-          becomes a first-order design variable, and PET + PVDF-type systems
-          represent a structurally superior class for long-life or
-          humidity-exposed filtration applications.
-        </p>
+        {/* KNEE CRITERION */}
+        <SectionCard
+          eyebrow="Critical Mechanism"
+          title="Connectivity-driven failure (“knee” behavior)"
+        >
+          <p>
+            Charge decay is not assumed to be smooth. Instead, this test allows
+            for non-monotonic behavior governed by connectivity of localized
+            fast-release regions.
+          </p>
 
-        <h2>Why This Edge Case Matters</h2>
-        <p>
-          This experiment does not propose a new polymer chemistry. It challenges
-          a long-tolerated performance compromise in filtration design.
-        </p>
-        <p>
-          If PET + PVDF fails, the industry’s reliance on legacy electret systems
-          is justified. If it succeeds, the cost–performance boundary shifts, and
-          “good enough” is no longer defensible for critical filtration
-          environments.
-        </p>
+          <p>
+            A distinct “knee” in the decay curve represents a regime transition:
+            the system shifts from stable charge retention to rapid collapse.
+          </p>
 
-        <hr />
+          <p>
+            This indicates loss of global constraint connectivity rather than
+            uniform degradation.
+          </p>
+        </SectionCard>
 
-        <p className="text-sm opacity-70">
-          Part of the{" "}
+        {/* GOVERNING VARIABLE */}
+        <SectionCard
+          eyebrow="Governing Variable"
+          title="Presence or absence of regime transition"
+        >
+          <p>
+            The governing variable is not final charge level—but whether a
+            connectivity-driven collapse occurs.
+          </p>
+
+          <ul>
+            <li>Smooth decay → tolerable degradation</li>
+            <li>Knee collapse → structural failure mode</li>
+            <li>No decay → stabilized architecture</li>
+          </ul>
+        </SectionCard>
+
+        {/* PASS FAIL */}
+        <SectionCard
+          eyebrow="Pass / Fail Boundary"
+          title="What breaks the assumption"
+        >
+          <p>
+            <strong>Pass:</strong> PET + PVDF shows no meaningful improvement over
+            PET or PP under humidity.
+          </p>
+
+          <p>
+            <strong>Fail:</strong> PET + PVDF retains significantly higher charge
+            and efficiency, with clear separation from legacy materials.
+          </p>
+        </SectionCard>
+
+        {/* FLIP */}
+        <SectionCard
+          eyebrow="Flip Condition"
+          title="Where the system becomes indefensible"
+        >
+          <p>
+            PET + PVDF maintains electrostatic performance under humidity while
+            PET and PP electrets collapse—without coatings or post-processing.
+          </p>
+        </SectionCard>
+
+        {/* INTERPRETATION */}
+        <SectionCard
+          eyebrow="Corrected Interpretation"
+          title="Electret performance is architecture-bound"
+        >
+          <p>
+            Electret durability under humidity is not governed by surface
+            charging alone. Polymer architecture becomes the primary control
+            variable.
+          </p>
+        </SectionCard>
+
+        {/* INVARIANT */}
+        <section className="rounded-3xl border border-black/10 bg-zinc-950 px-8 py-10 text-white">
+          <div className="mb-3 text-xs uppercase tracking-[0.24em] text-zinc-400">
+            Invariant
+          </div>
+          <p className="max-w-4xl text-2xl font-semibold leading-10 tracking-tight md:text-3xl">
+            A filter is not stable because it works dry.
+          </p>
+          <p className="mt-4 max-w-3xl text-base leading-8 text-zinc-300">
+            If humidity can trigger abrupt electrostatic collapse, then the
+            system was never durable—only conditionally functional.
+          </p>
+        </section>
+
+        <p className="text-sm text-zinc-500">
           <Link href="/edge-of-practice">
-            Edge of Practice short-cycle experiment index
+            Edge of Practice short-cycle index
           </Link>
-          .
         </p>
-      </article>
+      </div>
     </main>
   );
 }
