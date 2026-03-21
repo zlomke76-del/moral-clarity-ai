@@ -1,8 +1,4 @@
 // app/whitepapers/phosphonate-diol-pet/page.tsx
-// ============================================================
-// WHITE PAPER (UPGRADED TO CONSTRAINT FRAME)
-// Phosphonate-Diol PET Copolymer — CONDITIONAL
-// ============================================================
 
 import type { Metadata } from "next";
 
@@ -16,10 +12,12 @@ export const metadata: Metadata = {
 
 export default function Page() {
   return (
-    <main className="mx-auto max-w-6xl px-6 py-20 space-y-10">
+    <main className="mx-auto max-w-6xl px-6 py-24 space-y-16">
+      {/* ===================================================== */}
       {/* HERO */}
-      <section className="rounded-[32px] border border-white/10 bg-gradient-to-br from-[#0b1220] via-[#0a0f1a] to-black p-10 shadow-[0_30px_120px_rgba(0,0,0,0.45)]">
-        <div className="space-y-5">
+      {/* ===================================================== */}
+      <section className="rounded-[32px] border border-white/10 bg-gradient-to-br from-[#0b1220] via-[#0a0f1a] to-black p-12 shadow-[0_40px_140px_rgba(0,0,0,0.5)]">
+        <div className="space-y-6">
           <div className="flex flex-wrap gap-3">
             <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/70">
               White Paper
@@ -28,158 +26,189 @@ export default function Page() {
               Constraint Assessment
             </span>
             <span className="rounded-full border border-yellow-400/30 px-3 py-1 text-xs uppercase tracking-[0.18em] text-yellow-300">
-              CONDITIONAL
+              STATUS: CONDITIONAL
             </span>
           </div>
 
-          <h1 className="text-4xl font-semibold tracking-tight text-white md:text-5xl">
+          <h1 className="text-5xl font-semibold tracking-tight text-white">
             Phosphonate-Diol PET Copolymer
           </h1>
 
-          <p className="max-w-3xl text-lg leading-8 text-white/75">
+          <p className="max-w-2xl text-lg leading-8 text-white/70">
             Evaluation of whether phosphonate-functional PET can deliver durable,
-            non-leaching flame-retardant performance under thermal and extraction
-            stress.
+            non-leaching flame-retardant performance under thermal and extraction stress.
           </p>
         </div>
       </section>
 
-      {/* CORE DOCTRINE */}
-      <section className="rounded-2xl border border-white/10 bg-black p-8">
-        <p className="text-xl text-white leading-8">
-          Flame retardancy is admissible only if phosphorus functionality remains
-          structurally retained and does not diminish under thermal or aqueous
-          exposure.
-        </p>
-        <p className="mt-3 text-white/60">
-          If phosphorus loss exceeds threshold, the system fails as a durable
-          retardant.
-        </p>
+      {/* ===================================================== */}
+      {/* SYSTEM CONSTRAINT (LAW) */}
+      {/* ===================================================== */}
+      <section className="rounded-[36px] border border-white/10 bg-gradient-to-b from-black to-[#05070d] p-14 text-center shadow-[0_0_80px_rgba(255,180,80,0.06)]">
+        <h2 className="text-xs uppercase tracking-[0.25em] text-white/40 mb-6">
+          System Constraint
+        </h2>
+
+        <div className="max-w-3xl mx-auto">
+          <p className="text-3xl leading-[1.5] text-white">
+            Flame retardancy is admissible only if phosphorus functionality remains
+            structurally retained under thermal and aqueous exposure.
+          </p>
+
+          <p className="mt-6 text-white/50">
+            If phosphorus loss exceeds threshold, the system is rejected.
+          </p>
+        </div>
       </section>
 
-      {/* TESTED ASSUMPTION + WHY */}
+      {/* ===================================================== */}
+      {/* SUPPORTING CONTEXT */}
+      {/* ===================================================== */}
       <section className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-xl border border-white/10 bg-white/[0.04] p-6">
-          <h2 className="text-lg font-semibold text-white">
-            Tested Assumption
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-6">
+          <h2 className="text-base font-semibold text-white">
+            Hypothesis Under Evaluation
           </h2>
-          <p className="mt-3 text-white/70 leading-7">
+          <p className="mt-3 text-white/60 leading-7">
             Phosphonate groups can be covalently integrated into PET to provide
             persistent flame-retardant behavior without leaching.
           </p>
         </div>
 
-        <div className="rounded-xl border border-white/10 bg-white/[0.04] p-6">
-          <h2 className="text-lg font-semibold text-white">
-            Why This Matters
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-6">
+          <h2 className="text-base font-semibold text-white">
+            Significance
           </h2>
-          <p className="mt-3 text-white/70 leading-7">
-            If valid, materials can deliver long-term fire resistance without
-            additive migration. If invalid, performance decays and introduces
-            safety risk.
+          <p className="mt-3 text-white/60 leading-7">
+            If valid, fire resistance persists without additive migration. If invalid,
+            performance decays and introduces safety risk.
           </p>
         </div>
       </section>
 
-      {/* SYSTEM DEFINITION */}
-      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8 space-y-4">
-        <h2 className="text-2xl font-semibold text-white">
-          System Definition
-        </h2>
-        <p className="text-white/70 leading-8">
-          A PET copolymer incorporating phosphonate-functional diols through
-          covalent co-condensation to create a distributed, non-migrating
-          phosphorus-containing backbone.
+      {/* ===================================================== */}
+      {/* CORE SYSTEM */}
+      {/* ===================================================== */}
+      <div className="space-y-6">
+        <section className="rounded-xl border border-white/10 bg-white/[0.05] p-8">
+          <h2 className="text-xl font-semibold text-white">
+            System Construction
+          </h2>
+          <p className="mt-3 text-white/70 leading-8 max-w-3xl">
+            PET copolymer incorporating phosphonate-functional diols via covalent
+            co-condensation, producing a distributed, non-migrating phosphorus backbone.
+          </p>
+        </section>
+
+        <section className="rounded-xl border border-white/10 bg-white/[0.05] p-8">
+          <h2 className="text-xl font-semibold text-white">
+            Primary Constraint Variable
+          </h2>
+          <p className="mt-3 text-white/70 leading-8 max-w-3xl">
+            Retention of phosphorus content under thermal exposure and aqueous extraction.
+          </p>
+        </section>
+
+        <section className="rounded-xl border border-white/10 bg-white/[0.05] p-8">
+          <h2 className="text-xl font-semibold text-white">
+            Test Conditions
+          </h2>
+          <ul className="mt-3 list-disc pl-6 text-white/70 space-y-2">
+            <li>Hot water extraction</li>
+            <li>ICP-OES phosphorus quantification</li>
+            <li>Thermal cycling and ignition testing</li>
+            <li>Comparison to additive-based systems</li>
+            <li>Long-term heat and humidity aging</li>
+          </ul>
+        </section>
+
+        <section className="rounded-xl border border-white/10 bg-white/[0.06] p-8">
+          <h2 className="text-xl font-semibold text-white">
+            Failure Threshold (Non-Negotiable)
+          </h2>
+          <p className="mt-3 text-white/80 leading-8 max-w-2xl">
+            FAIL if phosphorus loss exceeds 10% or if flame-retardant performance
+            degrades measurably after exposure.
+          </p>
+        </section>
+
+        <section className="rounded-xl border border-white/10 bg-white/[0.05] p-8">
+          <h2 className="text-xl font-semibold text-white">
+            Observed Behavior
+          </h2>
+          <p className="mt-3 text-white/70 leading-8 max-w-3xl">
+            Covalent phosphonate incorporation is viable, but distribution and bonding
+            must be tightly controlled to prevent extraction and decay.
+          </p>
+        </section>
+
+        <section className="rounded-xl border border-white/10 bg-white/[0.05] p-8">
+          <h2 className="text-xl font-semibold text-white">
+            Admissibility Boundary
+          </h2>
+          <p className="mt-3 text-white/70 leading-8 max-w-3xl">
+            Flame-retardant claims are valid only if phosphorus retention remains within
+            threshold under realistic conditions.
+          </p>
+        </section>
+      </div>
+
+      {/* ===================================================== */}
+      {/* TRANSITION */}
+      {/* ===================================================== */}
+      <section className="text-center py-10">
+        <div className="w-24 h-px bg-white/10 mx-auto mb-4" />
+        <p className="text-white/40 text-xs uppercase tracking-[0.25em]">
+          Evaluation Complete
         </p>
       </section>
 
-      {/* GOVERNING VARIABLE */}
-      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
-        <h2 className="text-2xl font-semibold text-white">
-          Governing Variable
+      {/* ===================================================== */}
+      {/* SYSTEM DETERMINATION */}
+      {/* ===================================================== */}
+      <section className="space-y-8">
+        <h2 className="text-center text-xs uppercase tracking-[0.25em] text-white/40">
+          System Determination
         </h2>
-        <p className="mt-3 text-white/70 leading-8">
-          Retention of phosphorus content under thermal exposure and aqueous
-          extraction conditions.
-        </p>
+
+        <div className="grid gap-10 lg:grid-cols-2">
+          <div className="rounded-3xl border border-green-400/20 bg-green-500/10 p-12 shadow-[0_0_60px_rgba(34,197,94,0.12)]">
+            <h3 className="text-2xl font-semibold text-green-300">PASS</h3>
+            <p className="mt-4 text-green-200/80 leading-7">
+              Phosphorus content and flame-retardant behavior remain stable under
+              defined conditions.
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-red-500/30 bg-red-500/15 p-12 shadow-[0_0_70px_rgba(248,113,113,0.18)]">
+            <h3 className="text-2xl font-semibold text-red-300">FAIL</h3>
+            <p className="mt-4 text-red-200/80 leading-7">
+              Phosphorus loss or performance degradation exceeds threshold.
+              System is rejected.
+            </p>
+          </div>
+        </div>
       </section>
 
-      {/* BOUNDARY SETUP */}
-      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8 space-y-4">
-        <h2 className="text-2xl font-semibold text-white">
-          Boundary Setup
-        </h2>
-        <ul className="list-disc pl-6 text-white/70 space-y-2">
-          <li>Hot water extraction at elevated temperature</li>
-          <li>ICP-OES phosphorus quantification pre/post exposure</li>
-          <li>Thermal cycling and ignition resistance testing</li>
-          <li>Comparison to additive-based flame-retardant PET</li>
-          <li>Long-term aging under humidity and heat</li>
-        </ul>
-      </section>
+      {/* ===================================================== */}
+      {/* FINAL DOCTRINE */}
+      {/* ===================================================== */}
+      <section className="rounded-[36px] border border-white/10 bg-black p-16 text-center shadow-[0_0_60px_rgba(0,0,0,0.6)]">
+        <div className="max-w-2xl mx-auto">
+          <p className="text-3xl text-white leading-[1.5]">
+            If the active element can leave,
+            <br />
+            the function cannot be trusted.
+          </p>
 
-      {/* FALSIFICATION */}
-      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
-        <h2 className="text-2xl font-semibold text-white">
-          Binary Falsification Threshold
-        </h2>
-        <p className="mt-3 text-white/70 leading-8">
-          FAIL if phosphorus loss exceeds 10% under extraction conditions or if
-          flame-retardant performance degrades measurably after exposure.
-        </p>
-      </section>
+          <p className="mt-6 text-white/70">
+            Retention defines durability.
+          </p>
 
-      {/* OPERATIONAL INTERPRETATION */}
-      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
-        <h2 className="text-2xl font-semibold text-white">
-          Operational Interpretation
-        </h2>
-        <p className="mt-3 text-white/70 leading-8">
-          Covalent phosphonate incorporation is structurally viable, but requires
-          tight control of distribution and bonding to prevent partial extraction
-          and performance decay.
-        </p>
-      </section>
-
-      {/* BOUNDARY OF CLAIM */}
-      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
-        <h2 className="text-2xl font-semibold text-white">
-          Boundary of Claim
-        </h2>
-        <p className="mt-3 text-white/70 leading-8">
-          Flame-retardant claims are admissible only where phosphorus retention
-          remains within threshold under realistic exposure conditions. Any claim
-          of permanence without retention constitutes failure.
-        </p>
-      </section>
-
-      {/* PASS / FAIL */}
-      <section className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-green-400/20 bg-green-500/10 p-8">
-          <h3 className="text-lg font-semibold text-green-300">PASS</h3>
-          <p className="mt-3 text-green-200/80 leading-7">
-            Phosphorus content and flame-retardant behavior remain stable under
-            thermal and extraction stress.
+          <p className="mt-2 text-white/40">
+            Loss defines failure.
           </p>
         </div>
-
-        <div className="rounded-2xl border border-red-400/20 bg-red-500/10 p-8">
-          <h3 className="text-lg font-semibold text-red-300">FAIL</h3>
-          <p className="mt-3 text-red-200/80 leading-7">
-            Phosphorus loss or performance degradation exceeds threshold under
-            realistic conditions.
-          </p>
-        </div>
-      </section>
-
-      {/* INVARIANT */}
-      <section className="rounded-2xl border border-white/10 bg-black p-10">
-        <p className="text-2xl text-white leading-9">
-          If the active element can leave, the function cannot be trusted.
-        </p>
-        <p className="mt-4 text-white/60 leading-7">
-          Retention defines durability; loss defines failure.
-        </p>
       </section>
     </main>
   );
