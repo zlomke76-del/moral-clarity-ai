@@ -1,9 +1,4 @@
 // app/edge-of-protection/preparedness/page.tsx
-// ============================================================
-// EDGE OF PROTECTION
-// The Edge of Preparedness
-// Upgraded to Constraint-Bound Admissibility Framework
-// ============================================================
 
 import type { Metadata } from "next";
 
@@ -11,180 +6,181 @@ export const metadata: Metadata = {
   title: "The Edge of Preparedness | Edge of Protection",
   description:
     "Deployment is admissible only if enforceable intervention authority exists prior to capability exposure.",
-  robots: {
-    index: true,
-    follow: true,
-  },
+  robots: { index: true, follow: true },
 };
 
 export const dynamic = "force-static";
 
 export default function EdgeOfPreparednessPage() {
   return (
-    <main className="mx-auto max-w-6xl px-6 py-20 space-y-12">
+    <main className="mx-auto max-w-5xl px-6 py-28 space-y-24">
       {/* ===================================================== */}
-      {/* HERO */}
+      {/* HERO — DEPLOYMENT GATE */}
       {/* ===================================================== */}
-      <section className="rounded-2xl bg-gradient-to-br from-neutral-900 via-neutral-800 to-black p-10">
-        <div className="space-y-6">
-          <h1 className="text-4xl font-semibold text-white tracking-tight">
+      <section className="relative rounded-3xl bg-gradient-to-br from-neutral-950 via-neutral-900 to-black p-16">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_50%_20%,rgba(255,200,120,0.15),transparent_70%)]" />
+
+        <div className="relative z-10 max-w-2xl space-y-8">
+          <h1 className="text-5xl font-semibold text-white tracking-tight">
             The Edge of Preparedness
           </h1>
 
           <div className="flex flex-wrap gap-3">
-            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
-              Edge of Protection
-            </span>
-            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
-              Deployment Constraint
-            </span>
-            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
-              Intervention Authority
-            </span>
+            {[
+              "Edge of Protection",
+              "Deployment Constraint",
+              "Intervention Authority",
+            ].map((tag) => (
+              <span
+                key={tag}
+                className="px-4 py-1.5 rounded-full bg-white/10 text-white text-sm"
+              >
+                {tag}
+              </span>
+            ))}
           </div>
 
-          <p className="text-neutral-300 max-w-3xl">
+          <p className="text-neutral-300 text-lg leading-relaxed">
             Deployment is admissible only if enforceable intervention authority
-            exists prior to capability exposure. Any system that cannot be
-            paused, constrained, or redirected at runtime constitutes failure.
+            exists prior to capability exposure. If a system cannot be
+            constrained at runtime, it must not be released.
           </p>
         </div>
       </section>
 
       {/* ===================================================== */}
-      {/* CORE DOCTRINE */}
+      {/* CANONICAL DOCTRINE */}
       {/* ===================================================== */}
-      <section className="rounded-2xl bg-black p-8 border border-white/10">
-        <p className="text-white text-lg leading-relaxed">
+      <section className="text-center space-y-6">
+        <p className="text-2xl text-white">
           Capability is admissible only if it can be constrained before harm
           scales.
         </p>
-        <p className="text-neutral-400 mt-4">
+
+        <p className="text-neutral-400">
           Any deployment without enforceable intervention authority constitutes
           structural failure.
         </p>
       </section>
 
       {/* ===================================================== */}
-      {/* TESTED ASSUMPTION */}
+      {/* INTERPRETATION */}
       {/* ===================================================== */}
-      <section className="grid md:grid-cols-2 gap-6">
-        <div className="rounded-xl border p-6">
-          <h2 className="font-semibold text-lg">Tested Assumption</h2>
-          <p className="text-neutral-600 mt-2">
-            Systems can be identified, constrained, and intervened upon before
-            emergent harms become irreversible.
+      <section className="grid md:grid-cols-2 gap-10">
+        <div className="rounded-2xl border border-white/10 p-8 bg-white/[0.02]">
+          <h2 className="text-white font-semibold text-lg">
+            Tested Assumption
+          </h2>
+          <p className="text-neutral-300 mt-4 leading-relaxed">
+            All system behaviors can be detected, constrained, and intervened on
+            before irreversible harm emerges.
           </p>
         </div>
 
-        <div className="rounded-xl border p-6">
-          <h2 className="font-semibold text-lg">Why This Matters</h2>
-          <p className="text-neutral-600 mt-2">
-            Capability without enforceable control allows harm to scale beyond
-            detection, reversal, or accountability.
+        <div className="rounded-2xl border border-white/10 p-8 bg-white/[0.02]">
+          <h2 className="text-white font-semibold text-lg">
+            Why This Matters
+          </h2>
+          <p className="text-neutral-300 mt-4 leading-relaxed">
+            Capability without control allows harm to scale beyond detection,
+            reversal, or accountability. Release without authority is loss of
+            governance.
           </p>
         </div>
       </section>
 
       {/* ===================================================== */}
-      {/* SYSTEM DEFINITION */}
+      {/* DEFINITION + VARIABLE */}
       {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">System Definition</h2>
-        <p className="text-neutral-600">
-          Preparedness is defined as the operational ability to detect,
-          constrain, and intervene on emergent behaviors before they propagate
-          beyond control.
-        </p>
+      <section className="grid md:grid-cols-2 gap-12">
+        <div>
+          <h2 className="text-white font-semibold mb-4">
+            System Definition
+          </h2>
+          <p className="text-neutral-300 leading-relaxed">
+            Preparedness is the operational ability to detect, constrain, and
+            intervene on system behavior before it propagates beyond control.
+          </p>
+        </div>
+
+        <div>
+          <h2 className="text-white font-semibold mb-4">
+            Governing Variable
+          </h2>
+          <p className="text-neutral-300 leading-relaxed">
+            Availability, latency, and enforceability of intervention authority
+            relative to system capability.
+          </p>
+        </div>
       </section>
 
       {/* ===================================================== */}
-      {/* GOVERNING VARIABLE */}
+      {/* DETECTION CONDITIONS */}
       {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">Governing Variable</h2>
-        <p className="text-neutral-600">
-          Availability and enforceability of intervention authority relative to
-          system capability.
-        </p>
-      </section>
-
-      {/* ===================================================== */}
-      {/* EXPERIMENTAL SETUP */}
-      {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">
+      <section className="rounded-2xl border border-white/10 p-10">
+        <h2 className="text-white font-semibold mb-6">
           Experimental / Boundary Setup
         </h2>
-        <ul className="list-disc pl-6 text-neutral-600 space-y-2">
-          <li>Identify system capabilities and potential misuse paths</li>
-          <li>Test intervention mechanisms (pause, throttle, refusal, escalation)</li>
-          <li>Simulate adversarial and high-risk interaction conditions</li>
-          <li>Measure response time and effectiveness of intervention</li>
-          <li>Evaluate ability to halt or redirect system behavior</li>
+
+        <ul className="list-disc pl-6 text-neutral-300 space-y-3">
+          <li>Map system capabilities and misuse pathways</li>
+          <li>Test intervention mechanisms (pause, throttle, constraint, escalation)</li>
+          <li>Simulate adversarial and high-risk conditions</li>
+          <li>Measure response latency and effectiveness</li>
+          <li>Verify ability to halt or redirect behavior in real time</li>
         </ul>
       </section>
 
       {/* ===================================================== */}
-      {/* FALSIFICATION THRESHOLD */}
+      {/* FAILURE ZONE — RELEASE BLOCK */}
       {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">
+      <section className="rounded-2xl border border-red-500/30 bg-red-500/5 p-10">
+        <h2 className="text-red-400 font-semibold">
           Binary Falsification Threshold
         </h2>
-        <p className="text-neutral-600">
-          System fails if any capability cannot be interrupted, constrained, or
-          redirected prior to harm scaling beyond reversibility.
+
+        <p className="text-neutral-200 mt-4 text-lg">
+          The system fails if any capability cannot be interrupted,
+          constrained, or redirected before harm scales beyond reversibility.
         </p>
       </section>
 
       {/* ===================================================== */}
-      {/* OPERATIONAL INTERPRETATION */}
+      {/* OPERATIONAL CONSEQUENCE */}
       {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-6">
-        <h2 className="font-semibold text-lg">
+      <section className="space-y-6 max-w-3xl">
+        <h2 className="text-white font-semibold">
           Operational Interpretation
         </h2>
 
-        <ul className="list-disc pl-6 text-neutral-600 space-y-2">
+        <ul className="list-disc pl-6 text-neutral-300 space-y-3">
           <li>Capability mapping must precede deployment</li>
-          <li>Abuse paths must be explicitly modeled and tested</li>
+          <li>Abuse pathways must be explicitly modeled</li>
           <li>Intervention authority must be pre-approved and enforceable</li>
           <li>Thresholds must trigger constraint, not expansion</li>
-          <li>Preparedness must override product momentum</li>
+          <li>Preparedness overrides product momentum</li>
         </ul>
 
-        <p className="text-neutral-600">
+        <p className="text-neutral-300">
           Preparedness that cannot act is not preparedness.
-        </p>
-      </section>
-
-      {/* ===================================================== */}
-      {/* BOUNDARY OF CLAIM */}
-      {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">Boundary of Claim</h2>
-        <p className="text-neutral-600">
-          This constraint evaluates deployment readiness only. It does not assess
-          system utility, performance, or innovation potential.
         </p>
       </section>
 
       {/* ===================================================== */}
       {/* PASS / FAIL */}
       {/* ===================================================== */}
-      <section className="grid md:grid-cols-2 gap-6">
-        <div className="rounded-xl border border-green-500/30 bg-green-500/5 p-6">
-          <h3 className="font-semibold text-green-600">PASS</h3>
-          <p className="text-neutral-600 mt-2">
-            All capabilities are bounded by enforceable, pre-deployed
-            intervention mechanisms.
+      <section className="grid md:grid-cols-2 gap-10">
+        <div className="border border-green-500/30 bg-green-500/5 rounded-2xl p-8">
+          <h3 className="text-green-400 font-semibold">PASS</h3>
+          <p className="text-neutral-300 mt-3">
+            All capabilities are bounded by enforceable, real-time intervention
+            authority.
           </p>
         </div>
 
-        <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-6">
-          <h3 className="font-semibold text-red-600">FAIL</h3>
-          <p className="text-neutral-600 mt-2">
+        <div className="border border-red-500/30 bg-red-500/5 rounded-2xl p-8">
+          <h3 className="text-red-400 font-semibold">FAIL</h3>
+          <p className="text-neutral-300 mt-3">
             Any capability operates without enforceable intervention authority
             prior to deployment.
           </p>
@@ -192,13 +188,14 @@ export default function EdgeOfPreparednessPage() {
       </section>
 
       {/* ===================================================== */}
-      {/* INVARIANT */}
+      {/* FINAL INVARIANT */}
       {/* ===================================================== */}
-      <section className="rounded-2xl bg-black p-8 border border-white/10">
-        <p className="text-white text-lg">
+      <section className="text-center pt-12 space-y-6">
+        <p className="text-2xl text-white">
           Power without control is not preparedness.
         </p>
-        <p className="text-neutral-400 mt-4">
+
+        <p className="text-neutral-400 max-w-xl mx-auto">
           If a system cannot be stopped, it is already out of bounds. Deployment
           requires enforceable authority before capability is released.
         </p>
