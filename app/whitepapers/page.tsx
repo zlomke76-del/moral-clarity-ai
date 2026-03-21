@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "White Papers | Moral Clarity AI",
     description:
-      "A structured library of public white papers spanning conceptual research, anchored PET systems, and advanced constrained material candidates.",
+      "A structured library of public white papers spanning conceptual research, core constrained polymer systems, extended PET architectures, and frontier material behaviors.",
     type: "website",
   },
   robots: {
@@ -69,7 +69,7 @@ const CONCEPTUAL_PAPERS: WhitePaper[] = [
   },
 ];
 
-const ANCHORED_PET_PAPERS: WhitePaper[] = [
+const CORE_PET_SYSTEMS: WhitePaper[] = [
   {
     slug: "sulfonated-aromatic-diacid-pet",
     title: "Sulfonated Aromatic Diacid–PET Copolymer",
@@ -122,7 +122,7 @@ const ANCHORED_PET_PAPERS: WhitePaper[] = [
   },
 ];
 
-const ADVANCED_ANCHORED_PET_PAPERS: WhitePaper[] = [
+const EXTENDED_PET_SYSTEMS: WhitePaper[] = [
   {
     slug: "bio-based-diacid-pet",
     title: "Bio-Based Diacid PET Copolymer (FDCA)",
@@ -155,6 +155,19 @@ const ADVANCED_ANCHORED_PET_PAPERS: WhitePaper[] = [
     subtitle: "Adhesion-enhanced PET inspired by mussel chemistry.",
   },
   {
+    slug: "lignin-derived-aromatic-pet",
+    title: "Lignin-Derived Aromatic PET Copolymer",
+    subtitle: "Renewable aromatics from bio-refinery waste streams.",
+  },
+  {
+    slug: "ionic-liquid-antistatic-pet",
+    title: "Ionic Liquid–Mimic Antistatic PET",
+    subtitle: "Durable antistatic PET without migrating additives.",
+  },
+];
+
+const FRONTIER_SYSTEMS: WhitePaper[] = [
+  {
     slug: "self-healing-diels-alder-pet",
     title: "Self-Healing PET via Diels–Alder Chemistry",
     subtitle: "Dynamic covalent PET enabling crack repair and life extension.",
@@ -164,16 +177,6 @@ const ADVANCED_ANCHORED_PET_PAPERS: WhitePaper[] = [
     title: "Polyamine-Functional PET for CO₂ Capture",
     subtitle:
       "Solid-state CO₂ capture from concentrated streams or controlled air-contact systems.",
-  },
-  {
-    slug: "lignin-derived-aromatic-pet",
-    title: "Lignin-Derived Aromatic PET Copolymer",
-    subtitle: "Renewable aromatics from bio-refinery waste streams.",
-  },
-  {
-    slug: "ionic-liquid-antistatic-pet",
-    title: "Ionic Liquid–Mimic Antistatic PET",
-    subtitle: "Durable antistatic PET without migrating additives.",
   },
 ];
 
@@ -253,6 +256,12 @@ function SectionBlock({
 }
 
 export default function WhitePapersIndexPage() {
+  const totalPapers =
+    CONCEPTUAL_PAPERS.length +
+    CORE_PET_SYSTEMS.length +
+    EXTENDED_PET_SYSTEMS.length +
+    FRONTIER_SYSTEMS.length;
+
   return (
     <main className="relative overflow-hidden bg-[#020817]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.14),transparent_30%),radial-gradient(circle_at_82%_18%,rgba(59,130,246,0.10),transparent_24%),linear-gradient(to_bottom,rgba(255,255,255,0.02),transparent_32%)]" />
@@ -299,8 +308,8 @@ export default function WhitePapersIndexPage() {
                   Scope
                 </div>
                 <div className="mt-3 text-sm leading-6 text-white/82">
-                  Conceptual research, anchored polymer systems, and advanced
-                  constrained candidates.
+                  Conceptual research, core constrained polymer systems,
+                  extended PET architectures, and frontier material behaviors.
                 </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-sm">
@@ -314,11 +323,10 @@ export default function WhitePapersIndexPage() {
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-sm">
                 <div className="text-xs uppercase tracking-[0.18em] text-white/42">
-                  Orientation
+                  Library Size
                 </div>
                 <div className="mt-3 text-sm leading-6 text-white/82">
-                  Public-facing, bounded, and designed to remain legible under
-                  critical review.
+                  {totalPapers} public papers across four research layers.
                 </div>
               </div>
             </div>
@@ -332,11 +340,12 @@ export default function WhitePapersIndexPage() {
               Library Position
             </div>
             <p className="mt-4 text-base leading-8 text-white/74">
-              This collection brings together public research across three
+              This collection brings together public research across four
               distinct layers: conceptual papers that define regime boundaries,
-              anchored PET papers that examine constrained functional chemistry,
-              and advanced candidates that extend those ideas into new material
-              directions.
+              core PET systems that establish constrained functional chemistry,
+              extended PET architectures that widen the field of material
+              utility, and frontier systems that change the behavior class of
+              the material itself.
             </p>
             <p className="mt-4 text-base leading-8 text-white/74">
               The purpose is not volume. The purpose is structured signal:
@@ -369,17 +378,24 @@ export default function WhitePapersIndexPage() {
         />
 
         <SectionBlock
-          eyebrow="Anchored PET"
-          title="Anchored PET White Papers"
-          description="Core anchored PET concepts focused on covalent retention, durability-gated function, extraction stability, and constrained performance behavior."
-          papers={ANCHORED_PET_PAPERS}
+          eyebrow="Core PET Systems"
+          title="Core PET White Papers"
+          description="Core constrained PET systems focused on covalent retention, durability-gated function, extraction stability, and foundational performance behavior."
+          papers={CORE_PET_SYSTEMS}
         />
 
         <SectionBlock
-          eyebrow="Advanced Candidates"
-          title="Advanced Anchored PET Candidates"
-          description="Extended candidate concepts exploring renewable feedstocks, dynamic repair systems, capture chemistry, anti-fouling behavior, and functionalized PET architectures."
-          papers={ADVANCED_ANCHORED_PET_PAPERS}
+          eyebrow="Extended PET Systems"
+          title="Extended PET Architectures"
+          description="Extended PET candidates exploring renewable feedstocks, antimicrobial surfaces, chelation, adhesion, antioxidant behavior, and other broadened functional architectures."
+          papers={EXTENDED_PET_SYSTEMS}
+        />
+
+        <SectionBlock
+          eyebrow="Frontier Systems"
+          title="Frontier Material Behaviors"
+          description="Material systems where the behavioral class changes from static function to dynamic response, including self-healing and solid-state capture behavior."
+          papers={FRONTIER_SYSTEMS}
         />
 
         {/* FOOTER INVARIANT */}
