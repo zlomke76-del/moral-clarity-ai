@@ -88,7 +88,7 @@ export default function PassiveEnvironmentalWitnessesWhitepaper() {
         <p className="text-white/70 leading-8">
           A passive material system that responds to environmental stimuli
           through slow, reversible physical or chemical change that is directly
-          observable without electronic measurement. :contentReference[oaicite:0]{index=0}
+          observable without electronic measurement.
         </p>
       </section>
 
@@ -174,7 +174,8 @@ export default function PassiveEnvironmentalWitnessesWhitepaper() {
       {/* INVARIANT */}
       <section className="rounded-2xl border border-white/10 bg-black p-10">
         <p className="text-2xl text-white leading-9">
-          If a signal cannot be trusted without explanation, it cannot serve as a witness.
+          If a signal cannot be trusted without explanation, it cannot serve as
+          a witness.
         </p>
         <p className="mt-4 text-white/60 leading-7">
           Visibility without interpretability is not evidence.
