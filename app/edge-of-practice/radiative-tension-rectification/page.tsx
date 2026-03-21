@@ -1,177 +1,220 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Radiative Tension Rectification for Passive Energy Storage | Moral Clarity AI",
+  title:
+    "Radiative Tension Rectification — Photon-to-Mechanical Boundary Test | Moral Clarity AI",
   description:
-    "A solid-state mechanism for passively capturing and storing ambient thermal energy via photon-driven molecular tension cycles at engineered interfaces.",
-  openGraph: {
-    title: "Radiative Tension Rectification for Passive Energy Storage",
-    description:
-      "Demonstrates how mid-infrared photon absorption in surface-bound molecular layers can be rectified into stored electrical energy without moving parts.",
-    url: "https://moralclarity.ai/edge-of-practice/radiative-tension-rectification",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
+    "A short-cycle falsification testing whether mid-infrared photon absorption can be rectified into net mechanical and electrical work without macroscopic gradients.",
   robots: {
     index: true,
     follow: true,
   },
 };
 
+function SectionCard({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-black/10 bg-white/70 p-6 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+      <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
+        {eyebrow}
+      </div>
+      <h2 className="mb-4 text-xl font-semibold text-zinc-950 dark:text-zinc-50">
+        {title}
+      </h2>
+      <div className="space-y-4 text-[15px] leading-7 text-zinc-700 dark:text-zinc-300">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function SignalPill({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex rounded-full border border-zinc-300 bg-zinc-100 px-3 py-1 text-xs text-zinc-700 dark:border-white/10 dark:bg-white/10 dark:text-zinc-300">
+      {children}
+    </span>
+  );
+}
+
 export default function RadiativeTensionRectificationPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Radiative Tension Rectification for Passive Energy Storage</h1>
+    <main className="mx-auto max-w-6xl px-6 py-16 md:px-8 md:py-20">
+      <div className="space-y-8">
 
-        <p className="lead">
-          <strong>
-            A solid-state method for capturing and storing ambient thermal energy
-            using photon-driven molecular tension at engineered interfaces
-          </strong>
-        </p>
+        {/* HERO */}
+        <section className="rounded-3xl border border-black/10 bg-gradient-to-br from-white to-zinc-100 p-10 dark:border-white/10 dark:from-zinc-950 dark:to-zinc-900">
+          <div className="mb-4 flex flex-wrap gap-2">
+            <SignalPill>Edge of Practice</SignalPill>
+            <SignalPill>Short-Cycle Falsification</SignalPill>
+            <SignalPill>Energy Boundary</SignalPill>
+          </div>
 
-        <hr />
+          <h1 className="text-4xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50 md:text-5xl">
+            Radiative Tension Rectification
+          </h1>
 
-        <h2>One-Sentence Discovery</h2>
+          <p className="mt-6 max-w-3xl text-lg leading-8 text-zinc-700 dark:text-zinc-300">
+            Ambient thermal radiation is admissible as a usable energy source
+            only if photon-driven molecular motion can be rectified into net
+            work without relying on macroscopic temperature gradients or bulk
+            flow.
+          </p>
 
-        <p>
-          A solid-state method captures and stores ambient thermal energy by
-          exploiting cyclic tension and contraction of surface-bound molecular
-          monolayers driven by selective mid-infrared photon absorption.
-        </p>
+          <div className="mt-8 rounded-2xl border border-zinc-200 bg-black p-6 text-white">
+            <div className="mb-2 text-[11px] uppercase tracking-[0.24em] text-zinc-400">
+              Core Doctrine
+            </div>
+            <p className="text-base leading-7 md:text-lg">
+              Thermal photons carry energy but not direction.  
+              Work is admissible only if a system can impose direction without
+              violating equilibrium constraints.
+            </p>
+          </div>
+        </section>
 
-        <hr />
+        {/* ASSUMPTION */}
+        <SectionCard
+          eyebrow="Tested Assumption"
+          title="Ambient thermal radiation cannot produce net work without gradients"
+        >
+          <p>
+            Conventional thermodynamics assumes that energy extraction from
+            ambient radiation requires a temperature gradient, bulk expansion,
+            or macroscopic transport.
+          </p>
+        </SectionCard>
 
-        <h2>The Physical Mechanism</h2>
+        {/* CLAIM */}
+        <SectionCard
+          eyebrow="Proposed Mechanism"
+          title="Photon-driven interfacial tension cycles"
+        >
+          <p>
+            Surface-bound molecular monolayers absorb mid-infrared photons and
+            undergo reversible conformational changes, generating nanoscale
+            tension cycles at an interface.
+          </p>
 
-        <p>
-          Surface-physisorbed organic monolayers engineered with specific dipolar
-          or conformationally flexible groups undergo reversible structural
-          changes when absorbing mid-infrared photons. When illumination is
-          periodic or spectrally selective, these molecular reconfigurations
-          generate nanoscale cycles of tension and relaxation at the interface.
-        </p>
+          <p>
+            When coupled to a piezoelectric substrate, these oscillations are
+            proposed to be rectified into net electrical charge accumulation.
+          </p>
+        </SectionCard>
 
-        <p>
-          This mechanical work, though individually minute, becomes coherent and
-          directional when the monolayer is coupled to a stretchable
-          piezoelectric substrate. Through rectification, the oscillatory
-          molecular motion is converted into net electrical charge accumulation
-          without macroscopic movement, gears, or active electronics.
-        </p>
+        {/* CRITICAL TENSION */}
+        <SectionCard
+          eyebrow="Critical Boundary"
+          title="Rectification vs equilibrium"
+        >
+          <p>
+            The system must demonstrate that oscillatory molecular motion can be
+            converted into directional work without relying on hidden gradients,
+            asymmetries, or external bias.
+          </p>
 
-        <p>
-          Unlike conventional thermal energy harvesting, this mechanism does not
-          rely on temperature gradients, bulk expansion, or fluid motion. Energy
-          is extracted directly from photon–matter interaction at the molecular
-          interface.
-        </p>
+          <p>
+            If the system depends on temperature differentials, spectral bias,
+            or external modulation, it does not violate the assumption—it
+            reintroduces a gradient through another channel.
+          </p>
+        </SectionCard>
 
-        <hr />
+        {/* GOVERNING VARIABLE */}
+        <SectionCard
+          eyebrow="Governing Variable"
+          title="Net work under equilibrium conditions"
+        >
+          <p>
+            The governing variable is whether measurable net electrical energy
+            accumulates under conditions that are otherwise thermodynamically
+            symmetric.
+          </p>
 
-        <h2>New Scientific Object</h2>
+          <ul>
+            <li>True rectification → net charge accumulation without gradient</li>
+            <li>False signal → symmetric oscillation with zero net work</li>
+          </ul>
+        </SectionCard>
 
-        <p>
-          <strong>The Radiative Tensioner</strong>
-        </p>
+        {/* EXPERIMENT */}
+        <SectionCard
+          eyebrow="Minimal Falsification Test"
+          title="Resonant vs non-resonant comparison"
+        >
+          <ul>
+            <li>Resonant IR illumination vs off-resonance control</li>
+            <li>Functionalized vs uncoated substrate</li>
+            <li>Measure net charge accumulation over time</li>
+          </ul>
 
-        <p>
-          An engineered interface in which photon-driven molecular
-          reconfiguration produces cyclic mechanical tension that is rectified
-          and transduced through piezoelectric coupling into stored electrical
-          energy.
-        </p>
+          <p>
+            The signal must exceed controls and persist across cycles.
+          </p>
+        </SectionCard>
 
-        <p>
-          The Radiative Tensioner is distinct from thermoelectric, photovoltaic,
-          or pyroelectric devices. It operates via interfacial photomechanics,
-          not bulk thermal gradients or electronic band excitation.
-        </p>
+        {/* FAILURE */}
+        <SectionCard
+          eyebrow="Failure Modes"
+          title="What invalidates the claim"
+        >
+          <ul>
+            <li>No net charge accumulation</li>
+            <li>Signal disappears under symmetric conditions</li>
+            <li>Effect attributable to hidden gradients or artifacts</li>
+          </ul>
+        </SectionCard>
 
-        <hr />
+        {/* PASS */}
+        <SectionCard
+          eyebrow="Pass Condition"
+          title="What would constitute a real effect"
+        >
+          <p>
+            Repeatable net electrical charge accumulation under resonant
+            illumination that cannot be explained by thermal gradients,
+            instrumentation bias, or external asymmetry.
+          </p>
+        </SectionCard>
 
-        <h2>Edge-of-Practice Experiment</h2>
+        {/* INTERPRETATION */}
+        <SectionCard
+          eyebrow="Corrected Interpretation"
+          title="Energy extraction channel must be explicit"
+        >
+          <p>
+            If the effect holds, it defines a new interfacial energy conversion
+            channel.
+          </p>
 
-        <p>
-          <strong>Assumption under test:</strong> Photon-driven molecular tension
-          cycles at a functionalized interface can be rectified into measurable,
-          accumulating electrical charge under resonant mid-infrared
-          illumination.
-        </p>
+          <p>
+            If it fails, it reinforces that ambient thermal radiation cannot be
+            rectified into work without introducing an explicit gradient.
+          </p>
+        </SectionCard>
 
-        <p>
-          <strong>Materials</strong>
-        </p>
+        {/* INVARIANT */}
+        <section className="rounded-3xl border border-black/10 bg-zinc-950 px-8 py-10 text-white">
+          <div className="mb-3 text-xs uppercase tracking-[0.24em] text-zinc-400">
+            Invariant
+          </div>
+          <p className="max-w-4xl text-2xl font-semibold leading-10 tracking-tight md:text-3xl">
+            Work requires asymmetry.
+          </p>
+          <p className="mt-4 max-w-3xl text-base leading-8 text-zinc-300">
+            If a system claims to extract energy from equilibrium, the burden is
+            to identify where asymmetry enters. If it cannot be located, the
+            effect is either non-existent or misinterpreted.
+          </p>
+        </section>
 
-        <ul>
-          <li>Piezoelectric polymer film (e.g., PVDF)</li>
-          <li>
-            Surface-bound amphiphilic molecular monolayer with strong mid-IR
-            absorption bands
-          </li>
-          <li>Modulated mid-infrared radiation source</li>
-          <li>High-impedance voltmeter or charge amplifier</li>
-          <li>Environmental thermal controls</li>
-        </ul>
-
-        <p>
-          <strong>Procedure</strong>
-        </p>
-
-        <ol>
-          <li>
-            Fabricate a piezoelectric polymer film and deposit a uniform
-            monolayer of IR-active molecules on its surface.
-          </li>
-          <li>
-            Expose the system to modulated mid-infrared illumination at the
-            absorption resonance of the monolayer.
-          </li>
-          <li>
-            Monitor charge accumulation or voltage across the piezoelectric
-            layer over repeated illumination cycles.
-          </li>
-          <li>
-            Repeat the experiment with off-resonance illumination and uncoated
-            control films.
-          </li>
-        </ol>
-
-        <p>
-          <strong>Binary outcome:</strong> If resonant illumination produces
-          repeatable net charge accumulation exceeding controls, the effect
-          exists. If not, the mechanism is falsified.
-        </p>
-
-        <hr />
-
-        <h2>Why This Matters</h2>
-
-        <p>
-          Radiative tension rectification enables passive, maintenance-free
-          energy storage devices that operate continuously in ambient thermal
-          environments. This opens pathways for ultra-long-lifetime sensors,
-          distributed electronics, and infrastructure-scale systems that harvest
-          waste or background infrared radiation without moving parts,
-          consumables, or active control.
-        </p>
-
-        <p>
-          The impact is not incremental efficiency gain, but the introduction of
-          a new physical channel for energy capture—one that complements, rather
-          than competes with, existing photovoltaic and thermal technologies.
-        </p>
-
-        <hr />
-
-        <p className="text-sm text-muted-foreground">
-          This experiment is published under the Edge of Practice framework.
-          Claims are limited to falsifiable physical behavior. No performance,
-          scalability, or commercial viability is implied without independent
-          validation.
-        </p>
-      </article>
+      </div>
     </main>
   );
 }
