@@ -63,17 +63,21 @@ export default function SolaceTranscript({
             style={{
               display: "flex",
               justifyContent: isUser ? "flex-end" : "flex-start",
-              marginBottom: 12,
+              marginBottom: 14,
             }}
           >
             <div
               style={{
-                maxWidth: "80%",
+                maxWidth: "82%",
                 padding: 14,
                 borderRadius: UI.radiusLg,
-                background: isUser ? UI.surface2 : UI.surface1,
+                background: isUser
+                  ? "rgba(255,255,255,0.06)"
+                  : "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
                 color: UI.text,
-                boxShadow: UI.shadow,
+                backdropFilter: "blur(6px)",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
               }}
             >
               {artifactType === "code" && (
@@ -88,7 +92,7 @@ export default function SolaceTranscript({
                 <div
                   style={{
                     whiteSpace: "pre-wrap",
-                    lineHeight: 1.55,
+                    lineHeight: 1.6,
                     fontSize: 15,
                   }}
                 >
@@ -112,11 +116,14 @@ function CodeArtifactBlock({ artifact }: { artifact: CodeArtifact }) {
   return (
     <div
       style={{
-        background: UI.surface2,
+        background: "rgba(255,255,255,0.03)",
+        border: "1px solid rgba(255,255,255,0.08)",
         borderRadius: UI.radiusMd,
         padding: 12,
-        fontFamily: "monospace",
+        fontFamily:
+          'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace',
         fontSize: 13,
+        boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.015)",
       }}
     >
       <Header title={artifact.filename || artifact.language} onCopy={copy} />
@@ -128,7 +135,7 @@ function CodeArtifactBlock({ artifact }: { artifact: CodeArtifact }) {
 }
 
 /* ------------------------------------------------------------------
-   Text Artifact (ChatGPT-clean)
+   Text Artifact
 ------------------------------------------------------------------- */
 function TextArtifactBlock({ artifact }: { artifact: TextArtifact }) {
   const copy = () => navigator.clipboard.writeText(artifact.content);
@@ -136,14 +143,16 @@ function TextArtifactBlock({ artifact }: { artifact: TextArtifact }) {
   return (
     <div
       style={{
-        background: UI.surface2,
+        background: "rgba(255,255,255,0.03)",
+        border: "1px solid rgba(255,255,255,0.08)",
         borderRadius: UI.radiusMd,
         padding: 14,
+        boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.015)",
       }}
     >
       <Header title={artifact.title || "Response"} onCopy={copy} />
 
-      <div style={{ fontSize: 15, lineHeight: 1.6 }}>
+      <div style={{ fontSize: 15, lineHeight: 1.65 }}>
         {artifact.format === "markdown" ? (
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
@@ -195,7 +204,7 @@ function TextArtifactBlock({ artifact }: { artifact: TextArtifact }) {
                 <th
                   style={{
                     textAlign: "left",
-                    borderBottom: "1px solid #333",
+                    borderBottom: "1px solid rgba(255,255,255,0.18)",
                     padding: "6px 8px",
                     fontWeight: 600,
                   }}
@@ -206,7 +215,7 @@ function TextArtifactBlock({ artifact }: { artifact: TextArtifact }) {
               td: ({ children }) => (
                 <td
                   style={{
-                    borderBottom: "1px solid #222",
+                    borderBottom: "1px solid rgba(255,255,255,0.08)",
                     padding: "6px 8px",
                     verticalAlign: "top",
                   }}
@@ -217,9 +226,9 @@ function TextArtifactBlock({ artifact }: { artifact: TextArtifact }) {
               code: ({ children }) => (
                 <code
                   style={{
-                    background: "#111",
-                    padding: "2px 4px",
-                    borderRadius: 4,
+                    background: "rgba(255,255,255,0.06)",
+                    padding: "2px 5px",
+                    borderRadius: 6,
                     fontSize: 13,
                   }}
                 >
@@ -253,7 +262,8 @@ function Header({
       style={{
         display: "flex",
         justifyContent: "space-between",
-        marginBottom: 8,
+        alignItems: "center",
+        marginBottom: 10,
         fontSize: 12,
         fontWeight: 600,
         color: UI.sub,
@@ -267,6 +277,7 @@ function Header({
           border: "none",
           cursor: "pointer",
           fontWeight: 700,
+          color: UI.sub,
         }}
         aria-label="Copy content"
       >
