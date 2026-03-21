@@ -2,6 +2,18 @@ import type { Metadata } from "next";
 
 export type ConstraintStatus = "CONDITIONAL" | "NO-GO" | "PASS" | "FAIL";
 
+export type ConstraintType =
+  | "RETENTION"
+  | "CHARGE_RETENTION"
+  | "OWNERSHIP"
+  | "PERSISTENCE"
+  | "TRAJECTORY"
+  | "INTERFACE"
+  | "MULTI_DOMAIN"
+  | "CLAIM"
+  | "REPEATABILITY"
+  | "NO_GO";
+
 export type ConstraintHero = {
   title: string;
   eyebrow?: string;
@@ -26,6 +38,7 @@ export type ConstraintTest = {
 export type ConstraintPageData = {
   metadata: Metadata;
   hero: ConstraintHero;
+  constraintType: ConstraintType;
   systemConstraint: {
     statement: string;
     substatement: string;
