@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 type Args = {
-  canRender?: boolean; // OPTIONAL — deprecated lifecycle flag
+  canRender?: boolean;
   visible: boolean;
   viewport: { w: number; h: number };
   panelW: number;
@@ -14,8 +14,6 @@ type Args = {
   x: number;
   y: number;
   setPos: (x: number, y: number) => void;
-
-  /** NEW — prevents accidental drag snapping */
   minDragPx?: number;
 };
 
@@ -30,12 +28,10 @@ export function useDockPosition({
   x,
   y,
   setPos,
-  minDragPx = 0, // default to 0 if not provided
+  minDragPx = 0,
 }: Args) {
   const [dragging, setDragging] = useState(false);
   const [posReady, setPosReady] = useState(false);
-
-  // NEW — track whether we've crossed the drag threshold
   const [dragActivated, setDragActivated] = useState(false);
 
   const [offset, setOffset] = useState({ dx: 0, dy: 0 });
@@ -43,14 +39,10 @@ export function useDockPosition({
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // --------------------------------------------------
-  // Load / initialize position
-  // --------------------------------------------------
   useEffect(() => {
     if (!visible) return;
     if (viewport.w === 0 || viewport.h === 0) return;
 
-    // Mobile: no persistence, always ready
     if (viewport.w <= 768) {
       setPosReady(true);
       return;
@@ -71,39 +63,31 @@ export function useDockPosition({
       }
     } catch {}
 
-    // Fallback: center-ish default
     setPos(
-      Math.round((viewport.w - 760) / 2),
-      Math.round((viewport.h - 560) / 2)
+      Math.max(PAD, Math.round((viewport.w - panelW) / 2)),
+      Math.max(PAD, Math.round((viewport.h - panelH) / 2))
     );
     setPosReady(true);
-  }, [
-    visible,
-    viewport.w,
-    viewport.h,
-    panelW,
-    panelH,
-    PAD,
-    posKey,
-    setPos,
-  ]);
+  }, [visible, viewport.w, viewport.h, panelW, panelH, PAD, posKey, setPos]);
 
-  // --------------------------------------------------
-  // Persist position
-  // --------------------------------------------------
   useEffect(() => {
     if (dragging) return;
     if (!posReady) return;
     if (viewport.w <= 768) return;
 
-    try {
-      localStorage.setItem(posKey, JSON.stringify({ x, y }));
-    } catch {}
-  }, [dragging, posReady, x, y, viewport.w, posKey]);
+    const clampedX = Math.max(PAD, Math.min(viewport.w - panelW - PAD, x));
+    const clampedY = Math.max(PAD, Math.min(viewport.h - panelH - PAD, y));
 
-  // --------------------------------------------------
-  // Drag handlers
-  // --------------------------------------------------
+    if (clampedX !== x || clampedY !== y) {
+      setPos(clampedX, clampedY);
+      return;
+    }
+
+    try {
+      localStorage.setItem(posKey, JSON.stringify({ x: clampedX, y: clampedY }));
+    } catch {}
+  }, [dragging, posReady, x, y, viewport.w, viewport.h, panelW, panelH, PAD, posKey, setPos]);
+
   function onHeaderMouseDown(e: React.MouseEvent) {
     if (isMobile) return;
 
@@ -114,7 +98,6 @@ export function useDockPosition({
       dy: e.clientY - (rect?.top ?? 0),
     });
 
-    // NEW — record starting mouse position
     startPosRef.current = { x: e.clientX, y: e.clientY };
 
     setDragActivated(false);
@@ -125,20 +108,21 @@ export function useDockPosition({
     if (!dragging) return;
 
     const onMove = (e: MouseEvent) => {
-      // NEW — threshold check
       if (!dragActivated) {
         const dx = Math.abs(e.clientX - startPosRef.current.x);
         const dy = Math.abs(e.clientY - startPosRef.current.y);
 
         if (dx < minDragPx && dy < minDragPx) {
-          return; // do not drag yet
+          return;
         }
 
         setDragActivated(true);
       }
 
-      // Only drag after threshold is crossed
-      setPos(e.clientX - offset.dx, e.clientY - offset.dy);
+      const nextX = Math.max(PAD, Math.min(viewport.w - panelW - PAD, e.clientX - offset.dx));
+      const nextY = Math.max(PAD, Math.min(viewport.h - panelH - PAD, e.clientY - offset.dy));
+
+      setPos(nextX, nextY);
     };
 
     const onUp = () => {
@@ -153,7 +137,19 @@ export function useDockPosition({
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
-  }, [dragging, dragActivated, offset.dx, offset.dy, setPos, minDragPx]);
+  }, [
+    dragging,
+    dragActivated,
+    offset.dx,
+    offset.dy,
+    setPos,
+    minDragPx,
+    viewport.w,
+    viewport.h,
+    panelW,
+    panelH,
+    PAD,
+  ]);
 
   return {
     containerRef,
