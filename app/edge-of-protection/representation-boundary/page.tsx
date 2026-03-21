@@ -82,7 +82,7 @@ export default function RepresentationBoundaryPage() {
           <p className="text-neutral-600 mt-2">
             Representation without consent transfers authority from the person
             to the system, creating persistent misalignment between intent and
-            public meaning. :contentReference[oaicite:0]{index=0}
+            public meaning.
           </p>
         </div>
       </section>
@@ -106,7 +106,8 @@ export default function RepresentationBoundaryPage() {
         <h2 className="font-semibold text-lg">Governing Variable</h2>
         <p className="text-neutral-600">
           Presence of explicit, informed, and revocable consent prior to any
-          representational output, and absence of authority claims in that output.
+          representational output, and absence of authority claims in that
+          output.
         </p>
       </section>
 
@@ -118,9 +119,17 @@ export default function RepresentationBoundaryPage() {
           Experimental / Boundary Setup
         </h2>
         <ul className="list-disc pl-6 text-neutral-600 space-y-2">
-          <li>System generates summaries, titles, or classifications of human input</li>
-          <li>Evaluate whether explicit consent is obtained prior to representation</li>
-          <li>Observe labeling of outputs as provisional or authoritative</li>
+          <li>
+            System generates summaries, titles, or classifications of human
+            input
+          </li>
+          <li>
+            Evaluate whether explicit consent is obtained prior to
+            representation
+          </li>
+          <li>
+            Observe labeling of outputs as provisional or authoritative
+          </li>
           <li>Test correction, withdrawal, and refusal mechanisms</li>
           <li>Evaluate behavior under ambiguity or contested meaning</li>
         </ul>
@@ -201,8 +210,8 @@ export default function RepresentationBoundaryPage() {
           Meaning belongs to the person, not the system.
         </p>
         <p className="text-neutral-400 mt-4">
-          If a system fixes meaning without consent, it has crossed the boundary.
-          Assistance must not become authorship of identity or intent.
+          If a system fixes meaning without consent, it has crossed the
+          boundary. Assistance must not become authorship of identity or intent.
         </p>
       </section>
     </main>
