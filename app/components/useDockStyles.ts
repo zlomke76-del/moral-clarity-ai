@@ -26,20 +26,20 @@ export function useDockStyles({
   const skin = Skins.default;
 
   return useMemo(() => {
-    /* ------------------------------------------------------------------
-       Panel (chrome only — glass allowed here)
-    ------------------------------------------------------------------- */
     const panelStyle: React.CSSProperties = {
       position: "fixed",
-      left: PAD,
-      top: PAD,
+      left: 0,
+      top: 0,
       width: dockW,
       height: dockH,
-      background: skin.panelBg,
+      background:
+        "linear-gradient(180deg, rgba(9,16,32,0.96) 0%, rgba(7,12,24,0.985) 100%)",
       borderRadius: UI.radiusLg,
-      border: skin.border,
-      boxShadow: ministryOn ? UI.glowOn : UI.shadow,
-      backdropFilter: "blur(8px)", // ✔ glass stays on outer shell
+      border: "1px solid rgba(255,255,255,0.08)",
+      boxShadow: ministryOn
+        ? "0 24px 80px rgba(0,0,0,0.42), 0 0 0 1px rgba(251,191,36,0.08), 0 0 40px rgba(251,191,36,0.08)"
+        : "0 24px 80px rgba(0,0,0,0.42), 0 0 0 1px rgba(255,255,255,0.02)",
+      backdropFilter: "blur(12px)",
       display: "flex",
       flexDirection: "column",
       overflow: "hidden",
@@ -50,42 +50,39 @@ export function useDockStyles({
       zIndex: 60,
     };
 
-    /* ------------------------------------------------------------------
-       Transcript (AUTHORITATIVE READABILITY ZONE)
-       Fully opaque to prevent contrast collapse.
-    ------------------------------------------------------------------- */
     const transcriptStyle: React.CSSProperties = {
       flex: "1 1 auto",
-      minHeight: 0, // critical for scrolling in flex column
+      minHeight: 0,
       overflowY: "auto",
       overflowX: "hidden",
-      padding: "14px 16px",
+      padding: "16px 18px 18px",
       color: UI.text,
-      background: UI.surface1, // 🔒 OPAQUE — no blur, no alpha stacking
+      background:
+        "linear-gradient(180deg, rgba(10,20,40,0.98) 0%, rgba(9,18,34,1) 100%)",
     };
 
-    /* ------------------------------------------------------------------
-       Composer
-    ------------------------------------------------------------------- */
     const textareaStyle: React.CSSProperties = {
       width: "100%",
-      minHeight: 70,
-      maxHeight: 180,
+      minHeight: 74,
+      maxHeight: 190,
       resize: "none",
-      padding: "10px 12px",
+      padding: "12px 14px",
       borderRadius: UI.radiusMd,
-      border: UI.border,
-      background: UI.surface2,
+      border: "1px solid rgba(255,255,255,0.10)",
+      background: "rgba(255,255,255,0.04)",
       color: UI.text,
       fontSize: "15px",
-      lineHeight: "1.4",
+      lineHeight: "1.45",
       outline: "none",
+      backdropFilter: "blur(6px)",
+      boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.02)",
     };
 
     const composerWrapStyle: React.CSSProperties = {
-      borderTop: UI.edge,
-      background: UI.surface1,
-      padding: 10,
+      borderTop: "1px solid rgba(255,255,255,0.08)",
+      background: "rgba(10,14,24,0.92)",
+      backdropFilter: "blur(12px)",
+      padding: 12,
     };
 
     return {
@@ -94,15 +91,5 @@ export function useDockStyles({
       textareaStyle,
       composerWrapStyle,
     };
-  }, [
-    dockW,
-    dockH,
-    tx,
-    ty,
-    invisible,
-    ministryOn,
-    PAD,
-    skin.panelBg,
-    skin.border,
-  ]);
+  }, [dockW, dockH, tx, ty, invisible, ministryOn, PAD, skin.panelBg, skin.border]);
 }
