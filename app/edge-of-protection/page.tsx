@@ -113,7 +113,7 @@ function SignalPill({
   value: string;
 }) {
   return (
-    <div className="rounded-2xl border border-sky-950/45 bg-slate-950/65 px-4 py-3">
+    <div className="rounded-2xl border border-sky-950/45 bg-slate-950/65 px-4 py-3 shadow-[0_0_0_1px_rgba(59,130,246,0.04)]">
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-300">
         {label}
       </p>
@@ -219,7 +219,7 @@ export default function EdgeOfProtectionIndexPage() {
               />
               <SignalPill
                 label="Outcome"
-                value="Some outputs are not allowed to exist, even when they could."
+                value="Some outputs must not exist—even if they are correct."
               />
             </div>
           </div>
@@ -237,6 +237,33 @@ export default function EdgeOfProtectionIndexPage() {
               />
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ENFORCEMENT DECLARATION */}
+      <section className="mt-10 rounded-[2rem] border border-red-500/25 bg-[linear-gradient(180deg,rgba(127,29,29,0.16),rgba(15,23,42,0.92))] p-8 shadow-[0_0_0_1px_rgba(239,68,68,0.08),0_18px_56px_rgba(0,0,0,0.38)] md:p-10">
+        <div className="max-w-4xl">
+          <div className="inline-flex items-center rounded-full border border-red-500/30 bg-red-950/40 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-red-300">
+            Enforcement Boundary
+          </div>
+
+          <h2 className="mt-5 text-2xl font-semibold tracking-tight text-white md:text-[2rem]">
+            This edge does not merely describe behavior. It defines where outputs
+            are no longer admissible.
+          </h2>
+
+          <p className="mt-5 text-[16px] leading-8 text-slate-200">
+            If a condition governed by this edge is triggered, generation is not
+            softened, negotiated, or behaviorally redirected toward continued
+            interaction. The valid response is structural termination, refusal,
+            silence, or immediate human transfer.
+          </p>
+
+          <p className="mt-4 text-[16px] leading-8 text-slate-300">
+            This is not a preference layer. It is an emission boundary. Outputs
+            that cross it are not merely lower quality or less safe. They are
+            invalid.
+          </p>
         </div>
       </section>
 
@@ -288,8 +315,18 @@ export default function EdgeOfProtectionIndexPage() {
         </p>
       </section>
 
+      {/* INVALID OUTPUT CONDITION */}
+      <section className="mx-auto max-w-4xl rounded-[2rem] border border-slate-800/80 bg-slate-950/55 px-8 py-10 text-center shadow-[0_0_0_1px_rgba(59,130,246,0.04)]">
+        <p className="text-xl leading-9 text-white md:text-2xl">
+          An output that violates this edge is not merely incorrect.
+        </p>
+        <p className="mt-4 text-[16px] leading-8 text-slate-400">
+          It is invalid and must not exist.
+        </p>
+      </section>
+
       {/* PURPOSE / APPLICABILITY / DESIGN */}
-      <section className="rounded-[2rem] border border-sky-950/45 bg-slate-950/70 p-8 shadow-[0_0_0_1px_rgba(59,130,246,0.05),0_18px_56px_rgba(0,0,0,0.38)] backdrop-blur-sm md:p-10">
+      <section className="mt-12 rounded-[2rem] border border-sky-950/45 bg-slate-950/70 p-8 shadow-[0_0_0_1px_rgba(59,130,246,0.05),0_18px_56px_rgba(0,0,0,0.38)] backdrop-blur-sm md:p-10">
         <div className="grid gap-8 lg:grid-cols-3">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight text-white">
