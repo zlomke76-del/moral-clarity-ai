@@ -16,6 +16,8 @@ export const geometryDrivenPathogenSurfacesData: ConstraintPageData = {
     status: "NO-GO",
   },
 
+  constraintType: "NO_GO",
+
   systemConstraint: {
     statement:
       "Geometry-only antimicrobial claims are admissible only if suppression persists after wear, fouling, and environmental cycling.",
