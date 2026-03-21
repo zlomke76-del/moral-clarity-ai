@@ -1,230 +1,186 @@
 // app/whitepapers/passive-source-control/page.tsx
+// ============================================================
+// WHITE PAPER (UPGRADED TO CONSTRAINT FRAME)
+// Passive Source-Control Materials — NO-GO
+// ============================================================
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Passive Source-Control Materials: A NO-GO Assessment | Moral Clarity AI",
+    "Passive Source-Control Materials | Constraint Assessment | Moral Clarity AI",
   description:
-    "A physics-grounded evaluation of whether passive materials or geometry can bias particle formation or trajectories before aerosolization.",
-  openGraph: {
-    title:
-      "Passive Source-Control Materials: A NO-GO Assessment",
-    description:
-      "An honest assessment of passive, non-powered attempts to reduce aerosol risk at the emission source—and why they fail to scale.",
-    url: "https://moralclarity.ai/whitepapers/passive-source-control",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A constraint-bound evaluation of whether passive materials or geometry can bias particle formation or trajectories prior to aerosolization.",
+  robots: { index: true, follow: true },
 };
 
 export default function PassiveSourceControlWhitepaper() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Passive Source-Control Materials</h1>
-        <p className="lead">
-          <strong>
-            Can Materials Bias Particle Trajectories Before Aerosolization?
-          </strong>
-        </p>
+    <main className="mx-auto max-w-6xl px-6 py-20 space-y-10">
+      {/* HERO */}
+      <section className="rounded-[32px] border border-white/10 bg-gradient-to-br from-[#0b1220] via-[#0a0f1a] to-black p-10 shadow-[0_30px_120px_rgba(0,0,0,0.45)]">
+        <div className="space-y-5">
+          <div className="flex flex-wrap gap-3">
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/70">
+              White Paper
+            </span>
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/70">
+              Constraint Assessment
+            </span>
+            <span className="rounded-full border border-red-400/30 px-3 py-1 text-xs uppercase tracking-[0.18em] text-red-300">
+              NO-GO
+            </span>
+          </div>
 
-        <p className="text-sm text-muted-foreground">
-          White Paper · Public Reference · Moral Clarity AI
-        </p>
+          <h1 className="text-4xl font-semibold tracking-tight text-white md:text-5xl">
+            Passive Source-Control Materials
+          </h1>
 
-        <h2>Abstract</h2>
-        <p>
-          Source control is one of the most effective strategies for reducing
-          aerosol-based transmission risk. Beyond masks and filtration, interest
-          has emerged in whether passive materials or surface geometries—without
-          power, chemistry, or active airflow—can bias particle formation or
-          trajectories before aerosols become freely suspended. This paper
-          evaluates the physical plausibility, scalability, and ethical viability
-          of such passive source-control approaches. We conclude that while
-          limited physical effects exist under constrained conditions, they do
-          not scale reliably to real-world use.
-        </p>
+          <p className="max-w-3xl text-lg leading-8 text-white/75">
+            Evaluation of whether passive materials or geometry can bias droplet
+            formation or trajectories prior to aerosolization without airflow,
+            filtration, or active mechanisms. :contentReference[oaicite:0]{index=0}
+          </p>
+        </div>
+      </section>
 
-        <h2>1. Physical Plausibility</h2>
-        <p>
-          Certain physical mechanisms can, in principle, influence droplet
-          formation or early motion at the point of emission:
+      {/* CORE DOCTRINE */}
+      <section className="rounded-2xl border border-white/10 bg-black p-8">
+        <p className="text-xl text-white leading-8">
+          Source control is admissible only if emission characteristics are
+          measurably altered independent of airflow restriction or behavioral
+          change.
         </p>
-        <ul>
-          <li>
-            <strong>Droplet breakup dynamics:</strong> Wettability and surface
-            microstructure may bias droplet size toward larger, faster-settling
-            droplets.
-          </li>
-          <li>
-            <strong>Coalescence and size biasing:</strong> Structured surfaces
-            near the emission point may encourage early droplet merging.
-          </li>
-          <li>
-            <strong>Momentum dissipation or redirection:</strong> Ridges,
-            baffles, or porous barriers can alter initial trajectories.
-          </li>
-          <li>
-            <strong>Early interception or impaction:</strong> Close-range
-            materials may intercept droplets before full aerosolization.
-          </li>
-          <li>
-            <strong>Boundary-layer disruption:</strong> Microtexture can affect
-            droplet detachment and speed.
-          </li>
+        <p className="mt-3 text-white/60">
+          If effects collapse when confounds are removed, the system fails.
+        </p>
+      </section>
+
+      {/* TESTED ASSUMPTION + WHY */}
+      <section className="grid gap-6 lg:grid-cols-2">
+        <div className="rounded-xl border border-white/10 bg-white/[0.04] p-6">
+          <h2 className="text-lg font-semibold text-white">
+            Tested Assumption
+          </h2>
+          <p className="mt-3 text-white/70 leading-7">
+            Passive materials or geometry can bias droplet formation, size
+            distribution, or trajectory before aerosolization.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-white/[0.04] p-6">
+          <h2 className="text-lg font-semibold text-white">
+            Why This Matters
+          </h2>
+          <p className="mt-3 text-white/70 leading-7">
+            If valid, passive systems could provide low-cost upstream risk
+            reduction. If invalid, they create false confidence and displace
+            proven interventions.
+          </p>
+        </div>
+      </section>
+
+      {/* SYSTEM DEFINITION */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8 space-y-4">
+        <h2 className="text-2xl font-semibold text-white">
+          System Definition
+        </h2>
+        <p className="text-white/70 leading-8">
+          A passive material or geometric structure placed at or near the
+          emission source intended to alter droplet formation or trajectory
+          without relying on filtration, airflow, or active energy input.
+        </p>
+      </section>
+
+      {/* GOVERNING VARIABLE */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
+        <h2 className="text-2xl font-semibold text-white">
+          Governing Variable
+        </h2>
+        <p className="mt-3 text-white/70 leading-8">
+          Measurable change in droplet size distribution, velocity, or aerosol
+          fraction independent of airflow restriction and user behavior.
+        </p>
+      </section>
+
+      {/* BOUNDARY SETUP */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8 space-y-4">
+        <h2 className="text-2xl font-semibold text-white">
+          Boundary Setup
+        </h2>
+        <ul className="list-disc pl-6 text-white/70 space-y-2">
+          <li>High-speed imaging of droplet formation</li>
+          <li>Particle sizing at emission point</li>
+          <li>Matched airflow conditions with and without intervention</li>
+          <li>Controlled user behavior across trials</li>
+          <li>Variation across humidity and temperature</li>
         </ul>
-        <p>
-          These effects require direct, close-range physical interaction.
-          Benefits vanish rapidly as contact probability decreases. Any implicit
-          airflow obstruction introduces hidden filtration rather than pure
-          material causality.
+      </section>
+
+      {/* FALSIFICATION */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
+        <h2 className="text-2xl font-semibold text-white">
+          Binary Falsification Threshold
+        </h2>
+        <p className="mt-3 text-white/70 leading-8">
+          FAIL if changes in droplet size, momentum, or aerosol fraction
+          disappear when airflow and behavioral variables are controlled or fall
+          within measurement noise.
         </p>
+      </section>
 
-        <h2>2. Regime and Scale Analysis</h2>
-
-        <h3>Likely to Function</h3>
-        <ul>
-          <li>High-velocity, focused emission events (e.g., coughs, sneezes)</li>
-          <li>Constrained emission geometries with consistent placement</li>
-          <li>Point-of-care or point-of-exhaust contexts</li>
-        </ul>
-
-        <h3>Marginal or Context-Dependent</h3>
-        <ul>
-          <li>Normal breathing or speech</li>
-          <li>Variable posture, humidity, and temperature</li>
-          <li>Intermittent or inconsistent contact with materials</li>
-        </ul>
-
-        <h3>Expected to Fail</h3>
-        <ul>
-          <li>Fully aerosolized emissions</li>
-          <li>Poor fit or inconsistent usage</li>
-          <li>Room-scale or long-range transmission scenarios</li>
-        </ul>
-
-        <p>
-          Any benefit decays rapidly outside tightly controlled, close-contact
-          regimes and does not scale to population-level use.
+      {/* OPERATIONAL INTERPRETATION */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
+        <h2 className="text-2xl font-semibold text-white">
+          Operational Interpretation
+        </h2>
+        <p className="mt-3 text-white/70 leading-8">
+          Limited effects exist in constrained, close-contact regimes but decay
+          rapidly outside controlled conditions. Real-world variability dominates
+          any passive influence.
         </p>
+      </section>
 
-        <h2>3. Confounds and Failure Modes</h2>
-        <ul>
-          <li>
-            <strong>Airflow restriction:</strong> Apparent benefits often arise
-            from reduced airflow rather than material effects.
-          </li>
-          <li>
-            <strong>Behavioral modification:</strong> Users may alter posture or
-            emission intensity in response to devices.
-          </li>
-          <li>
-            <strong>Hygiene degradation:</strong> Moisture accumulation and
-            fouling degrade performance over time.
-          </li>
-          <li>
-            <strong>Comfort and compliance:</strong> Discomfort leads to misuse
-            or abandonment.
-          </li>
-          <li>
-            <strong>Misattribution:</strong> Environmental or measurement
-            artifacts may be mistaken for physical causality.
-          </li>
-        </ul>
+      {/* BOUNDARY OF CLAIM */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
+        <h2 className="text-2xl font-semibold text-white">
+          Boundary of Claim
+        </h2>
+        <p className="mt-3 text-white/70 leading-8">
+          Effects are admissible only in tightly constrained, short-range,
+          controlled environments. Any claim of scalable or population-level
+          source control constitutes failure.
+        </p>
+      </section>
 
-        <h2>4. Falsification Criteria</h2>
-        <p>
-          Decisive falsification requires:
-        </p>
-        <ul>
-          <li>
-            High-speed imaging and particle sizing at the emission point
-          </li>
-          <li>
-            Matched airflow conditions with and without the intervention
-          </li>
-          <li>
-            Controls isolating physical effects from behavioral changes
-          </li>
-          <li>
-            Repetition across users, humidity, and temperature
-          </li>
-        </ul>
-        <p>
-          <strong>NO-GO condition:</strong> If shifts in droplet size, momentum,
-          or aerosol fraction disappear when airflow and behavior are controlled,
-          or fall within measurement noise.
-        </p>
+      {/* PASS / FAIL */}
+      <section className="grid gap-6 lg:grid-cols-2">
+        <div className="rounded-2xl border border-green-400/20 bg-green-500/10 p-8">
+          <h3 className="text-lg font-semibold text-green-300">PASS</h3>
+          <p className="mt-3 text-green-200/80 leading-7">
+            Measurable, reproducible change in emission characteristics persists
+            independent of airflow and behavior.
+          </p>
+        </div>
 
-        <h2>5. Humanitarian and Ethical Assessment</h2>
-        <p>
-          Benefits are limited, incremental, and highly scenario-dependent.
-          Overstatement risks behavioral risk compensation and undermining of
-          proven interventions.
-        </p>
-        <p>
-          Ethical deployment requires explicit communication that such approaches
-          are supplementary only and do not replace masks, ventilation, or
-          established source-control measures.
-        </p>
+        <div className="rounded-2xl border border-red-400/20 bg-red-500/10 p-8">
+          <h3 className="text-lg font-semibold text-red-300">FAIL</h3>
+          <p className="mt-3 text-red-200/80 leading-7">
+            Effects are confounded, non-reproducible, or collapse under
+            real-world conditions.
+          </p>
+        </div>
+      </section>
 
-        <h2>6. Comparison to Existing Interventions</h2>
-        <ul>
-          <li>
-            <strong>Masks:</strong> Proven kinetic and filtration-based source
-            control.
-          </li>
-          <li>
-            <strong>Respirators:</strong> Robust performance across emission
-            variability.
-          </li>
-          <li>
-            <strong>Behavioral measures:</strong> Address risk at the source with
-            known trade-offs.
-          </li>
-          <li>
-            <strong>Ventilation:</strong> Reduces downstream risk but does not
-            modify source emission.
-          </li>
-          <li>
-            <strong>Passive materials:</strong> Fragile, regime-limited, and
-            unreliable at scale.
-          </li>
-        </ul>
-
-        <h2>7. Final Judgment</h2>
-        <p>
-          <strong>Decision: NO-GO.</strong>
+      {/* INVARIANT */}
+      <section className="rounded-2xl border border-white/10 bg-black p-10">
+        <p className="text-2xl text-white leading-9">
+          If control depends on conditions that cannot be enforced, it is not control.
         </p>
-        <p>
-          Passive, geometry- or material-only source-control interventions do not
-          provide reliable, scalable, or ethically defensible reduction in
-          aerosol transmission risk in real-world settings. Effects are narrow,
-          confounded, and prone to misinterpretation.
+        <p className="mt-4 text-white/60 leading-7">
+          Effects that vanish in reality cannot be claimed at scale.
         </p>
-
-        <p>
-          Further investigation is appropriate only in tightly controlled
-          research contexts. Public or policy-facing deployment is not justified.
-        </p>
-
-        <hr />
-
-        <p>
-          <strong>Note:</strong> This assessment was produced via structured
-          reasoning by <em>Solace</em>, Moral Clarity AI’s evaluation system, and is
-          published as a public reference.
-        </p>
-
-        <p className="text-sm text-muted-foreground">
-          Version 1.0 · White Paper · Updated only by revision
-        </p>
-      </article>
+      </section>
     </main>
   );
 }
