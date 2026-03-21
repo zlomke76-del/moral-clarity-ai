@@ -3,139 +3,242 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title:
-    "Human Supervision as a Failsafe in Partially Autonomous Systems | Edge of Practice — Moral Clarity AI",
+    "Human Supervision as a Failsafe — Short-Cycle Authority Boundary | Edge of Practice — Moral Clarity AI",
   description:
-    "An Edge of Practice examination of the assumption that human operators can reliably supervise and intervene in partially autonomous systems at scale.",
-  openGraph: {
-    title: "Human Supervision as a Failsafe in Partially Autonomous Systems",
-    description:
-      "A short-cycle assumption exposure examining human supervision limits in safety-critical autonomous systems.",
-    url: "https://moralclarity.ai/edge-of-practice/human-supervision-autonomy",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
+    "A short-cycle constraint test examining whether human supervision is admissible as a reliable failsafe in partially autonomous systems.",
   robots: {
     index: true,
     follow: true,
   },
 };
 
+function SectionCard({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-black/10 bg-white/70 p-6 shadow-sm">
+      <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-zinc-500">
+        {eyebrow}
+      </div>
+      <h2 className="mb-4 text-xl font-semibold">{title}</h2>
+      <div className="space-y-4 text-[15px] leading-7 text-zinc-700">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function SignalPill({
+  children,
+  tone = "neutral",
+}: {
+  children: React.ReactNode;
+  tone?: "neutral" | "fail" | "pass";
+}) {
+  const toneClass =
+    tone === "fail"
+      ? "border-rose-500/20 bg-rose-500/10 text-rose-700"
+      : tone === "pass"
+        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
+        : "border-zinc-300 bg-zinc-100 text-zinc-700";
+
+  return (
+    <span className={`inline-flex rounded-full border px-3 py-1 text-xs ${toneClass}`}>
+      {children}
+    </span>
+  );
+}
+
 export default function HumanSupervisionAutonomyPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Human Supervision as a Failsafe in Partially Autonomous Systems</h1>
+    <main className="mx-auto max-w-6xl px-6 py-16">
+      <div className="space-y-8">
 
-        <p className="text-sm opacity-70">
-          Edge of Practice · Automation · Human–Machine Interaction · Safety
-        </p>
+        {/* HERO */}
+        <section className="rounded-3xl border bg-gradient-to-br from-white to-zinc-100 p-10">
+          <div className="mb-4 flex flex-wrap gap-2">
+            <SignalPill>Edge of Practice</SignalPill>
+            <SignalPill tone="fail">Short-Cycle Falsification</SignalPill>
+            <SignalPill>Authority Boundary</SignalPill>
+          </div>
 
-        <h2>One-Sentence Assumption Under Test</h2>
-        <p>
-          Human operators can reliably supervise partially autonomous systems
-          and intervene effectively whenever system limits are reached.
-        </p>
+          <h1 className="text-4xl font-semibold">
+            Human Supervision as a Failsafe in Partially Autonomous Systems
+          </h1>
 
-        <h2>Why This Assumption Is Tolerated</h2>
-        <p>
-          Human oversight is formally present and legally emphasized. Training
-          materials and alerting systems exist to remind operators of
-          responsibility. Many interventions succeed under test conditions, and
-          failures are frequently attributed to misuse rather than structural
-          interaction limits.
-        </p>
+          <p className="mt-6 text-lg max-w-3xl text-zinc-700">
+            Human supervision is admissible as a failsafe only if operators can
+            reliably detect system failure and intervene within the required time
+            window under real-world conditions of sustained automation use.
+          </p>
 
-        <p>
-          The assumption persists because responsibility is formally assigned,
-          not because intervention is reliably achievable.
-        </p>
+          <div className="mt-8 bg-black text-white p-6 rounded-xl">
+            <div className="text-xs uppercase opacity-70 mb-2">
+              Core Doctrine
+            </div>
+            <p>
+              A failsafe is <strong>admissible</strong> only if it can reliably
+              act at the moment of failure. If intervention depends on degraded
+              cognition, delayed awareness, or misaligned reaction time, the
+              failsafe is structurally invalid.
+            </p>
+          </div>
+        </section>
 
-        <h2>Precise Restatement of the Assumption</h2>
-        <p>
-          The organization operates under the belief that human users, when
-          informed and attentive, can maintain sufficient situational awareness
-          to detect system failure modes and intervene within the time window
-          required to prevent harm. Implied is that alerting mechanisms,
-          cognitive readiness, and reaction time align with system behavior.
-          Unstated is whether human cognition can sustain this role under real-
-          world conditions of automation reliance.
-        </p>
+        {/* ASSUMPTION */}
+        <SectionCard
+          eyebrow="Tested Assumption"
+          title="Humans can reliably intervene when needed"
+        >
+          <p>
+            The system assumes that human operators can maintain sufficient
+            situational awareness to detect system limits and intervene
+            effectively whenever required.
+          </p>
+        </SectionCard>
 
-        <h2>Apparent Conditions for Validity — and Their Fragility</h2>
-        <p>
-          This assumption may appear valid in short trials, controlled
-          demonstrations, or low-complexity environments where system limits are
-          rare and human attention remains fully engaged.
-        </p>
+        {/* WHY IT PERSISTS */}
+        <SectionCard
+          eyebrow="Why This Assumption Persists"
+          title="Responsibility is assigned, not verified"
+        >
+          <ul>
+            <li>Human oversight is formally present</li>
+            <li>Training and alerts create perceived readiness</li>
+            <li>Successful interventions exist in controlled settings</li>
+            <li>Failures are attributed to misuse rather than system design</li>
+          </ul>
 
-        <p>
-          At scale, repeated exposure induces automation complacency, vigilance
-          decay, and cognitive offloading. Intervention windows shrink as system
-          capability increases, and human reaction time becomes misaligned with
-          machine decision speed.
-        </p>
+          <p>
+            The system appears safe because responsibility is declared—not
+            because intervention is consistently achievable.
+          </p>
+        </SectionCard>
 
-        <h2>Structural Failure Modes</h2>
+        {/* SYSTEM */}
+        <SectionCard
+          eyebrow="System Definition"
+          title="Human supervising autonomous system output"
+        >
+          <ul>
+            <li>Autonomous system performs primary task execution</li>
+            <li>Human operator remains passive until alert or anomaly</li>
+            <li>Intervention required within limited time window</li>
+            <li>Extended exposure to automation precedes intervention</li>
+          </ul>
+        </SectionCard>
 
-        <h3>Irreversible Cognitive Dead Zones</h3>
-        <p>
-          Extended reliance on automation degrades situational awareness. When
-          takeover is required, operators lack the contextual grounding needed
-          to intervene effectively, even when alerts are technically delivered.
-        </p>
+        {/* GOVERNING VARIABLE */}
+        <SectionCard
+          eyebrow="Governing Variable"
+          title="Alignment of cognition, awareness, and reaction window"
+        >
+          <p>
+            The governing variable is whether human cognitive state remains
+            aligned with system state at the moment intervention is required.
+          </p>
 
-        <h3>Alert Interpretation Collapse</h3>
-        <p>
-          In time-critical scenarios, alerts compete with sensory load and
-          stress. Humans fail not because alerts are absent, but because parsing
-          and action exceed cognitive limits within the available window.
-        </p>
+          <ul>
+            <li>Awareness must be current</li>
+            <li>Interpretation must be immediate</li>
+            <li>Action must occur within system time constraints</li>
+          </ul>
 
-        <h2>Epistemic Boundary</h2>
+          <p>
+            Failure in any of these dimensions invalidates the failsafe.
+          </p>
+        </SectionCard>
 
-        <p>
-          <strong>What Can Be Known Pre-Deployment:</strong> Alert latency,
-          nominal reaction times, and supervised performance under test
-          conditions.
-        </p>
+        {/* FAILURE MODES */}
+        <SectionCard
+          eyebrow="Failure Signatures"
+          title="What breaks the claim"
+        >
+          <ul>
+            <li>Loss of situational awareness due to automation reliance</li>
+            <li>Delayed or incorrect interpretation of alerts</li>
+            <li>Reaction time exceeding available intervention window</li>
+            <li>Cognitive overload under stress conditions</li>
+          </ul>
 
-        <p>
-          <strong>What Cannot Be Known Until Failure Occurs:</strong> Cumulative
-          cognitive effects of long-term automation reliance, context-dependent
-          vigilance collapse, and real-world handoff failure under stress.
-        </p>
+          <p>
+            These are structural, not incidental, failure modes.
+          </p>
+        </SectionCard>
 
-        <p>
-          Where certainty ends, supervision cannot be treated as a reliable
-          failsafe.
-        </p>
+        {/* VERDICT */}
+        <section className="grid gap-6 lg:grid-cols-2">
+          <section className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-8">
+            <h2 className="text-3xl font-semibold text-emerald-800">PASS</h2>
+            <p className="mt-4 text-sm">
+              Humans reliably detect, interpret, and act within required
+              intervention windows across real-world operating conditions.
+            </p>
+          </section>
 
-        <h2>Disentitlement</h2>
-        <p>
-          On the basis of this assumption, no claim that human supervision
-          reliably mitigates system failure at scale is justified. Assigning
-          responsibility does not guarantee capacity. Training and warnings do
-          not overcome structural cognitive limits.
-        </p>
+          <section className="rounded-3xl border border-rose-500/20 bg-rose-500/10 p-8">
+            <h2 className="text-3xl font-semibold text-rose-800">FAIL</h2>
+            <p className="mt-4 text-sm">
+              Any consistent misalignment between system behavior and human
+              intervention capacity under real conditions.
+            </p>
+          </section>
+        </section>
 
-        <h2>Steward’s Note</h2>
-        <p>
-          Positioning humans as the final safety layer transfers risk onto
-          operators without ensuring they can meaningfully bear it. This
-          assumption displaces system responsibility into moments of crisis,
-          where failure becomes inevitable rather than exceptional.
-        </p>
+        {/* INTERPRETATION */}
+        <SectionCard
+          eyebrow="Operational Interpretation"
+          title="What failure means"
+        >
+          <p>
+            Failure indicates that human supervision is not a true failsafe, but
+            a deferred liability point.
+          </p>
 
-        <hr />
+          <p>
+            Responsibility is transferred to the human at the exact moment their
+            capacity is least reliable.
+          </p>
+        </SectionCard>
 
-        <p className="text-sm opacity-70">
+        {/* DISENTITLEMENT */}
+        <SectionCard
+          eyebrow="Disentitlement"
+          title="What can no longer be claimed"
+        >
+          <p>
+            No claim that human supervision reliably mitigates autonomous system
+            failure at scale is admissible if intervention capacity cannot be
+            guaranteed under real-world conditions.
+          </p>
+        </SectionCard>
+
+        {/* INVARIANT */}
+        <section className="rounded-3xl border bg-zinc-950 text-white p-8">
+          <p className="text-2xl font-semibold">
+            A failsafe must act faster than failure.
+          </p>
+          <p className="mt-4 opacity-80">
+            If intervention depends on degraded awareness or delayed cognition,
+            it is not a failsafe—it is a narrative.
+          </p>
+        </section>
+
+        <p className="text-sm text-zinc-500">
           Part of the{" "}
           <Link href="/edge-of-practice">
             Edge of Practice short-cycle experiment index
           </Link>
           .
         </p>
-      </article>
+
+      </div>
     </main>
   );
 }
