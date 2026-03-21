@@ -16,6 +16,8 @@ export const bioBasedDiacidPetData: ConstraintPageData = {
     status: "CONDITIONAL",
   },
 
+  constraintType: "CLAIM",
+
   systemConstraint: {
     statement:
       "Renewable substitution is admissible only if FDCA-derived structure remains structurally retained after extraction.",
