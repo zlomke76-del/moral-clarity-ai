@@ -1,202 +1,208 @@
-// app/edge-of-practice/tpu-segmental-network-decoupling/page.tsx
-// ============================================================
-// EDGE OF PRACTICE — SHORT-CYCLE EXPERIMENT
-// ============================================================
-// Experiment: TPU Segmental Network Decoupling Test
-// Scope: Polymer molecular invariants (property separability)
-// Status: Canonical, fixed at publication
-// ============================================================
-
 import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
   title:
-    "TPU Segmental Network Decoupling Test | Edge of Practice | Moral Clarity AI",
+    "TPU Segmental Network Decoupling — Property Separability Collapse Test | Moral Clarity AI",
   description:
-    "A short-cycle experiment testing whether mechanically indistinguishable TPU parts can silently diverge in transport behavior due to reset-resistant segmental network reconfiguration.",
+    "A short-cycle falsification testing whether mechanically indistinguishable TPU systems can diverge in transport behavior due to reset-resistant segmental network reconfiguration.",
   robots: {
     index: true,
     follow: true,
   },
-  openGraph: {
-    title: "TPU Segmental Network Decoupling Test",
-    description:
-      "Tests the collapse of property separability in thermoplastic polyurethane under mechanically invisible segmental reconfiguration.",
-    type: "article",
-  },
 };
 
-export const dynamic = "force-static";
+function SectionCard({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-black/10 bg-white/70 p-6 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+      <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
+        {eyebrow}
+      </div>
+      <h2 className="mb-4 text-xl font-semibold text-zinc-950 dark:text-zinc-50">
+        {title}
+      </h2>
+      <div className="space-y-4 text-[15px] leading-7 text-zinc-700 dark:text-zinc-300">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function SignalPill({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex rounded-full border border-zinc-300 bg-zinc-100 px-3 py-1 text-xs text-zinc-700 dark:border-white/10 dark:bg-white/10 dark:text-zinc-300">
+      {children}
+    </span>
+  );
+}
 
 export default function TPUSegmentalNetworkDecouplingPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <header>
-          <p className="text-sm uppercase tracking-wide text-neutral-400">
-            Edge of Practice · Short-Cycle Experiment
+    <main className="mx-auto max-w-6xl px-6 py-16 md:px-8 md:py-20">
+      <div className="space-y-8">
+
+        {/* HERO */}
+        <section className="rounded-3xl border border-black/10 bg-gradient-to-br from-white to-zinc-100 p-10 dark:border-white/10 dark:from-zinc-950 dark:to-zinc-900">
+          <div className="mb-4 flex flex-wrap gap-2">
+            <SignalPill>Edge of Practice</SignalPill>
+            <SignalPill>Short-Cycle Falsification</SignalPill>
+            <SignalPill>Hidden-State Divergence</SignalPill>
+          </div>
+
+          <h1 className="text-4xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50 md:text-5xl">
+            TPU Segmental Network Decoupling
+          </h1>
+
+          <p className="mt-6 max-w-3xl text-lg leading-8 text-zinc-700 dark:text-zinc-300">
+            A material is admissible as property-separable only if identical
+            mechanical performance guarantees equivalence of transport behavior.
+            If transport diverges while mechanics remain matched, separability is
+            invalid.
           </p>
-          <h1>TPU Segmental Network Decoupling Test</h1>
-          <p className="text-lg text-neutral-400">
-            Mechanical equivalence masking reset-resistant segmental
-            reconfiguration and barrier divergence in thermoplastic polyurethane
+
+          <div className="mt-8 rounded-2xl border border-zinc-200 bg-black p-6 text-white">
+            <div className="mb-2 text-[11px] uppercase tracking-[0.24em] text-zinc-400">
+              Core Doctrine
+            </div>
+            <p className="text-base leading-7 md:text-lg">
+              If two materials behave the same mechanically but differently
+              functionally, then the governing state is hidden.
+            </p>
+          </div>
+        </section>
+
+        {/* ASSUMPTION */}
+        <SectionCard
+          eyebrow="Tested Assumption"
+          title="Mechanical equivalence guarantees functional equivalence"
+        >
+          <p>
+            Industry assumes that passing tensile, modulus, and elongation
+            thresholds certifies equivalence across transport and barrier
+            performance.
           </p>
-        </header>
+        </SectionCard>
 
-        <hr />
+        {/* FAILURE */}
+        <SectionCard
+          eyebrow="Structural Failure"
+          title="Segmental networks decouple observables"
+        >
+          <p>
+            Hydrogen-bonded soft–hard segment topology can reconfigure under
+            sub-yield conditioning without altering bulk mechanical signatures.
+          </p>
 
-        <h2>Hidden Assumption</h2>
-        <p>
-          Separability: in thermoplastic polyurethane (TPU), passing mechanical
-          acceptance tests (tensile strength, modulus, elongation) certifies
-          equivalence of transport and barrier performance; segmental hydrogen
-          bond network rearrangement cannot induce substantial permeability
-          changes without corresponding mechanical signature.
-        </p>
+          <p>
+            This creates hidden-state divergence: identical macroscopic response,
+            different molecular transport pathways.
+          </p>
+        </SectionCard>
 
-        <h2>Why This Assumption Persists</h2>
-        <p>
-          Industry acceptance practices privilege tensile and abrasion metrics
-          because they are fast, standardized, and user-visible. Segmental
-          hydrogen bonding and soft–hard domain topology are presumed to track
-          mechanical integrity, not functional barrier behavior. Once mechanical
-          specification is met, permeability is rarely re-verified, reinforcing
-          the presumption that mechanical and transport states are inseparable.
-        </p>
+        {/* GOVERNING VARIABLE */}
+        <SectionCard
+          eyebrow="Governing Variable"
+          title="Segmental network topology"
+        >
+          <p>
+            The governing variable is the internal segmental hydrogen-bond
+            network and its history-dependent configuration.
+          </p>
 
-        <h2>Minimal Falsification Experiment</h2>
+          <ul>
+            <li>Mechanics → bulk averaged response</li>
+            <li>Transport → pathway-sensitive to microstructure</li>
+          </ul>
+        </SectionCard>
 
-        <h3>Material</h3>
-        <ul>
-          <li>
-            Single production lot of <strong>ether-based TPU</strong> film or
-            plaque (no fillers, blends, or plasticizers; batch verified)
-          </li>
-          <li>
-            Prepare <strong>50 identical, standardized specimens</strong>
-          </li>
-        </ul>
+        {/* EXPERIMENT */}
+        <SectionCard
+          eyebrow="Minimal Falsification"
+          title="Mechanical equivalence, transport divergence"
+        >
+          <ul>
+            <li>Induce history-dependent states (humidity, strain, cycling)</li>
+            <li>Filter by strict mechanical indistinguishability</li>
+            <li>Measure WVTR / OTR</li>
+            <li>Validate with DMA (tan δ shift / broadening)</li>
+          </ul>
 
-        <h3>Condition History Induction</h3>
-        <p>Divide specimens into five groups (n = 10):</p>
-        <ul>
-          <li>
-            <strong>Group A:</strong> No treatment (baseline control)
-          </li>
-          <li>
-            <strong>Group B:</strong> Moderate humidity soak (75% RH, 72 h)
-          </li>
-          <li>
-            <strong>Group C:</strong> Cyclic humidity (25% ↔ 75% RH, 12 h per
-            step, 6 cycles)
-          </li>
-          <li>
-            <strong>Group D:</strong> Static sub-yield tensile pre-strain (15% of
-            yield, held 24 h, then unloaded)
-          </li>
-          <li>
-            <strong>Group E:</strong> Combined humidity cycling (as Group C) +
-            sub-yield pre-strain (as Group D), synchronized
-          </li>
-        </ul>
-        <p>
-          No group may exceed yield or display any visible deformation. All
-          groups equilibrate <strong>48 h at 25 °C, 50% RH</strong> before
-          testing.
-        </p>
+          <p>
+            Only specimens passing mechanical equivalence are admissible for
+            transport comparison.
+          </p>
+        </SectionCard>
 
-        <h3>Mechanical Indistinguishability Gate</h3>
-        <p>Test 5 specimens per group. Require:</p>
-        <ul>
-          <li>Yield strength and UTS within ±3% of control mean</li>
-          <li>Modulus and elongation within ±5%</li>
-          <li>No whitening, cracking, or necking</li>
-        </ul>
-        <p>
-          Groups failing any criterion are excluded from further analysis; only
-          mechanically indistinguishable sets advance.
-        </p>
+        {/* FAILURE CONDITION */}
+        <SectionCard
+          eyebrow="Failure Signature"
+          title="Separability collapse"
+        >
+          <ul>
+            <li>≥30% transport divergence (WVTR / OTR)</li>
+            <li>≥5 °C Tg shift or ≥20% tan δ broadening</li>
+            <li>No mechanical differentiation</li>
+            <li>Persistence after reset anneal</li>
+          </ul>
 
-        <h3>Functional Proxy — Barrier / Transport</h3>
-        <p>
-          On remaining 5 specimens per group, measure{" "}
-          <strong>WVTR or OTR</strong> using the same fixture, randomized order,
-          under standardized test conditions.
-        </p>
+          <p>
+            This constitutes a categorical break: properties no longer track
+            together.
+          </p>
+        </SectionCard>
 
-        <h3>Molecular Proxy — Segmental State</h3>
-        <p>
-          Run <strong>DMA temperature sweep</strong> on matched specimens. Record
-          tan&nbsp;δ peak position and width in the soft-segment T<sub>g</sub>{" "}
-          region.
-        </p>
+        {/* CRITICAL INSIGHT */}
+        <SectionCard
+          eyebrow="Critical Insight"
+          title="Reset resistance proves structural change"
+        >
+          <p>
+            If divergence survives thermal anneal, the system is not temporarily
+            perturbed—it has transitioned into a new metastable configuration.
+          </p>
+        </SectionCard>
 
-        <h3>Reversibility Strike (Post-Divergence)</h3>
-        <p>
-          For any group showing barrier or molecular divergence, apply reset
-          anneal:
-        </p>
-        <ul>
-          <li>
-            <strong>80 °C × 24 h</strong>, dry air, no load
-          </li>
-          <li>
-            Re-equilibrate <strong>48 h at 25 °C, 50% RH</strong>
-          </li>
-          <li>Repeat permeability and DMA testing</li>
-        </ul>
+        {/* INTERPRETATION */}
+        <SectionCard
+          eyebrow="Corrected Interpretation"
+          title="Properties are not intrinsically coupled"
+        >
+          <p>
+            Mechanical and transport properties are not guaranteed to co-vary.
+            They are projections of different aspects of internal structure.
+          </p>
+        </SectionCard>
 
-        <h2>Primary Readout</h2>
-        <ul>
-          <li>
-            Discontinuous or threshold shift in transport (≥30% change in
-            WVTR/OTR or non-monotonic jump)
-          </li>
-          <li>
-            Accompanied by ≥5 °C tan&nbsp;δ shift or ≥20% peak broadening (DMA)
-          </li>
-          <li>All while mechanical parameters remain matched to control</li>
-        </ul>
+        {/* INVARIANT */}
+        <section className="rounded-3xl border border-black/10 bg-zinc-950 px-8 py-10 text-white">
+          <div className="mb-3 text-xs uppercase tracking-[0.24em] text-zinc-400">
+            Invariant
+          </div>
+          <p className="max-w-4xl text-2xl font-semibold leading-10 tracking-tight md:text-3xl">
+            Matching outputs do not imply matching states.
+          </p>
+          <p className="mt-4 max-w-3xl text-base leading-8 text-zinc-300">
+            If different internal structures produce identical mechanical
+            behavior, then mechanical testing cannot certify functional
+            equivalence.
+          </p>
+        </section>
 
-        <h2>Pass / Fail Threshold</h2>
-        <p>The assumption fails if any treatment group:</p>
-        <ul>
-          <li>Passes the mechanical indistinguishability gate</li>
-          <li>
-            Shows ≥30% transport property change (WVTR/OTR) versus control
-          </li>
-          <li>
-            Shows ≥5 °C shift or ≥20% broadening of tan&nbsp;δ in the
-            soft-segment region
-          </li>
-          <li>
-            Retains divergence after standardized reset anneal
-          </li>
-        </ul>
-
-        <h2>Embarrassing Flip Condition</h2>
-        <p>
-          Discovery that TPU remains fully within mechanical specification while
-          undergoing reset-resistant segmental network reconfiguration that
-          silently alters barrier functionality directly falsifies separability.
-          Mechanical testing alone is disqualified as a proxy for environmental,
-          chemical, or transport equivalence.
-        </p>
-
-        <hr />
-
-        <p className="text-sm text-neutral-400">
-          This experiment is fixed at publication and revised only by explicit
-          versioning to preserve epistemic continuity.
-        </p>
-
-        <p className="mt-6">
-          <Link href="/edge-of-practice" className="no-underline">
+        <p className="text-sm text-zinc-500">
+          <Link href="/edge-of-practice">
             ← Back to Edge of Practice Index
           </Link>
         </p>
-      </article>
+
+      </div>
     </main>
   );
 }
