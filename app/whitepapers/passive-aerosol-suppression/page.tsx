@@ -39,7 +39,7 @@ export default function PassiveAerosolSuppressionWhitepaper() {
           <p className="max-w-3xl text-lg leading-8 text-white/75">
             Evaluation of whether passive materials or geometry can reduce
             aerosol persistence at room scale without power, filtration, or
-            chemistry. :contentReference[oaicite:0]{index=0}
+            chemistry.
           </p>
         </div>
       </section>
@@ -113,7 +113,7 @@ export default function PassiveAerosolSuppressionWhitepaper() {
           <li>No active airflow, filtration, or ionization</li>
           <li>Repeated aerosol decay measurements (0.3–10 μm)</li>
           <li>Controlled temperature and humidity</li>
-          <li>Occupied vs unoccupied conditions</li>
+          <li>Occupied versus unoccupied conditions</li>
         </ul>
       </section>
 
