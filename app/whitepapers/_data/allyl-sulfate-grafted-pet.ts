@@ -16,6 +16,8 @@ export const allylSulfateGraftedPetData: ConstraintPageData = {
     status: "CONDITIONAL",
   },
 
+  constraintType: "CHARGE_RETENTION",
+
   systemConstraint: {
     statement:
       "Charge-based functionality is admissible only if sulfate groups remain structurally retained after extraction stress.",
