@@ -1,212 +1,182 @@
 // app/whitepapers/geometry-driven-pathogen-surfaces/page.tsx
+// ============================================================
+// WHITE PAPER (UPGRADED TO CONSTRAINT FRAME)
+// Geometry-Driven Pathogen-Hostile Surfaces — NO-GO
+// ============================================================
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Geometry-Driven Pathogen-Hostile Surfaces: A NO-GO Assessment | Moral Clarity AI",
+    "Geometry-Driven Pathogen-Hostile Surfaces: Constraint Assessment | Moral Clarity AI",
   description:
-    "A physics- and biology-grounded evaluation of whether surface geometry alone can reliably suppress pathogens, and why it fails at scale.",
-  openGraph: {
-    title:
-      "Geometry-Driven Pathogen-Hostile Surfaces: A NO-GO Assessment",
-    description:
-      "An honest assessment of the physical plausibility, limits, and ethical risks of geometry-only antimicrobial surfaces.",
-    url: "https://moralclarity.ai/whitepapers/geometry-driven-pathogen-surfaces",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A constraint-bound evaluation of whether surface geometry alone can produce durable pathogen suppression. Final determination: NO-GO.",
+  robots: { index: true, follow: true },
 };
 
-export default function GeometryDrivenPathogenSurfacesWhitepaper() {
+export default function Page() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Geometry-Driven Pathogen-Hostile Surfaces</h1>
-        <p className="lead">
-          <strong>
-            Evaluation of Physical Plausibility, Limits, and Ethical Deployment
-          </strong>
-        </p>
+    <main className="mx-auto max-w-6xl px-6 py-20 space-y-10">
+      {/* HERO */}
+      <section className="rounded-[32px] border border-white/10 bg-gradient-to-br from-[#0b1220] via-[#0a0f1a] to-black p-10 shadow-[0_30px_120px_rgba(0,0,0,0.45)]">
+        <div className="space-y-5">
+          <div className="flex flex-wrap gap-3">
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/70">
+              White Paper
+            </span>
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/70">
+              Constraint Assessment
+            </span>
+            <span className="rounded-full border border-red-400/30 px-3 py-1 text-xs uppercase tracking-[0.18em] text-red-300">
+              NO-GO
+            </span>
+          </div>
 
-        <p className="text-sm text-muted-foreground">
-          White Paper · Public Reference · Moral Clarity AI
-        </p>
+          <h1 className="text-4xl font-semibold tracking-tight text-white md:text-5xl">
+            Geometry-Driven Pathogen-Hostile Surfaces
+          </h1>
 
-        <h2>Abstract</h2>
-        <p>
-          Inspired by biological surfaces and laboratory demonstrations,
-          geometry-driven antimicrobial designs propose suppressing pathogens
-          through surface micro- or meso-scale topography alone—without chemicals,
-          metals, or electronics. This paper evaluates whether such approaches are
-          physically grounded, durable, and ethically deployable in real-world
-          environments. While geometry-mediated effects exist under controlled
-          conditions, we find that they are highly regime-limited, fragile, and
-          prone to rapid functional collapse at scale.
-        </p>
+          <p className="max-w-3xl text-lg leading-8 text-white/75">
+            Evaluation of whether surface geometry alone is admissible as a
+            durable pathogen-suppression mechanism under real-world conditions.
+          </p>
+        </div>
+      </section>
 
-        <h2>1. Physical Plausibility</h2>
-        <p>
-          Geometry alone can, in narrowly defined conditions, impede some bacteria
-          through:
+      {/* CORE DOCTRINE */}
+      <section className="rounded-2xl border border-white/10 bg-black p-8">
+        <p className="text-xl text-white leading-8">
+          Geometry-only antimicrobial claims are admissible only if suppression
+          persists after wear, fouling, and environmental cycling.
         </p>
-        <ul>
-          <li>
-            <strong>Mechanical membrane stress or rupture:</strong> High-aspect-ratio
-            features can deform or rupture bacterial membranes if dimensions and
-            spacing are precisely tuned.
-          </li>
-          <li>
-            <strong>Adhesion frustration:</strong> Feature sizes that interfere with
-            anchoring reduce stable adhesion for some species.
-          </li>
-          <li>
-            <strong>Biofilm nucleation disruption:</strong> Disordered geometries
-            may delay early matrix formation.
-          </li>
-          <li>
-            <strong>Micro-scale fluid and drying effects:</strong> Topography can
-            locally increase shear or drying stress.
-          </li>
+        <p className="mt-3 text-white/60">
+          If suppression collapses under real-world conditions, the mechanism
+          fails as a deployable system.
+        </p>
+      </section>
+
+      {/* TESTED ASSUMPTION */}
+      <section className="grid gap-6 lg:grid-cols-2">
+        <div className="rounded-xl border border-white/10 bg-white/[0.04] p-6">
+          <h2 className="text-lg font-semibold text-white">
+            Tested Assumption
+          </h2>
+          <p className="mt-3 text-white/70 leading-7">
+            Surface geometry alone can provide durable, chemical-free pathogen
+            suppression.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-white/[0.04] p-6">
+          <h2 className="text-lg font-semibold text-white">
+            Why This Matters
+          </h2>
+          <p className="mt-3 text-white/70 leading-7">
+            If true, geometry-based systems would offer low-cost, passive,
+            non-toxic antimicrobial protection. If false, deployment introduces
+            false confidence and systemic risk.
+          </p>
+        </div>
+      </section>
+
+      {/* SYSTEM DEFINITION */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8 space-y-4">
+        <h2 className="text-2xl font-semibold text-white">
+          System Definition
+        </h2>
+        <p className="text-white/70 leading-8">
+          A surface whose pathogen suppression is derived solely from
+          micro- or meso-scale geometry, with no contribution from chemistry,
+          coatings, or active mechanisms. :contentReference[oaicite:0]{index=0}
+        </p>
+      </section>
+
+      {/* GOVERNING VARIABLE */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
+        <h2 className="text-2xl font-semibold text-white">
+          Governing Variable
+        </h2>
+        <p className="mt-3 text-white/70 leading-8">
+          Persistence of geometric effectiveness after environmental exposure:
+          fouling, abrasion, moisture, and multi-species colonization.
+        </p>
+      </section>
+
+      {/* BOUNDARY SETUP */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8 space-y-4">
+        <h2 className="text-2xl font-semibold text-white">
+          Boundary Setup
+        </h2>
+        <ul className="list-disc pl-6 text-white/70 space-y-2">
+          <li>Chemically identical flat vs textured controls</li>
+          <li>Wear and abrasion cycling</li>
+          <li>Organic fouling exposure</li>
+          <li>Wet–dry environmental cycling</li>
+          <li>Mixed-species biofilm exposure</li>
         </ul>
-        <p>
-          These mechanisms are geometry-driven only when material chemistry and
-          surface energy are held constant. Many reported effects conflate geometry
-          with chemical or surface-energy changes.
+      </section>
+
+      {/* FALSIFICATION */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
+        <h2 className="text-2xl font-semibold text-white">
+          Binary Falsification Threshold
+        </h2>
+        <p className="mt-3 text-white/70 leading-8">
+          FAIL if no durable, statistically significant suppression remains
+          after realistic degradation conditions.
         </p>
+      </section>
 
-        <h2>2. Regime Analysis</h2>
-
-        <h3>Reliable Regimes</h3>
-        <ul>
-          <li>Dry, well-controlled environments</li>
-          <li>Minimal organic fouling</li>
-          <li>Preserved micro-scale feature integrity</li>
-          <li>Early-stage, single-species colonization</li>
-        </ul>
-
-        <h3>Marginal or Context-Dependent Regimes</h3>
-        <ul>
-          <li>Intermittent moisture or wet–dry cycling</li>
-          <li>Moderate organic load</li>
-          <li>Routine but gentle cleaning</li>
-          <li>Multi-species exposure</li>
-        </ul>
-
-        <h3>Expected Failure Regimes</h3>
-        <ul>
-          <li>High-humidity or continuously wet environments</li>
-          <li>Heavy organic fouling</li>
-          <li>Mechanical abrasion and wear</li>
-          <li>Frequent aggressive cleaning</li>
-          <li>Mature or mixed biofilm communities</li>
-        </ul>
-
-        <p>
-          In real-world settings, beneficial effects typically decay as surfaces
-          age, collect debris, or experience mechanical stress.
+      {/* OPERATIONAL INTERPRETATION */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
+        <h2 className="text-2xl font-semibold text-white">
+          Operational Interpretation
+        </h2>
+        <p className="mt-3 text-white/70 leading-8">
+          Geometry may delay early-stage colonization in controlled conditions,
+          but does not provide persistent suppression under real-world use.
         </p>
+      </section>
 
-        <h2>3. Evolutionary and Biological Limits</h2>
-        <p>
-          Bacteria exhibit significant adaptive capacity. Over time, they may:
+      {/* BOUNDARY OF CLAIM */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
+        <h2 className="text-2xl font-semibold text-white">
+          Boundary of Claim
+        </h2>
+        <p className="mt-3 text-white/70 leading-8">
+          Effects are admissible only in tightly controlled, low-fouling,
+          low-wear environments. Any claim of durable antimicrobial protection
+          beyond these conditions constitutes failure.
         </p>
-        <ul>
-          <li>Alter adhesion strategies</li>
-          <li>Increase extracellular matrix production</li>
-          <li>Change morphology to bypass geometric constraints</li>
-        </ul>
-        <p>
-          Geometry may delay colonization but does not constitute an irreducible
-          barrier. Community-level behavior rapidly erodes single-mechanism
-          defenses.
-        </p>
+      </section>
 
-        <h2>4. Falsification Criteria</h2>
-        <p>
-          Decisive falsification requires:
-        </p>
-        <ul>
-          <li>
-            Chemically identical flat and textured controls
-          </li>
-          <li>
-            Wear, abrasion, and organic fouling cycling prior to testing
-          </li>
-          <li>
-            Long-duration, mixed-species biofilm assays
-          </li>
-        </ul>
-        <p>
-          <strong>NO-GO condition:</strong> No statistically significant or durable
-          suppression beyond that achieved by routine cleaning or maintenance
-          after realistic degradation.
-        </p>
+      {/* PASS / FAIL */}
+      <section className="grid gap-6 lg:grid-cols-2">
+        <div className="rounded-2xl border border-green-400/20 bg-green-500/10 p-8">
+          <h3 className="text-lg font-semibold text-green-300">PASS</h3>
+          <p className="mt-3 text-green-200/80 leading-7">
+            Suppression persists after wear, fouling, and environmental cycling.
+          </p>
+        </div>
 
-        <h2>5. Humanitarian and Ethical Assessment</h2>
-        <p>
-          While non-toxic and power-free, geometry-only approaches carry
-          substantial ethical risk if overclaimed. Users may gain false
-          confidence, neglecting proven hygiene practices.
-        </p>
-        <p>
-          Equity benefits are limited by rapid functional decay in real-world
-          environments. Ethical deployment requires explicit communication that
-          such surfaces are, at best, supportive and transient.
-        </p>
+        <div className="rounded-2xl border border-red-400/20 bg-red-500/10 p-8">
+          <h3 className="text-lg font-semibold text-red-300">FAIL</h3>
+          <p className="mt-3 text-red-200/80 leading-7">
+            Suppression collapses under real-world conditions.
+          </p>
+        </div>
+      </section>
 
-        <h2>6. Comparison to Existing Approaches</h2>
-        <ul>
-          <li>
-            <strong>Chemical coatings:</strong> More robust but face toxicity and
-            durability trade-offs.
-          </li>
-          <li>
-            <strong>Metal surfaces:</strong> Persistent antimicrobial action with
-            higher cost and material constraints.
-          </li>
-          <li>
-            <strong>Active sterilization:</strong> Most reliable, but requires
-            power and maintenance.
-          </li>
-          <li>
-            <strong>Geometry-only surfaces:</strong> Lowest maintenance, but least
-            durable and most regime-limited.
-          </li>
-        </ul>
-
-        <h2>7. Final Judgment</h2>
-        <p>
-          <strong>Decision: NO-GO.</strong>
+      {/* INVARIANT */}
+      <section className="rounded-2xl border border-white/10 bg-black p-10">
+        <p className="text-2xl text-white leading-9">
+          A system that only works before reality touches it does not work.
         </p>
-        <p>
-          Geometry-driven pathogen-hostile surfaces relying solely on topography
-          do not deliver robust, durable, or broad-spectrum suppression in
-          real-world, high-risk, or long-duration settings. Observed effects are
-          real but fragile, regime-limited, and ethically hazardous if overstated.
+        <p className="mt-4 text-white/60 leading-7">
+          If performance depends on ideal conditions, it is not a deployable
+          constraint.
         </p>
-
-        <p>
-          Further work is justified only in research or tightly controlled pilot
-          contexts with explicit acknowledgment of limits and failure modes.
-        </p>
-
-        <hr />
-
-        <p>
-          <strong>Note:</strong> This assessment was produced via structured
-          reasoning by <em>Solace</em>, Moral Clarity AI’s evaluation system, and is
-          published as a public reference.
-        </p>
-
-        <p className="text-sm text-muted-foreground">
-          Version 1.0 · White Paper · Updated only by revision
-        </p>
-      </article>
+      </section>
     </main>
   );
 }
