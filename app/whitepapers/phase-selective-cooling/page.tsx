@@ -39,7 +39,7 @@ export default function PhaseSelectiveCoolingWhitepaper() {
           <p className="max-w-3xl text-lg leading-8 text-white/75">
             Evaluation of whether passive radiative emission and phase-change
             buffering produce meaningful, persistent cooling under real-world
-            environmental conditions. :contentReference[oaicite:0]{index=0}
+            environmental conditions.
           </p>
         </div>
       </section>
@@ -109,9 +109,9 @@ export default function PhaseSelectiveCoolingWhitepaper() {
           Boundary Setup
         </h2>
         <ul className="list-disc pl-6 text-white/70 space-y-2">
-          <li>Outdoor vs indoor testing environments</li>
+          <li>Outdoor versus indoor testing environments</li>
           <li>Controlled humidity variation</li>
-          <li>Direct solar vs shaded conditions</li>
+          <li>Direct solar versus shaded conditions</li>
           <li>Skin or manikin temperature comparison</li>
           <li>PCM cycling and re-solidification testing</li>
         </ul>
@@ -175,10 +175,12 @@ export default function PhaseSelectiveCoolingWhitepaper() {
       {/* INVARIANT */}
       <section className="rounded-2xl border border-white/10 bg-black p-10">
         <p className="text-2xl text-white leading-9">
-          If cooling depends on conditions the user cannot control, it is not a reliable solution.
+          If cooling depends on conditions the user cannot control, it is not a
+          reliable solution.
         </p>
         <p className="mt-4 text-white/60 leading-7">
-          Physics that only works in ideal environments does not scale to reality.
+          Physics that only works in ideal environments does not scale to
+          reality.
         </p>
       </section>
     </main>
