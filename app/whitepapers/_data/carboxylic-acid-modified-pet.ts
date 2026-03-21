@@ -16,6 +16,8 @@ export const carboxylicAcidModifiedPetData: ConstraintPageData = {
     status: "CONDITIONAL",
   },
 
+  constraintType: "RETENTION",
+
   systemConstraint: {
     statement:
       "Chemical resistance is admissible only if carboxylic acid functionality remains structurally retained after extraction stress.",
