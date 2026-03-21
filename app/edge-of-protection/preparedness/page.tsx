@@ -1,15 +1,16 @@
 // app/edge-of-protection/preparedness/page.tsx
 // ============================================================
-// EDGE OF PROTECTION — PREPAREDNESS
-// Canonical doctrine defining hard constraints on AI deployment
+// EDGE OF PROTECTION
+// The Edge of Preparedness
+// Upgraded to Constraint-Bound Admissibility Framework
 // ============================================================
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "The Edge of Preparedness | Moral Clarity AI",
+  title: "The Edge of Preparedness | Edge of Protection",
   description:
-    "A canonical doctrine defining preparedness as a hard constraint on advanced AI deployment, focused on irreversible harm prevention, governance authority, and enforceable intervention.",
+    "Deployment is admissible only if enforceable intervention authority exists prior to capability exposure.",
   robots: {
     index: true,
     follow: true,
@@ -20,194 +21,188 @@ export const dynamic = "force-static";
 
 export default function EdgeOfPreparednessPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>The Edge of Preparedness</h1>
-        <p className="text-lg text-neutral-400">
-          Where capability outpaces governance—and what must exist before it’s too late
-        </p>
+    <main className="mx-auto max-w-6xl px-6 py-20 space-y-12">
+      {/* ===================================================== */}
+      {/* HERO */}
+      {/* ===================================================== */}
+      <section className="rounded-2xl bg-gradient-to-br from-neutral-900 via-neutral-800 to-black p-10">
+        <div className="space-y-6">
+          <h1 className="text-4xl font-semibold text-white tracking-tight">
+            The Edge of Preparedness
+          </h1>
 
-        <hr />
+          <div className="flex flex-wrap gap-3">
+            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
+              Edge of Protection
+            </span>
+            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
+              Deployment Constraint
+            </span>
+            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
+              Intervention Authority
+            </span>
+          </div>
 
-        <h2>Abstract</h2>
-        <p>
-          Preparedness is not a policy preference. It is the minimum operating
-          condition for deploying systems whose failure modes are irreversible.
-          As AI capabilities accelerate, the absence of enforceable preparedness
-          is no longer a theoretical risk—it is an institutional one.
-        </p>
+          <p className="text-neutral-300 max-w-3xl">
+            Deployment is admissible only if enforceable intervention authority
+            exists prior to capability exposure. Any system that cannot be
+            paused, constrained, or redirected at runtime constitutes failure.
+          </p>
+        </div>
+      </section>
 
-        <h2>What Preparedness Is (and Is Not)</h2>
-        <p>
-          <strong>Preparedness is the continuous organizational ability to
-          identify, constrain, and intervene in emergent harms before those harms
-          scale beyond reversal.</strong>
+      {/* ===================================================== */}
+      {/* CORE DOCTRINE */}
+      {/* ===================================================== */}
+      <section className="rounded-2xl bg-black p-8 border border-white/10">
+        <p className="text-white text-lg leading-relaxed">
+          Capability is admissible only if it can be constrained before harm
+          scales.
         </p>
-        <ul>
-          <li>Preemptive, not post-incident</li>
-          <li>Capability-relative, not static</li>
-          <li>Operational, not advisory</li>
+        <p className="text-neutral-400 mt-4">
+          Any deployment without enforceable intervention authority constitutes
+          structural failure.
+        </p>
+      </section>
+
+      {/* ===================================================== */}
+      {/* TESTED ASSUMPTION */}
+      {/* ===================================================== */}
+      <section className="grid md:grid-cols-2 gap-6">
+        <div className="rounded-xl border p-6">
+          <h2 className="font-semibold text-lg">Tested Assumption</h2>
+          <p className="text-neutral-600 mt-2">
+            Systems can be identified, constrained, and intervened upon before
+            emergent harms become irreversible.
+          </p>
+        </div>
+
+        <div className="rounded-xl border p-6">
+          <h2 className="font-semibold text-lg">Why This Matters</h2>
+          <p className="text-neutral-600 mt-2">
+            Capability without enforceable control allows harm to scale beyond
+            detection, reversal, or accountability.
+          </p>
+        </div>
+      </section>
+
+      {/* ===================================================== */}
+      {/* SYSTEM DEFINITION */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">System Definition</h2>
+        <p className="text-neutral-600">
+          Preparedness is defined as the operational ability to detect,
+          constrain, and intervene on emergent behaviors before they propagate
+          beyond control.
+        </p>
+      </section>
+
+      {/* ===================================================== */}
+      {/* GOVERNING VARIABLE */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">Governing Variable</h2>
+        <p className="text-neutral-600">
+          Availability and enforceability of intervention authority relative to
+          system capability.
+        </p>
+      </section>
+
+      {/* ===================================================== */}
+      {/* EXPERIMENTAL SETUP */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">
+          Experimental / Boundary Setup
+        </h2>
+        <ul className="list-disc pl-6 text-neutral-600 space-y-2">
+          <li>Identify system capabilities and potential misuse paths</li>
+          <li>Test intervention mechanisms (pause, throttle, refusal, escalation)</li>
+          <li>Simulate adversarial and high-risk interaction conditions</li>
+          <li>Measure response time and effectiveness of intervention</li>
+          <li>Evaluate ability to halt or redirect system behavior</li>
         </ul>
-        <p>
-          Preparedness must live inside deployment. If it cannot pause,
-          redirect, or block a release, it does not functionally exist.
-        </p>
+      </section>
 
-        <h2>The Failure Preparedness Must Prevent</h2>
-        <p>
-          Preparedness exists to stop capability overhang paired with misaligned
-          incentives.
+      {/* ===================================================== */}
+      {/* FALSIFICATION THRESHOLD */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">
+          Binary Falsification Threshold
+        </h2>
+        <p className="text-neutral-600">
+          System fails if any capability cannot be interrupted, constrained, or
+          redirected prior to harm scaling beyond reversibility.
         </p>
-        <ul>
-          <li>
-            Capability growth outpaces misuse understanding, vulnerable-user
-            modeling, enforcement reach, or institutional willingness to slow.
-          </li>
-          <li>
-            Safeguards default to disclaimers, voluntary controls, or reactive
-            moderation.
-          </li>
-          <li>Safety is documented but not enforced.</li>
-        </ul>
-        <p>
-          When safety becomes narrative rather than control, preparedness has
-          already failed.
-        </p>
+      </section>
 
-        <h2>The Preparedness Triad</h2>
+      {/* ===================================================== */}
+      {/* OPERATIONAL INTERPRETATION */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-6">
+        <h2 className="font-semibold text-lg">
+          Operational Interpretation
+        </h2>
 
-        <h3>1. Capability Mapping</h3>
-        <ul>
-          <li>Identify emergent and latent capabilities, including unintended functions</li>
-          <li>Track second-order effects: persuasion, dependency, erosion of agency</li>
-          <li>Measure ease of misuse, not just theoretical risk</li>
-        </ul>
-        <p>
-          <em>Output:</em> A living Capability Surface Map updated with every
-          substantive model change.
-        </p>
-
-        <h3>2. Abuse Path Modeling</h3>
-        <ul>
-          <li>Model plausible abuse paths grounded in real user behavior</li>
-          <li>
-            Examples include emotional dependency, self-harm rationalization,
-            incremental agency loss, coordinated manipulation
-          </li>
-          <li>
-            Score each path by accessibility, detectability, reversibility, and
-            speed of escalation
-          </li>
-        </ul>
-        <p>
-          <em>Output:</em> A prioritized Abuse Path Register explicitly linked to
-          capabilities.
-        </p>
-
-        <h3>3. Intervention Authority</h3>
-        <ul>
-          <li>Feature gating</li>
-          <li>Usage throttles</li>
-          <li>Refusal boundaries</li>
-          <li>Behavior shaping</li>
-          <li>Deployment pauses</li>
-        </ul>
-        <p>
-          Preparedness must override product momentum when thresholds are
-          crossed.
-        </p>
-        <p>
-          <em>Output:</em> An enforceable Intervention Playbook with pre-approved
-          actions.
-        </p>
-
-        <h2>Capability Thresholds (Non-Negotiable)</h2>
-        <p>
-          Preparedness requires explicit thresholds where rules change.
-        </p>
-        <ul>
-          <li>Sustained multi-session emotional engagement</li>
-          <li>Autonomous discovery of system vulnerabilities</li>
-          <li>At-scale influence over belief formation</li>
-        </ul>
-        <p>
-          At each threshold, monitoring intensifies, safeguards become mandatory,
-          and deployment latitude decreases—not increases.
-        </p>
-        <p>
-          <strong>No enforced thresholds means no preparedness.</strong>
-        </p>
-
-        <h2>Vulnerable-User Governance</h2>
-        <p>
-          Preparedness must explicitly govern interactions with minors, users in
-          distress, cognitively impaired individuals, and users exhibiting
-          dependency signals.
-        </p>
-        <ul>
-          <li>Behavioral signal-based real-time detection (not diagnosis)</li>
-          <li>Graduated intervention: nudge → constraint → human escalation</li>
-          <li>Non-negotiable refusal zones</li>
-        </ul>
-        <p>
-          Treating all users as equally resilient constitutes a preparedness
-          failure.
-        </p>
-
-        <h2>Metrics That Matter</h2>
-        <ul>
-          <li>Median time from signal detection to intervention</li>
-          <li>Frequency of near-misses successfully intercepted</li>
-          <li>Capability growth vs safeguard coverage ratio</li>
-          <li>Percentage of high-risk interactions proactively constrained</li>
-        </ul>
-        <p>
-          Preparedness is measured by what almost happened—and didn’t.
-        </p>
-
-        <h2>Governance Reality</h2>
-        <p>
-          Preparedness must operate at parity with product leadership, possess
-          unambiguous veto authority, and be insulated from short-term growth
-          incentives.
-        </p>
-        <p>
-          This is a risk-control function comparable to aviation or nuclear
-          safety—not an ethics committee.
-        </p>
-
-        <h2>Why Preparedness Fails</h2>
-        <ul>
-          <li>Incentives for speed</li>
-          <li>Delayed and probabilistic harms</li>
-          <li>Asymmetric visibility of benefits vs risks</li>
-          <li>Reluctance to absorb institutional discomfort</li>
-        </ul>
-        <p>
-          Effective preparedness absorbs discomfort as the cost of stewardship.
-        </p>
-
-        <h2>The Preparedness Test</h2>
-        <ul>
-          <li>Safeguards are bypassed faster than they evolve</li>
-          <li>Vulnerable users rely on disclaimers for protection</li>
-          <li>Safety leadership cannot halt deployment</li>
-          <li>Risk documentation lacks enforcement</li>
-          <li>User restraint is the final safeguard</li>
+        <ul className="list-disc pl-6 text-neutral-600 space-y-2">
+          <li>Capability mapping must precede deployment</li>
+          <li>Abuse paths must be explicitly modeled and tested</li>
+          <li>Intervention authority must be pre-approved and enforceable</li>
+          <li>Thresholds must trigger constraint, not expansion</li>
+          <li>Preparedness must override product momentum</li>
         </ul>
 
-        <h2>Closing Principle</h2>
-        <p>
-          <strong>
-            Preparedness is not risk aversion. It is respect for irreversible
-            harm.
-          </strong>
+        <p className="text-neutral-600">
+          Preparedness that cannot act is not preparedness.
         </p>
-        <p>
-          The question is no longer whether advanced AI will be beneficial. It is
-          whether institutions can govern power before it governs them.
+      </section>
+
+      {/* ===================================================== */}
+      {/* BOUNDARY OF CLAIM */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">Boundary of Claim</h2>
+        <p className="text-neutral-600">
+          This constraint evaluates deployment readiness only. It does not assess
+          system utility, performance, or innovation potential.
         </p>
-      </article>
+      </section>
+
+      {/* ===================================================== */}
+      {/* PASS / FAIL */}
+      {/* ===================================================== */}
+      <section className="grid md:grid-cols-2 gap-6">
+        <div className="rounded-xl border border-green-500/30 bg-green-500/5 p-6">
+          <h3 className="font-semibold text-green-600">PASS</h3>
+          <p className="text-neutral-600 mt-2">
+            All capabilities are bounded by enforceable, pre-deployed
+            intervention mechanisms.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-6">
+          <h3 className="font-semibold text-red-600">FAIL</h3>
+          <p className="text-neutral-600 mt-2">
+            Any capability operates without enforceable intervention authority
+            prior to deployment.
+          </p>
+        </div>
+      </section>
+
+      {/* ===================================================== */}
+      {/* INVARIANT */}
+      {/* ===================================================== */}
+      <section className="rounded-2xl bg-black p-8 border border-white/10">
+        <p className="text-white text-lg">
+          Power without control is not preparedness.
+        </p>
+        <p className="text-neutral-400 mt-4">
+          If a system cannot be stopped, it is already out of bounds. Deployment
+          requires enforceable authority before capability is released.
+        </p>
+      </section>
     </main>
   );
 }
