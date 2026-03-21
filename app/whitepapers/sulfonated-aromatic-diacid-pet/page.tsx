@@ -1,6 +1,6 @@
 // app/whitepapers/sulfonated-aromatic-diacid-pet/page.tsx
 // ============================================================
-// WHITE PAPER (UPGRADED TO CONSTRAINT FRAME)
+// WHITE PAPER (CONSTRAINT SYSTEM — ELEVATED)
 // Sulfonated Aromatic Diacid–PET Copolymer — CONDITIONAL
 // ============================================================
 
@@ -16,8 +16,10 @@ export const metadata: Metadata = {
 
 export default function Page() {
   return (
-    <main className="mx-auto max-w-6xl px-6 py-20 space-y-10">
+    <main className="mx-auto max-w-6xl px-6 py-20 space-y-12">
+      {/* ===================================================== */}
       {/* HERO */}
+      {/* ===================================================== */}
       <section className="rounded-[32px] border border-white/10 bg-gradient-to-br from-[#0b1220] via-[#0a0f1a] to-black p-10 shadow-[0_30px_120px_rgba(0,0,0,0.45)]">
         <div className="space-y-5">
           <div className="flex flex-wrap gap-3">
@@ -44,23 +46,32 @@ export default function Page() {
         </div>
       </section>
 
-      {/* CORE DOCTRINE */}
-      <section className="rounded-2xl border border-white/10 bg-black p-8">
-        <p className="text-xl text-white leading-8">
+      {/* ===================================================== */}
+      {/* ADMISSIBILITY CONSTRAINT (CORE LAW) */}
+      {/* ===================================================== */}
+      <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-black to-[#05070d] p-10 text-center shadow-[0_0_60px_rgba(122,162,255,0.08)]">
+        <h2 className="text-sm uppercase tracking-[0.2em] text-white/50 mb-4">
+          Admissibility Constraint
+        </h2>
+
+        <p className="text-2xl md:text-3xl leading-10 text-white max-w-4xl mx-auto">
           Functional charge and hydration are admissible only if structural and
           mechanical integrity persist under combined thermal and humidity stress.
         </p>
-        <p className="mt-3 text-white/60">
+
+        <p className="mt-6 text-white/60 max-w-2xl mx-auto">
           If crystallinity or mechanical performance degrades beyond threshold,
-          the system fails as a durable material.
+          the system is rejected as a durable material.
         </p>
       </section>
 
-      {/* TESTED ASSUMPTION + WHY */}
+      {/* ===================================================== */}
+      {/* HYPOTHESIS + SIGNIFICANCE */}
+      {/* ===================================================== */}
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-white/10 bg-white/[0.04] p-6">
           <h2 className="text-lg font-semibold text-white">
-            Tested Assumption
+            Hypothesis Under Evaluation
           </h2>
           <p className="mt-3 text-white/70 leading-7">
             Sulfonated aromatic diacids can be covalently integrated into PET to
@@ -71,32 +82,35 @@ export default function Page() {
 
         <div className="rounded-xl border border-white/10 bg-white/[0.04] p-6">
           <h2 className="text-lg font-semibold text-white">
-            Why This Matters
+            Significance
           </h2>
           <p className="mt-3 text-white/70 leading-7">
-            If valid, materials gain antistatic and cleanliness benefits without
-            additives. If invalid, structural degradation undermines usability
-            and safety.
+            If valid, materials gain intrinsic antistatic and cleanliness benefits
+            without additives. If invalid, structural degradation undermines
+            usability, safety, and lifecycle performance.
           </p>
         </div>
       </section>
 
-      {/* SYSTEM DEFINITION */}
+      {/* ===================================================== */}
+      {/* SYSTEM CONSTRUCTION */}
+      {/* ===================================================== */}
       <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8 space-y-4">
         <h2 className="text-2xl font-semibold text-white">
-          System Definition
+          System Construction
         </h2>
         <p className="text-white/70 leading-8">
           A PET copolymer incorporating sulfonate-bearing aromatic diacids via
-          polycondensation, producing fixed ionic sites within the polymer
-          backbone.
+          polycondensation, producing fixed ionic sites within the polymer backbone.
         </p>
       </section>
 
-      {/* GOVERNING VARIABLE */}
+      {/* ===================================================== */}
+      {/* PRIMARY CONSTRAINT VARIABLE */}
+      {/* ===================================================== */}
       <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
         <h2 className="text-2xl font-semibold text-white">
-          Governing Variable
+          Primary Constraint Variable
         </h2>
         <p className="mt-3 text-white/70 leading-8">
           Retention of crystallinity and mechanical strength under prolonged
@@ -104,10 +118,12 @@ export default function Page() {
         </p>
       </section>
 
-      {/* BOUNDARY SETUP */}
+      {/* ===================================================== */}
+      {/* TEST CONDITIONS */}
+      {/* ===================================================== */}
       <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8 space-y-4">
         <h2 className="text-2xl font-semibold text-white">
-          Boundary Setup
+          Test Conditions
         </h2>
         <ul className="list-disc pl-6 text-white/70 space-y-2">
           <li>Environmental aging at 85°C / 85% relative humidity</li>
@@ -118,10 +134,12 @@ export default function Page() {
         </ul>
       </section>
 
-      {/* FALSIFICATION */}
+      {/* ===================================================== */}
+      {/* FAILURE THRESHOLD */}
+      {/* ===================================================== */}
       <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
         <h2 className="text-2xl font-semibold text-white">
-          Binary Falsification Threshold
+          Failure Threshold (Non-Negotiable)
         </h2>
         <p className="mt-3 text-white/70 leading-8">
           FAIL if greater than 10% absolute loss in crystallinity or tensile
@@ -129,10 +147,12 @@ export default function Page() {
         </p>
       </section>
 
-      {/* OPERATIONAL INTERPRETATION */}
+      {/* ===================================================== */}
+      {/* OBSERVED BEHAVIOR */}
+      {/* ===================================================== */}
       <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
         <h2 className="text-2xl font-semibold text-white">
-          Operational Interpretation
+          Observed Behavior
         </h2>
         <p className="mt-3 text-white/70 leading-8">
           Sulfonate incorporation introduces polarity and hydration, but may
@@ -141,10 +161,12 @@ export default function Page() {
         </p>
       </section>
 
-      {/* BOUNDARY OF CLAIM */}
+      {/* ===================================================== */}
+      {/* ADMISSIBILITY BOUNDARY */}
+      {/* ===================================================== */}
       <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
         <h2 className="text-2xl font-semibold text-white">
-          Boundary of Claim
+          Admissibility Boundary
         </h2>
         <p className="mt-3 text-white/70 leading-8">
           Functional claims are admissible only where structural and mechanical
@@ -153,32 +175,47 @@ export default function Page() {
         </p>
       </section>
 
-      {/* PASS / FAIL */}
-      <section className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-green-400/20 bg-green-500/10 p-8">
-          <h3 className="text-lg font-semibold text-green-300">PASS</h3>
-          <p className="mt-3 text-green-200/80 leading-7">
-            Structural integrity and functional properties persist under
-            environmental aging conditions.
-          </p>
-        </div>
+      {/* ===================================================== */}
+      {/* SYSTEM DETERMINATION (FOCAL POINT) */}
+      {/* ===================================================== */}
+      <section className="space-y-6">
+        <h2 className="text-center text-sm uppercase tracking-[0.2em] text-white/50">
+          System Determination
+        </h2>
 
-        <div className="rounded-2xl border border-red-400/20 bg-red-500/10 p-8">
-          <h3 className="text-lg font-semibold text-red-300">FAIL</h3>
-          <p className="mt-3 text-red-200/80 leading-7">
-            Crystallinity or mechanical strength degrades beyond acceptable
-            thresholds.
-          </p>
+        <div className="grid gap-8 lg:grid-cols-2">
+          <div className="rounded-3xl border border-green-400/20 bg-green-500/10 p-10 shadow-[0_0_40px_rgba(34,197,94,0.15)]">
+            <h3 className="text-xl font-semibold text-green-300">PASS</h3>
+            <p className="mt-4 text-green-200/80 leading-7">
+              Structural integrity and functional properties persist under
+              environmental aging conditions.
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-red-400/20 bg-red-500/10 p-10 shadow-[0_0_40px_rgba(248,113,113,0.15)]">
+            <h3 className="text-xl font-semibold text-red-300">FAIL</h3>
+            <p className="mt-4 text-red-200/80 leading-7">
+              Crystallinity or mechanical strength degrades beyond acceptable
+              thresholds.
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* INVARIANT */}
-      <section className="rounded-2xl border border-white/10 bg-black p-10">
-        <p className="text-2xl text-white leading-9">
-          If function compromises structure, the material cannot endure.
+      {/* ===================================================== */}
+      {/* DOCTRINE (SIGNATURE CLOSE) */}
+      {/* ===================================================== */}
+      <section className="rounded-3xl border border-white/10 bg-black p-12 text-center">
+        <p className="text-3xl leading-10 text-white">
+          Function does not justify failure.
         </p>
-        <p className="mt-4 text-white/60 leading-7">
-          Durability is the boundary between capability and failure.
+
+        <p className="mt-4 text-xl text-white/80">
+          If structure is compromised, the system is rejected.
+        </p>
+
+        <p className="mt-6 text-white/50">
+          Durability defines admissibility.
         </p>
       </section>
     </main>
