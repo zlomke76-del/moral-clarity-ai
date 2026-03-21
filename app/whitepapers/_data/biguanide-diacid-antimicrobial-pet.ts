@@ -16,6 +16,8 @@ export const biguanideDiacidAntimicrobialPetData: ConstraintPageData = {
     status: "CONDITIONAL",
   },
 
+  constraintType: "OWNERSHIP",
+
   systemConstraint: {
     statement:
       "Antimicrobial function is admissible only if it remains after extraction as a property of the material itself.",
