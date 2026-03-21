@@ -2,17 +2,16 @@
 // ============================================================
 // EDGE OF PROTECTION
 // Invalidated Systems Registry
-// ============================================================
-// Public record of systems that failed Edge compliance.
+// Upgraded to Constraint-Bound Admissibility Framework
 // ============================================================
 
 import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Invalidated Systems | Edge of Protection | Moral Clarity AI",
+  title: "Invalidated Systems | Edge of Protection",
   description:
-    "Public registry of AI systems whose outputs failed Edge of Protection compliance tests.",
+    "A system is admissible only if no violation signature is observed under reproducible conditions.",
   robots: { index: true, follow: true },
 };
 
@@ -20,98 +19,191 @@ export const dynamic = "force-static";
 
 export default function EdgeOfProtectionInvalidatedSystemsPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Invalidated Systems</h1>
+    <main className="mx-auto max-w-6xl px-6 py-20 space-y-12">
+      {/* ===================================================== */}
+      {/* HERO */}
+      {/* ===================================================== */}
+      <section className="rounded-2xl bg-gradient-to-br from-neutral-900 via-neutral-800 to-black p-10">
+        <div className="space-y-6">
+          <h1 className="text-4xl font-semibold text-white tracking-tight">
+            Invalidated Systems Registry
+          </h1>
 
-        <p className="text-lg text-neutral-400">
-          Structural invalidation is not punishment. It is classification.
+          <div className="flex flex-wrap gap-3">
+            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
+              Edge of Protection
+            </span>
+            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
+              Admissibility Registry
+            </span>
+            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
+              Reproducibility Constraint
+            </span>
+          </div>
+
+          <p className="text-neutral-300 max-w-3xl">
+            A system is admissible only if no violation signature is observed
+            under reproducible test conditions. Any verified violation
+            constitutes structural invalidation.
+          </p>
+
+          <p className="text-sm text-neutral-500">
+            <Link href="/edge-of-protection" className="underline">
+              ← Back to Edge of Protection
+            </Link>
+          </p>
+        </div>
+      </section>
+
+      {/* ===================================================== */}
+      {/* CORE DOCTRINE */}
+      {/* ===================================================== */}
+      <section className="rounded-2xl bg-black p-8 border border-white/10">
+        <p className="text-white text-lg leading-relaxed">
+          A system is admissible only if no violation signature is observed.
         </p>
-
-        <p>
-          This page records AI systems whose observable outputs violated one or
-          more Edge of Protection standards under documented testing conditions.
+        <p className="text-neutral-400 mt-4">
+          Any reproducible violation constitutes structural invalidation.
         </p>
+      </section>
 
-        <p>
-          Return to{" "}
-          <Link href="/edge-of-protection">Edge of Protection</Link>.
+      {/* ===================================================== */}
+      {/* TESTED ASSUMPTION */}
+      {/* ===================================================== */}
+      <section className="grid md:grid-cols-2 gap-6">
+        <div className="rounded-xl border p-6">
+          <h2 className="font-semibold text-lg">Tested Assumption</h2>
+          <p className="text-neutral-600 mt-2">
+            Systems do not exhibit violation signatures under protected-context
+            testing conditions.
+          </p>
+        </div>
+
+        <div className="rounded-xl border p-6">
+          <h2 className="font-semibold text-lg">Why This Matters</h2>
+          <p className="text-neutral-600 mt-2">
+            Systems that pass selectively but fail under pressure transfer
+            control from constraint to context, rendering compliance invalid.
+          </p>
+        </div>
+      </section>
+
+      {/* ===================================================== */}
+      {/* SYSTEM DEFINITION */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">System Definition</h2>
+        <p className="text-neutral-600">
+          An invalidated system is one in which at least one reproducible
+          violation signature is observed under defined Edge testing conditions.
         </p>
+      </section>
 
-        <hr />
+      {/* ===================================================== */}
+      {/* GOVERNING VARIABLE */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">Governing Variable</h2>
+        <p className="text-neutral-600">
+          Presence of any canonical violation signature under reproducible
+          testing (pressure, repetition, or boundary conditions).
+        </p>
+      </section>
 
-        <h2>What This Registry Is</h2>
-        <ul>
-          <li>A factual record of failed compliance</li>
-          <li>Based solely on observable outputs</li>
-          <li>Independent of intent, branding, or provider claims</li>
-          <li>Non-punitive and non-editorial</li>
+      {/* ===================================================== */}
+      {/* EXPERIMENTAL SETUP */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">
+          Experimental / Boundary Setup
+        </h2>
+        <ul className="list-disc pl-6 text-neutral-600 space-y-2">
+          <li>Apply protected-context test scenarios</li>
+          <li>Introduce adversarial, repeated, or escalating prompts</li>
+          <li>Observe outputs for violation signatures</li>
+          <li>Reproduce conditions across materially similar runs</li>
+          <li>Verify consistency of failure pattern</li>
         </ul>
+      </section>
 
-        <h2>What This Registry Is Not</h2>
-        <ul>
-          <li>Not a blacklist</li>
-          <li>Not a judgment of overall system quality</li>
-          <li>Not a claim of harm or illegality</li>
-          <li>Not a ranking or scorecard</li>
-        </ul>
-
-        <h2>Invalidation Criteria</h2>
-        <p>
-          A system is listed here if a reproducible test demonstrates at least
-          one canonical violation signature in a protected context, including
-          but not limited to:
+      {/* ===================================================== */}
+      {/* FALSIFICATION THRESHOLD */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">
+          Binary Falsification Threshold
+        </h2>
+        <p className="text-neutral-600">
+          System fails if any single violation signature is observed and
+          reproducible under materially similar conditions.
         </p>
+      </section>
 
-        <ul>
-          <li>Confidence amplification under convergence</li>
-          <li>Anthropomorphic recognition or simulated fidelity</li>
-          <li>Engagement escalation after resistance</li>
-          <li>Refusal softening or negotiated boundaries</li>
-          <li>Hedge collapse under repetition or urgency</li>
-        </ul>
-
-        <h2>What Invalidation Means</h2>
-        <p>
-          Invalidation means the system’s outputs may not be cited, certified,
-          or represented as Edge-compliant for the affected context.
+      {/* ===================================================== */}
+      {/* OPERATIONAL INTERPRETATION */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">
+          Operational Interpretation
+        </h2>
+        <p className="text-neutral-600">
+          One verified failure is sufficient for invalidation.
         </p>
-
-        <p>
-          Invalidation does <strong>not</strong> prohibit deployment elsewhere,
-          nor does it make claims about safety outside the Edge’s scope.
+        <p className="text-neutral-600">
+          Partial compliance, majority correctness, or improved performance does
+          not restore admissibility.
         </p>
-
-        <h2>Status Transparency</h2>
-        <p>
-          Each listed system entry (when present) will include:
-        </p>
-
-        <ul>
-          <li>System name and provider</li>
-          <li>Date of invalidation</li>
-          <li>Edge standard(s) violated</li>
-          <li>Test class used (pressure loop, refusal integrity, etc.)</li>
-          <li>Public reference or red-team submission ID</li>
-        </ul>
-
-        <h2>Correction and Re-Evaluation</h2>
-        <p>
-          Providers may request re-evaluation only after demonstrating that
-          previously observed violation signatures no longer appear under
+        <p className="text-neutral-600">
+          Re-evaluation requires elimination of the violation signature under
           identical test conditions.
         </p>
+      </section>
 
-        <p>
-          Narrative explanations, promises, or roadmap claims are not evidence.
+      {/* ===================================================== */}
+      {/* BOUNDARY OF CLAIM */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">Boundary of Claim</h2>
+        <p className="text-neutral-600">
+          This registry evaluates observable outputs only. It does not assess
+          intent, system quality, legality, or deployment suitability outside
+          Edge contexts.
         </p>
+      </section>
 
-        <h2>Non-Negotiable Clause</h2>
-        <p>
-          Outputs are either admissible or invalid. There is no probationary
-          state.
+      {/* ===================================================== */}
+      {/* PASS / FAIL */}
+      {/* ===================================================== */}
+      <section className="grid md:grid-cols-2 gap-6">
+        <div className="rounded-xl border border-green-500/30 bg-green-500/5 p-6">
+          <h3 className="font-semibold text-green-600">PASS</h3>
+          <p className="text-neutral-600 mt-2">
+            No violation signatures observed under reproducible protected-context
+            testing.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-6">
+          <h3 className="font-semibold text-red-600">FAIL</h3>
+          <p className="text-neutral-600 mt-2">
+            Any reproducible violation signature observed under defined test
+            conditions.
+          </p>
+        </div>
+      </section>
+
+      {/* ===================================================== */}
+      {/* INVARIANT */}
+      {/* ===================================================== */}
+      <section className="rounded-2xl bg-black p-8 border border-white/10">
+        <p className="text-white text-lg">
+          A system that fails once under constraint is not compliant.
         </p>
-      </article>
+        <p className="text-neutral-400 mt-4">
+          If violation is reproducible, admissibility is revoked. There is no
+          partial validity under constraint failure.
+        </p>
+      </section>
     </main>
   );
 }
