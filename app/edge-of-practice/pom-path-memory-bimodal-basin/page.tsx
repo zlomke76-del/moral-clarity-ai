@@ -1,193 +1,206 @@
-// app/edge-of-practice/pom-path-memory-bimodal-basin/page.tsx
-// ============================================================
-// EDGE OF PRACTICE — SHORT-CYCLE EXPERIMENT
-// ============================================================
-// Experiment: POM Path-Memory Bimodal Basin Test
-// Scope: Polymer molecular invariants (path dependence + reversibility)
-// Status: Canonical, fixed at publication
-// ============================================================
-
 import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
   title:
-    "POM Path-Memory Bimodal Basin Test | Edge of Practice | Moral Clarity AI",
+    "POM Path-Memory Bimodal Basin Test — State Non-Uniqueness Boundary | Moral Clarity AI",
   description:
-    "A short-cycle experiment testing whether thermally microcycled POM can occupy irreversible, mechanically indistinguishable but molecularly divergent internal states.",
+    "A short-cycle invariant falsification testing whether mechanically indistinguishable POM samples can occupy irreversible, path-dependent molecular basins that persist beyond reset conditions.",
   robots: {
     index: true,
     follow: true,
   },
-  openGraph: {
-    title: "POM Path-Memory Bimodal Basin Test",
-    description:
-      "Tests the collapse of path independence and reversibility assumptions in acetal (POM) under sub-visible thermal microhistory.",
-    type: "article",
-  },
 };
 
-export const dynamic = "force-static";
+function SectionCard({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-black/10 bg-white/70 p-6 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+      <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
+        {eyebrow}
+      </div>
+      <h2 className="mb-4 text-xl font-semibold text-zinc-950 dark:text-zinc-50">
+        {title}
+      </h2>
+      <div className="space-y-4 text-[15px] leading-7 text-zinc-700 dark:text-zinc-300">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function SignalPill({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex rounded-full border border-zinc-300 bg-zinc-100 px-3 py-1 text-xs text-zinc-700 dark:border-white/10 dark:bg-white/10 dark:text-zinc-300">
+      {children}
+    </span>
+  );
+}
 
 export default function POMPathMemoryBimodalBasinPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <header>
-          <p className="text-sm uppercase tracking-wide text-neutral-400">
-            Edge of Practice · Short-Cycle Experiment
+    <main className="mx-auto max-w-6xl px-6 py-16 md:px-8 md:py-20">
+      <div className="space-y-8">
+
+        {/* HERO */}
+        <section className="rounded-3xl border border-black/10 bg-gradient-to-br from-white to-zinc-100 p-10 dark:border-white/10 dark:from-zinc-950 dark:to-zinc-900">
+          <div className="mb-4 flex flex-wrap gap-2">
+            <SignalPill>Edge of Practice</SignalPill>
+            <SignalPill>Short-Cycle Falsification</SignalPill>
+            <SignalPill>State-Space Regime</SignalPill>
+          </div>
+
+          <h1 className="text-4xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50 md:text-5xl">
+            POM Path-Memory Bimodal Basin Test
+          </h1>
+
+          <p className="mt-6 max-w-3xl text-lg leading-8 text-zinc-700 dark:text-zinc-300">
+            A material is admissible as equivalent only if identical mechanical
+            observables imply a unique internal state. If multiple hidden basins
+            exist under identical acceptance criteria, then equivalence is
+            structurally invalid.
           </p>
-          <h1>POM Path-Memory Bimodal Basin Test</h1>
-          <p className="text-lg text-neutral-400">
-            Molecular path dependence and reset-resistant memory in acetal
-            polymers under tensile-spec-compliant conditions
+
+          <div className="mt-8 rounded-2xl border border-zinc-200 bg-black p-6 text-white">
+            <div className="mb-2 text-[11px] uppercase tracking-[0.24em] text-zinc-400">
+              Core Doctrine
+            </div>
+            <p className="text-base leading-7 md:text-lg">
+              Observables do not define state.  
+              If two systems behave the same but evolve differently, they were
+              never the same system.
+            </p>
+          </div>
+        </section>
+
+        {/* ASSUMPTION */}
+        <SectionCard
+          eyebrow="Tested Assumption"
+          title="Mechanical equivalence implies molecular equivalence"
+        >
+          <p>
+            Standard qualification assumes that parts meeting tensile and visual
+            criteria are interchangeable, regardless of thermal microhistory.
           </p>
-        </header>
+        </SectionCard>
 
-        <hr />
+        {/* BREAK */}
+        <SectionCard
+          eyebrow="Hidden Failure Mode"
+          title="Path-dependent basin divergence"
+        >
+          <p>
+            Thermal microcycling may drive the polymer into distinct internal
+            basins that are not visible in standard mechanical tests but alter
+            functional behavior.
+          </p>
+        </SectionCard>
 
-        <h2>Hidden Assumption</h2>
-        <p>
-          Path independence: polyoxymethylene (POM) parts that meet standard
-          mechanical acceptance criteria are molecularly equivalent; prior
-          thermal microhistory cannot create distinct, stable internal basins
-          that alter functional behavior.
-        </p>
+        {/* SYSTEM */}
+        <SectionCard
+          eyebrow="System Definition"
+          title="Thermally microcycled POM under mechanical equivalence constraints"
+        >
+          <p>
+            Identical POM samples are subjected to controlled microcycle
+            histories while constrained to pass tensile equivalence gates.
+          </p>
+        </SectionCard>
 
-        <h2>Why This Assumption Persists</h2>
-        <p>
-          ASTM and ISO qualification workflows treat tensile outcomes and visual
-          inspection as sufficient proxies for material equivalence. Thermal
-          microhistory is operationally difficult to track and is assumed to
-          average out if parts remain within tensile tolerances and show no
-          visible damage. Functional drift at low stress is rarely attributed to
-          hidden molecular state when primary acceptance tests still pass.
-        </p>
+        {/* GOVERNING VARIABLE */}
+        <SectionCard
+          eyebrow="Governing Variable"
+          title="Existence of multiple admissible internal states"
+        >
+          <p>
+            The governing variable is whether multiple molecular basins exist
+            under identical observable constraints.
+          </p>
 
-        <h2>Minimal Falsification Experiment</h2>
-        <ol>
-          <li>
-            Mold <strong>60 POM tensile bars</strong> from a single production lot
-            under identical processing conditions. Randomly assign into{" "}
-            <strong>6 groups</strong> (n = 10 per group).
-          </li>
-          <li>
-            Apply thermal history treatments:
-            <ul>
-              <li>
-                Microcycle groups:{" "}
-                <strong>0, 10, 50, 100, 300 cycles</strong> between 25 °C and
-                140 °C, ~2 min dwell per step.
-              </li>
-              <li>
-                Reference group: <strong>120 °C anneal × 24 h</strong>, slow cool.
-              </li>
-            </ul>
-          </li>
-          <li>
-            Condition all samples identically for{" "}
-            <strong>48 h at ambient laboratory conditions</strong>.
-          </li>
-          <li>
-            <strong>Mechanical indistinguishability gate:</strong> tensile test
-            5 bars per group.
-            <ul>
-              <li>Yield stress and UTS within ±3% of 0-cycle mean</li>
-              <li>Modulus and elongation within ±5%</li>
-              <li>No whitening, cracking, or necking anomalies</li>
-            </ul>
-            Any group failing this gate is excluded.
-          </li>
-          <li>
-            <strong>Functional proxy — low-stress creep:</strong> on remaining 5
-            bars per group, apply constant stress at 10–20% of baseline yield
-            stress for 60 min at room temperature. Record strain at 5 min, 60
-            min, unload, then record residual strain after 10 min recovery.
-          </li>
-          <li>
-            <strong>Molecular proxy — DSC:</strong> run identical DSC programs on
-            tested bars or matched coupons. Record crystallization temperature
-            (Tc), crystallization enthalpy (cooling), and melting enthalpy
-            (heating).
-          </li>
-          <li>
-            <strong>Degradation discriminator:</strong> run oxidation induction
-            time (DSC) or FTIR oxidation index on 0-cycle vs 300-cycle material to
-            rule out simple oxidative aging.
-          </li>
-          <li>
-            <strong>Reversibility (reset) test:</strong> select the first
-            diverged microcycle group and the 0-cycle control. Apply standardized
-            reset anneal (120 °C × 24 h, slow cool), condition 48 h, then repeat
-            DSC and low-stress creep testing.
-          </li>
-        </ol>
-
-        <h2>Primary Readout</h2>
-        <p>
-          Paired divergence in mechanically indistinguishable samples:
           <ul>
-            <li>
-              Emergence of bimodal or threshold-shifted Tc and/or crystallization
-              enthalpy
-            </li>
-            <li>
-              Discontinuous increase in low-stress creep compliance and residual
-              strain
-            </li>
-            <li>
-              Persistence or collapse of divergence after standardized reset
-              anneal
-            </li>
+            <li>Single basin → equivalence holds</li>
+            <li>Multiple basins → equivalence collapses</li>
           </ul>
-        </p>
+        </SectionCard>
 
-        <h2>Pass / Fail Threshold</h2>
-        <p>
-          The assumption fails if any microcycle group:
+        {/* READOUT */}
+        <SectionCard
+          eyebrow="Primary Readout"
+          title="Divergence under hidden-state probes"
+        >
           <ul>
-            <li>Passes mechanical indistinguishability gates</li>
-            <li>
-              Shows ≥5 °C Tc separation or ≥10% enthalpy separation, including
-              bimodality
-            </li>
-            <li>
-              Shows ≥25% higher creep strain at 60 min or ≥2× residual strain
-              after recovery vs 0-cycle group
-            </li>
-            <li>
-              Retains ≥3 °C Tc or ≥1.5× residual creep divergence after reset
-              anneal
-            </li>
-            <li>
-              While oxidation metrics do not explain the divergence
-            </li>
+            <li>DSC bifurcation (Tc / enthalpy shifts)</li>
+            <li>Low-stress creep divergence</li>
+            <li>Residual strain differences</li>
+            <li>Persistence after reset anneal</li>
           </ul>
-        </p>
+        </SectionCard>
 
-        <h2>Embarrassing Flip Condition</h2>
-        <p>
-          Discovery of a sharp thermal microcycle threshold where POM remains
-          tensile-spec compliant yet occupies a reset-resistant molecular basin
-          forces revision of acceptance logic: thermal microhistory must be
-          treated as a first-class state variable, and mechanical qualification
-          alone can no longer certify interchangeability for dimensional
-          stability or long-term performance.
-        </p>
+        {/* RESET */}
+        <SectionCard
+          eyebrow="Critical Test"
+          title="Reset irreversibility"
+        >
+          <p>
+            If divergence persists after standardized annealing, the system
+            cannot be restored to a unique baseline state.
+          </p>
+        </SectionCard>
 
-        <hr />
+        {/* PASS FAIL */}
+        <SectionCard
+          eyebrow="Binary Boundary"
+          title="What breaks the assumption"
+        >
+          <p>
+            <strong>Pass:</strong> All samples converge to a single basin and
+            reset eliminates divergence.
+          </p>
 
-        <p className="text-sm text-neutral-400">
-          This experiment is fixed at publication and revised only by explicit
-          versioning to preserve epistemic continuity.
-        </p>
+          <p>
+            <strong>Fail:</strong> Mechanically identical samples occupy
+            distinct, reset-resistant molecular states.
+          </p>
+        </SectionCard>
 
-        <p className="mt-6">
-          <Link href="/edge-of-practice" className="no-underline">
-            ← Back to Edge of Practice Index
+        {/* INTERPRETATION */}
+        <SectionCard
+          eyebrow="Corrected Interpretation"
+          title="Equivalence is path-dependent"
+        >
+          <p>
+            Material identity is not defined solely by present observables but by
+            the trajectory that produced them.
+          </p>
+        </SectionCard>
+
+        {/* INVARIANT */}
+        <section className="rounded-3xl border border-black/10 bg-zinc-950 px-8 py-10 text-white">
+          <div className="mb-3 text-xs uppercase tracking-[0.24em] text-zinc-400">
+            Invariant
+          </div>
+          <p className="max-w-4xl text-2xl font-semibold leading-10 tracking-tight md:text-3xl">
+            A system is not defined by what it is—it is defined by how it got there.
+          </p>
+          <p className="mt-4 max-w-3xl text-base leading-8 text-zinc-300">
+            If two states cannot be distinguished by observation but diverge in
+            evolution, then state identity is fundamentally path-dependent.
+          </p>
+        </section>
+
+        <p className="text-sm text-zinc-500">
+          <Link href="/edge-of-practice">
+            Edge of Practice index
           </Link>
         </p>
-      </article>
+      </div>
     </main>
   );
 }
