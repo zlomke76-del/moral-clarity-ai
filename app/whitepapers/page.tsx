@@ -1,12 +1,21 @@
 // app/whitepapers/page.tsx
 // ============================================================
 // WHITE PAPERS INDEX
-// Elevated research library
-// App Router | Next.js 16 SAFE
+// Registry-driven index with auto-grouping by section
 // ============================================================
 
 import type { Metadata } from "next";
 import Link from "next/link";
+import {
+  CONSTRAINT_TYPE_META,
+  LIBRARY_SECTION_META,
+  getAllWhitePapers,
+  getConstraintTypeCounts,
+  getPapersBySection,
+  getStatusCounts,
+  type ConstraintType,
+  type WhitePaperRegistryItem,
+} from "./_data/registry";
 
 export const metadata: Metadata = {
   title: "White Papers | Moral Clarity AI",
@@ -24,180 +33,74 @@ export const metadata: Metadata = {
   },
 };
 
-type WhitePaper = {
-  slug: string;
-  title: string;
-  subtitle: string;
-};
+function getStatusClasses(status: WhitePaperRegistryItem["status"]) {
+  switch (status) {
+    case "NO-GO":
+      return {
+        pill: "border-red-500/25 bg-red-500/10 text-red-300",
+      };
+    case "PASS":
+      return {
+        pill: "border-green-500/25 bg-green-500/10 text-green-300",
+      };
+    case "FAIL":
+      return {
+        pill: "border-red-500/25 bg-red-500/10 text-red-300",
+      };
+    case "CONDITIONAL":
+    default:
+      return {
+        pill: "border-yellow-400/25 bg-yellow-400/10 text-yellow-300",
+      };
+  }
+}
 
-const CONCEPTUAL_PAPERS: WhitePaper[] = [
-  {
-    slug: "materials-with-causal-memory",
-    title: "Materials with Causal Memory",
-    subtitle:
-      "Physical systems that irreversibly encode history, exposure, or misuse into material structure.",
-  },
-  {
-    slug: "geometry-driven-pathogen-surfaces",
-    title: "Geometry-Driven Pathogen Surfaces",
-    subtitle:
-      "How surface geometry alone can influence pathogen behavior without chemistry or claims of elimination.",
-  },
-  {
-    slug: "passive-aerosol-suppression",
-    title: "Passive Aerosol Suppression",
-    subtitle:
-      "Regime-bounded evaluation of materials that reduce aerosol transmission without filtration or airflow control.",
-  },
-  {
-    slug: "passive-environmental-witnesses",
-    title: "Passive Environmental Witnesses",
-    subtitle:
-      "Materials that record environmental exposure as physical evidence rather than data or reports.",
-  },
-  {
-    slug: "passive-source-control",
-    title: "Passive Source Control",
-    subtitle:
-      "Reducing emitted harm at the source through intrinsic material behavior, not user compliance.",
-  },
-  {
-    slug: "phase-selective-cooling",
-    title: "Phase-Selective Cooling",
-    subtitle:
-      "Thermal regulation through phase behavior rather than active energy expenditure.",
-  },
-];
+function getConstraintTypeBadgeClasses(type: ConstraintType) {
+  switch (type) {
+    case "NO_GO":
+      return "border-red-500/20 bg-red-500/10 text-red-200";
+    case "CLAIM":
+      return "border-sky-400/20 bg-sky-400/10 text-sky-100";
+    case "OWNERSHIP":
+      return "border-fuchsia-400/20 bg-fuchsia-400/10 text-fuchsia-100";
+    case "MULTI_DOMAIN":
+      return "border-cyan-400/20 bg-cyan-400/10 text-cyan-100";
+    default:
+      return "border-white/12 bg-black/30 text-white/58";
+  }
+}
 
-const CORE_PET_SYSTEMS: WhitePaper[] = [
-  {
-    slug: "sulfonated-aromatic-diacid-pet",
-    title: "Sulfonated Aromatic Diacid–PET Copolymer",
-    subtitle: "Anchored fixed-charge PET with durability-gated hygiene capability.",
-  },
-  {
-    slug: "phosphonate-diol-pet",
-    title: "Phosphonate-Diol–PET Copolymer",
-    subtitle: "Covalently retained phosphonate PET for non-leaching flame retardancy.",
-  },
-  {
-    slug: "carboxylic-acid-modified-pet",
-    title: "Carboxylic Acid–Modified PET",
-    subtitle: "Pendant-acid PET for enhanced chemical resistance and container life.",
-  },
-  {
-    slug: "quaternary-ammonium-grafted-pet",
-    title: "Quaternary Ammonium–Grafted PET",
-    subtitle: "Extraction-stable cationic PET surfaces with antimicrobial potential.",
-  },
-  {
-    slug: "peg-diacid-pet",
-    title: "PEG-Diacid PET Copolymer",
-    subtitle: "Hydration-stable PEG incorporation for flexible, biocompatible PET.",
-  },
-  {
-    slug: "imidazolium-functional-pet",
-    title: "Imidazolium-Functional PET Graft",
-    subtitle: "Salt-stable ionic PET for membranes and sensing.",
-  },
-  {
-    slug: "zwitterion-modified-pet",
-    title: "Zwitterion-Modified PET",
-    subtitle: "Anti-fouling PET surfaces gated by hot-water extraction stability.",
-  },
-  {
-    slug: "cyanate-ester-pet",
-    title: "Cyanate Ester–PET Copolymer",
-    subtitle: "Thermally durable PET via low-level cyanate anchoring.",
-  },
-  {
-    slug: "allyl-sulfate-grafted-pet",
-    title: "Allyl Sulfate Grafted PET",
-    subtitle: "Anchored sulfate PET for filtration and ion-exchange applications.",
-  },
-  {
-    slug: "epoxy-modified-pet",
-    title: "Epoxy-Modified PET",
-    subtitle: "Epoxy-diacid PET enabling adhesion and barrier enhancement.",
-  },
-];
+function PaperCard({ paper }: { paper: WhitePaperRegistryItem }) {
+  const statusClasses = getStatusClasses(paper.status);
+  const constraintLabel = CONSTRAINT_TYPE_META[paper.constraintType].label;
 
-const EXTENDED_PET_SYSTEMS: WhitePaper[] = [
-  {
-    slug: "bio-based-diacid-pet",
-    title: "Bio-Based Diacid PET Copolymer (FDCA)",
-    subtitle: "Renewable diacid PET supporting lower-carbon polymer supply chains.",
-  },
-  {
-    slug: "biguanide-diacid-antimicrobial-pet",
-    title: "Biguanide Diacid–Functional Antimicrobial PET",
-    subtitle: "Anchored antimicrobial PET without leachable additives.",
-  },
-  {
-    slug: "citric-acid-modified-pet",
-    title: "Citric Acid–Modified PET",
-    subtitle:
-      "Controlled hydrolytic susceptibility enabling predictable end-of-life pathways.",
-  },
-  {
-    slug: "gallic-acid-antioxidant-pet",
-    title: "Gallic Acid–Antioxidant PET",
-    subtitle: "Intrinsic antioxidant PET for extended shelf life and stability.",
-  },
-  {
-    slug: "edta-ligand-functional-pet",
-    title: "EDTA-Ligand Functional PET",
-    subtitle: "Covalently anchored chelation for heavy-metal remediation.",
-  },
-  {
-    slug: "catechol-bearing-pet",
-    title: "Catechol-Bearing PET",
-    subtitle: "Adhesion-enhanced PET inspired by mussel chemistry.",
-  },
-  {
-    slug: "lignin-derived-aromatic-pet",
-    title: "Lignin-Derived Aromatic PET Copolymer",
-    subtitle: "Renewable aromatics from bio-refinery waste streams.",
-  },
-  {
-    slug: "ionic-liquid-antistatic-pet",
-    title: "Ionic Liquid–Mimic Antistatic PET",
-    subtitle: "Durable antistatic PET without migrating additives.",
-  },
-];
-
-const FRONTIER_SYSTEMS: WhitePaper[] = [
-  {
-    slug: "self-healing-diels-alder-pet",
-    title: "Self-Healing PET via Diels–Alder Chemistry",
-    subtitle: "Dynamic covalent PET enabling crack repair and life extension.",
-  },
-  {
-    slug: "polyamine-co2-capture-pet",
-    title: "Polyamine-Functional PET for CO₂ Capture",
-    subtitle:
-      "Solid-state CO₂ capture from concentrated streams or controlled air-contact systems.",
-  },
-];
-
-function PaperCard({
-  paper,
-  category,
-}: {
-  paper: WhitePaper;
-  category: string;
-}) {
   return (
     <Link
       href={`/whitepapers/${paper.slug}`}
       className="group relative overflow-hidden rounded-[26px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.20)] transition duration-200 hover:border-cyan-300/25 hover:bg-white/[0.055] md:p-7"
     >
       <div className="absolute inset-0 bg-gradient-to-r from-white/[0.03] via-transparent to-transparent opacity-80" />
+
       <div className="relative space-y-4">
         <div className="flex flex-wrap gap-2">
-          <span className="rounded-full border border-white/12 bg-black/30 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-white/58">
-            {category}
+          <span
+            className={[
+              "rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.16em]",
+              getConstraintTypeBadgeClasses(paper.constraintType),
+            ].join(" ")}
+          >
+            {constraintLabel}
           </span>
+
+          <span
+            className={[
+              "rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.16em]",
+              statusClasses.pill,
+            ].join(" ")}
+          >
+            {paper.status}
+          </span>
+
           <span className="rounded-full border border-white/12 bg-black/30 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-white/45">
             White Paper
           </span>
@@ -230,7 +133,7 @@ function SectionBlock({
   eyebrow: string;
   title: string;
   description: string;
-  papers: WhitePaper[];
+  papers: WhitePaperRegistryItem[];
 }) {
   return (
     <section className="space-y-6">
@@ -248,7 +151,7 @@ function SectionBlock({
 
       <div className="grid gap-5 lg:grid-cols-2">
         {papers.map((paper) => (
-          <PaperCard key={paper.slug} paper={paper} category={eyebrow} />
+          <PaperCard key={paper.slug} paper={paper} />
         ))}
       </div>
     </section>
@@ -256,18 +159,25 @@ function SectionBlock({
 }
 
 export default function WhitePapersIndexPage() {
-  const totalPapers =
-    CONCEPTUAL_PAPERS.length +
-    CORE_PET_SYSTEMS.length +
-    EXTENDED_PET_SYSTEMS.length +
-    FRONTIER_SYSTEMS.length;
+  const allPapers = getAllWhitePapers();
+  const papersBySection = getPapersBySection();
+  const constraintTypeCounts = getConstraintTypeCounts();
+  const statusCounts = getStatusCounts();
+
+  const orderedSections = Object.entries(LIBRARY_SECTION_META)
+    .sort((a, b) => a[1].order - b[1].order)
+    .map(([key, meta]) => ({
+      key,
+      ...meta,
+      papers: papersBySection[key as keyof typeof papersBySection],
+    }));
 
   return (
     <main className="relative overflow-hidden bg-[#020817]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.14),transparent_30%),radial-gradient(circle_at_82%_18%,rgba(59,130,246,0.10),transparent_24%),linear-gradient(to_bottom,rgba(255,255,255,0.02),transparent_32%)]" />
       <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:48px_48px]" />
 
-      <div className="relative mx-auto max-w-7xl px-6 py-16 md:px-8 lg:px-10 lg:py-20 space-y-12">
+      <div className="relative mx-auto max-w-7xl space-y-12 px-6 py-16 md:px-8 lg:px-10 lg:py-20">
         {/* HERO */}
         <section className="rounded-[32px] border border-white/10 bg-gradient-to-br from-[#081427]/95 via-[#0b1220]/92 to-black/92 p-8 shadow-[0_30px_120px_rgba(0,0,0,0.42)] backdrop-blur-xl md:p-10 lg:p-12">
           <div className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
@@ -280,7 +190,7 @@ export default function WhitePapersIndexPage() {
                   Public Research Library
                 </span>
                 <span className="rounded-full border border-white/12 bg-white/8 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-white/70">
-                  Regime-Bounded
+                  Constraint Indexed
                 </span>
               </div>
 
@@ -294,10 +204,8 @@ export default function WhitePapersIndexPage() {
                   constrained material systems.
                 </p>
                 <p className="max-w-4xl text-base leading-8 text-white/66 md:text-lg">
-                  This library is designed for serious review. These papers are
-                  not positioned as universal claims or deployment guarantees.
-                  They are bounded publications organized by constraint surface,
-                  material logic, and survivability under scrutiny.
+                  This library is no longer just grouped by topic. It is now
+                  indexed by constraint logic, failure class, and determination status.
                 </p>
               </div>
             </div>
@@ -305,11 +213,21 @@ export default function WhitePapersIndexPage() {
             <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-1">
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-sm">
                 <div className="text-xs uppercase tracking-[0.18em] text-white/42">
-                  Scope
+                  Library Size
                 </div>
                 <div className="mt-3 text-sm leading-6 text-white/82">
-                  Conceptual research, core constrained polymer systems,
-                  extended PET architectures, and frontier material behaviors.
+                  {allPapers.length} public papers across{" "}
+                  {orderedSections.length} research layers.
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-sm">
+                <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+                  Determination Mix
+                </div>
+                <div className="mt-3 text-sm leading-6 text-white/82">
+                  {statusCounts.conditional} conditional · {statusCounts.noGo} no-go
+                  {statusCounts.pass ? ` · ${statusCounts.pass} pass` : ""}
+                  {statusCounts.fail ? ` · ${statusCounts.fail} fail` : ""}
                 </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-sm">
@@ -321,15 +239,42 @@ export default function WhitePapersIndexPage() {
                   certification, or deployment maturity.
                 </div>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-sm">
+            </div>
+          </div>
+        </section>
+
+        {/* CONSTRAINT INDEX */}
+        <section className="space-y-5">
+          <div className="space-y-3">
+            <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+              Constraint Index
+            </div>
+            <h2 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+              Failure classes and admissibility surfaces
+            </h2>
+            <p className="max-w-3xl text-sm leading-7 text-white/64 md:text-base">
+              These papers can now be scanned not only by subject area, but by the
+              type of constraint they test and the class of failure they expose.
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+            {constraintTypeCounts.map((item) => (
+              <div
+                key={item.type}
+                className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.16)]"
+              >
                 <div className="text-xs uppercase tracking-[0.18em] text-white/42">
-                  Library Size
+                  Constraint Type
                 </div>
-                <div className="mt-3 text-sm leading-6 text-white/82">
-                  {totalPapers} public papers across four research layers.
+                <div className="mt-3 text-lg font-semibold tracking-tight text-white">
+                  {item.label}
+                </div>
+                <div className="mt-2 text-sm leading-6 text-white/64">
+                  {item.count} paper{item.count === 1 ? "" : "s"}
                 </div>
               </div>
-            </div>
+            ))}
           </div>
         </section>
 
@@ -340,12 +285,10 @@ export default function WhitePapersIndexPage() {
               Library Position
             </div>
             <p className="mt-4 text-base leading-8 text-white/74">
-              This collection brings together public research across four
-              distinct layers: conceptual papers that define regime boundaries,
-              core PET systems that establish constrained functional chemistry,
-              extended PET architectures that widen the field of material
-              utility, and frontier systems that change the behavior class of
-              the material itself.
+              This collection brings together public research across conceptual
+              papers, core PET systems, extended PET architectures, and frontier
+              behavior classes. The grouping is now registry-driven rather than
+              manually duplicated across the page.
             </p>
             <p className="mt-4 text-base leading-8 text-white/74">
               The purpose is not volume. The purpose is structured signal:
@@ -362,41 +305,23 @@ export default function WhitePapersIndexPage() {
               These papers are bounded by design.
             </p>
             <p className="mt-4 text-base leading-8 text-white/66">
-              They are intentionally limited, regime-specific, and survivability-
-              gated. Inclusion does not imply readiness, universal applicability,
+              They are intentionally limited, regime-specific, and survivability-gated.
+              Inclusion does not imply readiness, universal applicability,
               or commercial deployment status.
             </p>
           </div>
         </section>
 
-        {/* SECTIONS */}
-        <SectionBlock
-          eyebrow="Conceptual Papers"
-          title="Conceptual Papers"
-          description="Research framing physical, ethical, and epistemic boundaries before materials, systems, or interventions are treated as operationally real."
-          papers={CONCEPTUAL_PAPERS}
-        />
-
-        <SectionBlock
-          eyebrow="Core PET Systems"
-          title="Core PET White Papers"
-          description="Core constrained PET systems focused on covalent retention, durability-gated function, extraction stability, and foundational performance behavior."
-          papers={CORE_PET_SYSTEMS}
-        />
-
-        <SectionBlock
-          eyebrow="Extended PET Systems"
-          title="Extended PET Architectures"
-          description="Extended PET candidates exploring renewable feedstocks, antimicrobial surfaces, chelation, adhesion, antioxidant behavior, and other broadened functional architectures."
-          papers={EXTENDED_PET_SYSTEMS}
-        />
-
-        <SectionBlock
-          eyebrow="Frontier Systems"
-          title="Frontier Material Behaviors"
-          description="Material systems where the behavioral class changes from static function to dynamic response, including self-healing and solid-state capture behavior."
-          papers={FRONTIER_SYSTEMS}
-        />
+        {/* AUTO-GROUPED SECTIONS */}
+        {orderedSections.map((section) => (
+          <SectionBlock
+            key={section.key}
+            eyebrow={section.eyebrow}
+            title={section.title}
+            description={section.description}
+            papers={section.papers}
+          />
+        ))}
 
         {/* FOOTER INVARIANT */}
         <section className="grid gap-6 lg:grid-cols-[1.08fr_0.92fr]">
@@ -405,9 +330,8 @@ export default function WhitePapersIndexPage() {
               Final Note
             </div>
             <p className="mt-4 text-base leading-8 text-white/74">
-              This library is meant to stay disciplined. Papers remain useful
-              only when they preserve their boundary conditions, regime limits,
-              and non-claims with clarity.
+              This library remains useful only when boundary conditions,
+              regime limits, and non-claims stay explicit.
             </p>
             <p className="mt-4 text-base leading-8 text-white/74">
               Public availability does not convert a bounded paper into a broad
