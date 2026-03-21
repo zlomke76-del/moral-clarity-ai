@@ -39,7 +39,7 @@ export default function MaterialsWithCausalMemoryWhitepaper() {
           <p className="max-w-3xl text-lg leading-8 text-white/75">
             Evaluation of whether materials can encode irreversible,
             interpretable records of cumulative mechanical stress beyond static
-            inspection. :contentReference[oaicite:0]{index=0}
+            inspection.
           </p>
         </div>
       </section>
@@ -112,8 +112,8 @@ export default function MaterialsWithCausalMemoryWhitepaper() {
         </h2>
         <ul className="list-disc pl-6 text-white/70 space-y-2">
           <li>Repeated sub-yield cyclic loading</li>
-          <li>Single overload vs cumulative stress comparison</li>
-          <li>Environmental exposure (temperature, humidity)</li>
+          <li>Single overload versus cumulative stress comparison</li>
+          <li>Environmental exposure including temperature and humidity</li>
           <li>Time-dependent aging without load</li>
           <li>Post-load removal measurement</li>
         </ul>
