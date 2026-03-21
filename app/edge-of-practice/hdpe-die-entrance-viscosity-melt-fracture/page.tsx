@@ -2,143 +2,207 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "HDPE Pipe Extrusion — Die-Entrance Viscosity Stability and Melt Fracture Risk | Moral Clarity AI",
+    "HDPE Die-Entrance Viscosity Stability — Short-Cycle Constraint Boundary | Edge of Practice — Moral Clarity AI",
   description:
-    "A short-cycle falsification experiment testing whether HDPE melt viscosity at the die entrance remains sufficient to prevent gross melt fracture under fixed extrusion conditions.",
+    "A short-cycle falsification protocol testing whether die-entrance viscosity in HDPE pipe extrusion remains above the melt-fracture threshold under fixed process conditions.",
   robots: {
     index: true,
     follow: true,
   },
 };
 
+function SectionCard({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-black/10 bg-white/70 p-6 shadow-sm">
+      <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-zinc-500">
+        {eyebrow}
+      </div>
+      <h2 className="mb-4 text-xl font-semibold">{title}</h2>
+      <div className="space-y-4 text-[15px] leading-7 text-zinc-700">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function SignalPill({
+  children,
+  tone = "neutral",
+}: {
+  children: React.ReactNode;
+  tone?: "neutral" | "fail" | "pass";
+}) {
+  const toneClass =
+    tone === "fail"
+      ? "border-rose-500/20 bg-rose-500/10 text-rose-700"
+      : tone === "pass"
+        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
+        : "border-zinc-300 bg-zinc-100 text-zinc-700";
+
+  return (
+    <span className={`inline-flex rounded-full border px-3 py-1 text-xs ${toneClass}`}>
+      {children}
+    </span>
+  );
+}
+
 export default function HDPEDieEntranceViscosityPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-20">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>
-          HDPE Pipe Extrusion — Die-Entrance Viscosity Stability and Melt Fracture
-          Risk
-        </h1>
+    <main className="mx-auto max-w-6xl px-6 py-16">
+      <div className="space-y-8">
 
-        <p className="lead">
-          <strong>
-            A minimal falsification of a tolerated rheological assumption in
-            continuous HDPE pipe extrusion
-          </strong>
-        </p>
+        {/* HERO */}
+        <section className="rounded-3xl border bg-gradient-to-br from-white to-zinc-100 p-10">
+          <div className="mb-4 flex flex-wrap gap-2">
+            <SignalPill>Edge of Practice</SignalPill>
+            <SignalPill tone="fail">Short-Cycle Falsification</SignalPill>
+            <SignalPill>Process Rheology Boundary</SignalPill>
+          </div>
 
-        <hr />
+          <h1 className="text-4xl font-semibold">
+            HDPE Die-Entrance Viscosity Stability
+          </h1>
 
-        <h2>Polymer and Processing Step</h2>
+          <p className="mt-6 text-lg max-w-3xl text-zinc-700">
+            Fixed extrusion conditions are admissible only if die-entrance
+            viscosity remains above the melt-fracture threshold throughout the
+            production window.
+          </p>
 
-        <p>
-          <strong>Polymer:</strong> High-density polyethylene (HDPE), bimodal
-          pipe-grade resin
-        </p>
+          <div className="mt-8 bg-black text-white p-6 rounded-xl">
+            <div className="text-xs uppercase opacity-70 mb-2">
+              Core Doctrine
+            </div>
+            <p>
+              A process is <strong>admissible</strong> only if its governing
+              rheological state remains above the instability threshold under
+              continuous operation. If viscosity drops below threshold, the
+              process is operating in a non-controlled regime.
+            </p>
+          </div>
+        </section>
 
-        <p>
-          <strong>Process:</strong> Single-screw pipe extrusion
-        </p>
+        {/* SYSTEM */}
+        <SectionCard
+          eyebrow="System Definition"
+          title="Polymer and process boundary"
+        >
+          <ul>
+            <li>Polymer: HDPE (bimodal pipe grade)</li>
+            <li>Process: single-screw pipe extrusion</li>
+            <li>Fixed conditions: temperature, screw speed, throughput</li>
+          </ul>
+        </SectionCard>
 
-        <h2>The Smallest Physical Assumption</h2>
+        {/* ASSUMPTION */}
+        <SectionCard
+          eyebrow="Tested Assumption"
+          title="Viscosity remains above fracture threshold"
+        >
+          <p>
+            Die-entrance viscosity remains sufficiently high to prevent wall
+            shear stress from entering the melt-fracture regime under fixed
+            production conditions.
+          </p>
+        </SectionCard>
 
-        <p>
-          The melt viscosity of HDPE at the die entrance remains sufficiently high
-          throughout the extrusion run to keep wall shear stress below the
-          critical threshold for gross melt fracture, allowing fixed screw speed
-          and temperature settings to reliably produce smooth pipe surfaces.
-        </p>
+        {/* WHY IT PERSISTS */}
+        <SectionCard
+          eyebrow="Why This Assumption Persists"
+          title="Throughput over observability"
+        >
+          <ul>
+            <li>Continuous operation discourages intervention</li>
+            <li>No inline viscosity measurement</li>
+            <li>Surface defects are tolerated below spec limits</li>
+            <li>Visual inspection replaces rheological verification</li>
+          </ul>
+        </SectionCard>
 
-        <h2>Why Industry Tolerates This Assumption</h2>
+        {/* EXPERIMENT */}
+        <SectionCard
+          eyebrow="Falsification Protocol"
+          title="Minimal plant-ready test"
+        >
+          <ul>
+            <li>Extrude pipe at fixed conditions</li>
+            <li>Sample melt at 30, 60, 90 minutes</li>
+            <li>Measure zero-shear viscosity (η₀)</li>
+          </ul>
 
-        <p>
-          Pipe extrusion lines operate continuously at fixed screw speeds
-          (typically 50–100 rpm) to maintain stable output rates of 300–1200 kg/h.
-          Die temperature and back pressure are set during startup based on
-          historical performance and are rarely adjusted mid-run.
-        </p>
+          <p>
+            No process changes. No intervention. Only measurement.
+          </p>
+        </SectionCard>
 
-        <p>
-          Real-time viscosity monitoring at the die entrance requires specialized
-          hardware and interrupts production flow. Surface quality is therefore
-          assessed visually or by touch after calibration, and minor surface
-          defects such as sharkskin are tolerated when they do not affect
-          pressure rating or dimensional certification.
-        </p>
+        {/* GOVERNING VARIABLE */}
+        <SectionCard
+          eyebrow="Governing Variable"
+          title="Die-entrance viscosity (η₀)"
+        >
+          <p>
+            The governing variable is zero-shear viscosity at the die entrance.
+          </p>
 
-        <h2>Minimal Falsification Experiment</h2>
+          <p>
+            This variable determines whether the system remains within or exits
+            the melt-fracture stability regime.
+          </p>
+        </SectionCard>
 
-        <p>
-          <strong>Setup:</strong>
-        </p>
+        {/* VERDICT */}
+        <section className="grid gap-6 lg:grid-cols-2">
+          <section className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-8">
+            <h2 className="text-3xl font-semibold text-emerald-800">PASS</h2>
+            <p className="mt-4 text-sm">
+              All η₀ values ≥ 1500 Pa·s.
+            </p>
+          </section>
 
-        <ul>
-          <li>
-            Extrude 110 mm OD SDR 11 HDPE pipe under standard conditions: melt
-            temperature 200 °C, screw speed 60 rpm, line speed 15 m/min.
-          </li>
-          <li>
-            After steady state is achieved, collect melt samples from the die
-            entrance using a retractable melt probe at 30, 60, and 90 minutes.
-          </li>
-          <li>
-            Measure zero-shear viscosity (η₀) for each sample using a rotational
-            rheometer (25 mm parallel-plate geometry, 190 °C, frequency sweep
-            0.01–100 rad/s).
-          </li>
-        </ul>
+          <section className="rounded-3xl border border-rose-500/20 bg-rose-500/10 p-8">
+            <h2 className="text-3xl font-semibold text-rose-800">FAIL</h2>
+            <p className="mt-4 text-sm">
+              Any η₀ ≤ 1200 Pa·s.
+            </p>
+          </section>
+        </section>
 
-        <p>
-          <strong>Primary Readout:</strong> Zero-shear viscosity η₀ (Pa·s) at the
-          die entrance.
-        </p>
+        {/* INTERPRETATION */}
+        <SectionCard
+          eyebrow="Operational Interpretation"
+          title="What failure means"
+        >
+          <p>
+            Failure indicates that the process has entered a rheological regime
+            capable of producing melt fracture under unchanged operating
+            conditions.
+          </p>
 
-        <p>
-          <strong>Pass:</strong> All measured η₀ values ≥ 1500 Pa·s.
-        </p>
+          <p>
+            The system is no longer stable—it is tolerated.
+          </p>
+        </SectionCard>
 
-        <p>
-          <strong>Fail:</strong> Any sample shows η₀ ≤ 1200 Pa·s, indicating
-          viscosity loss sufficient to permit gross melt fracture under fixed
-          process settings.
-        </p>
+        {/* INVARIANT */}
+        <section className="rounded-3xl border bg-zinc-950 text-white p-8">
+          <p className="text-2xl font-semibold">
+            A stable surface requires a stable rheology.
+          </p>
+          <p className="mt-4 opacity-80">
+            If viscosity drifts below the fracture threshold, surface quality is
+            no longer controlled—it is incidental.
+          </p>
+        </section>
 
-        <h2>Embarrassing Flip Condition</h2>
-
-        <p>
-          If all three melt samples show zero-shear viscosity η₀ ≥ 1500 Pa·s over
-          the full 90-minute run, despite continuous operation at fixed settings,
-          the premise that viscosity degradation poses a credible melt fracture
-          risk under standard conditions is invalidated.
-        </p>
-
-        <h2>Corrected Interpretation If the Flip Occurs</h2>
-
-        <p>
-          Melt viscosity at the die entrance remains sufficiently stable during
-          routine HDPE pipe extrusion to keep wall shear stress below the
-          fracture threshold, confirming that fixed process parameters are
-          adequate to prevent gross melt fracture under standard operating
-          practice.
-        </p>
-
-        <hr />
-
-        <h2>Methodological Note</h2>
-
-        <p>
-          This experiment was independently derived using multiple large language
-          model systems and reconciled through a structured editorial process to
-          test convergence under Edge of Practice constraints. Measurement
-          methods, thresholds, and falsification criteria were not altered during
-          reconciliation.
-        </p>
-
-        <p className="text-sm text-muted-foreground">
-          Inclusion in the Edge of Practice index does not imply generalization
-          beyond the tested assumption.
-        </p>
-      </article>
+      </div>
     </main>
   );
 }
