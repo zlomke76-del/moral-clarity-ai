@@ -1,7 +1,7 @@
 // app/edge/page.tsx
 // ------------------------------------------------------------
 // The Edge Framework — Canonical Index
-// Elevated visual system with corrected route links
+// Elevated visual system with operational instruments
 // App Router | Next.js 16 SAFE
 // ------------------------------------------------------------
 
@@ -26,6 +26,13 @@ type EdgeItem = {
   description: string;
   signal: string;
   index: string;
+};
+
+type InstrumentItem = {
+  title: string;
+  slug: string;
+  description: string;
+  tags: string[];
 };
 
 const EDGES: EdgeItem[] = [
@@ -68,6 +75,23 @@ const EDGES: EdgeItem[] = [
       "Insurability is admissible only if risk is bounded, attributable, and economically governable. This Edge defines the transition from experiment to accountable system.",
     signal: "Economic Accountability",
     index: "05",
+  },
+];
+
+const INSTRUMENTS: InstrumentItem[] = [
+  {
+    title: "Moral Clarity Governance Audit™",
+    slug: "https://studio.moralclarity.ai/governance-audit",
+    description:
+      "A public governance instrument for diagnosing authority failure, accountability breakdown, boundary collapse, and non-governable risk. It operationalizes Edge logic as reviewable audit structure rather than abstract doctrine.",
+    tags: ["Knowledge → Protection", "Detection", "Authority Breakdown"],
+  },
+  {
+    title: "Solace Deployment Contract",
+    slug: "https://studio.moralclarity.ai/governance/deployment-contract",
+    description:
+      "A bounded operational contract defining what Solace may observe, produce, escalate, refuse, and never do without explicit human permission. It renders stewardship into enforceable deployment terms.",
+    tags: ["Stewardship → Protection", "Explicit Permission", "Revocability"],
   },
 ];
 
@@ -183,6 +207,80 @@ export default function EdgeIndexPage() {
               </div>
             </Link>
           ))}
+        </section>
+
+        {/* ===================================================== */}
+        {/* FROM CANON TO CONSTRAINT */}
+        {/* ===================================================== */}
+        <section className="mt-12 rounded-[30px] border border-white/10 bg-gradient-to-br from-[#0b1220]/92 via-[#08101d]/92 to-black/90 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.28)] md:p-10">
+          <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+            <div className="space-y-4">
+              <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+                From Canon to Constraint
+              </div>
+              <h3 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+                Operational Instruments
+              </h3>
+              <p className="max-w-2xl text-sm leading-7 text-white/66 md:text-base">
+                The Edge Framework defines the ordered boundaries of
+                admissibility. The instruments below show how those boundaries
+                are rendered into public, reviewable, operational forms.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+              <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+                Interpretation
+              </div>
+              <p className="mt-3 text-sm leading-7 text-white/72 md:text-base">
+                The Edges define the governing logic. These linked instruments
+                demonstrate how that logic is diagnosed, enforced, and bounded in
+                actual deployment conditions.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8 grid gap-5 lg:grid-cols-2">
+            {INSTRUMENTS.map((instrument) => (
+              <Link
+                key={instrument.title}
+                href={instrument.slug}
+                target="_blank"
+                rel="noreferrer"
+                className="group relative overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.22)] transition duration-200 hover:border-cyan-300/30 hover:bg-white/[0.055] md:p-8"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/[0.04] via-transparent to-transparent opacity-80" />
+                <div className="relative space-y-5">
+                  <div className="flex flex-wrap gap-2">
+                    {instrument.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full border border-white/12 bg-black/30 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-white/62"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="text-2xl font-semibold tracking-tight text-white transition group-hover:text-cyan-100">
+                      {instrument.title}
+                    </h4>
+                    <p className="text-sm leading-7 text-white/66 md:text-base">
+                      {instrument.description}
+                    </p>
+                  </div>
+
+                  <div className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 text-sm font-medium text-white/78 transition group-hover:border-cyan-300/30 group-hover:text-cyan-100">
+                    View Instrument
+                    <span className="ml-2 transition group-hover:translate-x-0.5">
+                      ↗
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
         </section>
 
         {/* ===================================================== */}
