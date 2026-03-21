@@ -16,6 +16,8 @@ export const citricAcidModifiedPetData: ConstraintPageData = {
     status: "CONDITIONAL",
   },
 
+  constraintType: "TRAJECTORY",
+
   systemConstraint: {
     statement:
       "Hydrolytic susceptibility is admissible only if it is controlled by structurally retained citric-derived functionality.",
