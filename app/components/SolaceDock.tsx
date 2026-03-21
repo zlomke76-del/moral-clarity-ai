@@ -8,7 +8,6 @@ import React, {
   useRef,
   useState,
   useLayoutEffect,
-  useCallback,
 } from "react";
 import { createPortal } from "react-dom";
 import { useSolaceStore } from "@/app/providers/solace-store";
@@ -26,12 +25,7 @@ import {
   ResizeHandle,
   createResizeController,
 } from "./dock-resize";
-
-// ? Authoritative transcript renderer (dock-ui based)
 import SolaceTranscript from "./SolaceTranscript";
-
-// ? Removed legacy inline Markdown / highlighting pipeline
-// (readability + surfaces now owned by dock-ui transcript)
 
 import type { SolaceExport } from "@/lib/exports/types";
 
@@ -79,14 +73,6 @@ type EvidenceBlock = {
   text?: string;
 };
 
-type PendingFile = {
-  name: string;
-  mime: string;
-  url: string;
-  size?: number;
-};
-
-
 /* ------------------------------------------------------------------
    Constants
 ------------------------------------------------------------------- */
@@ -112,11 +98,11 @@ function isImageIntent(message: string): boolean {
   );
 }
 
-  /* ------------------------------------------------------------------
-     MAIN
-  ------------------------------------------------------------------- */
-  export default function SolaceDock() {
-   const canRender = true;
+/* ------------------------------------------------------------------
+   MAIN
+------------------------------------------------------------------- */
+export default function SolaceDock() {
+  const canRender = true;
 
   // ------------------------------------------------------------------
   // Singleton ownership (hook-safe)
@@ -131,7 +117,7 @@ function isImageIntent(message: string): boolean {
       }
     };
   }, []);
-  
+
   // ------------------------------------------------------------------
   // Conversation identity (stable per mounted instance)
   // ------------------------------------------------------------------
@@ -240,7 +226,7 @@ function isImageIntent(message: string): boolean {
         setFilters(next);
       }
     } catch {}
-  }, [setFilters]);
+  }, [filters, setFilters]);
 
   // ------------------------------------------------------------------
   // Initial greeting
@@ -250,7 +236,20 @@ function isImageIntent(message: string): boolean {
       setMessages([
         {
           role: "assistant",
-          content: "Ready when you are.",
+          artifact: {
+            type: "text",
+            format: "markdown",
+            title: "Solace",
+            content: [
+              "## Ready when you are.",
+              "",
+              "Ask a question, explore an idea, or begin a structured analysis.",
+              "",
+              "- Research a topic",
+              "- Test a claim",
+              "- Build something new",
+            ].join("\n"),
+          },
         },
       ]);
     }
@@ -315,8 +314,8 @@ function isImageIntent(message: string): boolean {
   const mobileW = Math.max(280, Math.min(dockW, vw - PAD * 2));
   const mobileH = Math.max(360, Math.min(dockH, vh - PAD * 2));
 
-  const txDesktop = Math.min(Math.max(0, x - PAD), vw - panelW - PAD);
-  const tyDesktop = Math.min(Math.max(0, y - PAD), vh - panelH - PAD);
+  const txDesktop = Math.min(Math.max(PAD, x), vw - panelW - PAD);
+  const tyDesktop = Math.min(Math.max(PAD, y), vh - panelH - PAD);
 
   const tx =
     isMobile || minimized ? PAD : minimizing ? orbPos.x : txDesktop;
@@ -324,8 +323,8 @@ function isImageIntent(message: string): boolean {
     isMobile || minimized
       ? Math.max(PAD, vh - mobileH - PAD)
       : minimizing
-      ? orbPos.y
-      : tyDesktop;
+        ? orbPos.y
+        : tyDesktop;
 
   const transitionStyle =
     minimizing || minimized
@@ -406,12 +405,13 @@ function isImageIntent(message: string): boolean {
     setMinimized(false);
   }
 
-/* ------------------------------------------------------------------
-   PAYLOAD INGEST (AUTHORITATIVE)
-------------------------------------------------------------------- */
+  /* ------------------------------------------------------------------
+     PAYLOAD INGEST (AUTHORITATIVE)
+  ------------------------------------------------------------------- */
   function ingestPayload(data: any) {
     try {
       if (!data) throw new Error("Empty response payload");
+
       if ((data.export as SolaceExport)?.kind === "export") {
         const exp = data.export as SolaceExport;
         setMessages((m) => [
@@ -426,6 +426,7 @@ function isImageIntent(message: string): boolean {
         ]);
         return;
       }
+
       if (
         Array.isArray(data.data) &&
         data.data[0] &&
@@ -438,6 +439,7 @@ function isImageIntent(message: string): boolean {
         ]);
         return;
       }
+
       if (typeof data.imageUrl === "string" || typeof data.image === "string") {
         const image = data.imageUrl ?? data.image;
         setMessages((m) => [
@@ -446,10 +448,12 @@ function isImageIntent(message: string): boolean {
         ]);
         return;
       }
+
       if (Array.isArray(data.messages)) {
         setMessages((m) => [...m, ...data.messages]);
         return;
       }
+
       if (data.ok === true && typeof data.response === "string") {
         setMessages((m) => [
           ...m,
@@ -457,6 +461,7 @@ function isImageIntent(message: string): boolean {
         ]);
         return;
       }
+
       if (Array.isArray(data.evidence)) {
         const evMsgs: Message[] = data.evidence.map((e: EvidenceBlock) => ({
           role: "assistant",
@@ -468,6 +473,7 @@ function isImageIntent(message: string): boolean {
         setMessages((m) => [...m, ...evMsgs]);
         return;
       }
+
       setMessages((m) => [
         ...m,
         {
@@ -480,98 +486,92 @@ function isImageIntent(message: string): boolean {
         ...m,
         {
           role: "assistant",
-          content: `? ${err?.message || "Request failed"}`,
+          content: `⚠️ ${err?.message || "Request failed"}`,
         },
       ]);
     }
   }
 
-/* ------------------------------------------------------------------
-   SEND
-------------------------------------------------------------------- */
-async function send(): Promise<void> {
-  if (!input.trim() && pendingFiles.length === 0) return;
-  if (streaming) return;
+  /* ------------------------------------------------------------------
+     SEND
+  ------------------------------------------------------------------- */
+  async function send(): Promise<void> {
+    if (!input.trim() && pendingFiles.length === 0) return;
+    if (streaming) return;
 
-  const userMsg = input.trim() || "Attachments:";
-  setInput("");
-  setStreaming(true);
-  setMessages((m) => [...m, { role: "user", content: userMsg }]);
+    const userMsg = input.trim() || "Attachments:";
+    setInput("");
+    setStreaming(true);
+    setMessages((m) => [...m, { role: "user", content: userMsg }]);
 
-  try {
-    // ------------------------------------------------------------
-    // IMAGE-INTENT FAST PATH (NOW WITH ATTACHMENTS)
-    // ------------------------------------------------------------
-    if (isImageIntent(userMsg)) {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: userMsg,
-          canonicalUserKey: userKey,
-          workspaceId: MCA_WORKSPACE_ID,
-          conversationId,
-          ministryMode: ministryOn,
-          modeHint,
-          attachments: pendingFiles.map((f) => ({
-            name: f.name,
-            mime: f.mime,
-            url: f.url,
-            size: f.size,
-          })),
-        }),
+    try {
+      if (isImageIntent(userMsg)) {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: userMsg,
+            canonicalUserKey: userKey,
+            workspaceId: MCA_WORKSPACE_ID,
+            conversationId,
+            ministryMode: ministryOn,
+            modeHint,
+            attachments: pendingFiles.map((f) => ({
+              name: f.name,
+              mime: f.mime,
+              url: f.url,
+              size: f.size,
+            })),
+          }),
+        });
+
+        ingestPayload(await res.json());
+        return;
+      }
+
+      const result = await sendWithVision({
+        userMsg,
+        pendingFiles,
+        userKey,
+        workspaceId: MCA_WORKSPACE_ID,
+        conversationId,
+        ministryOn,
+        modeHint,
       });
 
-      ingestPayload(await res.json());
-      return;
-    }
-
-    // ------------------------------------------------------------
-    // VISION / STANDARD PATH
-    // ------------------------------------------------------------
-    const result = await sendWithVision({
-      userMsg,
-      pendingFiles,
-      userKey,
-      workspaceId: MCA_WORKSPACE_ID,
-      conversationId,
-      ministryOn,
-      modeHint,
-    });
-
-    if (result?.visionResults) {
-      for (const v of result.visionResults) {
-        setMessages((m) => [
-          ...m,
-          {
-            role: "assistant",
-            content: v?.answer ?? "",
-            imageUrl: v?.imageUrl ?? null,
-          },
-        ]);
+      if (result?.visionResults) {
+        for (const v of result.visionResults) {
+          setMessages((m) => [
+            ...m,
+            {
+              role: "assistant",
+              content: v?.answer ?? "",
+              imageUrl: v?.imageUrl ?? null,
+            },
+          ]);
+        }
       }
-    }
 
-    if (result?.chatPayload) {
-      ingestPayload(result.chatPayload);
+      if (result?.chatPayload) {
+        ingestPayload(result.chatPayload);
+      }
+    } catch (err: any) {
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content: `⚠️ ${err?.message || "Request failed"}`,
+        },
+      ]);
+    } finally {
+      setStreaming(false);
+      clearPending();
     }
-  } catch (err: any) {
-    setMessages((m) => [
-      ...m,
-      {
-        role: "assistant",
-        content: `⚠️ ${err?.message || "Request failed"}`,
-      },
-    ]);
-  } finally {
-    setStreaming(false);
-    clearPending();
   }
-}
 
-/* ------------------------------------------------------------------
-   Auto-expanding textarea
-------------------------------------------------------------------- */
+  /* ------------------------------------------------------------------
+     Auto-expanding textarea
+  ------------------------------------------------------------------- */
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   useLayoutEffect(() => {
     const ta = textareaRef.current;
@@ -626,7 +626,13 @@ async function send(): Promise<void> {
       />
 
       <div
-        style={{ ...composerWrapStyle, paddingTop: 2, paddingBottom: 2 }}
+        style={{
+          ...composerWrapStyle,
+          padding: 10,
+          background:
+            "linear-gradient(180deg, rgba(10,14,24,0.95), rgba(8,12,20,0.98))",
+          backdropFilter: "blur(10px)",
+        }}
         onPaste={(e) => handlePaste(e, { prefix: "solace" })}
       >
         <div
@@ -634,7 +640,7 @@ async function send(): Promise<void> {
             display: "flex",
             gap: 8,
             alignItems: "center",
-            minHeight: 44,
+            minHeight: 46,
             paddingLeft: 2,
             paddingRight: 2,
           }}
@@ -648,6 +654,7 @@ async function send(): Promise<void> {
               alignItems: "center",
               justifyContent: "center",
               position: "relative",
+              borderRadius: 10,
             }}
           >
             <span
@@ -657,6 +664,7 @@ async function send(): Promise<void> {
                 justifyContent: "center",
                 height: 28,
                 width: 28,
+                opacity: 0.86,
               }}
             >
               <IconPaperclip
@@ -684,6 +692,8 @@ async function send(): Promise<void> {
               justifyContent: "center",
               padding: 0,
               outline: "none",
+              borderRadius: 10,
+              cursor: "pointer",
             }}
             tabIndex={0}
             type="button"
@@ -695,6 +705,7 @@ async function send(): Promise<void> {
                 justifyContent: "center",
                 height: 28,
                 width: 28,
+                opacity: listening ? 1 : 0.86,
               }}
             >
               <IconMic
@@ -710,14 +721,16 @@ async function send(): Promise<void> {
               minHeight: 38,
               maxHeight: 80,
               fontSize: 16,
-              lineHeight: 1.4,
-              borderRadius: 6,
-              border: "1px solid #ddd",
-              padding: "7px 10px",
+              lineHeight: 1.45,
+              borderRadius: 10,
+              border: "1px solid rgba(255,255,255,0.10)",
+              background: "rgba(255,255,255,0.05)",
+              backdropFilter: "blur(6px)",
+              padding: "8px 12px",
               flex: 1,
               resize: "none",
               overflow: "hidden",
-              transition: "height 0.15s ease",
+              transition: "height 0.15s ease, border 0.15s ease",
             }}
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -731,18 +744,20 @@ async function send(): Promise<void> {
             onClick={send}
             disabled={streaming}
             style={{
-              minWidth: 54,
+              minWidth: 56,
               height: 38,
-              border: "none",
-              borderRadius: 7,
-              background: GOLD,
-              color: "#333",
-              fontWeight: 600,
-              fontSize: 16,
-              boxShadow: "0 1.5px 4px #0001",
+              border: "1px solid rgba(255,215,0,0.35)",
+              borderRadius: 10,
+              background:
+                "linear-gradient(180deg, rgba(255,215,0,0.95), rgba(255,200,0,0.85))",
+              color: "#1a1a1a",
+              fontWeight: 700,
+              fontSize: 14,
+              boxShadow:
+                "0 6px 18px rgba(255,215,0,0.18), inset 0 1px 0 rgba(255,255,255,0.25)",
               cursor: streaming ? "not-allowed" : "pointer",
               opacity: streaming ? 0.6 : 1,
-              transition: "background 0.15s, color 0.15s, box-shadow 0.2s",
+              transition: "all 0.15s ease",
               marginLeft: 2,
             }}
             type="button"
@@ -757,40 +772,38 @@ async function send(): Promise<void> {
     </section>
   );
 
-// --- Render only one (panel or orb), never both
-if (!canRender || !visible) return null;
+  if (!canRender || !visible) return null;
 
-// Acquire singleton ownership at render boundary
-if (!SOLACE_DOCK_ACTIVE) {
-  SOLACE_DOCK_ACTIVE = true;
-  ownsDockRef.current = true;
-} else if (!ownsDockRef.current) {
-  return null;
-}
+  if (!SOLACE_DOCK_ACTIVE) {
+    SOLACE_DOCK_ACTIVE = true;
+    ownsDockRef.current = true;
+  } else if (!ownsDockRef.current) {
+    return null;
+  }
 
-return createPortal(
-  <>
-    {minimized && !isMobile ? (
-      <div
-        style={orbStyle}
-        onClick={restoreDock}
-        aria-label="Restore Solace dock"
-      >
-        <span
-          style={{
-            fontWeight: "bold",
-            fontSize: 28,
-            color: "#fff",
-            userSelect: "none",
-          }}
+  return createPortal(
+    <>
+      {minimized && !isMobile ? (
+        <div
+          style={orbStyle}
+          onClick={restoreDock}
+          aria-label="Restore Solace dock"
         >
-          ?
-        </span>
-      </div>
-    ) : (
-      panel
-    )}
-  </>,
-  document.body
-);
+          <span
+            style={{
+              fontWeight: "bold",
+              fontSize: 28,
+              color: "#fff",
+              userSelect: "none",
+            }}
+          >
+            ?
+          </span>
+        </div>
+      ) : (
+        panel
+      )}
+    </>,
+    document.body
+  );
 }
