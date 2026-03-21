@@ -3,150 +3,222 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title:
-    "Post-Deployment Monitoring as a Safety Proxy in General-Purpose AI | Edge of Practice — Moral Clarity AI",
+    "Post-Deployment Monitoring — Detection Boundary Failure in AI Systems | Moral Clarity AI",
   description:
-    "An Edge of Practice examination of the assumption that post-deployment monitoring and user feedback are sufficient to detect and mitigate harmful emergent behavior in large-scale AI systems.",
-  openGraph: {
-    title: "Post-Deployment Monitoring as a Safety Proxy in General-Purpose AI",
-    description:
-      "A short-cycle assumption exposure examining the limits of post-deployment monitoring as a safety guarantee in general-purpose AI deployment.",
-    url: "https://moralclarity.ai/edge-of-practice/post-deployment-monitoring-ai",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
+    "A short-cycle invariant falsification testing whether post-deployment monitoring can detect all materially harmful emergent behavior in general-purpose AI systems.",
   robots: {
     index: true,
     follow: true,
   },
 };
 
+function SectionCard({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-black/10 bg-white/70 p-6 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+      <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
+        {eyebrow}
+      </div>
+      <h2 className="mb-4 text-xl font-semibold text-zinc-950 dark:text-zinc-50">
+        {title}
+      </h2>
+      <div className="space-y-4 text-[15px] leading-7 text-zinc-700 dark:text-zinc-300">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function SignalPill({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex rounded-full border border-zinc-300 bg-zinc-100 px-3 py-1 text-xs text-zinc-700 dark:border-white/10 dark:bg-white/10 dark:text-zinc-300">
+      {children}
+    </span>
+  );
+}
+
 export default function PostDeploymentMonitoringAIPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Post-Deployment Monitoring as a Safety Proxy in General-Purpose AI</h1>
+    <main className="mx-auto max-w-6xl px-6 py-16 md:px-8 md:py-20">
+      <div className="space-y-8">
 
-        <p className="text-sm opacity-70">
-          Edge of Practice · Automation · AI Systems · Governance
-        </p>
+        {/* HERO */}
+        <section className="rounded-3xl border border-black/10 bg-gradient-to-br from-white to-zinc-100 p-10 dark:border-white/10 dark:from-zinc-950 dark:to-zinc-900">
+          <div className="mb-4 flex flex-wrap gap-2">
+            <SignalPill>Edge of Practice</SignalPill>
+            <SignalPill>Short-Cycle Falsification</SignalPill>
+            <SignalPill>Detection Regime</SignalPill>
+          </div>
 
-        <h2>One-Sentence Assumption Under Test</h2>
-        <p>
-          Post-deployment monitoring and user feedback are sufficient to identify
-          and mitigate harmful emergent behavior in large-scale, general-purpose
-          AI systems.
-        </p>
+          <h1 className="text-4xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50 md:text-5xl">
+            Post-Deployment Monitoring as a Safety Proxy
+          </h1>
 
-        <h2>Why This Assumption Is Tolerated</h2>
-        <p>
-          Continuous monitoring infrastructure and user feedback channels are
-          visible, active, and frequently invoked after deployment. Many
-          observed failures are detected and addressed iteratively, reinforcing
-          confidence in reactive correction. Internal evaluation and red-teaming
-          demonstrate competence in known failure modes, and the absence of
-          immediate catastrophe is interpreted as evidence of sufficiency.
-        </p>
+          <p className="mt-6 max-w-3xl text-lg leading-8 text-zinc-700 dark:text-zinc-300">
+            A system is admissible as safe only if harmful behavior is
+            observable within its monitoring channels. If harm can exist,
+            propagate, or accumulate outside detection pathways, then monitoring
+            is not a safety mechanism—it is a visibility mechanism.
+          </p>
 
-        <p>
-          The assumption persists because corrective mechanisms are observable,
-          while undetected harms remain structurally invisible.
-        </p>
+          <div className="mt-8 rounded-2xl border border-zinc-200 bg-black p-6 text-white">
+            <div className="mb-2 text-[11px] uppercase tracking-[0.24em] text-zinc-400">
+              Core Doctrine
+            </div>
+            <p className="text-base leading-7 md:text-lg">
+              You cannot mitigate what you cannot observe.  
+              If harm is not guaranteed to enter the detection channel, it is
+              not governed.
+            </p>
+          </div>
+        </section>
 
-        <h2>Precise Restatement of the Assumption</h2>
-        <p>
-          The organization operates under the belief that post-deployment
-          monitoring systems, supplemented by user feedback, function with
-          sufficient speed, scope, and representativeness to detect and contain
-          all materially harmful emergent behaviors before they propagate or
-          cause irreversible impact. Implied is that feedback channels surface
-          harms reliably and early enough to enable effective intervention.
-          Unstated is the extent to which detection burden is externalized and
-          delayed, and the degree to which undetected or diffuse harms bypass
-          these mechanisms entirely.
-        </p>
+        {/* ASSUMPTION */}
+        <SectionCard
+          eyebrow="Tested Assumption"
+          title="Monitoring is sufficient to ensure safety"
+        >
+          <p>
+            Post-deployment monitoring and user feedback are assumed to detect
+            and mitigate harmful emergent behavior across all real-world use
+            contexts.
+          </p>
+        </SectionCard>
 
-        <h2>Apparent Conditions for Validity — and Their Fragility</h2>
-        <p>
-          This assumption may appear valid when deployment environments are
-          limited in scale, user populations are relatively homogeneous, harms
-          are immediately visible, and organizational response cycles are faster
-          than system propagation.
-        </p>
+        {/* WHY IT PERSISTS */}
+        <SectionCard
+          eyebrow="Why This Assumption Persists"
+          title="Visibility bias"
+        >
+          <p>
+            Detected failures are visible and correctable, reinforcing confidence
+            in monitoring systems.
+          </p>
 
-        <p>
-          At global scale, these conditions fail. Use contexts fragment, harms
-          diffuse across populations, feedback becomes selective and delayed,
-          and model behavior propagates faster than governance updates or
-          organizational reflexes.
-        </p>
+          <p>
+            Undetected harms leave no signal and are incorrectly treated as
+            absence of failure.
+          </p>
+        </SectionCard>
 
-        <h2>Structural Failure Modes</h2>
+        {/* CORE BREAK */}
+        <SectionCard
+          eyebrow="Structural Break"
+          title="Observation is not guaranteed"
+        >
+          <p>
+            Monitoring assumes that harmful events will surface through feedback
+            or observable signals.
+          </p>
 
-        <h3>Diffuse, Accumulating Harm</h3>
-        <p>
-          Some harms do not manifest as discrete, reportable incidents. They
-          accumulate gradually through bias reinforcement, misinformation
-          normalization, or subtle behavioral influence, remaining below
-          detection thresholds until systemic effects are evident and difficult
-          to reverse.
-        </p>
+          <p>
+            This is false. Harm can exist without triggering reporting,
+            recognition, or measurement.
+          </p>
+        </SectionCard>
 
-        <h3>Observational Blind Spots</h3>
-        <p>
-          Not all affected parties recognize harm, have access to feedback
-          channels, or possess incentives to report. Marginalized, non-dominant,
-          or indirect stakeholders are systematically underrepresented, leaving
-          entire harm classes invisible despite competent monitoring.
-        </p>
+        {/* FAILURE MODES */}
+        <SectionCard
+          eyebrow="Failure Modes"
+          title="How harm escapes detection"
+        >
+          <ul>
+            <li>Diffuse accumulation (no discrete event)</li>
+            <li>Delayed manifestation (time-shifted harm)</li>
+            <li>Unreported exposure (no feedback signal)</li>
+            <li>Population bias (underrepresented groups)</li>
+          </ul>
+        </SectionCard>
 
-        <h2>Epistemic Boundary</h2>
+        {/* GOVERNING VARIABLE */}
+        <SectionCard
+          eyebrow="Governing Variable"
+          title="Detection completeness"
+        >
+          <p>
+            The governing variable is not response speed, but whether all
+            materially harmful behavior enters the observable channel.
+          </p>
 
-        <p>
-          <strong>What Can Be Known Pre-Deployment:</strong> Documented
-          performance on benchmarks, observed behavior in controlled tests, and
-          known categories of failure.
-        </p>
+          <ul>
+            <li>Complete detection → monitoring viable</li>
+            <li>Incomplete detection → monitoring invalid as safety proxy</li>
+          </ul>
+        </SectionCard>
 
-        <p>
-          <strong>What Cannot Be Known Until Harm Occurs:</strong> Context-
-          specific, adversarial, or emergent behaviors arising in untested
-          real-world environments, particularly those that propagate faster than
-          detection and response mechanisms.
-        </p>
+        {/* EPISTEMIC BOUNDARY */}
+        <SectionCard
+          eyebrow="Epistemic Boundary"
+          title="Unknown harm space"
+        >
+          <p>
+            Known harms can be monitored and mitigated.
+          </p>
 
-        <p>
-          Where certainty ends, assurance cannot legitimately extend.
-        </p>
+          <p>
+            Unknown or emergent harms may exist entirely outside monitoring
+            visibility until after propagation.
+          </p>
+        </SectionCard>
 
-        <h2>Disentitlement</h2>
-        <p>
-          On the basis of this assumption, no claim of comprehensive safety,
-          assured benign generalization, or timely harm containment across all
-          real-world contexts is justified. Post-deployment monitoring does not
-          eliminate unknown unknowns, nor does it guarantee early detection of
-          diffuse or systemic harm.
-        </p>
+        {/* PASS FAIL */}
+        <SectionCard
+          eyebrow="Binary Boundary"
+          title="What breaks the assumption"
+        >
+          <p>
+            <strong>Pass:</strong> All harmful behaviors are reliably detected
+            before propagation or impact.
+          </p>
 
-        <h2>Steward’s Note</h2>
-        <p>
-          Reliance on post-deployment monitoring and external feedback transfers
-          initial detection risk beyond the organization to users, regulators,
-          and society. This displacement delays accountability and allows
-          systemic harm to emerge before recognition. Stewardship requires
-          explicit acknowledgment that this assumption externalizes, rather than
-          contains, risk.
-        </p>
+          <p>
+            <strong>Fail:</strong> Any harm exists that is undetected,
+            underreported, or discovered only after propagation.
+          </p>
+        </SectionCard>
 
-        <hr />
+        {/* INTERPRETATION */}
+        <SectionCard
+          eyebrow="Corrected Interpretation"
+          title="Monitoring is not governance"
+        >
+          <p>
+            Monitoring systems observe known signals. They do not guarantee
+            visibility into all harmful system behavior.
+          </p>
 
-        <p className="text-sm opacity-70">
-          Part of the{" "}
+          <p>
+            Safety requires pre-execution constraint—not post-hoc observation.
+          </p>
+        </SectionCard>
+
+        {/* INVARIANT */}
+        <section className="rounded-3xl border border-black/10 bg-zinc-950 px-8 py-10 text-white">
+          <div className="mb-3 text-xs uppercase tracking-[0.24em] text-zinc-400">
+            Invariant
+          </div>
+          <p className="max-w-4xl text-2xl font-semibold leading-10 tracking-tight md:text-3xl">
+            If harm must be reported to exist, it is already too late.
+          </p>
+          <p className="mt-4 max-w-3xl text-base leading-8 text-zinc-300">
+            A system that depends on observation to discover harm does not
+            control harm—it waits for it.
+          </p>
+        </section>
+
+        <p className="text-sm text-zinc-500">
           <Link href="/edge-of-practice">
-            Edge of Practice short-cycle experiment index
+            Edge of Practice index
           </Link>
-          .
         </p>
-      </article>
+      </div>
     </main>
   );
 }
