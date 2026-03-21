@@ -236,25 +236,19 @@ export default function SolaceDock() {
       setMessages([
         {
           role: "assistant",
-          artifact: {
-            type: "text",
-            format: "markdown",
-            title: "Solace",
-            content: [
-              "## Ready when you are.",
-              "",
-              "Ask a question, explore an idea, or begin a structured analysis.",
-              "",
-              "- Research a topic",
-              "- Test a claim",
-              "- Build something new",
-            ].join("\n"),
-          },
+          content: [
+            "Ready when you are.",
+            "",
+            "Ask a question, explore an idea, or begin a structured analysis.",
+            "",
+            "• Research a topic",
+            "• Test a claim",
+            "• Build something new",
+          ].join("\n"),
         },
       ]);
     }
   }, [messages.length]);
-
   // ------------------------------------------------------------------
   // Panel measurement
   // ------------------------------------------------------------------
