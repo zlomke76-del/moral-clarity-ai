@@ -3,159 +3,223 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title:
-    "Phase-Locked Capillary Oscillation for Enhanced Solar Desalination | Moral Clarity AI",
+    "Capillary Phase-Locking in Solar Desalination — Interfacial Coupling Boundary | Moral Clarity AI",
   description:
-    "Demonstrates how phase-locked capillary wave excitation at the water–air interface can increase evaporation rates beyond static solar thermal limits.",
-  openGraph: {
-    title: "Phase-Locked Capillary Oscillation for Enhanced Solar Desalination",
-    description:
-      "An Edge of Practice experiment showing how resonant interfacial oscillations can boost solar-driven evaporation.",
-    url: "https://moralclarity.ai/edge-of-practice/phase-locked-capillary-oscillation",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
+    "A constructive physics constraint artifact testing whether evaporation in solar desalination is limited by interfacial phase coherence rather than thermal input alone.",
   robots: {
     index: true,
     follow: true,
   },
 };
 
+function SectionCard({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-black/10 bg-white/70 p-6 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+      <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
+        {eyebrow}
+      </div>
+      <h2 className="mb-4 text-xl font-semibold text-zinc-950 dark:text-zinc-50">
+        {title}
+      </h2>
+      <div className="space-y-4 text-[15px] leading-7 text-zinc-700 dark:text-zinc-300">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function SignalPill({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <span className="inline-flex rounded-full border border-zinc-300 bg-zinc-100 px-3 py-1 text-xs text-zinc-700 dark:border-white/10 dark:bg-white/10 dark:text-zinc-300">
+      {children}
+    </span>
+  );
+}
+
 export default function PhaseLockedCapillaryOscillationPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Phase-Locked Capillary Oscillation for Enhanced Solar Desalination</h1>
+    <main className="mx-auto max-w-6xl px-6 py-16 md:px-8 md:py-20">
+      <div className="space-y-8">
 
-        <p className="lead">
-          <strong>
-            A constructive interfacial physics experiment for increasing solar
-            evaporation without new materials
-          </strong>
+        {/* HERO */}
+        <section className="rounded-3xl border border-black/10 bg-gradient-to-br from-white to-zinc-100 p-10 dark:border-white/10 dark:from-zinc-950 dark:to-zinc-900">
+          <div className="mb-4 flex flex-wrap gap-2">
+            <SignalPill>Constructive Physics</SignalPill>
+            <SignalPill>Interfacial Regime</SignalPill>
+            <SignalPill>Phase Coupling</SignalPill>
+          </div>
+
+          <h1 className="text-4xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50 md:text-5xl">
+            Capillary Phase-Locking in Solar Desalination
+          </h1>
+
+          <p className="mt-6 max-w-3xl text-lg leading-8 text-zinc-700 dark:text-zinc-300">
+            Solar evaporation is admissible as thermally limited only if
+            interfacial capillary modes remain incoherent under steady energy
+            input. If phase-locking amplifies evaporation at equal energy, then
+            the governing constraint is coupling—not heat.
+          </p>
+
+          <div className="mt-8 rounded-2xl border border-zinc-200 bg-black p-6 text-white">
+            <div className="mb-2 text-[11px] uppercase tracking-[0.24em] text-zinc-400">
+              Core Doctrine
+            </div>
+            <p className="text-base leading-7 md:text-lg">
+              Evaporation is <strong>not purely thermal</strong>. It is governed
+              by the degree of phase coherence at the interface. If energy is
+              delivered incoherently, the system underperforms its physical
+              potential.
+            </p>
+          </div>
+        </section>
+
+        {/* ASSUMPTION */}
+        <SectionCard
+          eyebrow="Tested Assumption"
+          title="Evaporation scales with steady thermal input"
+        >
+          <p>
+            Solar desalination systems assume evaporation rate is governed by
+            steady-state thermal gradients and mean energy input.
+          </p>
+        </SectionCard>
+
+        {/* MECHANISM */}
+        <SectionCard
+          eyebrow="Hidden Mechanism"
+          title="Capillary modes remain incoherent under steady forcing"
+        >
+          <p>
+            Thin water films support capillary wave modes, but under steady
+            illumination these remain weak, incoherent, and unexploited.
+          </p>
+
+          <p>
+            The interface is treated as passive, rather than a dynamically
+            excitable system.
+          </p>
+        </SectionCard>
+
+        {/* DISCOVERY */}
+        <SectionCard
+          eyebrow="Discovery"
+          title="Phase-locking amplifies interfacial energy transfer"
+        >
+          <p>
+            When energy input is modulated at the natural resonance frequency of
+            capillary modes, oscillations phase-lock and amplify.
+          </p>
+
+          <p>
+            This increases curvature, pressure gradients, and effective
+            vapor-pressure differential—raising evaporation without increasing
+            total energy input.
+          </p>
+        </SectionCard>
+
+        {/* GOVERNING VARIABLE */}
+        <SectionCard
+          eyebrow="Governing Variable"
+          title="Degree of phase coherence at the interface"
+        >
+          <p>
+            The governing variable is not temperature, but coherence between
+            energy input and capillary resonance.
+          </p>
+
+          <ul>
+            <li>Incoherent input → suppressed evaporation</li>
+            <li>Partial coupling → moderate gain</li>
+            <li>Phase-locked → amplified flux</li>
+          </ul>
+        </SectionCard>
+
+        {/* NEW OBJECT */}
+        <SectionCard
+          eyebrow="New Scientific Object"
+          title="Capillary Resonance Coupling Coefficient (CRCC)"
+        >
+          <p>
+            CRCC quantifies the increase in capillary oscillation amplitude when
+            input energy matches the natural resonance frequency.
+          </p>
+
+          <p>
+            It directly correlates with evaporation enhancement and serves as a
+            measurable proxy for interfacial coupling efficiency.
+          </p>
+        </SectionCard>
+
+        {/* EXPERIMENT */}
+        <SectionCard
+          eyebrow="Minimal Falsification Test"
+          title="Steady vs phase-modulated illumination"
+        >
+          <ul>
+            <li>Apply steady illumination → measure baseline evaporation</li>
+            <li>Apply modulated illumination at resonance frequency</li>
+            <li>Maintain identical mean energy input</li>
+            <li>Compare evaporation rate and oscillation amplitude</li>
+          </ul>
+        </SectionCard>
+
+        {/* PASS FAIL */}
+        <SectionCard
+          eyebrow="Binary Boundary"
+          title="What breaks the assumption"
+        >
+          <p>
+            <strong>Pass:</strong> No increase in evaporation under phase-modulated input.
+          </p>
+
+          <p>
+            <strong>Fail:</strong> Measurable increase in evaporation and CRCC at equal energy input.
+          </p>
+        </SectionCard>
+
+        {/* INTERPRETATION */}
+        <SectionCard
+          eyebrow="Corrected Interpretation"
+          title="Evaporation is coupling-limited, not heat-limited"
+        >
+          <p>
+            If phase-locking increases evaporation, then thermal models alone
+            are incomplete. Interface dynamics become the primary design axis.
+          </p>
+        </SectionCard>
+
+        {/* INVARIANT */}
+        <section className="rounded-3xl border border-black/10 bg-zinc-950 px-8 py-10 text-white">
+          <div className="mb-3 text-xs uppercase tracking-[0.24em] text-zinc-400">
+            Invariant
+          </div>
+          <p className="max-w-4xl text-2xl font-semibold leading-10 tracking-tight md:text-3xl">
+            A system is not limited by energy—it is limited by how energy couples.
+          </p>
+          <p className="mt-4 max-w-3xl text-base leading-8 text-zinc-300">
+            If the interface cannot synchronize with incoming energy, potential
+            work remains unextracted regardless of input magnitude.
+          </p>
+        </section>
+
+        <p className="text-sm text-zinc-500">
+          <Link href="/edge-of-practice">
+            Edge of Practice index
+          </Link>
         </p>
-
-        <hr />
-
-        <h2>One-Sentence Discovery</h2>
-
-        <p>
-          Solar thermal desalination systems systematically underperform because
-          sub-millimeter capillary waves at the water–air interface are treated
-          as passive surface roughness, when in fact they can be externally
-          phase-locked to incoming solar flux to amplify evaporation.
-        </p>
-
-        <hr />
-
-        <h2>The Physical Mechanism</h2>
-
-        <p>
-          Thin water films naturally support capillary wave modes determined by
-          surface tension, density, and wavelength. When solar or thermal input
-          is applied steadily, these modes remain weak and incoherent, limiting
-          vapor flux to static thermal gradients.
-        </p>
-
-        <p>
-          If incident energy is modulated at or near the natural resonance
-          frequency of these capillary modes, interfacial oscillations can
-          phase-lock to the forcing. This produces constructive amplification
-          of surface motion, increasing local curvature, pressure gradients,
-          and effective vapor-pressure differentials at the interface.
-        </p>
-
-        <p>
-          The result is an evaporation rate that exceeds predictions from
-          steady-state solar thermal models at equal mean energy input.
-        </p>
-
-        <hr />
-
-        <h2>New Scientific Object</h2>
-
-        <p>
-          <strong>Capillary Resonance Coupling Coefficient (CRCC)</strong>
-        </p>
-
-        <p>
-          The CRCC is defined as the measured increase in capillary wave
-          amplitude (nanometers) induced when modulated optical or thermal input
-          matches the natural resonance frequency of the water surface. It is
-          observable via laser Doppler vibrometry or high-speed surface imaging
-          and correlates directly with evaporation flux enhancement.
-        </p>
-
-        <hr />
-
-        <h2>Edge of Practice Experiment</h2>
-
-        <p>
-          <strong>Assumption under test:</strong> External modulation of solar
-          illumination at the capillary wave resonance frequency produces
-          significantly greater surface oscillation and evaporation than steady
-          illumination of equal mean intensity.
-        </p>
-
-        <h3>Materials</h3>
-
-        <ul>
-          <li>Shallow water tray (3–5 mm depth)</li>
-          <li>Modulated light or thermal source (e.g., LED array or shuttered lamp)</li>
-          <li>Controller for periodic modulation</li>
-          <li>Precision scale for mass loss</li>
-          <li>Thermometer</li>
-          <li>Laser Doppler vibrometer or high-speed camera (optional but preferred)</li>
-        </ul>
-
-        <h3>Procedure</h3>
-
-        <ol>
-          <li>Fill tray with a fixed depth of water.</li>
-          <li>Apply steady illumination and record baseline evaporation rate.</li>
-          <li>Measure surface oscillation amplitude under steady conditions.</li>
-          <li>
-            Apply modulated illumination at the calculated capillary resonance
-            frequency while maintaining equal mean intensity.
-          </li>
-          <li>Record evaporation rate and oscillation amplitude.</li>
-          <li>
-            Alternate between steady and modulated regimes to confirm
-            repeatability.
-          </li>
-        </ol>
-
-        <p>
-          <strong>Binary outcome:</strong> If modulated illumination increases
-          both CRCC and evaporation rate relative to the steady control, the
-          effect exists. If not, it does not.
-        </p>
-
-        <hr />
-
-        <h2>Why This Matters</h2>
-
-        <p>
-          This experiment opens a new axis for improving solar desalination and
-          atmospheric water harvesting by exploiting interfacial physics rather
-          than new materials or higher temperatures. It enables efficiency gains
-          using passive modulation techniques compatible with low-cost,
-          distributed water systems.
-        </p>
-
-        <p>
-          Even modest gains compound meaningfully at scale, especially in
-          water-stressed regions where simplicity and durability dominate
-          design constraints.
-        </p>
-
-        <hr />
-
-        <p className="text-sm text-muted-foreground">
-          This experiment is published as part of{" "}
-          <Link href="/edge-of-practice">Edge of Practice</Link>. It proposes no
-          product, policy, or deployment claim and exists solely to test a
-          hidden physical assumption governing real-world systems.
-        </p>
-      </article>
+      </div>
     </main>
   );
 }
