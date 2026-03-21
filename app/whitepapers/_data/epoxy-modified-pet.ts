@@ -51,10 +51,8 @@ export const epoxyModifiedPetData: ConstraintPageData = {
     title: "Admissibility Test",
     description:
       "Exposure to 1M HCl for 24 hours followed by quantification of retained epoxy groups.",
-    passText:
-      "≥90% epoxy functionality retained.",
-    failText:
-      "<90% retention after hydrolysis.",
+    passText: "≥90% epoxy functionality retained.",
+    failText: "<90% retention after hydrolysis.",
   },
 
   determination:
