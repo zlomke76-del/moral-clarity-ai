@@ -1,205 +1,176 @@
 // app/whitepapers/catechol-bearing-pet/page.tsx
-// ============================================================
-// WHITE PAPER
-// Catechol-Bearing PET (Adhesion-Enhanced PET)
-// ============================================================
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Catechol-Bearing PET | Moral Clarity AI",
+  title:
+    "Catechol-Bearing PET | Constraint Assessment | Moral Clarity AI",
   description:
-    "A regime-bounded white paper examining whether catechol functionality can be structurally anchored into PET to enable durable adhesion without mobile adhesives.",
+    "A constraint-bound evaluation of whether adhesion remains structurally retained under environmental cycling.",
   robots: { index: true, follow: true },
 };
 
 export default function Page() {
   return (
-    <main className="mx-auto max-w-4xl px-6 py-20">
-      <article className="space-y-10">
-        {/* HEADER */}
-        <header className="space-y-4 border-b pb-8">
-          <p className="text-sm uppercase tracking-[0.18em] text-neutral-500">
-            White Paper · Anchored PET Candidate
-          </p>
-          <h1 className="text-4xl font-semibold tracking-tight">
-            Catechol-Bearing PET (Adhesion-Enhanced PET)
+    <main className="mx-auto max-w-6xl px-6 py-24 space-y-16">
+      {/* ===================================================== */}
+      {/* HERO */}
+      {/* ===================================================== */}
+      <section className="rounded-[32px] border border-white/10 bg-black p-12">
+        <div className="space-y-6">
+          <div className="flex flex-wrap gap-3">
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/70 uppercase tracking-[0.18em]">
+              White Paper
+            </span>
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/70 uppercase tracking-[0.18em]">
+              Constraint Assessment
+            </span>
+            <span className="rounded-full border border-yellow-400/30 px-3 py-1 text-xs text-yellow-300 uppercase tracking-[0.18em]">
+              STATUS: CONDITIONAL
+            </span>
+          </div>
+
+          <h1 className="text-5xl text-white font-semibold tracking-tight">
+            Catechol-Bearing PET
           </h1>
-          <p className="max-w-3xl text-lg leading-8 text-neutral-600">
-            A bounded materials investigation into whether catechol
-            functionality can be covalently anchored into PET to enable durable
-            adhesion across metal, glass, and biological substrates without
-            reliance on mobile adhesives or external bonding agents.
-          </p>
-        </header>
 
-        {/* ABSTRACT */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Abstract</h2>
-          <p className="leading-8 text-neutral-700">
-            This paper evaluates the admissibility of incorporating
-            catechol-bearing functionality into polyethylene terephthalate
-            (PET) as a route to intrinsic adhesion. The central constraint is
-            persistence under environmental cycling. Adhesion is admissible only
-            if it remains after repeated wet/dry exposure without degradation
-            beyond defined thresholds.
+          <p className="max-w-2xl text-lg text-white/70 leading-8">
+            Evaluation of whether adhesion can be structurally retained in PET
+            and persist across wet/dry environmental cycling without reliance on
+            mobile adhesives or transient surface chemistry.
           </p>
-          <p className="leading-8 text-neutral-700">
-            If adhesion depends on transient surface chemistry or degrades under
-            cycling, the system fails as an anchored adhesion material and
-            reverts to an unstable or additive-dependent mechanism.
-          </p>
-        </section>
+        </div>
+      </section>
 
-        {/* PROBLEM CONTEXT */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Problem Context</h2>
-          <p className="leading-8 text-neutral-700">
-            Adhesion in polymer systems is commonly achieved through applied
-            adhesives, surface treatments, or coatings. These introduce failure
-            points, toxicity concerns, and degradation under moisture, thermal,
-            or mechanical stress.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            Catechol chemistry, inspired by mussel adhesion, offers a pathway to
-            strong interfacial bonding across diverse substrates. However, its
-            effectiveness depends on whether the functional group is retained
-            and accessible as part of the material structure.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            For PET to function as an adhesion-capable material, catechol groups
-            must remain covalently anchored and resist degradation or loss under
-            repeated environmental cycling.
-          </p>
-        </section>
+      {/* ===================================================== */}
+      {/* SYSTEM CONSTRAINT */}
+      {/* ===================================================== */}
+      <section className="rounded-[36px] border border-white/10 bg-black p-14 text-center">
+        <h2 className="text-xs uppercase tracking-[0.25em] text-white/40 mb-6">
+          System Constraint
+        </h2>
 
-        {/* THESIS */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Conceptual Thesis</h2>
-          <p className="leading-8 text-neutral-700">
-            Incorporating catechol-functional diacids or diols into PET during
-            polymerization may enable intrinsic adhesion through retained
-            functional groups that interact with target surfaces under both wet
-            and dry conditions.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            This concept is admissible only if adhesion performance is stable
-            under repeated environmental cycling and does not depend on
-            degradation-sensitive or extractable components.
-          </p>
-        </section>
+        <p className="text-3xl text-white max-w-3xl mx-auto leading-[1.5]">
+          Adhesion is admissible only if it persists under environmental cycling
+          as a function of retained structure.
+        </p>
 
-        {/* FUNCTIONALIZATION */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Functionalization Strategy</h2>
-          <p className="leading-8 text-neutral-700">
-            Catechol-bearing monomers are introduced into PET during
-            polycondensation at low molar fractions. The objective is to embed
-            adhesion-capable functionality directly into the polymer network
-            without compromising processability or structural integrity.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            This is a constrained structural hypothesis. It assumes no inherent
-            adhesion benefit unless validated through persistence and cycling
-            stability.
-          </p>
-        </section>
+        <p className="mt-6 text-white/50">
+          If bonding degrades or depends on transient surface chemistry,
+          the system is rejected.
+        </p>
+      </section>
 
-        {/* FAILURE CONDITION */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Primary Failure Condition</h2>
-          <p className="leading-8 text-neutral-700">
-            The system fails if adhesion strength decreases beyond the defined
-            threshold after repeated wet/dry cycling.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            Loss of adhesion indicates either degradation of catechol
-            functionality or insufficient structural retention, invalidating the
-            concept as an anchored adhesion material.
-          </p>
-        </section>
+      {/* ===================================================== */}
+      {/* CONTEXT */}
+      {/* ===================================================== */}
+      <section className="max-w-3xl space-y-6">
+        <h2 className="text-2xl text-white font-semibold">
+          Problem Context
+        </h2>
 
-        {/* ADMISSIBILITY TEST */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Admissibility Test</h2>
-          <p className="leading-8 text-neutral-700">
-            Surface peel testing is conducted after repeated wet/dry cycling to
-            evaluate adhesion stability under environmental stress.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            <strong>FAIL:</strong> greater than 10% reduction in adhesion
-            strength relative to baseline after cycling.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            <strong>PASS:</strong> adhesion loss remains within 10% of baseline,
-            with no evidence that bonding relies on transient or degrading
-            chemistry.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            This threshold defines persistence, not peak performance.
-          </p>
-        </section>
+        <p className="text-white/70 leading-8">
+          Conventional adhesion systems rely on applied adhesives, coatings,
+          or treatments that degrade under environmental stress.
+        </p>
 
-        {/* PROJECTED CAPABILITY */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Projected Capability</h2>
-          <p className="leading-8 text-neutral-700">
-            If retention and stability hold, catechol-bearing PET may enable
-            durable adhesion across a range of substrates without the need for
-            applied adhesives or bonding agents.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            This could support applications in medical devices, assemblies, and
-            environments where adhesive migration or degradation presents
-            unacceptable risk.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            These capabilities are conditional and invalid if the cycling
-            stability requirement fails.
-          </p>
-        </section>
+        <p className="text-white/70 leading-8">
+          Structural anchoring offers a pathway to intrinsic adhesion without
+          external bonding agents.
+        </p>
+      </section>
 
-        {/* NON-CLAIMS */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Non-Claims</h2>
-          <p className="leading-8 text-neutral-700">
-            This paper does not claim validated adhesion performance across all
-            substrates, regulatory approval, biocompatibility certification,
-            manufacturability at scale, or superiority over existing adhesive
-            systems.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            It defines a constrained candidate system and the condition under
-            which intrinsic adhesion becomes materially credible.
-          </p>
-        </section>
+      {/* ===================================================== */}
+      {/* SYSTEM CONSTRUCTION */}
+      {/* ===================================================== */}
+      <section className="max-w-3xl space-y-6">
+        <h2 className="text-2xl text-white font-semibold">
+          System Construction
+        </h2>
 
-        {/* CONCLUSION */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Conclusion</h2>
-          <p className="leading-8 text-neutral-700">
-            Catechol-bearing PET is admissible only if adhesion persists after
-            repeated environmental cycling as a function of retained structure.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            If adhesion degrades beyond threshold, the concept fails as a durable
-            structural solution. If stability holds, it becomes a viable
-            candidate for adhesion-critical applications without reliance on
-            external adhesives.
-          </p>
-        </section>
+        <p className="text-white/70 leading-8">
+          Catechol-functional monomers are incorporated into PET during
+          polymerization to embed adhesion-capable functionality into the structure.
+        </p>
+      </section>
 
-        {/* INVARIANT */}
-        <section className="border-t pt-8">
-          <p className="text-xl leading-8">
-            Adhesion is admissible only if it survives environmental cycling.
-          </p>
-          <p className="mt-2 text-neutral-600">
-            If bonding degrades under use conditions, it does not belong to the
-            material.
-          </p>
-        </section>
-      </article>
+      {/* ===================================================== */}
+      {/* FAILURE CONDITION */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.05] p-8 max-w-3xl">
+        <h2 className="text-xl text-white font-semibold">
+          Failure Condition
+        </h2>
+
+        <p className="mt-3 text-white/80 leading-8">
+          The system fails if adhesion strength decreases beyond threshold
+          after repeated wet/dry cycling or if functional groups degrade.
+        </p>
+      </section>
+
+      {/* ===================================================== */}
+      {/* ADMISSIBILITY TEST */}
+      {/* ===================================================== */}
+      <section className="max-w-3xl space-y-6">
+        <h2 className="text-2xl text-white font-semibold">
+          Admissibility Test
+        </h2>
+
+        <p className="text-white/70 leading-8">
+          Surface peel testing after repeated wet/dry cycles defines adhesion persistence.
+        </p>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="rounded-2xl border border-green-400/20 bg-green-500/10 p-6">
+            <h3 className="text-green-300 font-semibold">PASS</h3>
+            <p className="mt-2 text-green-200/80">
+              Adhesion loss remains within 10% of baseline.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6">
+            <h3 className="text-red-300 font-semibold">FAIL</h3>
+            <p className="mt-2 text-red-200/80">
+              Greater than 10% reduction in adhesion strength.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ===================================================== */}
+      {/* SYSTEM DETERMINATION */}
+      {/* ===================================================== */}
+      <section className="text-center space-y-4">
+        <div className="w-24 h-px bg-white/10 mx-auto" />
+
+        <p className="text-xs uppercase tracking-[0.25em] text-white/40">
+          System Determination
+        </p>
+
+        <p className="text-white/70 max-w-2xl mx-auto">
+          Admissibility is conditional on adhesion persistence under cycling.
+          Adhesion claims are invalid if bonding degrades with use.
+        </p>
+      </section>
+
+      {/* ===================================================== */}
+      {/* FINAL DOCTRINE */}
+      {/* ===================================================== */}
+      <section className="rounded-[36px] border border-white/10 bg-black p-16 text-center">
+        <p className="text-3xl text-white leading-[1.5]">
+          If adhesion does not survive the interface,
+          <br />
+          it is not part of the material.
+        </p>
+
+        <p className="mt-6 text-white/60">
+          Bonding must persist.
+        </p>
+
+        <p className="mt-2 text-white/40">
+          Not just occur.
+        </p>
+      </section>
     </main>
   );
 }
