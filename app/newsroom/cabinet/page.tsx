@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import NeuralSidebar from "@/app/components/NeuralSidebar";
 import type { OutletOverview, OutletStats } from "./types";
 import Leaderboard from "./components/Leaderboard";
 import ScoreBreakdown from "./components/ScoreBreakdown";
@@ -19,7 +20,7 @@ const OUTLET_MERGE_CANON: Record<string, string> = {
   "bbc.com": "BBC",
   "www.bbc.co.uk": "BBC",
   "www.bbc.com": "BBC",
-  "bbc": "BBC",
+  bbc: "BBC",
 
   // ----------------------------------------------------------
   // Newsmax
@@ -27,7 +28,7 @@ const OUTLET_MERGE_CANON: Record<string, string> = {
   "ir.newsmax": "Newsmax",
   "ir.newsmax.com": "Newsmax",
   "newsmax.com": "Newsmax",
-  "newsmax": "Newsmax",
+  newsmax: "Newsmax",
 
   // ----------------------------------------------------------
   // Time
@@ -37,7 +38,7 @@ const OUTLET_MERGE_CANON: Record<string, string> = {
   "nation.time.com": "Time",
   "newsfeed.time.com": "Time",
   "time.com": "Time",
-  "time": "Time",
+  time: "Time",
 
   // ----------------------------------------------------------
   // Bloomberg
@@ -45,14 +46,14 @@ const OUTLET_MERGE_CANON: Record<string, string> = {
   "bna.content.cirrus.bloomberg.com": "Bloomberg",
   "bna content - bloomberg": "Bloomberg",
   "bna content": "Bloomberg",
-  "bloomberg": "Bloomberg",
+  bloomberg: "Bloomberg",
 
   // ----------------------------------------------------------
   // DW
   // ----------------------------------------------------------
   "amp.dw.com": "DW",
   "dw.com": "DW",
-  "dw": "DW",
+  dw: "DW",
 
   // ----------------------------------------------------------
   // RFERL
@@ -60,7 +61,7 @@ const OUTLET_MERGE_CANON: Record<string, string> = {
   "about.rferl.org": "RFERL",
   "about.rferl": "RFERL",
   "rferl.org": "RFERL",
-  "rferl": "RFERL",
+  rferl: "RFERL",
 
   // ----------------------------------------------------------
   // Washington Examiner
@@ -90,7 +91,7 @@ const OUTLET_MERGE_CANON: Record<string, string> = {
   "cooking.nytimes.com": "NY Times",
   "nytimes cooking": "NY Times",
   "nyt cooking": "NY Times",
-  "nytimescooking": "NY Times",
+  nytimescooking: "NY Times",
 };
 
 function normalizeKey(raw: string): string {
@@ -127,17 +128,14 @@ function mergeDuplicateOutlets(
       const existing = map.get(key)!;
 
       const combinedStories = existing.__stories + stories;
-      const combinedPiNumerator =
-        existing.__pi_numerator + pi * stories;
+      const combinedPiNumerator = existing.__pi_numerator + pi * stories;
 
       map.set(key, {
         ...existing,
         outlet: canonical,
         total_stories: combinedStories,
         avg_pi_weighted:
-          combinedStories > 0
-            ? combinedPiNumerator / combinedStories
-            : 0,
+          combinedStories > 0 ? combinedPiNumerator / combinedStories : 0,
         __stories: combinedStories,
         __pi_numerator: combinedPiNumerator,
       });
@@ -200,9 +198,7 @@ export default function NewsroomCabinetPage() {
   useEffect(() => {
     if (!selected) return;
 
-    const selectedOutlet = ranked.find(
-      (o) => o.outlet === selected
-    );
+    const selectedOutlet = ranked.find((o) => o.outlet === selected);
 
     if (!selectedOutlet) {
       setStats(null);
@@ -227,68 +223,107 @@ export default function NewsroomCabinetPage() {
 
   const totalStoriesEvaluated = useMemo(
     () =>
-      ranked.reduce(
-        (sum, o) => sum + (Number(o.total_stories) || 0),
-        0
-      ),
+      ranked.reduce((sum, o) => sum + (Number(o.total_stories) || 0), 0),
     [ranked]
   );
 
   return (
-    <div className="flex flex-col gap-12">
-      <div className="text-xs text-neutral-400">
-        {totalStoriesEvaluated.toLocaleString()} stories evaluated · PI based on lifetime
-        <span className="ml-2">
-          ·{" "}
-          <Link
-            href="/newsroom/methodology"
-            className="underline underline-offset-2 hover:text-neutral-200"
-          >
-            Methodology
-          </Link>
-        </span>
-      </div>
+    <main className="grid h-screen min-h-0 w-screen grid-cols-[260px_minmax(0,1fr)] overflow-hidden bg-transparent text-white">
+      <aside className="h-full overflow-y-auto border-r border-white/8 bg-neutral-950/70 backdrop-blur-xl">
+        <NeuralSidebar />
+      </aside>
 
-      {goldenAnchor.length > 0 && (
-        <section>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-amber-400">
-            Golden Anchor · Top 3 Predictability
-          </h2>
-          <Leaderboard
-            outlets={goldenAnchor}
-            selectedOutlet={selected}
-            onSelect={setSelected}
-          />
-        </section>
-      )}
+      <section className="relative flex min-h-0 h-full w-full overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_24%),radial-gradient(circle_at_top_right,rgba(250,204,21,0.07),transparent_22%),linear-gradient(180deg,rgba(4,10,24,0.96)_0%,rgba(3,7,18,0.995)_100%)]" />
 
-      {neutralField.length > 0 && (
-        <section className="border-t border-neutral-700 pt-6">
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-            Neutral Category · Full Field
-          </h2>
-          <Leaderboard
-            outlets={neutralField}
-            selectedOutlet={selected}
-            onSelect={setSelected}
-          />
-        </section>
-      )}
+        <div className="relative z-10 flex h-full min-h-0 w-full flex-col overflow-hidden px-8 py-8">
+          <div className="flex-1 min-h-0 overflow-y-auto pr-2">
+            <div className="mx-auto w-full max-w-6xl">
+              <header className="mb-10 border-b border-white/8 pb-8 text-center">
+                <div className="inline-flex items-center rounded-full border border-amber-300/15 bg-amber-300/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-100/80">
+                  Newsroom Cabinet
+                </div>
 
-      {watchList.length > 0 && (
-        <section className="border-t border-neutral-800 pt-6">
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-red-400">
-            Watch List · Lowest Predictability
-          </h2>
-          <Leaderboard
-            outlets={watchList}
-            selectedOutlet={selected}
-            onSelect={setSelected}
-          />
-        </section>
-      )}
+                <h1 className="mt-5 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+                  Moral Clarity Newsroom
+                </h1>
 
-      <ScoreBreakdown outlet={stats} />
-    </div>
+                <p className="mt-3 text-sm leading-6 text-white/55 sm:text-base">
+                  Powered by Solace — neutral, transparent, ethical journalism
+                  tools.
+                </p>
+              </header>
+
+              <div className="flex flex-col gap-10">
+                <div className="rounded-2xl border border-white/8 bg-white/[0.025] px-5 py-4 text-xs text-white/55 shadow-[0_10px_30px_rgba(0,0,0,0.16)]">
+                  {totalStoriesEvaluated.toLocaleString()} stories analyzed · PI
+                  based on lifetime.
+                  <span className="ml-2">
+                    ·{" "}
+                    <Link
+                      href="/newsroom/methodology"
+                      className="underline underline-offset-2 transition hover:text-white"
+                    >
+                      Methodology
+                    </Link>
+                  </span>
+                </div>
+
+                {goldenAnchor.length > 0 && (
+                  <section>
+                    <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-amber-400">
+                      Golden Anchor · Top 3 Predictability
+                    </h2>
+                    <div className="rounded-[28px] border border-white/8 bg-white/[0.02] p-4 shadow-[0_16px_48px_rgba(0,0,0,0.2)]">
+                      <Leaderboard
+                        outlets={goldenAnchor}
+                        selectedOutlet={selected}
+                        onSelect={setSelected}
+                      />
+                    </div>
+                  </section>
+                )}
+
+                {neutralField.length > 0 && (
+                  <section className="border-t border-white/8 pt-8">
+                    <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-white/45">
+                      Neutral Category · Full Field
+                    </h2>
+                    <div className="rounded-[28px] border border-white/8 bg-white/[0.02] p-4 shadow-[0_16px_48px_rgba(0,0,0,0.2)]">
+                      <Leaderboard
+                        outlets={neutralField}
+                        selectedOutlet={selected}
+                        onSelect={setSelected}
+                      />
+                    </div>
+                  </section>
+                )}
+
+                {watchList.length > 0 && (
+                  <section className="border-t border-white/8 pt-8">
+                    <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.16em] text-rose-400">
+                      Watch List · Lowest Predictability
+                    </h2>
+                    <div className="rounded-[28px] border border-white/8 bg-white/[0.02] p-4 shadow-[0_16px_48px_rgba(0,0,0,0.2)]">
+                      <Leaderboard
+                        outlets={watchList}
+                        selectedOutlet={selected}
+                        onSelect={setSelected}
+                      />
+                    </div>
+                  </section>
+                )}
+
+                <section className="border-t border-white/8 pt-8">
+                  <div className="rounded-[28px] border border-white/8 bg-white/[0.02] p-4 shadow-[0_16px_48px_rgba(0,0,0,0.2)]">
+                    <ScoreBreakdown outlet={stats} />
+                  </div>
+                </section>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }
