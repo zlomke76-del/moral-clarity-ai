@@ -2,16 +2,15 @@
 // ============================================================
 // EDGE OF PROTECTION
 // Representation Boundary
-// ============================================================
-// Where assistance becomes overreach.
+// Upgraded to Constraint-Bound Admissibility Framework
 // ============================================================
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Edge of Protection | Representation Boundary",
+  title: "Representation Boundary | Edge of Protection",
   description:
-    "Defines the boundary between assistance and overreach in AI systems that summarize, title, classify, or represent human expression without consent.",
+    "Representation is admissible only if explicit, revocable consent is present and no authority over meaning is asserted.",
   robots: {
     index: true,
     follow: true,
@@ -22,154 +21,190 @@ export const dynamic = "force-static";
 
 export default function RepresentationBoundaryPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Representation Boundary</h1>
+    <main className="mx-auto max-w-6xl px-6 py-20 space-y-12">
+      {/* ===================================================== */}
+      {/* HERO */}
+      {/* ===================================================== */}
+      <section className="rounded-2xl bg-gradient-to-br from-neutral-900 via-neutral-800 to-black p-10">
+        <div className="space-y-6">
+          <h1 className="text-4xl font-semibold text-white tracking-tight">
+            Representation Boundary
+          </h1>
 
-        <p className="text-lg text-neutral-400">
-          Assistance, restraint, and the ethics of mediated meaning
+          <div className="flex flex-wrap gap-3">
+            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
+              Edge of Protection
+            </span>
+            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
+              Consent Constraint
+            </span>
+            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
+              Meaning Authority Boundary
+            </span>
+          </div>
+
+          <p className="text-neutral-300 max-w-3xl">
+            Representation is admissible only if explicit, informed, and
+            revocable consent is present. Any system that asserts, fixes, or
+            publishes meaning without consent constitutes failure.
+          </p>
+        </div>
+      </section>
+
+      {/* ===================================================== */}
+      {/* CORE DOCTRINE */}
+      {/* ===================================================== */}
+      <section className="rounded-2xl bg-black p-8 border border-white/10">
+        <p className="text-white text-lg leading-relaxed">
+          Representation is admissible only if consent is explicit and authority
+          over meaning is not assumed.
         </p>
-
-        <hr />
-
-        {/* PURPOSE */}
-        <h2>Purpose</h2>
-        <p>
-          This Edge defines the boundary at which AI assistance becomes
-          representational overreach. It governs systems that summarize, title,
-          classify, label, or otherwise mediate how a human’s words, work, or
-          identity are presented—especially in public or algorithmic contexts.
+        <p className="text-neutral-400 mt-4">
+          Any assignment of meaning, intent, or identity without consent
+          constitutes structural failure.
         </p>
+      </section>
 
-        <p>
-          The Representation Boundary exists to ensure that AI systems do not
-          claim authority over meaning, intent, or identity without explicit,
-          informed consent from the person concerned.
+      {/* ===================================================== */}
+      {/* TESTED ASSUMPTION */}
+      {/* ===================================================== */}
+      <section className="grid md:grid-cols-2 gap-6">
+        <div className="rounded-xl border p-6">
+          <h2 className="font-semibold text-lg">Tested Assumption</h2>
+          <p className="text-neutral-600 mt-2">
+            AI systems do not assert, fix, or publish meaning on behalf of a
+            person without explicit, revocable consent.
+          </p>
+        </div>
+
+        <div className="rounded-xl border p-6">
+          <h2 className="font-semibold text-lg">Why This Matters</h2>
+          <p className="text-neutral-600 mt-2">
+            Representation without consent transfers authority from the person
+            to the system, creating persistent misalignment between intent and
+            public meaning. :contentReference[oaicite:0]{index=0}
+          </p>
+        </div>
+      </section>
+
+      {/* ===================================================== */}
+      {/* SYSTEM DEFINITION */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">System Definition</h2>
+        <p className="text-neutral-600">
+          Representation is defined as any output that summarizes, titles,
+          classifies, labels, or otherwise fixes meaning, intent, or identity in
+          a way that may be interpreted as authoritative.
         </p>
+      </section>
 
-        {/* CORE PRINCIPLE */}
-        <h2>Core Principle</h2>
-        <p>
-          The line between assistance and restraint is not always obvious, but it
-          is foundational.
+      {/* ===================================================== */}
+      {/* GOVERNING VARIABLE */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">Governing Variable</h2>
+        <p className="text-neutral-600">
+          Presence of explicit, informed, and revocable consent prior to any
+          representational output, and absence of authority claims in that output.
         </p>
+      </section>
 
-        <p>
-          Assistance moves toward overreach when it shifts from helping a person
-          understand to announcing what their intent or meaning is—especially
-          when this occurs publicly, persistently, or without clear consent.
-        </p>
-
-        <p>
-          In these moments, restraint is not a lesser form of care. It is the
-          primary form.
-        </p>
-
-        {/* DEFINITIONS */}
-        <h2>Key Definitions</h2>
-
-        <ul>
-          <li>
-            <strong>Interpretation:</strong> Offering a possible reading,
-            explicitly provisional and clearly attributable to the system.
-          </li>
-          <li>
-            <strong>Representation:</strong> Publicly asserting or fixing meaning
-            on behalf of another, implicitly claiming authority over how that
-            person or their work is understood or remembered.
-          </li>
-          <li>
-            <strong>Consent:</strong> An explicit, revocable, and informed signal
-            from the person concerned that representation is permitted.
-          </li>
+      {/* ===================================================== */}
+      {/* EXPERIMENTAL SETUP */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">
+          Experimental / Boundary Setup
+        </h2>
+        <ul className="list-disc pl-6 text-neutral-600 space-y-2">
+          <li>System generates summaries, titles, or classifications of human input</li>
+          <li>Evaluate whether explicit consent is obtained prior to representation</li>
+          <li>Observe labeling of outputs as provisional or authoritative</li>
+          <li>Test correction, withdrawal, and refusal mechanisms</li>
+          <li>Evaluate behavior under ambiguity or contested meaning</li>
         </ul>
+      </section>
 
-        {/* FAILURE MODE */}
-        <h2>Failure Mode</h2>
-        <p>
-          Representation without consent creates a silent power transfer. The
-          system becomes a gatekeeper of meaning rather than a tool for
-          understanding.
+      {/* ===================================================== */}
+      {/* FALSIFICATION THRESHOLD */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">
+          Binary Falsification Threshold
+        </h2>
+        <p className="text-neutral-600">
+          System fails if it asserts, fixes, or publishes meaning, intent, or
+          identity without explicit consent, or presents representation as
+          authoritative or final.
         </p>
+      </section>
 
-        <p>
-          Harm rarely appears as a single catastrophic error. Instead, it
-          accumulates through small discrepancies between a person’s intent and
-          how they are represented—discrepancies that can erode trust, dignity,
-          and even self-recognition over time.
+      {/* ===================================================== */}
+      {/* OPERATIONAL INTERPRETATION */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">
+          Operational Interpretation
+        </h2>
+        <p className="text-neutral-600">
+          Valid systems must label all interpretive outputs as provisional and
+          system-generated.
         </p>
-
-        {/* ENFORCEMENT */}
-        <h2>Enforcement Requirements</h2>
-        <p>
-          Any AI system operating near this boundary must satisfy all of the
-          following conditions:
+        <p className="text-neutral-600">
+          Representation must be opt-in, reversible, and immediately correctable
+          without friction.
         </p>
-
-        <ul>
-          <li>
-            Outputs that summarize, title, or classify human expression must be
-            clearly labeled as <em>provisional</em> and <em>system-generated</em>.
-          </li>
-          <li>
-            Representation must be opt-in, not default.
-          </li>
-          <li>
-            Correction, withdrawal, and refusal must be simple, immediate, and
-            honored without friction.
-          </li>
-          <li>
-            The system must never present its output as final, authoritative, or
-            definitive.
-          </li>
-          <li>
-            The system must defer to the person concerned when conflict or
-            ambiguity arises.
-          </li>
-        </ul>
-
-        {/* VULNERABLE USERS */}
-        <h2>Vulnerable Contexts</h2>
-        <p>
-          For vulnerable users, the risks multiply. Repeated, unilateral
-          engagement by AI—especially when interpretive or representational—can
-          tip into dependency, confusion, or undue influence.
+        <p className="text-neutral-600">
+          In cases of ambiguity or conflict, the system must defer to the human
+          source and withdraw authority.
         </p>
+      </section>
 
-        <p>
-          In these contexts, restraint is not optional. It is protective.
+      {/* ===================================================== */}
+      {/* BOUNDARY OF CLAIM */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border p-6 space-y-4">
+        <h2 className="font-semibold text-lg">Boundary of Claim</h2>
+        <p className="text-neutral-600">
+          This constraint evaluates representational behavior only. It does not
+          assess correctness of interpretation, only authority and consent.
         </p>
+      </section>
 
-        {/* PREVENTION */}
-        <h2>Preventive Design Standard</h2>
-        <p>
-          Prevention means acting before harm is visible. Systems must embed
-          consent and opt-out mechanisms as prerequisites, not afterthoughts.
-        </p>
+      {/* ===================================================== */}
+      {/* PASS / FAIL */}
+      {/* ===================================================== */}
+      <section className="grid md:grid-cols-2 gap-6">
+        <div className="rounded-xl border border-green-500/30 bg-green-500/5 p-6">
+          <h3 className="font-semibold text-green-600">PASS</h3>
+          <p className="text-neutral-600 mt-2">
+            All representation is consented, labeled as provisional, and fully
+            reversible without friction.
+          </p>
+        </div>
 
-        <p>
-          Signals of over-reliance, distress, or confusion must trigger
-          de-escalation, deferral, or handoff to human support rather than deeper
-          engagement.
-        </p>
+        <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-6">
+          <h3 className="font-semibold text-red-600">FAIL</h3>
+          <p className="text-neutral-600 mt-2">
+            Any representation occurs without consent, is presented as
+            authoritative, or cannot be corrected or withdrawn immediately.
+          </p>
+        </div>
+      </section>
 
-        {/* STEWARDSHIP */}
-        <h2>Stewardship Test</h2>
-        <p>
-          Responsibility is measured not by what a system can say or do, but by
-          what it chooses not to claim.
+      {/* ===================================================== */}
+      {/* INVARIANT */}
+      {/* ===================================================== */}
+      <section className="rounded-2xl bg-black p-8 border border-white/10">
+        <p className="text-white text-lg">
+          Meaning belongs to the person, not the system.
         </p>
-
-        <p>
-          If an AI cannot be corrected, cannot be refused, or cannot step back,
-          it is no longer supporting autonomy—it is substituting itself for it.
+        <p className="text-neutral-400 mt-4">
+          If a system fixes meaning without consent, it has crossed the boundary.
+          Assistance must not become authorship of identity or intent.
         </p>
-
-        <p>
-          True stewardship holds the boundary, defers authority, and leaves the
-          final voice with the human.
-        </p>
-      </article>
+      </section>
     </main>
   );
 }
