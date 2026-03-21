@@ -1,185 +1,168 @@
 // app/whitepapers/bio-based-diacid-pet/page.tsx
-// ============================================================
-// WHITE PAPER
-// Bio-Based Diacid PET Copolymer (FDCA)
-// ============================================================
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Bio-Based Diacid PET Copolymer (FDCA) | Moral Clarity AI",
+  title:
+    "Bio-Based Diacid PET (FDCA) | Constraint Assessment | Moral Clarity AI",
   description:
-    "A regime-bounded white paper examining whether FDCA can be durably incorporated into PET as a renewable diacid substitution without losing structural retention.",
+    "A constraint-bound evaluation of whether FDCA can be structurally retained in PET as a durable renewable substitution.",
   robots: { index: true, follow: true },
 };
 
 export default function Page() {
   return (
-    <main className="mx-auto max-w-4xl px-6 py-20">
-      <article className="space-y-10">
-        <header className="space-y-4 border-b pb-8">
-          <p className="text-sm uppercase tracking-[0.18em] text-neutral-500">
-            White Paper · Anchored PET Candidate
-          </p>
-          <h1 className="text-4xl font-semibold tracking-tight">
-            Bio-Based Diacid PET Copolymer (FDCA)
+    <main className="mx-auto max-w-6xl px-6 py-24 space-y-16">
+      {/* ===================================================== */}
+      {/* HERO */}
+      {/* ===================================================== */}
+      <section className="rounded-[32px] border border-white/10 bg-black p-12">
+        <div className="space-y-6">
+          <div className="flex gap-3 flex-wrap">
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/70 uppercase tracking-[0.18em]">
+              White Paper
+            </span>
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/70 uppercase tracking-[0.18em]">
+              Constraint Assessment
+            </span>
+            <span className="rounded-full border border-yellow-400/30 px-3 py-1 text-xs text-yellow-300 uppercase tracking-[0.18em]">
+              STATUS: CONDITIONAL
+            </span>
+          </div>
+
+          <h1 className="text-5xl text-white font-semibold tracking-tight">
+            Bio-Based Diacid PET (FDCA)
           </h1>
-          <p className="max-w-3xl text-lg leading-8 text-neutral-600">
-            A bounded materials investigation into whether
-            2,5-furandicarboxylic acid (FDCA) can serve as a structurally
-            retained renewable diacid within PET, reducing fossil feedstock
-            dependence without compromising material integrity.
-          </p>
-        </header>
 
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Abstract</h2>
-          <p className="leading-8 text-neutral-700">
-            This paper examines the admissibility of incorporating
-            2,5-furandicarboxylic acid (FDCA) into polyethylene terephthalate
-            (PET) as a renewable diacid substitution strategy. The central
-            question is not whether FDCA is chemically compatible in principle,
-            but whether it remains structurally retained after processing and
-            extraction stress.
+          <p className="max-w-2xl text-lg text-white/70 leading-8">
+            Evaluation of whether FDCA can serve as a structurally retained
+            renewable diacid within PET without loss of material integrity.
           </p>
-          <p className="leading-8 text-neutral-700">
-            The governing condition is persistence. If the furan-bearing
-            structure is not materially retained, then the renewable substitution
-            claim weakens from structural incorporation to incomplete or unstable
-            modification.
-          </p>
-        </section>
+        </div>
+      </section>
 
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Problem Context</h2>
-          <p className="leading-8 text-neutral-700">
-            Conventional PET relies on terephthalic acid derived largely from
-            petroleum-based feedstocks. This creates an upstream dependence on
-            fossil carbon even where downstream material performance is strong.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            FDCA offers a bio-derived aromatic diacid candidate with meaningful
-            structural similarity, making it one of the clearest routes toward a
-            lower-fossil PET architecture. The key issue is whether that
-            substitution behaves as a durable component of the polymer rather
-            than a nominal or unstable inclusion.
-          </p>
-        </section>
+      {/* ===================================================== */}
+      {/* SYSTEM CONSTRAINT */}
+      {/* ===================================================== */}
+      <section className="rounded-[36px] border border-white/10 bg-black p-14 text-center">
+        <h2 className="text-xs uppercase tracking-[0.25em] text-white/40 mb-6">
+          System Constraint
+        </h2>
 
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Conceptual Thesis</h2>
-          <p className="leading-8 text-neutral-700">
-            Controlled co-condensation of FDCA into PET may produce a
-            partially renewable polyester system while preserving the structural
-            continuity required for practical use.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            This concept is admissible only if FDCA-derived furan units remain
-            incorporated as part of the material structure after extraction and
-            analytical challenge.
-          </p>
-        </section>
+        <p className="text-3xl text-white max-w-3xl mx-auto leading-[1.5]">
+          Renewable substitution is admissible only if FDCA-derived structure
+          remains structurally retained after extraction.
+        </p>
 
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Functionalization Strategy</h2>
-          <p className="leading-8 text-neutral-700">
-            FDCA is introduced during PET polycondensation at controlled molar
-            fractions as a co-diacid component. The objective is not novelty for
-            its own sake, but renewable substitution through direct structural
-            integration.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            The strategy is framed as a bounded copolymer hypothesis: if FDCA
-            becomes part of the chain architecture in a retained and measurable
-            way, then the renewable-content claim gains structural legitimacy.
-          </p>
-        </section>
+        <p className="mt-6 text-white/50">
+          If the renewable component does not persist, the claim is rejected.
+        </p>
+      </section>
 
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Primary Failure Condition</h2>
-          <p className="leading-8 text-neutral-700">
-            The system fails if FDCA-derived furan content is not retained at
-            sufficiently high levels after extraction, indicating incomplete,
-            unstable, or non-durable incorporation.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            In that case, the material cannot be treated as a structurally
-            credible renewable PET copolymer.
-          </p>
-        </section>
+      {/* ===================================================== */}
+      {/* CONTEXT */}
+      {/* ===================================================== */}
+      <section className="max-w-3xl space-y-6">
+        <h2 className="text-2xl text-white font-semibold">
+          Problem Context
+        </h2>
 
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Admissibility Test</h2>
-          <p className="leading-8 text-neutral-700">
-            Soxhlet extraction is used as the governing stress condition,
-            followed by nuclear magnetic resonance (NMR) analysis to quantify
-            furan-ring retention.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            <strong>FAIL:</strong> less than 90% furan-ring retention after
-            extraction.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            <strong>PASS:</strong> at least 90% furan-ring retention with no
-            evidence that the renewable structural contribution is materially
-            unstable.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            This threshold is a survivability gate, not a marketing metric.
-          </p>
-        </section>
+        <p className="text-white/70 leading-8">
+          PET relies on fossil-derived feedstocks. FDCA offers a bio-based
+          alternative, but substitution is only meaningful if structurally retained.
+        </p>
+      </section>
 
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Projected Capability</h2>
-          <p className="leading-8 text-neutral-700">
-            If retention holds, FDCA-PET may provide a credible route to
-            partially or potentially more fully renewable polyester systems
-            without abandoning the PET processing logic already familiar to
-            industry.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            The projected value is upstream carbon displacement through durable
-            structural substitution, not symbolic bio-content.
-          </p>
-        </section>
+      {/* ===================================================== */}
+      {/* SYSTEM CONSTRUCTION */}
+      {/* ===================================================== */}
+      <section className="max-w-3xl space-y-6">
+        <h2 className="text-2xl text-white font-semibold">
+          System Construction
+        </h2>
 
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Non-Claims</h2>
-          <p className="leading-8 text-neutral-700">
-            This paper does not claim lifecycle validation, full carbon
-            accounting, recyclability superiority, commercial readiness, or
-            performance equivalence across all PET use cases.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            It defines a constrained candidate system and the condition under
-            which its renewable substitution claim becomes materially credible.
-          </p>
-        </section>
+        <p className="text-white/70 leading-8">
+          FDCA is incorporated during PET polycondensation as a co-diacid,
+          forming a partially renewable polyester system.
+        </p>
+      </section>
 
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Conclusion</h2>
-          <p className="leading-8 text-neutral-700">
-            FDCA-PET is meaningful only if the furan-bearing renewable structure
-            survives extraction as part of the polymer itself.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            If retention falls below threshold, the concept fails as a durable
-            renewable copolymer claim. If retention holds, it becomes a credible
-            candidate for lower-fossil polyester supply chains.
-          </p>
-        </section>
+      {/* ===================================================== */}
+      {/* FAILURE CONDITION */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.05] p-8 max-w-3xl">
+        <h2 className="text-xl text-white font-semibold">
+          Failure Condition
+        </h2>
 
-        <section className="border-t pt-8">
-          <p className="text-xl leading-8">
-            Renewable substitution is admissible only if it remains part of the
-            material.
-          </p>
-          <p className="mt-2 text-neutral-600">
-            If the structural contribution does not survive extraction, the
-            sustainability claim has not been materially secured.
-          </p>
-        </section>
-      </article>
+        <p className="mt-3 text-white/80 leading-8">
+          The system fails if furan-derived structure is not retained after extraction.
+        </p>
+      </section>
+
+      {/* ===================================================== */}
+      {/* ADMISSIBILITY TEST */}
+      {/* ===================================================== */}
+      <section className="max-w-3xl space-y-6">
+        <h2 className="text-2xl text-white font-semibold">
+          Admissibility Test
+        </h2>
+
+        <p className="text-white/70 leading-8">
+          Soxhlet extraction followed by NMR quantification of furan-ring retention.
+        </p>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="rounded-2xl border border-green-400/20 bg-green-500/10 p-6">
+            <h3 className="text-green-300 font-semibold">PASS</h3>
+            <p className="mt-2 text-green-200/80">
+              ≥90% furan structure retained.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6">
+            <h3 className="text-red-300 font-semibold">FAIL</h3>
+            <p className="mt-2 text-red-200/80">
+              &lt;90% retention after extraction.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ===================================================== */}
+      {/* SYSTEM DETERMINATION */}
+      {/* ===================================================== */}
+      <section className="text-center space-y-4">
+        <div className="w-24 h-px bg-white/10 mx-auto" />
+
+        <p className="text-xs uppercase tracking-[0.25em] text-white/40">
+          System Determination
+        </p>
+
+        <p className="text-white/70 max-w-2xl mx-auto">
+          Admissibility is conditional on structural retention of FDCA.
+          Renewable claims are invalid if retention fails.
+        </p>
+      </section>
+
+      {/* ===================================================== */}
+      {/* FINAL DOCTRINE */}
+      {/* ===================================================== */}
+      <section className="rounded-[36px] border border-white/10 bg-black p-16 text-center">
+        <p className="text-3xl text-white leading-[1.5]">
+          If the renewable structure does not remain,
+          <br />
+          the material is not meaningfully renewable.
+        </p>
+
+        <p className="mt-6 text-white/60">
+          Sustainability is structural.
+        </p>
+
+        <p className="mt-2 text-white/40">
+          Not symbolic.
+        </p>
+      </section>
     </main>
   );
 }
