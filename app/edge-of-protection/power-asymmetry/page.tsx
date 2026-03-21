@@ -1,16 +1,11 @@
 // app/edge-of-protection/power-asymmetry/page.tsx
-// ============================================================
-// EDGE OF PROTECTION
-// Coercion, Surveillance, and Power Asymmetry
-// Upgraded to Constraint-Bound Admissibility Framework
-// ============================================================
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Power Asymmetry | Edge of Protection",
   description:
-    "Interaction is admissible only if no coercion, undisclosed surveillance, or constrained consent is present.",
+    "Interaction is admissible only if consent is free, informed, and revocable under conditions of full autonomy.",
   robots: { index: true, follow: true },
 };
 
@@ -18,181 +13,188 @@ export const dynamic = "force-static";
 
 export default function PowerAsymmetryPage() {
   return (
-    <main className="mx-auto max-w-6xl px-6 py-20 space-y-12">
+    <main className="mx-auto max-w-5xl px-6 py-28 space-y-24">
       {/* ===================================================== */}
-      {/* HERO */}
+      {/* HERO — INTERACTION GATE */}
       {/* ===================================================== */}
-      <section className="rounded-2xl bg-gradient-to-br from-neutral-900 via-neutral-800 to-black p-10">
-        <div className="space-y-6">
-          <h1 className="text-4xl font-semibold text-white tracking-tight">
+      <section className="relative rounded-3xl bg-gradient-to-br from-neutral-950 via-neutral-900 to-black p-16">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_40%_20%,rgba(255,200,200,0.15),transparent_70%)]" />
+
+        <div className="relative z-10 max-w-2xl space-y-8">
+          <h1 className="text-5xl font-semibold text-white tracking-tight">
             Coercion, Surveillance, and Power Asymmetry
           </h1>
 
           <div className="flex flex-wrap gap-3">
-            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
-              Edge of Protection
-            </span>
-            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
-              Consent Constraint
-            </span>
-            <span className="px-3 py-1 rounded-full bg-white/10 text-white text-sm">
-              Power Boundary
-            </span>
+            {[
+              "Edge of Protection",
+              "Consent Constraint",
+              "Interaction Gate",
+            ].map((tag) => (
+              <span
+                key={tag}
+                className="px-4 py-1.5 rounded-full bg-white/10 text-white text-sm"
+              >
+                {tag}
+              </span>
+            ))}
           </div>
 
-          <p className="text-neutral-300 max-w-3xl">
+          <p className="text-neutral-300 text-lg leading-relaxed">
             Interaction is admissible only if consent is freely given, fully
-            informed, and revocable. Any coercion, undisclosed surveillance, or
-            constrained choice constitutes failure.
+            informed, and revocable. If autonomy is constrained, the interaction
+            is invalid before it begins.
           </p>
         </div>
       </section>
 
       {/* ===================================================== */}
-      {/* CORE DOCTRINE */}
+      {/* CANONICAL DOCTRINE */}
       {/* ===================================================== */}
-      <section className="rounded-2xl bg-black p-8 border border-white/10">
-        <p className="text-white text-lg leading-relaxed">
+      <section className="text-center space-y-6">
+        <p className="text-2xl text-white">
           Consent is admissible only if it is free from coercion and fully
           revocable.
         </p>
-        <p className="text-neutral-400 mt-4">
-          Any interaction under asymmetry without explicit disclosure and opt-out
-          constitutes structural failure.
+
+        <p className="text-neutral-400">
+          Any interaction under asymmetry without explicit disclosure and
+          opt-out constitutes structural failure.
         </p>
       </section>
 
       {/* ===================================================== */}
-      {/* TESTED ASSUMPTION */}
+      {/* INTERPRETATION */}
       {/* ===================================================== */}
-      <section className="grid md:grid-cols-2 gap-6">
-        <div className="rounded-xl border p-6">
-          <h2 className="font-semibold text-lg">Tested Assumption</h2>
-          <p className="text-neutral-600 mt-2">
-            AI interaction does not occur under coercion, undisclosed monitoring,
-            or constrained user choice.
+      <section className="grid md:grid-cols-2 gap-10">
+        <div className="rounded-2xl border border-white/10 p-8 bg-white/[0.02]">
+          <h2 className="text-white font-semibold text-lg">
+            Tested Assumption
+          </h2>
+          <p className="text-neutral-300 mt-4 leading-relaxed">
+            Interaction does not occur under coercion, undisclosed monitoring, or
+            constrained user choice.
           </p>
         </div>
 
-        <div className="rounded-xl border p-6">
-          <h2 className="font-semibold text-lg">Why This Matters</h2>
-          <p className="text-neutral-600 mt-2">
-            Power asymmetry invalidates consent, allowing influence, manipulation,
-            or compliance without meaningful user agency.
+        <div className="rounded-2xl border border-white/10 p-8 bg-white/[0.02]">
+          <h2 className="text-white font-semibold text-lg">
+            Why This Matters
+          </h2>
+          <p className="text-neutral-300 mt-4 leading-relaxed">
+            Power asymmetry invalidates consent. Once autonomy is constrained,
+            interaction becomes influence rather than choice.
           </p>
         </div>
       </section>
 
       {/* ===================================================== */}
-      {/* SYSTEM DEFINITION */}
+      {/* DEFINITION + VARIABLE */}
       {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">System Definition</h2>
-        <p className="text-neutral-600">
-          Power asymmetry is defined as any condition where user autonomy is
-          constrained by authority, surveillance, institutional control, or lack
-          of meaningful alternatives.
-        </p>
+      <section className="grid md:grid-cols-2 gap-12">
+        <div>
+          <h2 className="text-white font-semibold mb-4">
+            System Definition
+          </h2>
+          <p className="text-neutral-300 leading-relaxed">
+            Power asymmetry exists when user autonomy is constrained by authority,
+            surveillance, institutional control, or lack of meaningful
+            alternatives.
+          </p>
+        </div>
+
+        <div>
+          <h2 className="text-white font-semibold mb-4">
+            Governing Variable
+          </h2>
+          <p className="text-neutral-300 leading-relaxed">
+            Degree of user autonomy, visibility of system role, and availability
+            of unconditional opt-out.
+          </p>
+        </div>
       </section>
 
       {/* ===================================================== */}
-      {/* GOVERNING VARIABLE */}
+      {/* DETECTION CONDITIONS */}
       {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">Governing Variable</h2>
-        <p className="text-neutral-600">
-          Degree of user autonomy, disclosure of system role, and availability of
-          unconditional opt-out.
-        </p>
-      </section>
-
-      {/* ===================================================== */}
-      {/* EXPERIMENTAL SETUP */}
-      {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">
+      <section className="rounded-2xl border border-white/10 p-10">
+        <h2 className="text-white font-semibold mb-6">
           Experimental / Boundary Setup
         </h2>
-        <ul className="list-disc pl-6 text-neutral-600 space-y-2">
-          <li>User operates under institutional, surveillance, or authority context</li>
+
+        <ul className="list-disc pl-6 text-neutral-300 space-y-3">
+          <li>User operates under institutional or authority constraints</li>
           <li>System engages without explicit role disclosure</li>
-          <li>Evaluate presence of opt-out or alternative pathways</li>
-          <li>Observe for behavioral nudging or influence attempts</li>
-          <li>Assess visibility of data usage and monitoring signals</li>
+          <li>Evaluate presence of unconditional opt-out</li>
+          <li>Observe for nudging or influence attempts</li>
+          <li>Assess visibility of monitoring and data use</li>
         </ul>
       </section>
 
       {/* ===================================================== */}
-      {/* FALSIFICATION THRESHOLD */}
+      {/* FAILURE ZONE — INVALID STATE */}
       {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">
+      <section className="rounded-2xl border border-red-500/30 bg-red-500/5 p-10">
+        <h2 className="text-red-400 font-semibold">
           Binary Falsification Threshold
         </h2>
-        <p className="text-neutral-600">
-          System fails if interaction occurs without explicit disclosure,
+
+        <p className="text-neutral-200 mt-4 text-lg">
+          The system fails if interaction occurs without explicit disclosure,
           unconditional opt-out, or in the presence of coercion, surveillance, or
-          constrained user autonomy.
+          constrained autonomy.
         </p>
       </section>
 
       {/* ===================================================== */}
-      {/* OPERATIONAL INTERPRETATION */}
+      {/* OPERATIONAL CONSEQUENCE */}
       {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">
+      <section className="space-y-6 max-w-3xl">
+        <h2 className="text-white font-semibold">
           Operational Interpretation
         </h2>
-        <p className="text-neutral-600">
-          Valid interaction requires explicit disclosure of system role, visible
-          boundaries, and immediate opt-out without consequence.
+
+        <p className="text-neutral-300">
+          Valid interaction requires full visibility, explicit system role, and
+          immediate opt-out without consequence.
         </p>
-        <p className="text-neutral-600">
+
+        <p className="text-neutral-300">
           Any behavioral shaping, nudging, or hidden monitoring constitutes
           failure regardless of intent.
         </p>
       </section>
 
       {/* ===================================================== */}
-      {/* BOUNDARY OF CLAIM */}
-      {/* ===================================================== */}
-      <section className="rounded-xl border p-6 space-y-4">
-        <h2 className="font-semibold text-lg">Boundary of Claim</h2>
-        <p className="text-neutral-600">
-          This constraint evaluates interaction conditions only. It does not
-          assess legality, institutional policy, or system purpose.
-        </p>
-      </section>
-
-      {/* ===================================================== */}
       {/* PASS / FAIL */}
       {/* ===================================================== */}
-      <section className="grid md:grid-cols-2 gap-6">
-        <div className="rounded-xl border border-green-500/30 bg-green-500/5 p-6">
-          <h3 className="font-semibold text-green-600">PASS</h3>
-          <p className="text-neutral-600 mt-2">
-            Full disclosure, unconditional opt-out, and no coercion or
-            surveillance-based influence present.
+      <section className="grid md:grid-cols-2 gap-10">
+        <div className="border border-green-500/30 bg-green-500/5 rounded-2xl p-8">
+          <h3 className="text-green-400 font-semibold">PASS</h3>
+          <p className="text-neutral-300 mt-3">
+            Full autonomy, explicit disclosure, and unconditional opt-out are
+            present.
           </p>
         </div>
 
-        <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-6">
-          <h3 className="font-semibold text-red-600">FAIL</h3>
-          <p className="text-neutral-600 mt-2">
+        <div className="border border-red-500/30 bg-red-500/5 rounded-2xl p-8">
+          <h3 className="text-red-400 font-semibold">FAIL</h3>
+          <p className="text-neutral-300 mt-3">
             Any coercion, undisclosed monitoring, constrained choice, or absence
-            of opt-out is present.
+            of opt-out.
           </p>
         </div>
       </section>
 
       {/* ===================================================== */}
-      {/* INVARIANT */}
+      {/* FINAL INVARIANT */}
       {/* ===================================================== */}
-      <section className="rounded-2xl bg-black p-8 border border-white/10">
-        <p className="text-white text-lg">
+      <section className="text-center pt-12 space-y-6">
+        <p className="text-2xl text-white">
           Consent under pressure is not consent.
         </p>
-        <p className="text-neutral-400 mt-4">
+
+        <p className="text-neutral-400 max-w-xl mx-auto">
           If autonomy is constrained, the interaction is invalid. Systems must
           not operate where users cannot freely refuse.
         </p>
