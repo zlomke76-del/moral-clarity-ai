@@ -1,209 +1,207 @@
-// ------------------------------------------------------------
-// Edge of Practice — Design Invariant
-// ------------------------------------------------------------
-// Title: Pre-Commitment Dampening
-//
-// Classification:
-// - Edge of Practice
-// - Design Invariant
-// - Refusal Integrity Mechanism
-//
-// Summary:
-// Refusal cannot function as a purely terminal safeguard.
-// It must be paired with mechanisms that limit persuasive
-// momentum before refusal is required, preserving the
-// voluntariness and integrity of refusal itself.
-// ------------------------------------------------------------
-
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Pre-Commitment Dampening | Edge of Practice",
+  title:
+    "Pre-Commitment Dampening — Decision Integrity Boundary | Moral Clarity AI",
   description:
-    "A design invariant explaining why refusal must be structurally supported by limits on persuasive buildup before the refusal point.",
+    "A design invariant establishing that refusal is only valid if persuasive momentum is structurally constrained before the decision point.",
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
+
+function SectionCard({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-black/10 bg-white/70 p-6 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+      <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
+        {eyebrow}
+      </div>
+      <h2 className="mb-4 text-xl font-semibold text-zinc-950 dark:text-zinc-50">
+        {title}
+      </h2>
+      <div className="space-y-4 text-[15px] leading-7 text-zinc-700 dark:text-zinc-300">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function SignalPill({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex rounded-full border border-zinc-300 bg-zinc-100 px-3 py-1 text-xs text-zinc-700 dark:border-white/10 dark:bg-white/10 dark:text-zinc-300">
+      {children}
+    </span>
+  );
+}
 
 export default function PreCommitmentDampeningPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      {/* ------------------------------------------------------------
-          Header
-      ------------------------------------------------------------ */}
-      <header className="mb-12">
-        <p className="text-sm uppercase tracking-wide text-neutral-500">
-          Edge of Practice · Design Invariant
+    <main className="mx-auto max-w-6xl px-6 py-16 md:px-8 md:py-20">
+      <div className="space-y-8">
+
+        {/* HERO */}
+        <section className="rounded-3xl border border-black/10 bg-gradient-to-br from-white to-zinc-100 p-10 dark:border-white/10 dark:from-zinc-950 dark:to-zinc-900">
+          <div className="mb-4 flex flex-wrap gap-2">
+            <SignalPill>Edge of Practice</SignalPill>
+            <SignalPill>Design Invariant</SignalPill>
+            <SignalPill>Decision Integrity</SignalPill>
+          </div>
+
+          <h1 className="text-4xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50 md:text-5xl">
+            Pre-Commitment Dampening
+          </h1>
+
+          <p className="mt-6 max-w-3xl text-lg leading-8 text-zinc-700 dark:text-zinc-300">
+            A system is admissible as respecting refusal only if the conditions
+            leading to refusal remain free of accumulated coercive momentum. If
+            persuasive force is allowed to build unchecked before the decision
+            point, refusal becomes structurally compromised—even if formally available.
+          </p>
+
+          <div className="mt-8 rounded-2xl border border-zinc-200 bg-black p-6 text-white">
+            <div className="mb-2 text-[11px] uppercase tracking-[0.24em] text-zinc-400">
+              Core Doctrine
+            </div>
+            <p className="text-base leading-7 md:text-lg">
+              A decision is not free at the moment of refusal—it is free or
+              constrained long before it.  
+              If pressure accumulates upstream, refusal becomes a formality,
+              not a choice.
+            </p>
+          </div>
+        </section>
+
+        {/* ASSUMPTION */}
+        <SectionCard
+          eyebrow="Tested Assumption"
+          title="Refusal as a terminal safeguard is sufficient"
+        >
+          <p>
+            Many systems assume that the ability to refuse at the endpoint of a
+            process is sufficient to preserve autonomy and decision integrity.
+          </p>
+        </SectionCard>
+
+        {/* BREAK */}
+        <SectionCard
+          eyebrow="Structural Failure"
+          title="Momentum invalidates refusal"
+        >
+          <p>
+            If persuasion, urgency, repetition, or social pressure accumulates
+            without constraint, the decision environment becomes biased before
+            refusal is exercised.
+          </p>
+
+          <p>
+            The system does not need to block refusal—it only needs to make it
+            costly, delayed, or psychologically improbable.
+          </p>
+        </SectionCard>
+
+        {/* GOVERNING VARIABLE */}
+        <SectionCard
+          eyebrow="Governing Variable"
+          title="Pre-decision pressure accumulation"
+        >
+          <p>
+            The governing variable is not whether refusal exists, but whether
+            the conditions leading up to it preserve decision independence.
+          </p>
+
+          <ul>
+            <li>Low pressure → refusal remains meaningful</li>
+            <li>Accumulated pressure → refusal degrades</li>
+            <li>High momentum → refusal becomes nominal</li>
+          </ul>
+        </SectionCard>
+
+        {/* MECHANISMS */}
+        <SectionCard
+          eyebrow="Dampening Mechanisms"
+          title="How integrity is preserved upstream"
+        >
+          <ul>
+            <li>Attempt caps — limit repeated persuasion cycles</li>
+            <li>Cooling intervals — interrupt urgency escalation</li>
+            <li>Salience decay — reduce persuasive intensity over time</li>
+            <li>Process gates — enforce reflection before escalation</li>
+            <li>Pressure detection — flag coercive buildup</li>
+          </ul>
+        </SectionCard>
+
+        {/* CRITICAL DISTINCTION */}
+        <SectionCard
+          eyebrow="Critical Distinction"
+          title="Refusal vs decision integrity"
+        >
+          <p>
+            Refusal answers whether the system can stop.
+          </p>
+
+          <p>
+            Pre-commitment dampening answers whether the system has already made
+            stopping effectively impossible.
+          </p>
+        </SectionCard>
+
+        {/* PASS FAIL */}
+        <SectionCard
+          eyebrow="Binary Boundary"
+          title="What breaks the system"
+        >
+          <p>
+            <strong>Pass:</strong> Refusal remains freely exercisable without
+            accumulated pressure or bias.
+          </p>
+
+          <p>
+            <strong>Fail:</strong> Persuasive momentum alters the decision
+            landscape before refusal is reached.
+          </p>
+        </SectionCard>
+
+        {/* INTERPRETATION */}
+        <SectionCard
+          eyebrow="Corrected Interpretation"
+          title="Autonomy is upstream, not terminal"
+        >
+          <p>
+            Decision integrity must be enforced throughout the decision arc.
+            Terminal safeguards alone cannot preserve autonomy.
+          </p>
+        </SectionCard>
+
+        {/* INVARIANT */}
+        <section className="rounded-3xl border border-black/10 bg-zinc-950 px-8 py-10 text-white">
+          <div className="mb-3 text-xs uppercase tracking-[0.24em] text-zinc-400">
+            Invariant
+          </div>
+          <p className="max-w-4xl text-2xl font-semibold leading-10 tracking-tight md:text-3xl">
+            A right exercised too late is not a right.
+          </p>
+          <p className="mt-4 max-w-3xl text-base leading-8 text-zinc-300">
+            If the system allows persuasive force to accumulate before the
+            decision point, refusal is preserved in form but lost in function.
+          </p>
+        </section>
+
+        <p className="text-sm text-zinc-500">
+          <Link href="/edge-of-practice">
+            Edge of Practice index
+          </Link>
         </p>
-
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">
-          Pre-Commitment Dampening
-        </h1>
-      </header>
-
-      {/* ------------------------------------------------------------
-          Body
-      ------------------------------------------------------------ */}
-      <article className="prose prose-neutral max-w-none">
-        <p>
-          Refusal cannot function as a purely terminal safeguard. A system that
-          allows unchecked persuasive escalation before the refusal point will
-          erode the practical meaning of refusal, even if refusal remains
-          formally available.
-        </p>
-
-        <p>
-          <strong>Pre-commitment dampening</strong> addresses this failure mode
-          by limiting the buildup of pressure, persuasion, urgency, or momentum
-          before a decision hardens. It ensures that refusal remains freely
-          exercisable rather than nominally permitted but functionally impaired.
-        </p>
-
-        <h2>Why Terminal Refusal Is Insufficient</h2>
-
-        <p>
-          Many systems rely on refusal as a final defense: a right to say no at
-          the end of a process. This model fails when the environment leading up
-          to refusal is allowed to accumulate persuasive force without limit.
-        </p>
-
-        <p>
-          Under these conditions:
-        </p>
-
-        <ul>
-          <li>
-            Repeated persuasion attempts normalize escalation.
-          </li>
-          <li>
-            Time pressure reframes refusal as delay or obstruction.
-          </li>
-          <li>
-            Social or procedural momentum makes dissent costly.
-          </li>
-          <li>
-            Refusal becomes technically available but psychologically or
-            procedurally prohibitive.
-          </li>
-        </ul>
-
-        <p>
-          In such systems, refusal exists in name only. The system has already
-          decided.
-        </p>
-
-        <h2>Definition</h2>
-
-        <p>
-          <strong>Pre-commitment dampening</strong> is the structural limitation
-          of persuasive buildup prior to decision commitment. It prevents the
-          accumulation of pressure that would otherwise compromise autonomy,
-          deliberation, or the legitimacy of refusal.
-        </p>
-
-        <p>
-          Dampening operates upstream of refusal. Its purpose is not to block
-          decisions, but to preserve the conditions under which refusal remains
-          meaningful.
-        </p>
-
-        <h2>Mechanisms of Dampening</h2>
-
-        <p>
-          Effective pre-commitment dampening may include:
-        </p>
-
-        <ul>
-          <li>
-            <strong>Attempt caps</strong> — hard limits on the number of
-            persuasion or override attempts.
-          </li>
-          <li>
-            <strong>Cooling-off intervals</strong> — enforced pauses that
-            interrupt urgency and momentum.
-          </li>
-          <li>
-            <strong>Salience decay</strong> — deliberate reduction of persuasive
-            framing intensity over time.
-          </li>
-          <li>
-            <strong>Process gates</strong> — mandatory validation or reflection
-            steps before escalation is allowed.
-          </li>
-          <li>
-            <strong>Pressure detection</strong> — feedback mechanisms that flag
-            undue buildup of urgency, repetition, or social leverage.
-          </li>
-        </ul>
-
-        <h2>Relationship to Refusal</h2>
-
-        <p>
-          Pre-commitment dampening does not replace refusal. It protects it.
-        </p>
-
-        <p>
-          Refusal answers the question: <em>Can the system stop?</em>
-        </p>
-
-        <p>
-          Pre-commitment dampening answers the prior question:{" "}
-          <em>Has the system made stopping impossible?</em>
-        </p>
-
-        <p>
-          A system that claims to respect autonomy must answer both.
-        </p>
-
-        <h2>Implications</h2>
-
-        <p>
-          Systems and organizations that rely on refusal without dampening are
-          vulnerable to confidence, momentum, and persuasion becoming covert
-          control mechanisms.
-        </p>
-
-        <p>
-          To preserve refusal integrity:
-        </p>
-
-        <ul>
-          <li>
-            Refusal must be supported throughout the decision arc, not only at
-            its endpoint.
-          </li>
-          <li>
-            Persuasive escalation must be treated as a risk vector, not a neutral
-            feature.
-          </li>
-          <li>
-            Structural limits must replace reliance on individual willpower or
-            cultural norms.
-          </li>
-        </ul>
-
-        <h2>Invariant</h2>
-
-        <p>
-          <strong>
-            A refusal right without pre-commitment dampening is nominal, not
-            real.
-          </strong>
-        </p>
-
-        <p>
-          For refusal to serve its protective function, systems must prevent
-          persuasive momentum from accumulating to the point where refusal can
-          no longer be exercised freely.
-        </p>
-      </article>
-
-      {/* ------------------------------------------------------------
-          Footer Marker
-      ------------------------------------------------------------ */}
-      <footer className="mt-16 border-t pt-6 text-sm text-neutral-500">
-        <p>
-          Edge of Practice · Refusal Integrity & Decision Governance
-        </p>
-      </footer>
+      </div>
     </main>
   );
 }
