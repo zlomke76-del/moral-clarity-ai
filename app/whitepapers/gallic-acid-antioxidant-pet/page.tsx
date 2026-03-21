@@ -1,199 +1,176 @@
 // app/whitepapers/gallic-acid-antioxidant-pet/page.tsx
-// ============================================================
-// WHITE PAPER
-// Gallic Acid–Antioxidant PET
-// ============================================================
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Gallic Acid–Antioxidant PET | Moral Clarity AI",
+  title:
+    "Gallic Acid–Antioxidant PET | Constraint Assessment | Moral Clarity AI",
   description:
-    "A regime-bounded white paper examining whether gallic-acid-derived functionality can be structurally incorporated into PET to enable persistent antioxidant behavior without leaching.",
+    "A constraint-bound evaluation of whether antioxidant functionality remains structurally retained and active under UV and oxidative stress.",
   robots: { index: true, follow: true },
 };
 
 export default function Page() {
   return (
-    <main className="mx-auto max-w-4xl px-6 py-20">
-      <article className="space-y-10">
-        {/* HEADER */}
-        <header className="space-y-4 border-b pb-8">
-          <p className="text-sm uppercase tracking-[0.18em] text-neutral-500">
-            White Paper · Anchored PET Candidate
-          </p>
-          <h1 className="text-4xl font-semibold tracking-tight">
+    <main className="mx-auto max-w-6xl px-6 py-24 space-y-16">
+      {/* ===================================================== */}
+      {/* HERO */}
+      {/* ===================================================== */}
+      <section className="rounded-[32px] border border-white/10 bg-black p-12">
+        <div className="space-y-6">
+          <div className="flex flex-wrap gap-3">
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/70 uppercase tracking-[0.18em]">
+              White Paper
+            </span>
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/70 uppercase tracking-[0.18em]">
+              Constraint Assessment
+            </span>
+            <span className="rounded-full border border-yellow-400/30 px-3 py-1 text-xs text-yellow-300 uppercase tracking-[0.18em]">
+              STATUS: CONDITIONAL
+            </span>
+          </div>
+
+          <h1 className="text-5xl text-white font-semibold tracking-tight">
             Gallic Acid–Antioxidant PET
           </h1>
-          <p className="max-w-3xl text-lg leading-8 text-neutral-600">
-            A bounded materials investigation into whether gallic-acid-derived
-            antioxidant functionality can be structurally incorporated into PET
-            to provide persistent oxidative resistance without reliance on
-            migrating additives.
-          </p>
-        </header>
 
-        {/* ABSTRACT */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Abstract</h2>
-          <p className="leading-8 text-neutral-700">
-            This paper evaluates the admissibility of embedding gallic-acid-
-            derived antioxidant functionality into polyethylene terephthalate
-            (PET). The governing constraint is photochemical and functional
-            retention. Antioxidant behavior is admissible only if it persists
-            after oxidative and UV stress without measurable loss of activity.
+          <p className="max-w-2xl text-lg text-white/70 leading-8">
+            Evaluation of whether antioxidant functionality can be structurally
+            incorporated into PET and persist under UV and oxidative stress
+            without reliance on leaching or transient behavior.
           </p>
-          <p className="leading-8 text-neutral-700">
-            If antioxidant capacity degrades or depends on extractable species,
-            the system fails as an anchored antioxidant material and reverts to
-            additive-dependent performance.
-          </p>
-        </section>
+        </div>
+      </section>
 
-        {/* PROBLEM CONTEXT */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Problem Context</h2>
-          <p className="leading-8 text-neutral-700">
-            Oxidative degradation affects both packaged contents and the
-            packaging material itself, limiting shelf life and stability in food,
-            medical, and chemical storage systems.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            Conventional antioxidant strategies rely on blended additives that
-            migrate, deplete, or degrade over time, creating variability and
-            potential exposure concerns.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            A structurally anchored antioxidant system offers a potential route
-            to persistent oxidative protection without reliance on mobile
-            chemistry.
-          </p>
-        </section>
+      {/* ===================================================== */}
+      {/* SYSTEM CONSTRAINT */}
+      {/* ===================================================== */}
+      <section className="rounded-[36px] border border-white/10 bg-black p-14 text-center">
+        <h2 className="text-xs uppercase tracking-[0.25em] text-white/40 mb-6">
+          System Constraint
+        </h2>
 
-        {/* THESIS */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Conceptual Thesis</h2>
-          <p className="leading-8 text-neutral-700">
-            Incorporating gallic-acid-derived aromatic diacids into PET during
-            polymerization may enable intrinsic antioxidant behavior through
-            retained phenolic functionality.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            This concept is admissible only if antioxidant activity persists
-            after UV and oxidative stress and is not dependent on leaching or
-            degradable components.
-          </p>
-        </section>
+        <p className="text-3xl text-white max-w-3xl mx-auto leading-[1.5]">
+          Antioxidant behavior is admissible only if it persists after UV and
+          oxidative stress as a function of retained structure.
+        </p>
 
-        {/* FUNCTIONALIZATION */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Functionalization Strategy</h2>
-          <p className="leading-8 text-neutral-700">
-            Gallic-acid-derived monomers are introduced during PET
-            polycondensation at low molar fractions. The objective is to embed
-            antioxidant-capable functionality directly into the polymer network
-            while preserving processability and material integrity.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            This is a constrained structural hypothesis. It assumes no benefit
-            unless functional retention and activity persistence are
-            demonstrated under stress.
-          </p>
-        </section>
+        <p className="mt-6 text-white/50">
+          If activity degrades or depends on extractable species, the system is rejected.
+        </p>
+      </section>
 
-        {/* FAILURE CONDITION */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Primary Failure Condition</h2>
-          <p className="leading-8 text-neutral-700">
-            The system fails if antioxidant activity decreases after UV
-            exposure or if functional groups degrade or become inactive.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            Loss of activity indicates that oxidative protection is not
-            structurally retained and cannot be treated as a durable material
-            property.
-          </p>
-        </section>
+      {/* ===================================================== */}
+      {/* CONTEXT */}
+      {/* ===================================================== */}
+      <section className="max-w-3xl space-y-6">
+        <h2 className="text-2xl text-white font-semibold">
+          Problem Context
+        </h2>
 
-        {/* ADMISSIBILITY TEST */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Admissibility Test</h2>
-          <p className="leading-8 text-neutral-700">
-            UV exposure for 72 hours is used as the governing stress condition,
-            followed by DPPH antioxidant assay to quantify retained activity.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            <strong>FAIL:</strong> measurable loss of antioxidant activity after
-            exposure.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            <strong>PASS:</strong> antioxidant activity persists with no
-            evidence of functional degradation or reliance on extractable
-            species.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            This test defines functional persistence, not peak activity.
-          </p>
-        </section>
+        <p className="text-white/70 leading-8">
+          Oxidative degradation limits material stability and shelf life in
+          packaging systems. Conventional antioxidant strategies rely on
+          additives that migrate or degrade over time.
+        </p>
 
-        {/* PROJECTED CAPABILITY */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Projected Capability</h2>
-          <p className="leading-8 text-neutral-700">
-            If retention holds, gallic-acid-modified PET may provide intrinsic
-            antioxidant protection, extending shelf life and improving material
-            stability in packaging systems.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            This could reduce reliance on additive-based stabilization and
-            decrease migration-related risks.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            These capabilities are conditional and invalid if activity does not
-            persist after stress.
-          </p>
-        </section>
+        <p className="text-white/70 leading-8">
+          Structural anchoring offers a pathway to persistent antioxidant behavior.
+        </p>
+      </section>
 
-        {/* NON-CLAIMS */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Non-Claims</h2>
-          <p className="leading-8 text-neutral-700">
-            This paper does not claim validated antioxidant performance across
-            all conditions, regulatory approval for food or medical use,
-            toxicological clearance, or manufacturability at scale.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            It defines a constrained candidate system and the condition under
-            which antioxidant functionality becomes materially credible.
-          </p>
-        </section>
+      {/* ===================================================== */}
+      {/* SYSTEM CONSTRUCTION */}
+      {/* ===================================================== */}
+      <section className="max-w-3xl space-y-6">
+        <h2 className="text-2xl text-white font-semibold">
+          System Construction
+        </h2>
 
-        {/* CONCLUSION */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Conclusion</h2>
-          <p className="leading-8 text-neutral-700">
-            Gallic-acid–modified PET is admissible only if antioxidant activity
-            persists after UV and oxidative stress as a function of retained
-            structure.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            If activity degrades, the concept fails as a durable antioxidant
-            system. If persistence holds, it becomes a viable candidate for
-            stability-critical packaging applications.
-          </p>
-        </section>
+        <p className="text-white/70 leading-8">
+          Gallic-acid-derived monomers are incorporated into PET during
+          polymerization to embed phenolic antioxidant functionality.
+        </p>
+      </section>
 
-        {/* INVARIANT */}
-        <section className="border-t pt-8">
-          <p className="text-xl leading-8">
-            Antioxidant function is admissible only if it survives exposure.
-          </p>
-          <p className="mt-2 text-neutral-600">
-            If activity degrades under light or oxidation, it does not belong to
-            the material.
-          </p>
-        </section>
-      </article>
+      {/* ===================================================== */}
+      {/* FAILURE CONDITION */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.05] p-8 max-w-3xl">
+        <h2 className="text-xl text-white font-semibold">
+          Failure Condition
+        </h2>
+
+        <p className="mt-3 text-white/80 leading-8">
+          The system fails if antioxidant activity decreases after UV or
+          oxidative exposure or if functional groups degrade.
+        </p>
+      </section>
+
+      {/* ===================================================== */}
+      {/* ADMISSIBILITY TEST */}
+      {/* ===================================================== */}
+      <section className="max-w-3xl space-y-6">
+        <h2 className="text-2xl text-white font-semibold">
+          Admissibility Test
+        </h2>
+
+        <p className="text-white/70 leading-8">
+          UV exposure for 72 hours followed by antioxidant activity measurement
+          (DPPH assay) defines functional persistence.
+        </p>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="rounded-2xl border border-green-400/20 bg-green-500/10 p-6">
+            <h3 className="text-green-300 font-semibold">PASS</h3>
+            <p className="mt-2 text-green-200/80">
+              Antioxidant activity persists with no functional degradation.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6">
+            <h3 className="text-red-300 font-semibold">FAIL</h3>
+            <p className="mt-2 text-red-200/80">
+              Measurable loss of antioxidant activity after exposure.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ===================================================== */}
+      {/* SYSTEM DETERMINATION */}
+      {/* ===================================================== */}
+      <section className="text-center space-y-4">
+        <div className="w-24 h-px bg-white/10 mx-auto" />
+
+        <p className="text-xs uppercase tracking-[0.25em] text-white/40">
+          System Determination
+        </p>
+
+        <p className="text-white/70 max-w-2xl mx-auto">
+          Admissibility is conditional on antioxidant persistence under stress.
+          Stability claims are invalid if activity does not survive exposure.
+        </p>
+      </section>
+
+      {/* ===================================================== */}
+      {/* FINAL DOCTRINE */}
+      {/* ===================================================== */}
+      <section className="rounded-[36px] border border-white/10 bg-black p-16 text-center">
+        <p className="text-3xl text-white leading-[1.5]">
+          If function cannot survive what it resists,
+          <br />
+          it is not part of the material.
+        </p>
+
+        <p className="mt-6 text-white/60">
+          Protection must persist.
+        </p>
+
+        <p className="mt-2 text-white/40">
+          Not just exist.
+        </p>
+      </section>
     </main>
   );
 }
