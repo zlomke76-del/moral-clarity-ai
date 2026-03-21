@@ -1,161 +1,185 @@
 // app/whitepapers/passive-environmental-witnesses/page.tsx
+// ============================================================
+// WHITE PAPER (UPGRADED TO CONSTRAINT FRAME)
+// Passive Environmental Witnesses — CONDITIONAL
+// ============================================================
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Passive Environmental Witnesses: Equity, Scale, and Trust Without Electronics | Moral Clarity AI",
+    "Passive Environmental Witnesses | Constraint Assessment | Moral Clarity AI",
   description:
-    "A physics-grounded assessment of passive environmental sensing using slow, reversible material changes. Benefits, limits, and appropriate use cases.",
-  openGraph: {
-    title:
-      "Passive Environmental Witnesses: Equity, Scale, and Trust Without Electronics",
-    description:
-      "An honest evaluation of passive, non-electronic environmental sensing through material change.",
-    url: "https://moralclarity.ai/whitepapers/passive-environmental-witnesses",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A constraint-bound evaluation of whether passive material systems can serve as interpretable environmental witnesses without electronics.",
+  robots: { index: true, follow: true },
 };
 
 export default function PassiveEnvironmentalWitnessesWhitepaper() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Passive Environmental Witnesses</h1>
-        <p className="lead">
-          <strong>
-            Equity, Scale, and Trust via Slow, Reversible Material Change
-          </strong>
-        </p>
+    <main className="mx-auto max-w-6xl px-6 py-20 space-y-10">
+      {/* HERO */}
+      <section className="rounded-[32px] border border-white/10 bg-gradient-to-br from-[#0b1220] via-[#0a0f1a] to-black p-10 shadow-[0_30px_120px_rgba(0,0,0,0.45)]">
+        <div className="space-y-5">
+          <div className="flex flex-wrap gap-3">
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/70">
+              White Paper
+            </span>
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/70">
+              Constraint Assessment
+            </span>
+            <span className="rounded-full border border-yellow-400/30 px-3 py-1 text-xs uppercase tracking-[0.18em] text-yellow-300">
+              CONDITIONAL
+            </span>
+          </div>
 
-        <p className="text-sm text-muted-foreground">
-          White Paper · Public Reference · Moral Clarity AI
-        </p>
+          <h1 className="text-4xl font-semibold tracking-tight text-white md:text-5xl">
+            Passive Environmental Witnesses
+          </h1>
 
-        <h2>Abstract</h2>
-        <p>
-          Active electronic sensors dominate modern environmental monitoring, but
-          they impose barriers related to cost, power, maintenance, trust, and
-          infrastructure. This paper evaluates whether slow, reversible material
-          responses—such as color, texture, or mechanical change—can serve as
-          passive environmental witnesses. These systems do not aim to replace
-          precision instrumentation, but to provide visible, low-cost, and
-          interpretable records of environmental exposure at scale. We assess
-          physical validity, practical limits, equity implications, and
-          appropriate application domains.
-        </p>
+          <p className="max-w-3xl text-lg leading-8 text-white/75">
+            Evaluation of whether slow, reversible material responses can serve
+            as interpretable environmental witnesses without electronics.
+          </p>
+        </div>
+      </section>
 
-        <h2>Physical and Practical Viability</h2>
-        <p>
-          Slow, reversible material responses to environmental stimuli are
-          physically valid sensing mechanisms. Materials can be engineered to
-          respond to humidity, temperature, ultraviolet exposure, oxidizing
-          pollutants, or particulate deposition through changes in color,
-          conductivity, shape, or surface texture.
+      {/* CORE DOCTRINE */}
+      <section className="rounded-2xl border border-white/10 bg-black p-8">
+        <p className="text-xl text-white leading-8">
+          Passive environmental witnessing is admissible only if material change
+          correlates consistently with cumulative exposure and remains
+          interpretable without instrumentation.
         </p>
-        <p>
-          These responses naturally integrate exposure over time and suppress
-          short-lived fluctuations. Outputs are typically visible or tactile and
-          can be interpreted without electronic instrumentation. Reversibility
-          enables repeated cycles of use, while slow dynamics reduce sensitivity
-          to transient noise.
+        <p className="mt-3 text-white/60">
+          If signals drift, confound, or require interpretation beyond direct
+          observation, the system fails as a reliable witness.
         </p>
+      </section>
 
-        <h2>How Passive Systems Differ from Active Electronics</h2>
-        <p>
-          Passive material witnesses do not compete with electronic sensors on
-          precision, speed, or data aggregation. Instead, they offer advantages
-          in three specific dimensions:
-        </p>
+      {/* TESTED ASSUMPTION + WHY */}
+      <section className="grid gap-6 lg:grid-cols-2">
+        <div className="rounded-xl border border-white/10 bg-white/[0.04] p-6">
+          <h2 className="text-lg font-semibold text-white">
+            Tested Assumption
+          </h2>
+          <p className="mt-3 text-white/70 leading-7">
+            Slow, reversible material changes can encode environmental exposure
+            in a way that is visible, interpretable, and stable over time.
+          </p>
+        </div>
 
-        <h3>Equity</h3>
-        <ul>
-          <li>No power, batteries, or network connectivity required</li>
-          <li>Minimal maintenance or technical expertise</li>
-          <li>Outputs interpretable by sight or touch</li>
-          <li>Low-cost deployment using local manufacturing</li>
+        <div className="rounded-xl border border-white/10 bg-white/[0.04] p-6">
+          <h2 className="text-lg font-semibold text-white">
+            Why This Matters
+          </h2>
+          <p className="mt-3 text-white/70 leading-7">
+            If valid, passive systems enable low-cost, scalable, and trustable
+            environmental awareness without infrastructure. If invalid, they
+            introduce misinterpretation and false confidence.
+          </p>
+        </div>
+      </section>
+
+      {/* SYSTEM DEFINITION */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8 space-y-4">
+        <h2 className="text-2xl font-semibold text-white">
+          System Definition
+        </h2>
+        <p className="text-white/70 leading-8">
+          A passive material system that responds to environmental stimuli
+          through slow, reversible physical or chemical change that is directly
+          observable without electronic measurement. :contentReference[oaicite:0]{index=0}
+        </p>
+      </section>
+
+      {/* GOVERNING VARIABLE */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
+        <h2 className="text-2xl font-semibold text-white">
+          Governing Variable
+        </h2>
+        <p className="mt-3 text-white/70 leading-8">
+          Stability and interpretability of signal under real-world variability,
+          including humidity, temperature, aging, and multi-factor exposure.
+        </p>
+      </section>
+
+      {/* BOUNDARY SETUP */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8 space-y-4">
+        <h2 className="text-2xl font-semibold text-white">
+          Boundary Setup
+        </h2>
+        <ul className="list-disc pl-6 text-white/70 space-y-2">
+          <li>Controlled exposure to single-variable conditions</li>
+          <li>Multi-variable environmental exposure (humidity, UV, pollutants)</li>
+          <li>Repeated exposure cycles to test reversibility</li>
+          <li>Long-term aging without exposure</li>
+          <li>Visual interpretability across observers</li>
         </ul>
+      </section>
 
-        <h3>Scale</h3>
-        <ul>
-          <li>Can be deployed as coatings, tiles, strips, or paints</li>
-          <li>Large surface coverage at low marginal cost</li>
-          <li>Not constrained by device ownership or data infrastructure</li>
-        </ul>
-
-        <h3>Trust</h3>
-        <ul>
-          <li>No hidden data collection or transmission</li>
-          <li>Direct, observable physical response</li>
-          <li>Reduced perception of surveillance or manipulation</li>
-        </ul>
-
-        <h2>Limits and Constraints</h2>
-        <p>
-          Passive witnesses have clear limitations that must be acknowledged to
-          avoid misuse:
+      {/* FALSIFICATION */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
+        <h2 className="text-2xl font-semibold text-white">
+          Binary Falsification Threshold
+        </h2>
+        <p className="mt-3 text-white/70 leading-8">
+          FAIL if signal cannot be uniquely attributed to environmental exposure
+          or becomes ambiguous under realistic multi-variable conditions.
         </p>
-        <ul>
-          <li>
-            Lower precision and sensitivity than electronic instrumentation
-          </li>
-          <li>Susceptibility to confounding environmental variables</li>
-          <li>Degradation or drift over long timescales</li>
-          <li>Manual inspection required for interpretation</li>
-          <li>Limited suitability for automated or regulatory use</li>
-        </ul>
+      </section>
 
-        <h2>Contexts Where Passive Witnesses Outperform</h2>
-        <ul>
-          <li>Low-resource or infrastructure-limited environments</li>
-          <li>Community awareness and environmental literacy efforts</li>
-          <li>Non-critical monitoring where trends matter more than precision</li>
-          <li>
-            Situations where trust, transparency, and visibility are prioritized
-          </li>
-        </ul>
-
-        <h2>Contexts Where Passive Witnesses Fail</h2>
-        <ul>
-          <li>Safety-critical or emergency detection</li>
-          <li>Regulatory compliance and enforcement</li>
-          <li>Real-time control systems</li>
-          <li>Applications requiring fine quantitative resolution</li>
-        </ul>
-
-        <h2>Judgment</h2>
-        <p>
-          Passive environmental witnesses can meaningfully outperform electronic
-          sensors in equity, distribution, and trust when qualitative or
-          trend-based information is sufficient. They should not be treated as
-          substitutes for precision instrumentation, but as complementary tools
-          that make environmental conditions visible, local, and legible to the
-          public.
+      {/* OPERATIONAL INTERPRETATION */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
+        <h2 className="text-2xl font-semibold text-white">
+          Operational Interpretation
+        </h2>
+        <p className="mt-3 text-white/70 leading-8">
+          Passive systems are physically valid and effective for qualitative,
+          cumulative exposure indication, but lack precision and are vulnerable
+          to environmental confounding.
         </p>
-        <p>
-          <strong>Recommendation:</strong> Proceed for equity- and
-          awareness-driven applications with explicit communication of limits.
-          Avoid use as sole indicators for health, safety, or regulatory
-          decisions.
-        </p>
+      </section>
 
-        <hr />
-
-        <p>
-          <strong>Note:</strong> This assessment was generated through structured
-          reasoning by <em>Solace</em>, Moral Clarity AI’s evaluation system. It is
-          published as a public reference and may be freely shared.
+      {/* BOUNDARY OF CLAIM */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
+        <h2 className="text-2xl font-semibold text-white">
+          Boundary of Claim
+        </h2>
+        <p className="mt-3 text-white/70 leading-8">
+          Systems are admissible only for qualitative awareness and trend
+          detection. Any claim of precision measurement, regulatory validity, or
+          safety-critical use constitutes failure.
         </p>
+      </section>
 
-        <p className="text-sm text-muted-foreground">
-          Version 1.0 · White Paper · Updated only by revision
+      {/* PASS / FAIL */}
+      <section className="grid gap-6 lg:grid-cols-2">
+        <div className="rounded-2xl border border-green-400/20 bg-green-500/10 p-8">
+          <h3 className="text-lg font-semibold text-green-300">PASS</h3>
+          <p className="mt-3 text-green-200/80 leading-7">
+            Observable, stable, and interpretable signal correlates with
+            cumulative environmental exposure.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-red-400/20 bg-red-500/10 p-8">
+          <h3 className="text-lg font-semibold text-red-300">FAIL</h3>
+          <p className="mt-3 text-red-200/80 leading-7">
+            Signal is ambiguous, confounded, or cannot be reliably interpreted
+            under real-world conditions.
+          </p>
+        </div>
+      </section>
+
+      {/* INVARIANT */}
+      <section className="rounded-2xl border border-white/10 bg-black p-10">
+        <p className="text-2xl text-white leading-9">
+          If a signal cannot be trusted without explanation, it cannot serve as a witness.
         </p>
-      </article>
+        <p className="mt-4 text-white/60 leading-7">
+          Visibility without interpretability is not evidence.
+        </p>
+      </section>
     </main>
   );
 }
