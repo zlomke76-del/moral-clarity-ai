@@ -1,152 +1,186 @@
 // app/whitepapers/phase-selective-cooling/page.tsx
+// ============================================================
+// WHITE PAPER (UPGRADED TO CONSTRAINT FRAME)
+// Phase-Selective Cooling Fabric — CONDITIONAL
+// ============================================================
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Phase-Selective Cooling Fabric: A Physics-Grounded Assessment | Moral Clarity AI",
+    "Phase-Selective Cooling Fabric | Constraint Assessment | Moral Clarity AI",
   description:
-    "A physics-honest evaluation of passive cooling textiles using radiative heat loss and phase-change materials. Benefits, limits, and falsifying experiments.",
-  openGraph: {
-    title: "Phase-Selective Cooling Fabric: A Physics-Grounded Assessment",
-    description:
-      "An honest assessment of when passive cooling fabrics work, when they fail, and how to test them.",
-    url: "https://moralclarity.ai/whitepapers/phase-selective-cooling",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "A constraint-bound evaluation of whether passive radiative and phase-change textiles provide meaningful cooling under real-world conditions.",
+  robots: { index: true, follow: true },
 };
 
 export default function PhaseSelectiveCoolingWhitepaper() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Phase-Selective Cooling Fabric</h1>
-        <p className="lead">
-          <strong>A Physics-Grounded Assessment</strong>
-        </p>
+    <main className="mx-auto max-w-6xl px-6 py-20 space-y-10">
+      {/* HERO */}
+      <section className="rounded-[32px] border border-white/10 bg-gradient-to-br from-[#0b1220] via-[#0a0f1a] to-black p-10 shadow-[0_30px_120px_rgba(0,0,0,0.45)]">
+        <div className="space-y-5">
+          <div className="flex flex-wrap gap-3">
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/70">
+              White Paper
+            </span>
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white/70">
+              Constraint Assessment
+            </span>
+            <span className="rounded-full border border-yellow-400/30 px-3 py-1 text-xs uppercase tracking-[0.18em] text-yellow-300">
+              CONDITIONAL
+            </span>
+          </div>
 
-        <p className="text-sm text-muted-foreground">
-          White Paper · Public Reference · Moral Clarity AI
-        </p>
+          <h1 className="text-4xl font-semibold tracking-tight text-white md:text-5xl">
+            Phase-Selective Cooling Fabric
+          </h1>
 
-        <h2>Abstract</h2>
-        <p>
-          Passive cooling textiles—often described as “radiative cooling” or
-          “phase-change” fabrics—are increasingly promoted as low-energy solutions
-          to heat stress. This paper evaluates whether such fabrics are physically
-          sound, practically viable, and meaningfully beneficial under real-world
-          conditions. The goal is not promotion, but clarity: identifying where the
-          physics supports limited benefit, where claims collapse, and how to
-          falsify overstatements early.
-        </p>
+          <p className="max-w-3xl text-lg leading-8 text-white/75">
+            Evaluation of whether passive radiative emission and phase-change
+            buffering produce meaningful, persistent cooling under real-world
+            environmental conditions. :contentReference[oaicite:0]{index=0}
+          </p>
+        </div>
+      </section>
 
-        <h2>Physical Validity</h2>
-        <p>
-          Passive radiative cooling via emission in the mid-infrared atmospheric
-          window (approximately 8–13 μm) is physically valid in principle. A fabric
-          with high emissivity in this band can transfer some body heat to a cooler
-          sky under appropriate conditions. Phase-change materials (PCMs) placed
-          near the skin can temporarily absorb heat during melting, delaying
-          temperature rise.
+      {/* CORE DOCTRINE */}
+      <section className="rounded-2xl border border-white/10 bg-black p-8">
+        <p className="text-xl text-white leading-8">
+          Cooling is admissible only if net heat loss persists under real-world
+          conditions where convection, humidity, and solar gain are present.
         </p>
-        <p>
-          However, radiation is only one component of human heat transfer.
-          Convection, conduction, and evaporative cooling often dominate—especially
-          in warm, humid, or enclosed environments. Radiative cooling only reduces
-          net heat load when solar gain is minimized, humidity is low, and sky view
-          is unobstructed. PCMs provide finite, one-time buffering and must be
-          re-solidified to function again.
+        <p className="mt-3 text-white/60">
+          If cooling collapses outside constrained environments, the system
+          fails as a practical intervention.
         </p>
+      </section>
 
-        <h2>Boundary Conditions and Regime Limits</h2>
+      {/* TESTED ASSUMPTION + WHY */}
+      <section className="grid gap-6 lg:grid-cols-2">
+        <div className="rounded-xl border border-white/10 bg-white/[0.04] p-6">
+          <h2 className="text-lg font-semibold text-white">
+            Tested Assumption
+          </h2>
+          <p className="mt-3 text-white/70 leading-7">
+            Radiative emission and phase-change materials can produce sustained
+            cooling beyond ambient conditions in wearable systems.
+          </p>
+        </div>
 
-        <h3>Where Limited Benefit Is Plausible</h3>
-        <ul>
-          <li>Outdoor environments with clear sky exposure</li>
-          <li>Dry or low-humidity climates</li>
-          <li>Shaded conditions or nighttime use</li>
-          <li>Minimal surrounding thermal back-radiation</li>
+        <div className="rounded-xl border border-white/10 bg-white/[0.04] p-6">
+          <h2 className="text-lg font-semibold text-white">
+            Why This Matters
+          </h2>
+          <p className="mt-3 text-white/70 leading-7">
+            If valid, passive cooling fabrics could reduce heat stress without
+            energy input. If invalid, they create false confidence and displace
+            effective cooling strategies.
+          </p>
+        </div>
+      </section>
+
+      {/* SYSTEM DEFINITION */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8 space-y-4">
+        <h2 className="text-2xl font-semibold text-white">
+          System Definition
+        </h2>
+        <p className="text-white/70 leading-8">
+          A textile system combining high emissivity in the mid-infrared
+          atmospheric window and/or embedded phase-change materials to reduce
+          perceived or measured heat load on the wearer.
+        </p>
+      </section>
+
+      {/* GOVERNING VARIABLE */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
+        <h2 className="text-2xl font-semibold text-white">
+          Governing Variable
+        </h2>
+        <p className="mt-3 text-white/70 leading-8">
+          Net heat flux reduction under combined radiative, convective,
+          conductive, and evaporative conditions.
+        </p>
+      </section>
+
+      {/* BOUNDARY SETUP */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8 space-y-4">
+        <h2 className="text-2xl font-semibold text-white">
+          Boundary Setup
+        </h2>
+        <ul className="list-disc pl-6 text-white/70 space-y-2">
+          <li>Outdoor vs indoor testing environments</li>
+          <li>Controlled humidity variation</li>
+          <li>Direct solar vs shaded conditions</li>
+          <li>Skin or manikin temperature comparison</li>
+          <li>PCM cycling and re-solidification testing</li>
         </ul>
+      </section>
 
-        <h3>Where the Approach Fails</h3>
-        <ul>
-          <li>Indoor settings with blocked sky view</li>
-          <li>High-humidity environments</li>
-          <li>Dense urban “canyon” geometry</li>
-          <li>Direct solar exposure without near-perfect reflectivity</li>
-          <li>Strong hot airflow where convection dominates</li>
-        </ul>
+      {/* FALSIFICATION */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
+        <h2 className="text-2xl font-semibold text-white">
+          Binary Falsification Threshold
+        </h2>
+        <p className="mt-3 text-white/70 leading-8">
+          FAIL if cooling effect is not statistically distinguishable from
+          baseline clothing under realistic environmental conditions or if
+          performance disappears indoors or under humidity.
+        </p>
+      </section>
 
-        <h2>Failure Modes and Overclaims</h2>
-        <p>
-          Common misconceptions include claims of universal cooling, sustained
-          temperature reduction, or replacement of conventional heat-mitigation
-          strategies. Passive fabrics cannot reliably cool below ambient
-          temperature, cannot sustain PCM effects indefinitely, and cannot replace
-          hydration, airflow, shade, or active cooling in high-risk conditions.
+      {/* OPERATIONAL INTERPRETATION */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
+        <h2 className="text-2xl font-semibold text-white">
+          Operational Interpretation
+        </h2>
+        <p className="mt-3 text-white/70 leading-8">
+          Radiative cooling and PCM buffering are physically valid but limited.
+          Radiative effects require specific environmental conditions, and PCM
+          effects are temporary and require reset.
         </p>
-        <p>
-          The greatest risk is not inefficiency but false confidence. Overclaiming
-          may cause users to delay or abandon proven protective measures.
-        </p>
+      </section>
 
-        <h2>Minimal Falsifying Experiments</h2>
+      {/* BOUNDARY OF CLAIM */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.04] p-8">
+        <h2 className="text-2xl font-semibold text-white">
+          Boundary of Claim
+        </h2>
+        <p className="mt-3 text-white/70 leading-8">
+          Effects are admissible only in low-humidity, shaded, outdoor
+          conditions with clear sky exposure. Any claim of universal cooling or
+          replacement of primary heat mitigation constitutes failure.
+        </p>
+      </section>
 
-        <h3>1. Controlled Skin Temperature Test</h3>
-        <p>
-          Compare skin and core temperature of participants (or a thermal manikin)
-          wearing the fabric versus standard breathable clothing under matched
-          environmental conditions. Include a shade-only control.
-        </p>
-        <p>
-          <strong>Falsification criterion:</strong> No statistically significant
-          improvement beyond conventional clothing or placebo.
-        </p>
+      {/* PASS / FAIL */}
+      <section className="grid gap-6 lg:grid-cols-2">
+        <div className="rounded-2xl border border-green-400/20 bg-green-500/10 p-8">
+          <h3 className="text-lg font-semibold text-green-300">PASS</h3>
+          <p className="mt-3 text-green-200/80 leading-7">
+            Measurable net heat loss persists under real-world environmental
+            conditions without reliance on idealized setups.
+          </p>
+        </div>
 
-        <h3>2. Radiative Flux Measurement</h3>
-        <p>
-          Measure net radiative heat loss from a heated plate covered with the
-          fabric under open sky versus indoor conditions.
-        </p>
-        <p>
-          <strong>Falsification criterion:</strong> Net additional cooling power
-          below ~10 W/m² or loss of effect indoors.
-        </p>
+        <div className="rounded-2xl border border-red-400/20 bg-red-500/10 p-8">
+          <h3 className="text-lg font-semibold text-red-300">FAIL</h3>
+          <p className="mt-3 text-red-200/80 leading-7">
+            Cooling effect is environment-dependent, transient, or disappears
+            outside controlled conditions.
+          </p>
+        </div>
+      </section>
 
-        <h2>Humanitarian Impact Assessment</h2>
-        <p>
-          Any plausible cooling effect is modest and highly context-dependent.
-          While potentially useful as a supplementary comfort aid in narrow
-          conditions, this approach does not meaningfully reduce the need for air
-          conditioning or other primary heat-mitigation strategies for vulnerable
-          populations.
+      {/* INVARIANT */}
+      <section className="rounded-2xl border border-white/10 bg-black p-10">
+        <p className="text-2xl text-white leading-9">
+          If cooling depends on conditions the user cannot control, it is not a reliable solution.
         </p>
-
-        <h2>Judgment</h2>
-        <p>
-          <strong>Proceed cautiously.</strong> The physics permits limited benefit
-          in specific regimes, but the approach is not transformative and must not
-          be presented as a standalone solution. Early falsification testing and
-          explicit communication of limits are essential.
+        <p className="mt-4 text-white/60 leading-7">
+          Physics that only works in ideal environments does not scale to reality.
         </p>
-
-        <hr />
-
-        <p>
-          <strong>Note:</strong> This assessment was generated through structured
-          reasoning by <em>Solace</em>, Moral Clarity AI’s evaluation system. It is
-          published as a public reference and may be freely shared.
-        </p>
-
-        <p className="text-sm text-muted-foreground">
-          Version 1.0 · White Paper · Updated only by revision
-        </p>
-      </article>
+      </section>
     </main>
   );
 }
