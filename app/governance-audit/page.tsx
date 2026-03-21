@@ -1,9 +1,7 @@
 // app/governance-audit/page.tsx
 // ============================================================
 // MORAL CLARITY GOVERNANCE AUDIT™
-// Governance where safety, ethics, and alignment stop working
-// ============================================================
-// Public-facing positioning page
+// Elevated public-facing positioning page
 // Non-advisory · Regime-bounded · Updated only by explicit revision
 // ============================================================
 
@@ -13,7 +11,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Moral Clarity Governance Audit™ | Moral Clarity AI",
   description:
-    "A regime-bounded governance diagnostic identifying drift, incentive corruption, coordination failure, and epistemic blind spots under uncertainty.",
+    "A regime-bounded governance diagnostic identifying drift, incentive corruption, coordination failure, authority breakdown, and epistemic blind spots under uncertainty.",
   openGraph: {
     title: "Moral Clarity Governance Audit™",
     description:
@@ -30,167 +28,351 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-static";
 
+const EXAMINATION_AREAS = [
+  {
+    title: "Incentive Corruption",
+    body: "Where reward structures favor denial, speed, plausible deniability, or continuity over correction.",
+  },
+  {
+    title: "Detection Failure",
+    body: "Whether early warnings can surface, whether they are legible when they do, and whether they are permitted to matter.",
+  },
+  {
+    title: "Authority Breakdown",
+    body: "Where responsibility exists in theory but not in execution, and where no actor can reliably stop unsafe continuation.",
+  },
+  {
+    title: "Procedural Entrenchment",
+    body: "Where process substitutes for judgment and blocks adaptation even when the system is visibly degrading.",
+  },
+  {
+    title: "Action Threshold Collapse",
+    body: "Where decisions arrive too late, too fast, or not at all under actual pressure.",
+  },
+  {
+    title: "Meta-Failure of Knowledge Systems",
+    body: "Where meaning, interpretation, evidence, and enforcement no longer converge.",
+  },
+];
+
+const NOT_THIS = [
+  "Not an AI safety checklist",
+  "Not an ethics or values workshop",
+  "Not a compliance certification",
+  "Not a technical model review",
+];
+
+const DELIVERABLES = [
+  "A written governance audit identifying drift vectors, accountability gaps, detection blind spots, and non-governable risk",
+  "A 60-minute executive debrief focused on what can be governed, what requires redesign, and what must be explicitly refused",
+];
+
+const WHEN_IT_MATTERS = [
+  "When systems are partially or fully opaque",
+  "When incentives are misaligned or adversarial",
+  "When responsibility is distributed or unclear",
+  "When performance metrics appear healthy but confidence is eroding",
+];
+
 export default function GovernanceAuditPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Moral Clarity Governance Audit™</h1>
+    <main className="relative overflow-hidden bg-[#020817]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(220,38,38,0.14),transparent_28%),radial-gradient(circle_at_82%_18%,rgba(59,130,246,0.10),transparent_22%),linear-gradient(to_bottom,rgba(255,255,255,0.02),transparent_32%)]" />
+      <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:48px_48px]" />
 
-        <p className="lead">
-          <strong>
-            Governance where safety, ethics, and alignment stop working.
-          </strong>
-        </p>
+      <div className="relative mx-auto max-w-7xl px-6 py-16 md:px-8 lg:px-10 lg:py-20 space-y-8">
+        {/* HERO */}
+        <section className="rounded-[32px] border border-white/10 bg-gradient-to-br from-[#2a0d10]/95 via-[#12141b]/92 to-black/92 p-8 shadow-[0_30px_120px_rgba(0,0,0,0.42)] backdrop-blur-xl md:p-10 lg:p-12">
+          <div className="grid gap-10 lg:grid-cols-[1.18fr_0.82fr] lg:items-end">
+            <div className="space-y-6">
+              <div className="flex flex-wrap gap-3">
+                <span className="rounded-full border border-white/12 bg-white/8 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-red-100/85">
+                  Moral Clarity Governance Audit™
+                </span>
+                <span className="rounded-full border border-white/12 bg-white/8 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-white/70">
+                  Regime-Bounded
+                </span>
+                <span className="rounded-full border border-white/12 bg-white/8 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-white/70">
+                  Diagnostic
+                </span>
+              </div>
 
-        <p className="text-sm text-red-700 dark:text-red-400">
-          <b>Boundary Notice:</b> This offering is regime-bounded and diagnostic
-          in nature. It does not provide compliance certification, technical
-          assurance, or operational guarantees.
-        </p>
+              <div className="space-y-5">
+                <h1 className="max-w-5xl text-4xl font-semibold tracking-tight text-white md:text-5xl lg:text-6xl">
+                  Governance where safety, ethics, and alignment stop working
+                </h1>
+                <p className="max-w-4xl text-lg leading-8 text-white/82">
+                  A short-cycle, high-signal diagnostic for organizations that
+                  need to know whether governance still functions when systems
+                  become opaque, incentives distort judgment, and accountability
+                  begins to fail before visible collapse.
+                </p>
+              </div>
 
-        {/* PRIMARY CTA — TOP */}
-        <div className="my-8">
-          <a
-            href="https://calendly.com/zlomke76/governance-drift-audit-intake-call"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block rounded-md bg-black px-6 py-3 text-white font-medium hover:bg-neutral-800"
-          >
-            Book a Governance &amp; Drift Audit Intake Call
-          </a>
-          <p className="mt-2 text-sm text-neutral-500">
-            A $500 deposit is required to reserve an intake slot and is applied
-            to the final audit fee.
+              <div className="rounded-2xl border border-red-400/20 bg-red-500/[0.08] p-5">
+                <p className="text-sm leading-7 text-red-100/90">
+                  <span className="font-semibold">Boundary Notice:</span> This
+                  offering is regime-bounded and diagnostic in nature. It does
+                  not provide compliance certification, technical assurance, or
+                  operational guarantees.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-4">
+                <a
+                  href="https://calendly.com/zlomke76/governance-drift-audit-intake-call"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-white/90"
+                >
+                  Book a Governance &amp; Drift Audit Intake Call
+                  <span className="ml-2">↗</span>
+                </a>
+
+                <Link
+                  href="/edge-of-knowledge"
+                  className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.04] px-6 py-3 text-sm font-medium text-white/82 transition hover:border-white/20 hover:bg-white/[0.07]"
+                >
+                  View Canonical Context
+                  <span className="ml-2">→</span>
+                </Link>
+              </div>
+
+              <p className="text-sm leading-7 text-white/50">
+                A $500 deposit is required to reserve an intake slot and is
+                applied to the final audit fee.
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-1">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-sm">
+                <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+                  Focus
+                </div>
+                <div className="mt-3 text-sm leading-6 text-white/82">
+                  Governance failure before visible system failure.
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-sm">
+                <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+                  Output
+                </div>
+                <div className="mt-3 text-sm leading-6 text-white/82">
+                  Drift vectors, blind spots, accountability gaps, redesign
+                  pressure.
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-sm">
+                <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+                  Boundary
+                </div>
+                <div className="mt-3 text-sm leading-6 text-white/82">
+                  Diagnostic only. No certification, no assurance, no implied
+                  prevention claim.
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* WHAT THIS IS / POSITION */}
+        <section className="grid gap-6 lg:grid-cols-[1.08fr_0.92fr]">
+          <div className="rounded-[28px] border border-white/10 bg-white/[0.035] p-7 shadow-[0_18px_60px_rgba(0,0,0,0.22)] md:p-8">
+            <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+              What This Is
+            </div>
+            <p className="mt-4 text-base leading-8 text-white/74">
+              The <strong className="text-white">Moral Clarity Governance Audit™</strong>{" "}
+              is designed to identify where organizations lose the ability to
+              govern before visible failure occurs.
+            </p>
+            <p className="mt-4 text-base leading-8 text-white/74">
+              Most safety, ethics, and alignment frameworks assume institutions
+              can still detect problems, decide coherently, and enforce
+              accountability as systems grow more complex.
+            </p>
+            <p className="mt-4 text-base leading-8 text-white/74">
+              In practice, those capacities often fail first.
+            </p>
+          </div>
+
+          <div className="rounded-[28px] border border-white/10 bg-black/65 p-7 shadow-[0_18px_60px_rgba(0,0,0,0.22)] md:p-8">
+            <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+              Position
+            </div>
+            <p className="mt-3 text-2xl font-semibold tracking-tight text-white">
+              This audit does not ask whether principles are stated.
+            </p>
+            <p className="mt-4 text-base leading-8 text-white/66">
+              It asks whether governance still functions when those principles
+              are stressed by opacity, incentives, distributed responsibility,
+              and operational pressure.
+            </p>
+          </div>
+        </section>
+
+        {/* WHAT THIS AUDIT EXAMINES */}
+        <section className="rounded-[30px] border border-white/10 bg-gradient-to-br from-[#0b1220]/92 via-[#08101d]/92 to-black/90 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.28)] md:p-10">
+          <div className="space-y-4">
+            <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+              What This Audit Examines
+            </div>
+            <h2 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+              High-signal governance failure surfaces
+            </h2>
+            <p className="max-w-3xl text-sm leading-7 text-white/66 md:text-base">
+              These are the places where institutions often become least able to
+              govern precisely when governance matters most.
+            </p>
+          </div>
+
+          <div className="mt-8 grid gap-5 lg:grid-cols-2">
+            {EXAMINATION_AREAS.map((item) => (
+              <div
+                key={item.title}
+                className="rounded-[24px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.18)]"
+              >
+                <h3 className="text-xl font-semibold tracking-tight text-white">
+                  {item.title}
+                </h3>
+                <p className="mt-3 text-base leading-7 text-white/68">
+                  {item.body}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* NOT / DELIVERABLES */}
+        <section className="grid gap-6 lg:grid-cols-2">
+          <div className="rounded-[28px] border border-white/10 bg-white/[0.035] p-7 shadow-[0_18px_60px_rgba(0,0,0,0.22)] md:p-8">
+            <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+              What This Audit Is Not
+            </div>
+            <ul className="mt-5 space-y-3">
+              {NOT_THIS.map((item) => (
+                <li
+                  key={item}
+                  className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm leading-7 text-white/76"
+                >
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-5 text-base leading-8 text-white/66">
+              This audit does not evaluate whether a system sounds aligned. It
+              evaluates whether governance remains intact under real strain.
+            </p>
+          </div>
+
+          <div className="rounded-[28px] border border-white/10 bg-black/65 p-7 shadow-[0_18px_60px_rgba(0,0,0,0.22)] md:p-8">
+            <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+              Deliverables
+            </div>
+            <ul className="mt-5 space-y-3">
+              {DELIVERABLES.map((item) => (
+                <li
+                  key={item}
+                  className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm leading-7 text-white/80"
+                >
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* WHEN IT MATTERS / BOUNDARY */}
+        <section className="grid gap-6 lg:grid-cols-[1.08fr_0.92fr]">
+          <div className="rounded-[28px] border border-white/10 bg-white/[0.035] p-7 shadow-[0_18px_60px_rgba(0,0,0,0.22)] md:p-8">
+            <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+              When This Matters Most
+            </div>
+            <ul className="mt-5 space-y-3">
+              {WHEN_IT_MATTERS.map((item) => (
+                <li
+                  key={item}
+                  className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm leading-7 text-white/76"
+                >
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="rounded-[28px] border border-white/10 bg-black/72 p-7 shadow-[0_18px_60px_rgba(0,0,0,0.22)] md:p-8">
+            <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+              Boundary Statement
+            </div>
+            <p className="mt-3 text-xl leading-8 text-white md:text-2xl">
+              When interpretability, alignment, or ethical intent cannot be
+              relied upon, governance must still function.
+            </p>
+            <p className="mt-4 text-base leading-7 text-white/64">
+              Moral Clarity exists at that boundary.
+            </p>
+          </div>
+        </section>
+
+        {/* CANONICAL CONTEXT + CTA */}
+        <section className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+          <div className="rounded-[28px] border border-white/10 bg-white/[0.035] p-7 shadow-[0_18px_60px_rgba(0,0,0,0.22)] md:p-8">
+            <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+              Canonical Context
+            </div>
+            <p className="mt-4 text-base leading-8 text-white/74">
+              This audit is grounded in the{" "}
+              <Link
+                href="/edge-of-knowledge"
+                className="font-medium text-white underline decoration-white/30 underline-offset-4 transition hover:decoration-white/60"
+              >
+                Edge of Knowledge
+              </Link>{" "}
+              research series, which examines failure, uncertainty, and
+              responsible action where optimization breaks.
+            </p>
+          </div>
+
+          <div className="rounded-[28px] border border-white/10 bg-gradient-to-br from-[#161616]/95 via-[#0f0f10]/92 to-black/92 p-7 shadow-[0_18px_60px_rgba(0,0,0,0.22)] md:p-8">
+            <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+              Intake
+            </div>
+            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-white">
+              Reserve an audit intake slot
+            </h2>
+            <p className="mt-4 text-base leading-8 text-white/66">
+              Intake calls are limited and gated. This is a diagnostic, not a
+              sales conversation.
+            </p>
+
+            <div className="mt-6 flex flex-wrap gap-4">
+              <a
+                href="https://calendly.com/zlomke76/governance-drift-audit-intake-call"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center rounded-full border border-white/12 bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-white/90"
+              >
+                Reserve an Audit Intake Slot
+                <span className="ml-2">↗</span>
+              </a>
+            </div>
+
+            <p className="mt-4 text-sm leading-7 text-white/48">
+              A $500 deposit is required to reserve an intake slot and is
+              applied to the final audit fee.
+            </p>
+          </div>
+        </section>
+
+        {/* FOOTER */}
+        <section className="rounded-[24px] border border-white/10 bg-white/[0.03] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.18)]">
+          <p className="text-sm leading-7 text-white/58">
+            Moral Clarity Governance Audit™ · Public reference · Updated only by
+            explicit revision. No claims of prevention, prediction, or assurance
+            are made or implied.
           </p>
-        </div>
-
-        {/* OVERVIEW */}
-        <h2>What This Is</h2>
-        <p>
-          The <strong>Moral Clarity Governance Audit™</strong> is a short-cycle,
-          high-signal diagnostic designed to identify where organizations lose
-          the ability to govern before visible failure occurs.
-        </p>
-        <p>
-          Most safety, ethics, and alignment frameworks assume that institutions
-          can still detect problems, decide coherently, and enforce
-          accountability as systems grow complex.
-        </p>
-        <p>
-          In practice, those capacities often fail first.
-        </p>
-
-        {/* WHAT IT EXAMINES */}
-        <h2>What This Audit Examines</h2>
-        <ul>
-          <li>
-            <strong>Incentive corruption:</strong> Where reward structures favor
-            denial, speed, or plausible deniability over correction
-          </li>
-          <li>
-            <strong>Detection failure:</strong> Whether early warnings can
-            surface — and whether they are permitted to
-          </li>
-          <li>
-            <strong>Authority breakdown:</strong> Where responsibility exists in
-            theory but not in practice
-          </li>
-          <li>
-            <strong>Procedural entrenchment:</strong> Where process replaces
-            judgment and blocks adaptation
-          </li>
-          <li>
-            <strong>Action threshold collapse:</strong> Where decisions arrive
-            too late, too fast, or not at all
-          </li>
-          <li>
-            <strong>Meta-failure of knowledge systems:</strong> Where meaning,
-            interpretation, and enforcement diverge
-          </li>
-        </ul>
-
-        {/* WHAT IT IS NOT */}
-        <h2>What This Audit Is Not</h2>
-        <ul>
-          <li>Not an AI safety checklist</li>
-          <li>Not an ethics or values workshop</li>
-          <li>Not a compliance certification</li>
-          <li>Not a technical model review</li>
-        </ul>
-
-        <p>
-          This audit does not ask whether systems align with stated principles.
-          It asks whether governance still functions when those principles are
-          stressed.
-        </p>
-
-        {/* DELIVERABLES */}
-        <h2>Deliverables</h2>
-        <ul>
-          <li>
-            A written governance audit identifying drift vectors, accountability
-            gaps, detection blind spots, and non-governable risk
-          </li>
-          <li>
-            A 60-minute executive debrief focused on what can be governed, what
-            requires redesign, and what must be explicitly refused
-          </li>
-        </ul>
-
-        {/* WHEN IT MATTERS */}
-        <h2>When This Matters Most</h2>
-        <ul>
-          <li>When systems are partially or fully opaque</li>
-          <li>When incentives are misaligned or adversarial</li>
-          <li>When responsibility is distributed or unclear</li>
-          <li>
-            When performance metrics appear healthy but confidence is eroding
-          </li>
-        </ul>
-
-        {/* BOUNDARY STATEMENT */}
-        <h2>Boundary Statement</h2>
-        <p>
-          When interpretability, alignment, or ethical intent cannot be relied
-          upon, governance must still function.
-        </p>
-        <p>
-          <strong>Moral Clarity exists at that boundary.</strong>
-        </p>
-
-        {/* CANONICAL CONTEXT */}
-        <h2>Canonical Context</h2>
-        <p>
-          This audit is grounded in the{" "}
-          <Link href="/edge-of-knowledge">Edge of Knowledge</Link> research
-          series, which examines failure, uncertainty, and responsible action
-          where optimization breaks.
-        </p>
-
-        {/* SECONDARY CTA — BOTTOM */}
-        <div className="my-10">
-          <a
-            href="https://calendly.com/zlomke76/governance-drift-audit-intake-call"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block rounded-md border border-neutral-300 px-6 py-3 font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800"
-          >
-            Reserve an Audit Intake Slot
-          </a>
-          <p className="mt-2 text-sm text-neutral-500">
-            Intake calls are limited and gated. This is a diagnostic, not a
-            sales conversation.
-          </p>
-        </div>
-
-        <hr />
-
-        <p className="text-sm text-neutral-400">
-          Moral Clarity Governance Audit™ · Public reference · Updated only by
-          explicit revision. No claims of prevention, prediction, or assurance
-          are made or implied.
-        </p>
-      </article>
+        </section>
+      </div>
     </main>
   );
 }
