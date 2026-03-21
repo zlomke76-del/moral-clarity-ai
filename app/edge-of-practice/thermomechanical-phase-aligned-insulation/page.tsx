@@ -2,187 +2,207 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
-    "Thermomechanical Phase-Aligned Insulation — Edge of Practice | Moral Clarity AI",
+    "Thermomechanical Phase-Aligned Insulation — Phase-Resolved Thermal Invariance Test | Moral Clarity AI",
   description:
-    "Invariant falsification of the assumption that static R-value suffices under time-translated thermal forcing.",
-  openGraph: {
-    title:
-      "Thermomechanical Phase-Aligned Insulation — Edge of Practice",
-    description:
-      "A short-cycle invariant falsification probing the sufficiency of static R-value metrics under cyclic thermal forcing.",
-    url: "https://studio.moralclarity.ai/edge-of-practice/thermomechanical-phase-aligned-insulation",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
+    "A short-cycle invariant falsification testing whether static R-value fails under time-translated thermal forcing due to phase-resolved heat transport.",
   robots: {
     index: true,
     follow: true,
   },
 };
 
+function SectionCard({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-black/10 bg-white/70 p-6 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+      <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
+        {eyebrow}
+      </div>
+      <h2 className="mb-4 text-xl font-semibold text-zinc-950 dark:text-zinc-50">
+        {title}
+      </h2>
+      <div className="space-y-4 text-[15px] leading-7 text-zinc-700 dark:text-zinc-300">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function SignalPill({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex rounded-full border border-zinc-300 bg-zinc-100 px-3 py-1 text-xs text-zinc-700 dark:border-white/10 dark:bg-white/10 dark:text-zinc-300">
+      {children}
+    </span>
+  );
+}
+
 export default function ThermomechanicalPhaseAlignedInsulationPage() {
   return (
-    <main className="mx-auto max-w-4xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Thermomechanical Phase-Aligned Insulation</h1>
+    <main className="mx-auto max-w-6xl px-6 py-16 md:px-8 md:py-20">
+      <div className="space-y-8">
 
-        <p>
-          <strong>
-            Falsification of Static R-Value Sufficiency Under Time-Translated
-            Thermal Forcing
-          </strong>
-        </p>
+        {/* HERO */}
+        <section className="rounded-3xl border border-black/10 bg-gradient-to-br from-white to-zinc-100 p-10 dark:border-white/10 dark:from-zinc-950 dark:to-zinc-900">
+          <div className="mb-4 flex flex-wrap gap-2">
+            <SignalPill>Edge of Practice</SignalPill>
+            <SignalPill>Invariant Falsification</SignalPill>
+            <SignalPill>Thermal Symmetry</SignalPill>
+          </div>
 
-        <hr />
+          <h1 className="text-4xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50 md:text-5xl">
+            Thermomechanical Phase-Aligned Insulation
+          </h1>
 
-        <h2>Edge Canon Classification</h2>
+          <p className="mt-6 max-w-3xl text-lg leading-8 text-zinc-700 dark:text-zinc-300">
+            Thermal insulation is admissible as phase-agnostic only if time
+            translation of boundary conditions does not alter invariant heat
+            transport structure. If phase shifts, peak flux discontinuities, or
+            spatial coherence emerge, static R-value is not a complete descriptor.
+          </p>
 
-        <h3>Symmetry Group (𝑮)</h3>
-        <p>
-          Time translation of cyclic thermal boundary conditions
-          (e.g., diurnal temperature forcing).
-        </p>
+          <div className="mt-8 rounded-2xl border border-zinc-200 bg-black p-6 text-white">
+            <div className="mb-2 text-[11px] uppercase tracking-[0.24em] text-zinc-400">
+              Core Doctrine
+            </div>
+            <p className="text-base leading-7 md:text-lg">
+              Insulation is not defined by how much heat passes—but when and how it passes.
+            </p>
+          </div>
+        </section>
 
-        <h3>Conserved Quantity (𝑸)</h3>
-        <p>
-          Net thermal envelope response treated as phase-agnostic under fixed
-          static R-value.
-        </p>
+        {/* ASSUMPTION */}
+        <SectionCard
+          eyebrow="Tested Assumption"
+          title="Static R-value is sufficient"
+        >
+          <p>
+            The governing assumption is that a single scalar (R-value) fully
+            characterizes thermal performance, independent of time variation in
+            boundary conditions.
+          </p>
+        </SectionCard>
 
-        <h3>Invariant Spectrum (𝑺)</h3>
-        <ul>
-          <li>
-            Phase offset between external temperature extrema and internal heat
-            flux extrema
-          </li>
-          <li>Extreme (peak) instantaneous heat flux</li>
-          <li>Spatial coherence of heat-flux pathways across the envelope</li>
-        </ul>
+        {/* SYMMETRY BREAK */}
+        <SectionCard
+          eyebrow="Symmetry Under Test"
+          title="Time-translation invariance"
+        >
+          <p>
+            If thermal response is invariant under time translation of cyclic
+            forcing, then phase does not matter and static descriptors suffice.
+          </p>
 
-        <h3>Failure Signature</h3>
-        <p>
-          The governing assumption is falsified if any categorical spectral
-          change appears:
-        </p>
-        <ul>
-          <li>Non-zero, repeatable phase lag under time translation</li>
-          <li>
-            Discontinuous change in peak heat flux relative to static insulation
-            with matched average R-value
-          </li>
-          <li>
-            Emergence of system-spanning heat-flux connectivity not present in
-            static assemblies
-          </li>
-        </ul>
+          <p>
+            If phase-dependent effects emerge, the symmetry is broken and the
+            descriptor is incomplete.
+          </p>
+        </SectionCard>
 
-        <hr />
+        {/* DISCOVERY */}
+        <SectionCard
+          eyebrow="Discovery"
+          title="Phase-aligned structures introduce temporal asymmetry"
+        >
+          <p>
+            Thermomechanically responsive layers with depth-wise hysteresis
+            gradients introduce delayed structural reconfiguration aligned with
+            cyclic forcing.
+          </p>
 
-        <h2>Assumption Under Test</h2>
-        <p>
-          Static R-value is a sufficient descriptor of building-envelope thermal
-          performance under real-world, time-varying thermal conditions.
-        </p>
+          <p>
+            This creates phase-shifted heat transport behavior that cannot be
+            captured by static metrics.
+          </p>
+        </SectionCard>
 
-        <hr />
+        {/* GOVERNING VARIABLE */}
+        <SectionCard
+          eyebrow="Governing Variable"
+          title="Phase-resolved heat transport structure"
+        >
+          <ul>
+            <li>Phase lag between external forcing and internal response</li>
+            <li>Peak instantaneous heat flux</li>
+            <li>Spatial coherence of flux pathways</li>
+          </ul>
 
-        <h2>Tested System</h2>
-        <p>
-          A multilayer passive laminate incorporating thermomechanically
-          reversible polymer domains engineered with depth-wise hysteresis
-          gradients. The system contains no sensors, electronics, power input,
-          or control logic.
-        </p>
+          <p>
+            These variables define the system’s true thermal behavior under
+            cyclic conditions.
+          </p>
+        </SectionCard>
 
-        <p>
-          The mechanism of interest is not instantaneous adaptation, but
-          time-lagged structural reconfiguration aligned with predictable thermal
-          cycles.
-        </p>
+        {/* EXPERIMENT */}
+        <SectionCard
+          eyebrow="Minimal Falsification Test"
+          title="Static vs phase-aligned comparison"
+        >
+          <ul>
+            <li>Panel A: conventional insulation</li>
+            <li>Panel B: phase-aligned laminate</li>
+            <li>Identical cyclic thermal forcing (≥100 cycles)</li>
+          </ul>
 
-        <hr />
+          <ul>
+            <li>Heat flux sensors</li>
+            <li>Depth thermocouples</li>
+            <li>Infrared thermography</li>
+          </ul>
 
-        <h2>Minimal Falsification Experiment</h2>
+          <p>
+            No averaging permitted. Only invariant spectral observables are admissible.
+          </p>
+        </SectionCard>
 
-        <p>
-          Two thermally equivalent test panels are exposed to identical cyclic
-          thermal forcing:
-        </p>
+        {/* FAILURE */}
+        <SectionCard
+          eyebrow="Failure Signature"
+          title="What breaks the assumption"
+        >
+          <ul>
+            <li>Non-zero, repeatable phase lag</li>
+            <li>Discontinuous peak heat flux change</li>
+            <li>Emergent flux pathway coherence</li>
+          </ul>
 
-        <ul>
-          <li>Panel A: Conventional static insulation</li>
-          <li>Panel B: Phase-aligned laminate</li>
-        </ul>
+          <p>
+            Any of these constitutes a categorical break in phase invariance.
+          </p>
+        </SectionCard>
 
-        <p>
-          Instrumentation is limited to standard, non-heroic apparatus:
-        </p>
+        {/* INTERPRETATION */}
+        <SectionCard
+          eyebrow="Corrected Interpretation"
+          title="Thermal systems are phase-sensitive"
+        >
+          <p>
+            Heat transport under real conditions is not purely scalar. It is a
+            time-resolved, structure-dependent process.
+          </p>
+        </SectionCard>
 
-        <ul>
-          <li>Heat-flux sensors (inbound and outbound)</li>
-          <li>Depth-wise thermocouples</li>
-          <li>Infrared thermography</li>
-          <li>Multi-cycle temperature control (≥100 cycles)</li>
-        </ul>
+        {/* INVARIANT */}
+        <section className="rounded-3xl border border-black/10 bg-zinc-950 px-8 py-10 text-white">
+          <div className="mb-3 text-xs uppercase tracking-[0.24em] text-zinc-400">
+            Invariant
+          </div>
+          <p className="max-w-4xl text-2xl font-semibold leading-10 tracking-tight md:text-3xl">
+            A scalar cannot describe a phase-dependent system.
+          </p>
+          <p className="mt-4 max-w-3xl text-base leading-8 text-zinc-300">
+            If thermal response depends on timing, then static R-value is not a
+            governing descriptor—it is an incomplete projection.
+          </p>
+        </section>
 
-        <p>
-          The experiment is pass/fail only. No averaged performance metrics are
-          admissible.
-        </p>
-
-        <hr />
-
-        <h2>Interpretation Constraints</h2>
-
-        <p>
-          The following are explicitly excluded from consideration:
-        </p>
-
-        <ul>
-          <li>Average energy savings</li>
-          <li>Efficiency percentages</li>
-          <li>Economic or cost-benefit analysis</li>
-          <li>Optimization or tuning narratives</li>
-          <li>Gradual or qualitative performance descriptions</li>
-        </ul>
-
-        <p>
-          Only invariant spectral observables are admissible.
-        </p>
-
-        <hr />
-
-        <h2>Failure Handling</h2>
-
-        <p>
-          If no invariant spectral change is observed, the assumption stands and
-          the phase-aligned approach is discarded.
-        </p>
-
-        <p>
-          Failure is bounded and non-catastrophic: the system reverts to ordinary
-          insulation behavior.
-        </p>
-
-        <hr />
-
-        <h2>Methodology</h2>
-
-        <p>
-          Edge of Practice invariant falsification using symmetry reduction (𝑮),
-          conserved quantity isolation (𝑸), invariant spectrum analysis (𝑺),
-          and categorical failure signatures, per{" "}
-          <em>Edge Canon: Invariants, Not Interpretations</em>.
-        </p>
-
-        <hr />
-
-        <p className="text-sm opacity-80">
-          This record is fixed at publication. Revisions require explicit
-          versioning. Inclusion does not imply generalization beyond the tested
-          assumption.
-        </p>
-      </article>
+      </div>
     </main>
   );
 }
