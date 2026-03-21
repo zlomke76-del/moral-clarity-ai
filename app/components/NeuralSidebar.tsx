@@ -33,7 +33,12 @@ export default function NeuralSidebar({ items }: Props) {
 
   let workspaceId: string | null = null;
   const parts = pathname.split("/").filter(Boolean);
-  if (parts[0] === "w" && parts[1]) workspaceId = parts[1];
+
+  if (parts[0] === "w" && parts[1]) {
+    workspaceId = parts[1];
+  }
+
+  const activeItemId = resolveActiveItemId(pathname);
 
   const sidebarItems =
     items && items.length > 0
@@ -51,7 +56,6 @@ export default function NeuralSidebar({ items }: Props) {
         overflow: "hidden",
       }}
     >
-      {/* BRAND */}
       <div
         className="border-b border-white/6 px-5 pb-5 pt-5"
         style={{ flexShrink: 0 }}
@@ -84,12 +88,9 @@ export default function NeuralSidebar({ items }: Props) {
         </Link>
       </div>
 
-      {/* CONTENT */}
       <div
         className="neural-sidebar-glass flex-1 overflow-y-auto overflow-x-hidden px-4 py-5"
-        style={{
-          minHeight: 0,
-        }}
+        style={{ minHeight: 0 }}
       >
         <div className="mb-3 px-1">
           <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/35">
@@ -99,7 +100,11 @@ export default function NeuralSidebar({ items }: Props) {
 
         <nav className="flex flex-col gap-3">
           {sidebarItems.map((item) => (
-            <SidebarChip key={item.id} item={item} />
+            <SidebarChip
+              key={item.id}
+              item={item}
+              isActive={item.id === activeItemId}
+            />
           ))}
         </nav>
 
@@ -128,12 +133,14 @@ export default function NeuralSidebar({ items }: Props) {
 }
 
 /* CHIP */
-function SidebarChip({ item }: { item: NeuralSidebarItem }) {
-  const pathname = usePathname() ?? "";
+function SidebarChip({
+  item,
+  isActive,
+}: {
+  item: NeuralSidebarItem;
+  isActive: boolean;
+}) {
   const href = item.href ?? "";
-
-  const isActive =
-    href.length > 0 && (pathname === href || pathname.startsWith(href + "/"));
 
   const content = (
     <div
@@ -206,7 +213,7 @@ function SidebarChip({ item }: { item: NeuralSidebarItem }) {
     return (
       <Link
         href={href}
-        className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40 focus-visible:ring-offset-0 rounded-2xl"
+        className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40 focus-visible:ring-offset-0"
       >
         {content}
       </Link>
@@ -222,6 +229,32 @@ function SidebarChip({ item }: { item: NeuralSidebarItem }) {
       {content}
     </button>
   );
+}
+
+/* ACTIVE ROUTE RESOLUTION */
+function resolveActiveItemId(pathname: string): string | null {
+  const parts = pathname.split("/").filter(Boolean);
+
+  if (pathname === "/app" || pathname.startsWith("/app/")) {
+    return null;
+  }
+
+  if (parts[0] === "w" && parts[2]) {
+    const section = parts[2];
+
+    if (section === "memory") return "memory";
+    if (section === "rolodex") return "memory";
+  }
+
+  if (pathname === "/newsroom/cabinet" || pathname.startsWith("/newsroom/cabinet/")) {
+    return "newsroom";
+  }
+
+  if (pathname === "/auth/sign-in" || pathname.startsWith("/auth/sign-in/")) {
+    return "magic-key";
+  }
+
+  return null;
 }
 
 /* DEFAULT PAGES */
