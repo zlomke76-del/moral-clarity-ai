@@ -1,203 +1,174 @@
 // app/whitepapers/citric-acid-modified-pet/page.tsx
-// ============================================================
-// WHITE PAPER
-// Citric Acid–Modified PET
-// ============================================================
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Citric Acid–Modified PET | Moral Clarity AI",
+  title:
+    "Citric Acid–Modified PET | Constraint Assessment | Moral Clarity AI",
   description:
-    "A regime-bounded white paper examining whether citric-acid-derived functionality can be structurally incorporated into PET to enable controlled hydrolytic susceptibility without additive dependence.",
+    "A constraint-bound evaluation of whether citric-derived functionality enables controlled, structurally governed hydrolytic response in PET.",
   robots: { index: true, follow: true },
 };
 
 export default function Page() {
   return (
-    <main className="mx-auto max-w-4xl px-6 py-20">
-      <article className="space-y-10">
-        {/* HEADER */}
-        <header className="space-y-4 border-b pb-8">
-          <p className="text-sm uppercase tracking-[0.18em] text-neutral-500">
-            White Paper · Anchored PET Candidate
-          </p>
-          <h1 className="text-4xl font-semibold tracking-tight">
+    <main className="mx-auto max-w-6xl px-6 py-24 space-y-16">
+      {/* ===================================================== */}
+      {/* HERO */}
+      {/* ===================================================== */}
+      <section className="rounded-[32px] border border-white/10 bg-black p-12">
+        <div className="space-y-6">
+          <div className="flex flex-wrap gap-3">
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/70 uppercase tracking-[0.18em]">
+              White Paper
+            </span>
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/70 uppercase tracking-[0.18em]">
+              Constraint Assessment
+            </span>
+            <span className="rounded-full border border-yellow-400/30 px-3 py-1 text-xs text-yellow-300 uppercase tracking-[0.18em]">
+              STATUS: CONDITIONAL
+            </span>
+          </div>
+
+          <h1 className="text-5xl text-white font-semibold tracking-tight">
             Citric Acid–Modified PET
           </h1>
-          <p className="max-w-3xl text-lg leading-8 text-neutral-600">
-            A bounded materials investigation into whether citric-acid-derived
-            functionality can be structurally incorporated into PET to enable
-            controlled hydrolytic susceptibility under defined end-of-life
-            conditions without reliance on additives or degradable fillers.
-          </p>
-        </header>
 
-        {/* ABSTRACT */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Abstract</h2>
-          <p className="leading-8 text-neutral-700">
-            This paper evaluates the admissibility of incorporating
-            citric-acid-derived comonomers into polyethylene terephthalate (PET)
-            as a route to controlled hydrolytic susceptibility. The central
-            constraint is not degradability in general, but controlled structural
-            response under defined conditions.
+          <p className="max-w-2xl text-lg text-white/70 leading-8">
+            Evaluation of whether citric-derived functionality can enable
+            controlled hydrolytic susceptibility governed by retained structure
+            rather than uncontrolled degradation or additive behavior.
           </p>
-          <p className="leading-8 text-neutral-700">
-            Hydrolytic susceptibility is admissible only if the modifying
-            structure remains part of the material and produces predictable
-            behavior under stress without relying on extractable or transient
-            components.
-          </p>
-        </section>
+        </div>
+      </section>
 
-        {/* PROBLEM CONTEXT */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Problem Context</h2>
-          <p className="leading-8 text-neutral-700">
-            PET is widely valued for durability and resistance to degradation.
-            However, this same persistence contributes to long-lived waste and
-            challenges in chemical recycling.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            Conventional approaches to modifying degradation behavior often rely
-            on additives or blends that introduce variability, migration risk,
-            or loss of structural control over time.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            A structurally modified PET that enables controlled hydrolytic
-            susceptibility offers a potential pathway toward predictable
-            end-of-life behavior without abandoning material integrity during use.
-          </p>
-        </section>
+      {/* ===================================================== */}
+      {/* SYSTEM CONSTRAINT */}
+      {/* ===================================================== */}
+      <section className="rounded-[36px] border border-white/10 bg-black p-14 text-center">
+        <h2 className="text-xs uppercase tracking-[0.25em] text-white/40 mb-6">
+          System Constraint
+        </h2>
 
-        {/* THESIS */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Conceptual Thesis</h2>
-          <p className="leading-8 text-neutral-700">
-            Incorporating citric-acid-derived triacid functionality into PET at
-            low molar fractions may introduce controlled points of hydrolytic
-            susceptibility within the polymer network.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            This concept is admissible only if the citric-derived structure is
-            retained after extraction and produces a predictable, condition-
-            dependent response rather than uncontrolled degradation.
-          </p>
-        </section>
+        <p className="text-3xl text-white max-w-3xl mx-auto leading-[1.5]">
+          Hydrolytic susceptibility is admissible only if it is controlled by
+          structurally retained citric-derived functionality.
+        </p>
 
-        {/* FUNCTIONALIZATION */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Functionalization Strategy</h2>
-          <p className="leading-8 text-neutral-700">
-            Citric-acid-derived triacid monomers are introduced during PET
-            polycondensation at low molar fractions. The objective is to embed
-            hydrolytically responsive functionality directly into the polymer
-            backbone while preserving processability and baseline performance.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            This is a constrained structural hypothesis. It does not assume
-            degradability as a benefit unless it is controllable, predictable,
-            and structurally retained.
-          </p>
-        </section>
+        <p className="mt-6 text-white/50">
+          If response is uncontrolled or decoupled from structure, the system is rejected.
+        </p>
+      </section>
 
-        {/* FAILURE CONDITION */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Primary Failure Condition</h2>
-          <p className="leading-8 text-neutral-700">
-            The system fails if citric-derived functionality is lost during
-            extraction or if hydrolytic response becomes uncontrolled or
-            decoupled from structural retention.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            Loss of acid content or unpredictable degradation behavior invalidates
-            the concept as a controlled end-of-life material.
-          </p>
-        </section>
+      {/* ===================================================== */}
+      {/* CONTEXT */}
+      {/* ===================================================== */}
+      <section className="max-w-3xl space-y-6">
+        <h2 className="text-2xl text-white font-semibold">
+          Problem Context
+        </h2>
 
-        {/* ADMISSIBILITY TEST */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Admissibility Test</h2>
-          <p className="leading-8 text-neutral-700">
-            Neutral water immersion at 80°C for 7 days is used as the governing
-            stress condition, followed by quantitative analysis of retained acid
-            functionality.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            <strong>FAIL:</strong> significant loss of acid content or evidence
-            that hydrolytic response is driven by extractable or unstable
-            components.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            <strong>PASS:</strong> structural retention of citric-derived
-            functionality with predictable hydrolytic response under defined
-            conditions.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            This test defines control, not degradation rate.
-          </p>
-        </section>
+        <p className="text-white/70 leading-8">
+          PET durability limits controlled end-of-life behavior, while additive
+          approaches introduce variability and loss of structural control.
+        </p>
 
-        {/* PROJECTED CAPABILITY */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Projected Capability</h2>
-          <p className="leading-8 text-neutral-700">
-            If retention and control hold, citric-acid-modified PET may enable
-            materials with tunable hydrolytic susceptibility, supporting more
-            predictable chemical recycling pathways or controlled degradation
-            under specified conditions.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            The value lies in controlled response, not accelerated breakdown.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            These capabilities are conditional and invalid if the retention or
-            control requirement fails.
-          </p>
-        </section>
+        <p className="text-white/70 leading-8">
+          Structural modification offers a pathway to predictable hydrolytic response
+          without compromising in-use stability.
+        </p>
+      </section>
 
-        {/* NON-CLAIMS */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Non-Claims</h2>
-          <p className="leading-8 text-neutral-700">
-            This paper does not claim biodegradability, environmental safety
-            across all contexts, regulatory approval, recyclability superiority,
-            or commercial readiness.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            It defines a constrained candidate system and the condition under
-            which controlled hydrolytic behavior becomes materially credible.
-          </p>
-        </section>
+      {/* ===================================================== */}
+      {/* SYSTEM CONSTRUCTION */}
+      {/* ===================================================== */}
+      <section className="max-w-3xl space-y-6">
+        <h2 className="text-2xl text-white font-semibold">
+          System Construction
+        </h2>
 
-        {/* CONCLUSION */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold">Conclusion</h2>
-          <p className="leading-8 text-neutral-700">
-            Citric-acid-modified PET is admissible only if hydrolytic
-            susceptibility arises from retained structure and remains
-            predictable under defined conditions.
-          </p>
-          <p className="leading-8 text-neutral-700">
-            If functionality is lost or behavior becomes uncontrolled, the
-            concept fails as a structurally governed material. If retention and
-            control hold, it becomes a viable candidate for end-of-life
-            engineering in PET systems.
-          </p>
-        </section>
+        <p className="text-white/70 leading-8">
+          Citric-acid-derived triacid functionality is incorporated during PET
+          polycondensation to introduce controlled hydrolytic response points.
+        </p>
+      </section>
 
-        {/* INVARIANT */}
-        <section className="border-t pt-8">
-          <p className="text-xl leading-8">
-            Degradation is admissible only if it is controlled by structure.
-          </p>
-          <p className="mt-2 text-neutral-600">
-            If the response cannot be predicted or retained, it does not belong
-            to the material.
-          </p>
-        </section>
-      </article>
+      {/* ===================================================== */}
+      {/* FAILURE CONDITION */}
+      {/* ===================================================== */}
+      <section className="rounded-xl border border-white/10 bg-white/[0.05] p-8 max-w-3xl">
+        <h2 className="text-xl text-white font-semibold">
+          Failure Condition
+        </h2>
+
+        <p className="mt-3 text-white/80 leading-8">
+          The system fails if citric-derived functionality is lost or if
+          hydrolytic response becomes unpredictable or decoupled from structure.
+        </p>
+      </section>
+
+      {/* ===================================================== */}
+      {/* ADMISSIBILITY TEST */}
+      {/* ===================================================== */}
+      <section className="max-w-3xl space-y-6">
+        <h2 className="text-2xl text-white font-semibold">
+          Admissibility Test
+        </h2>
+
+        <p className="text-white/70 leading-8">
+          Neutral water immersion at 80°C for 7 days followed by quantification
+          of retained acid functionality and response consistency.
+        </p>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="rounded-2xl border border-green-400/20 bg-green-500/10 p-6">
+            <h3 className="text-green-300 font-semibold">PASS</h3>
+            <p className="mt-2 text-green-200/80">
+              Structural retention with predictable, condition-dependent response.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6">
+            <h3 className="text-red-300 font-semibold">FAIL</h3>
+            <p className="mt-2 text-red-200/80">
+              Loss of structure or uncontrolled degradation behavior.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ===================================================== */}
+      {/* SYSTEM DETERMINATION */}
+      {/* ===================================================== */}
+      <section className="text-center space-y-4">
+        <div className="w-24 h-px bg-white/10 mx-auto" />
+
+        <p className="text-xs uppercase tracking-[0.25em] text-white/40">
+          System Determination
+        </p>
+
+        <p className="text-white/70 max-w-2xl mx-auto">
+          Admissibility is conditional on structural retention and predictable
+          hydrolytic response. Claims are invalid if behavior is uncontrolled.
+        </p>
+      </section>
+
+      {/* ===================================================== */}
+      {/* FINAL DOCTRINE */}
+      {/* ===================================================== */}
+      <section className="rounded-[36px] border border-white/10 bg-black p-16 text-center">
+        <p className="text-3xl text-white leading-[1.5]">
+          Degradation is admissible only if it is controlled by structure.
+        </p>
+
+        <p className="mt-6 text-white/60">
+          If behavior cannot be predicted,
+        </p>
+
+        <p className="mt-2 text-white/40">
+          it is not governed by the material.
+        </p>
+      </section>
     </main>
   );
 }
