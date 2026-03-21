@@ -1,196 +1,220 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "PP + PVP Hydration-Mediated Aerosol Capture | Edge of Practice",
+  title:
+    "Hydration-Mediated Aerosol Capture — Interface Regime Shift in PP Systems | Moral Clarity AI",
   description:
-    "A falsifiable Edge of Practice experiment testing whether low-level PVP in polypropylene fibers improves aerosol capture via hydration-mediated surface interactions.",
+    "A short-cycle falsification testing whether aerosol capture in polypropylene systems transitions from electrostatic to hydration-mediated mechanisms under humidity.",
   robots: {
     index: true,
     follow: true,
   },
 };
 
-export default function PP_PVP_Experiment() {
+function SectionCard({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <main className="mx-auto max-w-4xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
+    <section className="rounded-2xl border border-black/10 bg-white/70 p-6 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+      <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
+        {eyebrow}
+      </div>
+      <h2 className="mb-4 text-xl font-semibold text-zinc-950 dark:text-zinc-50">
+        {title}
+      </h2>
+      <div className="space-y-4 text-[15px] leading-7 text-zinc-700 dark:text-zinc-300">
+        {children}
+      </div>
+    </section>
+  );
+}
 
-        <h1>Polypropylene Fibers with Interface-Localized Polyvinylpyrrolidone</h1>
+function SignalPill({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <span className="inline-flex rounded-full border border-zinc-300 bg-zinc-100 px-3 py-1 text-xs text-zinc-700 dark:border-white/10 dark:bg-white/10 dark:text-zinc-300">
+      {children}
+    </span>
+  );
+}
 
-        <p>
-          <strong>Edge of Practice Experiment</strong>
-        </p>
+export default function PPPVPHydrationCapturePage() {
+  return (
+    <main className="mx-auto max-w-6xl px-6 py-16 md:px-8 md:py-20">
+      <div className="space-y-8">
 
-        <hr />
+        {/* HERO */}
+        <section className="rounded-3xl border border-black/10 bg-gradient-to-br from-white to-zinc-100 p-10 dark:border-white/10 dark:from-zinc-950 dark:to-zinc-900">
+          <div className="mb-4 flex flex-wrap gap-2">
+            <SignalPill>Edge of Practice</SignalPill>
+            <SignalPill>Short-Cycle Falsification</SignalPill>
+            <SignalPill>Interface Regime</SignalPill>
+          </div>
 
-        {/* -------------------------------------------------- */}
-        {/* PURPOSE */}
-        {/* -------------------------------------------------- */}
-        <section>
-          <h2>Purpose</h2>
-          <p>
-            To test whether adding a small amount of polyvinylpyrrolidone (PVP)
-            to polypropylene (PP) melt-blown fibers measurably increases aerosol
-            capture efficiency in humid air via hydration-mediated surface
-            interactions, without relying on electrostatic charging or chemical
-            reactivity.
+          <h1 className="text-4xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50 md:text-5xl">
+            Hydration-Mediated Aerosol Capture in Polypropylene Systems
+          </h1>
+
+          <p className="mt-6 max-w-3xl text-lg leading-8 text-zinc-700 dark:text-zinc-300">
+            Aerosol capture in polypropylene is admissible as electrostatic only
+            if humidity does not induce a dominant alternative mechanism. If
+            hydration-mediated interactions exceed electrostatic capture under
+            realistic conditions, the governing regime shifts from charge to
+            interface physics.
           </p>
+
+          <div className="mt-8 rounded-2xl border border-zinc-200 bg-black p-6 text-white">
+            <div className="mb-2 text-[11px] uppercase tracking-[0.24em] text-zinc-400">
+              Core Doctrine
+            </div>
+            <p className="text-base leading-7 md:text-lg">
+              Filtration is not governed by charge alone.  
+              If humidity can create a stable interfacial hydration layer, then
+              capture becomes a surface-mediated interaction—not an electrostatic one.
+            </p>
+          </div>
         </section>
 
-        {/* -------------------------------------------------- */}
-        {/* WHY THIS MATTERS */}
-        {/* -------------------------------------------------- */}
-        <section>
-          <h2>Why This Experiment Exists</h2>
+        {/* ASSUMPTION */}
+        <SectionCard
+          eyebrow="Tested Assumption"
+          title="Electrostatic capture dominates filtration behavior"
+        >
           <p>
-            Polypropylene melt-blown fibers dominate global air filtration.
-            Their primary failure mode occurs in humid environments, where
-            electrostatic capture efficiency decays.
+            Polypropylene filtration systems assume electrostatic interactions
+            remain the dominant capture mechanism across operating environments.
+          </p>
+        </SectionCard>
+
+        {/* BREAK */}
+        <SectionCard
+          eyebrow="Hidden Failure Mode"
+          title="Humidity collapses electrostatic dominance"
+        >
+          <p>
+            In humid environments, electrostatic charge decays, reducing capture
+            efficiency and exposing alternative interaction pathways.
+          </p>
+        </SectionCard>
+
+        {/* DISCOVERY */}
+        <SectionCard
+          eyebrow="Discovery"
+          title="Hydration layers create a new capture regime"
+        >
+          <p>
+            Trace polar components (e.g., PVP) localize at the fiber interface
+            and stabilize hydration shells under humidity.
           </p>
 
           <p>
-            Polyvinylpyrrolidone is widely used as a water-soluble binder or
-            excipient and is generally dismissed as incompatible with durable,
-            hydrophobic polymers. This assumption has prevented investigation
-            of whether trace PVP can localize at PP fiber interfaces and form
-            stable hydration shells that enhance particle adhesion.
+            These shells increase local polarity and enable dipolar and
+            hydrogen-bond-mediated capture mechanisms independent of charge.
           </p>
+        </SectionCard>
 
+        {/* GOVERNING VARIABLE */}
+        <SectionCard
+          eyebrow="Governing Variable"
+          title="Interfacial hydration stability"
+        >
           <p>
-            This experiment tests that assumption directly.
-          </p>
-        </section>
-
-        {/* -------------------------------------------------- */}
-        {/* HYPOTHESIS */}
-        {/* -------------------------------------------------- */}
-        <section>
-          <h2>Hypothesis</h2>
-          <p>
-            At low loading (≈2–5 wt%), PVP preferentially enriches at the PP
-            fiber surface during melt-blowing. In humid air, PVP’s polar lactam
-            groups stabilize a persistent hydration layer at the air–polymer
-            interface.
-          </p>
-
-          <p>
-            This hydration shell increases local surface polarity and dielectric
-            contrast, enhancing aerosol and droplet capture through dipolar and
-            hydrogen-bond-mediated interactions.
-          </p>
-
-          <p>
-            The effect should:
+            The governing variable is not charge retention, but the persistence
+            of a hydration-mediated interface.
           </p>
 
           <ul>
-            <li>Increase with relative humidity</li>
-            <li>Disappear if PVP leaches</li>
-            <li>Require no electrostatic charging</li>
+            <li>Dry → electrostatic regime</li>
+            <li>Moderate humidity → mixed regime</li>
+            <li>High humidity → hydration-dominant regime</li>
           </ul>
-        </section>
+        </SectionCard>
 
-        {/* -------------------------------------------------- */}
-        {/* EXPERIMENTAL DESIGN */}
-        {/* -------------------------------------------------- */}
-        <section>
-          <h2>Experimental Design (MVP)</h2>
-
-          <h3>Materials</h3>
-          <ul>
-            <li>Filtration-grade polypropylene pellets</li>
-            <li>Polyvinylpyrrolidone (Mw ≈ 40k)</li>
-          </ul>
-
-          <h3>Processing</h3>
-          <ul>
-            <li>Melt-blend PP with 5 wt% PVP</li>
-            <li>Produce nonwoven mats via standard melt-blown processing</li>
-            <li>No surface coatings or post-treatments</li>
-          </ul>
-
-          <h3>Controls</h3>
-          <ul>
-            <li>Neat PP melt-blown fiber mat</li>
-          </ul>
-        </section>
-
-        {/* -------------------------------------------------- */}
-        {/* PASS / FAIL CRITERIA */}
-        {/* -------------------------------------------------- */}
-        <section>
-          <h2>Pass / Fail Criteria</h2>
-
-          <h3>Non-Leaching Gate (Absolute)</h3>
+        {/* CRITICAL GATE */}
+        <SectionCard
+          eyebrow="Critical Gate"
+          title="Non-leaching constraint"
+        >
           <p>
-            72-hour water extraction at room temperature.
-            PVP loss must be &lt;1% by mass (gravimetric or UV-Vis / FTIR).
+            The hydration mechanism is admissible only if the polar component
+            remains interface-bound.
           </p>
 
           <p>
-            <strong>Any measurable migration above threshold terminates the experiment.</strong>
+            Any measurable leaching invalidates the system, reducing it to a
+            transient effect.
           </p>
+        </SectionCard>
 
-          <h3>Functional Test</h3>
+        {/* EXPERIMENT */}
+        <SectionCard
+          eyebrow="Minimal Falsification Test"
+          title="Humidity-dependent performance divergence"
+        >
           <ul>
-            <li>NaCl aerosol (0.3 µm)</li>
-            <li>Fixed pressure drop (≈100 Pa)</li>
-            <li>Test at 30%, 60%, and 80% RH</li>
+            <li>Compare PP vs PP+PVP under identical airflow</li>
+            <li>Test at 30%, 60%, 80% RH</li>
+            <li>Measure capture efficiency at fixed pressure drop</li>
           </ul>
+        </SectionCard>
+
+        {/* PASS FAIL */}
+        <SectionCard
+          eyebrow="Binary Boundary"
+          title="What breaks the assumption"
+        >
+          <p>
+            <strong>Pass:</strong> No improvement under humidity conditions.
+          </p>
 
           <p>
-            <strong>Success threshold:</strong> ≥15% higher capture efficiency
-            at 60% RH compared to neat PP.
+            <strong>Fail:</strong> ≥15% efficiency increase at 60% RH without
+            electrostatic contribution.
           </p>
-        </section>
+        </SectionCard>
 
-        {/* -------------------------------------------------- */}
-        {/* FAILURE MODES */}
-        {/* -------------------------------------------------- */}
-        <section>
-          <h2>Primary Failure Modes</h2>
-          <ul>
-            <li>PVP leaching under humidity exposure</li>
-            <li>No statistically meaningful improvement in capture</li>
-            <li>Mechanical or airflow degradation due to blending</li>
-          </ul>
-        </section>
-
-        {/* -------------------------------------------------- */}
         {/* INTERPRETATION */}
-        {/* -------------------------------------------------- */}
-        <section>
-          <h2>Interpretation Rules</h2>
-          <ul>
-            <li>No extrapolation beyond tested humidity range</li>
-            <li>No claims of antimicrobial or biocidal action</li>
-            <li>No performance claims without extraction validation</li>
-          </ul>
-
+        <SectionCard
+          eyebrow="Corrected Interpretation"
+          title="Filtration is regime-dependent"
+        >
           <p>
-            A positive result demonstrates that hydration-mediated surface
-            physics — not electrostatics — can materially improve real-world
-            filtration performance using commodity polymers.
+            Filtration performance cannot be treated as a single-mechanism
+            system. It transitions between electrostatic and hydration-mediated
+            regimes depending on environmental conditions.
+          </p>
+        </SectionCard>
+
+        {/* INVARIANT */}
+        <section className="rounded-3xl border border-black/10 bg-zinc-950 px-8 py-10 text-white">
+          <div className="mb-3 text-xs uppercase tracking-[0.24em] text-zinc-400">
+            Invariant
+          </div>
+          <p className="max-w-4xl text-2xl font-semibold leading-10 tracking-tight md:text-3xl">
+            A system is not defined by how it works in ideal conditions.
+          </p>
+          <p className="mt-4 max-w-3xl text-base leading-8 text-zinc-300">
+            If the governing mechanism changes with environment, then the system
+            was never single-mode—it was conditionally interpreted.
           </p>
         </section>
 
-        {/* -------------------------------------------------- */}
-        {/* GOVERNANCE */}
-        {/* -------------------------------------------------- */}
-        <section>
-          <h2>Governance</h2>
-          <p>
-            This experiment does not claim product readiness, regulatory
-            clearance, or downstream application suitability.
-          </p>
-
-          <p>
-            Its sole purpose is to falsify or validate a single physical
-            assumption under realistic operating conditions.
-          </p>
-        </section>
-
-      </article>
+        <p className="text-sm text-zinc-500">
+          <Link href="/edge-of-practice">
+            Edge of Practice index
+          </Link>
+        </p>
+      </div>
     </main>
   );
 }
