@@ -1,162 +1,210 @@
-// app/edge-of-practice/irreversible-cognitive-dead-zones/page.tsx
-
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Irreversible Cognitive Dead Zones in Human–Automation Handoffs",
+  title:
+    "Irreversible Cognitive Dead Zones in Human–Automation Handoffs — Authority Boundary | Edge of Practice — Moral Clarity AI",
   description:
-    "An Edge of Practice analysis identifying a non-negotiable cognitive and temporal boundary in human–automation control handoffs, beyond which safe human intervention becomes physically impossible.",
-  openGraph: {
-    title: "Irreversible Cognitive Dead Zones in Human–Automation Handoffs",
-    description:
-      "Certain human–automation systems impose a hard cognitive boundary during control handoff that no training, procedure, or monitoring can overcome.",
-    url: "https://studio.moralclarity.ai/edge-of-practice/irreversible-cognitive-dead-zones",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
+    "A constraint artifact establishing that certain human–automation handoff conditions create irreversible cognitive dead zones where safe human intervention is physically impossible.",
   robots: {
     index: true,
     follow: true,
   },
 };
 
-export default function EdgeOfPracticeEntry() {
+function SectionCard({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Irreversible Cognitive Dead Zones in Human–Automation Handoffs</h1>
+    <section className="rounded-2xl border border-black/10 bg-white/70 p-6 shadow-sm">
+      <div className="mb-3 text-[11px] uppercase tracking-[0.22em] text-zinc-500">
+        {eyebrow}
+      </div>
+      <h2 className="mb-4 text-xl font-semibold">{title}</h2>
+      <div className="space-y-4 text-[15px] leading-7 text-zinc-700">
+        {children}
+      </div>
+    </section>
+  );
+}
 
-        <p className="text-sm text-neutral-500">
-          Edge of Practice · Safety-Critical Systems · Human–Automation Interaction
-        </p>
+function SignalPill({
+  children,
+  tone = "neutral",
+}: {
+  children: React.ReactNode;
+  tone?: "neutral" | "fail" | "pass";
+}) {
+  const toneClass =
+    tone === "fail"
+      ? "border-rose-500/20 bg-rose-500/10 text-rose-700"
+      : tone === "pass"
+        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
+        : "border-zinc-300 bg-zinc-100 text-zinc-700";
 
-        <hr />
+  return (
+    <span className={`inline-flex rounded-full border px-3 py-1 text-xs ${toneClass}`}>
+      {children}
+    </span>
+  );
+}
 
-        <h2>One-Sentence Definition</h2>
+export default function IrreversibleCognitiveDeadZonesPage() {
+  return (
+    <main className="mx-auto max-w-6xl px-6 py-16">
+      <div className="space-y-8">
 
-        <p>
-          Certain human–automation systems impose a non-negotiable cognitive and
-          temporal boundary during control handoff, beyond which human
-          intervention becomes physically impossible—yet operational practice
-          continues to assume recoverability, accountability, and control.
-        </p>
+        {/* HERO */}
+        <section className="rounded-3xl border bg-gradient-to-br from-white to-zinc-100 p-10">
+          <div className="mb-4 flex flex-wrap gap-2">
+            <SignalPill>Edge of Practice</SignalPill>
+            <SignalPill tone="fail">Irreversible Boundary</SignalPill>
+            <SignalPill>Authority Collapse</SignalPill>
+          </div>
 
-        <h2>What This Work Exposes</h2>
+          <h1 className="text-4xl font-semibold">
+            Irreversible Cognitive Dead Zones in Human–Automation Handoffs
+          </h1>
 
-        <p>
-          This work identifies and formalizes a class of <strong>irreversible
-          failure zones</strong> that emerge during abrupt automation-to-human
-          transitions in safety-critical systems. These zones are not design
-          flaws, training gaps, or procedural lapses; they are enforced by
-          biological and temporal limits of human cognition interacting with
-          automation complexity.
-        </p>
+          <p className="mt-6 text-lg max-w-3xl text-zinc-700">
+            Human supervision is non-admissible as a failsafe once system state,
+            cognitive load, and time-to-intervention exceed biological recovery
+            limits. Beyond this boundary, safe intervention becomes physically
+            impossible.
+          </p>
 
-        <p>
-          The boundary is already being crossed in operational systems. What lags
-          is not scientific understanding, but institutional acknowledgment.
-        </p>
+          <div className="mt-8 bg-black text-white p-6 rounded-xl">
+            <div className="text-xs uppercase opacity-70 mb-2">
+              Core Doctrine
+            </div>
+            <p>
+              A control handoff is <strong>admissible</strong> only if the receiving
+              agent can regain situational awareness and act within the available
+              time window. If this cannot occur, authority is undefined and the
+              system has already failed—regardless of procedure or intent.
+            </p>
+          </div>
+        </section>
 
-        <h2>Why This Is Edge of Practice (Not Edge of Knowledge)</h2>
+        {/* DEFINITION */}
+        <SectionCard
+          eyebrow="Definition"
+          title="Irreversible cognitive dead zone"
+        >
+          <p>
+            A cognitive dead zone is a region of system state where the time
+            required for human comprehension and action exceeds the time
+            available to intervene.
+          </p>
 
-        <ul>
-          <li>The mechanism is observable, repeatable, and physiologically grounded.</li>
-          <li>
-            Evidence already exists in accident timelines, simulator studies, and
-            established human performance limits.
-          </li>
-          <li>
-            Failure persists even under perfect training, intent, and procedural
-            compliance.
-          </li>
-          <li>
-            Continued framing as “human error” is incentive-driven, not
-            evidence-driven.
-          </li>
-        </ul>
+          <p>
+            Once entered, recovery is not degraded—it is impossible.
+          </p>
+        </SectionCard>
 
-        <p>
-          This is not missing science. It is known reality misclassified to
-          preserve legitimacy and liability structures.
-        </p>
+        {/* SYSTEM */}
+        <SectionCard
+          eyebrow="System Definition"
+          title="Automation-to-human handoff under time pressure"
+        >
+          <ul>
+            <li>Automation performs primary control</li>
+            <li>Human remains disengaged during steady-state operation</li>
+            <li>System transitions abruptly to human control</li>
+            <li>Time-to-failure is shorter than cognitive recovery time</li>
+          </ul>
+        </SectionCard>
 
-        <h2>Enforced Constraint</h2>
+        {/* GOVERNING VARIABLE */}
+        <SectionCard
+          eyebrow="Governing Variable"
+          title="Cognitive recovery time vs intervention window"
+        >
+          <p>
+            The governing variable is the relationship between:
+          </p>
 
-        <p>
-          Reality enforces a hard boundary at the level of human cognitive
-          state-recovery speed during automation handoff. Once system ambiguity
-          and time pressure exceed this boundary, safe intervention is no longer
-          possible—regardless of procedure, monitoring, or training.
-        </p>
+          <ul>
+            <li>Time required for human situational awareness reconstruction</li>
+            <li>Time available before irreversible system failure</li>
+          </ul>
 
-        <h2>Exact Scale Where Reality Enforces the Boundary</h2>
+          <p>
+            If recovery time exceeds available time, intervention cannot occur.
+          </p>
+        </SectionCard>
 
-        <p>
-          <strong>Biological / cognitive / temporal.</strong> The limit is set by
-          irreducible properties of human information processing under surprise,
-          stress, and compressed time—not by policy, interface design, or intent.
-        </p>
+        {/* FAILURE */}
+        <SectionCard
+          eyebrow="Failure Signature"
+          title="What defines the dead zone"
+        >
+          <ul>
+            <li>Operator receives alert but cannot reconstruct system state in time</li>
+            <li>Correct action is known but cannot be executed before failure</li>
+            <li>Multiple plausible interpretations exceed available decision window</li>
+            <li>Stress and surprise degrade response below actionable threshold</li>
+          </ul>
 
-        <h2>Why Prevailing Approaches Fail</h2>
+          <p>
+            These are not errors—they are boundary violations.
+          </p>
+        </SectionCard>
 
-        <p>
-          Current safety models assume that human error is continuously
-          improvable. In reality, failure probability increases discontinuously
-          once cognitive recovery windows are exceeded.
-        </p>
+        {/* VERDICT */}
+        <section className="rounded-3xl border border-rose-500/20 bg-rose-500/10 p-8">
+          <h2 className="text-3xl font-semibold text-rose-800">FAIL</h2>
+          <p className="mt-4 text-sm">
+            Human supervision is not admissible as a failsafe in systems where
+            cognitive recovery time exceeds intervention window under realistic
+            operating conditions.
+          </p>
+        </section>
 
-        <p>
-          Training, alerts, and interface improvements can buffer—but cannot
-          eliminate—the dead zone.
-        </p>
+        {/* INTERPRETATION */}
+        <SectionCard
+          eyebrow="Operational Interpretation"
+          title="What this means for system design"
+        >
+          <p>
+            Systems that rely on human takeover beyond this boundary are not
+            supervised—they are operating without a valid failsafe.
+          </p>
 
-        <h2>What Practice Refuses to Admit</h2>
+          <p>
+            Responsibility assigned at this point is structurally incoherent.
+          </p>
+        </SectionCard>
 
-        <ul>
-          <li>
-            There are intervals where no actor—human or automation—can safely
-            regain control.
-          </li>
-          <li>
-            Responsibility assignment after such events is structurally
-            incoherent.
-          </li>
-          <li>
-            Increased automation depth raises latent catastrophic risk rather
-            than eliminating it.
-          </li>
-        </ul>
+        {/* WHAT PRACTICE MISSES */}
+        <SectionCard
+          eyebrow="What Practice Misclassifies"
+          title="Failure is attributed incorrectly"
+        >
+          <ul>
+            <li>Failure labeled as human error instead of boundary violation</li>
+            <li>Training treated as corrective despite biological limits</li>
+            <li>Monitoring assumed to restore control without restoring cognition</li>
+          </ul>
+        </SectionCard>
 
-        <h2>Time Horizon</h2>
+        {/* INVARIANT */}
+        <section className="rounded-3xl border bg-zinc-950 text-white p-8">
+          <p className="text-2xl font-semibold">
+            Control requires time to understand.
+          </p>
+          <p className="mt-4 opacity-80">
+            If understanding cannot occur before consequence, control never
+            existed.
+          </p>
+        </section>
 
-        <ul>
-          <li>
-            <strong>Scientific validity:</strong> Immediate
-          </li>
-          <li>
-            <strong>Experimental confirmation:</strong> Short-term (months)
-          </li>
-          <li>
-            <strong>Operational adoption:</strong> Long-term and politically resistant
-          </li>
-        </ul>
-
-        <h2>Why This Matters</h2>
-
-        <p>
-          The cost of misclassification is not academic error—it is human life.
-          Publishing this boundary shifts safety discourse from blame to physical
-          reality.
-        </p>
-
-        <hr />
-
-        <p className="text-xs text-neutral-500">
-          This entry documents a constraint enforced by reality. No further
-          optimization, incentive adjustment, or procedural refinement can
-          remove the boundary described above.
-        </p>
-      </article>
+      </div>
     </main>
   );
 }
