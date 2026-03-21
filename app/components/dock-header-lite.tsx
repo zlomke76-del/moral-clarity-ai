@@ -7,7 +7,7 @@ import { UI } from "./dock-ui";
 interface Props {
   ministryOn: boolean;
   memReady: boolean;
-  onToggleMinistry: () => void; // intentionally unused (kept for compatibility)
+  onToggleMinistry: () => void;
   onMinimize: () => void;
   onDragStart: (e: any) => void;
 }
@@ -18,12 +18,9 @@ export default function SolaceDockHeaderLite({
   onMinimize,
   onDragStart,
 }: Props) {
-  // ------------------------------------------------------------
-  // Anchor / Triangle visual state
-  // ------------------------------------------------------------
   const anchorGlow = ministryOn
     ? "0 0 28px rgba(251,191,36,.65), 0 0 6px rgba(251,191,36,.45)"
-    : "0 0 6px rgba(148,163,184,.25)";
+    : "0 0 10px rgba(148,163,184,.22)";
 
   const anchorFill = ministryOn ? "#fbbf24" : "#94a3b8";
 
@@ -34,13 +31,13 @@ export default function SolaceDockHeaderLite({
         display: "flex",
         alignItems: "center",
         gap: 12,
-        padding: "10px 14px",
-        borderBottom: UI.edge,
+        padding: "12px 16px",
+        borderBottom: "1px solid rgba(255,255,255,0.08)",
+        background: "linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.01) 100%)",
         cursor: "move",
         userSelect: "none",
       }}
     >
-      {/* Triangle / Anchor Mark */}
       <span
         aria-hidden
         style={{
@@ -50,6 +47,7 @@ export default function SolaceDockHeaderLite({
           alignItems: "center",
           justifyContent: "center",
           filter: "drop-shadow(" + anchorGlow + ")",
+          flexShrink: 0,
         }}
       >
         <svg
@@ -62,47 +60,59 @@ export default function SolaceDockHeaderLite({
           strokeLinecap="round"
           strokeLinejoin="round"
         >
-          {/* Triangle */}
           <path d="M12 3 L21 19 H3 Z" />
-          {/* Anchor stem */}
           <line x1="12" y1="8" x2="12" y2="19" />
-          {/* Anchor base */}
           <path d="M8 19c1.5 2 6.5 2 8 0" />
         </svg>
       </span>
 
-      {/* Title */}
-      <span style={{ font: "600 13px system-ui" }}>Solace</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+        <span
+          style={{
+            font: '600 14px system-ui, -apple-system, "Segoe UI", sans-serif',
+            letterSpacing: "-0.01em",
+            color: UI.text,
+            whiteSpace: "nowrap",
+          }}
+        >
+          Solace
+        </span>
 
-      <span style={{ font: "12px system-ui", color: UI.sub }}>
-        Create with moral clarity
-      </span>
+        <span
+          style={{
+            font: '500 12px system-ui, -apple-system, "Segoe UI", sans-serif',
+            color: UI.sub,
+            whiteSpace: "nowrap",
+          }}
+        >
+          Create with moral clarity
+        </span>
 
-      {/* Memory ready indicator */}
-      <span
-        title={memReady ? "Memory ready" : "Loading memory"}
-        style={{
-          marginLeft: 8,
-          width: 8,
-          height: 8,
-          borderRadius: "50%",
-          background: memReady ? "#34d399" : "#f59e0b",
-          boxShadow: memReady ? "0 0 8px #34d399aa" : "none",
-        }}
-      />
+        <span
+          title={memReady ? "Memory ready" : "Loading memory"}
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            background: memReady ? "#34d399" : "#f59e0b",
+            boxShadow: memReady ? "0 0 10px rgba(52,211,153,0.7)" : "0 0 8px rgba(245,158,11,0.35)",
+            flexShrink: 0,
+          }}
+        />
+      </div>
 
-      {/* Right controls */}
       <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
         <button
           onClick={onMinimize}
           style={{
-            borderRadius: 6,
-            padding: "4px 8px",
-            font: "600 12px system-ui",
-            border: UI.edge,
-            background: "#0e1726",
+            borderRadius: 8,
+            padding: "4px 9px",
+            font: '600 12px system-ui, -apple-system, "Segoe UI", sans-serif',
+            border: "1px solid rgba(255,255,255,0.08)",
+            background: "rgba(255,255,255,0.03)",
             color: UI.sub,
             cursor: "pointer",
+            transition: "background 120ms ease, border-color 120ms ease, color 120ms ease",
           }}
           aria-label="Minimize Solace"
         >
