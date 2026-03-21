@@ -85,9 +85,9 @@ export default function Page() {
           System Definition
         </h2>
         <p className="text-white/70 leading-8">
-          A surface whose pathogen suppression is derived solely from
-          micro- or meso-scale geometry, with no contribution from chemistry,
-          coatings, or active mechanisms. :contentReference[oaicite:0]{index=0}
+          A surface whose pathogen suppression is derived solely from micro- or
+          meso-scale geometry, with no contribution from chemistry, coatings, or
+          active mechanisms.
         </p>
       </section>
 
