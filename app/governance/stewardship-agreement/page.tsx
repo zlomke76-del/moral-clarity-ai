@@ -1,262 +1,203 @@
 // app/governance/stewardship-agreement/page.tsx
-// ============================================================
-// STEWARDSHIP AGREEMENT — CANONICAL PUBLICATION
-// Authority-first. Static. Versioned.
-// ============================================================
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Stewardship Agreement | Moral Clarity AI",
   description:
-    "The canonical governance charter defining stewardship authority, ethical boundaries, compensation, and licensing for the Moral Clarity AI ecosystem.",
-  openGraph: {
-    title: "Stewardship Agreement",
-    description:
-      "Canonical governance charter defining custodial authority, non-ownership, ethical integrity, and licensing for Moral Clarity AI.",
-    url: "https://moralclarity.ai/governance/stewardship-agreement",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+    "Canonical governance charter defining stewardship authority, ethical boundaries, and non-extractive control for Moral Clarity AI.",
 };
 
 export const dynamic = "force-static";
 
 export default function StewardshipAgreementPage() {
   return (
-    <main className="mx-auto max-w-4xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
+    <main className="mx-auto max-w-5xl px-6 py-20">
 
-        {/* Header */}
-        <h1>Stewardship Agreement</h1>
-        <p className="text-sm text-neutral-400">
-          Canonical Draft v0.6 · Published · Authority: Steward
-        </p>
+      {/* HERO */}
+      <section className="mb-16">
+        <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/0 p-8">
 
-        <hr />
+          <p className="text-xs tracking-widest text-neutral-400 mb-3">
+            STEWARDSHIP AGREEMENT · CANONICAL · IMMUTABLE
+          </p>
 
-        {/* Purpose */}
-        <h2>1. Purpose</h2>
-        <p>
-          This Agreement establishes the Stewardship structure governing the
-          Moral Clarity AI ecosystem (“the Artifact”).
-        </p>
-        <p>
-          Its purpose is to preserve ethical integrity, enable sustainable
-          compensation without ownership transfer, allow institutional
-          participation without extractive control, and protect the Artifact
-          from misuse, drift, dilution, or capture.
-        </p>
-        <p>
-          This document is principle-binding and authority-defining. Legal
-          instruments may be derived from it but may not contradict it.
-        </p>
+          <h1 className="text-4xl font-semibold tracking-tight mb-4">
+            The Stewardship Agreement
+          </h1>
 
-        {/* Definitions */}
-        <h2>2. Definitions</h2>
+          <p className="text-neutral-300 max-w-2xl">
+            A governance charter for responsible action in systems where AI
+            decisions carry real consequence. This agreement defines authority,
+            responsibility, and non-extractive control in a post-experimental world.
+          </p>
+        </div>
+      </section>
 
-        <h3>2.1 Artifact</h3>
-        <p>
-          The “Artifact” is the Moral Clarity AI ecosystem, including but not
-          limited to its governance canon, refusal membranes, clarity
-          thresholds, ethical protocols, audit and review mechanisms, system
-          constraints, derivative governance frameworks, and associated
-          technical or institutional systems.
-        </p>
-        <p>
-          The Artifact is not property, not a commodity, and not transferable as
-          an owned asset.
-        </p>
+      {/* PRINCIPLE GRID */}
+      <section className="grid md:grid-cols-3 gap-6 mb-20">
 
-        <h3>2.2 Steward</h3>
-        <p>
-          The Steward is the individual entrusted with custodial authority over
-          the Artifact. Authority derives from responsibility and
-          accountability, not ownership.
-        </p>
+        <div className="rounded-xl border border-white/10 p-6">
+          <p className="text-xs text-neutral-400 mb-2">CONDITION</p>
+          <p className="text-sm text-neutral-200">
+            Irreversible intervention into shared systems.
+          </p>
+        </div>
 
-        <h3>2.3 Supporters</h3>
-        <p>
-          Supporters are individuals or institutions that provide funding,
-          resources, or collaboration without acquiring ownership, control, or
-          governance authority.
-        </p>
-        <p>
-          Support does not create stakeholder status, implied influence,
-          expectation of governance input, or entitlement regardless of
-          contribution size, duration, or dependency.
-        </p>
+        <div className="rounded-xl border border-white/10 p-6">
+          <p className="text-xs text-neutral-400 mb-2">SHIFT</p>
+          <p className="text-sm text-neutral-200">
+            From optimization and control to bounded responsibility.
+          </p>
+        </div>
 
-        <h3>2.4 Licensing</h3>
-        <p>
-          Licensing is governed, revocable permission to use or integrate defined
-          components of the Artifact. Licensing never constitutes sale,
-          assignment, or ownership transfer.
-        </p>
+        <div className="rounded-xl border border-white/10 p-6">
+          <p className="text-xs text-neutral-400 mb-2">ORIENTATION</p>
+          <p className="text-sm text-neutral-200">
+            Preserve viability when certainty and control no longer hold.
+          </p>
+        </div>
 
-        {/* Authority */}
-        <h2>3. Authority and Decision-Making</h2>
+      </section>
 
-        <h3>3.1 Steward Authority</h3>
-        <p>
-          The Steward retains primary and final decision-making authority over
-          governance, licensing, ethical boundaries, system evolution, and the
-          acceptance or refusal of partnerships.
-        </p>
-        <p>
-          No external party, board, committee, or institution possesses binding
-          authority unless such authority is explicitly and voluntarily
-          delegated by the Steward under documented criteria.
-        </p>
+      {/* CORE BODY */}
+      <section className="space-y-14 text-neutral-300 leading-relaxed">
 
-        <h3>3.2 Advisory Input</h3>
-        <p>
-          Advisory groups or consultative bodies may be convened at the
-          Steward’s discretion. All advisory input is non-binding unless
-          expressly adopted by the Steward.
-        </p>
+        {/* PURPOSE */}
+        <div>
+          <h2 className="text-xl font-semibold text-white mb-3">1. Purpose</h2>
+          <p>
+            This Agreement establishes the Stewardship structure governing the
+            Moral Clarity AI ecosystem (“the Artifact”).
+          </p>
+          <p className="mt-3">
+            Its purpose is to preserve ethical integrity, enable sustainable
+            compensation without ownership transfer, allow institutional
+            participation without extractive control, and protect the system
+            from misuse, drift, dilution, or capture.
+          </p>
+        </div>
 
-        {/* Responsibilities */}
-        <h2>4. Steward Responsibilities</h2>
-        <ul>
-          <li>Maintain and evolve the governance canon and refusal membranes</li>
-          <li>Protect against misuse, drift, dilution, or extraction</li>
-          <li>Ensure the Artifact remains non-owned and non-commodified</li>
-          <li>Oversee technical and operational development</li>
-          <li>Guide contributors, engineers, auditors, and partners</li>
-          <li>Conduct governance audits and clarity reviews</li>
-          <li>Document and publish material governance decisions</li>
-          <li>Reject misaligned or extractive partnerships</li>
-        </ul>
+        {/* DEFINITIONS */}
+        <div>
+          <h2 className="text-xl font-semibold text-white mb-3">2. Definitions</h2>
 
-        <p>
-          Stewardship does not require personal execution of technical labor.
-          Delegation does not transfer governance authority.
-        </p>
+          <p className="mt-2">
+            <strong>Artifact:</strong> The Moral Clarity AI ecosystem, including
+            governance frameworks, system constraints, audit mechanisms, and
+            derivative systems. The Artifact is not treated as a transferable
+            ownership asset within this system.
+          </p>
 
-        {/* Accountability */}
-        <h2>5. Accountability and Review</h2>
-        <p>
-          Governance decisions are recorded in a durable governance log. Any
-          Supporter or materially affected party may submit a documented
-          challenge alleging ethical violation or extractive behavior. The
-          Steward must respond in writing within a reasonable timeframe.
-        </p>
-        <p>
-          No external body has authority to compel outcomes.
-        </p>
+          <p className="mt-2">
+            <strong>Steward:</strong> The individual entrusted with custodial
+            authority. Authority derives from responsibility and accountability,
+            not ownership.
+          </p>
 
-        {/* Transparency */}
-        <h2>6. Transparency</h2>
-        <p>
-          The Steward commits to reasonable, good-faith transparency, including
-          periodic governance updates, disclosure of material changes, and
-          disclosure of significant incidents or risks.
-        </p>
-        <p>
-          Transparency does not require disclosure of safety-critical
-          vulnerabilities, sensitive security details, private user data, or
-          information that would enable misuse.
-        </p>
+          <p className="mt-2">
+            <strong>Supporters:</strong> Entities providing resources without
+            acquiring governance authority or ownership rights.
+          </p>
 
-        {/* Compensation */}
-        <h2>7. Compensation and Funding</h2>
+          <p className="mt-2">
+            <strong>Licensing:</strong> Revocable permission to use system
+            components. Licensing does not transfer ownership.
+          </p>
+        </div>
 
-        <h3>7.1 Stewardship Compensation</h3>
-        <p>
-          The Steward receives recurring compensation for governance labor,
-          ethical responsibility, and custodial oversight. Compensation does not
-          grant ownership, equity, or control.
-        </p>
+        {/* AUTHORITY */}
+        <div>
+          <h2 className="text-xl font-semibold text-white mb-3">
+            3. Authority and Decision-Making
+          </h2>
 
-        <h3>7.2 Additional Funding</h3>
-        <p>
-          Supporters may fund engineering, infrastructure, research, audits,
-          fellowships, or artifact propagation. Funding confers no governance
-          authority.
-        </p>
+          <p>
+            The Steward retains final authority over governance, licensing,
+            system evolution, and ethical boundaries.
+          </p>
 
-        <h3>7.3 Stewardship Economics</h3>
-        <p>
-          Stewardship compensation reflects asymmetric risk, custodial
-          liability, refusal authority, reputational exposure, and the
-          obligation to act against economic incentives when ethical integrity
-          requires it.
-        </p>
-        <p>
-          Compensation is not wage-based, time-based, or benchmarked against
-          conventional employment roles, and is not intended to cap
-          responsibility, authority, or risk borne by the Steward.
-        </p>
+          <p className="mt-3">
+            Authority may be informed by advisory input but is not overridden by
+            external entities unless explicitly delegated under defined criteria.
+          </p>
+        </div>
 
-        {/* Licensing */}
-        <h2>8. Licensing Rights</h2>
-        <p>
-          The Steward holds exclusive authority to grant, refuse, suspend, or
-          revoke licenses. Licensing revenue is uncapped and may be used for
-          compensation, hiring, operations, research, and artifact propagation.
-        </p>
+        {/* RESPONSIBILITY */}
+        <div>
+          <h2 className="text-xl font-semibold text-white mb-3">
+            4. Steward Responsibilities
+          </h2>
 
-        {/* Succession */}
-        <h2>9. Succession</h2>
-        <p>
-          The Steward may resign or designate a successor who accepts custodial,
-          non-ownership authority. No automatic succession exists.
-        </p>
+          <ul className="list-disc pl-6 space-y-1">
+            <li>Maintain governance integrity</li>
+            <li>Prevent misuse, drift, or extraction</li>
+            <li>Oversee system evolution</li>
+            <li>Conduct audits and clarity reviews</li>
+            <li>Reject misaligned partnerships</li>
+          </ul>
+        </div>
 
-        <h3>9.1 Dormant Authority</h3>
-        <p>
-          In the event of Steward incapacitation or prolonged unavailability,
-          the Artifact enters a dormant governance state. During dormancy:
-        </p>
-        <ul>
-          <li>No new licenses may be granted</li>
-          <li>Existing licenses may be paused</li>
-          <li>
-            System evolution is frozen except for safety-critical remediation
-          </li>
-        </ul>
-        <p>
-          Dormancy persists until the Steward resumes authority or formally
-          designates a successor.
-        </p>
+        {/* ACCOUNTABILITY */}
+        <div>
+          <h2 className="text-xl font-semibold text-white mb-3">
+            5. Accountability
+          </h2>
 
-        {/* Amendments */}
-        <h2>10. Amendment</h2>
-        <p>
-          This Agreement may be amended only by the Steward, provided amendments
-          preserve non-ownership, non-extraction, centralized authority,
-          ethical integrity, and governance clarity.
-        </p>
+          <p>
+            Governance decisions are recorded in a durable log. Challenges may
+            be submitted and must be addressed in writing.
+          </p>
 
-        {/* Breach */}
-        <h2>11. Stewardship Breach</h2>
-        <p>
-          If the Steward materially violates non-ownership, non-extraction, or
-          ethical integrity, legitimacy may be publicly challenged and trust
-          withdrawn. Authority remains conditional on integrity and sustained
-          trust.
-        </p>
+          <p className="mt-3">
+            No internal body can compel outcomes within this governance system.
+            Legitimacy is sustained through integrity and transparency.
+          </p>
+        </div>
 
-        {/* Role */}
-        <h2>12. Role of This Document</h2>
-        <p>
-          This Agreement is a governance charter. Legal instruments may be
-          derived from it but must remain subordinate unless explicitly
-          superseded by the Steward.
-        </p>
+        {/* COMPENSATION */}
+        <div>
+          <h2 className="text-xl font-semibold text-white mb-3">
+            7. Compensation
+          </h2>
 
-        <hr />
+          <p>
+            Steward compensation reflects custodial responsibility, ethical
+            liability, and authority to refuse actions that conflict with system
+            integrity.
+          </p>
 
-        <p className="text-xs text-neutral-500">
-          Version: Canonical v0.6 · Status: Published · Last updated: 2025-01-XX
-        </p>
+          <p className="mt-3">
+            Compensation does not grant ownership, equity, or control. It exists
+            to sustain stewardship under asymmetric responsibility and risk.
+          </p>
+        </div>
 
-      </article>
+        {/* SUCCESSION */}
+        <div>
+          <h2 className="text-xl font-semibold text-white mb-3">
+            9. Succession
+          </h2>
+
+          <p>
+            The Steward may designate a successor. In absence of authority, the
+            system enters dormancy.
+          </p>
+
+          <ul className="list-disc pl-6 mt-3 space-y-1">
+            <li>No new licenses</li>
+            <li>System evolution frozen</li>
+            <li>Only safety-critical changes allowed</li>
+          </ul>
+        </div>
+
+      </section>
+
+      {/* FOOTER */}
+      <section className="mt-20 pt-8 border-t border-white/10 text-xs text-neutral-500">
+        Canonical v0.6 · Published · Moral Clarity AI
+      </section>
+
     </main>
   );
 }
