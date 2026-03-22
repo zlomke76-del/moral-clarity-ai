@@ -1,8 +1,4 @@
 // app/edge/page.tsx
-// ------------------------------------------------------------
-// The Edge Framework — Canonical Index (ENFORCEMENT UPGRADE)
-// App Router | Next.js 16 SAFE
-// ------------------------------------------------------------
 
 import Link from "next/link";
 import Image from "next/image";
@@ -12,12 +8,6 @@ export const metadata: Metadata = {
   title: "The Edge Framework",
   description:
     "The Edge Framework defines the ordered constraint boundaries where knowledge, practice, protection, stewardship, and insurability become admissible.",
-  openGraph: {
-    title: "The Edge Framework",
-    description:
-      "A structured constraint framework defining the ordered boundaries of accountable, governed, and insurable AI systems.",
-    type: "website",
-  },
 };
 
 type EdgeItem = {
@@ -26,6 +16,7 @@ type EdgeItem = {
   description: string;
   signal: string;
   index: string;
+  failure: string;
 };
 
 type InstrumentItem = {
@@ -40,41 +31,46 @@ const EDGES: EdgeItem[] = [
     title: "Edge of Knowledge",
     slug: "/edge-of-knowledge",
     description:
-      "Knowledge is admissible only if the epistemic boundary holds. This Edge defines what is known, unknown, unobservable, or falsely assumed before action can begin.",
+      "Defines what is known, unknown, unobservable, or falsely assumed before action begins.",
     signal: "Epistemic Boundary",
     index: "01",
+    failure: "If this fails, nothing downstream is admissible.",
   },
   {
     title: "Edge of Practice",
     slug: "/edge-of-practice",
     description:
-      "Practice is admissible only if reality does not fail under stress. This Edge evaluates falsification, operational breakdown, and real-world constraint failure.",
+      "Ensures reality does not fail under real-world execution.",
     signal: "Operational Falsification",
     index: "02",
+    failure: "If this fails, execution collapses under stress.",
   },
   {
     title: "Edge of Protection",
     slug: "/edge-of-protection",
     description:
-      "Protection is admissible only if harm is structurally prevented. This Edge governs misuse, authority leakage, refusal integrity, and boundary enforcement.",
+      "Prevents structural harm before it occurs.",
     signal: "Protective Constraint",
     index: "03",
+    failure: "If this fails, harm is allowed.",
   },
   {
     title: "Edge of Stewardship",
     slug: "/stewardship-canon",
     description:
-      "Stewardship is admissible only if responsibility is bounded and enforceable. This Edge defines accountability, delegated authority, and human responsibility.",
+      "Ensures responsibility is bounded and enforceable.",
     signal: "Authority Boundary",
     index: "04",
+    failure: "If this fails, accountability dissolves.",
   },
   {
     title: "Edge of Insurability",
     slug: "/edge/insurability",
     description:
-      "Insurability is admissible only if risk is bounded, attributable, and economically governable. This Edge defines the transition from experiment to accountable system.",
+      "Ensures risk is bounded, attributable, and governable.",
     signal: "Economic Accountability",
     index: "05",
+    failure: "If this fails, the system cannot be trusted at scale.",
   },
 ];
 
@@ -83,7 +79,7 @@ const INSTRUMENTS: InstrumentItem[] = [
     title: "Moral Clarity Governance Audit™",
     slug: "/governance-audit",
     description:
-      "A governance diagnostic identifying authority failure, accountability gaps, detection breakdown, and non-governable risk.",
+      "Identifies authority failure, accountability gaps, detection breakdown, and non-governable risk.",
     tags: ["Knowledge → Protection", "Detection", "Failure Surface"],
   },
   {
@@ -99,87 +95,101 @@ export default function EdgeIndexPage() {
   return (
     <main className="relative overflow-hidden bg-[#020817]">
       {/* BACKGROUND */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.16),transparent_32%),radial-gradient(circle_at_80%_20%,rgba(14,165,233,0.10),transparent_24%)]" />
-      <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.14)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.14)_1px,transparent_1px)] [background-size:48px_48px]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.16),transparent_32%)]" />
 
-      <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-16 md:px-8 lg:px-10 lg:py-20">
-        {/* ===================================================== */}
+      <div className="relative mx-auto max-w-7xl px-6 py-16">
+
         {/* HERO */}
-        {/* ===================================================== */}
-        <section className="rounded-[32px] border border-white/10 bg-gradient-to-br from-[#07152f]/95 via-[#051126]/92 to-black/92 px-8 py-10 shadow-[0_30px_120px_rgba(0,0,0,0.45)] backdrop-blur-xl md:px-12 md:py-14">
-          <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_280px]">
-            <div className="space-y-6">
-              <h1 className="text-5xl font-semibold tracking-tight text-white md:text-6xl">
+        <section className="rounded-[32px] border border-white/10 bg-[#07152f]/90 px-10 py-12">
+          <div className="grid items-center gap-10 lg:grid-cols-[1fr_240px]">
+
+            <div>
+              <h1 className="text-5xl text-white mb-4">
                 The Edge Framework
               </h1>
-              <p className="max-w-3xl text-lg leading-8 text-white/75">
-                Artificial intelligence becomes admissible only when reality holds
-                across ordered boundaries. If an earlier Edge fails, every
-                downstream claim becomes invalid.
+
+              <p className="text-white/70 mb-4">
+                AI is only valid when reality holds across ordered boundaries.
+              </p>
+
+              <p className="text-white/50 text-sm">
+                This framework determines whether an AI decision is allowed to exist.
               </p>
             </div>
 
-            <div className="flex items-center justify-center lg:justify-end">
-              <div className="relative flex h-[180px] w-[180px] items-center justify-center md:h-[220px] md:w-[220px]">
-                <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(59,130,246,0.22)_0%,rgba(14,165,233,0.08)_42%,transparent_72%)] blur-2xl" />
-                <Image
-                  src="/assets/image_edge_logo_trans_01.png"
-                  alt="The Edge logo"
-                  width={220}
-                  height={220}
-                  priority
-                  className="relative h-auto w-full object-contain drop-shadow-[0_0_22px_rgba(96,165,250,0.22)]"
-                />
-              </div>
-            </div>
+            <Image
+              src="/assets/image_edge_logo_trans_01.png"
+              alt="The Edge"
+              width={180}
+              height={180}
+              className="mx-auto"
+            />
           </div>
         </section>
 
-        {/* ===================================================== */}
         {/* EDGE STACK */}
-        {/* ===================================================== */}
-        <section className="mt-10 grid gap-5">
+        <section className="mt-10 space-y-5">
           {EDGES.map((edge) => (
             <Link
               key={edge.slug}
               href={edge.slug}
-              className="group rounded-[28px] border border-white/10 bg-white/[0.035] p-6 transition hover:bg-white/[0.05] hover:border-white/15"
+              className="block rounded-[24px] border border-white/10 bg-white/[0.04] p-6 hover:bg-white/[0.06]"
             >
-              <div className="flex items-center justify-between gap-6">
+              <div className="flex justify-between">
                 <div>
-                  <div className="text-sm text-white/50">Edge {edge.index}</div>
-                  <h2 className="text-2xl text-white">{edge.title}</h2>
-                  <p className="mt-2 text-sm text-white/60">{edge.description}</p>
+                  <div className="text-xs text-blue-400 mb-1">
+                    Edge {edge.index}
+                  </div>
+
+                  <h2 className="text-xl text-white">
+                    {edge.title}
+                  </h2>
+
+                  <p className="text-white/60 text-sm mt-2">
+                    {edge.description}
+                  </p>
+
+                  <p className="text-red-400/80 text-xs mt-3">
+                    {edge.failure}
+                  </p>
+
+                  <div className="text-[11px] text-white/40 mt-2">
+                    Status: Requires validation
+                  </div>
                 </div>
-                <div className="shrink-0 text-white/60 transition group-hover:translate-x-0.5 group-hover:text-white/85">
-                  →
-                </div>
+
+                <div className="text-white/50">→</div>
               </div>
             </Link>
           ))}
         </section>
 
-        {/* ===================================================== */}
-        {/* OPERATIONAL INSTRUMENTS */}
-        {/* ===================================================== */}
-        <section className="mt-12 space-y-6">
-          <h3 className="text-3xl text-white">Operational Instruments</h3>
+        {/* EXECUTION LAYER */}
+        <section className="mt-14">
+          <h3 className="text-2xl text-white mb-6">
+            Execution Layer
+          </h3>
 
-          <div className="grid gap-5 md:grid-cols-2">
+          <div className="grid md:grid-cols-2 gap-6">
             {INSTRUMENTS.map((item) => (
               <Link
                 key={item.title}
                 href={item.slug}
-                className="rounded-[24px] border border-white/10 bg-white/[0.04] p-6 transition hover:bg-white/[0.06] hover:border-white/15"
+                className="rounded-[20px] border border-white/10 bg-black/40 p-6 hover:bg-white/[0.05]"
               >
-                <h4 className="text-xl text-white">{item.title}</h4>
-                <p className="mt-2 text-sm text-white/60">{item.description}</p>
+                <h4 className="text-white text-lg">
+                  {item.title}
+                </h4>
 
-                <div className="mt-4 flex flex-wrap gap-2">
+                <p className="text-white/60 text-sm mt-2">
+                  {item.description}
+                </p>
+
+                <div className="flex gap-2 mt-4 flex-wrap">
                   {item.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] uppercase tracking-[0.12em] text-white/45"
+                      className="text-[10px] border border-white/10 px-2 py-1 rounded-full text-white/40"
                     >
                       {tag}
                     </span>
@@ -190,60 +200,42 @@ export default function EdgeIndexPage() {
           </div>
         </section>
 
-        {/* ===================================================== */}
-        {/* ENFORCEMENT LAYER */}
-        {/* ===================================================== */}
-        <section className="mt-12 rounded-[30px] border border-white/10 bg-black/60 p-8">
-          <h3 className="mb-6 text-3xl text-white">
-            Enforcement &amp; Liability Surface
+        {/* ENFORCEMENT */}
+        <section className="mt-14">
+          <h3 className="text-2xl text-white mb-6">
+            Enforcement & Liability Surface
           </h3>
 
-          <div className="grid gap-5 md:grid-cols-3">
-            <Link
-              href="/liability-and-governance"
-              className="rounded-xl border border-white/10 p-6 transition hover:bg-white/[0.05] hover:border-white/15"
-            >
-              <h4 className="text-lg text-white">Authority &amp; Liability</h4>
-              <p className="mt-2 text-sm text-white/60">
-                Defines where responsibility resides and why it cannot be
-                transferred to systems.
-              </p>
+          <div className="grid md:grid-cols-3 gap-5">
+            <Link href="/liability-and-governance" className="p-5 border border-white/10 rounded-xl text-white/60">
+              Authority & Liability
             </Link>
 
-            <Link
-              href="/governance/deployment-contract"
-              className="rounded-xl border border-white/10 p-6 transition hover:bg-white/[0.05] hover:border-white/15"
-            >
-              <h4 className="text-lg text-white">Execution Contract</h4>
-              <p className="mt-2 text-sm text-white/60">
-                Defines system behavior boundaries and permission controls.
-              </p>
+            <Link href="/governance/deployment-contract" className="p-5 border border-white/10 rounded-xl text-white/60">
+              Execution Contract
             </Link>
 
-            <Link
-              href="/governance-audit"
-              className="rounded-xl border border-white/10 p-6 transition hover:bg-white/[0.05] hover:border-white/15"
-            >
-              <h4 className="text-lg text-white">Governance Audit</h4>
-              <p className="mt-2 text-sm text-white/60">
-                Identifies where governance fails under pressure.
-              </p>
+            <Link href="/governance-audit" className="p-5 border border-white/10 rounded-xl text-white/60">
+              Governance Audit
             </Link>
           </div>
         </section>
 
-        {/* ===================================================== */}
         {/* INVARIANT */}
-        {/* ===================================================== */}
-        <section className="mt-10 rounded-xl border border-white/10 bg-black/70 p-8">
-          <h3 className="text-xl text-white">Invariant</h3>
-          <p className="mt-3 text-lg text-white">
+        <section className="mt-14 text-center border-t border-b border-white/10 py-10">
+          <div className="text-xs text-white/40 tracking-widest mb-3">
+            INVARIANT
+          </div>
+
+          <p className="text-xl text-white">
             A system cannot become valid by bypassing reality.
           </p>
-          <p className="mt-2 text-white/60">
+
+          <p className="text-white/60 mt-2">
             If an upstream Edge fails, every downstream claim is invalid.
           </p>
         </section>
+
       </div>
     </main>
   );
