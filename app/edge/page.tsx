@@ -19,7 +19,6 @@ type EdgeItem = {
   failure: string;
   accent: string;
   glow: string;
-  line: string;
 };
 
 type InstrumentItem = {
@@ -27,6 +26,14 @@ type InstrumentItem = {
   slug: string;
   description: string;
   tags: string[];
+  accent: string;
+  halo: string;
+};
+
+type SurfaceItem = {
+  title: string;
+  slug: string;
+  kicker: string;
 };
 
 const EDGES: EdgeItem[] = [
@@ -41,7 +48,6 @@ const EDGES: EdgeItem[] = [
     accent: "text-cyan-300",
     glow:
       "bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_55%)]",
-    line: "from-cyan-400/70",
   },
   {
     title: "Edge of Practice",
@@ -54,7 +60,6 @@ const EDGES: EdgeItem[] = [
     accent: "text-blue-300",
     glow:
       "bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_55%)]",
-    line: "from-blue-400/70",
   },
   {
     title: "Edge of Protection",
@@ -66,7 +71,6 @@ const EDGES: EdgeItem[] = [
     accent: "text-teal-300",
     glow:
       "bg-[radial-gradient(circle_at_top_left,rgba(45,212,191,0.18),transparent_55%)]",
-    line: "from-teal-400/70",
   },
   {
     title: "Edge of Stewardship",
@@ -79,7 +83,6 @@ const EDGES: EdgeItem[] = [
     accent: "text-indigo-300",
     glow:
       "bg-[radial-gradient(circle_at_top_left,rgba(129,140,248,0.18),transparent_55%)]",
-    line: "from-indigo-400/70",
   },
   {
     title: "Edge of Insurability",
@@ -92,7 +95,6 @@ const EDGES: EdgeItem[] = [
     accent: "text-violet-300",
     glow:
       "bg-[radial-gradient(circle_at_top_left,rgba(167,139,250,0.18),transparent_55%)]",
-    line: "from-violet-400/70",
   },
 ];
 
@@ -103,6 +105,9 @@ const INSTRUMENTS: InstrumentItem[] = [
     description:
       "Identifies authority failure, accountability gaps, detection breakdown, and non-governable risk.",
     tags: ["Knowledge → Protection", "Detection", "Failure Surface"],
+    accent: "text-cyan-300",
+    halo:
+      "bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.14),transparent_58%)]",
   },
   {
     title: "Solace Deployment Contract",
@@ -110,6 +115,27 @@ const INSTRUMENTS: InstrumentItem[] = [
     description:
       "Defines what Solace may observe, produce, retain, refuse, and never do without explicit human permission.",
     tags: ["Stewardship → Protection", "Execution Boundaries"],
+    accent: "text-indigo-300",
+    halo:
+      "bg-[radial-gradient(circle_at_top_left,rgba(129,140,248,0.14),transparent_58%)]",
+  },
+];
+
+const SURFACES: SurfaceItem[] = [
+  {
+    title: "Authority & Liability",
+    slug: "/liability-and-governance",
+    kicker: "Responsibility surface",
+  },
+  {
+    title: "Execution Contract",
+    slug: "/governance/deployment-contract",
+    kicker: "Permitted action boundary",
+  },
+  {
+    title: "Governance Audit",
+    slug: "/governance-audit",
+    kicker: "Failure detection surface",
   },
 ];
 
@@ -151,8 +177,8 @@ export default function EdgeIndexPage() {
                 <Image
                   src="/assets/image_edge_logo_trans_01.png"
                   alt="The Edge"
-                  width={260}
-                  height={260}
+                  width={180}
+                  height={180}
                   className="mx-auto"
                 />
               </div>
@@ -225,16 +251,15 @@ export default function EdgeIndexPage() {
               <div key={edge.slug} className="relative">
                 <Link
                   href={edge.slug}
-                  className={`group relative block overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.03] p-7 transition hover:bg-white/[0.06] hover:border-white/15 shadow-[0_18px_60px_rgba(2,8,23,0.28)]`}
+                  className="group relative block overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.03] p-7 transition duration-300 hover:border-white/15 hover:bg-white/[0.06] hover:-translate-y-[2px] shadow-[0_18px_60px_rgba(2,8,23,0.28)]"
                 >
                   <div className={`pointer-events-none absolute inset-0 ${edge.glow}`} />
+                  <div className="pointer-events-none absolute inset-y-0 left-0 w-px bg-white/10" />
 
                   <div className="relative flex items-start justify-between gap-6">
                     <div className="flex gap-5">
                       <div className="relative hidden md:flex">
-                        <div
-                          className={`relative z-10 mt-1 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-[#081121] text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(255,255,255,0.03)]`}
-                        >
+                        <div className="relative z-10 mt-1 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-[#081121] text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(255,255,255,0.03)]">
                           {edge.index}
                         </div>
                       </div>
@@ -272,107 +297,163 @@ export default function EdgeIndexPage() {
                     </div>
                   </div>
                 </Link>
-
-                {edge.index !== "05" && (
-                  <div className="pointer-events-none relative hidden md:flex">
-                    <div className="absolute left-[21px] top-0 h-6 w-px bg-white/0" />
-                    <div
-                      className={`absolute left-[21px] top-0 h-6 w-px bg-gradient-to-b ${edge.line} to-white/0`}
-                    />
-                  </div>
-                )}
               </div>
             ))}
           </div>
         </section>
 
         {/* EXECUTION LAYER */}
-        <section className="mt-20">
-          <h3 className="mb-2 text-2xl text-white">
-            Execution Layer (Applied Enforcement)
-          </h3>
+        <section className="relative mt-24">
+          <div className="pointer-events-none absolute inset-x-0 -top-10 h-32 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.10),transparent_68%)]" />
 
-          <p className="mb-6 max-w-2xl text-sm text-white/50">
-            Instruments that operationalize the framework by exposing authority
-            failure, execution limits, and accountability surfaces.
-          </p>
+          <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(7,21,47,0.55),rgba(2,8,23,0.35))] px-6 py-8 md:px-8 md:py-10">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.03),transparent_38%)]" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-400/50 to-transparent" />
 
-          <div className="grid gap-6 md:grid-cols-2">
-            {INSTRUMENTS.map((item) => (
+            <div className="relative">
+              <div className="mb-8 flex items-end justify-between gap-6">
+                <div>
+                  <div className="mb-2 text-xs tracking-[0.18em] text-blue-400">
+                    APPLIED ENFORCEMENT
+                  </div>
+                  <h3 className="mb-2 text-2xl text-white md:text-3xl">
+                    Execution Layer
+                  </h3>
+                  <p className="max-w-2xl text-sm text-white/50">
+                    Instruments that operationalize the framework by exposing
+                    authority failure, execution limits, and accountability
+                    surfaces.
+                  </p>
+                </div>
+
+                <div className="hidden md:block text-right">
+                  <div className="text-xs tracking-[0.16em] text-white/30">
+                    FRAMEWORK → OPERATION
+                  </div>
+                  <div className="mt-2 text-sm text-white/50">
+                    Doctrine becomes executable constraint.
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                {INSTRUMENTS.map((item) => (
+                  <Link
+                    key={item.title}
+                    href={item.slug}
+                    className="group relative overflow-hidden rounded-[24px] border border-white/10 bg-black/35 p-6 transition duration-300 hover:-translate-y-[2px] hover:border-white/15 hover:bg-white/[0.05] shadow-[0_18px_50px_rgba(2,8,23,0.28)]"
+                  >
+                    <div className={`pointer-events-none absolute inset-0 ${item.halo}`} />
+                    <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                    <div className="pointer-events-none absolute right-0 top-0 h-20 w-20 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.07),transparent_70%)]" />
+
+                    <div className="relative">
+                      <div className={`mb-3 text-[11px] tracking-[0.16em] ${item.accent}`}>
+                        EXECUTION INSTRUMENT
+                      </div>
+
+                      <h4 className="text-xl text-white transition group-hover:text-white">
+                        {item.title}
+                      </h4>
+
+                      <p className="mt-3 max-w-lg text-sm leading-relaxed text-white/60">
+                        {item.description}
+                      </p>
+
+                      <div className="mt-5 flex flex-wrap gap-2">
+                        {item.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[10px] text-white/45"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="mt-6 flex items-center justify-between">
+                        <div className="text-[11px] tracking-[0.16em] text-white/30">
+                          OPEN SURFACE
+                        </div>
+                        <div className="text-white/30 transition group-hover:text-white">
+                          →
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ENFORCEMENT */}
+        <section className="relative mt-16">
+          <div className="mb-6">
+            <div className="mb-2 text-xs tracking-[0.18em] text-white/35">
+              ACCOUNTABILITY INTERFACE
+            </div>
+            <h3 className="mb-2 text-2xl text-white">
+              Enforcement & Liability Surface
+            </h3>
+
+            <p className="max-w-xl text-sm text-white/50">
+              Where authority, execution constraints, and auditability intersect
+              to determine accountability.
+            </p>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-3">
+            {SURFACES.map((item, idx) => (
               <Link
                 key={item.title}
                 href={item.slug}
-                className="rounded-[20px] border border-white/10 bg-black/40 p-6 shadow-[0_18px_50px_rgba(2,8,23,0.24)] transition hover:bg-white/[0.05] hover:border-white/15"
+                className="group relative overflow-hidden rounded-[20px] border border-white/10 bg-black/20 p-5 transition duration-300 hover:-translate-y-[2px] hover:border-white/15 hover:bg-white/[0.05] shadow-[0_14px_40px_rgba(2,8,23,0.22)]"
               >
-                <h4 className="text-lg text-white">{item.title}</h4>
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.07),transparent_55%)]" />
 
-                <p className="mt-2 text-sm text-white/60">
-                  {item.description}
-                </p>
+                <div className="relative">
+                  <div className="mb-5 flex items-center justify-between">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-xs text-white/55">
+                      0{idx + 1}
+                    </div>
+                    <div className="text-white/25 transition group-hover:text-white/60">
+                      →
+                    </div>
+                  </div>
 
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {item.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border border-white/10 px-2 py-1 text-[10px] text-white/40"
-                    >
-                      {tag}
-                    </span>
-                  ))}
+                  <div className="mb-2 text-[11px] tracking-[0.16em] text-white/35">
+                    {item.kicker}
+                  </div>
+
+                  <div className="text-base text-white/80 transition group-hover:text-white">
+                    {item.title}
+                  </div>
                 </div>
               </Link>
             ))}
           </div>
         </section>
 
-        {/* ENFORCEMENT */}
-        <section className="mt-14">
-          <h3 className="mb-2 text-2xl text-white">
-            Enforcement & Liability Surface
-          </h3>
-
-          <p className="mb-6 max-w-xl text-sm text-white/50">
-            Where authority, execution constraints, and auditability intersect
-            to determine accountability.
-          </p>
-
-          <div className="grid gap-5 md:grid-cols-3">
-            <Link
-              href="/liability-and-governance"
-              className="rounded-xl border border-white/10 bg-black/20 p-5 text-white/60 transition hover:bg-white/[0.04] hover:text-white"
-            >
-              Authority & Liability
-            </Link>
-
-            <Link
-              href="/governance/deployment-contract"
-              className="rounded-xl border border-white/10 bg-black/20 p-5 text-white/60 transition hover:bg-white/[0.04] hover:text-white"
-            >
-              Execution Contract
-            </Link>
-
-            <Link
-              href="/governance-audit"
-              className="rounded-xl border border-white/10 bg-black/20 p-5 text-white/60 transition hover:bg-white/[0.04] hover:text-white"
-            >
-              Governance Audit
-            </Link>
-          </div>
-        </section>
-
         {/* INVARIANT */}
-        <section className="mt-20 border-y border-white/10 py-14 text-center">
-          <div className="mb-3 text-xs tracking-[0.22em] text-white/40">
-            INVARIANT
+        <section className="relative mt-20 overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] py-14 text-center">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.08),transparent_62%)]" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+          <div className="relative px-6">
+            <div className="mb-3 text-xs tracking-[0.22em] text-white/40">
+              INVARIANT
+            </div>
+
+            <p className="text-2xl text-white">
+              A system cannot become valid by bypassing reality.
+            </p>
+
+            <p className="mx-auto mt-3 max-w-2xl text-white/60">
+              If an upstream Edge fails, every downstream claim is invalid.
+            </p>
           </div>
-
-          <p className="text-2xl text-white">
-            A system cannot become valid by bypassing reality.
-          </p>
-
-          <p className="mt-2 text-white/60">
-            If an upstream Edge fails, every downstream claim is invalid.
-          </p>
         </section>
       </div>
     </main>
