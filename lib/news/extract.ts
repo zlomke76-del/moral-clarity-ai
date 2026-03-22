@@ -20,40 +20,108 @@ export type ExtractedArticle = {
 
 /* ========= CONSTANTS ========= */
 
-const MIN_ARTICLE_CHARS = 400; // strict-mode threshold (Option C)
+const MIN_ARTICLE_CHARS = 400;
 
 /* ========= DOMAIN NORMALIZATION ========= */
 
+/**
+ * Strong canonical map for known outlets
+ * (kept explicit where needed)
+ */
 const CANONICAL_DOMAIN_MAP: Record<string, string> = {
-  // Groups of variants unified to base domains
-  "www.nbcnews.com": "nbcnews.com",
+  // Core mappings
+  "foxnews.com": "foxnews.com",
+  "www.foxnews.com": "foxnews.com",
+
+  "bbc.com": "bbc.com",
+  "www.bbc.com": "bbc.com",
+
+  "cnn.com": "cnn.com",
+  "www.cnn.com": "cnn.com",
+  "edition.cnn.com": "cnn.com",
+  "amp.cnn.com": "cnn.com",
+
+  "reuters.com": "reuters.com",
+  "www.reuters.com": "reuters.com",
+
+  "apnews.com": "apnews.com",
+  "www.apnews.com": "apnews.com",
+
+  "nytimes.com": "nytimes.com",
+  "www.nytimes.com": "nytimes.com",
+
+  "wsj.com": "wsj.com",
+  "www.wsj.com": "wsj.com",
+
+  "bloomberg.com": "bloomberg.com",
+  "www.bloomberg.com": "bloomberg.com",
+
+  "npr.org": "npr.org",
+  "www.npr.org": "npr.org",
+
   "nbcnews.com": "nbcnews.com",
+  "www.nbcnews.com": "nbcnews.com",
   "nbc.com": "nbcnews.com",
 
-  "www.nytimes.com": "nytimes.com",
-  "nytimes.com": "nytimes.com",
+  "cbsnews.com": "cbsnews.com",
+  "www.cbsnews.com": "cbsnews.com",
 
-  "www.motherjones.com": "motherjones.com",
-  "motherjones.com": "motherjones.com",
+  "washingtonpost.com": "washingtonpost.com",
+  "www.washingtonpost.com": "washingtonpost.com",
 
-  "www.foxnews.com": "foxnews.com",
-  "foxnews.com": "foxnews.com",
+  "theguardian.com": "theguardian.com",
+  "www.theguardian.com": "theguardian.com",
 
-  "www.apnews.com": "apnews.com",
-  "apnews.com": "apnews.com",
+  "thetimes.co.uk": "thetimes.co.uk",
 
-  "www.bloomberg.com": "bloomberg.com",
-  "bloomberg.com": "bloomberg.com",
+  "telegraph.co.uk": "telegraph.co.uk",
 
-  // Add more as needed…
+  "aljazeera.com": "aljazeera.com",
+  "www.aljazeera.com": "aljazeera.com",
+
+  "dw.com": "dw.com",
+  "www.dw.com": "dw.com",
+
+  "axios.com": "axios.com",
+  "www.axios.com": "axios.com",
+
+  "forbes.com": "forbes.com",
+  "www.forbes.com": "forbes.com",
+
+  "newsmax.com": "newsmax.com",
+  "www.newsmax.com": "newsmax.com",
+
+  "msnbc.com": "msnbc.com",
+  "www.msnbc.com": "msnbc.com",
+
+  "politico.com": "politico.com",
+  "www.politico.com": "politico.com",
 };
 
+/**
+ * Extract root domain (handles subdomains cleanly)
+ * e.g. edition.cnn.com → cnn.com
+ */
+function rootDomain(host: string): string {
+  const parts = host.split(".");
+  if (parts.length <= 2) return host;
+  return parts.slice(-2).join(".");
+}
+
+/**
+ * Final normalization
+ */
 function normalizeDomain(url: string): string {
   try {
     const u = new URL(url);
     const host = u.hostname.toLowerCase();
     const noWww = host.replace(/^www\./, "");
-    return CANONICAL_DOMAIN_MAP[host] || CANONICAL_DOMAIN_MAP[noWww] || noWww;
+
+    return (
+      CANONICAL_DOMAIN_MAP[host] ||
+      CANONICAL_DOMAIN_MAP[noWww] ||
+      rootDomain(noWww)
+    );
   } catch {
     return "unknown";
   }
@@ -63,9 +131,11 @@ function normalizeDomain(url: string): string {
 
 function stripHtml(html: string): string {
   if (!html) return "";
+
   let text = html.replace(/<script[\s\S]*?<\/script>/gi, "");
   text = text.replace(/<style[\s\S]*?<\/style>/gi, "");
   text = text.replace(/<\/?[^>]+>/g, " ");
+
   text = text
     .replace(/&nbsp;/gi, " ")
     .replace(/&amp;/gi, "&")
@@ -86,8 +156,8 @@ function clamp(text: string, max = 20000): string {
 
 function looksLikeArticle(text: string): boolean {
   if (!text) return false;
-  if (text.length < MIN_ARTICLE_CHARS) return false; // strict threshold
-  if (text.split(" ").length < 80) return false; // sanity: avoid short blurbs
+  if (text.length < MIN_ARTICLE_CHARS) return false;
+  if (text.split(" ").length < 80) return false;
   return true;
 }
 
@@ -98,9 +168,11 @@ function extractJsonLd(html: string) {
     const match = html.match(
       /<script type=["']application\/ld\+json["']>([\s\S]*?)<\/script>/i
     );
+
     if (!match) return null;
 
     const data = JSON.parse(match[1].trim());
+
     if (!data) return null;
 
     if (Array.isArray(data)) {
@@ -139,7 +211,7 @@ export async function extractArticle(opts: {
     };
   }
 
-  /* ========= 1) Browserless Attempt ========= */
+  /* ========= 1) Browserless ========= */
 
   if (BROWSERLESS_TOKEN) {
     try {
@@ -167,6 +239,7 @@ export async function extractArticle(opts: {
 
       if (resp.ok) {
         let raw = await resp.text();
+
         try {
           const tryJson = JSON.parse(raw);
           if (typeof tryJson?.data === "string") raw = tryJson.data;
@@ -194,12 +267,10 @@ export async function extractArticle(opts: {
           };
         }
       }
-    } catch (err) {
-      console.error("[extract] Browserless failure", { url, err });
-    }
+    } catch {}
   }
 
-  /* ========= 2) Tavily Fallback ========= */
+  /* ========= 2) Tavily ========= */
 
   if (tavilyContent && tavilyContent.trim()) {
     const clean = tavilyContent.trim();
@@ -218,7 +289,7 @@ export async function extractArticle(opts: {
     }
   }
 
-  /* ========= 3) Direct Fetch Fallback ========= */
+  /* ========= 3) Direct Fetch ========= */
 
   try {
     const controller = new AbortController();
@@ -229,7 +300,8 @@ export async function extractArticle(opts: {
       signal: controller.signal,
       headers: {
         "User-Agent": "MoralClarity-NewsBot/1.0",
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       },
     });
 
@@ -259,11 +331,9 @@ export async function extractArticle(opts: {
         };
       }
     }
-  } catch (err) {
-    console.error("[extract] fetch fallback failed", { url, err });
-  }
+  } catch {}
 
-  /* ========= 4) Hard Fail ========= */
+  /* ========= FAIL ========= */
 
   return {
     success: false,
@@ -278,5 +348,3 @@ export async function extractArticle(opts: {
     error: "Strict mode: No valid article text found",
   };
 }
-
-
