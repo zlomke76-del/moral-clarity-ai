@@ -46,38 +46,51 @@ export default function Page() {
 
   return (
     <main className="min-h-screen bg-black text-zinc-200 px-6 py-24">
-      <section className="mx-auto w-full max-w-2xl space-y-10">
-        {/* Title */}
-        <header className="space-y-3">
+      <section className="mx-auto w-full max-w-2xl space-y-12">
+
+        {/* HERO */}
+        <header className="space-y-4">
+          <p className="text-xs tracking-widest text-zinc-500">
+            CONTACT · STEWARDSHIP CHANNEL
+          </p>
+
           <h1 className="text-3xl font-serif tracking-tight">
             {isInstitutional
               ? "Institutional & Governance Inquiry"
               : "Contact — Moral Clarity AI"}
           </h1>
 
-          <p className="text-sm text-zinc-400 leading-relaxed">
-            This channel reaches the Moral Clarity stewardship team directly.
-            Messages submitted here are reviewed by humans.
+          <p className="text-sm text-zinc-400 leading-relaxed max-w-xl">
+            This channel connects directly to the Moral Clarity stewardship team.
+            Submissions are reviewed by humans and evaluated in context.
           </p>
         </header>
 
         <hr className="border-zinc-700/60" />
 
-        {/* Institutional framing */}
+        {/* INTENT FRAMING */}
+        <section className="space-y-2 text-sm leading-relaxed">
+          <p className="text-zinc-300">
+            Use this channel when the interaction matters—
+            governance, institutional use, sponsorship, or system-level questions.
+          </p>
+        </section>
+
+        {/* INSTITUTIONAL BLOCK */}
         {isInstitutional && (
-          <section className="space-y-2 text-sm leading-relaxed">
-            <p className="text-zinc-300 font-medium">
+          <section className="space-y-2 text-sm leading-relaxed border border-white/10 p-4 rounded-lg">
+            <p className="text-zinc-200 font-medium">
               Institutional access is not self-serve.
             </p>
             <p className="text-zinc-400">
-              Requests involving regulated, public-facing, or execution-bound
-              use are reviewed prior to any deployment discussion. Submission of
-              this form does not grant access or approval.
+              Requests involving regulated, public-facing, or execution-bound use
+              are reviewed prior to any deployment discussion.
+              Submission does not imply approval or access.
             </p>
           </section>
         )}
 
-        {/* Email fallback */}
+        {/* EMAIL */}
         <p className="text-sm text-zinc-400">
           Direct correspondence:{" "}
           <a
@@ -90,9 +103,10 @@ export default function Page() {
 
         <hr className="border-zinc-700/60" />
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <section className="space-y-5">
+        {/* FORM */}
+        <form onSubmit={handleSubmit} className="space-y-10">
+          <section className="space-y-6">
+
             <div className="space-y-1">
               <label className="text-xs uppercase tracking-wider text-zinc-500">
                 Name
@@ -129,16 +143,17 @@ export default function Page() {
                 placeholder={
                   isInstitutional
                     ? "Describe your organization, intended use, and governance context."
-                    : "Your message."
+                    : "What do you need to understand, evaluate, or move forward?"
                 }
                 className="w-full bg-black border border-zinc-700 px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-400"
               />
             </div>
+
           </section>
 
           <hr className="border-zinc-700/60" />
 
-          {/* Submit */}
+          {/* SUBMIT */}
           <section className="flex items-center gap-4">
             <button
               type="submit"
@@ -148,13 +163,13 @@ export default function Page() {
               {status === "sending"
                 ? "Submitting…"
                 : isInstitutional
-                ? "Submit inquiry for review"
+                ? "Submit for review"
                 : "Send message"}
             </button>
 
             {status === "sent" && (
               <span className="text-sm text-green-400">
-                Inquiry received.
+                Submission received.
               </span>
             )}
 
@@ -166,11 +181,12 @@ export default function Page() {
           </section>
         </form>
 
-        {/* Footer */}
+        {/* FOOTER */}
         <p className="text-xs text-zinc-500 leading-relaxed">
-          Appropriate for governance questions, institutional correspondence,
-          sponsorship inquiries, and regulated-use discussions.
+          This channel is appropriate for governance questions, institutional
+          correspondence, sponsorship discussions, and regulated-use inquiries.
         </p>
+
       </section>
     </main>
   );
