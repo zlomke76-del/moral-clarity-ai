@@ -1,8 +1,4 @@
 // app/governance/sponsorship/page.tsx
-// ============================================================
-// SPONSORSHIP CHARTER
-// Canonical, public, crawlable
-// ============================================================
 
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -10,145 +6,215 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Sponsorship Charter | Moral Clarity AI",
   description:
-    "The Moral Clarity AI Sponsorship Charter defines ethical sponsorship, non-ownership support, governance boundaries, and transparency commitments.",
-  robots: {
-    index: true,
-    follow: true,
-  },
-  openGraph: {
-    title: "Sponsorship Charter | Moral Clarity AI",
-    description:
-      "A principled framework for supporting Moral Clarity AI without ownership, control, or extraction.",
-    url: "https://www.moralclarity.ai/governance/sponsorship",
-    siteName: "Moral Clarity AI",
-    type: "article",
-  },
+    "A framework for supporting Moral Clarity AI without ownership, control, or extraction.",
 };
 
 export const dynamic = "force-static";
 
 export default function SponsorshipCharterPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <h1>Moral Clarity AI</h1>
-        <h2>Sponsorship Charter</h2>
+    <main className="mx-auto max-w-5xl px-6 py-20">
 
-        <p className="text-lg text-neutral-400">
-          A framework for ethical sponsorship, stewardship support, and
-          long-term independence.
-        </p>
+      {/* HERO */}
+      <section className="mb-16">
+        <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/0 p-8">
 
-        <hr />
+          <p className="text-xs tracking-widest text-neutral-400 mb-3">
+            SPONSORSHIP CHARTER · CANONICAL · NON-EXTRACTIVE
+          </p>
 
-        <h3>Purpose</h3>
-        <p>
-          This Charter defines the nature of sponsorship for Moral Clarity AI.
-          Sponsorship exists to support stewardship, infrastructure, and
-          propagation of the Artifact without transferring ownership,
-          governance authority, or extractive rights.
-        </p>
+          <h1 className="text-4xl font-semibold tracking-tight mb-4">
+            Sponsorship, Without Control
+          </h1>
 
-        <h3>What Sponsorship Is</h3>
-        <p>Sponsorship is non-controlling support provided to sustain:</p>
-        <ul>
-          <li>Stewardship and governance labor</li>
-          <li>Infrastructure and operational stability</li>
-          <li>Research, audits, and safety work</li>
-          <li>Limited expansion and artifact propagation</li>
-        </ul>
+          <p className="text-neutral-300 max-w-2xl">
+            AI systems are becoming powerful enough to shape real-world outcomes.
+            Supporting their development responsibly requires a model that
+            preserves independence, not ownership. This charter defines how
+            Moral Clarity AI can be supported without being captured.
+          </p>
+        </div>
+      </section>
 
-        <p>
-          Sponsorship is not an investment vehicle, equity instrument, or
-          governance role.
-        </p>
+      {/* PRINCIPLE GRID */}
+      <section className="grid md:grid-cols-3 gap-6 mb-20">
 
-        <h3>What Sponsorship Is Not</h3>
-        <ul>
-          <li>No ownership or equity</li>
-          <li>No voting or governance authority</li>
-          <li>No control over licensing decisions</li>
-          <li>No influence over ethical standards</li>
-          <li>No access to private user data</li>
-          <li>No preferential extraction rights</li>
-        </ul>
+        <div className="rounded-xl border border-white/10 p-6">
+          <p className="text-xs text-neutral-400 mb-2">MODEL</p>
+          <p className="text-sm text-neutral-200">
+            Support without ownership.
+          </p>
+        </div>
 
-        <p>
-          Sponsorship does not entitle a sponsor to product direction,
-          ideological alignment, or brand influence.
-        </p>
+        <div className="rounded-xl border border-white/10 p-6">
+          <p className="text-xs text-neutral-400 mb-2">BOUNDARY</p>
+          <p className="text-sm text-neutral-200">
+            No control over governance or outcomes.
+          </p>
+        </div>
 
-        <h3>Governance and Authority</h3>
-        <p>
-          Moral Clarity AI operates under a Stewardship model. Final authority
-          over governance, licensing, and ethical boundaries resides with the
-          Steward.
-        </p>
-        <p>
-          Governance principles and authority are defined publicly in the
-          <strong> Stewardship Agreement</strong>.
-        </p>
+        <div className="rounded-xl border border-white/10 p-6">
+          <p className="text-xs text-neutral-400 mb-2">PURPOSE</p>
+          <p className="text-sm text-neutral-200">
+            Preserve independence under scale and pressure.
+          </p>
+        </div>
 
-        <p>
-          <Link href="/governance/stewardship-agreement">
+      </section>
+
+      {/* BODY */}
+      <section className="space-y-14 text-neutral-300 leading-relaxed">
+
+        {/* PURPOSE */}
+        <div>
+          <h2 className="text-xl font-semibold text-white mb-3">Purpose</h2>
+          <p>
+            Sponsorship exists to support the stewardship, infrastructure, and
+            propagation of Moral Clarity AI without transferring ownership,
+            governance authority, or extractive rights.
+          </p>
+          <p className="mt-3">
+            This model ensures the system remains aligned to truth, safety, and
+            long-term viability—even when external incentives would otherwise
+            distort it.
+          </p>
+        </div>
+
+        {/* WHAT IT IS */}
+        <div>
+          <h2 className="text-xl font-semibold text-white mb-3">
+            What Sponsorship Is
+          </h2>
+
+          <p>
+            Sponsorship is non-controlling support that sustains:
+          </p>
+
+          <ul className="list-disc pl-6 mt-3 space-y-1">
+            <li>Stewardship and governance labor</li>
+            <li>Infrastructure and operational stability</li>
+            <li>Research, audits, and safety work</li>
+            <li>Responsible expansion of the system</li>
+          </ul>
+
+          <p className="mt-3">
+            Sponsors enable the system to exist without shaping its decisions.
+          </p>
+        </div>
+
+        {/* WHAT IT IS NOT */}
+        <div>
+          <h2 className="text-xl font-semibold text-white mb-3">
+            What Sponsorship Is Not
+          </h2>
+
+          <ul className="list-disc pl-6 space-y-1">
+            <li>No ownership or equity</li>
+            <li>No governance authority or voting rights</li>
+            <li>No influence over ethical or system decisions</li>
+            <li>No access to private or user-level data</li>
+            <li>No preferential extraction or advantage</li>
+          </ul>
+
+          <p className="mt-3">
+            This structure is intentional. Independence is preserved by design.
+          </p>
+        </div>
+
+        {/* GOVERNANCE */}
+        <div>
+          <h2 className="text-xl font-semibold text-white mb-3">
+            Governance and Authority
+          </h2>
+
+          <p>
+            Moral Clarity AI operates under a Stewardship model. Final authority
+            over governance, licensing, and ethical boundaries resides with the
+            Steward.
+          </p>
+
+          <p className="mt-3">
+            Governance is defined publicly in the Stewardship Agreement.
+          </p>
+
+          <Link
+            href="/governance/stewardship-agreement"
+            className="inline-block mt-3 text-blue-400"
+          >
             View the Stewardship Agreement →
           </Link>
-        </p>
+        </div>
 
-        <h3>Transparency Commitments</h3>
-        <p>Sponsors receive:</p>
-        <ul>
-          <li>Public access to governance documents</li>
-          <li>
-            Disclosure of material changes to governance or licensing posture
-          </li>
-          <li>
-            High-level reporting on sponsorship use (non-confidential,
-            non-user-specific)
-          </li>
-        </ul>
+        {/* TRANSPARENCY */}
+        <div>
+          <h2 className="text-xl font-semibold text-white mb-3">
+            Transparency
+          </h2>
 
-        <p>
-          Transparency is designed to ensure trust without surveillance or
-          control.
-        </p>
+          <ul className="list-disc pl-6 space-y-1">
+            <li>Public access to governance documents</li>
+            <li>Disclosure of material changes</li>
+            <li>High-level reporting on sponsorship use</li>
+          </ul>
 
-        <h3>Licensing Separation</h3>
-        <p>
-          Sponsorship is structurally separate from licensing. Sponsorship does
-          not guarantee access, integration, or commercial advantage.
-          Licensing, if pursued, is evaluated independently.
-        </p>
+          <p className="mt-3">
+            Transparency is designed to create trust without enabling control.
+          </p>
+        </div>
 
-        <h3>Ethical Boundaries</h3>
-        <p>
-          Moral Clarity AI will not accept sponsorship that seeks ownership,
-          control, extraction, ideological compliance, or compromise of
-          neutrality, refusal integrity, or safety.
-        </p>
+        {/* LICENSING */}
+        <div>
+          <h2 className="text-xl font-semibold text-white mb-3">
+            Licensing Separation
+          </h2>
 
-        <h3>Term and Withdrawal</h3>
-        <p>
-          Sponsorship may be paused or withdrawn by either party with notice.
-          Withdrawal does not affect governance authority or licensing posture.
-          No penalties apply.
-        </p>
+          <p>
+            Sponsorship does not grant access, integration, or commercial
+            advantage. Licensing decisions are evaluated independently.
+          </p>
+        </div>
 
-        <h3>Statement of Intent</h3>
-        <p>
-          Sponsorship is an act of support, not capture. Sponsors participate
-          because they believe some systems should remain governed, not owned;
-          that ethical infrastructure requires independence; and that
-          stewardship is legitimate labor.
-        </p>
+        {/* ETHICAL BOUNDARIES */}
+        <div>
+          <h2 className="text-xl font-semibold text-white mb-3">
+            Ethical Boundaries
+          </h2>
 
-        <hr />
+          <p>
+            Sponsorship will not be accepted if it introduces ownership,
+            control, extraction, or compromise of system integrity.
+          </p>
+        </div>
 
-        <p className="text-sm text-neutral-500">
-          This document is public, canonical, and versioned. Legal instruments
-          may be derived where required but do not supersede this Charter.
-        </p>
-      </article>
+        {/* INTENT */}
+        <div>
+          <h2 className="text-xl font-semibold text-white mb-3">
+            Statement of Intent
+          </h2>
+
+          <p>
+            Sponsorship is participation in a system that must remain governed,
+            not owned.
+          </p>
+
+          <p className="mt-3">
+            It reflects the belief that:
+          </p>
+
+          <ul className="list-disc pl-6 mt-3 space-y-1">
+            <li>AI systems require independent governance</li>
+            <li>Ethical infrastructure must resist capture</li>
+            <li>Stewardship is legitimate and necessary labor</li>
+          </ul>
+        </div>
+
+      </section>
+
+      {/* FOOTER */}
+      <section className="mt-20 pt-8 border-t border-white/10 text-xs text-neutral-500">
+        Canonical · Moral Clarity AI · Public Governance Document
+      </section>
+
     </main>
   );
 }
