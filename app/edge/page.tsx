@@ -151,8 +151,8 @@ export default function EdgeIndexPage() {
                 <Image
                   src="/assets/image_edge_logo_trans_01.png"
                   alt="The Edge"
-                  width={180}
-                  height={180}
+                  width={260}
+                  height={260}
                   className="mx-auto"
                 />
               </div>
