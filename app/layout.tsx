@@ -1,4 +1,3 @@
-// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
@@ -17,6 +16,11 @@ export const metadata: Metadata = {
     template: "%s • Moral Clarity AI",
   },
   description: "Anchored answers. Neutral • Guidance.",
+  icons: {
+    icon: "/favicon_sas.svg",
+    shortcut: "/favicon_sas.svg",
+    apple: "/favicon_sas.svg",
+  },
 };
 
 export const viewport: Viewport = {
