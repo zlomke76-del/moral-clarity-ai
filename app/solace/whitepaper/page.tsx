@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Solace Authority System | Moral Clarity AI",
+  title: "Solace Authority System | Moral Clity AI",
   description:
     "A deterministic framework for admissible, authorized, and enforced execution.",
 };
@@ -29,11 +29,11 @@ function SectionHeading({
   body?: string;
 }) {
   return (
-    <div className="mb-8">
-      <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.28em] text-cyan-300/80">
+    <div className="mb-9">
+      <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-300/85">
         {kicker}
       </div>
-      <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+      <h2 className="max-w-4xl text-2xl font-semibold tracking-tight text-white sm:text-3xl lg:text-[2rem] lg:leading-[1.15]">
         {title}
       </h2>
       {body ? (
@@ -53,7 +53,8 @@ function FeatureCard({
   body: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
+    <div className="group relative overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.22)] transition duration-300 hover:-translate-y-0.5 hover:border-cyan-400/20 hover:shadow-[0_22px_70px_rgba(0,0,0,0.34)]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/35 to-transparent opacity-70" />
       <h3 className="text-base font-semibold text-white">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-slate-300">{body}</p>
     </div>
@@ -68,26 +69,27 @@ function ContrastCard({
   statement: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#0c1729]/90 p-5">
-      <div className="text-xs text-slate-400">{eyebrow}</div>
-      <div className="mt-2 text-lg font-semibold text-white">{statement}</div>
+    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(12,23,41,0.96),rgba(9,19,34,0.9))] p-5 shadow-[0_16px_50px_rgba(0,0,0,0.2)]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/25 to-transparent" />
+      <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
+        {eyebrow}
+      </div>
+      <div className="mt-3 text-lg font-semibold leading-8 text-white">
+        {statement}
+      </div>
     </div>
   );
 }
 
-function SignalList({
-  items,
-}: {
-  items: string[];
-}) {
+function SignalList({ items }: { items: string[] }) {
   return (
-    <ul className="space-y-3">
+    <ul className="space-y-3.5">
       {items.map((item) => (
         <li
           key={item}
-          className="flex gap-3 text-sm leading-6 text-slate-300"
+          className="flex items-start gap-3 text-sm leading-6 text-slate-300"
         >
-          <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300" />
+          <span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.65)]" />
           <span>{item}</span>
         </li>
       ))}
@@ -95,22 +97,56 @@ function SignalList({
   );
 }
 
+function Pill({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="rounded-full border border-white/10 bg-white/[0.045] px-3 py-1 text-sm text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+      {children}
+    </span>
+  );
+}
+
 export default function SolaceWhitepaperPage() {
   return (
     <main className="min-h-screen bg-[#06101d] text-white">
-      <section className="relative overflow-hidden border-b border-white/10 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.18),transparent_36%),radial-gradient(circle_at_70%_18%,rgba(59,130,246,0.14),transparent_26%),linear-gradient(180deg,#0b1628_0%,#06101d_100%)]">
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(6,16,29,0.34))]" />
+      <section className="relative overflow-hidden border-b border-white/10 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.18),transparent_32%),radial-gradient(circle_at_74%_18%,rgba(59,130,246,0.16),transparent_24%),linear-gradient(180deg,#0b1628_0%,#06101d_100%)]">
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(6,16,29,0.4))]" />
+        <div className="pointer-events-none absolute -right-24 top-10 hidden opacity-[0.07] blur-[0.4px] lg:block">
+          <img
+            src="/assets/logo_sas.svg"
+            alt=""
+            className="h-[520px] w-[520px]"
+          />
+        </div>
+        <div className="pointer-events-none absolute left-1/2 top-0 h-px w-[70%] -translate-x-1/2 bg-gradient-to-r from-transparent via-cyan-300/25 to-transparent" />
+
         <div className="relative mx-auto max-w-7xl px-6 py-20 lg:px-8 lg:py-24">
-          <div className="max-w-4xl">
+          <div className="max-w-5xl">
             <div className="mb-6 inline-flex items-center rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200">
-              Moral Clarity AI · Authority Layer
+              Moral Clarity AI · Solace Authority System
             </div>
 
-            <h1 className="max-w-5xl text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
-              The Solace Authority System
-            </h1>
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
+              <div className="relative shrink-0">
+                <div className="absolute inset-0 rounded-full bg-cyan-400/15 blur-2xl" />
+                <img
+                  src="/assets/logo_sas.svg"
+                  alt="Solace Authority System"
+                  className="relative h-20 w-20 drop-shadow-[0_0_18px_rgba(34,211,238,0.35)] transition duration-500 hover:scale-[1.03] hover:drop-shadow-[0_0_28px_rgba(34,211,238,0.55)] sm:h-24 sm:w-24 lg:h-28 lg:w-28"
+                />
+              </div>
 
-            <p className="mt-6 max-w-3xl text-xl leading-8 text-slate-200">
+              <div>
+                <h1 className="max-w-5xl text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
+                  The Solace Authority System
+                </h1>
+                <p className="mt-3 max-w-3xl text-base leading-7 text-slate-400 sm:text-lg">
+                  Deterministic authority for what is allowed to exist, act, and
+                  execute.
+                </p>
+              </div>
+            </div>
+
+            <p className="mt-8 max-w-3xl text-xl leading-8 text-slate-200">
               AI systems can already act in the real world. What they still
               cannot do is prove that action was valid at the exact moment it
               occurred.
@@ -122,38 +158,54 @@ export default function SolaceWhitepaperPage() {
               becoming real unless they are valid, authorized, and enforced.
             </p>
 
-            <div className="mt-8 flex flex-wrap gap-3 text-sm text-slate-300">
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                Admissibility before action
-              </span>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                Deterministic execution control
-              </span>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                Fail-closed enforcement
-              </span>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                Cryptographic proof boundary
-              </span>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Pill>Admissibility before action</Pill>
+              <Pill>Deterministic execution control</Pill>
+              <Pill>Fail-closed enforcement</Pill>
+              <Pill>Cryptographic proof boundary</Pill>
             </div>
 
-            <div className="mt-10 max-w-4xl rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.06] p-6 shadow-[0_20px_70px_rgba(0,0,0,0.35)]">
-              <p className="text-base leading-7 text-cyan-100">
-                Every AI system today can produce outputs that look correct,
-                pass validation, and still fail in reality.
-              </p>
-              <p className="mt-3 text-lg font-semibold text-white">
-                Solace eliminates this class of failure at the execution
-                boundary.
-              </p>
+            <div className="mt-10 grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
+              <div className="relative overflow-hidden rounded-3xl border border-cyan-400/20 bg-[linear-gradient(180deg,rgba(6,50,77,0.24),rgba(6,27,42,0.16))] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/45 to-transparent" />
+                <p className="text-base leading-7 text-cyan-100">
+                  Every AI system today can produce outputs that look correct,
+                  pass validation, and still fail in reality.
+                </p>
+                <p className="mt-3 text-xl font-semibold leading-8 text-white">
+                  Solace eliminates this class of failure at the execution
+                  boundary.
+                </p>
+              </div>
+
+              <div className="grid gap-4">
+                <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
+                    System claim
+                  </div>
+                  <div className="mt-2 text-base font-semibold leading-7 text-white">
+                    No output is admitted without admissibility.
+                  </div>
+                </div>
+                <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
+                    Execution claim
+                  </div>
+                  <div className="mt-2 text-base font-semibold leading-7 text-white">
+                    No action is permitted without explicit authority and
+                    enforcement.
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-12 px-6 py-14 lg:grid-cols-[270px_minmax(0,1fr)] lg:px-8 lg:py-18">
+      <section className="mx-auto grid max-w-7xl gap-12 px-6 py-14 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-8 lg:py-18">
         <aside className="lg:sticky lg:top-24 lg:self-start">
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 shadow-[0_16px_50px_rgba(0,0,0,0.24)]">
+          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-5 shadow-[0_18px_55px_rgba(0,0,0,0.24)]">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/20 to-transparent" />
             <div className="mb-4 text-[11px] font-semibold uppercase tracking-[0.26em] text-slate-400">
               System Structure
             </div>
@@ -171,7 +223,7 @@ export default function SolaceWhitepaperPage() {
           </div>
         </aside>
 
-        <article className="space-y-16">
+        <article className="space-y-18">
           <section id="executive-summary" className="scroll-mt-28">
             <SectionHeading
               kicker="Executive Summary"
@@ -180,7 +232,7 @@ export default function SolaceWhitepaperPage() {
             />
 
             <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-              <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+              <div className="rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.22)]">
                 <div className="mb-4 text-sm font-medium text-white">
                   Current systems operate on a reactive model:
                 </div>
@@ -233,7 +285,7 @@ export default function SolaceWhitepaperPage() {
               />
             </div>
 
-            <div className="mt-8 rounded-3xl border border-white/10 bg-[#0c1729]/90 p-6">
+            <div className="mt-8 rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(12,23,41,0.96),rgba(9,19,34,0.92))] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.24)]">
               <p className="text-xl font-semibold leading-8 text-white">
                 The failure is not model accuracy. It is the absence of
                 execution authority.
@@ -263,7 +315,7 @@ export default function SolaceWhitepaperPage() {
               />
             </div>
 
-            <div className="mt-8 rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.05] p-6">
+            <div className="mt-8 rounded-3xl border border-cyan-400/20 bg-[linear-gradient(180deg,rgba(34,211,238,0.09),rgba(34,211,238,0.04))] p-6 shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
               <p className="text-lg font-semibold text-white">
                 Unauthorized execution is not merely discouraged. It is made
                 structurally impossible.
@@ -278,7 +330,7 @@ export default function SolaceWhitepaperPage() {
               body="The sequence below is not a convenience workflow. It is the enforced order by which admissibility, authority, and execution are bound together."
             />
 
-            <div className="rounded-3xl border border-white/10 bg-[#0b1628] p-6 shadow-[0_16px_50px_rgba(0,0,0,0.24)]">
+            <div className="rounded-3xl border border-white/10 bg-[linear-gradient(180deg,#0b1628_0%,#091321_100%)] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.28)]">
               <ol className="space-y-3 text-sm leading-6 text-slate-200">
                 <li>1. Input enters the system.</li>
                 <li>2. Admissibility is enforced.</li>
@@ -333,7 +385,7 @@ export default function SolaceWhitepaperPage() {
             />
 
             <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-              <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+              <div className="rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.22)]">
                 <div className="mb-4 text-sm font-medium text-white">
                   Core enforcement elements
                 </div>
@@ -348,7 +400,7 @@ export default function SolaceWhitepaperPage() {
                 />
               </div>
 
-              <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+              <div className="rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.22)]">
                 <div className="mb-4 text-sm font-medium text-white">
                   What this prevents
                 </div>
@@ -391,7 +443,7 @@ export default function SolaceWhitepaperPage() {
               body="The system does not simply make harmful outcomes easier to investigate. It constrains the ability of those outcomes to become actionable in the first place."
             />
 
-            <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#0b1628]">
+            <div className="overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(180deg,#0b1628_0%,#091321_100%)] shadow-[0_20px_60px_rgba(0,0,0,0.26)]">
               <table className="min-w-full divide-y divide-white/10 text-left text-sm text-slate-200">
                 <thead className="bg-white/[0.04]">
                   <tr>
@@ -511,26 +563,30 @@ export default function SolaceWhitepaperPage() {
               body="As AI systems move from assistance into action, the governing problem changes. Correct-seeming outputs are no longer enough. The real requirement is admissibility at the boundary where consequence begins."
             />
 
-            <div className="space-y-6 rounded-3xl border border-white/10 bg-white/[0.03] p-7">
-              <p className="text-lg leading-8 text-slate-200">
-                AI is no longer a passive tool. It is becoming an active
-                participant in real-world outcomes.
-              </p>
+            <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] p-7 shadow-[0_22px_70px_rgba(0,0,0,0.28)]">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/25 to-transparent" />
+              <div className="space-y-6">
+                <p className="text-lg leading-8 text-slate-200">
+                  AI is no longer a passive tool. It is becoming an active
+                  participant in real-world outcomes.
+                </p>
 
-              <p className="text-lg leading-8 text-slate-300">
-                The question is not whether a decision appears correct. The
-                question is whether it was ever valid to act on.
-              </p>
+                <p className="text-lg leading-8 text-slate-300">
+                  The question is not whether a decision appears correct. The
+                  question is whether it was ever valid to act on.
+                </p>
 
-              <blockquote className="border-l border-cyan-300/40 pl-5 text-xl font-semibold leading-9 text-white">
-                Execution without admissibility is not intelligence.
-                <br />
-                It is uncontrolled risk.
-              </blockquote>
+                <blockquote className="border-l border-cyan-300/40 pl-5 text-xl font-semibold leading-9 text-white">
+                  Execution without admissibility is not intelligence.
+                  <br />
+                  It is uncontrolled risk.
+                </blockquote>
 
-              <p className="text-2xl font-semibold tracking-tight text-white">
-                Solace determines whether decisions are allowed to become real.
-              </p>
+                <p className="text-2xl font-semibold tracking-tight text-white">
+                  Solace determines whether decisions are allowed to become
+                  real.
+                </p>
+              </div>
             </div>
           </section>
         </article>
