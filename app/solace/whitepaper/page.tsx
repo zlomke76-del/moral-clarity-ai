@@ -371,7 +371,7 @@ function SystemMap() {
           <div className="h-px w-full bg-gradient-to-r from-cyan-300/0 via-cyan-300/45 to-cyan-300/0" />
         </div>
 
-        <div className="relative overflow-hidden rounded-[1.8rem] border border-cyan-300/20 bg-[linear-gradient(180deg,rgba(20,61,90,0.28),rgba(9,26,42,0.5))] p-6 shadow-[0_0_50px_rgba(34,211,238,0.08)]">
+        <div className="relative overflow-visible rounded-[1.8rem] border border-cyan-300/20 bg-[linear-gradient(180deg,rgba(20,61,90,0.28),rgba(9,26,42,0.5))] p-6 shadow-[0_0_50px_rgba(34,211,238,0.08)]">
           <div className="absolute inset-0 opacity-50">
             <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-gradient-to-b from-cyan-300/0 via-cyan-300/20 to-cyan-300/0" />
             <div className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-gradient-to-r from-cyan-300/0 via-cyan-300/20 to-cyan-300/0" />
@@ -388,15 +388,33 @@ function SystemMap() {
               anything is allowed to cross into consequence.
             </p>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-center text-xs uppercase tracking-[0.18em] text-slate-300">
-                Admissibility
+            <div className="relative z-30 mt-8 -mb-2 flex flex-wrap gap-3 overflow-visible">
+              <div
+                className="group solace-floating-chip rounded-full px-4 py-2.5 text-center text-[11px] uppercase tracking-[0.18em] text-cyan-100 transition duration-300 hover:scale-[1.04]"
+                style={{ animationDelay: "0s" }}
+              >
+                <div className="pointer-events-none absolute inset-0 rounded-full opacity-0 transition duration-300 group-hover:opacity-100">
+                  <div className="absolute inset-0 rounded-full bg-cyan-300/10 blur-xl" />
+                </div>
+                <div className="relative">Admissibility</div>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-center text-xs uppercase tracking-[0.18em] text-slate-300">
-                Authority
+              <div
+                className="group solace-floating-chip rounded-full px-4 py-2.5 text-center text-[11px] uppercase tracking-[0.18em] text-cyan-100 transition duration-300 hover:scale-[1.04]"
+                style={{ animationDelay: "0.2s" }}
+              >
+                <div className="pointer-events-none absolute inset-0 rounded-full opacity-0 transition duration-300 group-hover:opacity-100">
+                  <div className="absolute inset-0 rounded-full bg-cyan-300/10 blur-xl" />
+                </div>
+                <div className="relative">Authority</div>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-center text-xs uppercase tracking-[0.18em] text-slate-300">
-                Enforcement
+              <div
+                className="group solace-floating-chip rounded-full px-4 py-2.5 text-center text-[11px] uppercase tracking-[0.18em] text-cyan-100 transition duration-300 hover:scale-[1.04]"
+                style={{ animationDelay: "0.4s" }}
+              >
+                <div className="pointer-events-none absolute inset-0 rounded-full opacity-0 transition duration-300 group-hover:opacity-100">
+                  <div className="absolute inset-0 rounded-full bg-cyan-300/10 blur-xl" />
+                </div>
+                <div className="relative">Enforcement</div>
               </div>
             </div>
           </div>
@@ -672,6 +690,15 @@ export default function SolaceWhitepaperPage() {
           }
         }
 
+        @keyframes chipFloat {
+          0%, 100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-3px);
+          }
+        }
+
         @keyframes solaceDrift {
           0% {
             transform: translate3d(0, 0, 0);
@@ -748,6 +775,29 @@ export default function SolaceWhitepaperPage() {
 
         .solace-reveal-3 {
           animation: solaceReveal 560ms ease-out 240ms both;
+        }
+
+        .solace-floating-chip {
+          position: relative;
+          z-index: 40;
+          overflow: visible;
+          border: 1px solid rgba(103, 232, 249, 0.22);
+          background: linear-gradient(180deg, rgba(10,25,45,0.92), rgba(6,18,34,0.88));
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          box-shadow:
+            0 10px 30px rgba(0,0,0,0.55),
+            0 0 18px rgba(34,211,238,0.12),
+            inset 0 1px 0 rgba(255,255,255,0.05);
+          animation: chipFloat 6s ease-in-out infinite;
+        }
+
+        .solace-floating-chip:hover {
+          border-color: rgba(103, 232, 249, 0.48);
+          box-shadow:
+            0 14px 40px rgba(0,0,0,0.68),
+            0 0 28px rgba(34,211,238,0.30),
+            inset 0 1px 0 rgba(255,255,255,0.08);
         }
 
         .solace-boundary-line {
