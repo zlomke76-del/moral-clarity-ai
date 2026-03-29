@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#60A5FA"/>
+      <stop offset="1" stop-color="#22D3EE"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Shield -->
+  <path
+    d="M32 6L52 14V28C52 42 43 52 32 58C21 52 12 42 12 28V14L32 6Z"
+    fill="#0A1322"
+    stroke="url(#g)"
+    stroke-width="2"
+  />
+
+  <!-- Spine -->
+  <line
+    x1="32"
+    y1="16"
+    x2="32"
+    y2="46"
+    stroke="url(#g)"
+    stroke-width="3"
+    stroke-linecap="round"
+  />
+
+  <!-- Core node -->
+  <circle cx="32" cy="32" r="4" fill="#22D3EE"/>
+</svg>
