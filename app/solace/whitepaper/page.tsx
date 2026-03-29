@@ -54,11 +54,12 @@ function FeatureCard({
   body: string;
 }) {
   return (
-    <div className="group relative overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.22)] transition duration-300 hover:border-cyan-400/25 hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.03))] hover:shadow-[0_22px_70px_rgba(0,0,0,0.34)]">
+    <div className="group relative overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.048),rgba(255,255,255,0.02))] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.04)] transition duration-300 hover:-translate-y-[2px] hover:border-cyan-400/25 hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))] hover:shadow-[0_22px_70px_rgba(0,0,0,0.34)]">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/35 to-transparent opacity-70" />
       <div className="pointer-events-none absolute inset-0 opacity-0 transition duration-300 group-hover:opacity-100">
         <div className="absolute inset-x-8 top-0 h-24 bg-cyan-300/5 blur-2xl" />
       </div>
+      <div className="pointer-events-none absolute inset-y-5 left-0 w-px bg-gradient-to-b from-transparent via-cyan-300/18 to-transparent opacity-70" />
       <h3 className="relative text-base font-semibold text-white">{title}</h3>
       <p className="relative mt-2 text-sm leading-6 text-slate-300">{body}</p>
     </div>
@@ -73,8 +74,9 @@ function ContrastCard({
   statement: string;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(12,23,41,0.96),rgba(9,19,34,0.9))] p-5 shadow-[0_16px_50px_rgba(0,0,0,0.2)]">
+    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(12,23,41,0.97),rgba(9,19,34,0.92))] p-5 shadow-[0_16px_50px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.04)]">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/25 to-transparent" />
+      <div className="pointer-events-none absolute inset-y-5 left-0 w-px bg-gradient-to-b from-transparent via-cyan-300/14 to-transparent" />
       <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
         {eyebrow}
       </div>
@@ -101,16 +103,97 @@ function SignalList({ items }: { items: string[] }) {
   );
 }
 
+function InvariantIcon({ index }: { index: number }) {
+  const common =
+    "h-[14px] w-[14px] shrink-0 text-cyan-100 drop-shadow-[0_0_12px_rgba(34,211,238,0.35)]";
+  if (index === 0) {
+    return (
+      <svg viewBox="0 0 24 24" className={common} fill="none" aria-hidden="true">
+        <path
+          d="M5 12.5 9.2 17 19 7.5"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+  if (index === 1) {
+    return (
+      <svg viewBox="0 0 24 24" className={common} fill="none" aria-hidden="true">
+        <rect
+          x="5"
+          y="6"
+          width="14"
+          height="12"
+          rx="3"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
+        <path
+          d="M9 10h6M9 14h6"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+  if (index === 2) {
+    return (
+      <svg viewBox="0 0 24 24" className={common} fill="none" aria-hidden="true">
+        <path
+          d="M8 11V8a4 4 0 1 1 8 0v3"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+        <rect
+          x="5"
+          y="11"
+          width="14"
+          height="9"
+          rx="2.5"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" className={common} fill="none" aria-hidden="true">
+      <path
+        d="M12 4.5 6.5 7.2v4.1c0 4.1 2.4 6.8 5.5 8.2 3.1-1.4 5.5-4.1 5.5-8.2V7.2L12 4.5Z"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <path
+        d="M12 8.5v5.5M9.3 11.2H14.7"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function InvariantChip({
   title,
   detail,
+  index,
 }: {
   title: string;
   detail: string;
+  index: number;
 }) {
   return (
-    <div className="group relative overflow-hidden rounded-full border border-white/10 bg-white/[0.045] px-4 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition duration-300 hover:border-cyan-300/30 hover:bg-cyan-400/[0.09]">
-      <div className="text-sm text-slate-100">{title}</div>
+    <div className="group relative overflow-visible rounded-full border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.028))] px-4 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_10px_30px_rgba(0,0,0,0.14)] transition duration-300 hover:-translate-y-[1px] hover:border-cyan-300/35 hover:bg-[linear-gradient(180deg,rgba(14,68,94,0.26),rgba(9,31,49,0.18))] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_16px_40px_rgba(0,0,0,0.18)]">
+      <div className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_12%_50%,rgba(34,211,238,0.12),transparent_42%)] opacity-80" />
+      <div className="relative flex items-center gap-2.5">
+        <InvariantIcon index={index} />
+        <div className="text-sm text-slate-100">{title}</div>
+      </div>
       <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 hidden w-72 -translate-x-1/2 rounded-2xl border border-white/10 bg-[#0a1627]/95 p-4 text-xs leading-5 text-slate-300 shadow-[0_20px_70px_rgba(0,0,0,0.4)] group-hover:block">
         {detail}
       </div>
@@ -153,7 +236,8 @@ function ConsolePanel({
   footer: string;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-5 shadow-[0_18px_55px_rgba(0,0,0,0.24)]">
+    <div className="group relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] p-5 shadow-[0_18px_55px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.04)] transition duration-300 hover:-translate-y-[2px] hover:border-cyan-300/20">
+      <div className="pointer-events-none absolute left-0 top-5 bottom-5 w-px bg-gradient-to-b from-transparent via-cyan-300/22 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/25 to-transparent" />
       <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
         {label}
@@ -169,9 +253,74 @@ function ConsolePanel({
   );
 }
 
+function AssertionCard({
+  title,
+  body,
+  tone,
+}: {
+  title: string;
+  body: string;
+  tone: "system" | "execution" | "proof";
+}) {
+  const edge =
+    tone === "proof"
+      ? "from-cyan-300/0 via-teal-300/90 to-cyan-300/0"
+      : tone === "execution"
+      ? "from-cyan-300/0 via-cyan-300/90 to-cyan-300/0"
+      : "from-sky-300/0 via-sky-300/80 to-sky-300/0";
+
+  const bar =
+    tone === "proof"
+      ? "bg-[linear-gradient(180deg,rgba(45,212,191,0.9),rgba(34,211,238,0.28))]"
+      : tone === "execution"
+      ? "bg-[linear-gradient(180deg,rgba(34,211,238,0.92),rgba(56,189,248,0.3))]"
+      : "bg-[linear-gradient(180deg,rgba(125,211,252,0.92),rgba(59,130,246,0.24))]";
+
+  const labelTone =
+    tone === "proof" ? "text-cyan-200" : tone === "execution" ? "text-cyan-200" : "text-slate-400";
+
+  return (
+    <div className="group relative overflow-hidden rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.02))] p-5 shadow-[0_18px_55px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.04)] transition duration-300 hover:-translate-y-[2px] hover:border-cyan-400/20">
+      <div className={`pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r ${edge}`} />
+      <div className={`pointer-events-none absolute left-0 top-4 bottom-4 w-[3px] rounded-full ${bar}`} />
+      <div className="flex items-start justify-between gap-3">
+        <div className={`text-[11px] uppercase tracking-[0.16em] ${labelTone}`}>
+          {title}
+        </div>
+        <div className="rounded-full border border-cyan-300/15 bg-cyan-400/[0.05] px-2 py-1">
+          <svg
+            viewBox="0 0 24 24"
+            className="h-3.5 w-3.5 text-cyan-200"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M5 12.5 9.2 17 19 7.5"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+      </div>
+      <div className="mt-2 text-base font-semibold leading-7 text-white">{body}</div>
+    </div>
+  );
+}
+
 function SystemMap() {
   return (
     <div className="relative overflow-hidden rounded-[1.9rem] border border-cyan-400/15 bg-[linear-gradient(180deg,rgba(7,26,44,0.96),rgba(5,15,28,0.98))] p-5 shadow-[0_26px_90px_rgba(0,0,0,0.38)]">
+      <div className="pointer-events-none absolute inset-0 opacity-[0.08]">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(103,232,249,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(103,232,249,0.12)_1px,transparent_1px)] bg-[size:36px_36px]" />
+      </div>
+      <div className="pointer-events-none absolute inset-0 opacity-40">
+        <div className="absolute left-[18%] top-[18%] h-2 w-2 rounded-full bg-cyan-300/50 shadow-[0_0_18px_rgba(34,211,238,0.45)]" />
+        <div className="absolute left-[21%] top-[23%] h-px w-24 bg-gradient-to-r from-cyan-300/0 via-cyan-300/28 to-cyan-300/0" />
+        <div className="absolute right-[20%] top-[20%] h-2 w-2 rounded-full bg-cyan-300/40 shadow-[0_0_18px_rgba(34,211,238,0.32)]" />
+        <div className="absolute right-[23%] top-[24%] h-20 w-px bg-gradient-to-b from-cyan-300/0 via-cyan-300/22 to-cyan-300/0" />
+      </div>
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/45 to-transparent" />
       <div className="mb-5 flex items-center justify-between gap-4">
         <div>
@@ -383,7 +532,8 @@ function FailureCard({
   response: string;
 }) {
   return (
-    <div className="rounded-[1.7rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-5 shadow-[0_18px_55px_rgba(0,0,0,0.22)]">
+    <div className="relative overflow-hidden rounded-[1.7rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-5 shadow-[0_18px_55px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/20 to-transparent" />
       <div className="text-base font-semibold text-white">{title}</div>
       <p className="mt-3 text-sm leading-6 text-slate-300">{body}</p>
       <div className="mt-4 rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.05] px-4 py-3 text-sm leading-6 text-cyan-100">
@@ -406,12 +556,12 @@ function ExecutionRailStep({
 }) {
   return (
     <div className="relative pl-12">
-      <div className="absolute left-0 top-0 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-xs font-semibold text-white">
+      <div className="absolute left-0 top-0 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-xs font-semibold text-white shadow-[0_6px_18px_rgba(0,0,0,0.16)]">
         {index}
       </div>
       <div className="absolute left-[15px] top-8 h-[calc(100%+1rem)] w-px bg-gradient-to-b from-cyan-300/30 to-transparent last:hidden" />
       <div
-        className={`rounded-[1.55rem] border p-5 ${
+        className={`rounded-[1.55rem] border p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] ${
           active
             ? "border-cyan-400/20 bg-[linear-gradient(180deg,rgba(34,211,238,0.08),rgba(255,255,255,0.02))]"
             : "border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))]"
@@ -424,29 +574,225 @@ function ExecutionRailStep({
   );
 }
 
+function HeroShieldBackdrop() {
+  return (
+    <div className="pointer-events-none absolute right-[-4rem] top-8 hidden opacity-[0.1] lg:block">
+      <div className="relative h-[640px] w-[640px]">
+        <img
+          src="/assets/logo_sas.svg"
+          alt=""
+          className="absolute right-0 top-10 h-[500px] w-[500px] opacity-60"
+        />
+        <svg
+          viewBox="0 0 640 640"
+          className="absolute inset-0 h-full w-full"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M320 80v480"
+            stroke="rgba(96,165,250,0.12)"
+            strokeWidth="1"
+          />
+          <path
+            d="M80 320h480"
+            stroke="rgba(96,165,250,0.12)"
+            strokeWidth="1"
+          />
+          <path
+            d="M160 160 480 480"
+            stroke="rgba(34,211,238,0.06)"
+            strokeWidth="1"
+          />
+          <path
+            d="M480 160 160 480"
+            stroke="rgba(34,211,238,0.06)"
+            strokeWidth="1"
+          />
+          <circle
+            cx="320"
+            cy="320"
+            r="164"
+            stroke="rgba(34,211,238,0.08)"
+            strokeWidth="1"
+          />
+          <circle
+            cx="320"
+            cy="320"
+            r="228"
+            stroke="rgba(59,130,246,0.06)"
+            strokeWidth="1"
+          />
+          <circle cx="320" cy="140" r="4" fill="rgba(103,232,249,0.18)" />
+          <circle cx="500" cy="320" r="4" fill="rgba(103,232,249,0.18)" />
+          <circle cx="320" cy="500" r="4" fill="rgba(103,232,249,0.18)" />
+          <circle cx="140" cy="320" r="4" fill="rgba(103,232,249,0.18)" />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 export default function SolaceWhitepaperPage() {
   return (
     <main className="min-h-screen bg-[#06101d] text-white">
-      <section className="relative overflow-hidden border-b border-white/10 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.18),transparent_30%),radial-gradient(circle_at_78%_18%,rgba(59,130,246,0.16),transparent_22%),linear-gradient(180deg,#0a1526_0%,#06101d_100%)]">
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(6,16,29,0.42))]" />
-        <div className="pointer-events-none absolute -right-24 top-10 hidden opacity-[0.07] blur-[0.4px] lg:block">
-          <img
-            src="/assets/logo_sas.svg"
-            alt=""
-            className="h-[560px] w-[560px]"
-          />
+      <style jsx global>{`
+        @keyframes solacePulse {
+          0%, 100% {
+            opacity: 0.35;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.6;
+            transform: scale(1.02);
+          }
+        }
+
+        @keyframes solaceFloat {
+          0%, 100% {
+            transform: translate3d(0, 0, 0);
+          }
+          50% {
+            transform: translate3d(0, -8px, 0);
+          }
+        }
+
+        @keyframes solaceDrift {
+          0% {
+            transform: translate3d(0, 0, 0);
+          }
+          50% {
+            transform: translate3d(18px, -10px, 0);
+          }
+          100% {
+            transform: translate3d(0, 0, 0);
+          }
+        }
+
+        @keyframes solaceSweep {
+          0% {
+            transform: translateX(-18%);
+            opacity: 0;
+          }
+          20% {
+            opacity: 1;
+          }
+          80% {
+            opacity: 1;
+          }
+          100% {
+            transform: translateX(118%);
+            opacity: 0;
+          }
+        }
+
+        @keyframes solaceReveal {
+          from {
+            opacity: 0;
+            transform: translateY(12px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .solace-grid-field::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background-image:
+            linear-gradient(rgba(103, 232, 249, 0.045) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(103, 232, 249, 0.045) 1px, transparent 1px);
+          background-size: 34px 34px;
+          mask-image: radial-gradient(circle at center, black 35%, transparent 88%);
+          opacity: 0.18;
+          pointer-events: none;
+        }
+
+        .solace-command-line {
+          animation: solacePulse 7s ease-in-out infinite;
+        }
+
+        .solace-icon-float {
+          animation: solaceFloat 12s ease-in-out infinite;
+        }
+
+        .solace-drift-layer {
+          animation: solaceDrift 24s ease-in-out infinite;
+        }
+
+        .solace-reveal-1 {
+          animation: solaceReveal 560ms ease-out both;
+        }
+
+        .solace-reveal-2 {
+          animation: solaceReveal 560ms ease-out 120ms both;
+        }
+
+        .solace-reveal-3 {
+          animation: solaceReveal 560ms ease-out 240ms both;
+        }
+
+        .solace-boundary-line {
+          position: relative;
+          overflow: hidden;
+        }
+
+        .solace-boundary-line::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background:
+            linear-gradient(
+              90deg,
+              transparent 0%,
+              rgba(34, 211, 238, 0.02) 20%,
+              rgba(34, 211, 238, 0.28) 50%,
+              rgba(34, 211, 238, 0.02) 80%,
+              transparent 100%
+            );
+          animation: solaceSweep 9s linear infinite;
+          pointer-events: none;
+        }
+
+        .solace-scanline::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background-image: linear-gradient(
+            to bottom,
+            rgba(255, 255, 255, 0.03) 0,
+            rgba(255, 255, 255, 0.01) 1px,
+            transparent 2px
+          );
+          background-size: 100% 7px;
+          opacity: 0.06;
+          pointer-events: none;
+        }
+      `}</style>
+
+      <section className="relative overflow-hidden border-b border-white/10 bg-[radial-gradient(circle_at_34%_12%,rgba(34,211,238,0.22),transparent_22%),radial-gradient(circle_at_72%_20%,rgba(59,130,246,0.18),transparent_24%),radial-gradient(circle_at_50%_0%,rgba(14,165,233,0.12),transparent_34%),linear-gradient(180deg,#071221_0%,#06101d_100%)]">
+        <div className="solace-grid-field absolute inset-0" />
+        <div className="solace-drift-layer pointer-events-none absolute inset-0 opacity-70">
+          <div className="absolute left-[14%] top-[16%] h-[1px] w-40 bg-gradient-to-r from-transparent via-cyan-300/18 to-transparent" />
+          <div className="absolute left-[18%] top-[16%] h-2 w-2 rounded-full bg-cyan-300/28 shadow-[0_0_16px_rgba(34,211,238,0.35)]" />
+          <div className="absolute right-[24%] top-[22%] h-[1px] w-28 bg-gradient-to-r from-transparent via-sky-300/14 to-transparent" />
+          <div className="absolute right-[20%] top-[28%] h-20 w-px bg-gradient-to-b from-transparent via-cyan-300/16 to-transparent" />
         </div>
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(6,16,29,0.42))]" />
+        <HeroShieldBackdrop />
         <div className="pointer-events-none absolute left-1/2 top-0 h-px w-[70%] -translate-x-1/2 bg-gradient-to-r from-transparent via-cyan-300/25 to-transparent" />
 
         <div className="relative mx-auto max-w-7xl px-6 py-20 lg:px-8 lg:py-24">
           <div className="max-w-6xl">
-            <div className="mb-6 inline-flex items-center rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200">
+            <div className="mb-6 inline-flex items-center rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200 shadow-[0_10px_30px_rgba(0,0,0,0.14)]">
               Moral Clarity AI · Solace Authority System
             </div>
 
             <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
               <div className="relative shrink-0">
-                <div className="absolute inset-0 rounded-full bg-cyan-400/15 blur-2xl" />
+                <div className="solace-icon-float absolute inset-0 rounded-full bg-cyan-400/15 blur-2xl" />
                 <img
                   src="/assets/logo_sas.svg"
                   alt="Solace Authority System"
@@ -469,14 +815,21 @@ export default function SolaceWhitepaperPage() {
               </div>
             </div>
 
-            <div className="mt-10 max-w-4xl">
-              <p className="text-3xl font-semibold leading-[1.15] tracking-tight text-white sm:text-4xl lg:text-[3.35rem] lg:leading-[1.05]">
-                AI can act.
-                <br />
-                It cannot prove that its actions were valid when they occurred.
-              </p>
+            <div className="mt-10 max-w-5xl">
+              <div className="relative pl-6 sm:pl-8">
+                <div className="solace-command-line absolute left-0 top-1 h-[88%] w-px bg-gradient-to-b from-cyan-300/0 via-cyan-300/85 to-cyan-300/0 shadow-[0_0_18px_rgba(34,211,238,0.4)]" />
+                <p className="solace-reveal-1 text-3xl font-semibold leading-[1.1] tracking-[-0.04em] text-white sm:text-4xl lg:text-[3.55rem] lg:leading-[1.01]">
+                  AI can act.
+                </p>
+                <p className="solace-reveal-2 text-3xl font-semibold leading-[1.1] tracking-[-0.04em] text-white sm:text-4xl lg:text-[3.55rem] lg:leading-[1.01]">
+                  It cannot prove that its actions were
+                </p>
+                <p className="solace-reveal-3 text-3xl font-semibold leading-[1.1] tracking-[-0.04em] text-white sm:text-4xl lg:text-[3.55rem] lg:leading-[1.01]">
+                  valid when they occurred.
+                </p>
+              </div>
 
-              <p className="mt-5 text-lg font-medium leading-8 text-cyan-100">
+              <p className="mt-6 text-lg font-medium leading-8 text-cyan-100">
                 That gap is the execution boundary.
               </p>
 
@@ -490,26 +843,34 @@ export default function SolaceWhitepaperPage() {
 
             <div className="mt-8 flex flex-wrap gap-3">
               <InvariantChip
+                index={0}
                 title="Admissibility is required"
                 detail="A decision does not become real because it appears correct. It must survive admissibility before consequence begins."
               />
               <InvariantChip
+                index={1}
                 title="Deterministic or denied"
                 detail="The same explicit boundary state must resolve to the same authority outcome. Ambiguity does not silently pass."
               />
               <InvariantChip
+                index={2}
                 title="Fail-closed by default"
                 detail="If truth, authority, or enforcement are insufficient, the system denies or defers execution rather than optimizing toward action."
               />
               <InvariantChip
+                index={3}
                 title="Provable authority only"
                 detail="Execution is not trusted into existence. It is bound to explicit authority artifacts and active verification."
               />
             </div>
 
             <div className="mt-12 grid gap-5 lg:grid-cols-[1.08fr_0.92fr]">
-              <div className="relative overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-[linear-gradient(180deg,rgba(6,50,77,0.24),rgba(6,27,42,0.16))] p-7 shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
+              <div className="solace-scanline relative overflow-hidden rounded-[2rem] border border-cyan-400/20 bg-[linear-gradient(180deg,rgba(6,50,77,0.26),rgba(6,27,42,0.18))] p-7 shadow-[0_24px_80px_rgba(0,0,0,0.32),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-[10px]">
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/45 to-transparent" />
+                <div className="pointer-events-none absolute left-0 top-6 bottom-6 w-px bg-gradient-to-b from-transparent via-red-300/55 to-transparent" />
+                <div className="mb-4 inline-flex rounded-full border border-white/10 bg-white/[0.035] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-300">
+                  System Diagnosis
+                </div>
                 <p className="text-lg leading-8 text-cyan-100">
                   A system can be correct, validated, and fully compliant… and
                   still fail in reality.
@@ -524,37 +885,30 @@ export default function SolaceWhitepaperPage() {
               </div>
 
               <div className="grid gap-4">
-                <div className="rounded-[1.8rem] border border-white/10 bg-white/[0.03] p-5">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
-                    System claim
-                  </div>
-                  <div className="mt-2 text-base font-semibold leading-7 text-white">
-                    No output exists without admissibility.
-                  </div>
-                </div>
-                <div className="rounded-[1.8rem] border border-white/10 bg-white/[0.03] p-5">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
-                    Execution claim
-                  </div>
-                  <div className="mt-2 text-base font-semibold leading-7 text-white">
-                    No action executes without explicit, provable authority.
-                  </div>
-                </div>
-                <div className="rounded-[1.8rem] border border-cyan-400/15 bg-cyan-400/[0.05] p-5">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-cyan-200">
-                    Proof boundary
-                  </div>
-                  <div className="mt-2 text-base leading-7 text-slate-200">
-                    Every admitted action is replayable, auditable, and bound to
-                    the exact state in which it was authorized.
-                  </div>
-                </div>
+                <AssertionCard
+                  title="System claim"
+                  body="No output exists without admissibility."
+                  tone="system"
+                />
+                <AssertionCard
+                  title="Execution claim"
+                  body="No action executes without explicit, provable authority."
+                  tone="execution"
+                />
+                <AssertionCard
+                  title="Proof boundary"
+                  body="Every admitted action is replayable, auditable, and bound to the exact state in which it was authorized."
+                  tone="proof"
+                />
               </div>
             </div>
 
-            <div className="mt-10 rounded-full border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-medium text-slate-200">
-              <span className="text-cyan-200">— Execution Boundary —</span>{" "}
-              Nothing crosses this line without admissibility.
+            <div className="mt-10">
+              <div className="solace-boundary-line relative rounded-full border border-cyan-300/14 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.028))] px-5 py-3.5 text-sm font-medium text-slate-200 shadow-[0_18px_55px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.04)]">
+                <div className="pointer-events-none absolute inset-y-[7px] left-2 right-2 rounded-full border border-cyan-300/8" />
+                <span className="text-cyan-200">— Execution Boundary —</span>{" "}
+                Nothing crosses this line without admissibility.
+              </div>
             </div>
 
             <div className="mt-12">
@@ -566,7 +920,7 @@ export default function SolaceWhitepaperPage() {
 
       <section className="mx-auto grid max-w-7xl gap-12 px-6 py-14 lg:grid-cols-[290px_minmax(0,1fr)] lg:px-8 lg:py-18">
         <aside className="lg:sticky lg:top-24 lg:self-start">
-          <div className="relative overflow-hidden rounded-[1.9rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-5 shadow-[0_18px_55px_rgba(0,0,0,0.24)]">
+          <div className="relative overflow-hidden rounded-[1.9rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-5 shadow-[0_18px_55px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.04)]">
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/20 to-transparent" />
             <div className="mb-4 text-[11px] font-semibold uppercase tracking-[0.26em] text-slate-400">
               Authority Map
@@ -579,7 +933,7 @@ export default function SolaceWhitepaperPage() {
                   className="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-300 transition hover:bg-white/5 hover:text-white"
                 >
                   <span
-                    className={`flex h-6 w-6 items-center justify-center rounded-full border text-[10px] font-semibold ${
+                    className={`flex h-6 w-6 items-center justify-center rounded-full border text-[10px] font-semibold shadow-[0_8px_18px_rgba(0,0,0,0.14)] ${
                       index < 3
                         ? "border-cyan-300/25 bg-cyan-400/[0.08] text-cyan-200"
                         : "border-white/10 bg-white/[0.03] text-slate-400"
@@ -603,7 +957,7 @@ export default function SolaceWhitepaperPage() {
             />
 
             <div className="grid gap-6 lg:grid-cols-[1fr_auto_1fr] lg:items-stretch">
-              <div className="rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.22)]">
+              <div className="rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.04)]">
                 <div className="mb-4 text-sm font-medium text-white">
                   Reactive governance
                 </div>
@@ -627,7 +981,7 @@ export default function SolaceWhitepaperPage() {
                 </div>
               </div>
 
-              <div className="rounded-[1.8rem] border border-cyan-400/15 bg-[linear-gradient(180deg,rgba(34,211,238,0.08),rgba(255,255,255,0.02))] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.22)]">
+              <div className="rounded-[1.8rem] border border-cyan-400/15 bg-[linear-gradient(180deg,rgba(34,211,238,0.08),rgba(255,255,255,0.02))] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.04)]">
                 <div className="mb-4 text-sm font-medium text-white">
                   Execution-time authority
                 </div>
@@ -737,7 +1091,7 @@ export default function SolaceWhitepaperPage() {
               />
             </div>
 
-            <div className="mt-8 rounded-[1.9rem] border border-white/10 bg-[linear-gradient(180deg,rgba(12,23,41,0.96),rgba(9,19,34,0.92))] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.24)]">
+            <div className="mt-8 rounded-[1.9rem] border border-white/10 bg-[linear-gradient(180deg,rgba(12,23,41,0.96),rgba(9,19,34,0.92))] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.04)]">
               <p className="text-xl font-semibold leading-8 text-white">
                 The failure is not model accuracy. It is the absence of
                 execution authority.
@@ -782,7 +1136,7 @@ export default function SolaceWhitepaperPage() {
               />
             </div>
 
-            <div className="mt-8 rounded-[1.9rem] border border-cyan-400/20 bg-[linear-gradient(180deg,rgba(34,211,238,0.09),rgba(34,211,238,0.04))] p-6 shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
+            <div className="mt-8 rounded-[1.9rem] border border-cyan-400/20 bg-[linear-gradient(180deg,rgba(34,211,238,0.09),rgba(34,211,238,0.04))] p-6 shadow-[0_20px_70px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.04)]">
               <p className="text-lg font-semibold text-white">
                 Unauthorized execution is not merely discouraged. It is made
                 structurally impossible.
@@ -836,7 +1190,7 @@ export default function SolaceWhitepaperPage() {
               />
             </div>
 
-            <div className="mt-6 rounded-[1.75rem] border border-cyan-400/15 bg-cyan-400/[0.05] p-5">
+            <div className="mt-6 rounded-[1.75rem] border border-cyan-400/15 bg-cyan-400/[0.05] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
               <div className="text-sm font-semibold text-white">
                 If any condition fails, execution does not occur.
               </div>
@@ -885,7 +1239,7 @@ export default function SolaceWhitepaperPage() {
             />
 
             <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-              <div className="rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.22)]">
+              <div className="rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.04)]">
                 <div className="mb-4 text-sm font-medium text-white">
                   Core enforcement elements
                 </div>
@@ -900,7 +1254,7 @@ export default function SolaceWhitepaperPage() {
                 />
               </div>
 
-              <div className="rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.22)]">
+              <div className="rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.04)]">
                 <div className="mb-4 text-sm font-medium text-white">
                   What this prevents
                 </div>
@@ -950,7 +1304,7 @@ export default function SolaceWhitepaperPage() {
               body="The system does not simply make harmful outcomes easier to investigate. It constrains the ability of those outcomes to become actionable in the first place."
             />
 
-            <div className="overflow-hidden rounded-[1.95rem] border border-white/10 bg-[linear-gradient(180deg,#0b1628_0%,#091321_100%)] shadow-[0_20px_60px_rgba(0,0,0,0.26)]">
+            <div className="overflow-hidden rounded-[1.95rem] border border-white/10 bg-[linear-gradient(180deg,#0b1628_0%,#091321_100%)] shadow-[0_20px_60px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,255,255,0.04)]">
               <table className="min-w-full divide-y divide-white/10 text-left text-sm text-slate-200">
                 <thead className="bg-white/[0.04]">
                   <tr>
@@ -1070,7 +1424,7 @@ export default function SolaceWhitepaperPage() {
               body="As AI systems move from assistance into action, the governing problem changes. Correct-seeming outputs are no longer enough. The real requirement is admissibility at the boundary where consequence begins."
             />
 
-            <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] p-7 shadow-[0_22px_70px_rgba(0,0,0,0.28)]">
+            <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] p-7 shadow-[0_22px_70px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.04)]">
               <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/25 to-transparent" />
               <div className="space-y-6">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-cyan-300/80">
