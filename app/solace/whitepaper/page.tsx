@@ -106,6 +106,7 @@ function SignalList({ items }: { items: string[] }) {
 function InvariantIcon({ index }: { index: number }) {
   const common =
     "h-[14px] w-[14px] shrink-0 text-cyan-100 drop-shadow-[0_0_12px_rgba(34,211,238,0.35)]";
+
   if (index === 0) {
     return (
       <svg viewBox="0 0 24 24" className={common} fill="none" aria-hidden="true">
@@ -119,6 +120,7 @@ function InvariantIcon({ index }: { index: number }) {
       </svg>
     );
   }
+
   if (index === 1) {
     return (
       <svg viewBox="0 0 24 24" className={common} fill="none" aria-hidden="true">
@@ -140,6 +142,7 @@ function InvariantIcon({ index }: { index: number }) {
       </svg>
     );
   }
+
   if (index === 2) {
     return (
       <svg viewBox="0 0 24 24" className={common} fill="none" aria-hidden="true">
@@ -161,6 +164,7 @@ function InvariantIcon({ index }: { index: number }) {
       </svg>
     );
   }
+
   return (
     <svg viewBox="0 0 24 24" className={common} fill="none" aria-hidden="true">
       <path
@@ -277,7 +281,11 @@ function AssertionCard({
       : "bg-[linear-gradient(180deg,rgba(125,211,252,0.92),rgba(59,130,246,0.24))]";
 
   const labelTone =
-    tone === "proof" ? "text-cyan-200" : tone === "execution" ? "text-cyan-200" : "text-slate-400";
+    tone === "proof"
+      ? "text-cyan-200"
+      : tone === "execution"
+      ? "text-cyan-200"
+      : "text-slate-400";
 
   return (
     <div className="group relative overflow-hidden rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.02))] p-5 shadow-[0_18px_55px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.04)] transition duration-300 hover:-translate-y-[2px] hover:border-cyan-400/20">
@@ -636,7 +644,7 @@ function HeroShieldBackdrop() {
 export default function SolaceWhitepaperPage() {
   return (
     <main className="min-h-screen bg-[#06101d] text-white">
-      <style jsx global>{`
+      <style>{`
         @keyframes solacePulse {
           0%, 100% {
             opacity: 0.35;
@@ -706,6 +714,7 @@ export default function SolaceWhitepaperPage() {
             linear-gradient(90deg, rgba(103, 232, 249, 0.045) 1px, transparent 1px);
           background-size: 34px 34px;
           mask-image: radial-gradient(circle at center, black 35%, transparent 88%);
+          -webkit-mask-image: radial-gradient(circle at center, black 35%, transparent 88%);
           opacity: 0.18;
           pointer-events: none;
         }
@@ -775,9 +784,9 @@ export default function SolaceWhitepaperPage() {
       <section className="relative overflow-hidden border-b border-white/10 bg-[radial-gradient(circle_at_34%_12%,rgba(34,211,238,0.22),transparent_22%),radial-gradient(circle_at_72%_20%,rgba(59,130,246,0.18),transparent_24%),radial-gradient(circle_at_50%_0%,rgba(14,165,233,0.12),transparent_34%),linear-gradient(180deg,#071221_0%,#06101d_100%)]">
         <div className="solace-grid-field absolute inset-0" />
         <div className="solace-drift-layer pointer-events-none absolute inset-0 opacity-70">
-          <div className="absolute left-[14%] top-[16%] h-[1px] w-40 bg-gradient-to-r from-transparent via-cyan-300/18 to-transparent" />
+          <div className="absolute left-[14%] top-[16%] h-px w-40 bg-gradient-to-r from-transparent via-cyan-300/18 to-transparent" />
           <div className="absolute left-[18%] top-[16%] h-2 w-2 rounded-full bg-cyan-300/28 shadow-[0_0_16px_rgba(34,211,238,0.35)]" />
-          <div className="absolute right-[24%] top-[22%] h-[1px] w-28 bg-gradient-to-r from-transparent via-sky-300/14 to-transparent" />
+          <div className="absolute right-[24%] top-[22%] h-px w-28 bg-gradient-to-r from-transparent via-sky-300/14 to-transparent" />
           <div className="absolute right-[20%] top-[28%] h-20 w-px bg-gradient-to-b from-transparent via-cyan-300/16 to-transparent" />
         </div>
         <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(6,16,29,0.42))]" />
