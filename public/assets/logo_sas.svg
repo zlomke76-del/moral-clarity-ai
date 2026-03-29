@@ -1,0 +1,188 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bgGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(512 470) rotate(90) scale(390 390)">
+      <stop offset="0" stop-color="#123B78" stop-opacity="0.34"/>
+      <stop offset="0.48" stop-color="#0A2348" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#06101D" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="coreGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(512 520) rotate(90) scale(220 220)">
+      <stop offset="0" stop-color="#22D3EE" stop-opacity="0.30"/>
+      <stop offset="0.55" stop-color="#2563EB" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#2563EB" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="shieldStroke" x1="318" y1="170" x2="706" y2="786" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F5FAFF"/>
+      <stop offset="0.35" stop-color="#D6E8FF"/>
+      <stop offset="0.72" stop-color="#60A5FA"/>
+      <stop offset="1" stop-color="#22D3EE"/>
+    </linearGradient>
+
+    <linearGradient id="metalFill" x1="512" y1="190" x2="512" y2="780" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F1D33"/>
+      <stop offset="0.5" stop-color="#091525"/>
+      <stop offset="1" stop-color="#07111F"/>
+    </linearGradient>
+
+    <linearGradient id="innerStroke" x1="390" y1="290" x2="634" y2="686" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F7FBFF"/>
+      <stop offset="0.45" stop-color="#D7E9FF"/>
+      <stop offset="1" stop-color="#8FD8FF"/>
+    </linearGradient>
+
+    <linearGradient id="accent" x1="512" y1="278" x2="512" y2="706" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22D3EE"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+
+    <filter id="shieldGlow" x="216" y="110" width="592" height="746" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="28" result="blur"/>
+      <feColorMatrix in="blur" type="matrix"
+        values="1 0 0 0 0
+                0 1 0 0 0.45
+                0 0 1 0 0.85
+                0 0 0 0.45 0"/>
+    </filter>
+
+    <filter id="lineGlow" x="322" y="248" width="380" height="488" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feColorMatrix in="blur" type="matrix"
+        values="1 0 0 0 0
+                0 1 0 0 0.45
+                0 0 1 0 0.85
+                0 0 0 0.52 0"/>
+    </filter>
+  </defs>
+
+  <circle cx="512" cy="512" r="390" fill="url(#bgGlow)"/>
+  <circle cx="512" cy="512" r="220" fill="url(#coreGlow)"/>
+
+  <!-- restrained outer protection rays -->
+  <g opacity="0.82">
+    <line x1="512" y1="122" x2="512" y2="176" stroke="#60A5FA" stroke-width="5" stroke-linecap="round"/>
+    <line x1="512" y1="902" x2="512" y2="848" stroke="#60A5FA" stroke-width="5" stroke-linecap="round"/>
+    <line x1="152" y1="512" x2="214" y2="512" stroke="#22D3EE" stroke-width="5" stroke-linecap="round"/>
+    <line x1="872" y1="512" x2="810" y2="512" stroke="#22D3EE" stroke-width="5" stroke-linecap="round"/>
+
+    <line x1="264" y1="248" x2="306" y2="290" stroke="#3B82F6" stroke-width="4" stroke-linecap="round"/>
+    <line x1="760" y1="248" x2="718" y2="290" stroke="#3B82F6" stroke-width="4" stroke-linecap="round"/>
+    <line x1="264" y1="776" x2="306" y2="734" stroke="#3B82F6" stroke-width="4" stroke-linecap="round"/>
+    <line x1="760" y1="776" x2="718" y2="734" stroke="#3B82F6" stroke-width="4" stroke-linecap="round"/>
+  </g>
+
+  <g>
+    <circle cx="512" cy="122" r="7" fill="#A5D8FF"/>
+    <circle cx="512" cy="902" r="7" fill="#A5D8FF"/>
+    <circle cx="152" cy="512" r="7" fill="#A5D8FF"/>
+    <circle cx="872" cy="512" r="7" fill="#A5D8FF"/>
+    <circle cx="264" cy="248" r="6" fill="#60A5FA"/>
+    <circle cx="760" cy="248" r="6" fill="#60A5FA"/>
+    <circle cx="264" cy="776" r="6" fill="#60A5FA"/>
+    <circle cx="760" cy="776" r="6" fill="#60A5FA"/>
+  </g>
+
+  <!-- heavy glow shield -->
+  <g filter="url(#shieldGlow)">
+    <path
+      d="M512 172L706 246V438C706 610 612 730 512 790C412 730 318 610 318 438V246L512 172Z"
+      fill="none"
+      stroke="#22D3EE"
+      stroke-opacity="0.34"
+      stroke-width="24"
+      stroke-linejoin="round"
+    />
+  </g>
+
+  <!-- outer shield -->
+  <path
+    d="M512 172L706 246V438C706 610 612 730 512 790C412 730 318 610 318 438V246L512 172Z"
+    fill="url(#metalFill)"
+    stroke="url(#shieldStroke)"
+    stroke-width="18"
+    stroke-linejoin="round"
+  />
+
+  <!-- armor facets -->
+  <path
+    d="M512 206L672 268V430C672 573 593 676 512 730C431 676 352 573 352 430V268L512 206Z"
+    fill="none"
+    stroke="rgba(220,235,255,0.18)"
+    stroke-width="6"
+    stroke-linejoin="round"
+  />
+
+  <path
+    d="M512 244L634 292V424C634 537 575 621 512 668C449 621 390 537 390 424V292L512 244Z"
+    fill="none"
+    stroke="rgba(143,216,255,0.18)"
+    stroke-width="4"
+    stroke-linejoin="round"
+  />
+
+  <!-- central protection spine -->
+  <path
+    d="M512 278V710"
+    stroke="url(#accent)"
+    stroke-width="18"
+    stroke-linecap="round"
+  />
+
+  <!-- inner force glow -->
+  <g filter="url(#lineGlow)">
+    <path d="M420 332H590" stroke="#22D3EE" stroke-width="12" stroke-linecap="round"/>
+    <path d="M438 512H572" stroke="#3B82F6" stroke-width="12" stroke-linecap="round"/>
+    <path d="M420 692H590" stroke="#22D3EE" stroke-width="12" stroke-linecap="round"/>
+    <path d="M420 332L420 414L572 596V692" stroke="#60A5FA" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M590 332V414L438 596V692" stroke="#DCEBFF" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- armored SAS monogram -->
+  <g>
+    <path
+      d="M420 328H590"
+      stroke="url(#innerStroke)"
+      stroke-width="18"
+      stroke-linecap="round"
+    />
+    <path
+      d="M438 512H572"
+      stroke="url(#accent)"
+      stroke-width="18"
+      stroke-linecap="round"
+    />
+    <path
+      d="M420 696H590"
+      stroke="url(#innerStroke)"
+      stroke-width="18"
+      stroke-linecap="round"
+    />
+    <path
+      d="M420 328V414L572 598V696"
+      stroke="url(#accent)"
+      stroke-width="18"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M590 328V414L438 598V696"
+      stroke="url(#innerStroke)"
+      stroke-width="18"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </g>
+
+  <!-- lock core -->
+  <g>
+    <circle cx="512" cy="512" r="24" fill="#081221" stroke="#DCEBFF" stroke-width="6"/>
+    <circle cx="512" cy="512" r="10" fill="#22D3EE"/>
+  </g>
+
+  <!-- lower authority point -->
+  <path
+    d="M512 710L538 740H486L512 710Z"
+    fill="#DCEBFF"
+    opacity="0.9"
+  />
+</svg>
