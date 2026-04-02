@@ -11,11 +11,11 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Moral Clarity Governance Audit™ | Moral Clarity AI",
   description:
-    "A regime-bounded governance diagnostic identifying drift, incentive corruption, coordination failure, authority breakdown, and epistemic blind spots under uncertainty.",
+    "A regime-bounded governance diagnostic identifying where systems pass governance, compliance, and validation checks while still producing outcomes that reality cannot support.",
   openGraph: {
     title: "Moral Clarity Governance Audit™",
     description:
-      "Governance where safety, ethics, and alignment frameworks stop working.",
+      "Where governance passes, but reality fails.",
     url: "https://moralclarity.ai/governance-audit",
     siteName: "Moral Clarity AI",
     type: "article",
@@ -55,15 +55,23 @@ const EXAMINATION_AREAS = [
   },
 ];
 
+const CORE_DIAGNOSTIC = [
+  "Act on states that are incomplete, degraded, inferred, or no longer current",
+  "Produce outcomes that exceed what the underlying conditions can actually support",
+  "Pass governance, compliance, and validation checks while still failing in reality",
+  "Continue execution when the state cannot carry the consequence of what has been set in motion",
+];
+
 const NOT_THIS = [
   "Not an AI safety checklist",
   "Not an ethics or values workshop",
   "Not a compliance certification",
   "Not a technical model review",
+  "Not a validation that the system merely appears correct",
 ];
 
 const DELIVERABLES = [
-  "A written governance audit identifying drift vectors, accountability gaps, detection blind spots, and non-governable risk",
+  "A written audit identifying where systems produce outcomes that are not supportable by the conditions they depend on, even when governance and validation appear intact",
   "A 60-minute executive debrief focused on what can be governed, what requires redesign, and what must be explicitly refused",
 ];
 
@@ -80,7 +88,7 @@ export default function GovernanceAuditPage() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(220,38,38,0.14),transparent_28%),radial-gradient(circle_at_82%_18%,rgba(59,130,246,0.10),transparent_22%),linear-gradient(to_bottom,rgba(255,255,255,0.02),transparent_32%)]" />
       <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:48px_48px]" />
 
-      <div className="relative mx-auto max-w-7xl px-6 py-16 md:px-8 lg:px-10 lg:py-20 space-y-8">
+      <div className="relative mx-auto max-w-7xl space-y-8 px-6 py-16 md:px-8 lg:px-10 lg:py-20">
         {/* HERO */}
         <section className="rounded-[32px] border border-white/10 bg-gradient-to-br from-[#2a0d10]/95 via-[#12141b]/92 to-black/92 p-8 shadow-[0_30px_120px_rgba(0,0,0,0.42)] backdrop-blur-xl md:p-10 lg:p-12">
           <div className="grid gap-10 lg:grid-cols-[1.18fr_0.82fr] lg:items-end">
@@ -99,13 +107,13 @@ export default function GovernanceAuditPage() {
 
               <div className="space-y-5">
                 <h1 className="max-w-5xl text-4xl font-semibold tracking-tight text-white md:text-5xl lg:text-6xl">
-                  Governance where safety, ethics, and alignment stop working
+                  Where governance passes, but reality fails
                 </h1>
                 <p className="max-w-4xl text-lg leading-8 text-white/82">
                   A short-cycle, high-signal diagnostic for organizations that
                   need to know whether governance still functions when systems
-                  become opaque, incentives distort judgment, and accountability
-                  begins to fail before visible collapse.
+                  begin to produce outcomes that pass every check, but are not
+                  supported by the conditions they depend on.
                 </p>
               </div>
 
@@ -150,7 +158,8 @@ export default function GovernanceAuditPage() {
                   Focus
                 </div>
                 <div className="mt-3 text-sm leading-6 text-white/82">
-                  Governance failure before visible system failure.
+                  Failures that remain invisible while governance still appears
+                  to hold.
                 </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-sm">
@@ -158,8 +167,8 @@ export default function GovernanceAuditPage() {
                   Output
                 </div>
                 <div className="mt-3 text-sm leading-6 text-white/82">
-                  Drift vectors, blind spots, accountability gaps, redesign
-                  pressure.
+                  Drift vectors, blind spots, accountability gaps, and points
+                  where valid decisions become invalid outcomes.
                 </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-sm">
@@ -182,7 +191,10 @@ export default function GovernanceAuditPage() {
               What This Is
             </div>
             <p className="mt-4 text-base leading-8 text-white/74">
-              The <strong className="text-white">Moral Clarity Governance Audit™</strong>{" "}
+              The{" "}
+              <strong className="text-white">
+                Moral Clarity Governance Audit™
+              </strong>{" "}
               is designed to identify where organizations lose the ability to
               govern before visible failure occurs.
             </p>
@@ -194,6 +206,12 @@ export default function GovernanceAuditPage() {
             <p className="mt-4 text-base leading-8 text-white/74">
               In practice, those capacities often fail first.
             </p>
+            <p className="mt-4 text-base leading-8 text-white/74">
+              More critically, systems can continue to act with full
+              authorization, compliance, and internal validity while operating
+              on conditions that are no longer strong enough to support the
+              consequences of those actions.
+            </p>
           </div>
 
           <div className="rounded-[28px] border border-white/10 bg-black/65 p-7 shadow-[0_18px_60px_rgba(0,0,0,0.22)] md:p-8">
@@ -201,12 +219,11 @@ export default function GovernanceAuditPage() {
               Position
             </div>
             <p className="mt-3 text-2xl font-semibold tracking-tight text-white">
-              This audit does not ask whether principles are stated.
+              This audit does not ask whether a system is allowed to act.
             </p>
             <p className="mt-4 text-base leading-8 text-white/66">
-              It asks whether governance still functions when those principles
-              are stressed by opacity, incentives, distributed responsibility,
-              and operational pressure.
+              It asks whether the conditions it depends on are strong enough to
+              support what happens when it does.
             </p>
           </div>
         </section>
@@ -243,6 +260,32 @@ export default function GovernanceAuditPage() {
           </div>
         </section>
 
+        {/* CORE DIAGNOSTIC */}
+        <section className="rounded-[30px] border border-white/10 bg-gradient-to-br from-[#0b1220]/92 via-[#08101d]/92 to-black/90 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.28)] md:p-10">
+          <div className="space-y-4">
+            <div className="text-xs uppercase tracking-[0.18em] text-white/42">
+              Core Diagnostic
+            </div>
+            <h2 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
+              Where valid decisions become invalid outcomes
+            </h2>
+            <p className="max-w-3xl text-sm leading-7 text-white/66 md:text-base">
+              The audit identifies where systems:
+            </p>
+          </div>
+
+          <div className="mt-6 space-y-3">
+            {CORE_DIAGNOSTIC.map((item) => (
+              <div
+                key={item}
+                className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm leading-7 text-white/76"
+              >
+                {item}
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* NOT / DELIVERABLES */}
         <section className="grid gap-6 lg:grid-cols-2">
           <div className="rounded-[28px] border border-white/10 bg-white/[0.035] p-7 shadow-[0_18px_60px_rgba(0,0,0,0.22)] md:p-8">
@@ -261,7 +304,9 @@ export default function GovernanceAuditPage() {
             </ul>
             <p className="mt-5 text-base leading-8 text-white/66">
               This audit does not evaluate whether a system sounds aligned. It
-              evaluates whether governance remains intact under real strain.
+              evaluates whether governance remains intact under real strain and
+              whether the state beneath the system can actually support what the
+              system is allowed to do.
             </p>
           </div>
 
@@ -307,6 +352,11 @@ export default function GovernanceAuditPage() {
             <p className="mt-3 text-xl leading-8 text-white md:text-2xl">
               When interpretability, alignment, or ethical intent cannot be
               relied upon, governance must still function.
+            </p>
+            <p className="mt-4 text-base leading-7 text-white/64">
+              And when governance appears to function, this audit asks the next
+              question: can reality actually carry what the system is about to
+              make real?
             </p>
             <p className="mt-4 text-base leading-7 text-white/64">
               Moral Clarity exists at that boundary.
