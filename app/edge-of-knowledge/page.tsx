@@ -465,7 +465,7 @@ export default function EdgeOfKnowledgePage() {
 
         <ul className="space-y-3">
           <li>
-            <LinkedInvariant href="/edge-of-knowledge/boundary-self-modification-prohibition-bsmp-v1">
+            <LinkedInvariant href="/edge-of-knowledge/bsmp-v1">
               Boundary Self-Modification Prohibition (BSMP-v1)
             </LinkedInvariant>
           </li>
