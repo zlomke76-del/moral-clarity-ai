@@ -1,5 +1,8 @@
-// app/admin/support/page.tsx (SERVER COMPONENT)
+// app/admin/page.tsx (SERVER COMPONENT)
 import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import LiveDashboard from "@/components/admin/support/LiveDashboard";
 import {
   Filters,
@@ -10,6 +13,7 @@ import {
 } from "@/components/admin/support/ClientBits";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 type Row = {
@@ -27,8 +31,31 @@ type Row = {
 
 export const dynamic = "force-dynamic";
 
+async function requireAuthenticatedSession() {
+  const cookieStore = await cookies();
+
+  const supabase = createServerClient(SUPABASE_URL, ANON_KEY, {
+    cookies: {
+      get: (name) => cookieStore.get(name)?.value,
+      set: () => {},
+      remove: () => {},
+    },
+  });
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    redirect("/auth/sign-in?redirectedFrom=/admin");
+  }
+
+  return session;
+}
+
 async function fetchRows(search = "", status = "all", category = "all") {
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+
   let q = supabase
     .from("v_support_requests")
     .select("*")
@@ -44,17 +71,23 @@ async function fetchRows(search = "", status = "all", category = "all") {
 
   const { data, error } = await q.limit(200);
   if (error) throw error;
+
   return data as Row[];
 }
 
 export default async function AdminSupportPage({
   searchParams,
 }: {
-  searchParams: { q?: string; status?: string; category?: string };
+  searchParams: Promise<{ q?: string; status?: string; category?: string }>;
 }) {
-  const q = searchParams.q ?? "";
-  const status = searchParams.status ?? "all";
-  const category = searchParams.category ?? "all";
+  // Hard stop: do not allow any privileged query execution without a valid session.
+  await requireAuthenticatedSession();
+
+  const resolvedSearchParams = await searchParams;
+  const q = resolvedSearchParams.q ?? "";
+  const status = resolvedSearchParams.status ?? "all";
+  const category = resolvedSearchParams.category ?? "all";
+
   const rows = await fetchRows(q, status, category);
 
   return (
@@ -64,7 +97,6 @@ export default async function AdminSupportPage({
         <Filters defaultQ={q} defaultStatus={status} defaultCategory={category} />
       </header>
 
-      {/* Live metrics */}
       <LiveDashboard />
 
       <div className="overflow-x-auto rounded-2xl border border-neutral-800">
@@ -156,6 +188,7 @@ function StatusBadge({ value }: { value: "open" | "closed" }) {
     value === "open"
       ? "bg-emerald-900/40 text-emerald-300"
       : "bg-neutral-800 text-neutral-300";
+
   return (
     <span className={`rounded-full px-2 py-0.5 text-xs ${cls}`}>{value}</span>
   );
@@ -168,6 +201,7 @@ function PriorityBadge({ value }: { value: "low" | "medium" | "high" }) {
       : value === "medium"
       ? "bg-amber-900/40 text-amber-300"
       : "bg-neutral-800 text-neutral-300";
+
   return (
     <span className={`rounded-full px-2 py-0.5 text-xs ${cls}`}>{value}</span>
   );
