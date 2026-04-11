@@ -1,7 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import Thread from "@/components/admin/support/Thread";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 type Ticket = {
@@ -19,31 +23,66 @@ type Ticket = {
 
 export const dynamic = "force-dynamic";
 
+async function requireAuthenticatedSession() {
+  const cookieStore = await cookies();
+
+  const supabase = createServerClient(SUPABASE_URL, ANON_KEY, {
+    cookies: {
+      get: (name) => cookieStore.get(name)?.value,
+      set: () => {},
+      remove: () => {},
+    },
+  });
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    redirect("/auth/sign-in?redirectedFrom=/admin/support");
+  }
+
+  return session;
+}
+
 async function getTicket(id: string) {
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+
   const { data, error } = await supabase
     .from("support_requests")
     .select("*")
     .eq("id", id)
     .single();
+
   if (error) throw error;
+
   return data as Ticket;
 }
 
 async function getMessages(id: string) {
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+
   const { data, error } = await supabase
     .from("support_messages")
     .select("*")
     .eq("support_request_id", id)
     .order("created_at", { ascending: true });
+
   if (error) throw error;
-  return data;
+
+  return data ?? [];
 }
 
-export default async function TicketPage({ params }: { params: { id: string } }) {
-  const ticket = await getTicket(params.id);
-  const messages = await getMessages(params.id);
+export default async function TicketPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  await requireAuthenticatedSession();
+
+  const { id } = await params;
+  const ticket = await getTicket(id);
+  const messages = await getMessages(id);
 
   return (
     <main className="p-6 space-y-6">
@@ -68,7 +107,7 @@ export default async function TicketPage({ params }: { params: { id: string } })
       <section className="rounded-2xl border border-neutral-800 overflow-hidden">
         <Thread
           supportRequestId={ticket.id}
-          initialMessages={messages ?? []}
+          initialMessages={messages}
           requester={{ name: ticket.name || "", email: ticket.email || "" }}
         />
       </section>
