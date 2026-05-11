@@ -1242,12 +1242,14 @@ body.mc-root::before {
   letter-spacing: -0.025em;
 }
 
-.solace-rail-head button {
+.solace-rail-head button,
+.solace-rail-head a {
   border: 0;
   background: transparent;
   color: var(--solace-gold);
   font-size: 0.82rem;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .solace-rail-card p {
