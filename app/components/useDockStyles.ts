@@ -1,3 +1,4 @@
+// app/components/useDockStyles.ts
 "use client";
 
 import { useMemo } from "react";
@@ -14,15 +15,7 @@ type DockStyleArgs = {
   PAD: number;
 };
 
-export function useDockStyles({
-  dockW,
-  dockH,
-  tx,
-  ty,
-  invisible,
-  ministryOn,
-  PAD,
-}: DockStyleArgs) {
+export function useDockStyles({ dockW, dockH, tx, ty, invisible, ministryOn }: DockStyleArgs) {
   const skin = Skins.default;
 
   return useMemo(() => {
@@ -33,13 +26,13 @@ export function useDockStyles({
       width: dockW,
       height: dockH,
       background:
-        "linear-gradient(180deg, rgba(9,16,32,0.96) 0%, rgba(7,12,24,0.985) 100%)",
-      borderRadius: UI.radiusLg,
-      border: "1px solid rgba(255,255,255,0.08)",
+        "radial-gradient(circle at 50% 0%, rgba(31, 41, 70, 0.42), transparent 38%), linear-gradient(180deg, rgba(6, 14, 27, 0.98), rgba(4, 10, 20, 0.995))",
+      borderRadius: 20,
+      border: "1px solid rgba(148,163,184,0.17)",
       boxShadow: ministryOn
-        ? "0 24px 80px rgba(0,0,0,0.42), 0 0 0 1px rgba(251,191,36,0.08), 0 0 40px rgba(251,191,36,0.08)"
-        : "0 24px 80px rgba(0,0,0,0.42), 0 0 0 1px rgba(255,255,255,0.02)",
-      backdropFilter: "blur(12px)",
+        ? "0 24px 80px rgba(0,0,0,0.42), 0 0 0 1px rgba(251,191,36,0.12), 0 0 44px rgba(251,191,36,0.10)"
+        : "0 26px 90px rgba(0,0,0,0.36), inset 0 1px 0 rgba(255,255,255,0.025)",
+      backdropFilter: "blur(18px)",
       display: "flex",
       flexDirection: "column",
       overflow: "hidden",
@@ -55,10 +48,9 @@ export function useDockStyles({
       minHeight: 0,
       overflowY: "auto",
       overflowX: "hidden",
-      padding: "16px 18px 18px",
+      padding: "0 22px 14px",
       color: UI.text,
-      background:
-        "linear-gradient(180deg, rgba(10,20,40,0.98) 0%, rgba(9,18,34,1) 100%)",
+      background: "transparent",
     };
 
     const textareaStyle: React.CSSProperties = {
@@ -67,7 +59,7 @@ export function useDockStyles({
       maxHeight: 190,
       resize: "none",
       padding: "12px 14px",
-      borderRadius: UI.radiusMd,
+      borderRadius: 18,
       border: "1px solid rgba(255,255,255,0.10)",
       background: "rgba(255,255,255,0.04)",
       color: UI.text,
@@ -79,17 +71,12 @@ export function useDockStyles({
     };
 
     const composerWrapStyle: React.CSSProperties = {
-      borderTop: "1px solid rgba(255,255,255,0.08)",
-      background: "rgba(10,14,24,0.92)",
-      backdropFilter: "blur(12px)",
-      padding: 12,
+      borderTop: "0",
+      background: "transparent",
+      backdropFilter: "none",
+      padding: "10px 22px 22px",
     };
 
-    return {
-      panelStyle,
-      transcriptStyle,
-      textareaStyle,
-      composerWrapStyle,
-    };
-  }, [dockW, dockH, tx, ty, invisible, ministryOn, PAD, skin.panelBg, skin.border]);
+    return { panelStyle, transcriptStyle, textareaStyle, composerWrapStyle };
+  }, [dockW, dockH, tx, ty, invisible, ministryOn, skin.panelBg, skin.border]);
 }

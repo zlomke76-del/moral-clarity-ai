@@ -10,6 +10,7 @@ import React, {
   useLayoutEffect,
 } from "react";
 import { createPortal } from "react-dom";
+import { usePathname } from "next/navigation";
 import { useSolaceStore } from "@/app/providers/solace-store";
 import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
 import { useDockStyles } from "./useDockStyles";
@@ -103,6 +104,8 @@ function isImageIntent(message: string): boolean {
 ------------------------------------------------------------------- */
 export default function SolaceDock() {
   const canRender = true;
+  const pathname = usePathname() ?? "";
+  const isAppExperience = pathname === "/app" || pathname.startsWith("/app/");
 
   // ------------------------------------------------------------------
   // Singleton ownership (hook-safe)
@@ -352,18 +355,26 @@ export default function SolaceDock() {
     WebkitOverflowScrolling: isMobile ? "touch" : undefined,
   };
 
+  const appShellLeft = viewport.w <= 900 ? PAD : 276;
+  const appShellTop = viewport.w <= 900 ? PAD : 14;
+  const appShellW = Math.max(320, vw - appShellLeft - (viewport.w <= 900 ? PAD : 18));
+  const appShellH = Math.max(420, vh - appShellTop - 14);
+
   const panelStyleSafe: React.CSSProperties = {
     ...panelStyle,
-    width: isMobile || minimized ? mobileW : dockW,
-    height: isMobile || minimized ? mobileH : dockH,
-    maxWidth: vw - PAD * 2,
-    maxHeight: vh - PAD * 2,
+    width: isAppExperience ? appShellW : isMobile || minimized ? mobileW : dockW,
+    height: isAppExperience ? appShellH : isMobile || minimized ? mobileH : dockH,
+    maxWidth: isAppExperience ? appShellW : vw - PAD * 2,
+    maxHeight: isAppExperience ? appShellH : vh - PAD * 2,
     ...transitionStyle,
     position: "fixed",
     zIndex: 1000,
     opacity: minimized || minimizing ? 0 : 1,
     visibility: panelVisibility,
     pointerEvents: minimized ? "none" : undefined,
+    transform: isAppExperience
+      ? `translate3d(${appShellLeft}px, ${appShellTop}px, 0)`
+      : panelStyle.transform,
   };
 
   // ------------------------------------------------------------------
@@ -620,13 +631,8 @@ export default function SolaceDock() {
       />
 
       <div
-        style={{
-          ...composerWrapStyle,
-          padding: 10,
-          background:
-            "linear-gradient(180deg, rgba(10,14,24,0.95), rgba(8,12,20,0.98))",
-          backdropFilter: "blur(10px)",
-        }}
+        className="solace-composer-shell"
+        style={composerWrapStyle}
         onPaste={(e) => handlePaste(e, { prefix: "solace" })}
       >
         <div
@@ -640,16 +646,7 @@ export default function SolaceDock() {
           }}
         >
           <label
-            style={{
-              width: 38,
-              height: 38,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              position: "relative",
-              borderRadius: 10,
-            }}
+            className="solace-composer-icon"
           >
             <span
               style={{
@@ -676,19 +673,7 @@ export default function SolaceDock() {
           <button
             onClick={toggleMic}
             aria-label="Toggle microphone"
-            style={{
-              width: 38,
-              height: 38,
-              border: "none",
-              background: "transparent",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 0,
-              outline: "none",
-              borderRadius: 10,
-              cursor: "pointer",
-            }}
+            className="solace-composer-icon"
             tabIndex={0}
             type="button"
           >
@@ -710,22 +695,8 @@ export default function SolaceDock() {
 
           <textarea
             ref={textareaRef}
-            style={{
-              ...textareaStyle,
-              minHeight: 38,
-              maxHeight: 80,
-              fontSize: 16,
-              lineHeight: 1.45,
-              borderRadius: 10,
-              border: "1px solid rgba(255,255,255,0.10)",
-              background: "rgba(255,255,255,0.05)",
-              backdropFilter: "blur(6px)",
-              padding: "8px 12px",
-              flex: 1,
-              resize: "none",
-              overflow: "hidden",
-              transition: "height 0.15s ease, border 0.15s ease",
-            }}
+            className="solace-composer-input"
+            style={{ ...textareaStyle }}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onEnterSend}
@@ -737,23 +708,8 @@ export default function SolaceDock() {
           <button
             onClick={send}
             disabled={streaming}
-            style={{
-              minWidth: 56,
-              height: 38,
-              border: "1px solid rgba(255,215,0,0.35)",
-              borderRadius: 10,
-              background:
-                "linear-gradient(180deg, rgba(255,215,0,0.95), rgba(255,200,0,0.85))",
-              color: "#1a1a1a",
-              fontWeight: 700,
-              fontSize: 14,
-              boxShadow:
-                "0 6px 18px rgba(255,215,0,0.18), inset 0 1px 0 rgba(255,255,255,0.25)",
-              cursor: streaming ? "not-allowed" : "pointer",
-              opacity: streaming ? 0.6 : 1,
-              transition: "all 0.15s ease",
-              marginLeft: 2,
-            }}
+            className="solace-composer-send"
+            style={{ opacity: streaming ? 0.6 : 1, cursor: streaming ? "not-allowed" : "pointer" }}
             type="button"
             aria-label="Send"
           >
@@ -762,7 +718,7 @@ export default function SolaceDock() {
         </div>
       </div>
 
-      {!isMobile && <ResizeHandle onResizeStart={startResize} />}
+      {!isMobile && !isAppExperience && <ResizeHandle onResizeStart={startResize} />}
     </section>
   );
 
