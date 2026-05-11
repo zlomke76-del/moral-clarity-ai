@@ -24,22 +24,22 @@ export default function LayoutShell({
       <>
         <div
           data-app-shell
-          className="relative z-10 grid h-screen min-h-0 grid-cols-[260px_minmax(0,1fr)]"
+          className="app-shell-consumer relative z-10 grid h-screen min-h-0 grid-cols-[300px_minmax(0,1fr)]"
         >
           <aside
             data-neural-sidebar
-            className="h-full overflow-y-auto border-r border-white/8 bg-neutral-950/70 backdrop-blur-xl"
+            className="app-shell-sidebar h-full overflow-hidden border-r border-white/8 bg-neutral-950/70 backdrop-blur-xl"
           >
             <NeuralSidebar />
           </aside>
 
           <main
             data-app-main
-            className="flex h-full min-h-0 flex-col overflow-hidden"
+            className="app-shell-main flex h-full min-h-0 flex-col overflow-hidden"
           >
             <div
               data-app-content
-              className="flex h-full min-h-0 w-full flex-col overflow-hidden px-6 py-6"
+              className="app-shell-content flex h-full min-h-0 w-full flex-col overflow-hidden px-6 py-4"
             >
               {/* ⛔ NO CARD HERE */}
               {/* Let Solace own the full surface */}

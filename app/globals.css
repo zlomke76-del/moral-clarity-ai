@@ -580,3 +580,977 @@ body[data-layout-debug="on"] [data-layout-boundary]::after {
   border-radius: 4px;
   pointer-events: none;
 }
+
+/* ============================================================
+   SOLACE CONSUMER HOME — PREMIUM GUIDED COMPANION
+   ============================================================ */
+
+.app-shell-consumer {
+  background:
+    radial-gradient(circle at 72% 18%, rgba(247, 199, 106, 0.06), transparent 32%),
+    radial-gradient(circle at 20% 8%, rgba(56, 189, 248, 0.06), transparent 30%),
+    linear-gradient(135deg, #030712 0%, #07111f 45%, #030712 100%);
+}
+
+.app-shell-content {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 18%),
+    radial-gradient(circle at 50% 100%, rgba(247, 199, 106, 0.035), transparent 34%);
+}
+
+.consumer-sidebar {
+  position: relative;
+  display: flex;
+  height: 100vh;
+  min-height: 0;
+  width: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 30% 0%, rgba(247, 199, 106, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(8, 14, 25, 0.96), rgba(3, 7, 18, 0.98));
+}
+
+.consumer-sidebar::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(255,255,255,0.026) 1px, transparent 1px);
+  background-size: 100% 46px;
+  opacity: 0.35;
+}
+
+.consumer-brand {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem 1.5rem 1.7rem;
+  color: white;
+  text-decoration: none;
+}
+
+.consumer-brand-mark {
+  position: relative;
+  display: grid;
+  height: 3.3rem;
+  width: 3.3rem;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(247, 199, 106, 0.34);
+  background:
+    radial-gradient(circle, rgba(247, 199, 106, 0.22), transparent 58%),
+    rgba(15, 23, 42, 0.78);
+  box-shadow: 0 0 34px rgba(247, 199, 106, 0.16);
+}
+
+.consumer-brand-mark::before {
+  content: "";
+  position: absolute;
+  height: 2.05rem;
+  width: 2.05rem;
+  transform: rotate(45deg);
+  border: 1px solid rgba(247, 199, 106, 0.36);
+  border-radius: 0.35rem;
+}
+
+.consumer-brand-mark span {
+  display: block;
+  height: 0.75rem;
+  width: 0.75rem;
+  border-radius: 999px;
+  background: #f7c76a;
+  box-shadow: 0 0 18px rgba(247, 199, 106, 0.9);
+}
+
+.consumer-brand strong {
+  display: block;
+  font-size: 1.55rem;
+  font-weight: 750;
+  letter-spacing: -0.045em;
+}
+
+.consumer-brand small {
+  display: block;
+  margin-top: 0.15rem;
+  color: #f7c76a;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.consumer-sidebar-scroll {
+  position: relative;
+  z-index: 1;
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 1.35rem 1.25rem;
+}
+
+.consumer-sidebar-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.055);
+  padding: 1.15rem 0;
+}
+
+.consumer-sidebar-section:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.consumer-sidebar-label {
+  margin: 0 0 0.72rem 0.55rem;
+  color: rgba(226, 232, 240, 0.46);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.consumer-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+
+.consumer-sidebar-link {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+
+.consumer-sidebar-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  border: 1px solid transparent;
+  border-radius: 0.95rem;
+  padding: 0.78rem 0.9rem;
+  transition: all 180ms ease;
+}
+
+.consumer-sidebar-item:hover {
+  border-color: rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.consumer-sidebar-item.active {
+  border-color: rgba(247, 199, 106, 0.22);
+  background: linear-gradient(90deg, rgba(247, 199, 106, 0.14), rgba(255, 255, 255, 0.035));
+  box-shadow: inset 2px 0 0 rgba(247, 199, 106, 0.88);
+}
+
+.consumer-sidebar-icon {
+  display: grid;
+  height: 2rem;
+  width: 2rem;
+  flex: 0 0 auto;
+  place-items: center;
+  color: rgba(226, 232, 240, 0.72);
+}
+
+.consumer-sidebar-item.active .consumer-sidebar-icon {
+  color: #f7c76a;
+}
+
+.consumer-sidebar-item strong {
+  display: block;
+  color: rgba(248, 250, 252, 0.93);
+  font-size: 0.92rem;
+  font-weight: 650;
+}
+
+.consumer-sidebar-item small {
+  display: block;
+  margin-top: 0.12rem;
+  color: rgba(203, 213, 225, 0.58);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.consumer-sidebar-status,
+.consumer-sidebar-user {
+  position: relative;
+  z-index: 1;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(15, 23, 42, 0.42);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.consumer-sidebar-status {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 1.25rem;
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+.consumer-sidebar-status .status-shield {
+  display: grid;
+  height: 2.4rem;
+  width: 2.4rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 999px;
+  color: #f7c76a;
+  background: radial-gradient(circle, rgba(247, 199, 106, 0.18), transparent 70%);
+}
+
+.consumer-sidebar-status strong,
+.consumer-sidebar-user strong {
+  display: block;
+  color: rgba(248, 250, 252, 0.94);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.consumer-sidebar-status p {
+  margin: 0.45rem 0 0;
+  color: rgba(203, 213, 225, 0.62);
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
+.consumer-sidebar-status a {
+  display: inline-block;
+  margin-top: 0.65rem;
+  color: #f7c76a;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.consumer-sidebar-status i,
+.governed-row i,
+.memory-orbit-row i,
+.solace-status-pill i {
+  display: block;
+  height: 0.48rem;
+  width: 0.48rem;
+  border-radius: 999px;
+  background: #4ade80;
+  box-shadow: 0 0 14px rgba(74, 222, 128, 0.9);
+}
+
+.consumer-sidebar-user {
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0 1.35rem 1.25rem;
+  border-radius: 1rem;
+  padding: 0.85rem;
+}
+
+.consumer-user-avatar {
+  display: grid;
+  height: 2.55rem;
+  width: 2.55rem;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.consumer-sidebar-user small {
+  display: block;
+  margin-top: 0.12rem;
+  color: rgba(203, 213, 225, 0.55);
+  font-size: 0.78rem;
+}
+
+.solace-home-shell {
+  position: relative;
+  isolation: isolate;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.13);
+  border-radius: 1.1rem;
+  background:
+    radial-gradient(circle at 52% 0%, rgba(247, 199, 106, 0.08), transparent 22%),
+    linear-gradient(145deg, rgba(10, 18, 32, 0.92), rgba(3, 7, 18, 0.96));
+  box-shadow: 0 30px 90px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.04);
+  color: #f8fafc;
+}
+
+.solace-home-atmosphere {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 78% 14%, rgba(56, 189, 248, 0.06), transparent 30%),
+    radial-gradient(circle at 35% 72%, rgba(247, 199, 106, 0.06), transparent 42%);
+}
+
+.solace-home-atmosphere::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(247, 199, 106, 0.25) 1px, transparent 1px);
+  background-size: 38px 38px;
+  mask-image: radial-gradient(circle at 72% 28%, black, transparent 42%);
+  opacity: 0.28;
+}
+
+.solace-home-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.55rem 1.7rem 1rem;
+}
+
+.solace-home-greeting {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: clamp(1.35rem, 2.2vw, 1.75rem);
+  font-weight: 760;
+  letter-spacing: -0.04em;
+}
+
+.solace-home-greeting span {
+  height: 0.42rem;
+  width: 0.42rem;
+  border-radius: 999px;
+  background: #f7c76a;
+  box-shadow: 0 0 16px rgba(247, 199, 106, 0.78);
+}
+
+.solace-home-header p {
+  margin: 0.45rem 0 0;
+  color: rgba(226, 232, 240, 0.74);
+  font-size: 0.95rem;
+}
+
+.solace-home-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+}
+
+.solace-status-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 0.9rem;
+  background: rgba(15, 23, 42, 0.62);
+  padding: 0.72rem 0.95rem;
+  color: #f7c76a;
+}
+
+.solace-status-pill span {
+  display: grid;
+  gap: 0.1rem;
+  color: rgba(248, 250, 252, 0.9);
+  font-size: 0.8rem;
+  line-height: 1.1;
+}
+
+.solace-status-pill strong {
+  color: rgba(203, 213, 225, 0.62);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.solace-user-orb {
+  display: grid;
+  height: 3.05rem;
+  width: 3.05rem;
+  place-items: center;
+  border: 1px solid rgba(247, 199, 106, 0.28);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #f7c76a;
+  font-weight: 800;
+  box-shadow: 0 0 26px rgba(247, 199, 106, 0.08);
+}
+
+.solace-home-grid {
+  display: grid;
+  height: calc(100% - 5.2rem);
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) 18.5rem;
+  gap: 1rem;
+  padding: 0 1.05rem 1.05rem 1.7rem;
+}
+
+.solace-home-main-panel,
+.solace-home-right-rail {
+  min-height: 0;
+}
+
+.solace-home-main-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.solace-welcome-surface,
+.solace-conversation-surface {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 1.1rem;
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.55), rgba(2, 6, 23, 0.42)),
+    radial-gradient(circle at 50% 55%, rgba(247, 199, 106, 0.08), transparent 34%);
+}
+
+.solace-welcome-surface {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(1.2rem, 2vw, 2rem);
+}
+
+.solace-horizon {
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  top: 44%;
+  height: 12rem;
+  border-radius: 50%;
+  border-top: 2px solid rgba(247, 199, 106, 0.72);
+  filter: blur(0.2px);
+  box-shadow: 0 -12px 42px rgba(247, 199, 106, 0.2), inset 0 18px 48px rgba(247, 199, 106, 0.08);
+  opacity: 0.9;
+}
+
+.solace-wave {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 31%;
+  height: 13rem;
+  opacity: 0.46;
+  background:
+    repeating-linear-gradient(172deg, transparent 0 10px, rgba(247, 199, 106, 0.15) 11px, transparent 12px),
+    radial-gradient(circle at 50% 100%, rgba(247, 199, 106, 0.18), transparent 48%);
+  mask-image: linear-gradient(90deg, transparent, black 18%, black 82%, transparent);
+}
+
+.solace-wave-two {
+  transform: scaleX(-1) translateY(1.5rem);
+  opacity: 0.28;
+}
+
+.solace-welcome-copy {
+  position: relative;
+  z-index: 1;
+  margin: 0 auto;
+  max-width: 42rem;
+  text-align: center;
+}
+
+.solace-welcome-copy h1 {
+  margin: 1rem 0 0;
+  font-size: clamp(2.4rem, 4vw, 4rem);
+  font-weight: 780;
+  letter-spacing: -0.065em;
+  line-height: 0.98;
+}
+
+.solace-welcome-copy h1 span {
+  color: #f7c76a;
+}
+
+.solace-welcome-copy p {
+  margin: 1rem auto 0;
+  max-width: 39rem;
+  color: rgba(226, 232, 240, 0.78);
+  font-size: clamp(1rem, 1.5vw, 1.24rem);
+  line-height: 1.55;
+}
+
+.solace-action-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: clamp(2rem, 5vh, 4.3rem);
+}
+
+.solace-action-card {
+  position: relative;
+  display: flex;
+  min-height: 9.4rem;
+  flex-direction: column;
+  align-items: flex-start;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(7, 12, 23, 0.86));
+  padding: 1rem;
+  color: white;
+  text-align: left;
+  transition: all 180ms ease;
+}
+
+.solace-action-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(247, 199, 106, 0.28);
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.74), rgba(10, 16, 30, 0.9));
+  box-shadow: 0 18px 45px rgba(0,0,0,0.28);
+}
+
+.solace-action-icon {
+  display: grid;
+  height: 2.75rem;
+  width: 2.75rem;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  margin-bottom: auto;
+}
+
+.tone-gold .solace-action-icon { color: #facc15; background: rgba(250, 204, 21, 0.09); }
+.tone-violet .solace-action-icon { color: #c084fc; background: rgba(168, 85, 247, 0.1); }
+.tone-emerald .solace-action-icon { color: #34d399; background: rgba(52, 211, 153, 0.1); }
+.tone-orange .solace-action-icon { color: #fb923c; background: rgba(251, 146, 60, 0.1); }
+.tone-rose .solace-action-icon { color: #fb7185; background: rgba(251, 113, 133, 0.1); }
+.tone-blue .solace-action-icon { color: #60a5fa; background: rgba(96, 165, 250, 0.1); }
+
+.solace-action-card strong {
+  margin-top: 1rem;
+  font-size: 0.94rem;
+  font-weight: 720;
+  letter-spacing: -0.02em;
+}
+
+.solace-action-card small {
+  margin-top: 0.48rem;
+  color: rgba(203, 213, 225, 0.64);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.solace-action-chevron {
+  position: absolute;
+  right: 0.9rem;
+  bottom: 0.95rem;
+  color: rgba(226, 232, 240, 0.42);
+}
+
+.solace-private-line {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1.9rem;
+  color: rgba(226, 232, 240, 0.48);
+  font-size: 0.9rem;
+}
+
+.solace-private-line svg {
+  color: #f7c76a;
+}
+
+.solace-conversation-surface {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  overflow-y: auto;
+  padding: 1.1rem;
+}
+
+.solace-message {
+  max-width: 78%;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+  background: rgba(15, 23, 42, 0.58);
+}
+
+.solace-message-user {
+  align-self: flex-end;
+  border-color: rgba(247, 199, 106, 0.24);
+  background: rgba(247, 199, 106, 0.09);
+}
+
+.solace-message-label {
+  margin-bottom: 0.35rem;
+  color: #f7c76a;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.solace-message-body {
+  white-space: pre-wrap;
+  color: rgba(248, 250, 252, 0.9);
+  font-size: 0.94rem;
+  line-height: 1.65;
+}
+
+.solace-thinking {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.solace-thinking span {
+  height: 0.45rem;
+  width: 0.45rem;
+  animation: solaceThinking 1s infinite ease-in-out;
+  border-radius: 999px;
+  background: rgba(247, 199, 106, 0.8);
+}
+
+.solace-thinking span:nth-child(2) { animation-delay: 0.15s; }
+.solace-thinking span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes solaceThinking {
+  0%, 100% { transform: translateY(0); opacity: 0.35; }
+  50% { transform: translateY(-3px); opacity: 1; }
+}
+
+.solace-home-input {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.7rem;
+  margin: 1rem auto 0;
+  width: min(100%, 54rem);
+  border: 1px solid rgba(247, 199, 106, 0.34);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.84), rgba(3, 7, 18, 0.92));
+  padding: 0.65rem;
+  box-shadow: 0 12px 46px rgba(0,0,0,0.32), 0 0 0 1px rgba(247,199,106,0.03);
+}
+
+.solace-home-input input {
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: white;
+  font-size: 1rem;
+}
+
+.solace-home-input input::placeholder {
+  color: rgba(203, 213, 225, 0.54);
+}
+
+.solace-home-input button {
+  display: grid;
+  height: 2.7rem;
+  width: 2.7rem;
+  place-items: center;
+  border: 0;
+  border-radius: 0.8rem;
+  color: rgba(248, 250, 252, 0.82);
+}
+
+.solace-home-input button:first-child {
+  background: transparent;
+}
+
+.solace-home-input button[type="submit"] {
+  background: linear-gradient(180deg, #f7c76a, #ca9d40);
+  color: #020617;
+  box-shadow: 0 10px 22px rgba(247,199,106,0.24);
+}
+
+.solace-home-input button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.solace-input-mode {
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 999px;
+  padding: 0.5rem 0.75rem;
+  color: rgba(226, 232, 240, 0.78);
+  font-size: 0.8rem;
+}
+
+.solace-input-mode svg {
+  color: #f7c76a;
+}
+
+.solace-home-disclaimer {
+  margin: 0.72rem 0 0;
+  color: rgba(203, 213, 225, 0.42);
+  text-align: center;
+  font-size: 0.75rem;
+}
+
+.solace-home-right-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  overflow-y: auto;
+  padding-right: 0.15rem;
+}
+
+.solace-rail-card {
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.62), rgba(3, 7, 18, 0.62));
+  padding: 1rem;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.solace-rail-card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.solace-rail-card-title strong {
+  color: rgba(248, 250, 252, 0.92);
+  font-size: 0.96rem;
+}
+
+.solace-rail-card-title a {
+  margin-left: auto;
+  color: #f7c76a;
+  font-size: 0.78rem;
+  text-decoration: none;
+}
+
+.solace-rail-card > p {
+  margin: 0.85rem 0 0;
+  color: rgba(203, 213, 225, 0.64);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.memory-orbit-row,
+.governed-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.memory-orbit-row {
+  margin-top: 1rem;
+}
+
+.memory-orbit {
+  height: 3.3rem;
+  width: 3.3rem;
+  border-radius: 999px;
+  border: 3px dotted rgba(247, 199, 106, 0.9);
+  box-shadow: 0 0 24px rgba(247,199,106,0.08);
+}
+
+.memory-orbit-row strong,
+.governed-row strong {
+  display: block;
+  color: rgba(248, 250, 252, 0.92);
+  font-size: 0.9rem;
+}
+
+.memory-orbit-row span,
+.governed-row span {
+  display: block;
+  margin-top: 0.2rem;
+  color: rgba(203, 213, 225, 0.58);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.memory-orbit-row i,
+.governed-row i {
+  margin-left: auto;
+}
+
+.recent-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.1rem;
+}
+
+.recent-list div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  color: rgba(248, 250, 252, 0.82);
+  font-size: 0.82rem;
+}
+
+.recent-list time {
+  color: rgba(203, 213, 225, 0.44);
+  white-space: nowrap;
+}
+
+.reflection-card p {
+  color: rgba(226, 232, 240, 0.72);
+  font-size: 1rem;
+}
+
+.governed-card {
+  margin-top: auto;
+}
+
+.governed-row svg,
+.solace-rail-card-title svg {
+  color: rgba(226, 232, 240, 0.82);
+}
+
+@media (max-width: 1280px) {
+  .app-shell-consumer {
+    grid-template-columns: 260px minmax(0, 1fr);
+  }
+
+  .solace-home-grid {
+    grid-template-columns: minmax(0, 1fr);
+    padding-right: 1.7rem;
+  }
+
+  .solace-home-right-rail {
+    display: none;
+  }
+
+  .solace-action-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .app-shell-consumer {
+    display: block;
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
+  }
+
+  .app-shell-sidebar {
+    height: auto;
+    max-height: none;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .consumer-sidebar {
+    height: auto;
+    min-height: 0;
+  }
+
+  .consumer-brand {
+    padding: 1rem;
+  }
+
+  .consumer-sidebar-scroll {
+    overflow: visible;
+    padding: 0 1rem 1rem;
+  }
+
+  .consumer-sidebar-section:not(:first-child),
+  .consumer-sidebar-status,
+  .consumer-sidebar-user {
+    display: none;
+  }
+
+  .consumer-sidebar-nav {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .consumer-sidebar-item small {
+    display: none;
+  }
+
+  .app-shell-main,
+  .app-shell-content {
+    height: auto;
+    min-height: calc(100vh - 8rem);
+    overflow: visible;
+  }
+
+  .app-shell-content {
+    padding: 0.85rem;
+  }
+
+  .solace-home-shell {
+    min-height: calc(100vh - 9rem);
+    height: auto;
+    overflow: visible;
+  }
+
+  .solace-home-header {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 1.1rem;
+  }
+
+  .solace-home-grid {
+    height: auto;
+    padding: 0 1rem 1rem;
+  }
+
+  .solace-welcome-surface,
+  .solace-conversation-surface {
+    min-height: 34rem;
+  }
+
+  .solace-action-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .solace-action-card {
+    min-height: 8rem;
+  }
+
+  .solace-input-mode {
+    display: none;
+  }
+
+  .solace-home-input {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+}
+
+@media (max-width: 560px) {
+  .solace-home-header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .solace-status-pill {
+    flex: 1;
+  }
+
+  .solace-welcome-copy h1 {
+    font-size: 2.4rem;
+  }
+
+  .solace-action-grid {
+    grid-template-columns: 1fr;
+    margin-top: 2rem;
+  }
+
+  .solace-welcome-surface {
+    justify-content: flex-start;
+    padding-top: 2rem;
+  }
+
+  .solace-message {
+    max-width: 92%;
+  }
+}
