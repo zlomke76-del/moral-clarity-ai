@@ -183,6 +183,21 @@ export default function SolaceDock() {
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
 
+  useEffect(() => {
+    const handleSeedInput = (event: Event) => {
+      const customEvent = event as CustomEvent<{ prompt?: string }>;
+      const prompt = customEvent.detail?.prompt?.trim();
+
+      if (!prompt) return;
+
+      setInput(prompt);
+      window.setTimeout(() => textareaRef.current?.focus(), 0);
+    };
+
+    window.addEventListener("solace:set-input", handleSeedInput);
+    return () => window.removeEventListener("solace:set-input", handleSeedInput);
+  }, []);
+
   // ------------------------------------------------------------------
   // Transcript auto-scroll
   // ------------------------------------------------------------------

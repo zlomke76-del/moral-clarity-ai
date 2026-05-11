@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
 import {
   BookOpen,
@@ -38,6 +38,14 @@ export default function NeuralSidebar({ items }: Props) {
   const parts = pathname.split("/").filter(Boolean);
   const workspaceId = parts[0] === "w" && parts[1] ? parts[1] : MCA_WORKSPACE_ID;
   const activeItemId = resolveActiveItemId(pathname);
+  const [displayName, setDisplayName] = useState("");
+
+  useEffect(() => {
+    setDisplayName(readDisplayName());
+  }, []);
+
+  const userLabel = displayName || "Studio User";
+  const userInitials = getInitials(displayName);
 
   const primaryItems =
     items && items.length > 0
@@ -178,9 +186,9 @@ export default function NeuralSidebar({ items }: Props) {
       </div>
 
       <div className="solace-sidebar-user">
-        <div className="solace-user-avatar">TZ</div>
+        <div className="solace-user-avatar">{userInitials}</div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold text-white">Tim Zlomke</div>
+          <div className="truncate text-sm font-semibold text-white">{userLabel}</div>
           <div className="mt-0.5 text-xs text-white/50">Personal Plan</div>
         </div>
         <ChevronDown className="h-4 w-4 text-white/45" />
@@ -221,4 +229,36 @@ function resolveActiveItemId(pathname: string): string | null {
   if (pathname.startsWith("/w/") && pathname.includes("/memory")) return "memory";
   if (pathname.startsWith("/account")) return "preferences";
   return "home";
+}
+function readDisplayName() {
+  if (typeof window === "undefined") return "";
+
+  const keys = [
+    "solace:user:name",
+    "solace:displayName",
+    "moralclarity:user:name",
+    "mc:user:name",
+    "displayName",
+  ];
+
+  for (const key of keys) {
+    const value = window.localStorage.getItem(key)?.trim();
+    if (value) return value;
+  }
+
+  return "";
+}
+
+function getInitials(displayName: string) {
+  const parts = displayName.trim().split(/\s+/).filter(Boolean);
+
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+
+  return "AI";
 }

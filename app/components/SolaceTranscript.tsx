@@ -113,41 +113,57 @@ export default function SolaceTranscript({ messages, transcriptRef, transcriptSt
   );
 }
 
+function sendPromptToComposer(prompt: string) {
+  if (typeof window === "undefined") return;
+
+  window.dispatchEvent(
+    new CustomEvent("solace:set-input", {
+      detail: { prompt },
+    }),
+  );
+}
+
 function SolaceWelcomeSurface() {
   const actions = [
     {
       title: "Explore an idea",
       body: "Research any topic with depth.",
+      prompt: "Help me explore an idea clearly and deeply.",
       icon: <Search className="h-8 w-8" />,
       tone: "gold",
     },
     {
       title: "Test a claim",
       body: "Analyze arguments and assumptions.",
+      prompt: "Help me test a claim and separate evidence from assumptions.",
       icon: <BrainCircuit className="h-8 w-8" />,
       tone: "violet",
     },
     {
       title: "Analyze risk",
       body: "Identify threats and weigh outcomes.",
+      prompt: "Help me analyze the risks, trade-offs, and likely outcomes.",
       icon: <ShieldCheck className="h-8 w-8" />,
       tone: "green",
     },
     {
       title: "Create something",
-      body: "Write, plan, and build with clarity.",
+      body: "Write, plan, and build something with clarity.",
+      prompt: "Help me create something clear, useful, and well structured.",
       icon: <PenLine className="h-8 w-8" />,
       tone: "orange",
     },
     {
       title: "Protect your family",
       body: "Strengthen what matters most.",
+      prompt: "Help me think through a practical protection plan for my family.",
       icon: <Users className="h-8 w-8" />,
       tone: "rose",
     },
     {
       title: "Secure your thinking",
       body: "Keep your mind private and safe.",
+      prompt: "Help me protect my thinking, privacy, and digital safety.",
       icon: <Lock className="h-8 w-8" />,
       tone: "blue",
     },
@@ -170,7 +186,12 @@ function SolaceWelcomeSurface() {
 
         <div className="solace-action-grid">
           {actions.map((action) => (
-            <button key={action.title} type="button" className={`solace-action-card tone-${action.tone}`}>
+            <button
+              key={action.title}
+              type="button"
+              className={`solace-action-card tone-${action.tone}`}
+              onClick={() => sendPromptToComposer(action.prompt)}
+            >
               <span className="solace-action-icon">{action.icon}</span>
               <span className="solace-action-title">
                 {action.title} <ChevronRight className="h-4 w-4" />
@@ -187,7 +208,7 @@ function SolaceWelcomeSurface() {
       </section>
 
       <aside className="solace-right-rail" aria-label="Solace context">
-        <RailCard title="Memory" action="View all" icon={<BrainCircuit className="h-5 w-5" />}>
+        <RailCard title="Memory" action="View all" actionHref="/memories" icon={<BrainCircuit className="h-5 w-5" />}>
           <p>Your memory gives Solace continuity across conversations.</p>
           <div className="solace-memory-active">
             <span className="solace-memory-ring" />
@@ -199,7 +220,7 @@ function SolaceWelcomeSurface() {
           </div>
         </RailCard>
 
-        <RailCard title="Recent Conversations" action="View all" icon={<MessageCircle className="h-5 w-5" />}>
+        <RailCard title="Recent Conversations" action="View all" actionHref="/app?view=conversations" icon={<MessageCircle className="h-5 w-5" />}>
           <ul className="solace-recent-list">
             <li><span>Moral clarity in leadership</span><em>2h ago</em></li>
             <li><span>AI safety vs. innovation</span><em>1d ago</em></li>
@@ -231,11 +252,13 @@ function SolaceWelcomeSurface() {
 function RailCard({
   title,
   action,
+  actionHref,
   icon,
   children,
 }: {
   title: string;
   action?: string;
+  actionHref?: string;
   icon: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -246,7 +269,7 @@ function RailCard({
           {icon}
           <h2>{title}</h2>
         </div>
-        {action && <button type="button">{action}</button>}
+        {action && actionHref && <a href={actionHref}>{action}</a>}
       </div>
       {children}
     </section>
