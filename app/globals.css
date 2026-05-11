@@ -582,975 +582,886 @@ body[data-layout-debug="on"] [data-layout-boundary]::after {
 }
 
 /* ============================================================
-   SOLACE CONSUMER HOME — PREMIUM GUIDED COMPANION
+   SOLACE CONSUMER FACELIFT — PERSONAL GOVERNED COGNITION
    ============================================================ */
 
-.app-shell-consumer {
-  background:
-    radial-gradient(circle at 72% 18%, rgba(247, 199, 106, 0.06), transparent 32%),
-    radial-gradient(circle at 20% 8%, rgba(56, 189, 248, 0.06), transparent 30%),
-    linear-gradient(135deg, #030712 0%, #07111f 45%, #030712 100%);
+:root {
+  --solace-bg: #030915;
+  --solace-panel: rgba(8, 15, 29, 0.74);
+  --solace-panel-strong: rgba(9, 17, 32, 0.9);
+  --solace-line: rgba(148, 163, 184, 0.16);
+  --solace-line-strong: rgba(251, 191, 36, 0.32);
+  --solace-text: #f8fafc;
+  --solace-muted: rgba(226, 232, 240, 0.66);
+  --solace-faint: rgba(148, 163, 184, 0.48);
+  --solace-gold: #f7c85f;
+  --solace-gold-2: #d69a28;
+  --solace-green: #52e3a2;
 }
 
-.app-shell-content {
+body.mc-root {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 18%),
-    radial-gradient(circle at 50% 100%, rgba(247, 199, 106, 0.035), transparent 34%);
+    radial-gradient(circle at 52% 18%, rgba(30, 58, 138, 0.16), transparent 36%),
+    radial-gradient(circle at 80% 68%, rgba(245, 158, 11, 0.07), transparent 34%),
+    linear-gradient(180deg, #020617 0%, #030712 100%) !important;
 }
 
-.consumer-sidebar {
+body.mc-root::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.014) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(circle at 50% 25%, black, transparent 70%);
+}
+
+[data-app-shell] {
+  background: rgba(1, 6, 18, 0.92);
+}
+
+[data-neural-sidebar] {
+  width: 276px !important;
+  background:
+    linear-gradient(180deg, rgba(6, 13, 26, 0.94), rgba(3, 8, 18, 0.98)) !important;
+  border-right: 1px solid rgba(148, 163, 184, 0.15) !important;
+  overflow: hidden !important;
+}
+
+[data-app-main],
+[data-app-content] {
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.solace-sidebar {
   position: relative;
   display: flex;
   height: 100vh;
   min-height: 0;
-  width: 100%;
+  width: 276px;
   flex-direction: column;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 30% 0%, rgba(247, 199, 106, 0.08), transparent 28%),
-    linear-gradient(180deg, rgba(8, 14, 25, 0.96), rgba(3, 7, 18, 0.98));
+  color: var(--solace-text);
 }
 
-.consumer-sidebar::after {
+.solace-sidebar::before {
   content: "";
-  pointer-events: none;
   position: absolute;
   inset: 0;
-  background-image: linear-gradient(rgba(255,255,255,0.026) 1px, transparent 1px);
-  background-size: 100% 46px;
-  opacity: 0.35;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 23% 9%, rgba(247, 200, 95, 0.12), transparent 24%),
+    linear-gradient(90deg, rgba(255,255,255,0.03), transparent 44%);
 }
 
-.consumer-brand {
+.solace-sidebar-brand {
   position: relative;
   z-index: 1;
+  flex: 0 0 auto;
+  padding: 28px 24px 20px;
+}
+
+.solace-brand-lockup {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 2rem 1.5rem 1.7rem;
-  color: white;
+  gap: 14px;
+  color: inherit;
   text-decoration: none;
 }
 
-.consumer-brand-mark {
+.solace-brand-orb {
   position: relative;
   display: grid;
-  height: 3.3rem;
-  width: 3.3rem;
+  height: 52px;
+  width: 52px;
   place-items: center;
-  border-radius: 999px;
-  border: 1px solid rgba(247, 199, 106, 0.34);
-  background:
-    radial-gradient(circle, rgba(247, 199, 106, 0.22), transparent 58%),
-    rgba(15, 23, 42, 0.78);
-  box-shadow: 0 0 34px rgba(247, 199, 106, 0.16);
-}
-
-.consumer-brand-mark::before {
-  content: "";
-  position: absolute;
-  height: 2.05rem;
-  width: 2.05rem;
+  border: 1px solid rgba(247, 200, 95, 0.35);
+  border-radius: 18px;
   transform: rotate(45deg);
-  border: 1px solid rgba(247, 199, 106, 0.36);
-  border-radius: 0.35rem;
+  background:
+    radial-gradient(circle, rgba(247, 200, 95, 0.32), rgba(247, 200, 95, 0.05) 42%, rgba(255,255,255,0.02));
+  box-shadow: 0 0 34px rgba(247, 200, 95, 0.15), inset 0 0 24px rgba(247, 200, 95, 0.05);
 }
 
-.consumer-brand-mark span {
-  display: block;
-  height: 0.75rem;
-  width: 0.75rem;
+.solace-brand-orb span {
+  height: 14px;
+  width: 14px;
   border-radius: 999px;
-  background: #f7c76a;
-  box-shadow: 0 0 18px rgba(247, 199, 106, 0.9);
+  background: linear-gradient(180deg, #ffe9a3, #e5a930);
+  box-shadow: 0 0 22px rgba(247, 200, 95, 0.9);
 }
 
-.consumer-brand strong {
-  display: block;
-  font-size: 1.55rem;
-  font-weight: 750;
+.solace-brand-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.solace-brand-title {
+  font-size: 1.58rem;
+  font-weight: 790;
   letter-spacing: -0.045em;
+  line-height: 1;
 }
 
-.consumer-brand small {
-  display: block;
-  margin-top: 0.15rem;
-  color: #f7c76a;
+.solace-brand-kicker {
+  color: var(--solace-gold);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.consumer-sidebar-scroll {
+.solace-sidebar-scroll {
   position: relative;
   z-index: 1;
   min-height: 0;
-  flex: 1;
+  flex: 1 1 auto;
   overflow-y: auto;
-  padding: 0 1.35rem 1.25rem;
+  overflow-x: hidden;
+  padding: 0 18px 18px;
+  scrollbar-color: rgba(247, 200, 95, 0.42) rgba(255,255,255,0.04);
+  scrollbar-width: thin;
 }
 
-.consumer-sidebar-section {
-  border-top: 1px solid rgba(255, 255, 255, 0.055);
-  padding: 1.15rem 0;
+.solace-sidebar-scroll::-webkit-scrollbar { width: 8px; }
+.solace-sidebar-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.035); border-radius: 999px; }
+.solace-sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(247, 200, 95, 0.42); border-radius: 999px; }
+
+.solace-sidebar-divider {
+  height: 1px;
+  margin: 20px 6px;
+  background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.14), transparent);
 }
 
-.consumer-sidebar-section:first-child {
-  border-top: 0;
-  padding-top: 0;
-}
-
-.consumer-sidebar-label {
-  margin: 0 0 0.72rem 0.55rem;
-  color: rgba(226, 232, 240, 0.46);
+.solace-sidebar-section-label {
+  padding: 0 10px 11px;
+  color: rgba(148, 163, 184, 0.68);
   font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.17em;
   text-transform: uppercase;
 }
 
-.consumer-sidebar-nav {
+.solace-nav-block {
   display: flex;
   flex-direction: column;
-  gap: 0.22rem;
+  gap: 7px;
 }
 
-.consumer-sidebar-link {
+.solace-nav-link,
+.solace-nav-button {
   display: block;
   width: 100%;
-  border: 0;
-  background: transparent;
   color: inherit;
-  text-align: left;
   text-decoration: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  text-align: left;
 }
 
-.consumer-sidebar-item {
+.solace-nav-row {
   position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: 28px minmax(0,1fr) auto;
+  gap: 10px;
   align-items: center;
-  gap: 0.85rem;
+  min-height: 58px;
   border: 1px solid transparent;
-  border-radius: 0.95rem;
-  padding: 0.78rem 0.9rem;
-  transition: all 180ms ease;
+  border-radius: 14px;
+  padding: 10px 12px;
+  color: rgba(226, 232, 240, 0.78);
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
-.consumer-sidebar-item:hover {
-  border-color: rgba(255, 255, 255, 0.09);
-  background: rgba(255, 255, 255, 0.035);
+.solace-nav-row:hover {
+  border-color: rgba(148, 163, 184, 0.14);
+  background: rgba(255,255,255,0.035);
+  color: white;
 }
 
-.consumer-sidebar-item.active {
-  border-color: rgba(247, 199, 106, 0.22);
-  background: linear-gradient(90deg, rgba(247, 199, 106, 0.14), rgba(255, 255, 255, 0.035));
-  box-shadow: inset 2px 0 0 rgba(247, 199, 106, 0.88);
+.solace-nav-row.is-active {
+  border-color: rgba(247, 200, 95, 0.38);
+  background:
+    radial-gradient(circle at 10% 50%, rgba(247, 200, 95, 0.13), transparent 42%),
+    rgba(255,255,255,0.055);
+  box-shadow: inset 3px 0 0 rgba(247, 200, 95, 0.86), 0 16px 36px rgba(0,0,0,0.16);
+  color: white;
 }
 
-.consumer-sidebar-icon {
+.solace-nav-icon {
   display: grid;
-  height: 2rem;
-  width: 2rem;
-  flex: 0 0 auto;
   place-items: center;
-  color: rgba(226, 232, 240, 0.72);
+  color: currentColor;
 }
 
-.consumer-sidebar-item.active .consumer-sidebar-icon {
-  color: #f7c76a;
+.solace-nav-row.is-active .solace-nav-icon {
+  color: var(--solace-gold);
 }
 
-.consumer-sidebar-item strong {
-  display: block;
-  color: rgba(248, 250, 252, 0.93);
-  font-size: 0.92rem;
-  font-weight: 650;
-}
-
-.consumer-sidebar-item small {
-  display: block;
-  margin-top: 0.12rem;
-  color: rgba(203, 213, 225, 0.58);
-  font-size: 0.78rem;
-  line-height: 1.35;
-}
-
-.consumer-sidebar-status,
-.consumer-sidebar-user {
-  position: relative;
-  z-index: 1;
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  background: rgba(15, 23, 42, 0.42);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
-}
-
-.consumer-sidebar-status {
+.solace-nav-copy {
   display: flex;
-  gap: 0.8rem;
-  margin-top: 1.25rem;
-  border-radius: 1rem;
-  padding: 1rem;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.consumer-sidebar-status .status-shield {
-  display: grid;
-  height: 2.4rem;
-  width: 2.4rem;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 999px;
-  color: #f7c76a;
-  background: radial-gradient(circle, rgba(247, 199, 106, 0.18), transparent 70%);
-}
-
-.consumer-sidebar-status strong,
-.consumer-sidebar-user strong {
-  display: block;
-  color: rgba(248, 250, 252, 0.94);
-  font-size: 0.86rem;
+.solace-nav-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.92rem;
   font-weight: 700;
+  letter-spacing: -0.012em;
 }
 
-.consumer-sidebar-status p {
-  margin: 0.45rem 0 0;
-  color: rgba(203, 213, 225, 0.62);
-  font-size: 0.75rem;
+.solace-nav-description {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(203, 213, 225, 0.55);
+  font-size: 0.76rem;
+  line-height: 1.15;
+}
+
+.solace-nav-dot {
+  height: 8px;
+  width: 8px;
+  border-radius: 999px;
+  background: var(--solace-gold);
+  box-shadow: 0 0 12px rgba(247, 200, 95, 0.85);
+}
+
+.solace-memory-card {
+  display: flex;
+  gap: 12px;
+  margin: 28px 4px 8px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 16px;
+  background: rgba(8, 15, 29, 0.72);
+  padding: 16px 14px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.025);
+}
+
+.solace-memory-card-icon {
+  display: grid;
+  flex: 0 0 auto;
+  height: 28px;
+  width: 28px;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--solace-gold);
+  background: rgba(247, 200, 95, 0.08);
+  border: 1px solid rgba(247, 200, 95, 0.18);
+}
+
+.solace-memory-card-title {
+  color: white;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.solace-memory-card p {
+  margin: 7px 0 8px;
+  color: rgba(203, 213, 225, 0.56);
+  font-size: 0.74rem;
   line-height: 1.55;
 }
 
-.consumer-sidebar-status a {
-  display: inline-block;
-  margin-top: 0.65rem;
-  color: #f7c76a;
-  font-size: 0.75rem;
+.solace-memory-card a {
+  color: var(--solace-gold);
+  font-size: 0.76rem;
   font-weight: 700;
   text-decoration: none;
 }
 
-.consumer-sidebar-status i,
-.governed-row i,
-.memory-orbit-row i,
-.solace-status-pill i {
-  display: block;
-  height: 0.48rem;
-  width: 0.48rem;
-  border-radius: 999px;
-  background: #4ade80;
-  box-shadow: 0 0 14px rgba(74, 222, 128, 0.9);
-}
-
-.consumer-sidebar-user {
-  z-index: 1;
+.solace-sidebar-user {
+  position: relative;
+  z-index: 2;
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
-  gap: 0.8rem;
-  margin: 0 1.35rem 1.25rem;
-  border-radius: 1rem;
-  padding: 0.85rem;
+  gap: 12px;
+  margin: 0 18px 18px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 16px;
+  background: rgba(8, 15, 29, 0.82);
+  padding: 12px;
 }
 
-.consumer-user-avatar {
+.solace-user-avatar {
   display: grid;
-  height: 2.55rem;
-  width: 2.55rem;
+  height: 38px;
+  width: 38px;
   place-items: center;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.09);
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 0.86rem;
-  font-weight: 700;
+  background: rgba(148, 163, 184, 0.16);
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 800;
 }
 
-.consumer-sidebar-user small {
-  display: block;
-  margin-top: 0.12rem;
-  color: rgba(203, 213, 225, 0.55);
-  font-size: 0.78rem;
+.solace-workspace-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 22px;
+  padding: 28px 36px 22px;
+  border-bottom: 0;
+  cursor: default;
+  user-select: none;
 }
 
-.solace-home-shell {
-  position: relative;
-  isolation: isolate;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.13);
-  border-radius: 1.1rem;
-  background:
-    radial-gradient(circle at 52% 0%, rgba(247, 199, 106, 0.08), transparent 22%),
-    linear-gradient(145deg, rgba(10, 18, 32, 0.92), rgba(3, 7, 18, 0.96));
-  box-shadow: 0 30px 90px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.04);
-  color: #f8fafc;
-}
-
-.solace-home-atmosphere {
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background:
-    radial-gradient(circle at 78% 14%, rgba(56, 189, 248, 0.06), transparent 30%),
-    radial-gradient(circle at 35% 72%, rgba(247, 199, 106, 0.06), transparent 42%);
-}
-
-.solace-home-atmosphere::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(rgba(247, 199, 106, 0.25) 1px, transparent 1px);
-  background-size: 38px 38px;
-  mask-image: radial-gradient(circle at 72% 28%, black, transparent 42%);
-  opacity: 0.28;
-}
-
-.solace-home-header {
+.solace-greeting-title {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1.55rem 1.7rem 1rem;
+  gap: 11px;
+  color: white;
+  font-size: clamp(1.45rem, 2.2vw, 2.05rem);
+  font-weight: 790;
+  letter-spacing: -0.045em;
+  line-height: 1.06;
 }
 
-.solace-home-greeting {
+.solace-greeting-title span {
+  color: var(--solace-gold);
+  font-size: 1.4rem;
+  line-height: 1;
+  text-shadow: 0 0 16px rgba(247, 200, 95, 0.65);
+}
+
+.solace-greeting-subtitle {
+  margin-top: 8px;
+  color: rgba(226, 232, 240, 0.72);
+  font-size: 0.96rem;
+}
+
+.solace-status-pill,
+.solace-profile-pill {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  font-size: clamp(1.35rem, 2.2vw, 1.75rem);
-  font-weight: 760;
-  letter-spacing: -0.04em;
-}
-
-.solace-home-greeting span {
-  height: 0.42rem;
-  width: 0.42rem;
-  border-radius: 999px;
-  background: #f7c76a;
-  box-shadow: 0 0 16px rgba(247, 199, 106, 0.78);
-}
-
-.solace-home-header p {
-  margin: 0.45rem 0 0;
-  color: rgba(226, 232, 240, 0.74);
-  font-size: 0.95rem;
-}
-
-.solace-home-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 1.4rem;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(8, 15, 29, 0.62);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.025);
 }
 
 .solace-status-pill {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  border-radius: 0.9rem;
-  background: rgba(15, 23, 42, 0.62);
-  padding: 0.72rem 0.95rem;
-  color: #f7c76a;
+  gap: 11px;
+  border-radius: 16px;
+  padding: 10px 14px;
 }
 
-.solace-status-pill span {
+.solace-status-icon {
   display: grid;
-  gap: 0.1rem;
-  color: rgba(248, 250, 252, 0.9);
-  font-size: 0.8rem;
-  line-height: 1.1;
+  height: 34px;
+  width: 34px;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--solace-gold);
+  background: rgba(247, 200, 95, 0.08);
 }
 
-.solace-status-pill strong {
-  color: rgba(203, 213, 225, 0.62);
-  font-size: 0.65rem;
+.solace-status-label,
+.solace-status-value {
+  display: block;
+  white-space: nowrap;
+}
+
+.solace-status-label {
+  color: rgba(148, 163, 184, 0.78);
+  font-size: 0.68rem;
   font-weight: 800;
-  letter-spacing: 0.11em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.solace-user-orb {
-  display: grid;
-  height: 3.05rem;
-  width: 3.05rem;
-  place-items: center;
-  border: 1px solid rgba(247, 199, 106, 0.28);
+.solace-status-value {
+  margin-top: 2px;
+  color: white;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.solace-status-dot,
+.solace-green-dot {
+  height: 8px;
+  width: 8px;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.72);
-  color: #f7c76a;
+  background: var(--solace-green);
+  box-shadow: 0 0 13px rgba(82, 227, 162, 0.85);
+}
+
+.solace-profile-pill {
+  gap: 10px;
+  border-radius: 999px;
+  padding: 8px 12px 8px 8px;
+  color: var(--solace-gold);
+}
+
+.solace-profile-pill span:first-child {
+  display: grid;
+  height: 42px;
+  width: 42px;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(247, 200, 95, 0.34);
+  background: rgba(247, 200, 95, 0.05);
   font-weight: 800;
-  box-shadow: 0 0 26px rgba(247, 199, 106, 0.08);
+}
+
+.solace-transcript-home,
+.solace-transcript-chat {
+  scrollbar-color: rgba(247, 200, 95, 0.34) rgba(255,255,255,0.03);
+  scrollbar-width: thin;
 }
 
 .solace-home-grid {
   display: grid;
-  height: calc(100% - 5.2rem);
-  min-height: 0;
-  grid-template-columns: minmax(0, 1fr) 18.5rem;
-  gap: 1rem;
-  padding: 0 1.05rem 1.05rem 1.7rem;
+  grid-template-columns: minmax(0, 1fr) 310px;
+  gap: 20px;
+  min-height: 100%;
 }
 
-.solace-home-main-panel,
-.solace-home-right-rail {
-  min-height: 0;
+.solace-hero-card,
+.solace-rail-card,
+.solace-governed-card {
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(8, 15, 29, 0.56);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.025), 0 24px 80px rgba(0,0,0,0.18);
 }
 
-.solace-home-main-panel {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.solace-welcome-surface,
-.solace-conversation-surface {
+.solace-hero-card {
   position: relative;
-  flex: 1;
-  min-height: 0;
+  min-height: 560px;
   overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  border-radius: 1.1rem;
-  background:
-    linear-gradient(180deg, rgba(15, 23, 42, 0.55), rgba(2, 6, 23, 0.42)),
-    radial-gradient(circle at 50% 55%, rgba(247, 199, 106, 0.08), transparent 34%);
+  border-radius: 20px;
+  padding: clamp(26px, 4.4vw, 72px) 18px 28px;
+  isolation: isolate;
 }
 
-.solace-welcome-surface {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: clamp(1.2rem, 2vw, 2rem);
-}
-
-.solace-horizon {
+.solace-hero-card::before {
+  content: "";
   position: absolute;
-  left: 5%;
-  right: 5%;
-  top: 44%;
-  height: 12rem;
-  border-radius: 50%;
-  border-top: 2px solid rgba(247, 199, 106, 0.72);
-  filter: blur(0.2px);
-  box-shadow: 0 -12px 42px rgba(247, 199, 106, 0.2), inset 0 18px 48px rgba(247, 199, 106, 0.08);
+  inset: 0;
+  z-index: -4;
+  background:
+    radial-gradient(circle at 50% 76%, rgba(247, 200, 95, 0.24), transparent 22%),
+    radial-gradient(circle at 50% 28%, rgba(59, 130, 246, 0.08), transparent 45%),
+    linear-gradient(180deg, rgba(7, 15, 30, 0.55), rgba(3, 8, 18, 0.88));
+}
+
+.solace-hero-stars {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  opacity: 0.75;
+  background-image:
+    radial-gradient(circle, rgba(247, 200, 95, 0.8) 0 1px, transparent 1.4px),
+    radial-gradient(circle, rgba(255,255,255,0.35) 0 1px, transparent 1.4px);
+  background-size: 92px 92px, 137px 137px;
+  background-position: 17px 28px, 52px 19px;
+  mask-image: radial-gradient(ellipse at center, black, transparent 78%);
+}
+
+.solace-hero-wave {
+  position: absolute;
+  left: -8%;
+  right: -8%;
+  top: 35%;
+  height: 240px;
+  z-index: -2;
   opacity: 0.9;
-}
-
-.solace-wave {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 31%;
-  height: 13rem;
-  opacity: 0.46;
   background:
-    repeating-linear-gradient(172deg, transparent 0 10px, rgba(247, 199, 106, 0.15) 11px, transparent 12px),
-    radial-gradient(circle at 50% 100%, rgba(247, 199, 106, 0.18), transparent 48%);
+    repeating-radial-gradient(ellipse at 50% 74%, transparent 0 12px, rgba(247, 200, 95, 0.1) 13px, transparent 15px),
+    linear-gradient(92deg, transparent, rgba(247, 200, 95, 0.22), transparent);
+  transform: perspective(600px) rotateX(58deg);
+  filter: blur(0.2px);
   mask-image: linear-gradient(90deg, transparent, black 18%, black 82%, transparent);
 }
 
-.solace-wave-two {
-  transform: scaleX(-1) translateY(1.5rem);
-  opacity: 0.28;
+.solace-hero-horizon {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  top: 49%;
+  height: 3px;
+  z-index: -1;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(247, 200, 95, 0.32), #ffdf79 50%, rgba(247, 200, 95, 0.28), transparent);
+  box-shadow: 0 0 35px rgba(247, 200, 95, 0.78), 0 0 110px rgba(247, 200, 95, 0.35);
 }
 
-.solace-welcome-copy {
-  position: relative;
-  z-index: 1;
+.solace-hero-content {
+  max-width: 780px;
   margin: 0 auto;
-  max-width: 42rem;
   text-align: center;
 }
 
-.solace-welcome-copy h1 {
-  margin: 1rem 0 0;
-  font-size: clamp(2.4rem, 4vw, 4rem);
-  font-weight: 780;
+.solace-hero-mark {
+  width: 46px;
+  height: 46px;
+  color: rgba(255, 226, 160, 0.95);
+  filter: drop-shadow(0 0 18px rgba(247, 200, 95, 0.55));
+}
+
+.solace-hero-content h1 {
+  margin: 22px 0 12px;
+  color: white;
+  font-size: clamp(2.25rem, 5vw, 4.35rem);
+  font-weight: 800;
   letter-spacing: -0.065em;
   line-height: 0.98;
 }
 
-.solace-welcome-copy h1 span {
-  color: #f7c76a;
+.solace-hero-content h1 span {
+  color: var(--solace-gold);
+  text-shadow: 0 0 26px rgba(247, 200, 95, 0.28);
 }
 
-.solace-welcome-copy p {
-  margin: 1rem auto 0;
-  max-width: 39rem;
-  color: rgba(226, 232, 240, 0.78);
-  font-size: clamp(1rem, 1.5vw, 1.24rem);
+.solace-hero-content p {
+  max-width: 610px;
+  margin: 0 auto;
+  color: rgba(248, 250, 252, 0.78);
+  font-size: clamp(1.02rem, 1.7vw, 1.28rem);
   line-height: 1.55;
 }
 
 .solace-action-grid {
-  position: relative;
-  z-index: 1;
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin-top: clamp(2rem, 5vh, 4.3rem);
+  gap: 12px;
+  margin: clamp(44px, 6vw, 78px) auto 0;
+  max-width: 1040px;
 }
 
 .solace-action-card {
-  position: relative;
-  display: flex;
-  min-height: 9.4rem;
-  flex-direction: column;
-  align-items: flex-start;
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  border-radius: 1rem;
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(7, 12, 23, 0.86));
-  padding: 1rem;
+  min-height: 154px;
+  border: 1px solid rgba(148, 163, 184, 0.17);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.025));
   color: white;
   text-align: left;
-  transition: all 180ms ease;
+  padding: 18px 16px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.035), 0 16px 42px rgba(0,0,0,0.20);
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
 }
 
 .solace-action-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(247, 199, 106, 0.28);
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.74), rgba(10, 16, 30, 0.9));
-  box-shadow: 0 18px 45px rgba(0,0,0,0.28);
+  transform: translateY(-3px);
+  border-color: rgba(247, 200, 95, 0.36);
+  background: linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.035));
+  box-shadow: 0 18px 44px rgba(0,0,0,0.28), 0 0 30px rgba(247, 200, 95, 0.08);
 }
 
 .solace-action-icon {
   display: grid;
-  height: 2.75rem;
-  width: 2.75rem;
+  height: 54px;
+  width: 54px;
   place-items: center;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  margin-bottom: auto;
+  border-radius: 17px;
+  margin-bottom: 18px;
 }
 
-.tone-gold .solace-action-icon { color: #facc15; background: rgba(250, 204, 21, 0.09); }
-.tone-violet .solace-action-icon { color: #c084fc; background: rgba(168, 85, 247, 0.1); }
-.tone-emerald .solace-action-icon { color: #34d399; background: rgba(52, 211, 153, 0.1); }
-.tone-orange .solace-action-icon { color: #fb923c; background: rgba(251, 146, 60, 0.1); }
-.tone-rose .solace-action-icon { color: #fb7185; background: rgba(251, 113, 133, 0.1); }
-.tone-blue .solace-action-icon { color: #60a5fa; background: rgba(96, 165, 250, 0.1); }
+.tone-gold .solace-action-icon { color: #facc15; background: rgba(250, 204, 21, 0.10); box-shadow: 0 0 26px rgba(250, 204, 21, 0.12); }
+.tone-violet .solace-action-icon { color: #c084fc; background: rgba(168, 85, 247, 0.11); box-shadow: 0 0 26px rgba(168, 85, 247, 0.12); }
+.tone-green .solace-action-icon { color: #5eead4; background: rgba(20, 184, 166, 0.11); box-shadow: 0 0 26px rgba(20, 184, 166, 0.12); }
+.tone-orange .solace-action-icon { color: #fb923c; background: rgba(249, 115, 22, 0.12); box-shadow: 0 0 26px rgba(249, 115, 22, 0.13); }
+.tone-rose .solace-action-icon { color: #fb7185; background: rgba(244, 63, 94, 0.12); box-shadow: 0 0 26px rgba(244, 63, 94, 0.13); }
+.tone-blue .solace-action-icon { color: #93c5fd; background: rgba(59, 130, 246, 0.12); box-shadow: 0 0 26px rgba(59, 130, 246, 0.13); }
 
-.solace-action-card strong {
-  margin-top: 1rem;
-  font-size: 0.94rem;
-  font-weight: 720;
-  letter-spacing: -0.02em;
-}
-
-.solace-action-card small {
-  margin-top: 0.48rem;
-  color: rgba(203, 213, 225, 0.64);
-  font-size: 0.8rem;
-  line-height: 1.55;
-}
-
-.solace-action-chevron {
-  position: absolute;
-  right: 0.9rem;
-  bottom: 0.95rem;
-  color: rgba(226, 232, 240, 0.42);
-}
-
-.solace-private-line {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-top: 1.9rem;
-  color: rgba(226, 232, 240, 0.48);
-  font-size: 0.9rem;
-}
-
-.solace-private-line svg {
-  color: #f7c76a;
-}
-
-.solace-conversation-surface {
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-  overflow-y: auto;
-  padding: 1.1rem;
-}
-
-.solace-message {
-  max-width: 78%;
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  border-radius: 1rem;
-  padding: 0.9rem 1rem;
-  background: rgba(15, 23, 42, 0.58);
-}
-
-.solace-message-user {
-  align-self: flex-end;
-  border-color: rgba(247, 199, 106, 0.24);
-  background: rgba(247, 199, 106, 0.09);
-}
-
-.solace-message-label {
-  margin-bottom: 0.35rem;
-  color: #f7c76a;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.solace-message-body {
-  white-space: pre-wrap;
-  color: rgba(248, 250, 252, 0.9);
-  font-size: 0.94rem;
-  line-height: 1.65;
-}
-
-.solace-thinking {
-  display: flex;
-  gap: 0.35rem;
-}
-
-.solace-thinking span {
-  height: 0.45rem;
-  width: 0.45rem;
-  animation: solaceThinking 1s infinite ease-in-out;
-  border-radius: 999px;
-  background: rgba(247, 199, 106, 0.8);
-}
-
-.solace-thinking span:nth-child(2) { animation-delay: 0.15s; }
-.solace-thinking span:nth-child(3) { animation-delay: 0.3s; }
-
-@keyframes solaceThinking {
-  0%, 100% { transform: translateY(0); opacity: 0.35; }
-  50% { transform: translateY(-3px); opacity: 1; }
-}
-
-.solace-home-input {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 0.7rem;
-  margin: 1rem auto 0;
-  width: min(100%, 54rem);
-  border: 1px solid rgba(247, 199, 106, 0.34);
-  border-radius: 1rem;
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.84), rgba(3, 7, 18, 0.92));
-  padding: 0.65rem;
-  box-shadow: 0 12px 46px rgba(0,0,0,0.32), 0 0 0 1px rgba(247,199,106,0.03);
-}
-
-.solace-home-input input {
-  min-width: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: white;
-  font-size: 1rem;
-}
-
-.solace-home-input input::placeholder {
-  color: rgba(203, 213, 225, 0.54);
-}
-
-.solace-home-input button {
-  display: grid;
-  height: 2.7rem;
-  width: 2.7rem;
-  place-items: center;
-  border: 0;
-  border-radius: 0.8rem;
-  color: rgba(248, 250, 252, 0.82);
-}
-
-.solace-home-input button:first-child {
-  background: transparent;
-}
-
-.solace-home-input button[type="submit"] {
-  background: linear-gradient(180deg, #f7c76a, #ca9d40);
-  color: #020617;
-  box-shadow: 0 10px 22px rgba(247,199,106,0.24);
-}
-
-.solace-home-input button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.solace-input-mode {
-  display: flex;
-  align-items: center;
-  gap: 0.42rem;
-  border: 1px solid rgba(148, 163, 184, 0.12);
-  border-radius: 999px;
-  padding: 0.5rem 0.75rem;
-  color: rgba(226, 232, 240, 0.78);
-  font-size: 0.8rem;
-}
-
-.solace-input-mode svg {
-  color: #f7c76a;
-}
-
-.solace-home-disclaimer {
-  margin: 0.72rem 0 0;
-  color: rgba(203, 213, 225, 0.42);
-  text-align: center;
-  font-size: 0.75rem;
-}
-
-.solace-home-right-rail {
-  display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
-  overflow-y: auto;
-  padding-right: 0.15rem;
-}
-
-.solace-rail-card {
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  border-radius: 1rem;
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.62), rgba(3, 7, 18, 0.62));
-  padding: 1rem;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
-}
-
-.solace-rail-card-title {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.solace-rail-card-title strong {
-  color: rgba(248, 250, 252, 0.92);
-  font-size: 0.96rem;
-}
-
-.solace-rail-card-title a {
-  margin-left: auto;
-  color: #f7c76a;
-  font-size: 0.78rem;
-  text-decoration: none;
-}
-
-.solace-rail-card > p {
-  margin: 0.85rem 0 0;
-  color: rgba(203, 213, 225, 0.64);
-  font-size: 0.84rem;
-  line-height: 1.55;
-}
-
-.memory-orbit-row,
-.governed-row {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-}
-
-.memory-orbit-row {
-  margin-top: 1rem;
-}
-
-.memory-orbit {
-  height: 3.3rem;
-  width: 3.3rem;
-  border-radius: 999px;
-  border: 3px dotted rgba(247, 199, 106, 0.9);
-  box-shadow: 0 0 24px rgba(247,199,106,0.08);
-}
-
-.memory-orbit-row strong,
-.governed-row strong {
-  display: block;
-  color: rgba(248, 250, 252, 0.92);
-  font-size: 0.9rem;
-}
-
-.memory-orbit-row span,
-.governed-row span {
-  display: block;
-  margin-top: 0.2rem;
-  color: rgba(203, 213, 225, 0.58);
-  font-size: 0.8rem;
-  line-height: 1.4;
-}
-
-.memory-orbit-row i,
-.governed-row i {
-  margin-left: auto;
-}
-
-.recent-list {
-  display: grid;
-  gap: 0.75rem;
-  margin-top: 1.1rem;
-}
-
-.recent-list div {
+.solace-action-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.8rem;
-  color: rgba(248, 250, 252, 0.82);
-  font-size: 0.82rem;
+  gap: 8px;
+  font-size: 0.96rem;
+  font-weight: 780;
+  letter-spacing: -0.02em;
 }
 
-.recent-list time {
-  color: rgba(203, 213, 225, 0.44);
+.solace-action-body {
+  display: block;
+  margin-top: 10px;
+  color: rgba(226, 232, 240, 0.61);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.solace-privacy-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 32px;
+  color: rgba(226, 232, 240, 0.55);
+  font-size: 0.92rem;
+}
+
+.solace-privacy-line svg { color: var(--solace-gold); }
+
+.solace-right-rail {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.solace-rail-card,
+.solace-governed-card {
+  border-radius: 18px;
+  padding: 20px;
+}
+
+.solace-rail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.solace-rail-head > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.solace-rail-head svg { color: rgba(226, 232, 240, 0.86); }
+
+.solace-rail-head h2 {
+  margin: 0;
+  color: white;
+  font-size: 1rem;
+  font-weight: 780;
+  letter-spacing: -0.025em;
+}
+
+.solace-rail-head button {
+  border: 0;
+  background: transparent;
+  color: var(--solace-gold);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.solace-rail-card p {
+  margin: 0;
+  color: rgba(226, 232, 240, 0.66);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.solace-memory-active {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.solace-memory-ring {
+  height: 58px;
+  width: 58px;
+  border-radius: 999px;
+  border: 3px dotted rgba(247, 200, 95, 0.94);
+  box-shadow: 0 0 24px rgba(247, 200, 95, 0.12);
+}
+
+.solace-memory-active strong,
+.solace-memory-active em {
+  display: block;
+}
+
+.solace-memory-active strong {
+  color: white;
+  font-size: 0.95rem;
+}
+
+.solace-memory-active em {
+  margin-top: 4px;
+  color: rgba(226, 232, 240, 0.58);
+  font-size: 0.84rem;
+  font-style: normal;
+  line-height: 1.45;
+}
+
+.solace-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.solace-recent-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: rgba(248, 250, 252, 0.86);
+  font-size: 0.84rem;
+}
+
+.solace-recent-list em {
+  color: rgba(148, 163, 184, 0.66);
+  font-style: normal;
   white-space: nowrap;
 }
 
-.reflection-card p {
-  color: rgba(226, 232, 240, 0.72);
+.solace-reflection {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 10px 8px 2px;
+}
+
+.solace-reflection svg {
+  flex: 0 0 auto;
+  color: rgba(226, 232, 240, 0.38);
+}
+
+.solace-reflection p {
+  color: rgba(226, 232, 240, 0.76);
   font-size: 1rem;
+  line-height: 1.55;
 }
 
-.governed-card {
-  margin-top: auto;
+.solace-governed-card {
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) auto;
+  align-items: center;
+  gap: 14px;
 }
 
-.governed-row svg,
-.solace-rail-card-title svg {
-  color: rgba(226, 232, 240, 0.82);
+.solace-governed-card svg { color: var(--solace-gold); }
+.solace-governed-card strong { display: block; color: white; font-size: 0.92rem; }
+.solace-governed-card span { display: block; color: rgba(203, 213, 225, 0.55); font-size: 0.78rem; margin-top: 4px; }
+.solace-governed-card > .solace-green-dot { margin-top: 0; }
+
+.solace-composer-shell {
+  padding: 10px 36px 32px !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+}
+
+.solace-composer-shell > div {
+  min-height: 98px !important;
+  gap: 12px !important;
+  align-items: center !important;
+  border: 1px solid rgba(247, 200, 95, 0.42);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 92% 50%, rgba(247, 200, 95, 0.08), transparent 20%),
+    rgba(8, 15, 29, 0.72);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.02), 0 22px 60px rgba(0,0,0,0.22), 0 0 34px rgba(247, 200, 95, 0.08);
+  padding: 0 18px !important;
+}
+
+.solace-composer-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(148, 163, 184, 0.14) !important;
+  border-radius: 14px !important;
+  background: rgba(255,255,255,0.035) !important;
+  color: rgba(226, 232, 240, 0.84);
+  cursor: pointer;
+  padding: 0 !important;
+}
+
+.solace-composer-input {
+  flex: 1 1 auto !important;
+  min-height: 62px !important;
+  max-height: 92px !important;
+  border: 0 !important;
+  border-left: 1px solid rgba(148, 163, 184, 0.12) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: white !important;
+  font-size: 1.05rem !important;
+  padding: 19px 18px !important;
+}
+
+.solace-composer-input::placeholder {
+  color: rgba(203, 213, 225, 0.54);
+}
+
+.solace-composer-send {
+  display: grid;
+  flex: 0 0 auto;
+  height: 52px;
+  width: 52px;
+  place-items: center;
+  border: 1px solid rgba(255, 236, 166, 0.5);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffe382, #e5a930);
+  color: #171103;
+  font-size: 0;
+  font-weight: 900;
+  box-shadow: 0 14px 34px rgba(247, 200, 95, 0.24), inset 0 1px 0 rgba(255,255,255,0.42);
+}
+
+.solace-composer-send::before {
+  content: "↑";
+  font-size: 1.45rem;
+  line-height: 1;
 }
 
 @media (max-width: 1280px) {
-  .app-shell-consumer {
-    grid-template-columns: 260px minmax(0, 1fr);
-  }
-
-  .solace-home-grid {
-    grid-template-columns: minmax(0, 1fr);
-    padding-right: 1.7rem;
-  }
-
-  .solace-home-right-rail {
-    display: none;
-  }
-
-  .solace-action-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+  .solace-home-grid { grid-template-columns: minmax(0,1fr); }
+  .solace-right-rail { display: none; }
+  .solace-action-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .solace-hero-card { min-height: 520px; }
 }
 
 @media (max-width: 900px) {
-  .app-shell-consumer {
-    display: block;
-    height: auto;
-    min-height: 100vh;
-    overflow: auto;
+  [data-app-shell] { grid-template-columns: 1fr !important; }
+  [data-neural-sidebar] { display: none !important; }
+  .solace-workspace-header {
+    grid-template-columns: minmax(0,1fr) auto;
+    padding: 22px 20px 16px;
   }
-
-  .app-shell-sidebar {
-    height: auto;
-    max-height: none;
-    border-right: 0;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-  }
-
-  .consumer-sidebar {
-    height: auto;
-    min-height: 0;
-  }
-
-  .consumer-brand {
-    padding: 1rem;
-  }
-
-  .consumer-sidebar-scroll {
-    overflow: visible;
-    padding: 0 1rem 1rem;
-  }
-
-  .consumer-sidebar-section:not(:first-child),
-  .consumer-sidebar-status,
-  .consumer-sidebar-user {
-    display: none;
-  }
-
-  .consumer-sidebar-nav {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
-
-  .consumer-sidebar-item small {
-    display: none;
-  }
-
-  .app-shell-main,
-  .app-shell-content {
-    height: auto;
-    min-height: calc(100vh - 8rem);
-    overflow: visible;
-  }
-
-  .app-shell-content {
-    padding: 0.85rem;
-  }
-
-  .solace-home-shell {
-    min-height: calc(100vh - 9rem);
-    height: auto;
-    overflow: visible;
-  }
-
-  .solace-home-header {
-    align-items: flex-start;
-    flex-direction: column;
-    padding: 1.1rem;
-  }
-
-  .solace-home-grid {
-    height: auto;
-    padding: 0 1rem 1rem;
-  }
-
-  .solace-welcome-surface,
-  .solace-conversation-surface {
-    min-height: 34rem;
-  }
-
-  .solace-action-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .solace-action-card {
-    min-height: 8rem;
-  }
-
-  .solace-input-mode {
-    display: none;
-  }
-
-  .solace-home-input {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-  }
+  .solace-status-pill { display: none; }
+  .solace-home-grid { display: block; }
+  .solace-hero-card { min-height: 0; padding: 32px 14px 22px; }
+  .solace-action-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; margin-top: 34px; }
+  .solace-action-card { min-height: 132px; padding: 14px; }
+  .solace-action-icon { width: 44px; height: 44px; margin-bottom: 12px; }
+  .solace-composer-shell { padding: 8px 12px 14px !important; }
+  .solace-composer-shell > div { min-height: 74px !important; border-radius: 18px; }
+  .solace-composer-icon { width: 38px; height: 38px; }
+  .solace-composer-input { min-height: 48px !important; font-size: 1rem !important; padding: 12px !important; }
+  .solace-composer-send { width: 44px; height: 44px; }
 }
 
 @media (max-width: 560px) {
-  .solace-home-header-actions {
-    width: 100%;
-    justify-content: space-between;
-  }
+  .solace-workspace-header { gap: 10px; }
+  .solace-profile-pill { display: none; }
+  .solace-greeting-title { font-size: 1.35rem; }
+  .solace-greeting-subtitle { font-size: 0.88rem; }
+  .solace-hero-content h1 { font-size: 2.3rem; }
+  .solace-hero-content p { font-size: 0.96rem; }
+  .solace-action-grid { grid-template-columns: 1fr; }
+  .solace-action-card { min-height: 108px; }
+  .solace-privacy-line { margin-top: 22px; }
+}
 
-  .solace-status-pill {
-    flex: 1;
-  }
-
-  .solace-welcome-copy h1 {
-    font-size: 2.4rem;
-  }
-
-  .solace-action-grid {
-    grid-template-columns: 1fr;
-    margin-top: 2rem;
-  }
-
-  .solace-welcome-surface {
-    justify-content: flex-start;
-    padding-top: 2rem;
-  }
-
-  .solace-message {
-    max-width: 92%;
-  }
+.solace-app-canvas {
+  min-height: 100%;
+  width: 100%;
+  background:
+    radial-gradient(circle at 48% 22%, rgba(30, 64, 175, 0.11), transparent 42%),
+    linear-gradient(180deg, rgba(3, 7, 18, 0.55), rgba(3, 7, 18, 0.95));
 }
