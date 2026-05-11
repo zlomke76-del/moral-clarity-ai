@@ -29,7 +29,10 @@ export default function SolaceGuard() {
   if (isAuth) return null;
 
   // --------------------------------------------------
-  // 🔒 App-only dock
+  // Consumer app home now owns the full Solace surface.
+  // The legacy floating dock remains available on deeper app routes.
   // --------------------------------------------------
+  if (pathname === "/app") return null;
+
   return <SolaceDockWrapper />;
 }

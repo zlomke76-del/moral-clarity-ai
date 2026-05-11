@@ -5,14 +5,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { MCA_WORKSPACE_ID } from "@/lib/mca-config";
-
-/* Icons */
 import {
   BrainCircuit,
-  Newspaper,
+  ChevronDown,
+  Edit3,
+  Home,
   KeyRound,
+  Library,
+  LockKeyhole,
+  MessageSquare,
+  Newspaper,
+  Search,
+  Settings,
+  ShieldCheck,
   Sparkles,
-  ChevronRight,
+  Target,
+  UserRound,
 } from "lucide-react";
 
 export type NeuralSidebarItem = {
@@ -24,262 +32,239 @@ export type NeuralSidebarItem = {
   onClick?: () => void;
 };
 
+type SidebarSection = {
+  label?: string;
+  items: NeuralSidebarItem[];
+};
+
 type Props = {
   items?: NeuralSidebarItem[];
 };
 
 export default function NeuralSidebar({ items }: Props) {
   const pathname = usePathname() ?? "";
-
-  let workspaceId: string | null = null;
   const parts = pathname.split("/").filter(Boolean);
-
-  if (parts[0] === "w" && parts[1]) {
-    workspaceId = parts[1];
-  }
-
+  const workspaceId = parts[0] === "w" && parts[1] ? parts[1] : MCA_WORKSPACE_ID;
   const activeItemId = resolveActiveItemId(pathname);
 
-  const sidebarItems =
-    items && items.length > 0
-      ? items
-      : buildDefaultItems(workspaceId ?? MCA_WORKSPACE_ID);
+  const sections = items?.length
+    ? [{ items }]
+    : buildDefaultSections(workspaceId);
 
   return (
-    <div
-      className="neural-sidebar text-white"
-      style={{
-        height: "100vh",
-        maxHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-      }}
-    >
-      <div
-        className="border-b border-white/6 px-5 pb-5 pt-5"
-        style={{ flexShrink: 0 }}
-      >
-        <Link
-          href="/app"
-          className="group block rounded-2xl border border-white/6 bg-white/[0.02] px-4 py-4 transition-all duration-200 hover:border-white/10 hover:bg-white/[0.035]"
-        >
-          <div className="flex items-center gap-3">
-            <div className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-amber-300/20 bg-gradient-to-b from-amber-300 to-amber-500 shadow-[0_10px_30px_rgba(250,204,21,0.12)]">
-              <span className="text-base font-semibold tracking-tight text-neutral-950">
-                AI
-              </span>
-            </div>
-
-            <div className="min-w-0">
-              <div className="truncate text-[1.02rem] font-semibold tracking-tight text-white">
-                Moral Clarity
-              </div>
-              <div className="mt-0.5 flex items-center gap-1.5 text-xs text-white/55">
-                <span>Studio</span>
-                <span className="inline-block h-1 w-1 rounded-full bg-white/25" />
-                <span className="inline-flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" />
-                  Active
-                </span>
-              </div>
-            </div>
-          </div>
-        </Link>
-      </div>
-
-      <div
-        className="neural-sidebar-glass flex-1 overflow-y-auto overflow-x-hidden px-4 py-5"
-        style={{ minHeight: 0 }}
-      >
-        <div className="mb-3 px-1">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/35">
-            Workspace
-          </div>
+    <aside className="consumer-sidebar text-white">
+      <Link href="/app" className="consumer-brand" aria-label="Solace home">
+        <div className="consumer-brand-mark">
+          <span />
         </div>
+        <div>
+          <strong>Solace</strong>
+          <small>AI for Moral Clarity</small>
+        </div>
+      </Link>
 
-        <nav className="flex flex-col gap-3">
-          {sidebarItems.map((item) => (
-            <SidebarChip
-              key={item.id}
-              item={item}
-              isActive={item.id === activeItemId}
-            />
-          ))}
-        </nav>
-
-        <div className="mt-6 rounded-2xl border border-white/6 bg-white/[0.02] p-4">
-          <div className="text-xs font-medium uppercase tracking-[0.16em] text-white/35">
-            Environment
+      <div className="consumer-sidebar-scroll">
+        {sections.map((section, sectionIndex) => (
+          <div className="consumer-sidebar-section" key={section.label ?? sectionIndex}>
+            {section.label && <div className="consumer-sidebar-label">{section.label}</div>}
+            <nav className="consumer-sidebar-nav">
+              {section.items.map((item) => (
+                <SidebarItem
+                  key={item.id}
+                  item={item}
+                  isActive={item.id === activeItemId}
+                />
+              ))}
+            </nav>
           </div>
-          <div className="mt-3 flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium text-white/85">
-                Studio Workspace
-              </div>
-              <div className="mt-1 text-xs leading-5 text-white/45">
-                Tools for memory, newsroom governance, and secure access.
-              </div>
-            </div>
+        ))}
 
-            <div className="ml-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-emerald-400/20 bg-emerald-400/10">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_14px_rgba(74,222,128,0.75)]" />
-            </div>
+        <div className="consumer-sidebar-status">
+          <div className="status-shield">
+            <ShieldCheck className="h-5 w-5" />
           </div>
+          <div>
+            <strong>Solace Memory Active</strong>
+            <p>Your continuity is secure and always within reach.</p>
+            <Link href={`/w/${workspaceId}/memory`}>Learn more →</Link>
+          </div>
+          <i />
         </div>
       </div>
-    </div>
+
+      <div className="consumer-sidebar-user">
+        <div className="consumer-user-avatar">TZ</div>
+        <div>
+          <strong>Tim Zlomke</strong>
+          <small>Personal Plan</small>
+        </div>
+        <ChevronDown className="ml-auto h-4 w-4 text-white/60" />
+      </div>
+    </aside>
   );
 }
 
-/* CHIP */
-function SidebarChip({
+function SidebarItem({
   item,
   isActive,
 }: {
   item: NeuralSidebarItem;
   isActive: boolean;
 }) {
-  const href = item.href ?? "";
-
   const content = (
-    <div
-      className={[
-        "group relative overflow-hidden rounded-2xl border px-4 py-4 transition-all duration-200",
-        isActive
-          ? "border-white/14 bg-white/[0.07] shadow-[0_12px_30px_rgba(0,0,0,0.18)]"
-          : "border-white/7 bg-white/[0.03] hover:border-white/12 hover:bg-white/[0.05]",
-      ].join(" ")}
-    >
-      <div className="flex items-start gap-3">
-        {item.icon && (
-          <div
-            className={[
-              "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all duration-200",
-              isActive
-                ? "border-white/12 bg-white/[0.08] text-white"
-                : "border-white/8 bg-white/[0.04] text-white/70 group-hover:text-white/90",
-            ].join(" ")}
-          >
-            {item.icon}
-          </div>
-        )}
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div
-                className={[
-                  "truncate text-[1rem] font-semibold tracking-tight transition-colors",
-                  isActive ? "text-white" : "text-white/92",
-                ].join(" ")}
-              >
-                {item.label}
-              </div>
-
-              {item.description && (
-                <div
-                  className={[
-                    "mt-1 line-clamp-2 text-sm leading-5",
-                    isActive ? "text-white/62" : "text-white/50",
-                  ].join(" ")}
-                >
-                  {item.description}
-                </div>
-              )}
-            </div>
-
-            <div
-              className={[
-                "mt-0.5 shrink-0 rounded-lg p-1 transition-all duration-200",
-                isActive
-                  ? "text-white/70"
-                  : "text-white/28 group-hover:text-white/50",
-              ].join(" ")}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {isActive && (
-        <div className="pointer-events-none absolute inset-y-3 left-0 w-[3px] rounded-r-full bg-amber-300 shadow-[0_0_18px_rgba(252,211,77,0.55)]" />
-      )}
+    <div className={["consumer-sidebar-item", isActive ? "active" : ""].join(" ")}>
+      <span className="consumer-sidebar-icon">{item.icon}</span>
+      <span>
+        <strong>{item.label}</strong>
+        {item.description && <small>{item.description}</small>}
+      </span>
     </div>
   );
 
-  if (href) {
+  if (item.href) {
     return (
-      <Link
-        href={href}
-        className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40 focus-visible:ring-offset-0"
-      >
+      <Link href={item.href} className="consumer-sidebar-link">
         {content}
       </Link>
     );
   }
 
   return (
-    <button
-      type="button"
-      onClick={item.onClick}
-      className="block w-full rounded-2xl text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/40 focus-visible:ring-offset-0"
-    >
+    <button type="button" onClick={item.onClick} className="consumer-sidebar-link">
       {content}
     </button>
   );
 }
 
-/* ACTIVE ROUTE RESOLUTION */
 function resolveActiveItemId(pathname: string): string | null {
   const parts = pathname.split("/").filter(Boolean);
 
-  if (pathname === "/app" || pathname.startsWith("/app/")) {
-    return null;
-  }
+  if (pathname === "/app" || pathname.startsWith("/app/")) return "home";
 
   if (parts[0] === "w" && parts[2]) {
-    const section = parts[2];
-
-    if (section === "memory") return "memory";
-    if (section === "rolodex") return "memory";
+    if (parts[2] === "memory" || parts[2] === "rolodex") return "memory";
   }
 
-  if (pathname === "/newsroom/cabinet" || pathname.startsWith("/newsroom/cabinet/")) {
-    return "newsroom";
-  }
-
-  if (pathname === "/auth/sign-in" || pathname.startsWith("/auth/sign-in/")) {
-    return "magic-key";
-  }
+  if (pathname.startsWith("/newsroom")) return "newsroom";
+  if (pathname.startsWith("/research")) return "research";
+  if (pathname.startsWith("/auth/sign-in")) return "magic-key";
+  if (pathname.startsWith("/memories")) return "memory-vault";
+  if (pathname.startsWith("/account")) return "account";
 
   return null;
 }
 
-/* DEFAULT PAGES */
-function buildDefaultItems(workspaceId: string): NeuralSidebarItem[] {
+function buildDefaultSections(workspaceId: string): SidebarSection[] {
   return [
     {
-      id: "memory",
-      label: "Memory",
-      description: "Review & edit Solace memory",
-      href: `/w/${workspaceId}/memory`,
-      icon: <BrainCircuit className="h-[18px] w-[18px]" />,
+      items: [
+        {
+          id: "home",
+          label: "Home",
+          description: "Start a conversation",
+          href: "/app",
+          icon: <Home className="h-[18px] w-[18px]" />,
+        },
+      ],
     },
     {
-      id: "newsroom",
-      label: "Newsroom Cabinet",
-      description: "Neutrality & outlet metrics",
-      href: "/newsroom/cabinet",
-      icon: <Newspaper className="h-[18px] w-[18px]" />,
+      label: "Explore",
+      items: [
+        {
+          id: "research",
+          label: "Research",
+          description: "Find answers, explore topics",
+          href: "/research",
+          icon: <Search className="h-[18px] w-[18px]" />,
+        },
+        {
+          id: "analysis",
+          label: "Analysis",
+          description: "Break down claims and ideas",
+          href: "/app",
+          icon: <Target className="h-[18px] w-[18px]" />,
+        },
+        {
+          id: "protect",
+          label: "Protect",
+          description: "Family, privacy, digital safety",
+          href: "/app",
+          icon: <ShieldCheck className="h-[18px] w-[18px]" />,
+        },
+        {
+          id: "create",
+          label: "Create",
+          description: "Write, build, and ideate",
+          href: "/app",
+          icon: <Edit3 className="h-[18px] w-[18px]" />,
+        },
+        {
+          id: "conversations",
+          label: "Conversations",
+          description: "Your recent threads",
+          href: "/app",
+          icon: <MessageSquare className="h-[18px] w-[18px]" />,
+        },
+        {
+          id: "library",
+          label: "Library",
+          description: "Saved references",
+          href: "/docs",
+          icon: <Library className="h-[18px] w-[18px]" />,
+        },
+      ],
     },
     {
-      id: "magic-key",
-      label: "Magic Key",
-      description: "Generate a new secure key",
-      href: "/auth/sign-in",
-      icon: <KeyRound className="h-[18px] w-[18px]" />,
+      label: "Memory & Context",
+      items: [
+        {
+          id: "memory",
+          label: "Memory",
+          description: "Your saved knowledge",
+          href: `/w/${workspaceId}/memory`,
+          icon: <BrainCircuit className="h-[18px] w-[18px]" />,
+        },
+        {
+          id: "memory-vault",
+          label: "Memory Vault",
+          description: "Review and edit memories",
+          href: "/memories",
+          icon: <LockKeyhole className="h-[18px] w-[18px]" />,
+        },
+        {
+          id: "newsroom",
+          label: "Newsroom",
+          description: "Neutrality and outlet metrics",
+          href: "/newsroom/cabinet",
+          icon: <Newspaper className="h-[18px] w-[18px]" />,
+        },
+      ],
+    },
+    {
+      label: "Settings",
+      items: [
+        {
+          id: "magic-key",
+          label: "Magic Key",
+          description: "Generate secure access",
+          href: "/auth/sign-in",
+          icon: <KeyRound className="h-[18px] w-[18px]" />,
+        },
+        {
+          id: "preferences",
+          label: "Preferences",
+          description: "Tune your experience",
+          href: "/app",
+          icon: <Settings className="h-[18px] w-[18px]" />,
+        },
+        {
+          id: "account",
+          label: "Account",
+          description: "Plan and profile",
+          href: "/account",
+          icon: <UserRound className="h-[18px] w-[18px]" />,
+        },
+      ],
     },
   ];
 }
