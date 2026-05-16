@@ -140,6 +140,10 @@ const domains: PracticeDomain[] = [
         label: "Architected Micro-Lattice EV Battery Enclosure",
       },
       {
+        href: "/edge-of-practice/humidity-triggered-pore-sealing-membrane",
+        label: "Humidity-Triggered Pore-Sealing Membrane",
+      },
+      {
         href: "/edge-of-practice/pom-path-memory-bimodal-basin",
         label: "POM Path-Memory Bimodal Basin Test",
       },
