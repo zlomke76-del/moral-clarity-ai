@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 export default function AppHomePage() {
-  return <div className="solace-app-canvas" aria-hidden />;
+  redirect("/app");
 }
