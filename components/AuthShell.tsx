@@ -4,27 +4,44 @@ import { useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/browser";
 
+function normalizeRedirectPath(value: string | null) {
+  const requested = value ?? "/app";
+
+  if (!requested.startsWith("/") || requested.startsWith("//")) {
+    return "/app";
+  }
+
+  if (requested.startsWith("/auth/")) {
+    return "/app";
+  }
+
+  return requested;
+}
+
 export default function AuthShell() {
   const searchParams = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // TypeScript-safe resolution
-  const redirectTo = searchParams?.get("redirect") ?? "/app";
+  const redirectTo = normalizeRedirectPath(
+    searchParams?.get("redirectedFrom") ?? searchParams?.get("redirect")
+  );
 
   const sendMagicLink = useCallback(async () => {
-    if (!email) return;
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) return;
 
     try {
       setLoading(true);
 
+      const callbackUrl = new URL("/auth/callback", window.location.origin);
+      callbackUrl.searchParams.set("redirect", redirectTo);
+
       const { error } = await supabase.auth.signInWithOtp({
-        email,
+        email: normalizedEmail,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(
-            redirectTo
-          )}`,
+          emailRedirectTo: callbackUrl.toString(),
         },
       });
 
@@ -32,6 +49,7 @@ export default function AuthShell() {
         console.error("[AuthShell] signIn error", error);
         alert("Failed to send magic link.");
       } else {
+        setEmail(normalizedEmail);
         alert("Check your email for the sign-in link.");
       }
     } finally {
