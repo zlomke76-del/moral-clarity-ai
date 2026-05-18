@@ -1,50 +1,70 @@
-import { NextResponse } from "next/server";
+// app/auth/start/route.ts
+import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-export async function POST(req: Request) {
-  const form = await req.formData();
-  const email = form.get("email")?.toString();
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-  if (!email) {
-    return NextResponse.redirect("/auth/error?err=Missing%20email");
+function resolveRedirectPath(req: NextRequest) {
+  const url = req.nextUrl;
+  const requested =
+    url.searchParams.get("redirect") ??
+    url.searchParams.get("redirectedFrom") ??
+    "/app";
+
+  if (!requested.startsWith("/") || requested.startsWith("//")) {
+    return "/app";
   }
 
-  // Create a mutable response
-  const response = NextResponse.redirect("/auth/check-email");
+  if (requested.startsWith("/auth/")) {
+    return "/app";
+  }
 
-  // Store callback redirect info
-  const params = new URLSearchParams();
-  params.set("next", "/app");
-  response.cookies.set("auth-callback-search", params.toString(), {
-    path: "/",
-    httpOnly: true,
-    sameSite: "lax",
-  });
+  return requested;
+}
+
+export async function POST(req: NextRequest) {
+  const form = await req.formData();
+  const email = form.get("email")?.toString().trim().toLowerCase();
+
+  if (!email) {
+    return NextResponse.redirect(new URL("/auth/error?err=Missing%20email", req.url));
+  }
+
+  const redirectPath = resolveRedirectPath(req);
+  const callbackUrl = new URL("/auth/callback", req.url);
+  callbackUrl.searchParams.set("redirect", redirectPath);
+
+  let response = NextResponse.redirect(new URL("/auth/check-email", req.url));
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name) {
-          return req.headers.get("cookie")?.match(new RegExp(`${name}=([^;]+)`))?.[1];
+        getAll() {
+          return req.cookies.getAll();
         },
-        set(name, value, options) {
-          response.cookies.set(name, value, options);
-        },
-        remove(name, options) {
-          response.cookies.set(name, "", { ...options, maxAge: 0 });
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
         },
       },
     }
   );
 
-  const { error } = await supabase.auth.signInWithOtp({ email });
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: callbackUrl.toString(),
+    },
+  });
 
   if (error) {
-    return NextResponse.redirect(
-      `/auth/error?err=${encodeURIComponent(error.message)}`
-    );
+    const target = new URL("/auth/error", req.url);
+    target.searchParams.set("err", error.message);
+    return NextResponse.redirect(target);
   }
 
   return response;
