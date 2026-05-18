@@ -25,7 +25,7 @@ export default function AuthShell() {
   const [loading, setLoading] = useState(false);
 
   const redirectTo = normalizeRedirectPath(
-    searchParams?.get("redirectedFrom") ?? searchParams?.get("redirect")
+    searchParams?.get("redirectedFrom") ?? searchParams?.get("redirect") ?? null
   );
 
   const sendMagicLink = useCallback(async () => {
