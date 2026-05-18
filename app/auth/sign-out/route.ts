@@ -1,38 +1,34 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import type { CookieOptions } from "@/lib/cookies";
+// app/auth/sign-out/route.ts
+import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
-export async function GET() {
-  // ⬅️ NEXT 16: MUST AWAIT
-  const reqCookies = await cookies();
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-  // Adapter for compatibility with existing code
-  const adapter = {
-    cookies: {
-      get(name: string) {
-        const c = reqCookies.get(name);
-        return c ? c.value : null;
+export async function GET(req: NextRequest) {
+  let response = NextResponse.redirect(new URL("/auth/sign-in", req.url));
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
+        },
       },
+    }
+  );
 
-      set(name: string, value: string, options: CookieOptions) {
-        // Write cookies onto the redirect response
-        reqCookies.set({ name, value, ...options });
-      },
+  await supabase.auth.signOut();
 
-      delete(name: string) {
-        reqCookies.set({
-          name,
-          value: "",
-          maxAge: 0,
-        });
-      },
-    },
-  };
+  // Legacy cleanup for older app sessions that predated Supabase SSR cookies.
+  response.cookies.set("mcai-session", "", { path: "/", maxAge: 0 });
 
-  // Clear the session cookie
-  adapter.cookies.delete("mcai-session");
-
-  // Send the user back to the sign-in page
-  return redirect("/auth/sign-in");
+  return response;
 }
-
