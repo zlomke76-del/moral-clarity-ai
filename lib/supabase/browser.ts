@@ -1,15 +1,11 @@
 // lib/supabase/browser.ts
 "use client";
 
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-    detectSessionInUrl: false,
-  },
-});
+// Use the Supabase SSR browser client so client components and API calls read
+// the same cookie-backed session that /auth/callback creates on the server.
+export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
