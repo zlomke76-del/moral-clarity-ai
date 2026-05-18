@@ -11,8 +11,26 @@ export default function SignInPage() {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
 
+  function getRedirectPath() {
+    const params = new URLSearchParams(window.location.search);
+    const requested =
+      params.get("redirectedFrom") ?? params.get("redirect") ?? "/app";
+
+    if (!requested.startsWith("/") || requested.startsWith("//")) {
+      return "/app";
+    }
+
+    if (requested.startsWith("/auth/")) {
+      return "/app";
+    }
+
+    return requested;
+  }
+
   async function sendLink() {
-    if (!email.trim()) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
       setError("Please enter your email address.");
       return;
     }
@@ -26,10 +44,14 @@ export default function SignInPage() {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       );
 
+      const redirectPath = getRedirectPath();
+      const callbackUrl = new URL("/auth/callback", window.location.origin);
+      callbackUrl.searchParams.set("redirect", redirectPath);
+
       const { error } = await supabase.auth.signInWithOtp({
-        email,
+        email: normalizedEmail,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: callbackUrl.toString(),
         },
       });
 
@@ -38,6 +60,7 @@ export default function SignInPage() {
         return;
       }
 
+      setEmail(normalizedEmail);
       setSent(true);
     } finally {
       setSending(false);
